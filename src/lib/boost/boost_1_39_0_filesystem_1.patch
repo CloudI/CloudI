@@ -1,0 +1,163 @@
+diff --git a/boost/filesystem/operations.hpp b/boost/filesystem/operations.hpp
+index 5c2080c..2cac537 100644
+--- a/boost/filesystem/operations.hpp
++++ b/boost/filesystem/operations.hpp
+@@ -659,9 +659,9 @@ namespace boost
+       { return is_symlink<wpath>( ph ); }
+ 
+     inline bool is_empty( const path & ph )
+-      { return is_empty<path>( ph ); }
++      { return boost::filesystem::is_empty<path>( ph ); }
+     inline bool is_empty( const wpath & ph )
+-      { return is_empty<wpath>( ph ); }
++      { return boost::filesystem::is_empty<wpath>( ph ); }
+ 
+     inline bool equivalent( const path & ph1, const path & ph2 )
+       { return equivalent<path>( ph1, ph2 ); }
+diff --git a/libs/filesystem/test/path_test.cpp b/libs/filesystem/test/path_test.cpp
+index 7e58c44..f616892 100644
+--- a/libs/filesystem/test/path_test.cpp
++++ b/libs/filesystem/test/path_test.cpp
+@@ -27,8 +27,7 @@
+ 
+ namespace fs = boost::filesystem;
+ using boost::filesystem::path;
+-using boost::next;
+-using boost::prior;
++
+ 
+ #include <boost/detail/lightweight_test.hpp>
+ 
+@@ -480,18 +479,18 @@ int main( int, char*[] )
+ 
+   itr_ck = "foo";
+   BOOST_TEST( *itr_ck.begin() == std::string( "foo" ) );
+-  BOOST_TEST( next( itr_ck.begin() ) == itr_ck.end() );
+-  BOOST_TEST( *prior( itr_ck.end() ) == std::string( "foo" ) );
+-  BOOST_TEST( prior( itr_ck.end() ) == itr_ck.begin() );
++  BOOST_TEST( boost::next( itr_ck.begin() ) == itr_ck.end() );
++  BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "foo" ) );
++  BOOST_TEST( boost::prior( itr_ck.end() ) == itr_ck.begin() );
+ 
+   itr_ck = path( "/foo" );
+   BOOST_TEST( *itr_ck.begin() == std::string( "/" ) );
+-  BOOST_TEST( *next( itr_ck.begin() ) == std::string( "foo" ) );
+-  BOOST_TEST( next(next( itr_ck.begin() )) == itr_ck.end() );
+-  BOOST_TEST( next( itr_ck.begin() ) == prior( itr_ck.end() ) );
+-  BOOST_TEST( *prior( itr_ck.end() ) == std::string( "foo" ) );
+-  BOOST_TEST( *prior(prior( itr_ck.end() )) == std::string( "/" ) );
+-  BOOST_TEST( prior(prior( itr_ck.end() )) == itr_ck.begin() );
++  BOOST_TEST( *boost::next( itr_ck.begin() ) == std::string( "foo" ) );
++  BOOST_TEST( boost::next(boost::next( itr_ck.begin() )) == itr_ck.end() );
++  BOOST_TEST( boost::next( itr_ck.begin() ) == boost::prior( itr_ck.end() ) );
++  BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "foo" ) );
++  BOOST_TEST( *boost::prior(boost::prior( itr_ck.end() )) == std::string( "/" ) );
++  BOOST_TEST( boost::prior(boost::prior( itr_ck.end() )) == itr_ck.begin() );
+ 
+   itr_ck = "/foo/bar";
+   itr = itr_ck.begin();
+@@ -1106,65 +1105,65 @@ int main( int, char*[] )
+ 
+     itr_ck = path( "c:" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "c:" ) );
+-    BOOST_TEST( next( itr_ck.begin() ) == itr_ck.end() );
+-    BOOST_TEST( prior( itr_ck.end() ) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "c:" ) );
++    BOOST_TEST( boost::next( itr_ck.begin() ) == itr_ck.end() );
++    BOOST_TEST( boost::prior( itr_ck.end() ) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "c:" ) );
+ 
+     itr_ck = path( "c:/" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "c:" ) );
+-    BOOST_TEST( *next( itr_ck.begin() ) == std::string( "/" ) );
+-    BOOST_TEST( next( next( itr_ck.begin() )) == itr_ck.end() );
+-    BOOST_TEST( prior( prior( itr_ck.end() )) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "/" ) );
+-    BOOST_TEST( *prior( prior( itr_ck.end() )) == std::string( "c:" ) );
++    BOOST_TEST( *boost::next( itr_ck.begin() ) == std::string( "/" ) );
++    BOOST_TEST( boost::next( boost::next( itr_ck.begin() )) == itr_ck.end() );
++    BOOST_TEST( boost::prior( boost::prior( itr_ck.end() )) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "/" ) );
++    BOOST_TEST( *boost::prior( boost::prior( itr_ck.end() )) == std::string( "c:" ) );
+ 
+     itr_ck = path( "c:foo" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "c:" ) );
+-    BOOST_TEST( *next( itr_ck.begin() ) == std::string( "foo" ) );
+-    BOOST_TEST( next(next( itr_ck.begin() )) == itr_ck.end() );
+-    BOOST_TEST( prior(prior( itr_ck.end() )) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "foo" ) );
+-    BOOST_TEST( *prior(prior( itr_ck.end() )) == std::string( "c:" ) );
++    BOOST_TEST( *boost::next( itr_ck.begin() ) == std::string( "foo" ) );
++    BOOST_TEST( boost::next(boost::next( itr_ck.begin() )) == itr_ck.end() );
++    BOOST_TEST( boost::prior(boost::prior( itr_ck.end() )) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "foo" ) );
++    BOOST_TEST( *boost::prior(boost::prior( itr_ck.end() )) == std::string( "c:" ) );
+ 
+     itr_ck = path( "c:/foo" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "c:" ) );
+-    BOOST_TEST( *next( itr_ck.begin() ) == std::string( "/" ) );
+-    BOOST_TEST( *next( next( itr_ck.begin() )) == std::string( "foo" ) );
+-    BOOST_TEST( next( next( next( itr_ck.begin() ))) == itr_ck.end() );
+-    BOOST_TEST( prior( prior( prior( itr_ck.end() ))) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "foo" ) );
+-    BOOST_TEST( *prior( prior( itr_ck.end() )) == std::string( "/" ) );
+-    BOOST_TEST( *prior( prior( prior( itr_ck.end() ))) == std::string( "c:" ) );
++    BOOST_TEST( *boost::next( itr_ck.begin() ) == std::string( "/" ) );
++    BOOST_TEST( *boost::next( boost::next( itr_ck.begin() )) == std::string( "foo" ) );
++    BOOST_TEST( boost::next( boost::next( boost::next( itr_ck.begin() ))) == itr_ck.end() );
++    BOOST_TEST( boost::prior( boost::prior( boost::prior( itr_ck.end() ))) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "foo" ) );
++    BOOST_TEST( *boost::prior( boost::prior( itr_ck.end() )) == std::string( "/" ) );
++    BOOST_TEST( *boost::prior( boost::prior( boost::prior( itr_ck.end() ))) == std::string( "c:" ) );
+ 
+     itr_ck = path( "//net" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "//net" ) );
+-    BOOST_TEST( next( itr_ck.begin() ) == itr_ck.end() );
+-    BOOST_TEST( prior( itr_ck.end() ) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "//net" ) );
++    BOOST_TEST( boost::next( itr_ck.begin() ) == itr_ck.end() );
++    BOOST_TEST( boost::prior( itr_ck.end() ) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "//net" ) );
+ 
+     itr_ck = path( "//net/" );
+     CHECK_EQUAL( *itr_ck.begin(), "//net" );
+-    CHECK_EQUAL( *next( itr_ck.begin() ), "/" );
+-    BOOST_TEST( next(next( itr_ck.begin() )) == itr_ck.end() );
+-    BOOST_TEST( prior(prior( itr_ck.end() )) == itr_ck.begin() );
+-    CHECK_EQUAL( *prior( itr_ck.end() ), "/" );
+-    CHECK_EQUAL( *prior(prior( itr_ck.end() )), "//net" );
++    CHECK_EQUAL( *boost::next( itr_ck.begin() ), "/" );
++    BOOST_TEST( boost::next(boost::next( itr_ck.begin() )) == itr_ck.end() );
++    BOOST_TEST( boost::prior(boost::prior( itr_ck.end() )) == itr_ck.begin() );
++    CHECK_EQUAL( *boost::prior( itr_ck.end() ), "/" );
++    CHECK_EQUAL( *boost::prior(boost::prior( itr_ck.end() )), "//net" );
+ 
+     itr_ck = path( "//net/foo" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "//net" ) );
+-    BOOST_TEST( *next( itr_ck.begin() ) == std::string( "/" ) );
+-    BOOST_TEST( *next(next( itr_ck.begin() )) == std::string( "foo" ) );
+-    BOOST_TEST( next(next(next( itr_ck.begin() ))) == itr_ck.end() );
+-    BOOST_TEST( prior(prior(prior( itr_ck.end() ))) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "foo" ) );
+-    BOOST_TEST( *prior(prior( itr_ck.end() )) == std::string( "/" ) );
+-    BOOST_TEST( *prior(prior(prior( itr_ck.end() ))) == std::string( "//net" ) );
++    BOOST_TEST( *boost::next( itr_ck.begin() ) == std::string( "/" ) );
++    BOOST_TEST( *boost::next(boost::next( itr_ck.begin() )) == std::string( "foo" ) );
++    BOOST_TEST( boost::next(boost::next(boost::next( itr_ck.begin() ))) == itr_ck.end() );
++    BOOST_TEST( boost::prior(boost::prior(boost::prior( itr_ck.end() ))) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "foo" ) );
++    BOOST_TEST( *boost::prior(boost::prior( itr_ck.end() )) == std::string( "/" ) );
++    BOOST_TEST( *boost::prior(boost::prior(boost::prior( itr_ck.end() ))) == std::string( "//net" ) );
+ 
+     itr_ck = path( "prn:" );
+     BOOST_TEST( *itr_ck.begin() == std::string( "prn:" ) );
+-    BOOST_TEST( next( itr_ck.begin() ) == itr_ck.end() );
+-    BOOST_TEST( prior( itr_ck.end() ) == itr_ck.begin() );
+-    BOOST_TEST( *prior( itr_ck.end() ) == std::string( "prn:" ) );
++    BOOST_TEST( boost::next( itr_ck.begin() ) == itr_ck.end() );
++    BOOST_TEST( boost::prior( itr_ck.end() ) == itr_ck.begin() );
++    BOOST_TEST( *boost::prior( itr_ck.end() ) == std::string( "prn:" ) );
+   } // Windows
+ 
+   else
+

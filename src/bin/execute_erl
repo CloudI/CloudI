@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# file contains entries like "hostname:epmd_port", one per line
+FAILOVER_HOSTS=config/failover_hosts
+
+
+CWD=`dirname $0`
+if [ $1 -lt 1 ]; then
+    ERL_EPMD_PORT=`grep -n \`hostname\` $CWD/../$FAILOVER_HOSTS | cut -d: -f3`
+    if [ $ERL_EPMD_PORT -lt 1 ]; then
+        echo "ERL_EPMD_PORT has an invalid value, modify $FAILOVER_HOSTS"
+        exit 1
+    fi
+else
+    ERL_EPMD_PORT=$1
+fi
+# os:getenv/1 requires the -env parameter
+# net_kernel:start/1 requires the -epmd_port
+exec ${*:2} -env ERL_EPMD_PORT $ERL_EPMD_PORT -epmd_port $ERL_EPMD_PORT
+

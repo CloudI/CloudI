@@ -1,0 +1,13 @@
+2009-09-01	Michael Truog	<mjtruog [at] gmail (dot) com>
+
+	* initial public release of CloudI version 0.0.1 (alpha)
+
+2009-09-24	Michael Truog	<mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.2 (alpha)
+		* shortnames are currently the only supported node names
+		* added arguments to work modules
+		* added tags to work titles
+		* fixed errors in the cloud_worker_port thread pool
+		* cleaned up the cloud_worker_nodes and cloud_worker_scheduler
+		* fix thread stop timeout problem in cloud_worker_port

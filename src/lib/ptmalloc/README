@@ -1,0 +1,14 @@
+ptmalloc3 is being used because of unsolved bugs in the glibc malloc
+(as of Sep 24 2009)
+The problem is a thread safety problem on multicore machines and is
+architecture dependent.
+
+Bug report
+http://sourceware.org/bugzilla/show_bug.cgi?id=6952
+
+RedHat Enterprise Linux fix
+http://dcs.nac.uci.edu/support/sysadmin/security/archive/msg04994.html
+
+ptmalloc3
+http://www.malloc.de/en/
+
