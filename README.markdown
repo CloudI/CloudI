@@ -17,7 +17,7 @@ type of cloud and interfacing to work.  External applications could manage
 security and a user interface for CloudI's functionality.  CloudI is meant
 to be the bare essentials for efficient fault-tolerant processing on a cloud.
 
-CloudI uses Erlang/OTP to provide fault-tolerance.  CloudI Work consists
+CloudI uses Erlang/OTP to provide fault-tolerance.  CloudI work consists
 of an Erlang module to handle allocating the work as tasks and
 a dynamic library created with C/C++ to execute the work.
 An example of using CloudI can be found in "src/lib/cloud_job_tests/src/",
@@ -46,7 +46,7 @@ Much of the local setup is currently in the files:
 
 Configuration will require changing the value "host1"
 (and possibly "host2" which requires uncommenting
- ssh commands in the Makefile, adding more?) in both files.
+ ssh commands in the Makefile, adding more?) in all the files.
 
 The paths for Erlang and ErlWare need to be specified in the Makefile:
     ERLANG_PATH=/home/user/installed
