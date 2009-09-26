@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module cloud_run_queue</title>
+<meta http-equiv="Content-Type" content="text/html; charset=ascii" />
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloud_run_queue</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Cloudi_Run_Queue">Cloudi Run Queue</a></h3>.
+<p>Copyright © 2009 Michael Truog</p>
+
+<p><b>Version:</b> 0.0.2 Sep 24 2009 12:49:56
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Cloudi_Run_Queue">Cloudi Run Queue</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#clear_invalid_work-1">clear_invalid_work/1</a></td><td>
+  <h4><a name="Remove_any_work_that_has_failed_from_the_list_of_running_work_and_add_the_work_to_the_list_of_failed_work.">Remove any work that has failed from the list of running work and add the work to the list of failed work.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_waiting-1">get_waiting/1</a></td><td>
+  <h4><a name="Get_waiting_work_for_assignment.">Get waiting work for assignment.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_a_new_run_queue_from_the_configuration.">Create a new run queue from the configuration.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#put_done-2">put_done/2</a></td><td>
+  <h4><a name="Put_work_in_the_done_queue_based_on_the_work_title.">Put work in the done queue based on the work title.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#put_failed-2">put_failed/2</a></td><td>
+  <h4><a name="Put_work_from_running_into_the_failed_queue_based_on_the_work_title.">Put work from running into the failed queue based on the work title.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#put_running-2">put_running/2</a></td><td>
+  <h4><a name="Put_work_in_the_running_queue.">Put work in the running queue.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#put_waiting-2">put_waiting/2</a></td><td>
+  <h4><a name="Put_waiting_work_back_into_the_queue">Put waiting work back into the queue</a></h4>
+  (assumes it was from the last get).</td></tr>
+<tr><td valign="top"><a href="#remove_idle_work-2">remove_idle_work/2</a></td><td>
+  <h4><a name="Remove_an_idle_work_entry_from_the_run_queue.">Remove an idle work entry from the run queue.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#remove_work_assignment-2">remove_work_assignment/2</a></td><td>
+  <h4><a name="Remove_old_mentions_of_a_work_assignment_in_the_process_names_entry_of_the_run_queue_work_state_record.">Remove old mentions of a work assignment in the process_names entry of the run_queue_work_state record.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#remove_work_assignments-2">remove_work_assignments/2</a></td><td>
+  <h4><a name="Remove_work_assignments_from_a_list_of_processes.">Remove work assignments from a list of processes.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-2">update/2</a></td><td>
+  <h4><a name="Update_an_old_run_queue_from_the_current_configuration.">Update an old run queue from the current configuration.</a></h4>
+  (merging work).</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="clear_invalid_work-1">clear_invalid_work/1</a></h3>
+<div class="spec">
+<p><tt>clear_invalid_work(Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_any_work_that_has_failed_from_the_list_of_running_work_and_add_the_work_to_the_list_of_failed_work.">Remove any work that has failed from the list of running work and add the work to the list of failed work.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_waiting-1">get_waiting/1</a></h3>
+<div class="spec">
+<p><tt>get_waiting(Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_waiting_work_for_assignment.">Get waiting work for assignment.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Create_a_new_run_queue_from_the_configuration.">Create a new run queue from the configuration.</a></h4>
+</p>
+
+<h3 class="function"><a name="put_done-2">put_done/2</a></h3>
+<div class="spec">
+<p><tt>put_done(WorkTitle, Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Put_work_in_the_done_queue_based_on_the_work_title.">Put work in the done queue based on the work title.</a></h4>
+</p>
+
+<h3 class="function"><a name="put_failed-2">put_failed/2</a></h3>
+<div class="spec">
+<p><tt>put_failed(WorkTitle, Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Put_work_from_running_into_the_failed_queue_based_on_the_work_title.">Put work from running into the failed queue based on the work title.</a></h4>
+</p>
+
+<h3 class="function"><a name="put_running-2">put_running/2</a></h3>
+<div class="spec">
+<p><tt>put_running(WorkState, Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Put_work_in_the_running_queue.">Put work in the running queue.</a></h4>
+</p>
+
+<h3 class="function"><a name="put_waiting-2">put_waiting/2</a></h3>
+<div class="spec">
+<p><tt>put_waiting(WorkState, Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Put_waiting_work_back_into_the_queue">Put waiting work back into the queue</a></h4>
+  (assumes it was from the last get).</p>
+
+<h3 class="function"><a name="remove_idle_work-2">remove_idle_work/2</a></h3>
+<div class="spec">
+<p><tt>remove_idle_work(WorkTitle, Queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_an_idle_work_entry_from_the_run_queue.">Remove an idle work entry from the run queue.</a></h4>
+</p>
+
+<h3 class="function"><a name="remove_work_assignment-2">remove_work_assignment/2</a></h3>
+<div class="spec">
+<p><tt>remove_work_assignment(ProcessName, Run_queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_old_mentions_of_a_work_assignment_in_the_process_names_entry_of_the_run_queue_work_state_record.">Remove old mentions of a work assignment in the process_names entry of the run_queue_work_state record.</a></h4>
+</p>
+
+<h3 class="function"><a name="remove_work_assignments-2">remove_work_assignments/2</a></h3>
+<div class="spec">
+<p><tt>remove_work_assignments(RemainingProcesses, Queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_work_assignments_from_a_list_of_processes.">Remove work assignments from a list of processes.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-2">update/2</a></h3>
+<div class="spec">
+<p><tt>update(ConfigJobs, Queue) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Update_an_old_run_queue_from_the_current_configuration.">Update an old run queue from the current configuration.</a></h4>
+  (merging work)</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 24 2009, 12:49:56.</i></p>
+</body>
+</html>

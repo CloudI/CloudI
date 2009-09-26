@@ -1,0 +1,178 @@
+MODULE
+
+	rbsets
+
+MODULE SUMMARY
+
+	Functions for Manipulating Sets as Red-Black trees
+
+DESCRIPTION
+
+	Sets are collections of elements with no duplicate
+	elements. An rbset is a representation of a set, where a
+	red-back tree is used to store the elements of the set.
+
+	This module provides exactly the same interface as the module
+	sets but with a defined representation. One difference is that
+	while sets considers two elements as different if they do not
+	match (=:=), this module considers two elements as different
+	if and only if they do not compare equal (==).
+
+DATA TYPES
+
+	rb_set()
+	  as returned by new/0
+
+EXPORTS
+
+new() -> Rbset
+
+	Types:
+
+	Rbset = rb_set()
+
+	Returns a new empty ordered set.
+
+is_set(Rbset) -> bool()
+
+	Types:
+
+	Rbset = term()
+
+	Returns true if Rbset is an ordered set of elements, otherwise
+	false.
+
+size(Rbset) -> int()
+
+	Types:
+
+	Rbset = term()
+
+	Returns the number of elements in Rbset.
+
+to_list(Rbset) -> List
+
+	Types:
+
+	Rbset = rb_set()
+	List = [term()]
+
+	Returns the elements of Rbset as a list.
+
+from_list(List) -> Rbset
+
+	Types:
+
+	List = [term()]
+	Rbset = rb_set()
+
+	Returns an ordered set of the elements in List.
+
+is_element(Element, Rbset) -> bool()
+
+	Types:
+
+	Element = term()
+	Rbset = rb_set()
+
+	Returns true if Element is an element of Rbset, otherwise
+	false.
+
+add_element(Element, Rbset1) -> Rbset2
+
+	Types:
+
+	Element = term()
+	Rbset1 = Rbset2 = rb_set()
+
+	Returns a new ordered set formed from Rbset1 with Element inserted.
+
+del_element(Element, Rbset1) -> Rbset2
+
+	Types:
+
+	Element = term()
+	Rbset1 = Rbset2 = rb_set()
+
+	Returns Rbset1, but with Element removed.
+
+union(Rbset1, Rbset2) -> Rbset3
+
+	Types:
+
+	Rbset1 = Rbset2 = Rbset3 = rb_set()
+
+	Returns the merged (union) set of Rbset1 and Rbset2.
+
+union(RbsetList) -> Rbset
+
+	Types:
+
+	RbsetList = [rb_set()]
+	Rbset = rb_set()
+
+	Returns the merged (union) set of the list of sets.
+
+intersection(Rbset1, Rbset2) -> Rbset3
+
+	Types:
+
+	Rbset1 = Rbset2 = Rbset3 = rb_set()
+
+	Returns the intersection of Rbset1 and Rbset2.
+
+intersection(RbsetList) -> Rbset
+
+	Types:
+
+	RbsetList = [rb_set()]
+	Rbset = rb_set()
+
+	Returns the intersection of the non-empty list of sets.
+
+subtract(Rbset1, Rbset2) -> Rbset3
+
+	Types:
+
+	Rbset1 = Rbset2 = Rbset3 = rb_set()
+
+	Returns only the elements of Rbset1 which are not also
+	elements of Rbset2.
+
+is_subset(Rbset1, Rbset2) -> bool()
+
+	Types:
+
+	Rbset1 = Rbset2 = rb_set()
+
+	Returns true when every element of Rbset1 is also a member of
+	Rbset2, otherwise false.
+
+fold(Function, Acc0, Rbset) -> Acc1
+
+	Types:
+
+	Function = fun (E, AccIn) -> AccOut
+	 Acc0 = Acc1 = AccIn = AccOut = term()
+	Rbset = rb_set()
+
+	Fold Function over every element in Rbset returning the final
+	value of the accumulator.
+
+filter(Pred, Rbset1) -> Set2
+
+	Types:
+
+	Pred = fun (E) -> bool()
+	Set1 = Set2 = rb_set()
+
+	Filter elements in Set1 with boolean function Fun.
+
+See Also
+
+gb_sets(3), sets(3), ordsets(3)
+
+AUTHOR
+	Robert Virding - rvirding@gmail.com
+
+	Copyright © 2008 Robert Virding

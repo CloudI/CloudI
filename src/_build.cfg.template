@@ -1,0 +1,43 @@
+project : {
+    name : ##PROJECT_NAME##
+    vsn  : "##VERSION_NAME##"
+},
+
+build : {
+    config : "config/sys.config"
+    flavor : "development"
+},
+
+task : {
+    build : {
+        print_args : true
+    }
+},
+
+tasks : {
+    comment : "compile:build/2 performs compilation on local sinan server"
+    build : {
+        compile_args : "-W2 -v"
+    }
+},
+
+repositories : ["##PROJECT_REPO_URL##"],
+
+build_dir : _build,
+
+ignore_dirs : ["_",
+               ".",
+               "pgsql",
+               "cloud_worker",
+               "cloud_job_tests",
+               "gepd",
+               "ptmalloc",
+               "g++",
+               "boost",
+               "gmp",
+               "asn1"],
+
+ignore_apps : [],
+
+
+

@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module lists_extensions</title>
+<meta http-equiv="Content-Type" content="text/html; charset=ascii" />
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module lists_extensions</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="List_operations">List operations</a></h3>.
+<p>Copyright © 2009 Michael Truog</p>
+
+<p><b>Version:</b> 0.0.2 Sep 24 2009 12:49:55
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="List_operations">List operations</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#iter-3">iter/3</a></td><td>
+  <h4><a name="Iterate_on_elements_of_a_list.">Iterate on elements of a list.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#itera-3">itera/3</a></td><td>
+  <h4><a name="Iterate_on_elements_of_a_list_with_an_accumulator.">Iterate on elements of a list with an accumulator.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#itera2-4">itera2/4</a></td><td>
+  <h4><a name="Iterate_on_elements_of_a_list_with_two_accumulators.">Iterate on elements of a list with two accumulators.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#itera3-5">itera3/5</a></td><td>
+  <h4><a name="Iterate_on_elements_of_a_list_with_three_accumulators.">Iterate on elements of a list with three accumulators.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#keyptake-3">keyptake/3</a></td><td>
+  <h4><a name="lists:keytake/3_with_the_position_index_returned_in_the_value_tuple_if_the_key_is_found.">lists:keytake/3 with the position index returned in the value tuple if the key is found.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#keypttake-4">keypttake/4</a></td><td>
+  <h4><a name="lists:keyptake/3_with_a_positional_tuple_match.">lists:keyptake/3 with a positional tuple match.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#keysort-2">keysort/2</a></td><td>
+  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple.">Sort a list of tuples based on an element (key) in the tuple.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#sort-1">sort/1</a></td><td>
+  <h4><a name="Sort_a_list.">Sort a list.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="iter-3">iter/3</a></h3>
+<div class="spec">
+<p><tt>iter(F, D, T) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Iterate_on_elements_of_a_list.">Iterate on elements of a list.</a></h4>
+</p>
+
+<h3 class="function"><a name="itera-3">itera/3</a></h3>
+<div class="spec">
+<p><tt>itera(F, Acc, T) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Iterate_on_elements_of_a_list_with_an_accumulator.">Iterate on elements of a list with an accumulator.</a></h4>
+</p>
+
+<h3 class="function"><a name="itera2-4">itera2/4</a></h3>
+<div class="spec">
+<p><tt>itera2(F, Acc0, Acc1, T) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Iterate_on_elements_of_a_list_with_two_accumulators.">Iterate on elements of a list with two accumulators.</a></h4>
+</p>
+
+<h3 class="function"><a name="itera3-5">itera3/5</a></h3>
+<div class="spec">
+<p><tt>itera3(F, Acc0, Acc1, Acc2, T) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Iterate_on_elements_of_a_list_with_three_accumulators.">Iterate on elements of a list with three accumulators.</a></h4>
+</p>
+
+<h3 class="function"><a name="keyptake-3">keyptake/3</a></h3>
+<div class="spec">
+<p><tt>keyptake(Key, N, L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="lists:keytake/3_with_the_position_index_returned_in_the_value_tuple_if_the_key_is_found.">lists:keytake/3 with the position index returned in the value tuple if the key is found.</a></h4>
+</p>
+
+<h3 class="function"><a name="keypttake-4">keypttake/4</a></h3>
+<div class="spec">
+<p><tt>keypttake(Key, N, Match, L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="lists:keyptake/3_with_a_positional_tuple_match.">lists:keyptake/3 with a positional tuple match.</a></h4>
+</p>
+
+<h3 class="function"><a name="keysort-2">keysort/2</a></h3>
+<div class="spec">
+<p><tt>keysort(I, L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple.">Sort a list of tuples based on an element (key) in the tuple.</a></h4>
+</p>
+
+<h3 class="function"><a name="sort-1">sort/1</a></h3>
+<div class="spec">
+<p><tt>sort(L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Sort_a_list.">Sort a list.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 24 2009, 12:49:55.</i></p>
+</body>
+</html>

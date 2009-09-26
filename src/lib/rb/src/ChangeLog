@@ -1,0 +1,8 @@
+2009-05-08  Robert Virding  <rv@arthur>
+
+	* rbdict.erl (find): Fixed loop bug.
+
+2009-05-07  Robert Virding  <rv@arthur>
+
+	* rbdict.erl, rbsets.erl: Initial release.
+

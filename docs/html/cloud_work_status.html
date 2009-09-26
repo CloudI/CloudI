@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module cloud_work_status</title>
+<meta http-equiv="Content-Type" content="text/html; charset=ascii" />
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloud_work_status</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Cloudi_Work_Status">Cloudi Work Status</a></h3>.
+<p>Copyright © 2009 Michael Truog</p>
+
+<p><b>Version:</b> 0.0.2 Sep 24 2009 12:49:56
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Cloudi_Work_Status">Cloudi Work Status</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#drain_output-2">drain_output/2</a></td><td>
+  <h4><a name="Determine_all_task_(work_title)_output_that_is_ready_to_be_consumed_in_the_order_defined_by_the_sequence_number">Determine all task (work title) output that is ready to be consumed in the order defined by the sequence number</a></h4>
+  (missing sequence numbers will prevent other data from being consumed).</td></tr>
+<tr><td valign="top"><a href="#get_cached_task-3">get_cached_task/3</a></td><td>
+  <h4><a name="Get_the_cached_task_that_was_stored_when_a_sequence_number_was_assigned.">Get the cached task that was stored when a sequence number was assigned.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_sequence_number-4">get_sequence_number/4</a></td><td>
+  <h4><a name="Get_the_external_sequence_number_when_given_a_type_of_work_(work_title,_or_task)_and_the_worker_process_index.">Get the external sequence number when given a type of work (work title, or task) and the worker process index.</a></h4>
+  The sequence number is saved in the work status as a "cached status"
+  so it can be recovered if the worker dies or fails in some way.</td></tr>
+<tr><td valign="top"><a href="#has_active_work-2">has_active_work/2</a></td><td>
+  <h4><a name="Check_if_the_work_title_is_marked_as_active_within_the_work_status.">Check if the work title is marked as active within the work status.</a></h4>
+  Work goes inactive if data modules are unable
+  to consume all the data (to prevent extreme memory consumption from
+  accumulating garbage).</td></tr>
+<tr><td valign="top"><a href="#has_work-2">has_work/2</a></td><td>
+  <h4><a name="Determine_if_the_work_status_contains_information_for_a_work_title.">Determine if the work status contains information for a work title.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_inactive_work-2">is_inactive_work/2</a></td><td>
+  <h4><a name="Set_the_work_to_inactive_because_the_work_type_(work_title)_appears_to_be_done_or_failed.">Set the work to inactive because the work type (work title) appears to be done or failed.</a></h4>
+  Output will still be accepted and successfully
+  draining the output makes the work active, so it is likely this will
+  be called more than once for the same work type.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Get_a_new_work_status_record.">Get a new work status record.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#output_length-1">output_length/1</a></td><td>
+  <h4><a name="Determine_the_length_of_the_output_queue_for_all_work_present_in_the_work_status.">Determine the length of the output queue for all work present in the work status.</a></h4>
+  The count returned only reflects the number of tasks
+  that have data stored after completing successfully.</td></tr>
+<tr><td valign="top"><a href="#set_cached_task-4">set_cached_task/4</a></td><td>
+  <h4><a name="Update_the_cached_task_stored_for_a_type_of_work_(work_title,_or_task)_and_the_worker_process_index.">Update the cached task stored for a type of work (work title, or task) and the worker process index.</a></h4>
+  The data defining the task can be recovered if the
+  worker dies or fails in some way.</td></tr>
+<tr><td valign="top"><a href="#store_output-5">store_output/5</a></td><td>
+  <h4><a name="Store_the_output_(list_of_data_repository_(database)_queries)_for_a_successfully_completed_task_with_the_unwrapped_sequence_number.">Store the output (list of data repository (database) queries) for a successfully completed task with the unwrapped sequence number.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-2">update/2</a></td><td>
+  <h4><a name="Update_the_work_status_with_information_from_new_processes.">Update the work status with information from new processes.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="drain_output-2">drain_output/2</a></h3>
+<div class="spec">
+<p><tt>drain_output(WorkStatus, DataTypeLookup) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Determine_all_task_(work_title)_output_that_is_ready_to_be_consumed_in_the_order_defined_by_the_sequence_number">Determine all task (work title) output that is ready to be consumed in the order defined by the sequence number</a></h4>
+  (missing sequence numbers will prevent other data from being consumed).
+  All the output is passed to the data module responsible for it based
+  on the data title ("DATA_MODULE.DATABASE_NAME").  If the data modules
+  fail to process all the output successfully, the associated task will
+  become inactive to prevent excessive memory consumption.</p>
+
+<h3 class="function"><a name="get_cached_task-3">get_cached_task/3</a></h3>
+<div class="spec">
+<p><tt>get_cached_task(WorkTitle, Id, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_cached_task_that_was_stored_when_a_sequence_number_was_assigned.">Get the cached task that was stored when a sequence number was assigned.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_sequence_number-4">get_sequence_number/4</a></h3>
+<div class="spec">
+<p><tt>get_sequence_number(WorkTitle, Id, Node, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_external_sequence_number_when_given_a_type_of_work_(work_title,_or_task)_and_the_worker_process_index.">Get the external sequence number when given a type of work (work title, or task) and the worker process index.</a></h4>
+  The sequence number is saved in the work status as a "cached status"
+  so it can be recovered if the worker dies or fails in some way.</p>
+
+<h3 class="function"><a name="has_active_work-2">has_active_work/2</a></h3>
+<div class="spec">
+<p><tt>has_active_work(WorkTitle, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Check_if_the_work_title_is_marked_as_active_within_the_work_status.">Check if the work title is marked as active within the work status.</a></h4>
+  Work goes inactive if data modules are unable
+  to consume all the data (to prevent extreme memory consumption from
+  accumulating garbage).</p>
+
+<h3 class="function"><a name="has_work-2">has_work/2</a></h3>
+<div class="spec">
+<p><tt>has_work(WorkTitle, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Determine_if_the_work_status_contains_information_for_a_work_title.">Determine if the work status contains information for a work title.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_inactive_work-2">is_inactive_work/2</a></h3>
+<div class="spec">
+<p><tt>is_inactive_work(WorkTitle, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Set_the_work_to_inactive_because_the_work_type_(work_title)_appears_to_be_done_or_failed.">Set the work to inactive because the work type (work title) appears to be done or failed.</a></h4>
+  Output will still be accepted and successfully
+  draining the output makes the work active, so it is likely this will
+  be called more than once for the same work type.  After all the output
+  is collected, the request to make the work inactive removes the entry
+  from the work status.</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_new_work_status_record.">Get a new work status record.</a></h4>
+</p>
+
+<h3 class="function"><a name="output_length-1">output_length/1</a></h3>
+<div class="spec">
+<p><tt>output_length(WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Determine_the_length_of_the_output_queue_for_all_work_present_in_the_work_status.">Determine the length of the output queue for all work present in the work status.</a></h4>
+  The count returned only reflects the number of tasks
+  that have data stored after completing successfully.  The count
+  does not reflect the number of queries stored, since they are all
+  nested within the output for each task.</p>
+
+<h3 class="function"><a name="set_cached_task-4">set_cached_task/4</a></h3>
+<div class="spec">
+<p><tt>set_cached_task(WorkTitle, Id, Task, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Update_the_cached_task_stored_for_a_type_of_work_(work_title,_or_task)_and_the_worker_process_index.">Update the cached task stored for a type of work (work title, or task) and the worker process index.</a></h4>
+  The data defining the task can be recovered if the
+  worker dies or fails in some way.</p>
+
+<h3 class="function"><a name="store_output-5">store_output/5</a></h3>
+<div class="spec">
+<p><tt>store_output(WorkTitle, Id, SequenceNumber, Output, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Store_the_output_(list_of_data_repository_(database)_queries)_for_a_successfully_completed_task_with_the_unwrapped_sequence_number.">Store the output (list of data repository (database) queries) for a successfully completed task with the unwrapped sequence number.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-2">update/2</a></h3>
+<div class="spec">
+<p><tt>update(Processes, WorkStatus) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Update_the_work_status_with_information_from_new_processes.">Update the work status with information from new processes.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 24 2009, 12:49:56.</i></p>
+</body>
+</html>
