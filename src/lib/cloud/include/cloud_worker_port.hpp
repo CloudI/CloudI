@@ -52,6 +52,7 @@
 
 // define all interface functions that will be used by the Erlang port
 #define PORT_FUNCTIONS \
+    ((  keep_alive, 0, (),                                              bool)) \
     ((worker_start, 5, (pchar_len,pchar_len,pchar_len,int32_t,int16_t), bool)) \
     ((worker_start, 4, (pchar_len,pchar_len,int32_t,int16_t),           bool)) \
     (( worker_stop, 0, (),                                              bool)) \

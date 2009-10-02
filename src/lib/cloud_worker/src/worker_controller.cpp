@@ -188,6 +188,7 @@ int WorkerController::receive(int fd)
                 return ExitStatus::controller_alloc;
             case EIO:
                 // I/O error.
+                // This occurs when the node connected to the cnode dies
                 return ExitStatus::node_receive_EIO;
             case ETIMEDOUT:
                 // Timed out (should be with ei_receive_tmo() only though)

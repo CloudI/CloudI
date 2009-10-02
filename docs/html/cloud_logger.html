@@ -14,7 +14,7 @@
    <h3><a name="Cloudi_Logger">Cloudi Logger</a></h3>.
 <p>Copyright © 2009 Michael Truog</p>
 
-<p><b>Version:</b> 0.0.2 Sep 24 2009 12:49:56
+<p><b>Version:</b> 0.0.3 Sep 29 2009 14:25:25
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -24,31 +24,33 @@
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#critical-4">critical/4</a></td><td>
-  <h4><a name="Critical_log_message_without_arguments,">Critical log message without arguments,</a></h4>
+<tr><td valign="top"><a href="#critical-5">critical/5</a></td><td>
+  <h4><a name="Critical_log_message,">Critical log message,</a></h4>
   which indicates the system has failed and can not continue.</td></tr>
-<tr><td valign="top"><a href="#debug-4">debug/4</a></td><td>
-  <h4><a name="Debug_log_message_without_arguments,">Debug log message without arguments,</a></h4>
+<tr><td valign="top"><a href="#debug-5">debug/5</a></td><td>
+  <h4><a name="Debug_log_message,">Debug log message,</a></h4>
   which reports subsystem data that should be useful for debugging.</td></tr>
-<tr><td valign="top"><a href="#error-4">error/4</a></td><td>
-  <h4><a name="Error_log_message_without_arguments,">Error log message without arguments,</a></h4>
+<tr><td valign="top"><a href="#error-5">error/5</a></td><td>
+  <h4><a name="Error_log_message,">Error log message,</a></h4>
   which indicates a subsystem has failed but the failure is not critical.</td></tr>
 <tr><td valign="top"><a href="#flush-0">flush/0</a></td><td>
   <h4><a name="Flush_all_logging_data_to_the_log_file.">Flush all logging data to the log file.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#info-4">info/4</a></td><td>
-  <h4><a name="Info_log_message_without_arguments,">Info log message without arguments,</a></h4>
+<tr><td valign="top"><a href="#info-5">info/5</a></td><td>
+  <h4><a name="Info_log_message,">Info log message,</a></h4>
   which indicates a subsystem has changed state.</td></tr>
 <tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#load_interface_module-1">load_interface_module/1</a></td><td>
+  <h4><a name="Load_the_binary_for_the_logger_interface_module.">Load the binary for the logger interface module.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#reopen-0">reopen/0</a></td><td>
   <h4><a name="Reopen_the_log_files_so_that_they_can_be_rotated_elsewhere.">Reopen the log files so that they can be rotated elsewhere.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>
   <h4><a name="Start_the_logging_server_with_the_supplied_configuration.">Start the logging server with the supplied configuration.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#warning-4">warning/4</a></td><td>
-  <h4><a name="Warning_log_message_without_arguments,">Warning log message without arguments,</a></h4>
+<tr><td valign="top"><a href="#warning-5">warning/5</a></td><td>
+  <h4><a name="Warning_log_message,">Warning log message,</a></h4>
   which indicates an unexpected occurance was found in a subsystem.</td></tr>
 </table>
 
@@ -59,27 +61,27 @@
 <p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="critical-4">critical/4</a></h3>
+<h3 class="function"><a name="critical-5">critical/5</a></h3>
 <div class="spec">
-<p><tt>critical(Module, Line, Format, Args) -&gt; any()</tt></p>
+<p><tt>critical(Process, Module, Line, Format, Args) -&gt; any()</tt></p>
 </div><p>
-  <h4><a name="Critical_log_message_without_arguments,">Critical log message without arguments,</a></h4>
+  <h4><a name="Critical_log_message,">Critical log message,</a></h4>
   which indicates the system has failed and can not continue.
   Called with ?LOG_CRITICAL(Format, []).</p>
 
-<h3 class="function"><a name="debug-4">debug/4</a></h3>
+<h3 class="function"><a name="debug-5">debug/5</a></h3>
 <div class="spec">
-<p><tt>debug(Module, Line, Format, Args) -&gt; any()</tt></p>
+<p><tt>debug(Process, Module, Line, Format, Args) -&gt; any()</tt></p>
 </div><p>
-  <h4><a name="Debug_log_message_without_arguments,">Debug log message without arguments,</a></h4>
+  <h4><a name="Debug_log_message,">Debug log message,</a></h4>
   which reports subsystem data that should be useful for debugging.
   Called with ?LOG_DEBUG(Format, []).</p>
 
-<h3 class="function"><a name="error-4">error/4</a></h3>
+<h3 class="function"><a name="error-5">error/5</a></h3>
 <div class="spec">
-<p><tt>error(Module, Line, Format, Args) -&gt; any()</tt></p>
+<p><tt>error(Process, Module, Line, Format, Args) -&gt; any()</tt></p>
 </div><p>
-  <h4><a name="Error_log_message_without_arguments,">Error log message without arguments,</a></h4>
+  <h4><a name="Error_log_message,">Error log message,</a></h4>
   which indicates a subsystem has failed but the failure is not critical.
   Called with ?LOG_ERROR(Format, []).</p>
 
@@ -105,11 +107,11 @@
 <p><tt>handle_info(Request, State) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="info-4">info/4</a></h3>
+<h3 class="function"><a name="info-5">info/5</a></h3>
 <div class="spec">
-<p><tt>info(Module, Line, Format, Args) -&gt; any()</tt></p>
+<p><tt>info(Process, Module, Line, Format, Args) -&gt; any()</tt></p>
 </div><p>
-  <h4><a name="Info_log_message_without_arguments,">Info log message without arguments,</a></h4>
+  <h4><a name="Info_log_message,">Info log message,</a></h4>
   which indicates a subsystem has changed state.
   Called with ?LOG_INFO(Format, []).</p>
 
@@ -117,6 +119,13 @@
 <div class="spec">
 <p><tt>init(X1) -&gt; any()</tt></p>
 </div>
+
+<h3 class="function"><a name="load_interface_module-1">load_interface_module/1</a></h3>
+<div class="spec">
+<p><tt>load_interface_module(Node) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Load_the_binary_for_the_logger_interface_module.">Load the binary for the logger interface module.</a></h4>
+</p>
 
 <h3 class="function"><a name="reopen-0">reopen/0</a></h3>
 <div class="spec">
@@ -137,16 +146,16 @@
 <p><tt>terminate(X1, State) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="warning-4">warning/4</a></h3>
+<h3 class="function"><a name="warning-5">warning/5</a></h3>
 <div class="spec">
-<p><tt>warning(Module, Line, Format, Args) -&gt; any()</tt></p>
+<p><tt>warning(Process, Module, Line, Format, Args) -&gt; any()</tt></p>
 </div><p>
-  <h4><a name="Warning_log_message_without_arguments,">Warning log message without arguments,</a></h4>
+  <h4><a name="Warning_log_message,">Warning log message,</a></h4>
   which indicates an unexpected occurance was found in a subsystem.
   Called with ?LOG_WARNING(Format, []).</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Sep 24 2009, 12:49:56.</i></p>
+<p><i>Generated by EDoc, Sep 29 2009, 14:25:25.</i></p>
 </body>
 </html>

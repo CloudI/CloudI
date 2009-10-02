@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_nodes).
@@ -70,7 +70,8 @@
          allocate_work/2,
          restart_workers/1,
          workers_died/3,
-         work_data_done/3]).
+         work_data_done/3,
+         nodedown_occurred/3]).
 
 -include("cloud_configuration.hrl").
 -include("cloud_run_queue.hrl").
@@ -227,7 +228,7 @@ add_machine(C, UseLongName, #state{machine_states = MachineStates} = State) ->
             if
                 Running == ok ->
                     ?LOG_DEBUG("added machine ~p",
-                        [C#config_machine.node_name]),
+                               [C#config_machine.node_name]),
                     {ok,
                      State#state{machine_states = MachineStates ++ Machine}};
                 true ->
@@ -264,15 +265,7 @@ remove_machine_request(Process, HostName)
 remove_machine(HostName, 
                #state{machine_states = MachineStates,
                       run_queue_work_state_processes = Processes} = State) ->
-    case lists_extensions:iter(
-        fun(#machine_state{node = Node} = M, Iter) ->
-            case string_extensions:after_character($@, atom_to_list(Node)) of
-                HostName ->
-                    M;
-                _ ->
-                    Iter()
-            end
-        end, undefined, MachineStates) of
+    case find_machine_state(HostName, MachineStates) of
         undefined ->
             {{error, "invalid machine hostname"}, State};
         #machine_state{node_state = error} = M ->
@@ -320,7 +313,10 @@ remove_machine(HostName,
 -spec stop_request(Process :: pid() | atom() | {atom(), atom()}) -> 'ok'.
 
 stop_request(Process) ->
-    gen_server:call(Process, stop, 15000).
+    % other timeouts will ensure that the synchronous call terminates
+    % however, it could take 5 seconds per process if all the work types
+    % are not respecting the stopProcessing boolean flag for their thread.
+    gen_server:call(Process, stop, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -543,7 +539,7 @@ restart_workers(#state{machine_states = MachineStates} = State) ->
             if
                 ErroneousNames == NewErroneousNames ->
                     ?LOG_WARNING("erroneous node(s) unable to restart: ~p",
-                        [ErroneousNames]),
+                                 [ErroneousNames]),
                     RestartedMachines;
                 true ->
                     erlang:element(2, start_machines(RestartedMachines))
@@ -574,7 +570,7 @@ workers_died(Pid, Reason, #state{machine_states = MachineStates} = State) ->
             State;
         Machine when is_record(Machine, machine_state) ->
             ?LOG_ERROR("cloud_worker_port_sup ~p died on node ~p: ~p",
-                [Pid, node(Pid), Reason]),
+                       [Pid, node(Pid), Reason]),
             State#state{machine_states =
                 lists:keyreplace(Pid, #machine_state.worker_port_sup,
                     MachineStates, start_machine(Machine)
@@ -600,13 +596,59 @@ work_data_done(WorkTitle,
     if
         erlang:length(IdleProcesses) > 0 ->
             ?LOG_INFO("~p workers are now idle",
-                [erlang:length(IdleProcesses)]),
+                      [erlang:length(IdleProcesses)]),
             % immediately try to schedule other work from the waiting queue
             self() ! allocate_work,
             {State#state{run_queue_work_state_processes =
                 Processes ++ IdleProcesses}, NewS};
         true ->
             {State, NewS}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Node monitor message handling for nodedown.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodedown_occurred(Node :: atom(),
+                        InfoList :: list({atom(), atom()}),
+                        State :: #state{}) ->
+    #state{}.
+
+nodedown_occurred(Node, InfoList,
+                  #state{machine_states = MachineStates} = State)
+    when is_atom(Node), is_list(InfoList) ->
+    {NodeName, HostName} =
+        string_extensions:split_on_character($@, atom_to_list(Node)),
+    NewMachineStates = update_machine_state_by_hostname(fun(M) ->
+        if
+            M#machine_state.node_state == error ->
+                M;
+            M#machine_state.node == Node ->
+                % breaking the link to the cloud_worker_port_sup
+                % is always detected before a nodedown is sent
+                % (so this may rarely, if ever happen)
+                restart_peer_node(erl_peer_program(),
+                    erl_peer_command_line_args(erlang:get_cookie()), M);
+            true ->
+                case cloud_worker_port_sup:get_cworker_index(NodeName) of
+                    error ->
+                        ?LOG_ERROR("unknown node ~p is down: ~p",
+                                   [Node, InfoList]);
+                    Index ->
+                        cloud_worker_port_sup:restart_port(
+                            {cloud_worker_port_sup:get_worker(Index),
+                             M#machine_state.node})
+                end,
+                M
+        end
+    end, HostName, MachineStates),
+    if
+        NewMachineStates == error ->
+            State;
+        true ->
+            State#state{machine_states = NewMachineStates}
     end.
 
 %%%------------------------------------------------------------------------
@@ -703,6 +745,34 @@ get_machine_states(MachineStates, [M | MachineConfigs], Entries,
         Cookie, LongNamesUsed, HostName,
         PeerProgram, PeerArgs).
 
+%% search for a node in the machine states when given a hostname
+find_machine_state(_, []) ->
+    undefined;
+find_machine_state(HostName, [#machine_state{node = Node} = M | MachineStates])
+    when is_list(HostName) ->
+    case string_extensions:after_character($@, atom_to_list(Node)) of
+        HostName ->
+            M;
+        _ ->
+            find_machine_state(HostName, MachineStates)
+    end.
+
+%% update a machine_state entry based on a hostname
+update_machine_state_by_hostname(F, HostName, MachineStates)
+    when is_function(F, 1), is_list(HostName), is_list(MachineStates) ->
+    update_machine_state_by_hostname(F, HostName, [], MachineStates).
+update_machine_state_by_hostname(_, _, _, []) ->
+    error;
+update_machine_state_by_hostname(F, HostName, CheckedMachineStates,
+    [#machine_state{node = Node} = M | RemainingMachineStates]) ->
+    case string_extensions:after_character($@, atom_to_list(Node)) of
+        HostName ->
+            CheckedMachineStates ++ [F(M) | RemainingMachineStates];
+        _ ->
+            update_machine_state_by_hostname(F, HostName,
+                CheckedMachineStates ++ [M], RemainingMachineStates)
+    end.
+
 %% cloud_peer:start program to setup the erlang environment
 erl_peer_program() ->
     {ok, CurrentWorkingDirectory} = file:get_cwd(),
@@ -744,6 +814,7 @@ start_machine(Machine) when is_record(Machine, machine_state) ->
         Machine#machine_state.node_state == ok ->
             % start the remote supervisor for port processes
             case cloud_worker_port_sup:start_link(
+                Machine#machine_state.worker_port_sup,
                 Machine#machine_state.node) of
                 {ok, Pid} when is_pid(Pid) ->
                     % start all the remote port process
@@ -755,13 +826,12 @@ start_machine(Machine) when is_record(Machine, machine_state) ->
                             Machine#machine_state{worker_port_sup = Pid};
                         error ->
                             Machine#machine_state{node_state = error,
-                                                  worker_port_sup = undefined}
+                                                  worker_port_sup = Pid}
                     end;
                 {error, Reason} ->
                     ?LOG_ERROR("~p failed to start worker supervisor: ~p",
-                        [Machine#machine_state.node, Reason]),
-                    Machine#machine_state{node_state = error,
-                                          worker_port_sup = undefined}
+                               [Machine#machine_state.node, Reason]),
+                    Machine#machine_state{node_state = error}
             end;
         true ->
             Machine % ignore dead node
@@ -798,27 +868,39 @@ restart_peer_nodes([MainMachine | MachineStates])
 %% (i.e., reconnect and re-spawn the Erlang VM, if necessary)
 restart_peer_node(PeerProgram, PeerArgs, Machine)
     when is_record(Machine, machine_state) ->
-    PeerStartResult = case Machine#machine_state.node_name_parsed of
-        {PeerName, PeerHostName, PeerDomain} ->
-            cloud_peer:start(PeerHostName ++ "." ++ PeerDomain, PeerName,
-                             PeerArgs, PeerProgram,
-                             ?CLOUD_PEER_START_TIMEOUT);
-        {PeerName, PeerHostName} ->
-            cloud_peer:start(PeerHostName, PeerName,
-                             PeerArgs, PeerProgram,
-                             ?CLOUD_PEER_START_TIMEOUT)
-    end,
-    {State, Node} = case PeerStartResult of
-        {ok, PeerNode} ->
-            {ok, PeerNode};
-        {error, {already_running, PeerNode}} ->
-            {ok, PeerNode};
-        {error, Reason} ->
-            ?LOG_ERROR("cloud_peer:start of ~p failed: ~p",
-                [Machine#machine_state.node, Reason]),
-            {error, Machine#machine_state.node}
-    end,
-    Machine#machine_state{node = Node, node_state = State}.
+    case net_kernel:connect(Machine#machine_state.node) of
+        true ->
+            if
+                Machine#machine_state.node_state == error ->
+                    ?LOG_ERROR("reconnected ~p node",
+                               [Machine#machine_state.node]),
+                    Machine#machine_state{node_state = ok};
+                true ->
+                    Machine
+            end;
+        _ ->
+            PeerStartResult = case Machine#machine_state.node_name_parsed of
+                {PeerName, PeerHostName, PeerDomain} ->
+                    cloud_peer:start(PeerHostName ++ "." ++ PeerDomain,
+                                     PeerName, PeerArgs, PeerProgram,
+                                     ?CLOUD_PEER_START_TIMEOUT);
+                {PeerName, PeerHostName} ->
+                    cloud_peer:start(PeerHostName,
+                                     PeerName, PeerArgs, PeerProgram,
+                                     ?CLOUD_PEER_START_TIMEOUT)
+            end,
+            {State, Node} = case PeerStartResult of
+                {ok, PeerNode} ->
+                    {ok, PeerNode};
+                {error, {already_running, PeerNode}} ->
+                    {ok, PeerNode};
+                {error, Reason} ->
+                    ?LOG_ERROR("cloud_peer:start of ~p failed: ~p",
+                               [Machine#machine_state.node, Reason]),
+                    {error, Machine#machine_state.node}
+            end,
+            Machine#machine_state{node = Node, node_state = State}
+    end.
 
 %% halt all the nodes
 halt_all_nodes([MainMachine | PeerNodes] = AllMachines)
@@ -837,7 +919,7 @@ halt_all_nodes([MainMachine | PeerNodes] = AllMachines)
                             % abortTask variable
                             cloud_worker_port_sup:stop_port(Process),
                             ?LOG_WARNING("forced exit of ~p on ~p",
-                                [WorkerId, Machine#machine_state.node])
+                                         [WorkerId, Machine#machine_state.node])
                     end
                 end, lists:seq(1, Machine#machine_state.processes));
             true ->
@@ -880,9 +962,10 @@ worker_node_ready(
                     % (and state will be reset as necessary)
                     true;
                 true ->
-                    WorkerIndex = cloud_worker_port_sup:get_index(Name),
+                    WorkerIndex = cloud_worker_port_sup:get_worker_index(Name),
+                    true = is_integer(WorkerIndex),
                     % to make sure this is a new instance, stop before starting
-                    cloud_worker_port:worker_stop({Name, Node}),
+                    cloud_worker_port:worker_stop_proxy({Name, Node}),
                     % iterate over the possible worker port numbers
                     lists_extensions:iter(fun(PortIndex, Itr) ->
                         % net_kernel:connect_node/1 is called

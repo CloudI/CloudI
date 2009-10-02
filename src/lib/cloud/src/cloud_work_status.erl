@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_status).
@@ -55,6 +55,7 @@
          has_work/2,
          has_active_work/2, is_inactive_work/2,
          get_sequence_number/4,
+         has_cached_task/3,
          get_cached_task/3, set_cached_task/4, 
          output_length/1, store_output/5, drain_output/2]).
 
@@ -131,6 +132,9 @@ update([FirstProcess | _] = Processes, WorkStatus)
             {ok, #work_status{concurrent_tasks = CurrentTasks} = W} =
                 rbdict:find(WorkTitle, D4),
             rbdict:store(WorkTitle, W#work_status{
+                % make everything is active again
+                % in case processes were restarted
+                active = true,
                 concurrent_tasks = CurrentTasks + Threads}, D4)
         end, D3, P#run_queue_work_state_process.assignments)
     end, CleanedWorkStatus, Processes).
@@ -254,6 +258,26 @@ get_sequence_number(WorkTitle, Id, Node, WorkStatus)
         error ->
             ?LOG_CRITICAL("unable to find work title ~p ", [WorkTitle]),
             error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check to make sure the cached task exists.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec has_cached_task(WorkTitle :: string(),
+                      Id :: non_neg_integer(),
+                      WorkStatus :: rbdict()) ->
+    bool().
+
+has_cached_task(WorkTitle, Id, WorkStatus)
+    when is_list(WorkTitle), is_integer(Id) ->
+    case rbdict:find(WorkTitle, WorkStatus) of
+        {ok, #work_status{working = SequenceLookup} = Status} ->
+            rbdict:is_key(Id, SequenceLookup);
+        error ->
+            false
     end.
 
 %%-------------------------------------------------------------------------

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_port).
@@ -53,8 +53,14 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/3]).
--export([worker_start_proxy/4]).
+-export([worker_start_proxy/4,
+         worker_stop_proxy/1,
+         has_work_proxy/4,
+         add_work_proxy/4,
+         remove_work_proxy/2]).
+-export([start_link/2,
+         acquire_as_new_process/2,
+         acquire_as_old_process/2]).
 
 %% gen_server callbacks
 -export([init/1, 
@@ -64,12 +70,14 @@
 -include("cloud_worker_port.hrl").
 -include("cloud_logger.hrl").
 
+% checks to make sure the port is still responding
+-define(WORKER_KEEP_ALIVE_INTERVAL, 60000). % 60 seconds
+
 -record(state,
     {
     process_name = undefined,
-    cnode_name = "",
-    host_name = "",
     master = {undefined, undefined},
+    keep_alive_timer = undefined,
     port_file_name = "",
     port = undefined}).
 
@@ -88,23 +96,31 @@
                          Port :: pos_integer(),
                          Instance :: non_neg_integer()) -> bool().
 
-worker_start_proxy(Process, CNodeName, Port, Instance)
-    when is_tuple(Process), is_list(CNodeName), is_integer(Port),
-         is_integer(Instance) ->
-    HostName = case Process of
-        %P when is_pid(P) ->
-        %    string_extensions:after_character($@, atom_to_list(node(P)));
-        {_, Node} ->
-            string_extensions:after_character($@, atom_to_list(Node))
-    end,
+worker_start_proxy({Name, Node} = Process, CNodeName, Port, Instance)
+    when is_list(CNodeName), is_integer(Port), is_integer(Instance) ->
     % shortname start function, doesn't include domain XXX
-    Started = case worker_start(Process,
+    HostName = string_extensions:after_character($@, atom_to_list(Node)),
+    Started = try worker_start(Process,
         CNodeName, atom_to_list(erlang:get_cookie()), Port, Instance) of
         {ok, Running} ->
             Running;
+        {error, {exit_status, Status}} ->
+            ?LOG_ERROR("port exited with ~s when "
+                       "unable to start worker ~p on ~p",
+                       [exit_status_to_list(Status), Name, Node]),
+            false;
         {error, Reason} ->
-            ?LOG_ERROR("unable to start worker ~s@~s: ~p", [
-                       CNodeName, HostName, Reason]),
+            ?LOG_ERROR("unable to start worker ~p on ~p: ~p",
+                       [Name, Node, Reason]),
+            false
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("start worker ~p on ~p timeout",
+                       [Name, Node]),
+            false;
+        _:Reason ->
+            ?LOG_ERROR("unable to start worker ~p on ~p: ~P",
+                       [Name, Node, Reason, 3]),
             false
     end,
     if
@@ -125,37 +141,238 @@ worker_start_proxy(Process, CNodeName, Port, Instance)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Stop running Erlang cnode worker.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec worker_stop_proxy(Process :: {atom(), atom()}) ->
+    {'ok', bool()} |
+    {'error', any()}.
+
+worker_stop_proxy({Name, Node} = Process) ->
+    try worker_stop(Process) of
+        {ok, _} = Result ->
+            Result;
+        {error, {exit_status, Status}} = Result ->
+            ?LOG_ERROR("port exited with ~s when "
+                       "unable to stop worker ~p on ~p",
+                       [exit_status_to_list(Status), Name, Node]),
+            Result;
+        {error, Reason} = Result ->
+            ?LOG_ERROR("unable to stop worker ~p on ~p: ~p",
+                       [Name, Node, Reason]),
+            Result
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("stop worker ~p on ~p timeout",
+                       [Name, Node]),
+            {error, timeout};
+        _:Reason ->
+            ?LOG_ERROR("unable to stop worker ~p on ~p: ~P",
+                       [Name, Node, Reason, 3]),
+            {error, Reason}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Verify a work assignment on the running worker.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec has_work_proxy(Process :: {atom(), atom()},
+                     WorkTitle :: string(),
+                     TaskIdOffset :: non_neg_integer(),
+                     ConcurrentTasks :: pos_integer()) ->
+    {'ok', bool()} |
+    {'error', any()}.
+
+has_work_proxy({Name, Node} = Process, WorkTitle, TaskIdOffset, ConcurrentTasks)
+    when is_list(WorkTitle), is_integer(TaskIdOffset),
+         is_integer(ConcurrentTasks) ->
+    try has_work(Process, WorkTitle, TaskIdOffset, ConcurrentTasks) of
+        {ok, _} = Result ->
+            Result;
+        {error, {exit_status, Status}} = Result ->
+            ?LOG_ERROR("port exited with ~s when "
+                       "has_work on worker ~p on ~p failed",
+                       [exit_status_to_list(Status), Name, Node]),
+            Result;
+        {error, Reason} = Result ->
+            ?LOG_ERROR("has_work on worker ~p on ~p failed: ~p",
+                       [Name, Node, Reason]),
+            Result
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("has_work on worker ~p on ~p timeout",
+                       [Name, Node]),
+            {error, timeout};
+        _:Reason ->
+            ?LOG_ERROR("has_work on worker ~p on ~p failed: ~P",
+                       [Name, Node, Reason, 3]),
+            {error, Reason}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add a work assignment to the running worker.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_work_proxy(Process :: {atom(), atom()},
+                     WorkTitle :: string(),
+                     TaskIdOffset :: non_neg_integer(),
+                     ConcurrentTasks :: pos_integer()) ->
+    {'ok', bool()} |
+    {'error', any()}.
+
+add_work_proxy({Name, Node} = Process, WorkTitle, TaskIdOffset, ConcurrentTasks)
+    when is_list(WorkTitle), is_integer(TaskIdOffset),
+         is_integer(ConcurrentTasks) ->
+    try add_work(Process, WorkTitle, TaskIdOffset, ConcurrentTasks) of
+        {ok, _} = Result ->
+            Result;
+        {error, {exit_status, Status}} = Result ->
+            ?LOG_ERROR("port exited with ~s when "
+                       "add_work on worker ~p on ~p failed",
+                       [exit_status_to_list(Status), Name, Node]),
+            Result;
+        {error, Reason} = Result ->
+            ?LOG_ERROR("add_work on worker ~p on ~p failed: ~p",
+                       [Name, Node, Reason]),
+            Result
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("add_work on worker ~p on ~p timeout",
+                       [Name, Node]),
+            {error, timeout};
+        _:Reason ->
+            ?LOG_ERROR("add_work on worker ~p on ~p failed: ~P",
+                       [Name, Node, Reason, 3]),
+            {error, Reason}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove a work assignment from the running worker.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec remove_work_proxy(Process :: {atom(), atom()},
+                        WorkTitle :: string()) ->
+    {'ok', bool()} |
+    {'error', any()}.
+
+remove_work_proxy({Name, Node} = Process, WorkTitle)
+    when is_list(WorkTitle) ->
+    try remove_work(Process, WorkTitle) of
+        {ok, _} = Result ->
+            Result;
+        {error, {exit_status, Status}} = Result ->
+            ?LOG_ERROR("port exited with ~s when "
+                       "remove_work on worker ~p on ~p failed",
+                       [exit_status_to_list(Status), Name, Node]),
+            Result;
+        {error, Reason} = Result ->
+            ?LOG_ERROR("remove_work on worker ~p on ~p failed: ~p",
+                       [Name, Node, Reason]),
+            Result
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("remove_work on worker ~p on ~p timeout",
+                       [Name, Node]),
+            {error, timeout};
+        _:Reason ->
+            ?LOG_ERROR("remove_work on worker ~p on ~p failed: ~P",
+                       [Name, Node, Reason, 3]),
+            {error, Reason}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Start the worker process server.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec start_link(ProcessName :: atom(),
-                 CNodeName :: string(),
-                 MasterNode :: atom()) ->
+-spec start_link(ProcessName :: atom(), MasterNode :: atom()) ->
     {'ok', pid()} |
     {'error', any()}.
 
-start_link(ProcessName, CNodeName, MasterNode)
-    when is_atom(ProcessName), is_list(CNodeName), is_atom(MasterNode) ->
+start_link(ProcessName, MasterNode)
+    when is_atom(ProcessName), is_atom(MasterNode) ->
     gen_server:start_link({local, ProcessName},
-        ?MODULE, [ProcessName, CNodeName, MasterNode], []).
+        ?MODULE, [ProcessName, MasterNode], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Acquire the worker process as if it was a new process.===
+%% This will cause the worker process to be reconfigured.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec acquire_as_new_process(Process :: {atom(), atom()},
+                             Master :: {atom(), atom()}) ->
+    'true' |
+    'false'.
+
+acquire_as_new_process({Name, Node} = Process, Master) ->
+    try gen_server:call(Process, {ready, Process, Master}) of
+        ok ->
+            true
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("timeout of process ~p on ~p",
+                       [Name, Node]),
+            false;
+        _:Reason ->
+            ?LOG_ERROR("unable to acquire process ~p on ~p: ~P",
+                       [Name, Node, Reason, 3]),
+            false
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Acquire the worker process as if it was an old process.===
+%% This will cause the worker process to have all of
+%% its work assignments verified.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec acquire_as_old_process(Process :: {atom(), atom()},
+                             Master :: {atom(), atom()}) ->
+    'true' |
+    'false'.
+
+acquire_as_old_process({Name, Node} = Process, Master) ->
+    try gen_server:call(Process, {reset_ready, Process, Master}) of
+        ok ->
+            true
+    catch
+        exit:{timeout, _} ->
+            ?LOG_ERROR("timeout of process ~p on ~p",
+                       [Name, Node]),
+            false;
+        _:Reason ->
+            ?LOG_ERROR("unable to acquire process ~p on ~p: ~P",
+                       [Name, Node, Reason, 3]),
+            false
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ProcessName, CNodeName, MasterNode]) ->
+init([ProcessName, MasterNode]) ->
     PortFileName = local_port_name(),
     case load_local_port(PortFileName) of
         {ok, Port} when is_port(Port) ->
+            Timer = erlang:send_after(?WORKER_KEEP_ALIVE_INTERVAL,
+                self(), keep_alive),
             % message to start the process of making the master process
             % configure the worker and store state after doing so
             gen_server:cast(self(), {ready, {ProcessName, node()}}),
-            {ok, HostName} = inet:gethostname(),
             {ok, #state{process_name = ProcessName,
-                        cnode_name = CNodeName,
-                        host_name = HostName,
                         master = {cloud_leader, MasterNode},
+                        keep_alive_timer = Timer,
                         port_file_name = PortFileName,
                         port = Port}};
         {error, Reason} ->
@@ -177,6 +394,9 @@ handle_call({call, Msg}, _, #state{port = Port} = State)
                         Result ->
                             {reply, {ok, Result}, State}
                     end
+            after
+                4500 ->
+                    {reply, {error, timeout}, State}
             end;
         {error, Reason} ->
             {reply, {error, Reason}, State}
@@ -186,6 +406,15 @@ handle_call({call, Msg}, _, State)
     when is_list(Msg), is_record(State, state) ->
     {stop, "invalid port state", error, State};
 
+%% reset the master process assignment for an old cloud_worker_port process
+%% with an unconfigured worker
+handle_call({ready, {Name, Node}, Master}, _, State)
+    when is_atom(Name), is_tuple(Master), is_record(State, state) ->
+    ok = gen_server:cast(self(), {ready, {Name, Node}}),
+    {reply, ok, State#state{master = Master}};
+
+%% reset the master process assignment for an old cloud_worker_port process
+%% with a configured worker
 handle_call({reset_ready, {Name, Node}, Master}, _, State)
     when is_atom(Name), is_tuple(Master), is_record(State, state) ->
     ok = gen_server:cast(self(), {reset_ready, {Name, Node}}),
@@ -196,13 +425,16 @@ handle_call(Request, _, State) ->
     {stop, string_extensions:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
-%% notify the master process that cloud_worker_port is ready to be started
+%% notify the master process with a new cloud_worker_port process
+%% that is ready to be initialized
 handle_cast({ready, {Name, Node}} = Message,
             #state{master = Master} = State)
     when is_atom(Name), is_atom(Node), is_tuple(Master) ->
     ok = gen_server:cast(Master, Message),
     {noreply, State};
 
+%% notify the master process with an old cloud_worker_port process
+%% that is ready to be verified
 handle_cast({reset_ready, {Name, Node}} = Message,
             #state{master = Master} = State)
     when is_atom(Name), is_atom(Node), is_tuple(Master) ->
@@ -220,24 +452,120 @@ handle_info({Port, {exit_status, Status}}, State)
     Reason = "port exited with " ++ exit_status_to_list(Status),
     {stop, Reason, State#state{port = undefined}};
 
-handle_info({stderr, Source, Error}, #state{cnode_name = CNodeName,
-                                            host_name = HostName} = State)
-    when is_list(Error), is_list(CNodeName) ->
+%% a timeout occurred and data was returned too late
+handle_info({Port, {data, _}}, State)
+    when is_port(Port), is_record(State, state) ->
+    {noreply, State};
+
+handle_info({stderr, Source, Error}, State) when is_list(Error) ->
     FormattedError = lists:flatmap(fun(Line) ->
         io_lib:format("    ~s~n", [Line])
     end, string:tokens(Error, "\n")),
     ?LOG_ERROR("~p stderr:~n~s", [node(Source), FormattedError]),
     {noreply, State};
 
+handle_info(keep_alive, #state{process_name = ProcessName} = State) ->
+    Parent = self(),
+    spawn(fun() ->
+        case catch keep_alive(Parent) of
+            {ok, true} ->
+                ok;
+            _ ->
+                Node = node(Parent),
+                ?LOG_ERROR("keep_alive failed for ~p on ~p",
+                    [ProcessName, Node]),
+                cloud_worker_port_sup:restart_port({ProcessName, Node})
+        end
+    end),
+    Timer = erlang:send_after(?WORKER_KEEP_ALIVE_INTERVAL, Parent, keep_alive),
+    {noreply, State#state{keep_alive_timer = Timer}};
+
+%% something unexpected happened when sending to the port
+handle_info({'EXIT', Port, PosixCode}, #state{port = Port} = State) ->
+    catch erlang:port_close(Port),
+    Reason = case PosixCode of
+        eacces ->
+            "permission denied";
+        eagain ->
+            "resource temporarily unavailable";
+        ebadf ->
+            "bad file number";
+        ebusy ->
+            "file busy";
+        edquot ->
+            "disk quota exceeded";
+        eexist ->
+            "file already exists";
+        efault ->
+            "bad address in system call argument";
+        efbig ->
+            "file too large";
+        eintr ->
+            "interrupted system call";
+        einval ->
+            "invalid argument";
+        eio ->
+            "IO error";
+        eisdir ->
+            "illegal operation on a directory";
+        eloop ->
+            "too many levels of symbolic links";
+        emfile ->
+            "too many open files";
+        emlink ->
+            "too many links";
+        enametoolong ->
+            "file name too long";
+        enfile ->
+            "file table overflow";
+        enodev ->
+            "no such device";
+        enoent ->
+            "no such file or directory";
+        enomem ->
+            "not enough memory";
+        enospc ->
+            "no space left on device";
+        enotblk ->
+            "block device required";
+        enotdir ->
+            "not a directory";
+        enotsup ->
+            "operation not supported";
+        enxio ->
+            "no such device or address";
+        eperm ->
+            "not owner";
+        epipe ->
+            "broken pipe";
+        erofs ->
+            "read-only file system";
+        espipe ->
+            "invalid seek";
+        esrch ->
+            "no such process";
+        estale ->
+            "stale remote file handle";
+        exdev ->
+            "cross-domain link";
+        Other when is_atom(Other) ->
+            atom_to_list(Other)
+    end,
+    {stop, Reason, State#state{port = undefined}};
+
 handle_info(Request, State) ->
     ?LOG_WARNING("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-terminate(_, #state{port = Port}) when is_port(Port) ->
-    catch erlang:port_close(Port),
-    ok;
-
-terminate(_, _) ->
+terminate(_, #state{keep_alive_timer = Timer,
+                    port = Port}) when is_port(Port) ->
+    if
+        Port /= undefined ->
+            catch erlang:port_close(Port);
+        true ->
+            ok
+    end,
+    erlang:cancel_timer(Timer),
     ok.
 
 code_change(_, State, _) ->

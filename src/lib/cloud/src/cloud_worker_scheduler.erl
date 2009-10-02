@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_scheduler).
@@ -293,8 +293,10 @@ merge_new_and_old_processes([#run_queue_work_state_process{
             if
                 % a process crashed, attempt to reassign old work
                 erlang:length(OldAssignments) > 0 ->
-                    ?LOG_INFO("attempt to verify old work on new process ~p", [
-                              ProcessName]),
+                    ?LOG_INFO("attempt to verify old work on a new "
+                              "process ~p on ~p",
+                              [erlang:element(1, ProcessName),
+                               erlang:element(2, ProcessName)]),
                     % ignore start_work_assignment/4 outcome and let
                     % check_processes_before_work_allocation/3 handle it later
                     start_work_assignment([], [], OldAssignments, ProcessName),
@@ -323,7 +325,9 @@ merge_new_and_old_processes([#run_queue_work_state_process{
                     )
             end;
         OldP -> % when P#run_queue_work_state_process.new_instance == false
-            ?LOG_INFO("attempt to verify old process ~p", [ProcessName]),
+            ?LOG_INFO("attempt to verify an old process ~p on ~p",
+                      [erlang:element(1, ProcessName),
+                       erlang:element(2, ProcessName)]),
             merge_new_and_old_processes(NewProcesses, 
                 lists:keyreplace(P#run_queue_work_state_process.name,
                     #run_queue_work_state_process.name, OldProcesses,
@@ -371,17 +375,16 @@ check_processes_before_work_allocation(CheckedProcesses,
             work_title = WorkTitle,
             id_offset = IdOffset,
             threads = Threads} = A, R, AList, Itr) ->
-        case cloud_worker_port:has_work(
+        case cloud_worker_port:has_work_proxy(
             ProcessName, WorkTitle, IdOffset, Threads) of
             {ok, true} ->
                 % do nothing here since the work exists as expected
                 Itr(R, AList);
             {ok, false} ->
-                cloud_worker_port:remove_work(ProcessName, WorkTitle),
+                % remove the work since it does not exist as expected
+                cloud_worker_port:remove_work_proxy(ProcessName, WorkTitle),
                 Itr(R, AList ++ [{ProcessName, A}]);
-            {error, _} = Error ->
-                ?LOG_ERROR("worker process ~p has_work query failed: ~p", [
-                           ProcessName, Error]),
+            {error, _} ->
                 Itr(true, AList)
         end
     end, false, [], Assignments),
@@ -389,28 +392,47 @@ check_processes_before_work_allocation(CheckedProcesses,
         Restart ->
             % restart the process because a function call failed
             cloud_worker_port_sup:restart_port(ProcessName),
-            % remove any old references to the process in the run_queue
-            CleanQueue = cloud_run_queue:remove_work_assignment(P, Queue),
-            % discard the process,
-            % since it will redo the scheduling process after it restarts
+            % keep all the old assignments so that they may be scheduled
+            % after the process is restarted.  discard the process entry,
+            % since it will redo the scheduling process after it restarts.
             check_processes_before_work_allocation(CheckedProcesses,
-                Processes, CleanQueue);
+                Processes, Queue);
         erlang:length(InvalidAssignments) > 0 ->
-            ?LOG_WARNING("~ninvalid work assignments: ~p", [
-                         InvalidAssignments]),
-            ThreadsFreed = lists:foldl(fun({{_, _}, A}, T) ->
-                A#run_queue_work_state_process_assignment.threads + T
-            end, 0, InvalidAssignments),
-            % remove the invalid assignments from the run queue
-            CleanQueue = cloud_run_queue:remove_work_assignments(
-                InvalidAssignments, Queue),
-            % update the process information
-            check_processes_before_work_allocation(CheckedProcesses ++ [
-                P#run_queue_work_state_process{
-                    new_instance = true, % now a valid process
-                    threads_used = ThreadsUsed - ThreadsFreed,
-                    threads_unused = ThreadsUnused + ThreadsFreed
-                }], Processes, CleanQueue);
+            UpdatedInvalidAssignments = lists:foldl(
+            fun({{_, _}, A} = AEntry, AList) ->
+                case start_work_assignment([], [], [A], ProcessName) of
+                    {[A], []} ->
+                        AList;
+                    {[], [A]} ->
+                        AList ++ [AEntry]
+                end
+            end, [], InvalidAssignments),
+            if
+                erlang:length(UpdatedInvalidAssignments) > 0 ->
+                    % should not get to this point unless a serious
+                    % failure occurred loading work on the
+                    % cloud_worker_port process.
+                    ?LOG_WARNING("~ninvalid work assignments removed: ~p",
+                                 [UpdatedInvalidAssignments]),
+                    ThreadsFreed = lists:foldl(fun({{_, _}, A}, T) ->
+                        A#run_queue_work_state_process_assignment.threads + T
+                    end, 0, UpdatedInvalidAssignments),
+                    % remove the invalid assignments from the run queue
+                    CleanQueue = cloud_run_queue:remove_work_assignments(
+                        UpdatedInvalidAssignments, Queue),
+                    % update the process information
+                    check_processes_before_work_allocation(CheckedProcesses ++ [
+                        P#run_queue_work_state_process{
+                            new_instance = true, % now a valid process
+                            threads_used = ThreadsUsed - ThreadsFreed,
+                            threads_unused = ThreadsUnused + ThreadsFreed
+                        }], Processes, CleanQueue);
+                true ->
+                    check_processes_before_work_allocation(CheckedProcesses ++ [
+                        P#run_queue_work_state_process{
+                            new_instance = true % now a valid process
+                        }], Processes, Queue)
+            end;
         true ->
             check_processes_before_work_allocation(CheckedProcesses ++ [
                 P#run_queue_work_state_process{
@@ -539,19 +561,17 @@ allocate_work(Processes, Lookup, Queue)
                             allocate_work(ProcessesOut ++ ProcessesIn, Lookup, 
                                 cloud_run_queue:put_running(
                                     NewWork, RemainingQueue));
-                        {all, ThreadsAllocated, ProcessesOut, [], NewWork} ->
+                        {all, _, ProcessesOut, [], NewWork} ->
                             % it is possible that a static number of threads
                             % were allocated per process, so attempt to
                             % schedule another work type
                             allocate_work(ProcessesOut, Lookup, 
                                 cloud_run_queue:put_running(
                                     NewWork, RemainingQueue));
-                            
                         {_, ThreadsAllocated, ProcessesOut, [], NewWork}
                             when ThreadsAllocated > 0 ->
                             % not all of the threads requested were allocated
-                            % (unless 'all') but some were,
-                            % so just return the result
+                            % but some were, so just return the result
                             {ProcessesOut, [],
                              cloud_run_queue:put_running(
                                 NewWork, RemainingQueue)};
@@ -740,13 +760,13 @@ start_work_assignment(SuccessfulAssignments, FailedAssignments,
                       ProcessName) ->
     % unable to determine if the work is already assigned or newly assigned,
     % so check before adding work
-    case cloud_worker_port:has_work(
+    case cloud_worker_port:has_work_proxy(
         ProcessName, WorkTitle, ThreadIdOffset, ThreadCount) of
         {ok, true} ->
             start_work_assignment(SuccessfulAssignments ++ [A],
                 FailedAssignments, Assignments, ProcessName);
         {ok, false} ->
-            case cloud_worker_port:add_work(
+            case cloud_worker_port:add_work_proxy(
                 ProcessName, WorkTitle, ThreadIdOffset, ThreadCount) of
                 {ok, true} ->
                     start_work_assignment(SuccessfulAssignments ++ [A],
@@ -756,15 +776,11 @@ start_work_assignment(SuccessfulAssignments, FailedAssignments,
                         ProcessName, WorkTitle]),
                     start_work_assignment(SuccessfulAssignments,
                         FailedAssignments ++ [A], Assignments, ProcessName);
-                {error, Reason} ->
-                    ?LOG_ERROR("worker process ~p add_work failed: ~p", [
-                        ProcessName, Reason]),
+                {error, _} ->
                     start_work_assignment(SuccessfulAssignments,
                         FailedAssignments ++ [A], Assignments, ProcessName)
             end;
-        {error, Reason} ->
-            ?LOG_ERROR("worker process ~p has_work failed: ~p", [
-                ProcessName, Reason]),
+        {error, _} ->
             start_work_assignment(SuccessfulAssignments,
                 FailedAssignments ++ [A], Assignments, ProcessName)
     end.
@@ -780,22 +796,15 @@ stop_work([{Name, Node} = Process | ProcessNames],
     when is_atom(Name), is_atom(Node), 
          is_record(FirstProcess, run_queue_work_state_process),
          is_list(WorkTitle) ->
-    try cloud_worker_port:remove_work(Process, WorkTitle) of
+    case cloud_worker_port:remove_work_proxy(Process, WorkTitle) of
         {ok, true} ->
             ok;
         {ok, false} ->
             ?LOG_ERROR("unable to remove work ~p "
                 "assigned to worker ~p on ~p",
                 [WorkTitle, Name, Node]);
-        {error, Reason} ->
-            ?LOG_ERROR("unable to remove work ~p "
-                "assigned to worker ~p on ~p with port error: ~p",
-                [WorkTitle, Name, Node, Reason])
-    catch
-        _:Reason ->
-            ?LOG_ERROR("unable to remove work ~p "
-                "assigned to worker ~p on ~p: ~p",
-                [WorkTitle, Name, Node, Reason])
+        {error, _} ->
+            ok
     end,
     case lists:keytake(Process, #run_queue_work_state_process.name,
                        RunningProcesses) of

@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: Erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -42,12 +42,15 @@
 
 #include <stdint.h>
 
-/// start the cnode server using erlang longnames
+/// check to make sure the Erlang port is still responding
+bool keep_alive();
+
+/// start the cnode server using Erlang longnames
 bool worker_start(char * nameStr, uint32_t nameLen,
                   char * domainStr, uint32_t domainLen,
                   char * cookieStr, uint32_t cookieLen,
                   int32_t port, int16_t instance);
-/// start the cnode server using erlang shortnames
+/// start the cnode server using Erlang shortnames
 bool worker_start(char * nameStr, uint32_t nameLen,
                   char * cookieStr, uint32_t cookieLen,
                   int32_t port, int16_t instance);
