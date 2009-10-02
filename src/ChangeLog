@@ -1,13 +1,23 @@
-2009-09-01	Michael Truog	<mjtruog [at] gmail (dot) com>
+2009-09-29	Michael Truog	<mjtruog [at] gmail (dot) com>
 
-	* initial public release of CloudI version 0.0.1 (alpha)
+	* CloudI version 0.0.3 (alpha)
+		* shortnames are currently the only supported node names
+		* fix logger so that remote nodes can log properly
+		* solve some fault-tolerance problems when a process or VM dies
+		* make sure to not have cloud_worker_port exit
+		  if the controlling VM exists
+		* use monitors for remote nodes and remote processes
 
 2009-09-24	Michael Truog	<mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.2 (alpha)
-		* shortnames are currently the only supported node names
 		* added arguments to work modules
 		* added tags to work titles
 		* fixed errors in the cloud_worker_port thread pool
 		* cleaned up the cloud_worker_nodes and cloud_worker_scheduler
 		* fix thread stop timeout problem in cloud_worker_port
+
+2009-09-01	Michael Truog	<mjtruog [at] gmail (dot) com>
+
+	* initial public release of CloudI version 0.0.1 (alpha)
+

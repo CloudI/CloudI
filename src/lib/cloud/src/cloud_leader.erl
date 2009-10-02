@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_leader).
@@ -204,11 +204,11 @@ work_data_done(WorkTitle) ->
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
-    erlang:process_flag(trap_exit, true),
     {ok, WorkerSchedulerState} =
         cloud_worker_scheduler:initialize_state(Config),
     case cloud_worker_nodes:initialize_state(Config) of
         {ok, WorkerNodesState} ->
+            net_kernel:monitor_nodes(true, [{node_type, all}, nodedown_reason]),
             {ok, #state{worker_nodes_state = WorkerNodesState,
                         worker_scheduler_state = WorkerSchedulerState}};
         {error, Reason} ->
@@ -272,10 +272,16 @@ handle_cast({work_module_failed, WorkTitle},
 handle_cast(Request, State) ->
     ?LOG_WARNING("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
-handle_info({'EXIT', Pid, Reason},
+handle_info({'DOWN', _, process, Pid, Reason},
             #state{worker_nodes_state = S} = State) ->
     {noreply, State#state{worker_nodes_state = 
         cloud_worker_nodes:workers_died(Pid, Reason, S)}};
+handle_info({'nodeup', _, _}, State) ->
+    {noreply, State};
+handle_info({'nodedown', Node, InfoList},
+            #state{worker_nodes_state = S} = State) ->
+    {noreply, State#state{worker_nodes_state =
+        cloud_worker_nodes:nodedown_occurred(Node, InfoList, S)}};
 handle_info(restart_workers,
             #state{worker_nodes_state = NodesState} = State) ->
     {noreply, State#state{worker_nodes_state =
@@ -297,4 +303,8 @@ terminate(_, #state{worker_nodes_state = NodesState,
     ok.
 code_change(_, State, _) ->
     {ok, State}.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 

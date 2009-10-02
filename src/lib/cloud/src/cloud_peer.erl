@@ -31,6 +31,8 @@
 %% external callbacks
 -export([peer_start/1, wait_for_peer/8]).
 
+-include("cloud_logger.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -99,7 +101,15 @@ wait_for_peer(Parent, Node, LongNames, Prog, Host, Name, Args, Timeout) ->
             receive
                 {PeerPid, peer_started} ->
                     unregister(Waiter),
-                    Parent ! {self(), {ok, node(PeerPid)}}
+                    PeerNode = node(PeerPid),
+                    case cloud_logger:load_interface_module(PeerNode) of
+                        ok ->
+                            ok;
+                        {error, Reason} ->
+                            ?LOG_ERROR("unable to load remote logger on ~p: ~p",
+                                       [PeerNode, Reason])
+                    end,
+                    Parent ! {self(), {ok, PeerNode}}
             after
                 Timeout ->
                     unregister(Waiter),

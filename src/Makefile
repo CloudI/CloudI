@@ -4,9 +4,9 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.2.0
-PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.2
+VERSION_NAME=0.0.3.0
+PROJECT_REPO_URL=http:\/\/lovwlk:3001\/repo\/
+MAJOR_VERSION_NAME=0.0.3
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -120,10 +120,14 @@ GXX_BIN=
 GCC_BIN=
 endif
 endif
+GXX_BUILT=$(strip $(wildcard $(GXX_BIN)))
+ifeq ($(GXX_BUILT),)
+else
 CXXFLAGS=$(GXX_CXXFLAGS)
 LDFLAGS=$(GXX_LDFLAGS)
 CXX=$(GXX_BIN)
 CC=$(GCC_BIN)
+endif
 
 # typical c++ compilation arguments
 CXXFLAGS+=-std=c++0x -Wall -Wextra -I$(BOOST_INC_PATH)
@@ -166,7 +170,9 @@ ERLANG_SRC_FILES=\
         $(MAIN_SRC_PATH)/cloud_work_status.erl \
         $(MAIN_SRC_PATH)/cloud_work_status.hrl \
         $(MAIN_SRC_PATH)/cloud_work_sup.erl \
+        $(MAIN_SRC_PATH)/dynamic_compile.erl \
         $(MAIN_SRC_PATH)/immediate_gc.erl \
+        $(MAIN_SRC_PATH)/monitor_link.erl \
         $(MAIN_SRC_PATH)/lists_extensions.erl \
         $(MAIN_SRC_PATH)/math_extensions.erl \
         $(MAIN_SRC_PATH)/q.erl \
@@ -231,6 +237,8 @@ $(GXX_BIN): $(GXX_SRC) \
       make && \
       make install\
      )
+	@echo "g++ now built, rerun the makefile to compile"
+	@exit 1
 
 asn1c: $(ASN1_BIN)
 $(ASN1_BIN): $(ASN1_SRC)

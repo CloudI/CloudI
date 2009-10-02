@@ -3,6 +3,6 @@
 {modules,[cloud_api,cloud_app,cloud_configuration,cloud_data_repository_sup,
           cloud_leader,cloud_logger,cloud_peer,cloud_run_queue,cloud_sup,
           cloud_task_speed_lookup,cloud_work_interface,cloud_work_manager,
-          cloud_work_status,cloud_work_sup,immediate_gc,lists_extensions,
-          math_extensions,q,string_extensions,time_extensions,
-          tuple_extensions]}.
+          cloud_work_status,cloud_work_sup,dynamic_compile,immediate_gc,
+          lists_extensions,math_extensions,monitor_link,q,string_extensions,
+          time_extensions,tuple_extensions]}.

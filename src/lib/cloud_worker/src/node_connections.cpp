@@ -87,7 +87,7 @@ static nfds_t pollDescriptorsCount = 1;
 #define POLL_DESC_INDEX_EPMD_SOCKET          3
 #define POLL_DESC_INDEX_LISTEN_SOCKET        4
 static nfds_t const pollDescriptorsNode0 = 5;
-// only allow 1 erlang node connection right now
+// only allow 1 Erlang node connection right now
 static int const maxCNodeConnections = pollDescriptorsNode0 + 1;
 static struct pollfd 
     pollDescriptors[maxCNodeConnections] = {
@@ -233,7 +233,9 @@ bool NodeConnections::initialize(std::string const & nodeNamePrefix,
             "failed to bind to port " << m_port << erl_endl;
         return false;
     }
-    // uses ERL_EPMD_PORT to determine which erlang cluster is being used
+    // unpublish before publishing in case the previous process was not stopped
+    ei_unpublish(&serverCNode);
+    // uses ERL_EPMD_PORT to determine which Erlang cluster is being used
     epmdSocket = ei_publish(&serverCNode, m_port);
     if (epmdSocket < 0)
     {
@@ -364,7 +366,7 @@ static int handle_stderr(WorkerController & controller)
 
     if ((pollDescriptorsCount - pollDescriptorsNode0) > 0 && foundNewline)
     {
-        // if there are many erlang node connections,
+        // if there are many Erlang node connections,
         // round-robin the stderr data among them
         static nfds_t fdIndex = 0;
         nfds_t const fdCount = pollDescriptorsCount - pollDescriptorsNode0;
@@ -434,7 +436,7 @@ static int handle_epmd_socket()
 }
 
 // handle c node server socket
-// accept new connections from erlang nodes
+// accept new connections from Erlang nodes
 static int handle_server_socket()
 {
     short & revents = pollDescriptors[POLL_DESC_INDEX_LISTEN_SOCKET].revents;
@@ -475,7 +477,7 @@ static int handle_server_socket()
     return 0;
 }
 
-// handle erlang node connections
+// handle Erlang node connections
 static int handle_node_connection(int index, WorkerController & controller)
 {
     short & revents = pollDescriptors[index].revents;
@@ -483,7 +485,20 @@ static int handle_node_connection(int index, WorkerController & controller)
     {
         return 0;
     }
-    else if (revents & (POLLERR | POLLHUP | POLLNVAL))
+    bool removeNode = revents & (POLLERR | POLLHUP | POLLNVAL);
+    revents = 0;
+    int status = 0;
+    if (! removeNode)
+    {
+        status = controller.receive(pollDescriptors[index].fd);
+        if (status == WorkerController::ExitStatus::node_receive_EIO)
+        {
+            // the Erlang node has exited
+            status = 0;
+            removeNode = true;
+        }
+    }
+    if (removeNode)
     {
         // remove the ill-mannered node
         pollDescriptorsCount--;
@@ -496,8 +511,7 @@ static int handle_node_connection(int index, WorkerController & controller)
         }
         return 0;
     }
-    revents = 0;
-    return controller.receive(pollDescriptors[index].fd);
+    return status;
 }
 
 // main event loop for the open sockets and pipes
