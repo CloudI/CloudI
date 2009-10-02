@@ -45,6 +45,11 @@
 // control work requests, work task execution, and work results
 static WorkerController controller;
 
+bool keep_alive()
+{
+    return true;
+}
+
 bool worker_start(char * nodeNameStr, uint32_t nodeNameLen,
                   char * domainNameStr, uint32_t domainNameLen,
                   char * cookieStr, uint32_t cookieLen,

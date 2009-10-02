@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(immediate_gc).
@@ -96,7 +96,7 @@ sync_fun(F, A) when is_function(F), is_list(A) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Make a asynchronous call to a function that will be garbage collected when the function returns.===
+%% ===Make an asynchronous call to a function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -110,7 +110,7 @@ async_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Make a asynchronous call to an anonymous function that will be garbage collected when the function returns.===
+%% ===Make an asynchronous call to an anonymous function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 

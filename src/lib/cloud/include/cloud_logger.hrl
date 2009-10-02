@@ -42,17 +42,17 @@
 %%%------------------------------------------------------------------------
 
 -define(LOG_CRITICAL(Format, Args),
-    cloud_logger:critical(?MODULE, ?LINE, Format, Args)).
+    cloud_logger_interface:critical(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_ERROR(Format, Args),
-    cloud_logger:error(?MODULE, ?LINE, Format, Args)).
+    cloud_logger_interface:error(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_WARNING(Format, Args),
-    cloud_logger:warning(?MODULE, ?LINE, Format, Args)).
+    cloud_logger_interface:warning(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_INFO(Format, Args),
-    cloud_logger:info(?MODULE, ?LINE, Format, Args)).
+    cloud_logger_interface:info(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_DEBUG(Format, Args),
-    cloud_logger:debug(?MODULE, ?LINE, Format, Args)).
+    cloud_logger_interface:debug(?MODULE, ?LINE, Format, Args)).
 

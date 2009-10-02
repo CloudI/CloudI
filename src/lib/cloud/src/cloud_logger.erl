@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_logger).
@@ -53,8 +53,9 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/1, flush/0, reopen/0,
-         critical/4, error/4, warning/4, info/4, debug/4]).
+-export([start_link/1,
+         load_interface_module/1, flush/0, reopen/0,
+         critical/5, error/5, warning/5, info/5, debug/5]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -82,6 +83,7 @@
         "DEBUG"
     },
     filename = "",
+    interface_module = undefined,
     fd = undefined,
     flush_timer = undefined,
     last_log_entry = erlang:make_tuple(5, #state_last_log_entry{})}).
@@ -98,8 +100,34 @@
 
 -spec start_link(#config{}) -> {'ok', pid()} | {'error', any()}.
 
-start_link(#config{logging = LoggingConfig}) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
+start_link(#config{logging = LoggingConfig,
+                   machines = [#config_machine{node_name = Node} | _]}) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE,
+        [Node, LoggingConfig], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Load the binary for the logger interface module.===
+%% @end
+%%-------------------------------------------------------------------------
+
+load_interface_module(Node) when is_atom(Node) ->
+    try gen_server:call(?MODULE, interface_module) of
+        Binary ->
+            case rpc:call(Node, code, load_binary,
+                [cloud_logger_interface,
+                 "cloud_logger_interface.erl", Binary]) of
+                {badrpc, Reason} ->
+                    {error, Reason};
+                {error, _} = Error ->
+                    Error;
+                {module, cloud_logger_interface} ->
+                    ok
+            end
+    catch
+        _:Reason ->
+            {error, Reason}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -107,10 +135,14 @@ start_link(#config{logging = LoggingConfig}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec flush() -> 'ok'.
+-spec flush() -> 'ok' | 'error'.
 
 flush() ->
-    gen_server:call(?MODULE, flush).
+    try gen_server:call(?MODULE, flush)
+    catch
+        _:_ ->
+            error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -118,181 +150,158 @@ flush() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec reopen() -> 'ok'.
+-spec reopen() -> 'ok' | 'error'.
 
 reopen() ->
-    gen_server:cast(?MODULE, reopen).
+    try gen_server:cast(?MODULE, reopen)
+    catch
+        _:_ ->
+            error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Critical log message without arguments,===
+%% ===Critical log message,===
 %% which indicates the system has failed and can not continue.
 %% Called with ?LOG_CRITICAL(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
--spec critical(Module :: atom(),
+-spec critical(Process :: {atom(), atom()},
+               Module :: atom(),
                Line :: integer(),
                Format :: string(),
                Args :: list(any())) ->
     'ok'.
 
-critical(Module, Line, [_|_] = Format, [])
+critical({_,_} = Process, Module, Line, [_|_] = Format, [])
     when is_atom(Module), is_integer(Line) ->
-    log_message(1, Module, Line, Format, []);
+    log_message(Process, 1, Module, Line, Format, []);
+
+critical({_,_} = Process, Module, Line, [_|_] = Format, [_|_] = Args)
+    when is_atom(Module), is_integer(Line) ->
+    log_message(Process, 1, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Critical log message with arguments,===
-%% which indicates the system has failed and can not continue.
-%% Called with ?LOG_CRITICAL(Format, Args).
-%% @end
-%%-------------------------------------------------------------------------
-
-critical(Module, Line, [_|_] = Format, [_|_] = Args)
-    when is_atom(Module), is_integer(Line) ->
-    log_message(1, Module, Line, Format, Args).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Error log message without arguments,===
+%% ===Error log message,===
 %% which indicates a subsystem has failed but the failure is not critical.
 %% Called with ?LOG_ERROR(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
--spec error(Module :: atom(),
+-spec error(Process :: {atom(), atom()},
+            Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list(any())) ->
     'ok'.
 
-error(Module, Line, [_|_] = Format, [])
+error({_,_} = Process, Module, Line, [_|_] = Format, [])
     when is_atom(Module), is_integer(Line) ->
-    log_message(2, Module, Line, Format, []);
+    log_message(Process, 2, Module, Line, Format, []);
+
+error({_,_} = Process, Module, Line, [_|_] = Format, [_|_] = Args)
+    when is_atom(Module), is_integer(Line) ->
+    log_message(Process, 2, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Error log message with arguments,===
-%% which indicates a subsystem has failed but the failure is not critical.
-%% Called with ?LOG_ERROR(Format, Args).
-%% @end
-%%-------------------------------------------------------------------------
-
-error(Module, Line, [_|_] = Format, [_|_] = Args)
-    when is_atom(Module), is_integer(Line) ->
-    log_message(2, Module, Line, Format, Args).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Warning log message without arguments,===
+%% ===Warning log message,===
 %% which indicates an unexpected occurance was found in a subsystem.
 %% Called with ?LOG_WARNING(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
--spec warning(Module :: atom(),
+-spec warning(Process :: {atom(), atom()},
+              Module :: atom(),
               Line :: integer(),
               Format :: string(),
               Args :: list(any())) ->
     'ok'.
 
-warning(Module, Line, [_|_] = Format, [])
+warning({_,_} = Process, Module, Line, [_|_] = Format, [])
     when is_atom(Module), is_integer(Line) ->
-    log_message(3, Module, Line, Format, []);
+    log_message(Process, 3, Module, Line, Format, []);
+
+warning({_,_} = Process, Module, Line, [_|_] = Format, [_|_] = Args)
+    when is_atom(Module), is_integer(Line) ->
+    log_message(Process, 3, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Warning log message with arguments,===
-%% which indicates an unexpected occurance was found in a subsystem.
-%% Called with ?LOG_WARNING(Format, Args).
-%% @end
-%%-------------------------------------------------------------------------
-
-warning(Module, Line, [_|_] = Format, [_|_] = Args)
-    when is_atom(Module), is_integer(Line) ->
-    log_message(3, Module, Line, Format, Args).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Info log message without arguments,===
+%% ===Info log message,===
 %% which indicates a subsystem has changed state.
 %% Called with ?LOG_INFO(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
--spec info(Module :: atom(),
+-spec info(Process :: {atom(), atom()},
+           Module :: atom(),
            Line :: integer(),
            Format :: string(),
            Args :: list(any())) ->
     'ok'.
 
-info(Module, Line, [_|_] = Format, [])
+info({_,_} = Process, Module, Line, [_|_] = Format, [])
     when is_atom(Module), is_integer(Line) ->
-    log_message(4, Module, Line, Format, []);
+    log_message(Process, 4, Module, Line, Format, []);
+
+info({_,_} = Process, Module, Line, [_|_] = Format, [_|_] = Args)
+    when is_atom(Module), is_integer(Line) ->
+    log_message(Process, 4, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Info log message with arguments,===
-%% which indicates a subsystem has changed state.
-%% Called with ?LOG_INFO(Format, Args).
-%% @end
-%%-------------------------------------------------------------------------
-
-info(Module, Line, [_|_] = Format, [_|_] = Args)
-    when is_atom(Module), is_integer(Line) ->
-    log_message(4, Module, Line, Format, Args).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Debug log message without arguments,===
+%% ===Debug log message,===
 %% which reports subsystem data that should be useful for debugging.
 %% Called with ?LOG_DEBUG(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
--spec debug(Module :: atom(),
+-spec debug(Process :: {atom(), atom()},
+            Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list(any())) ->
     'ok'.
 
-debug(Module, Line, [_|_] = Format, [])
+debug({_,_} = Process, Module, Line, [_|_] = Format, [])
     when is_atom(Module), is_integer(Line) ->
-    log_message(5, Module, Line, Format, []);
+    log_message(Process, 5, Module, Line, Format, []);
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Debug log message with arguments,===
-%% which reports subsystem data that should be useful for debugging.
-%% Called with ?LOG_DEBUG(Format, Args).
-%% @end
-%%-------------------------------------------------------------------------
-
-debug(Module, Line, [_|_] = Format, [_|_] = Args)
+debug({_,_} = Process, Module, Line, [_|_] = Format, [_|_] = Args)
     when is_atom(Module), is_integer(Line) ->
-    log_message(5, Module, Line, Format, Args).
+    log_message(Process, 5, Module, Line, Format, Args).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([#config_logging{loglevel = Level, filename = FileName}]) ->
+init([Node, #config_logging{loglevel = Level, filename = FileName}]) ->
     case file:open(FileName, [append, raw]) of
         {ok, Fd} ->
-            cloud_logger = ets:new(cloud_logger,
-                [named_table, protected, set]),
-            true = ets:insert(cloud_logger,
-                {loglevel, get_loglevel_integer(Level)}),
-            FlushTimer = erlang:send_after(
-                ?LOG_DATA_FLUSH_TIMEOUT, self(), flush),
-            {ok, #state{
-                filename = FileName,
-                fd = Fd,
-                flush_timer = FlushTimer}};
+            try create_interface_module(Node, get_loglevel_integer(Level)) of
+                {ok, Binary} ->
+                    FlushTimer = erlang:send_after(
+                        ?LOG_DATA_FLUSH_TIMEOUT, self(), flush),
+                    {ok, #state{
+                        filename = FileName,
+                        interface_module = Binary,
+                        fd = Fd,
+                        flush_timer = FlushTimer}};
+                {error, Reason} ->
+                    {stop, Reason}
+            catch
+                _:Reason ->
+                    {stop, Reason}
+            end;
         {error, Reason} ->
             {stop, Reason}
     end.
+
+handle_call(interface_module, _, #state{interface_module = Binary} = State) ->
+    {reply, Binary, State, hibernate};
 
 handle_call(flush, _, State) ->
     {reply, ok, append_queued_log_messages(State), hibernate};
@@ -359,7 +368,6 @@ terminate(_, #state{fd = Fd, flush_timer = FlushTimer} = State) ->
             ok
     end,
     erlang:cancel_timer(FlushTimer),
-    ets:delete(cloud_logger),
     ok.
 
 code_change(_, State, _) ->
@@ -369,20 +377,14 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-log_message(Level, Module, Line, [_|_] = Format, Args)
+log_message(Process, Level, Module, Line, [_|_] = Format, Args)
     when is_integer(Level), is_atom(Module), is_integer(Line) ->
-    [{loglevel, LevelLimit}] = ets:lookup(cloud_logger, loglevel),
-    if
-        Level =< LevelLimit ->
-            gen_server:cast(?MODULE, 
-                {log,
-                 Level,
-                 erlang:now(),
-                 erlang:universaltime(),
-                 Module, Line, self(), Format, Args});
-        true ->
-            ok
-    end.
+    gen_server:cast(Process, 
+        {log,
+         Level,
+         erlang:now(),
+         erlang:universaltime(),
+         Module, Line, self(), Format, Args}).
 
 %% convert a loglevel atom into an integer value
 %% that has meaning limited to this module
@@ -495,5 +497,103 @@ file_flush(Fd) ->
         {error, Reason} ->
             error_logger:error_msg("(~p:~p:~p) unable to flush file: ~p~n",
                 [?MODULE, ?LINE, self(), Reason])
+    end.
+
+-define(INTERFACE_MODULE_HEADER,
+    "
+    -module(cloud_logger_interface).
+    -author('mjtruog [at] gmail (dot) com').
+    -export([critical/4, error/4, warning/4, info/4, debug/4]).").
+get_interface_module_code(0, _) ->
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(_, _, _, _) -> ok.
+    error(_, _, _, _) -> ok.
+    warning(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    ";
+get_interface_module_code(1, Process) ->
+    string_extensions:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(Module, Line, Format, Arguments) ->
+        cloud_logger:critical(~s, Module, Line, Format, Arguments).
+    error(_, _, _, _) -> ok.
+    warning(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    ", [Process]);
+get_interface_module_code(2, Process) ->
+    string_extensions:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(Module, Line, Format, Arguments) ->
+        cloud_logger:critical(~s, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloud_logger:error(~s, Module, Line, Format, Arguments).
+    warning(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    ", [Process, Process]);
+get_interface_module_code(3, Process) ->
+    string_extensions:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(Module, Line, Format, Arguments) ->
+        cloud_logger:critical(~s, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloud_logger:error(~s, Module, Line, Format, Arguments).
+    warning(Module, Line, Format, Arguments) ->
+        cloud_logger:warning(~s, Module, Line, Format, Arguments).
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    ", [Process, Process, Process]);
+get_interface_module_code(4, Process) ->
+    string_extensions:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(Module, Line, Format, Arguments) ->
+        cloud_logger:critical(~s, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloud_logger:error(~s, Module, Line, Format, Arguments).
+    warning(Module, Line, Format, Arguments) ->
+        cloud_logger:warning(~s, Module, Line, Format, Arguments).
+    info(Module, Line, Format, Arguments) ->
+        cloud_logger:info(~s, Module, Line, Format, Arguments).
+    debug(_, _, _, _) -> ok.
+    ", [Process, Process, Process, Process]);
+get_interface_module_code(_, Process) -> % 5
+    string_extensions:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    critical(Module, Line, Format, Arguments) ->
+        cloud_logger:critical(~s, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloud_logger:error(~s, Module, Line, Format, Arguments).
+    warning(Module, Line, Format, Arguments) ->
+        cloud_logger:warning(~s, Module, Line, Format, Arguments).
+    info(Module, Line, Format, Arguments) ->
+        cloud_logger:info(~s, Module, Line, Format, Arguments).
+    debug(Module, Line, Format, Arguments) ->
+        cloud_logger:debug(~s, Module, Line, Format, Arguments).
+    ", [Process, Process, Process, Process, Process]).
+
+create_interface_module(Node, Level) when is_integer(Level) ->
+    Deleted = code:delete(cloud_logger_interface),
+    if
+        Deleted ->
+            code:purge(cloud_logger_interface);
+        true ->
+            ok
+    end,
+    Process = string_extensions:format("{~p,'~p'}", [?MODULE, Node]),
+    {Module, Binary} = dynamic_compile:from_string(
+        get_interface_module_code(Level, Process)),
+    case code:load_binary(Module, "cloud_logger_interface.erl", Binary) of
+        {module, Module} ->
+            {ok, Binary};
+        {error, _} = Error ->
+            Error
     end.
 

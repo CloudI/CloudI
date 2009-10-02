@@ -101,7 +101,9 @@ ln -s /home/user/organized/work/erlang/faxien_lighttpd_repo /var/www/repo
 
 CODE REQUIRES boost, asn1, etc.
 
-#minimal dependency for building boost
+# minimal dependency for building g++ (on a 64bit system)
+apt-get install libc6-dev-i386
+# minimal dependency for building boost
 apt-get install libbz2-dev zlib1g-dev
 
 

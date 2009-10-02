@@ -399,6 +399,7 @@ class WorkerController::WorkId
         }
 
         std::string const & workTitle() const { return m_workTitle; }
+        uint32_t id() const { return m_id; }
     private:
         std::string m_workTitle;
         uint32_t m_id;

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_manager).
@@ -243,6 +243,8 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+-define(PULL_TYPE, 'WorkerMessage_pullJobTaskResponse').
+
 %% create a task for the type of work that was requested
 respond(#'WorkerMessage_pullJobTaskRequest'{
         workerName = WorkerName,
@@ -250,14 +252,13 @@ respond(#'WorkerMessage_pullJobTaskRequest'{
         id = Id
     } = Request, Pid, WorkLookup, WorkStatus)
     when is_pid(Pid) ->
-    WorkExists = cloud_work_status:has_active_work(WorkTitle, WorkStatus),
-    if
-        WorkExists == false ->
+    case cloud_work_status:has_active_work(WorkTitle, WorkStatus) of
+        false ->
             % no work is present yet, just respond with a null task
             {ok, Answer} = 'WorkerProtocol':encode(
                 'WorkerMessage',
                 {'pullJobTaskResponse',
-                 #'WorkerMessage_pullJobTaskResponse'{
+                 #?PULL_TYPE{
                      workTitle = WorkTitle,
                      id = Id,
                      totalIds = 0,
@@ -292,7 +293,7 @@ respond(#'WorkerMessage_pullJobTaskRequest'{
                                     {ok, Answer} = 'WorkerProtocol':encode(
                                         'WorkerMessage',
                                         {'pullJobTaskResponse',
-                                         #'WorkerMessage_pullJobTaskResponse'{
+                                         #?PULL_TYPE{
                                              workTitle = WorkTitle,
                                              id = Id,
                                              totalIds = 0,
@@ -323,7 +324,7 @@ respond(#'WorkerMessage_pullJobTaskRequest'{
                                     {ok, Answer} = 'WorkerProtocol':encode(
                                         'WorkerMessage',
                                         {'pullJobTaskResponse',
-                                         #'WorkerMessage_pullJobTaskResponse'{
+                                         #?PULL_TYPE{
                                             workTitle = WorkTitle,
                                             id = Id,
                                             totalIds = TotalIds,
@@ -351,7 +352,7 @@ respond(#'WorkerMessage_pullJobTaskRequest'{
                     {ok, Answer} = 'WorkerProtocol':encode(
                         'WorkerMessage',
                         {'pullJobTaskResponse',
-                         #'WorkerMessage_pullJobTaskResponse'{
+                         #?PULL_TYPE{
                              workTitle = WorkTitle,
                              id = Id,
                              totalIds = TotalIds,
@@ -365,6 +366,8 @@ respond(#'WorkerMessage_pullJobTaskRequest'{
                     {list_to_binary(Answer), WorkLookup, UpdatedWorkStatus}
             end
     end.
+
+-define(PUSH_TYPE, 'WorkerMessage_pushJobTaskResultResponse').
 
 %% collect the results of a task for a type of work
 respond(#'WorkerMessage_pushJobTaskResultRequest'{
@@ -380,17 +383,29 @@ respond(#'WorkerMessage_pushJobTaskResultRequest'{
         failureCount = FailureCount
     } = Request, Pid, WorkLookup, DataTypeLookup, WorkStatus)
     when is_pid(Pid) ->
+    Task = cloud_work_status:get_cached_task(WorkTitle, Id, WorkStatus),
     if
-        ReturnValue == false ->
-            % work task failed, so respond to acknowledge the failure
-            % (the next task request by the same id will get the same task)
-            Task = cloud_work_status:get_cached_task(WorkTitle, Id, WorkStatus),
+        Task == error ->
+            % old data from the worker has been sent and
+            % replying to it will make the future queries
+            % pull valid tasks
+            {ok, Answer} = 'WorkerProtocol':encode(
+                'WorkerMessage',
+                {'pushJobTaskResultResponse',
+                 #?PUSH_TYPE{
+                     workTitle = WorkTitle,
+                     id = Id,
+                     taskData = TaskData
+                 }
+                }),
+            {list_to_binary(Answer),
+             WorkLookup, DataTypeLookup, WorkStatus};
+        true ->
             if
-                Task == error ->
-                    ?LOG_CRITICAL("task ~p failed and does not exist",
-                        [Sequence]),
-                    error;
-                true ->
+                ReturnValue == false ->
+                    % work task failed, so respond to acknowledge the failure
+                    % (the next task request by the
+                    %  same id will get the same task)
                     case cloud_work_status:set_cached_task(
                         WorkTitle, Id, Task#work_status_working_task{
                             failure_count = (FailureCount + 1)
@@ -401,7 +416,7 @@ respond(#'WorkerMessage_pushJobTaskResultRequest'{
                             {ok, Answer} = 'WorkerProtocol':encode(
                                 'WorkerMessage',
                                 {'pushJobTaskResultResponse',
-                                 #'WorkerMessage_pushJobTaskResultResponse'{
+                                 #?PUSH_TYPE{
                                      workTitle = WorkTitle,
                                      id = Id,
                                      taskData = TaskData
@@ -411,37 +426,40 @@ respond(#'WorkerMessage_pushJobTaskResultRequest'{
                                 "task data: ~p", [Sequence, 
                                 erlang:list_to_binary(TaskData)]),
                             {list_to_binary(Answer),
-                             WorkLookup, DataTypeLookup, UpdatedWorkStatus}
+                             WorkLookup, DataTypeLookup,
+                             UpdatedWorkStatus}
+                    end;
+                true ->
+                    TaskSize = erlang:list_to_float(StrTaskSize),
+                    ElapsedTime = erlang:list_to_float(StrElapsedTime),
+                    Node = node(Pid),
+                    {GenericQueries, UpdatedDataTypeLookup} = 
+                        check_result_queries(Queries, DataTypeLookup),
+                    case cloud_work_status:store_output(
+                        WorkTitle, Id, Sequence, GenericQueries, WorkStatus) of
+                        error ->
+                            error;
+                        duplicate ->
+                            ignore;
+                        {ok, NewWorkStatus} ->
+                            NewWorkLookup = cloud_task_speed_lookup:add(
+                                Node, WorkTitle, TaskSize,
+                                cloud_work_interface:get_task_time_target(
+                                    WorkTitle),
+                                ElapsedTime, WorkLookup),
+                            {ok, Answer} = 'WorkerProtocol':encode(
+                                'WorkerMessage',
+                                {'pushJobTaskResultResponse',
+                                 #?PUSH_TYPE{
+                                     workTitle = WorkTitle,
+                                     id = Id,
+                                     taskData = TaskData
+                                 }
+                                }),
+                            {list_to_binary(Answer),
+                             NewWorkLookup, UpdatedDataTypeLookup,
+                             NewWorkStatus}
                     end
-            end;
-        true ->
-            TaskSize = erlang:list_to_float(StrTaskSize),
-            ElapsedTime = erlang:list_to_float(StrElapsedTime),
-            Node = node(Pid),
-            {GenericQueries, UpdatedDataTypeLookup} = 
-                check_result_queries(Queries, DataTypeLookup),
-            case cloud_work_status:store_output(
-                WorkTitle, Id, Sequence, GenericQueries, WorkStatus) of
-                error ->
-                    error;
-                duplicate ->
-                    ignore;
-                {ok, NewWorkStatus} ->
-                    NewWorkLookup = cloud_task_speed_lookup:add(
-                        Node, WorkTitle, TaskSize,
-                        cloud_work_interface:get_task_time_target(WorkTitle),
-                        ElapsedTime, WorkLookup),
-                    {ok, Answer} = 'WorkerProtocol':encode(
-                        'WorkerMessage',
-                        {'pushJobTaskResultResponse',
-                         #'WorkerMessage_pushJobTaskResultResponse'{
-                             workTitle = WorkTitle,
-                             id = Id,
-                             taskData = TaskData
-                         }
-                        }),
-                    {list_to_binary(Answer),
-                     NewWorkLookup, UpdatedDataTypeLookup, NewWorkStatus}
             end
     end.
 

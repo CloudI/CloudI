@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_run_queue).
