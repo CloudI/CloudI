@@ -1,6 +1,6 @@
-# ABOUT
+#CloudI 0.0.3 (alpha)
 
-CloudI 0.0.2 (alpha)
+## ABOUT
 
 The project is still being developed and is alpha, so please be patient if you
 have troubles with the setup.  The setup will soon become more
@@ -34,7 +34,15 @@ implemented, since that will occur in a separate external application that
 is not yet written.  Current failover requires knowledge of the cloud_api
 module and commands fed to the Erlang VM shell, so it is a manual process.
 
-# CONFIGURATION
+CloudI fault-tolerance test cases include:
+    * a local death of a CloudI instance coordinating Erlang VM
+    * a local death of a cloud_worker_port due to a signal
+    * a local stop of a cloud_worker_port due to a signal
+    * a remote death of a CloudI instance Erlang VM
+    * a remote death of a cloud_worker_port due to a signal
+    * a remote stop of a cloud_worker_port due to a signal
+
+## CONFIGURATION
 
 CloudI does require some configuration and a brief guide exists here:
     src/docs/CONFIGURATION.txt
@@ -57,7 +65,7 @@ a different version, you will need to change:
     ERTS_VERSION=5.7.2
     ERL_INTERFACE_VERSION=3.6.2
 
-# RUNNING
+## RUNNING
 
 Once configuration has been completed, you can run "make" and it will
 compile any specific dependencies CloudI requires
@@ -73,11 +81,11 @@ when using the cloud_api:remove_data/1 function.  If a data repository is
 removed that a work module is using, bad things will happen.  The usage of the
 CloudI API should respect running work that is not removed.
 
-# LICENSE
+## LICENSE
 
 BSD License
 
-# CONTACT
+## CONTACT
 
 Michael Truog (mjtruog [at] gmail (dot) com)
 

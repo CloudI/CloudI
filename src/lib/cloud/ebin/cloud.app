@@ -1,8 +1,6 @@
-%% This is the application resource file (.app file) for the cloud,
-%% application.
 {application, cloud, 
-  [{description, "Cloud"},
-   {vsn, "0.0.2"},
+  [{description, "Cloudi Application"},
+   {vsn, "0.0.3"},
    {modules, [
        cloud_api,
        cloud_app,
@@ -22,7 +20,9 @@
        cloud_worker_scheduler,
        cloud_worker_port_sup,
        cloud_worker_port,
+       dynamic_compile,
        immediate_gc,
+       monitor_link,
        q,
        lists_extensions,
        math_extensions,

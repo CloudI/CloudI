@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_task_speed_lookup).
@@ -160,7 +160,9 @@ add(Node, WorkTitle, TaskSize, TargetTime, ElapsedTime, State)
         TaskScaleFactor = TargetTime / ElapsedTime,
         if
             TaskScaleFactor < 0.1 ->
-                ?LOG_DEBUG("node ~p is too slow for ~p", [Node, WorkTitle]);
+                ?LOG_DEBUG("node ~p is too slow for ~p "
+                           "(with the current task_time_target "
+                           "of ~p hours)", [Node, WorkTitle, TargetTime]);
             true ->
                 ok
         end,
