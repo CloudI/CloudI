@@ -1,4 +1,4 @@
-#CloudI 0.0.3 (alpha)
+#CloudI 0.0.4 (alpha)
 
 ## ABOUT
 
@@ -25,7 +25,8 @@ which defines the work title "cloud_job_tests" referenced in src/cloud.conf.
 "cloud_job_tests" finds hexadecimal digits of the constant PI using the
 Bailey-Borwein-Plouffe formula and verifies that they are correct.
 "cloud_job_tests" requires that Postgres is configured and setup because
-it stores the results.
+it stores the results.  Memcached is also used by "cloud_job_tests", but any
+results that would go to memcached are discarded if memcached isn't configured.
 
 CloudI ensures that the C/C++ work code is executed in a fault-tolerant way.
 Failover is handled with multiple CloudI instances using separate epmd daemons.
@@ -64,6 +65,13 @@ The Makefile is currently assuming Erlang R13B01 is used.  If you are using
 a different version, you will need to change:
     ERTS_VERSION=5.7.2
     ERL_INTERFACE_VERSION=3.6.2
+
+If the version of CloudI has changed and you have already ran CloudI in the
+past, execute "rm _build.cfg" before running make.
+
+CloudI currently supports the following databases:
+    * Postgres
+    * Memcached
 
 ## RUNNING
 

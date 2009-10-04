@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.3 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_status).
@@ -498,22 +498,21 @@ drain_output(WorkStatus, DataTypeLookup) ->
                         if
                             Sequence == RemainingSequence ->
                                 ?LOG_ERROR("failed to store all results (~w) "
-                                    "for work title ~p",
-                                    [RemainingLength, WorkTitle]),
-                                Status#work_status{active = false};
+                                    "for work title ~p (at least partially)",
+                                    [RemainingLength, WorkTitle]);
                             true ->
                                 ?LOG_ERROR("failed to store some results "
                                     "(~w out of ~w) for work title ~p",
                                     [RemainingLength,
-                                     erlang:length(WorkResults), WorkTitle]),
-                                RemainingOutputQueue = lists:zip(lists:seq(
-                                    RemainingSequence, NewSequence - 1),
-                                    Remaining) ++ NewOutputQueue,
-                                Status#work_status{
-                                    active = false,
-                                    remove_sequence_number = RemainingSequence,
-                                    output = RemainingOutputQueue}
-                        end
+                                     erlang:length(WorkResults), WorkTitle])
+                        end,
+                        RemainingOutputQueue = lists:zip(lists:seq(
+                            RemainingSequence, NewSequence - 1),
+                            Remaining) ++ NewOutputQueue,
+                        Status#work_status{
+                            active = false,
+                            remove_sequence_number = RemainingSequence,
+                            output = RemainingOutputQueue}
                 end;
             true ->
                 Status
@@ -575,7 +574,7 @@ drain_output_entries(Sequence, DataQueue, [])
 drain_output_entries(Sequence, DataQueue,
                      [{Sequence, OutputData} | OutputQueue])
     when is_integer(Sequence), is_list(DataQueue), is_list(OutputData) ->
-    drain_output_entries(Sequence + 1, DataQueue ++ OutputData, OutputQueue);
+    drain_output_entries(Sequence + 1, DataQueue ++ [OutputData], OutputQueue);
 
 drain_output_entries(Sequence, DataQueue, OutputQueue)
     when is_integer(Sequence), is_list(DataQueue), is_list(OutputQueue) ->

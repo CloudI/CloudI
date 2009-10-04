@@ -98,11 +98,12 @@ extern "C"
 void initialize()
 {
     // global/"static" data is shared between multiple threads, beware!
+    //std::cerr << "initialize()" << std::endl;
 }
 
 void deinitialize()
 {
-    //std::cerr << "deinitialize()\r\n";
+    //std::cerr << "deinitialize()" << std::endl;
 }
 
 bool do_work(bool const & abortTask,
@@ -158,6 +159,11 @@ bool do_work(bool const & abortTask,
         "(" << digitIndex << ", '" << piResult << "');";
     queriesOut.push_back(
         DatabaseQuery("cloud_data_pgsql.cloudi_tests", resultQuery.str()));
+    resultQuery.str("");
+    resultQuery << 
+        "{set, \"" << digitIndex << "\", <<\"" << piResult << "\">>}";
+    queriesOut.push_back(
+        DatabaseQuery("cloud_data_memcached.cloudi_tests", resultQuery.str()));
 
     return true;
 }
