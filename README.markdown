@@ -24,7 +24,7 @@ An example of using CloudI can be found in "src/lib/cloud_job_tests/src/",
 which defines the work title "cloud_job_tests" referenced in src/cloud.conf.
 "cloud_job_tests" finds hexadecimal digits of the constant PI using the
 Bailey-Borwein-Plouffe formula and verifies that they are correct.
-"cloud_job_tests" requires that Postgres is configured and setup because
+"cloud_job_tests" requires that PostgreSQL is configured and setup because
 it stores the results.  Memcached is also used by "cloud_job_tests", but any
 results that would go to memcached are discarded if memcached isn't configured.
 
@@ -70,8 +70,8 @@ If the version of CloudI has changed and you have already ran CloudI in the
 past, execute "rm _build.cfg" before running make.
 
 CloudI currently supports the following databases:
-    * Postgres
-    * Memcached
+    * PostgreSQL
+    * memcached
 
 ## RUNNING
 
