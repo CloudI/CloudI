@@ -6,9 +6,11 @@ FAILOVER_HOSTS=config/failover_hosts
 
 CWD=`dirname $0`
 if [ $1 -lt 1 ]; then
-    ERL_EPMD_PORT=`grep -n \`hostname\` $CWD/../$FAILOVER_HOSTS | cut -d: -f3`
-    if [ $ERL_EPMD_PORT -lt 1 ]; then
-        echo "ERL_EPMD_PORT has an invalid value, modify $FAILOVER_HOSTS"
+    HOST=`hostname`
+    ERL_EPMD_PORT=`grep -n $HOST $CWD/../$FAILOVER_HOSTS | cut -d: -f3`
+    if [ -z $ERL_EPMD_PORT ]; then
+        echo "ERL_EPMD_PORT has an invalid value,"
+        echo "modify $FAILOVER_HOSTS to include the entry \"$HOST:ERL_EPMD_PORT\""
         exit 1
     fi
 else
