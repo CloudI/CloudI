@@ -167,7 +167,7 @@ do_query(Query, Process) ->
                 when is_binary(Value) ->
                 mcerlang:add(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
-            {'add_exp', Key, Value, Expiration}
+            {'add', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
                 mcerlang:add_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
@@ -175,7 +175,7 @@ do_query(Query, Process) ->
                 when is_binary(Value) ->
                 mcerlang:set(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
-            {'set_exp', Key, Value, Expiration}
+            {'set', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
                 mcerlang:set_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
@@ -183,19 +183,19 @@ do_query(Query, Process) ->
                 when is_binary(Value) ->
                 mcerlang:replace(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
-            {'replace_exp', Key, Value, Expiration}
+            {'replace', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
                 mcerlang:replace_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
             {'delete', Key} ->
                 mcerlang:delete(Process,
                     Key, ?MEMCACHED_TIMEOUT);
-            {'increment_exp', Key, Value, Initial, Expiration}
+            {'increment', Key, Value, Initial, Expiration}
                 when is_binary(Value), is_binary(Initial),
                      is_integer(Expiration) ->
                 mcerlang:increment_exp(Process,
                     Key, Value, Initial, Expiration, ?MEMCACHED_TIMEOUT);
-            {'decrement_exp', Key, Value, Initial, Expiration}
+            {'decrement', Key, Value, Initial, Expiration}
                 when is_binary(Value), is_binary(Initial),
                      is_integer(Expiration) ->
                 mcerlang:decrement_exp(Process,
@@ -214,7 +214,7 @@ do_query(Query, Process) ->
             {'flush'} ->
                 mcerlang:flush(Process,
                     ?MEMCACHED_TIMEOUT);
-            {'flush_exp', Expiration}
+            {'flush', Expiration}
                 when is_integer(Expiration) ->
                 mcerlang:flush_exp(Process,
                     Expiration, ?MEMCACHED_TIMEOUT);
