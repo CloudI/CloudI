@@ -1,4 +1,4 @@
-from http://github.com/JacobVorreuter/mcerlang
+# from <http://github.com/JacobVorreuter/mcerlang>
 
 # MC Erlang caches beats on your face
 
