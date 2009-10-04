@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.3 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_manager).
@@ -66,7 +66,7 @@
 -include("cloud_logger.hrl").
 -include("rbdict.hrl").
 
-%% delay between receiving results and putting them in the work module
+%% delay between receiving results and passing them to the data module
 %% (preserving the order defined by the work module,
 %%  for each of the data repositories specified with data titles)
 -define(RESULT_COLLECTION_DELAY, 1000). % 1 second

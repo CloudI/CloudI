@@ -1,7 +1,17 @@
+2009-10-03	Michael Truog	<mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.4 (alpha)
+		* shortnames are currently the only supported node names
+		* fix problems when storing work data in the data repository
+		* create the cloud_interface application, for easier development
+		  of dependent cloud_data applications
+		* create the cloud_data_memcached application so that memcached
+		  commands can be issued as an Erlang tuple passed as a list
+		  (for the query text)
+
 2009-09-29	Michael Truog	<mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.3 (alpha)
-		* shortnames are currently the only supported node names
 		* fix logger so that remote nodes can log properly
 		* solve some fault-tolerance problems when a process or VM dies
 		* make sure to not have cloud_worker_port exit
