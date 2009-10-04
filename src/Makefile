@@ -191,12 +191,7 @@ ERLANG_SRC_FILES=\
         lib/epgsql/src/pgsql_types.erl \
         lib/epgsql/src/pgsql_binary.erl \
         lib/epgsql/src/pgsql_connection.erl \
-        lib/epgsql/src/pgsql_fdatetime.erl \
-        lib/pgsql/src/epgsql_wrapper.erl \
-        lib/pgsql/src/pgsql_util.erl \
-        lib/pgsql/src/pgsql.erl \
-        lib/pgsql/src/pgsql_tcp.erl \
-        lib/pgsql/src/pgsql_proto.erl
+        lib/epgsql/src/pgsql_fdatetime.erl
 
 all: build
 
