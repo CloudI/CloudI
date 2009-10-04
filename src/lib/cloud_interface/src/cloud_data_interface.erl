@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.3 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_interface).
@@ -52,6 +52,9 @@
 
 %% behavior callbacks
 -export([behaviour_info/1]).
+
+%% external interface
+-export([do_queries_group/5]).
 
 %% behavior external interface
 -export([stop/1, do_queries/2]).
@@ -76,6 +79,22 @@ behaviour_info(_) ->
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Group queries based on the DataTitle===
+%% Do queries that are grouped based on the DataTitle to be processed
+%% (only queries that contain the specified DataTitle can be processed
+%%  with the Module:Function/2 call that is specified)
+%% all the processed queries are removed from the QueryList
+%% so that it may be processed in other data modules, if necessary.
+%% @end
+%%-------------------------------------------------------------------------
+do_queries_group(QueryList, Module, Function, State, DataTitle)
+    when is_list(QueryList), is_atom(Module),
+         is_atom(Function), is_atom(DataTitle) ->
+    do_queries_group([], QueryList, QueryList, 
+                     Module, Function, State, DataTitle).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -121,5 +140,62 @@ call_data(DataTitle, Function, Arguments, Error)
         error:badarg ->
             ?LOG_ERROR("invalid data title \"~p\"", [DataTitle]),
             Error
+    end.
+
+%% remove queries that were processed from the main QueryList
+get_all_remaining_queries(RemainingQueryList,
+                          Remaining, Remaining,
+                          QueryList, _)
+    when is_list(RemainingQueryList), is_list(Remaining), is_list(QueryList) ->
+    % all the other processing queries failed
+    % (first failure aborts the process of executing remaining queries)
+    RemainingQueryList ++ QueryList;
+get_all_remaining_queries(RemainingQueryList,
+                          [Query | ProcessingRemaining] = Processing,
+                          Remaining, [QueryEntry | QueryList], DataTitle)
+    when is_list(RemainingQueryList), is_list(Processing),
+         is_list(Remaining), is_list(QueryList), is_atom(DataTitle) ->
+    case lists_extensions:checked_delete({DataTitle, Query}, QueryEntry) of
+        false ->
+            get_all_remaining_queries(RemainingQueryList ++ [QueryEntry],
+                                      Processing, Remaining,
+                                      QueryList, DataTitle);
+        [] ->
+            get_all_remaining_queries(RemainingQueryList,
+                                      ProcessingRemaining, Remaining,
+                                      QueryList, DataTitle);
+        NewQueryEntry ->
+            get_all_remaining_queries(RemainingQueryList ++ [NewQueryEntry],
+                                      ProcessingRemaining, Remaining,
+                                      QueryList, DataTitle)
+    end.
+
+%% do_queries_group/5 implementation
+do_queries_group([], [], QueryList, _, _, _, _) when is_list(QueryList) ->
+    {ok, QueryList}; % no queries to handle in this module
+do_queries_group(Processing, [], QueryList,
+                 Module, Function, State, DataTitle)
+    when is_list(Processing), is_list(QueryList), is_atom(Module),
+         is_atom(Function), is_atom(DataTitle) ->
+    case erlang:apply(Module, Function, [Processing, State]) of
+        [] ->
+            {ok, get_all_remaining_queries(
+                [], Processing, [], QueryList, DataTitle)};
+        Remaining when is_list(Remaining) ->
+            {error, get_all_remaining_queries(
+                [], Processing, Remaining, QueryList, DataTitle)}
+    end;
+do_queries_group(Processing, [QueryEntry | OtherQueries],
+                 QueryList, Module, Function, State, DataTitle)
+    when is_list(Processing), is_list(OtherQueries),
+         is_list(QueryList), is_atom(Module),
+         is_atom(Function), is_atom(DataTitle) ->
+    case lists:keyfind(DataTitle, 1, QueryEntry) of
+        false ->
+            do_queries_group(Processing, OtherQueries,
+                             QueryList, Module, Function, State, DataTitle);
+        {DataTitle, Query} ->
+            do_queries_group(Processing ++ [Query], OtherQueries,
+                             QueryList, Module, Function, State, DataTitle)
     end.
 

@@ -28,7 +28,7 @@ $(TARGET): ${OBJS} \
            ../include/worker_protocol.hpp \
            worker_protocol.cpp
 	@./sizeof_WorkerMessage_t ../include/worker_protocol_defs.hpp
-	@$(CXX) $(CXXFLAGS) -I../include \
+	@$(CXX) $(CXXFLAGS) -I../include -I../../cloud_interface/include \
         -o ../priv/obj/worker_protocol.o -c worker_protocol.cpp
 	@(cd ../priv/obj/ && \
       $(AR) -rfs ../lib/$(TARGET) worker_protocol.o ${OBJS} $(LIBS))

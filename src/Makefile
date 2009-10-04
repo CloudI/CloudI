@@ -4,9 +4,9 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.3.0
-PROJECT_REPO_URL=http:\/\/lovwlk:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.3
+VERSION_NAME=0.0.4.0
+PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
+MAJOR_VERSION_NAME=0.0.4
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -65,6 +65,8 @@ WORKER_SRC_PATH=lib/cloud_worker/src
 WORKER_OBJ_PATH=lib/cloud_worker/priv/obj
 WORKER_LIB_PATH=lib/cloud_worker/priv/lib
 WORKER_PROTOCOL_PATH=lib/cloud_worker/protocol
+INTERFACE_SRC_PATH=lib/cloud_interface/src
+INTERFACE_INC_PATH=$(ROOT_PATH)/lib/cloud_interface/include
 MAIN_SRC_PATH=lib/cloud/src
 MAIN_INC_PATH=$(ROOT_PATH)/lib/cloud/include
 MAIN_BIN_PATH=lib/cloud/priv
@@ -147,9 +149,9 @@ LDFLAGS+=-L/usr/lib/debug/
 
 # source files compiled with sinan
 ERLANG_SRC_FILES=\
-        $(MAIN_INC_PATH)/cloud_data_interface.erl \
+        $(INTERFACE_SRC_PATH)/cloud_data_interface.erl \
+        $(INTERFACE_SRC_PATH)/cloud_work_interface.erl \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
-        $(MAIN_INC_PATH)/cloud_work_interface.erl \
         $(MAIN_SRC_PATH)/cloud_api.erl \
         $(MAIN_SRC_PATH)/cloud_app.erl \
         $(MAIN_SRC_PATH)/cloud_configuration.erl \
@@ -179,7 +181,6 @@ ERLANG_SRC_FILES=\
         $(MAIN_SRC_PATH)/string_extensions.erl \
         $(MAIN_SRC_PATH)/time_extensions.erl \
         $(MAIN_SRC_PATH)/tuple_extensions.erl \
-        lib/cloud_data_pgsql/src/cloud_data_interface.erl \
         lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
         lib/rb/src/rbsets.erl \
         lib/rb/src/rbdict.erl \
@@ -301,7 +302,7 @@ $(BOOST_LIB_PATH): $(BOOST_SRC)
      )
 
 $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
-        $(MAIN_INC_PATH)/cloud_work_interface.hpp \
+        $(INTERFACE_INC_PATH)/cloud_work_interface.hpp \
         $(WORK_TYPE1_SRC_PATH)/cloud_job_tests.cpp \
         $(WORK_TYPE1_SRC_PATH)/piqpr8_gmp_verify.cpp \
         $(WORK_TYPE1_SRC_PATH)/piqpr8_gmp_verify.hpp \
@@ -309,6 +310,7 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
         $(WORK_TYPE1_SRC_PATH)/piqpr8_gmp.hpp
 	@$(CXX) $(CXXFLAGS) -rdynamic -I$(MAIN_INC_PATH) \
         -I$(WORKER_INC_PATH) \
+        -I$(INTERFACE_INC_PATH) \
         -o $(WORK_TYPE1_OBJ_PATH)/cloud_job_tests.o \
         -c -fPIC $(WORK_TYPE1_SRC_PATH)/cloud_job_tests.cpp
 	@$(CXX) $(CXXFLAGS) -rdynamic -I$(GMP_INC_PATH) \
@@ -331,12 +333,13 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
 
 $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
-        $(MAIN_INC_PATH)/cloud_work_interface.erl \
+        $(INTERFACE_SRC_PATH)/cloud_work_interface.erl \
         $(WORK_TYPE1_SRC_PATH)/cloud_job_tests.erl
 	@$(ERLC_PATH) -o $(WORK_TYPE1_OBJ_PATH) \
-        $(MAIN_INC_PATH)/cloud_work_interface.erl
+        -I$(INTERFACE_INC_PATH) \
+        $(INTERFACE_SRC_PATH)/cloud_work_interface.erl
 	@$(ERLC_PATH) -o $(WORK_TYPE1_LIB_PATH) \
-        -I $(MAIN_INC_PATH) \
+        -I$(MAIN_INC_PATH) \
         -pz $(WORK_TYPE1_OBJ_PATH) \
         $(WORK_TYPE1_SRC_PATH)/cloud_job_tests.erl
 
@@ -398,25 +401,28 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
         $(WORKER_SRC_PATH)/safe_shared_ptr.hpp \
         $(WORKER_INC_PATH)/pool_copy_ptr.hpp \
         $(WORKER_INC_PATH)/boost_thread.hpp \
-        $(MAIN_INC_PATH)/cloud_work_interface_data.hpp \
+        $(INTERFACE_INC_PATH)/cloud_work_interface_data.hpp \
         $(MAIN_INC_PATH)/cloud_worker_port.hpp
 	# creating worker library for port binary function calls
 	@$(CXX) $(CXXFLAGS) -I$(GEPD_INC_PATH) \
          -I$(ERL_INTERFACE_INC_PATH) \
          -I$(WORKER_INC_PATH) \
          -I$(MAIN_INC_PATH) \
+         -I$(INTERFACE_INC_PATH) \
 	     -o $(WORKER_OBJ_PATH)/node_connections.o \
          -c $(WORKER_SRC_PATH)/node_connections.cpp 
 	@$(CXX) $(CXXFLAGS) -I$(GEPD_INC_PATH) \
          -I$(ERL_INTERFACE_INC_PATH) \
 		 -I$(WORKER_INC_PATH) -I$(WORKER_SRC_PATH) \
          -I$(MAIN_INC_PATH) \
+         -I$(INTERFACE_INC_PATH) \
 	     -o $(WORKER_OBJ_PATH)/worker_controller.o \
          -c $(WORKER_SRC_PATH)/worker_controller.cpp 
 	@$(CXX) $(CXXFLAGS) -I$(GEPD_INC_PATH) \
          -I$(ERL_INTERFACE_INC_PATH) \
 		 -I$(WORKER_INC_PATH) -I$(WORKER_SRC_PATH) \
          -I$(MAIN_INC_PATH) \
+         -I$(INTERFACE_INC_PATH) \
 	     -o $(WORKER_OBJ_PATH)/cloud_worker.o \
          -c $(WORKER_SRC_PATH)/cloud_worker.cpp 
 	@$(CXX) $(CXXFLAGS)  \
@@ -425,6 +431,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
 	@$(CXX) $(CXXFLAGS) -I$(GEPD_INC_PATH) \
 		 -I$(WORKER_INC_PATH) -I$(WORKER_SRC_PATH) \
          -I$(MAIN_INC_PATH) \
+         -I$(INTERFACE_INC_PATH) \
 	     -o $(WORKER_OBJ_PATH)/worker_execution.o \
          -c $(WORKER_SRC_PATH)/worker_execution.cpp 
 	@$(CXX) $(CXXFLAGS) \
@@ -578,8 +585,8 @@ analyze: $(DIALYZER_PLT) \
         -I$(MAIN_INC_PATH) \
         -I$(MAIN_SRC_PATH) -c \
         $(MAIN_SRC_PATH)/*.erl \
+        $(INTERFACE_SRC_PATH)/*.erl \
         $(WORK_TYPE1_SRC_PATH)/*.erl \
-        $(MAIN_INC_PATH)/cloud_data_interface.erl \
         lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
         lib/rb/src/rbdict.erl \
         lib/rb/src/rbsets.erl

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.3 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_repository_sup).
@@ -198,7 +198,7 @@ build_child_specifications(Specification, [
     % code uses list_to_existing_atom/1
     if
         erlang:length(DatabaseArguments) == 0 ->
-            DataTitle = erlang:list_to_atom(DataModuleString),
+            DataTitle = DataModule,
             build_child_specifications(
                 Specification ++ [
                     {DataTitle,
@@ -208,12 +208,11 @@ build_child_specifications(Specification, [
                 ], DataRepositories);
         true ->
             build_child_specifications(
-                lists:foldl(fun({database, DatabaseName} = DArg, S) ->
-                    % should be the only call of list_to_atom/1
-                    % for the DataTitle, other
-                    % code uses list_to_existing_atom/1
+                lists:foldl(fun(DArg, S) ->
+                    % should be the only call of list_to_atom/1 for the
+                    % DataTitle, other code uses list_to_existing_atom/1
                     DataTitle = erlang:list_to_atom(
-                        DataModuleString ++ "." ++ DatabaseName),
+                        DataModuleString ++ "." ++ erlang:element(2, DArg)),
                     S ++ [
                         {DataTitle,
                          {DataModule, start_link,
