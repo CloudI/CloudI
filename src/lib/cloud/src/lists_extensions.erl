@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.3 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(lists_extensions).
@@ -53,6 +53,7 @@
 %% external interface
 -export([iter/3,
          itera/3, itera2/4, itera3/5,
+         checked_delete/2,
          keyptake/3, keypttake/4,
          sort/1, keysort/2]).
 
@@ -134,6 +135,25 @@ itera3(F, Acc0, Acc1, Acc2, [H]) ->
     F(H, Acc0, Acc1, Acc2, fun(V0, V1, V2) -> {V0, V1, V2} end);
 itera3(F, Acc0, Acc1, Acc2, [H | T]) ->
     F(H, Acc0, Acc1, Acc2, fun(V0, V1, V2) -> itera3(F, V0, V1, V2, T) end).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===lists:delete/2 functionality, but returns false when an element is not deleted.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec checked_delete(Elem :: any(), List :: list()) ->
+    list() |
+    'false'.
+
+checked_delete(Elem, List) when is_list(List) ->
+    checked_delete(Elem, [], List).
+checked_delete(Elem, L, [Elem | T]) ->
+    L ++ T;
+checked_delete(Elem, L, [H | T]) ->
+    checked_delete(Elem, L ++ [H], T);
+checked_delete(_, _, []) ->
+    false.
 
 %%-------------------------------------------------------------------------
 %% @doc

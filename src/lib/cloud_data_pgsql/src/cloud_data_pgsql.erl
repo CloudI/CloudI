@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_pgsql).
@@ -55,6 +55,8 @@
 
 %% external interface
 -export([equery/3, squery/2]).
+%% do_queries_group/5 interface
+-export([do_queries_in_transaction/2]).
 
 %% cloud_data_interface callbacks
 -export([start_link/2, handle_stop/1, handle_do_queries/2]).
@@ -65,7 +67,7 @@
          terminate/2, code_change/3]).
 
 -include("cloud_logger.hrl").
--include("../../epgsql/include/pgsql.hrl").
+-include("pgsql.hrl").
 
 -define(PGSQL_TIMEOUT, 20000). % 20 seconds
 
@@ -166,7 +168,9 @@ handle_call(stop, _,
 handle_call({do_queries, QueryList}, _,
             #state{data_title = DataTitle,
                    connection = Connection} = State) ->
-    Response = do_queries_group(QueryList, Connection, DataTitle),
+    Response = cloud_data_interface:do_queries_group(QueryList,
+        cloud_data_pgsql, do_queries_in_transaction,
+        Connection, DataTitle),
     {reply, Response, State, hibernate};
 handle_call(Request, _, State) ->
     ?LOG_WARNING("Unknown call \"~p\"", [Request]),
@@ -289,63 +293,4 @@ do_queries_in_transaction(SQLQueryList, Connection)
         Remaining when is_list(Remaining) ->
             Remaining
     end.
-
-%% remove queries that were processed from the main QueryList
-get_all_remaining_queries(RemainingQueryList,
-                          Remaining, Remaining,
-                          QueryList, _)
-    when is_list(RemainingQueryList), is_list(Remaining), is_list(QueryList) ->
-    % all the other processing queries failed
-    % (first failure aborts the process of executing remaining queries)
-    RemainingQueryList ++ QueryList;
-get_all_remaining_queries(RemainingQueryList,
-                          [SQLQuery | Processing], Remaining,
-                          [{DataTitle, SQLQuery} | QueryList], DataTitle)
-    when is_list(RemainingQueryList), is_list(Processing),
-         is_list(Remaining), is_list(QueryList), is_atom(DataTitle) ->
-    % a query that succeeded
-    get_all_remaining_queries(RemainingQueryList,
-                              Processing, Remaining,
-                              QueryList, DataTitle);
-get_all_remaining_queries(RemainingQueryList, Processing, Remaining,
-                          [{_, _} = Query | QueryList], DataTitle)
-    when is_list(RemainingQueryList), is_list(Processing),
-         is_list(Remaining), is_list(QueryList), is_atom(DataTitle) ->
-    % a query that is for a different module (different DataTitle)
-    get_all_remaining_queries(RemainingQueryList ++ [Query],
-                              Processing, Remaining,
-                              QueryList, DataTitle).
-
-%% do queries that are grouped based on the DataTitle to be processed
-%% (only queries that contain the DataTitle can be processed in this module)
-%% all the processed queries are removed from the QueryList
-%% so that it may be processed in other data modules, if necessary
-do_queries_group(QueryList, Connection, DataTitle)
-    when is_list(QueryList), is_atom(DataTitle) ->
-    do_queries_group([], QueryList, QueryList, Connection, DataTitle).
-
-do_queries_group([], [], QueryList, _, _) when is_list(QueryList) ->
-    {ok, QueryList}; % no queries to handle in this module
-do_queries_group(Processing, [], QueryList, Connection, DataTitle)
-    when is_list(Processing), is_list(QueryList), is_atom(DataTitle) ->
-    case do_queries_in_transaction(Processing, Connection) of
-        [] ->
-            {ok, get_all_remaining_queries(
-                [], Processing, [], QueryList, DataTitle)};
-        Remaining when is_list(Remaining) ->
-            {error, get_all_remaining_queries(
-                [], Processing, Remaining, QueryList, DataTitle)}
-    end;
-do_queries_group(Processing, [{DataTitle, SQLQuery} | OtherQueries],
-                 QueryList, Connection, DataTitle)
-    when is_list(Processing), is_list(OtherQueries),
-         is_list(QueryList), is_atom(DataTitle) ->
-    do_queries_group(Processing ++ [SQLQuery], OtherQueries,
-                     QueryList, Connection, DataTitle);
-do_queries_group(Processing, [{_, _} | OtherQueries],
-                 QueryList, Connection, DataTitle)
-    when is_list(Processing), is_list(OtherQueries),
-         is_list(QueryList), is_atom(DataTitle) ->
-    do_queries_group(Processing, OtherQueries,
-                     QueryList, Connection, DataTitle).
 
