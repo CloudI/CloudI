@@ -223,9 +223,8 @@ init(CacheServers) ->
         end, [], lists:seq(1, PoolSize)),
         if
             erlang:length(Sockets) == PoolSize ->
-                lists:keymerge(1, Acc0, [
-                    {hash_to_uint(Host, Port),
-                     {Host, Port, PoolSize, Sockets}}]);
+                [{hash_to_uint(Host, Port),
+                  {Host, Port, PoolSize, Sockets}} | Acc0];
             true ->
                 Acc0
         end
@@ -234,7 +233,7 @@ init(CacheServers) ->
         erlang:length(Continuum) /= erlang:length(CacheServers) ->
             {stop, "error creating sockets"};
         true ->
-            {ok, #state{continuum = Continuum}}
+            {ok, #state{continuum = lists:keysort(1, Continuum)}}
     end.
 
 %%--------------------------------------------------------------------
@@ -520,8 +519,8 @@ find_next_largest(Int, [{Hash, Value} | Continuum]) ->
     end.
 find_next_largest(_, [], Value) ->
     Value;
-find_next_largest(Int, [{Hash, _} | Continuum], _) when Hash =< Int ->
-    find_next_largest(Int, Continuum);
+find_next_largest(Int, [{Hash, _} | Continuum], Value) when Hash =< Int ->
+    find_next_largest(Int, Continuum, Value);
 find_next_largest(_, [{_, Value} | _], _) ->
     Value.
 
