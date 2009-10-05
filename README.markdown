@@ -36,12 +36,13 @@ is not yet written.  Current failover requires knowledge of the cloud_api
 module and commands fed to the Erlang VM shell, so it is a manual process.
 
 CloudI fault-tolerance test cases include:
-    * a local death of a CloudI instance coordinating Erlang VM
-    * a local death of a cloud_worker_port due to a signal
-    * a local stop of a cloud_worker_port due to a signal
-    * a remote death of a CloudI instance Erlang VM
-    * a remote death of a cloud_worker_port due to a signal
-    * a remote stop of a cloud_worker_port due to a signal
+
+* a local death of a CloudI instance coordinating Erlang VM
+* a local death of C/C++ work code (within a cloud_worker_port OS process) due to a signal
+* a local stop of C/C++ work code (within a cloud_worker_port OS process) due to a signal
+* a remote death of a CloudI instance Erlang VM
+* a remote death of C/C++ work code (within a cloud_worker_port OS process) due to a signal
+* a remote stop of C/C++ work code (within a cloud_worker_port OS process) due to a signal
 
 ## CONFIGURATION
 
@@ -70,8 +71,9 @@ If the version of CloudI has changed and you have already ran CloudI in the
 past, execute "rm _build.cfg" before running make.
 
 CloudI currently supports the following databases:
-    * PostgreSQL
-    * memcached
+
+* PostgreSQL
+* memcached
 
 ## RUNNING
 
