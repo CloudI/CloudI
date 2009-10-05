@@ -26,7 +26,7 @@
 %%
 %% http://code.google.com/p/memcached/wiki/MemcacheBinaryProtocol
 %% @doc a binary protocol memcached client
--module(mcerlang).
+-module(ememcached).
 -behaviour(gen_server).
 
 %% gen_server callbacks
@@ -55,7 +55,7 @@
 
 -export([find_next_largest/2]).
 
--include("mcerlang.hrl").
+-include("ememcached.hrl").
 
 -record(state, {continuum}).
 

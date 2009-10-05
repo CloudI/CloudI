@@ -11,7 +11,7 @@
         cloud_data_memcached % with dynamic suffix ".database"
         ]},
    {applications, [
-        mcerlang,
+        ememcached,
         cloud_interface
         ]},
    {start_phases, []}]}.

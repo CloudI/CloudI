@@ -146,7 +146,7 @@ code_change(_, State, _) ->
 %% initialize the client state
 init_state(DataTitle, [{database, _, [{_,_,_}|_] = HostList}])
     when is_atom(DataTitle) ->
-    case mcerlang:start_link(HostList) of
+    case ememcached:start_link(HostList) of
         {ok, Pid} when is_pid(Pid) ->
             {ok, #state{data_title = DataTitle,
                         process = Pid}};
@@ -158,82 +158,87 @@ init_state(DataTitle, [{database, _, [{_,_,_}|_] = HostList}])
 do_query(Query, Process) ->
     try (case string_extensions:list_to_term(binary_to_list(Query)) of
             %{'get', Key} ->
-            %    mcerlang:get(Process,
+            %    ememcached:get(Process,
             %       Key, ?MEMCACHED_TIMEOUT);
             %{'get_many', Keys} when is_list(Keys) ->
-            %    mcerlang:get_many(Process,
+            %    ememcached:get_many(Process,
             %        Keys, ?MEMCACHED_TIMEOUT);
             {'add', Key, Value}
                 when is_binary(Value) ->
-                mcerlang:add(Process,
+                ememcached:add(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
             {'add', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
-                mcerlang:add_exp(Process,
+                ememcached:add_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
             {'set', Key, Value}
                 when is_binary(Value) ->
-                mcerlang:set(Process,
+                ememcached:set(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
             {'set', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
-                mcerlang:set_exp(Process,
+                ememcached:set_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
             {'replace', Key, Value}
                 when is_binary(Value) ->
-                mcerlang:replace(Process,
+                ememcached:replace(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
             {'replace', Key, Value, Expiration}
                 when is_binary(Value), is_integer(Expiration) ->
-                mcerlang:replace_exp(Process,
+                ememcached:replace_exp(Process,
                     Key, Value, Expiration, ?MEMCACHED_TIMEOUT);
             {'delete', Key} ->
-                mcerlang:delete(Process,
+                ememcached:delete(Process,
                     Key, ?MEMCACHED_TIMEOUT);
             {'increment', Key, Value, Initial, Expiration}
                 when is_binary(Value), is_binary(Initial),
                      is_integer(Expiration) ->
-                mcerlang:increment_exp(Process,
+                ememcached:increment_exp(Process,
                     Key, Value, Initial, Expiration, ?MEMCACHED_TIMEOUT);
             {'decrement', Key, Value, Initial, Expiration}
                 when is_binary(Value), is_binary(Initial),
                      is_integer(Expiration) ->
-                mcerlang:decrement_exp(Process,
+                ememcached:decrement_exp(Process,
                     Key, Value, Initial, Expiration, ?MEMCACHED_TIMEOUT);
             {'append', Key, Value}
                 when is_binary(Value) ->
-                mcerlang:append(Process,
+                ememcached:append(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
             {'prepend', Key, Value}
                 when is_binary(Value) ->
-                mcerlang:prepend(Process,
+                ememcached:prepend(Process,
                     Key, Value, ?MEMCACHED_TIMEOUT);
             %{'stats'} ->
-            %    mcerlang:stats(Process,
+            %    ememcached:stats(Process,
             %        ?MEMCACHED_TIMEOUT);
             {'flush'} ->
-                mcerlang:flush(Process,
+                ememcached:flush(Process,
                     ?MEMCACHED_TIMEOUT);
             {'flush', Expiration}
                 when is_integer(Expiration) ->
-                mcerlang:flush_exp(Process,
+                ememcached:flush_exp(Process,
                     Expiration, ?MEMCACHED_TIMEOUT);
             %{'quit'} ->
-            %    mcerlang:quit(Process,
+            %    ememcached:quit(Process,
             %        ?MEMCACHED_TIMEOUT);
             %{'version'} ->
-            %    mcerlang:version(Process,
+            %    ememcached:version(Process,
             %        ?MEMCACHED_TIMEOUT);
             _ ->
                 {error, invalid_call}
     
         end) of
-        {error, _} ->
+        {error, invalid_call} ->
+            ?LOG_DEBUG("Invalid memcached command tuple ~p",
+                       [binary_to_list(Query)]),
             false;
         _ ->
             true
     catch
-        _:_ ->
+        _:Reason ->
+            ?LOG_DEBUG("exception when processing "
+                       "memcached command tuple ~p: ~p",
+                       [binary_to_list(Query), Reason]),
             false
     end.
 
