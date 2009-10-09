@@ -95,7 +95,8 @@ class WorkerInboundMessage
         }
 
         typedef pool_copy_ptr< PullJobTaskResponse,
-            safe_object_pool<PullJobTaskResponse> > PullJobTaskResponseType;
+            safe_shared_ptr< safe_object_pool<PullJobTaskResponse> > >
+            PullJobTaskResponseType;
         typedef pool_copy_ptr< PushJobTaskResultResponse >
             PushJobTaskResultResponseType;
         
@@ -114,9 +115,11 @@ class WorkerInboundMessage
         PushJobTaskResultResponseType m_pPushJobTaskResultResponse;
 
         // request responses need to be thread-safe
-        static safe_object_pool<PullJobTaskResponse> m_requestsPool;
+        static safe_shared_ptr<
+            safe_object_pool<PullJobTaskResponse> > m_pRequestsPool;
         // result responses don't need to be thread-safe
-        static boost::object_pool<PushJobTaskResultResponse> m_resultsPool;
+        static safe_shared_ptr<
+            boost::object_pool<PushJobTaskResultResponse> > m_pResultsPool;
         
 };
 

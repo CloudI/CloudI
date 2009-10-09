@@ -2,8 +2,8 @@
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 
 {application, cloud_data_pgsql, 
-  [{description, "Cloud Postgres Client Interface"},
-   {vsn, "0.1.0"},
+  [{description, "Cloud PostgreSQL Client Interface"},
+   {vsn, "0.1.1"},
    {modules, [
         cloud_data_pgsql
         ]},
@@ -11,7 +11,8 @@
         cloud_data_pgsql % with dynamic suffix ".database"
         ]},
    {applications, [
-        epgsql,
-        cloud_interface
+        cloud_interface,
+        cloud_stdlib,
+        epgsql
         ]},
    {start_phases, []}]}.

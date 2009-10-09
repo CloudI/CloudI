@@ -11,7 +11,8 @@
         cloud_data_memcached % with dynamic suffix ".database"
         ]},
    {applications, [
-        ememcached,
-        cloud_interface
+        cloud_interface,
+        cloud_stdlib,
+        ememcached
         ]},
    {start_phases, []}]}.

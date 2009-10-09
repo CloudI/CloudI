@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_nodes).
@@ -597,8 +597,6 @@ work_data_done(WorkTitle,
         erlang:length(IdleProcesses) > 0 ->
             ?LOG_INFO("~p workers are now idle",
                       [erlang:length(IdleProcesses)]),
-            % immediately try to schedule other work from the waiting queue
-            self() ! allocate_work,
             {State#state{run_queue_work_state_processes =
                 Processes ++ IdleProcesses}, NewS};
         true ->

@@ -3,7 +3,7 @@
 
 {application, cloud, 
   [{description, "Cloudi Application"},
-   {vsn, "0.0.4"},
+   {vsn, "0.0.5"},
    {modules, [
         cloud_api,
         cloud_app,
@@ -22,15 +22,7 @@
         cloud_worker_scheduler,
         cloud_worker_port_sup,
         cloud_worker_port,
-        dynamic_compile,
-        immediate_gc,
-        monitor_link,
         q,
-        lists_extensions,
-        math_extensions,
-        time_extensions,
-        tuple_extensions,
-        string_extensions,
         'WorkerProtocol'
         ]},
    {registered,[
@@ -45,10 +37,11 @@
         cloud_work_manager
         ]},
    {applications, [
+        cloud_stdlib,
+        cloud_interface,
         rb,
         stdlib,
-        kernel,
-        cloud_interface
+        kernel
         ]},
    {mod, {cloud_app,[]}},
    {start_phases, []}]}.

@@ -60,6 +60,7 @@
 
 struct pollfd;
 typedef struct ei_cnode_s ei_cnode;
+class ThreadPool;
 
 // high-level controller of work so that resources are allocated for the work
 // to take place
@@ -77,7 +78,9 @@ class WorkerController
             PullJobTaskResponseType;
         /// created in WorkerExecution thread
         typedef pool_copy_ptr< WorkerProtocol::PushJobTaskResultRequest,
-            safe_object_pool<WorkerProtocol::PushJobTaskResultRequest> >
+            safe_shared_ptr<
+                safe_object_pool<WorkerProtocol::PushJobTaskResultRequest>
+            > >
             PushJobTaskResultRequestType;
         /// created in WorkerProtocol::WorkerInboundMessage
         typedef 
@@ -104,15 +107,14 @@ class WorkerController
             return m_workerQueries.remove(workTitle);
         }
 
-        inline bool clear_work()
+        inline void clear_work()
         {
-            return m_workerQueries.clear();
+            m_workerQueries.clear();
         }
 
-        inline bool add_result(bool const & ignore,
-            PushJobTaskResultRequestType & ptr)
+        inline bool add_result(PushJobTaskResultRequestType & ptr)
         {
-            return m_workerQueries.add(ignore, ptr);
+            return m_workerQueries.add(ptr);
         }
 
         // return ExitStatus
@@ -211,40 +213,36 @@ class WorkerController
             return m_currentPath;
         }
 
-        // handle work execution with the current thread pool
+        // handle concurrent work execution with an internal thread pool
         class WorkerExecution
         {
             public:
-                WorkerExecution(WorkerController & controller) :
-                    m_controller(controller) {}
+                class ThreadPool;
+                WorkerExecution(WorkerController & controller);
                 ~WorkerExecution();
-                void reserveCapacity(size_t count);
-                void add(PullJobTaskResponseType & pTask);
-                void discard(bool const & ignore, 
-                    PushJobTaskResultRequestType & pTask);
-                uint32_t count(std::vector<WorkId> const & taskArray);
-                size_t remove(WorkId const & workId,
-                    PendingRequestsLookup & pendingRequests,
-                    PendingResultsLookup & pendingResults);
-                bool clear(
-                    PendingRequestsLookup & pendingRequests,
-                    PendingResultsLookup & pendingResults);
-
-                typedef std::map<WorkId, size_t> WorkerExecutionLookup;
+                void input(PullJobTaskResponseType & pTask);
+                void output(PushJobTaskResultRequestType & pTask)
+                {
+                    m_controller.add_result(pTask);
+                }
+                void increaseCapacity(size_t count);
+                size_t count(std::vector<WorkId> const & taskArray,
+                    PendingRequestsLookup & requests,
+                    PendingResultsLookup & results);
+                size_t erase(WorkId const & id,
+                    PendingRequestsLookup & requests,
+                    PendingResultsLookup & results);
+                void clear();
             private:
                 WorkerExecution(WorkerExecution const &);
 
+                WorkerController & m_controller;
                 // id for a work title instance of a work library
                 class LibraryId;
-
                 typedef std::map<LibraryId, safe_shared_ptr<library> >
                     WorkLibraryLookup;
-
-                WorkerController & m_controller;
-                WorkerExecutionLookup m_threads;
                 WorkLibraryLookup m_libraries;
-                // protect access to m_threads and m_libraries
-                boost::mutex m_threadsMutex;
+                boost::scoped_ptr<ThreadPool> m_pThreadPool;
         };
 
     private:
@@ -274,11 +272,10 @@ class WorkerController
                 bool remove(std::string const & workTitle);
 
                 // clear all work from the queue
-                bool clear();
+                void clear();
 
-                // add the result of work, to store in a fault-tolerant way
-                bool add(bool const & ignore, 
-                    PushJobTaskResultRequestType & ptr);
+                // add the result of a work task
+                bool add(PushJobTaskResultRequestType & ptr);
 
                 void received(PullJobTaskResponseType & ptr);
                 void received(PushJobTaskResultResponseType & ptr);
@@ -342,9 +339,8 @@ class WorkerController
 
                 volatile int m_eventPipe[2];
                 PendingRequestsLookup m_pendingRequests;
-                boost::object_pool<
-                    WorkerProtocol::PullJobTaskRequest> m_requestPool;
-
+                PullJobTaskRequestType::pool_ptr_type m_pRequestAllocator;
+                
                 PendingResultsLookup m_pendingResults;
                 boost::mutex m_resultsMutex; // protect m_pendingResults
 

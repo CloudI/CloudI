@@ -1,3 +1,22 @@
+2009-10-09	Michael Truog   <mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.5 (alpha)
+		* make the cloud_worker_port process thread pool stable
+			* rewrite of ThreadPool
+			* reference count object pool allocator to avoid
+			  deletion order problems (with safe_shared_ptr)
+		* add MySQL support with emysql and cloud_data_mysql
+		* add (optional) usage of cloud_data_mysql in cloud_job_tests
+		* provide the same parameter substitution as MySQL for the PostgreSQL
+		  interface ("?" instead of "$1", "$2", "$3", etc., so that queries
+		  can be as similar as possible when using the equery/3 function
+		  for either PostgreSQL or MySQL
+			* currently handles punctuation but not operators
+			  (so spaces are currently required on either side of the "?")
+		* disable ptmalloc for now because of problems with gmp taking the
+		  libc malloc
+		* update g++ to 4.4.1 and boost to 1.40
+
 2009-10-03	Michael Truog	<mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.4 (alpha)

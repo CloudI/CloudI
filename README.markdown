@@ -1,4 +1,4 @@
-#CloudI 0.0.4 (alpha)
+#CloudI 0.0.5 (alpha)
 
 ## ABOUT
 
@@ -73,6 +73,7 @@ past, execute "rm _build.cfg" before running make.
 CloudI currently supports the following databases:
 
 * PostgreSQL
+* MySQL
 * memcached
 
 ## RUNNING

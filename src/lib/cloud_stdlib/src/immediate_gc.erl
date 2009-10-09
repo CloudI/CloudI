@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==String extensions==
+%%% ==Enforce immediate garbage collection on a function==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,17 +44,15 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(string_extensions).
+-module(immediate_gc).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([after_character/2, before_character/2,
-         split_on_character/2,
-         list_to_term/1, term_to_list/1,
-         format/2]).
+-export([sync_fun/2, sync_fun/3,
+         async_fun/2, async_fun/3]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -62,90 +60,65 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return the string that occurs after a character, otherwise return an empty string.===
+%% ===Make a synchronous call to a function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec after_character(Char :: pos_integer(), string()) -> string().
+-spec sync_fun(M :: atom(), F :: atom(), A :: list()) -> any().
 
-after_character(_, []) ->
-    [];
-after_character(Char, [Char | Rest]) when is_integer(Char) ->
-    Rest;
-after_character(Char, [_ | Rest]) when is_integer(Char) ->
-    after_character(Char, Rest).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Return the string that occurs before a character, otherwise return an empty string.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec before_character(Char :: pos_integer(), string()) -> string().
-
-before_character(Char, Input) when is_integer(Char), is_list(Input) ->
-    before_character([], Char, Input).
-before_character(_, _, []) ->
-    [];
-before_character(Before, Char, [Char | _]) when is_integer(Char) ->
-    Before;
-before_character(Before, Char, [H | Input]) when is_integer(Char) ->
-    before_character(Before ++ [H], Char, Input).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Return the two strings split at the first occurrence of the character.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec split_on_character(Char :: pos_integer(), string()) ->
-    {string(), string()}.
-
-split_on_character(Char, Input) when is_integer(Char), is_list(Input) ->
-    split_on_character([], Char, Input).
-split_on_character(_, _, []) ->
-    {[], []};
-split_on_character(Before, Char, [Char | Input]) when is_integer(Char) ->
-    {Before, Input};
-split_on_character(Before, Char, [H | Input]) when is_integer(Char) ->
-    split_on_character(Before ++ [H], Char, Input).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Convert a string to an Erlang term.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec list_to_term(L :: string()) -> any().
-
-list_to_term(L) when is_list(L) ->
-    {ok, S, _} = erl_scan:string(L ++ "."),
-    case erl_parse:parse_term(S) of
-        {ok, Term} ->
-            Term;
-        {error, Reason} ->
-            throw(Reason)
+sync_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
+    Parent = self(),
+    Child = erlang:spawn_opt(fun() ->
+        Parent ! {self(), erlang:apply(M, F, A)},
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]),
+    receive
+        {Child, Result} -> Result
     end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Convert an Erlang term to a string.===
+%% ===Make a synchronous call to an anonymous function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec term_to_list(T :: any()) -> string().
+-spec sync_fun(F :: fun(), A :: list()) -> any().
 
-term_to_list(T) ->
-    format("~w", [T]).
+sync_fun(F, A) when is_function(F), is_list(A) ->
+    Parent = self(),
+    Child = erlang:spawn_opt(fun() ->
+        Parent ! {self(), erlang:apply(F, A)},
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]),
+    receive
+        {Child, Result} -> Result
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Format a string based on the arguments.===
+%% ===Make an asynchronous call to a function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec format(L :: string(), A :: list()) -> string().
+-spec async_fun(M :: atom(), F :: atom(), A :: list()) -> pid().
 
-format(L, A) when is_list(L), is_list(A) ->
-    lists:flatten(io_lib:format(L, A)).
+async_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
+    erlang:spawn_opt(fun() ->
+        erlang:apply(M, F, A),
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make an asynchronous call to an anonymous function that will be garbage collected when the function returns.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec async_fun(F :: fun(), A :: list()) -> pid().
+
+async_fun(F, A) when is_function(F), is_list(A) ->
+    erlang:spawn_opt(fun() ->
+        erlang:apply(F, A),
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]).
 

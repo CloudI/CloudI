@@ -49,48 +49,48 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// create random failures for testing purposes
-class RandomFailure
-{
-    public:
-        static int const oddsOfFailure = 10; // to 1
-        static int const maxConsecutiveFailures = 50; // (min of 0)
-
-        RandomFailure() : m_random(1, oddsOfFailure),
-            m_randomCount(0, maxConsecutiveFailures), m_count(10)
-        {
-            m_randomGenerator.seed(static_cast<int>(getpid()));
-            m_randomCountGenerator.seed(static_cast<int>(getpid()) / 2);
-        }
-        bool operator () ()
-        {
-            boost::lock_guard<boost::mutex> lock(m_mutex);
-            if (m_count > 0)
-            {
-                --m_count;
-                return true;
-            }
-            if (m_random(m_randomGenerator) == 1)
-            {
-                m_count = m_randomCount(m_randomCountGenerator);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-            
-    private:
-        boost::mutex m_mutex;
-        boost::hellekalek1995 m_randomGenerator;
-        boost::uniform_int<int> m_random;
-        boost::hellekalek1995 m_randomCountGenerator;
-        boost::uniform_int<int> m_randomCount;
-        int m_count;
-};
-
-static RandomFailure returnFalse;
+//// create random failures for testing purposes
+//class RandomFailure
+//{
+//    public:
+//        static int const oddsOfFailure = 10; // to 1
+//        static int const maxConsecutiveFailures = 50; // (min of 0)
+//
+//        RandomFailure() : m_random(1, oddsOfFailure),
+//            m_randomCount(0, maxConsecutiveFailures), m_count(10)
+//        {
+//            m_randomGenerator.seed(static_cast<int>(getpid()));
+//            m_randomCountGenerator.seed(static_cast<int>(getpid()) / 2);
+//        }
+//        bool operator () ()
+//        {
+//            boost::lock_guard<boost::mutex> lock(m_mutex);
+//            if (m_count > 0)
+//            {
+//                --m_count;
+//                return true;
+//            }
+//            if (m_random(m_randomGenerator) == 1)
+//            {
+//                m_count = m_randomCount(m_randomCountGenerator);
+//                return true;
+//            }
+//            else
+//            {
+//                return false;
+//            }
+//        }
+//            
+//    private:
+//        boost::mutex m_mutex;
+//        boost::hellekalek1995 m_randomGenerator;
+//        boost::uniform_int<int> m_random;
+//        boost::hellekalek1995 m_randomCountGenerator;
+//        boost::uniform_int<int> m_randomCount;
+//        int m_count;
+//};
+//
+//static RandomFailure returnFalse;
 
 extern "C"
 {
@@ -153,12 +153,14 @@ bool do_work(bool const & abortTask,
     // create query to store the results of the work
     std::ostringstream resultQuery;
     resultQuery <<
-        "INSERT INTO incoming_results_v2 "
-        "(index, data) "
+        "INSERT INTO incoming_results_v3 "
+        "(digit_index, data) "
         "VALUES "
         "(" << digitIndex << ", '" << piResult << "');";
     queriesOut.push_back(
         DatabaseQuery("cloud_data_pgsql.cloudi_tests", resultQuery.str()));
+    queriesOut.push_back(
+        DatabaseQuery("cloud_data_mysql.cloudi_tests", resultQuery.str()));
     resultQuery.str("");
     resultQuery << 
         "{set, \"" << digitIndex << "\", <<\"" << piResult << "\">>}";

@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Postgres Data Module==
+%%% ==Cloudi PostgreSQL Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_pgsql).
@@ -87,7 +87,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Perform an extended SQL query that does string substitution with $1, $2, $3, etc.===
+%% ===Perform an extended SQL query that does string substitution with "?"s.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -99,9 +99,11 @@
     {'ok', non_neg_integer(), list(#column{}), list(tuple())} |
     {'error', any()}.
 
-equery(DataTitle, String, Parameters) ->
+equery(DataTitle, String, Parameters)
+    when is_atom(DataTitle), is_list(String), is_list(Parameters) ->
     % depend on PGSQL_TIMEOUT for a database communication timeout
-    gen_server:call(DataTitle, {equery, String, Parameters}, infinity).
+    gen_server:call(DataTitle,
+        {equery, equery_argument_parse(String), Parameters}, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -116,7 +118,8 @@ equery(DataTitle, String, Parameters) ->
     {'ok', non_neg_integer(), list(#column{}), list(tuple())} |
     {'error', any()}.
 
-squery(DataTitle, String) ->
+squery(DataTitle, String)
+    when is_atom(DataTitle), is_list(String) ->
     % depend on PGSQL_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {squery, String}, infinity).
 
@@ -168,10 +171,10 @@ handle_call(stop, _,
 handle_call({do_queries, QueryList}, _,
             #state{data_title = DataTitle,
                    connection = Connection} = State) ->
-    Response = cloud_data_interface:do_queries_group(QueryList,
-        cloud_data_pgsql, do_queries_in_transaction,
-        Connection, DataTitle),
-    {reply, Response, State, hibernate};
+    {reply,
+     cloud_data_interface:do_queries_group(QueryList,
+        cloud_data_pgsql, do_queries_in_transaction, Connection, DataTitle),
+     State, hibernate};
 handle_call(Request, _, State) ->
     ?LOG_WARNING("Unknown call \"~p\"", [Request]),
     {stop, string_extensions:format("Unknown call \"~p\"", [Request]),
@@ -193,44 +196,17 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 %% initialize the pgsql client state
-init_state(DataTitle, Arguments) when is_atom(DataTitle), is_list(Arguments) ->
-    {HostName, Args1} = case lists:keytake(hostname, 1, Arguments) of
-        false ->
-            {?DEFAULT_HOST_NAME, Arguments};
-        {value, {hostname, H}, RemainingArgs1} when is_list(H) ->
-            {H, RemainingArgs1}
-    end,
-    {UserName, Args2} = case lists:keytake(username, 1, Args1) of
-        false ->
-            {?DEFAULT_USER_NAME, Args1};
-        {value, {username, U}, RemainingArgs2} when is_list(U) ->
-            {U, RemainingArgs2}
-    end,
-    {Password, Args3} = case lists:keytake(password, 1, Args2) of
-        false ->
-            {?DEFAULT_PASSWORD, Args2};
-        {value, {password, P1}, RemainingArgs3} when is_list(P1) ->
-            {P1, RemainingArgs3}
-    end,
-    {Port, Args4} = case lists:keytake(port, 1, Args3) of
-        false ->
-            {?DEFAULT_PORT, Args3};
-        {value, {port, P2}, RemainingArgs4} when is_integer(P2) ->
-            {P2, RemainingArgs4}
-    end,
-    Args5 = case lists:keytake(timeout, 1, Args4) of
-        false ->
-            [{timeout, ?PGSQL_TIMEOUT} | Args4];
-        {value, {timeout, Timeout}, RemainingArgs5}
-        when Timeout < ?PGSQL_TIMEOUT ->
-            % override any user specified timeout smaller than the default
-            ?LOG_WARNING("overriding timeout, ~p is now ~p milliseconds",
-                         [Timeout, ?PGSQL_TIMEOUT]),
-            [{timeout, ?PGSQL_TIMEOUT} | RemainingArgs5];
-        {value, _, _} ->
-            Args4
-    end,
-    case pgsql:connect(HostName, UserName, Password, [{port, Port} | Args5]) of
+init_state(DataTitle, Args) when is_atom(DataTitle), is_list(Args) ->
+    Defaults = [
+        {hostname, ?DEFAULT_HOST_NAME},
+        {username, ?DEFAULT_USER_NAME},
+        {password, ?DEFAULT_PASSWORD},
+        {port, ?DEFAULT_PORT},
+        {timeout, ?PGSQL_TIMEOUT}],
+    [HostName, UserName, Password, Port, Timeout, NewArgs] =
+        proplists_extensions:take_values(Defaults, Args),
+    FinalArgs = NewArgs ++ [{port, Port}, {timeout, Timeout}],
+    case pgsql:connect(HostName, UserName, Password, FinalArgs) of
         {ok, Connection} ->
             {ok, #state{data_title = DataTitle,
                         connection = Connection}};
@@ -292,5 +268,89 @@ do_queries_in_transaction(SQLQueryList, Connection)
             SQLQueryList;
         Remaining when is_list(Remaining) ->
             Remaining
+    end.
+
+%% provide the "?"s parameter syntax externally like mysql, but provide the
+%% $1, $2, $3, etc. PostgreSQL parameter syntax internally to epgsql,
+%% as required.
+equery_argument_parse(String) ->
+    equery_argument_parse_get([], 1, String).
+
+-define(SPACE, 32).
+-define(QUOTE, 39). % '
+
+%% handle spaces and normal punctuation when performing
+%% parameter syntax substitution
+equery_argument_parse_put(NewString, ?QUOTE, $?, ?QUOTE,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ "'$" ++ integer_to_list(Index) ++ "'",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, ?SPACE, $?, ?SPACE,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ " $" ++ integer_to_list(Index) ++ " ",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, ?SPACE, $?, $),
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ " $" ++ integer_to_list(Index) ++ ")",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, ?SPACE, $?, $,,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ " $" ++ integer_to_list(Index) ++ ",",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, ?SPACE, $?, $;,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ " $" ++ integer_to_list(Index) ++ ";",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, $,, $?, ?SPACE,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ ",$" ++ integer_to_list(Index) ++ " ",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, $(, $?, ?SPACE,
+                          false, Index, Remaining) ->
+    equery_argument_parse_get(
+        NewString ++ "($" ++ integer_to_list(Index) ++ " ",
+        Index + 1, Remaining);
+%% tail recursion termination case
+equery_argument_parse_put(NewString, C1, C2, C3,
+                          _, _, []) ->
+    NewString ++ [C1, C2, C3];
+%% keep track of quoted strings, so that they are not parsed
+%% for parameter syntax substitution
+equery_argument_parse_put(NewString, C1, C2, C3,
+                          Quoted, Index, [C4 | Remaining]) ->
+    NewQuoted = if
+        C1 == ?QUOTE, Quoted ->
+            false;
+        C1 == ?QUOTE ->
+            true;
+        true ->
+            Quoted
+    end,
+    equery_argument_parse_put(
+        NewString ++ [C1], C2, C3, C4, NewQuoted, Index, Remaining).
+%% get more characters for parameter syntax substitution parsing
+equery_argument_parse_get(NewString, _, []) ->
+    NewString;
+equery_argument_parse_get(NewString, Index, Remaining) ->
+    [C1 | Remaining1] = Remaining,
+    if
+        Remaining1 == [] ->
+            NewString ++ [C1];
+        true ->
+            [C2 | Remaining2] = Remaining1,
+            if
+                Remaining2 == [] ->
+                    NewString ++ [C1, C2];
+                true ->
+                    [C3 | Remaining3] = Remaining2,
+                    equery_argument_parse_put(
+                        NewString, C1, C2, C3, false, Index, Remaining3)
+            end
     end.
 

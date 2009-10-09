@@ -42,18 +42,23 @@
 
 // do not allow boost::thread to use broken BOOST_HAS_RVALUE_REFS
 // on g++ 4.3.2 32bit systems, bad things happen
+/*
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 #define CXX0X_GUARD __GXX_EXPERIMENTAL_CXX0X__
 #undef __GXX_EXPERIMENTAL_CXX0X__
 #endif
+*/
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
+#include <boost/thread/condition_variable.hpp>
 
+/*
 #ifdef CXX0X_GUARD
 #define __GXX_EXPERIMENTAL_CXX0X__ CXX0X_GUARD
 #endif
+*/
 
 #endif // BOOST_THREAD_HPP
 

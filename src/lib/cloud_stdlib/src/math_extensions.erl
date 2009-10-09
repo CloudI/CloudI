@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Replace a Link with a Monitor to a Process Hierarchy or a Single Process==
+%%% ==Math operations==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,14 +44,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(monitor_link).
+-module(math_extensions).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([call/5, call/6]).
+-export([product/1, ceil/1, floor/1, round/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -59,70 +59,58 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Call a function to create a remote link that is monitored by the calling process.===
-%% Any link the called function generates is removed.  This is meant for
-%% supervisor:start_link on a remote node, or the other stdlib behaviours.
+%% ===Find the product of a list of numbers.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec call(OldPid :: pid() | 'undefined',
-           Node :: atom(),
-           M :: atom(),
-           F :: atom(),
-           A :: list()) ->
-    {'ok', pid()} |
-    {'error', any()}.
+-spec product(list(number())) -> number().
 
-call(OldPid, Node, M, F, A) ->
-    call(OldPid, Node, M, F, A, 5000).
+product(L) when is_list(L) ->
+    lists:foldl(fun(X, Y) -> X * Y end, 1, L).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Call a function to create a remote process that is monitored by the calling process, with a timeout.===
-%% Any link the called function generates is removed.  This is meant for
-%% supervisor:start_link on a remote node, or the other stdlib behaviours.
+%% ===Provide a ceiling function.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec call(OldPid :: pid() | 'undefined',
-           Node :: atom(),
-           M :: atom(),
-           F :: atom(),
-           A :: list(),
-           Timeout :: pos_integer()) ->
-    {'ok', pid()} |
-    {'error', any()}.
+-spec ceil(number()) -> integer().
 
-call(OldPid, Node, M, F, A, Timeout) ->
-    Parent = self(),
-    try erlang:spawn(Node, fun() ->
-            case erlang:apply(M, F, A) of
-                {ok, Pid} = Result ->
-                    unlink(Pid),
-                    Parent ! {self(), Result};
-                {error, _} = Result ->
-                    Parent ! {self(), Result}
-            end
-        end) of
-        Child when is_pid(Child) ->
-            receive
-                {Child, {ok, Pid} = Result} ->
-                    erlang:monitor(process, Pid),
-                    Result;
-                {Child, {error, {already_started, OldPid}}} ->
-                    % assume an old monitor exists
-                    {ok, OldPid};
-                {Child, {error, {already_started, Pid}}} ->
-                    erlang:monitor(process, Pid),
-                    {ok, Pid};
-                {Child, {error, _} = Result} ->
-                    Result
-            after
-                Timeout ->
-                    {error, timeout}
-            end
-    catch
-        error:Reason ->
-            {error, Reason}
-    end.
+ceil(X) ->
+    erlang:round(X + 0.5).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide a floor function (for readability).===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floor(number()) -> integer().
+
+floor(X) ->
+    erlang:trunc(X).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Round to a decimal place.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec round(float(), integer()) -> float().
+
+round(X, 1) ->
+    erlang:round(X * 10) / 10.0;
+round(X, 2) ->
+    erlang:round(X * 100) / 100.0;
+round(X, 3) ->
+    erlang:round(X * 1000) / 1000.0;
+round(X, 4) ->
+    erlang:round(X * 10000) / 10000.0;
+round(X, 5) ->
+    erlang:round(X * 100000) / 100000.0;
+round(X, 6) ->
+    erlang:round(X * 1000000) / 1000000.0;
+round(X, N) when is_integer(N) ->
+    Scale = math:pow(10, N),
+    erlang:round(X * Scale) / Scale.
 

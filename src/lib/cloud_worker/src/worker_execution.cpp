@@ -43,6 +43,7 @@
 #include "worker_protocol.hpp"
 #include "node_connections.hpp"
 #include "timer.hpp"
+#include "copy_ptr.hpp"
 #include "library.hpp"
 #include "boost_thread.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -50,339 +51,454 @@
 #include <vector>
 #include <cassert>
 
-namespace
-{
+size_t const maximumThreadPoolSize = 512;
+size_t const initialThreadPoolSize = 0;
 
-class ThreadPool
+/// ThreadPool object
+/// All methods are meant to be used by a single thread
+/// except for the output() method (which is meant to be used by other threads).
+class WorkerController::WorkerExecution::ThreadPool
 {
-    public:
+    private:
+        class ThreadFunctionObject
+        {
+            public:
+                typedef PushJobTaskResultRequestType
+                    ResultType;
+                typedef PushJobTaskResultRequestType::pool_type
+                    AllocatorType;
+                typedef PushJobTaskResultRequestType::pool_ptr_type
+                    AllocatorPtrType;
+        
+                ThreadFunctionObject(
+                    PullJobTaskResponseType & pTask,
+                    safe_shared_ptr<library> const & workLibrary,
+                    WorkerExecution::ThreadPool & threadPool) :
+                        m_pTask(pTask),
+                        m_workLibrary(workLibrary),
+                        m_threadPool(threadPool),
+                        m_id(m_pTask->workTitle(), m_pTask->id())
+                {
+                }
+        
+                WorkId const & getWorkId() const { return m_id; }
+        
+                void operator () (bool & stopped, AllocatorPtrType & allocator);
+        
+            private:
+                PullJobTaskResponseType m_pTask;
+                safe_shared_ptr<library> m_workLibrary;
+                ThreadPool & m_threadPool;
+                WorkId m_id;
+        };
+
+        /// Active Object design pattern
+        /// with round-robin scheduling in the ThreadPool
+        /// and a method (ThreadPool::output()) callback for the result
+        class ThreadObjectData
+        {
+            private:
+                typedef std::list<ThreadFunctionObject> QueueType;
+            public:
+                ThreadObjectData() :
+                    m_allocator(new ThreadFunctionObject::AllocatorType),
+                    m_running(false)
+                {
+                }
+
+                ThreadObjectData(ThreadObjectData const & object) :
+                    m_allocator(object.m_allocator),
+                    m_running(object.m_running),
+                    m_stopped(object.m_stopped)
+                {
+                    // can not be called after the thread is started
+                }
+        
+                /// make the executing thread exit this function object
+                void exit()
+                {
+                    if (! m_running)
+                        return;
+                    {
+                        boost::lock_guard<boost::mutex> lock(m_queueMutex);
+                        m_running = false;
+                        m_stopped = true;
+                    }
+                    m_queueConditional.notify_one();
+                }
+        
+                /// stop a worker that is expected to exist in this thread
+                bool stop(WorkId const & id)
+                {
+                    boost::lock_guard<boost::mutex> lock(m_queueMutex);
+                    if (m_queue.empty())
+                        return false;
+                    QueueType::iterator itr = m_queue.begin();
+                    if (itr->getWorkId() == id)
+                    {
+                        if (m_stopped == false)
+                        {
+                            // stop the task while it is running
+                            m_stopped = true;
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    for (++itr; itr != m_queue.end(); ++itr)
+                    {
+                        if (itr->getWorkId() == id)
+                        {
+                            m_queue.erase(itr);
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+        
+                /// check if a worker thread instance exists
+                bool find(WorkId const & id)
+                {
+                    boost::lock_guard<boost::mutex> lock(m_queueMutex);
+                    QueueType::const_iterator itr;
+                    for (itr = m_queue.begin(); itr != m_queue.end(); ++itr)
+                    {
+                        if (id == itr->getWorkId())
+                            return true;
+                    }
+                    return false;
+                }
+        
+                /// add a function for the thread to execute to the queue
+                bool push_back(ThreadFunctionObject const & input)
+                {
+                    bool wasEmpty;
+                    {
+                        boost::lock_guard<boost::mutex> lock(m_queueMutex);
+                        wasEmpty = m_queue.empty();
+                        m_queue.push_back(input);
+                    }
+                    if (wasEmpty)
+                        m_queueConditional.notify_one();
+                    return true;
+                }
+        
+                /// the thread's execution function
+                void operator () ()
+                {
+                    m_running = true;
+                    m_stopped = true;
+                    boost::unique_lock<boost::mutex> queueLock(m_queueMutex);
+                    while (m_running && m_queue.empty())
+                        m_queueConditional.wait(queueLock);
+                    while (m_running)
+                    {
+                        ThreadFunctionObject function = m_queue.front();
+                        m_stopped = false;
+                        queueLock.unlock();
+        
+                        function(m_stopped, m_allocator);
+                        m_stopped = true;
+        
+                        queueLock.lock();
+                        m_queue.pop_front();
+                        while (m_running && m_queue.empty())
+                            m_queueConditional.wait(queueLock);
+                    }
+                    m_running = false;
+                }
+            private:
+                ThreadFunctionObject::AllocatorPtrType m_allocator;
+                bool m_running; /// thread is running
+                bool m_stopped; /// queued function is stopped
+                QueueType m_queue;
+                boost::mutex m_queueMutex;
+                boost::condition_variable m_queueConditional;
+        };
+
+        /// boost::thread parameter container that handles encapsulation of the
+        /// thread's data so that object copy semantics do not interfere
+        /// with functionality.
         class ThreadObject
         {
             public:
-                typedef safe_object_pool<
-                    WorkerProtocol::PushJobTaskResultRequest> PoolType;
+                ThreadObject(ThreadObjectData & data) : m_data(data) {}
+                void operator () () { m_data(); }
+            private:
+                ThreadObjectData & m_data;
+        };
 
-                ThreadObject() :
-                    m_running(false) {}
-                ThreadObject(ThreadObject const &) :
-                    m_running(false) {}
-                ThreadObject & operator = (ThreadObject const &)
+        typedef std::map<WorkId, size_t> WorkerLookupType;
+    public:
+        ThreadPool(size_t initialSize, size_t maxSize,
+                   WorkerController::WorkerExecution & executionObject) :
+            m_threads(maxSize),
+            m_objects(maxSize),
+            m_currentThread(0),
+            m_totalConfigured(0),
+            m_totalActive(0),
+            m_executionObject(executionObject)
+        {
+            configure(initialSize);
+        }
+
+        /// cause all threads to exit and unconfigure the thread pool
+        void exit()
+        {
+            for (size_t i = 0; i < m_totalConfigured; ++i)
+                m_objects[i].exit();
+            m_currentThread = 0;
+            m_totalConfigured = 0;
+            m_totalActive = 0;
+            m_workerLookup.clear();
+        }
+
+        /// stop a worker that was added to a thread's queue
+        bool stop(WorkId const & id)
+        {
+            boost::lock_guard<boost::mutex> lock(m_taskOutputMutex);
+            size_t index;
+            {
+                boost::lock_guard<boost::mutex> lock(m_taskInputMutex);
+                WorkerLookupType::iterator itr = m_workerLookup.find(id);
+                if (itr == m_workerLookup.end())
+                    return false;
+                index = itr->second;
+            }
+            return m_objects[index].stop(id);
+        }
+
+        /// put a function into the thread pool for execution
+        bool input(WorkerController::PullJobTaskResponseType & pTask,
+                   safe_shared_ptr<library> const & workLibrary)
+        {
+            {
+                boost::lock_guard<boost::mutex> lock(m_taskInputMutex);
+                WorkId const id(pTask->workTitle(), pTask->id());
+                if (! m_objects[m_currentThread].push_back(
+                          ThreadFunctionObject(pTask, workLibrary, *this)))
+                    return false;
+                m_workerLookup[id] = m_currentThread;
+            }
+            if (++m_currentThread == m_totalActive)
+                m_currentThread = 0;
+            return true;
+        }
+
+        /// get a result object from a thread that is almost done executing
+        void output(bool & stopped, ThreadFunctionObject::ResultType & result)
+        {
+            boost::mutex::scoped_try_lock lock(m_taskOutputMutex);
+            while (! lock.owns_lock())
+            {
+                if (stopped)
+                    return;
+                boost::this_thread::yield();
+                lock.try_lock();
+            }
+            if (stopped)
+                return;
+            stopped = true; // unable to stop now
+            m_executionObject.output(result);
+        }
+
+        /// make the thread pool grow by an increment
+        void grow(size_t increment)
+        {
+            configure(m_totalActive + increment);
+        }
+
+        /// make the thread pool shrink by a decrement
+        void shrink(size_t decrement)
+        {
+            assert(decrement <= m_totalActive);
+            configure(m_totalActive - decrement);
+        }
+
+        /// count all worker thread instances, to verify the work assignments
+        size_t count(std::vector<WorkId> const & taskArray,
+            PendingRequestsLookup & requests,
+            PendingResultsLookup & results)
+        {
+            size_t count = 0;
+            boost::lock_guard<boost::mutex> lockOutput(m_taskOutputMutex);
+            boost::lock_guard<boost::mutex> lockInput(m_taskInputMutex);
+            std::vector<WorkId>::const_iterator itr;
+            for (itr = taskArray.begin(); itr != taskArray.end(); ++itr)
+            {
+                PendingRequestsLookup::iterator requestItr =
+                    requests.find(*itr);
+                if (requestItr != requests.end())
                 {
-                    m_running = false;
-                    return *this;
+                    ++count;
                 }
-
-                // run a ThreadFunctionObject
-                template <typename F>
-                void run(F const & object)
+                else
                 {
-                    F & objectRef = const_cast<F &>(object);
-                    objectRef.attach(this);
-                    m_thread = boost::thread(objectRef);
-                }
-
-                // force the thread to stop if it is running
-                void stop(size_t const timeoutLimit)
-                {
-                    boost::lock_guard<boost::mutex> lock(m_stopMutex);
-                    // if the thread is not running,
-                    // then do not wait for it to stop
-                    if (! m_running)
-                        return;
-
-                    // stop the running thread
-                    m_stopProcessing = true;
-
-                    // detach the thread
-                    m_thread = boost::thread();
-
-                    // If a work type is not paying attention to the
-                    // stopProcessing state, it is possible it will
-                    // get stuck processing work for some indefinite
-                    // period of time.  It is also possible that
-                    // the Erlang VM will terminate before the
-                    // threads have stopped, which will leave the main thread
-                    // waiting for threads that have already terminated
-                    // (at least that seems to be the case,
-                    //  more testing is needed here).
-                    // The problem develops when a timeout occurs for
-                    // cloud_worker_port_sup:stop_port/1 when nodes are
-                    // being halted.  So, a timeoutLimit should be supplied
-                    // that respects the Erlang function call timeout.
-                    size_t const timeout =
-                        std::max(timeoutLimit, static_cast<size_t>(1));
-
-                    // wait for the thread to stop
-                    size_t const timeoutIncrement = 25;
-                    size_t timeoutElapsed = 0;
-                    boost::posix_time::milliseconds delay(timeoutIncrement);
-                    while (m_stopProcessing && timeoutElapsed < timeout)
+                    PendingResultsLookup::iterator resultsItr =
+                        results.find(*itr);
+                    if (resultsItr != results.end())
                     {
-                        boost::this_thread::sleep(delay);
-                        timeoutElapsed += timeoutIncrement;
+                        ++count;
+                    }
+                    else
+                    {
+                        WorkerLookupType::iterator workerItr =
+                            m_workerLookup.find(*itr);
+                        if (workerItr != m_workerLookup.end())
+                        {
+                            if (m_objects[workerItr->second].find(*itr))
+                                ++count;
+                        }
                     }
                 }
-
-                PoolType & getResultPool()
-                {
-                    return m_resultPool;
-                }
-
-                bool const & stopProcessing() const
-                {
-                    return m_stopProcessing;
-                }
-
-                // processing in the thread function has started
-                void startedProcessing()
-                {
-                    boost::lock_guard<boost::mutex> lock(m_stopMutex);
-                    m_running = true;
-                    m_stopProcessing = false;
-                }
-
-                // processing in the thread function has finished
-                void finishedProcessing()
-                {
-                    boost::lock_guard<boost::mutex> lock(m_stopMutex);
-                    m_running = false;
-                    m_stopProcessing = false;
-                }
-            private:
-                boost::thread m_thread;
-                boost::mutex m_stopMutex;
-                bool m_running;
-                bool m_stopProcessing;
-                PoolType m_resultPool;
-        };
-
-        ThreadPool(size_t initialSize) :
-            m_currentThread(0), m_threadCount(0), 
-            m_threads(initialSize) {}
-        void reserve(size_t threadCount)
-        {
-            m_threadCount += threadCount;
-            if (m_threadCount >= m_threads.size())
-            {
-                // force a resize to a power of 2 that is greater than i
-                int bits = 1;
-                for (size_t div2 = m_threadCount; div2 > 1; div2 >>= 1)
-                    ++bits;
-                m_threads.resize(1 << bits);
-                assert(m_threadCount < m_threads.size());
             }
+            return count;
         }
-        void shrink(size_t threadCount)
+
+        /// erase the worker thread data to eliminate further processing
+        size_t erase(WorkId const & id,
+            PendingRequestsLookup & requests,
+            PendingResultsLookup & results)
         {
-            m_threadCount -= threadCount;
-            if (m_currentThread >= m_threadCount)
-                m_currentThread = 0;
+            boost::lock_guard<boost::mutex> lockOutput(m_taskOutputMutex);
+            boost::lock_guard<boost::mutex> lockInput(m_taskInputMutex);
+            size_t count = 0;
+            std::pair<WorkerLookupType::iterator, WorkerLookupType::iterator>
+                workers = m_workerLookup.equal_range(id);
+            WorkerLookupType::iterator workerItr = workers.first;
+            for (; workerItr != workers.second; ++workerItr)
+            {
+                if (m_objects[workerItr->second].stop(id))
+                    ++count;
+            }
+            m_workerLookup.erase(workers.first, workers.second);
+            return (requests.erase(id) + results.erase(id) + count);
         }
-        void stop(size_t const index, size_t const timeoutLimit)
-        {
-            m_threads[index].stop(timeoutLimit);
-        }
-        template <typename F>
-        size_t run(F const & object)
-        {
-            size_t const index = m_currentThread;
-            m_threads[m_currentThread++].run(object);
-            if (m_currentThread == m_threadCount)
-                m_currentThread = 0;
-            return index;
-        }
+
     private:
+        /// verify that there is a sufficient number of threads
+        /// configured and prespawned
+        void configure(size_t count)
+        {
+            if (count > m_threads.size())
+            {
+                count = m_threads.size();
+                std::cerr << count << " max threads configured" << std::endl;
+            }
+
+            // configure more threads if necessary
+            if (count > m_totalConfigured)
+            {
+                for (size_t i = m_totalConfigured; i < count; ++i)
+                    m_threads[i].reset(
+                        new boost::thread(ThreadObject(m_objects[i])));
+                m_totalConfigured = count;
+            }
+            
+            // make sure only active threads will be referenced in the future
+            if (count < m_totalActive)
+            {
+                if (m_currentThread >= count)
+                    m_currentThread = 0;
+            }
+            m_totalActive = count;
+        }
+
+        std::vector< copy_ptr<boost::thread> > m_threads;
+        std::vector<ThreadObjectData> m_objects;
         size_t m_currentThread;
-        size_t m_threadCount;
-        std::vector<ThreadObject> m_threads;
+        size_t m_totalConfigured;
+        size_t m_totalActive;
+        boost::mutex m_taskInputMutex;
+        WorkerLookupType m_workerLookup;
+        boost::mutex m_taskOutputMutex;
+        WorkerController::WorkerExecution & m_executionObject;
 };
 
-class ThreadFunctionObject
+void WorkerController::WorkerExecution::ThreadPool::ThreadFunctionObject::
+    operator () (bool & stopped, AllocatorPtrType & allocator)
 {
-    public:
-        ThreadFunctionObject() : m_pThreadObject(0) {}
-        virtual ~ThreadFunctionObject() {}
-
-        // attach a ThreadPool::ThreadObject
-        void attach(ThreadPool::ThreadObject * pThreadObject)
-        {
-            m_pThreadObject = pThreadObject;
-        }
-
-        // get the result memory pool from the ThreadPool::ThreadObject
-        ThreadPool::ThreadObject::PoolType & getResultPool() const
-        {
-            assert(m_pThreadObject);
-            return m_pThreadObject->getResultPool();
-        }
-
-        // get the stop processing flag from the ThreadPool::ThreadObject
-        bool const & stopProcessing() const
-        {
-            assert(m_pThreadObject);
-            return m_pThreadObject->stopProcessing();
-        }
-
-        // manage ThreadPool::ThreadObject state changes
-        // within the ThreadFunctionObject::operator () function
-        class ScopedProcessing
-        {
-            public:
-                friend class ThreadFunctionObject;
-
-                ~ScopedProcessing()
-                {
-                    m_obj.finishedProcessing();
-                }
-            private:
-                ScopedProcessing(ThreadPool::ThreadObject & obj) : m_obj(obj)
-                {
-                    m_obj.startedProcessing();
-                }
-                ThreadPool::ThreadObject & m_obj;
-        };
-        
-        ScopedProcessing getScopedProcessing() const
-        {
-            assert(m_pThreadObject);
-            return ScopedProcessing(*m_pThreadObject);
-        }
-
-        // thread function
-        virtual void operator () () = 0;
-
-    private:
-        ThreadPool::ThreadObject * m_pThreadObject; // ThreadPool::ThreadObject
-};
-
-class TaskContainer : public ThreadFunctionObject
-{
-    public:
-        TaskContainer(
-            WorkerController::PullJobTaskResponseType & pTask,
-            safe_shared_ptr<library> const & taskLibrary,
-            WorkerController::WorkerExecution & execution) :
-            m_execution(execution),
-            m_taskLibrary(taskLibrary),
-            m_pTask(pTask) {}
-
-        void operator () ()
-        {
-            ScopedProcessing cleanupObject(getScopedProcessing());
-            timer workTimer;
-            DatabaseQueryVector queriesOut;
-            queriesOut.reserve(16);
-            bool returnValue = false;
-            try
-            {
-                typedef bool (*WorkFunctionType)(
-                    bool const &,
-                    uint32_t const,
-                    uint32_t const,
-                    uint32_t const,
-                    boost::scoped_array<uint8_t> const &,
-                    size_t const,
-                    DatabaseQueryVector const &,
-                    DatabaseQueryVector &);
-                WorkFunctionType workFunction = 
-                    m_taskLibrary->f<WorkFunctionType>("do_work");
-                returnValue = workFunction(
-                        stopProcessing(),
-                        m_pTask->failureCount(),
-                        m_pTask->id(),
-                        m_pTask->totalIds(),
-                        m_pTask->taskData(),
-                        m_pTask->taskDataSize(),
-                        m_pTask->queries(),
-                        queriesOut
-                    );
-            }
-            catch (boost::thread_interrupted const & te)
-            {
-                throw te;
-            }
-            catch (std::exception const & e)
-            {
-                std::cerr << m_pTask->workTitle() << ": " <<
-                    m_pTask->id() << " failed: " << e.what() << std::endl;
-            }
-            catch (...)
-            {
-                std::cerr << m_pTask->workTitle() << ": " <<
-                    m_pTask->id() << " failed: unknown exception" << std::endl;
-            }
-            double const elapsedTimeInHours = (workTimer.elapsed() / 3600.0);
-            if (stopProcessing())
-                return;
-            WorkerController::PushJobTaskResultRequestType
-                pResult(getResultPool());
-            pResult(
-                NodeConnections::nodeName(),
-                m_pTask->workTitle(),
+    if (stopped)
+        return;
+    timer workTimer;
+    DatabaseQueryVector queriesOut;
+    queriesOut.reserve(16);
+    bool returnValue = false;
+    try
+    {
+        typedef bool (*WorkFunctionType)(
+            bool const &,
+            uint32_t const,
+            uint32_t const,
+            uint32_t const,
+            boost::scoped_array<uint8_t> const &,
+            size_t const,
+            DatabaseQueryVector const &,
+            DatabaseQueryVector &);
+        WorkFunctionType workFunction = 
+            m_workLibrary->f<WorkFunctionType>("do_work");
+        returnValue = workFunction(
+                stopped,
+                m_pTask->failureCount(),
                 m_pTask->id(),
-                m_pTask->sequence(),
-                m_pTask->taskSize(),
-                m_pTask->taskData().get(),
+                m_pTask->totalIds(),
+                m_pTask->taskData(),
                 m_pTask->taskDataSize(),
-                elapsedTimeInHours,
-                returnValue,
-                queriesOut,
-                m_pTask->failureCount());
-            m_execution.discard(stopProcessing(), pResult);
-        }
+                m_pTask->queries(),
+                queriesOut
+            );
+    }
+    catch (boost::thread_interrupted const & te)
+    {
+        throw te;
+    }
+    catch (std::exception const & e)
+    {
+        std::cerr << m_pTask->workTitle() << ": " <<
+            m_pTask->id() << " failed: " << e.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << m_pTask->workTitle() << ": " <<
+            m_pTask->id() << " failed: unknown exception" << std::endl;
+    }
+    double const elapsedTimeInHours = (workTimer.elapsed() / 3600.0);
+    if (stopped)
+        return;
+    ResultType pResult(allocator);
+    pResult(
+        NodeConnections::nodeName(),
+        m_pTask->workTitle(),
+        m_pTask->id(),
+        m_pTask->sequence(),
+        m_pTask->taskSize(),
+        m_pTask->taskData().get(),
+        m_pTask->taskDataSize(),
+        elapsedTimeInHours,
+        returnValue,
+        queriesOut,
+        m_pTask->failureCount());
+    m_threadPool.output(stopped, pResult);
+}
 
-    private:
-        WorkerController::WorkerExecution & m_execution;
-        safe_shared_ptr<library> m_taskLibrary;
-        WorkerController::PullJobTaskResponseType m_pTask;
-};
-
-// the always true predicate function object
-class always_true
+WorkerController::WorkerExecution::WorkerExecution(
+    WorkerController & controller) : m_controller(controller)
 {
-    public:
-        typedef
-            WorkerController::WorkerExecution::WorkerExecutionLookup::value_type
-            ArgumentType;
-        bool operator () (ArgumentType &) { return true; }
-};
-
-// WorkerExecution thread pool decoupled
-// from the WorkerExecution implementation
-static ThreadPool executionPool(1);
-
-// respect the timeout of the
-// cloud_worker_port_sup:stop_port/1 Erlang function call (5000 milliseconds)
-static size_t const totalStopTimeoutLimit = 4000; // milliseconds
-
-} // anonymous namespace end
+    m_pThreadPool.reset(
+        new ThreadPool(initialThreadPoolSize, maximumThreadPoolSize, *this));
+}
 
 WorkerController::WorkerExecution::~WorkerExecution()
 {
-    boost::lock_guard<boost::mutex> lock(m_threadsMutex);
-    size_t const totalThreads = m_threads.size();
-    if (totalThreads > 0)
-    {
-        size_t const timeoutLimit = totalStopTimeoutLimit / totalThreads;
-        // make sure all the current threads die and the results are ignored
-        WorkerExecutionLookup::iterator itr;
-        for (itr = m_threads.begin(); itr != m_threads.end(); ++itr)
-            executionPool.stop(itr->second, timeoutLimit);
-        m_threads.clear();
-    }
+    m_pThreadPool->exit();
 }
 
-void WorkerController::WorkerExecution::reserveCapacity(size_t count)
-{
-    executionPool.reserve(count);
-}
-
-void WorkerController::WorkerExecution::add(PullJobTaskResponseType & pTask)
+void WorkerController::WorkerExecution::input(
+    PullJobTaskResponseType & pTask)
 {
     LibraryId libraryId(LibraryId::create(pTask->workTitle()));
-
-    // lock access to m_libraries and m_threads
-    boost::lock_guard<boost::mutex> lock(m_threadsMutex);
 
     // find the library
     WorkLibraryLookup::iterator libraryItr = m_libraries.find(libraryId);
@@ -423,106 +539,39 @@ void WorkerController::WorkerExecution::add(PullJobTaskResponseType & pTask)
         }
     }
 
-    // create the execution thread
-    typedef std::pair<WorkId, size_t> ThreadsPair;
-    WorkId workId(pTask->workTitle(), pTask->id());
-    std::pair<WorkerExecutionLookup::iterator, bool> threadResult = 
-        m_threads.insert(ThreadsPair(workId,
-            executionPool.run(
-                TaskContainer(pTask, libraryItr->second, *this)
-            )
-        ));
-    assert(threadResult.second);
+    if (! m_pThreadPool->input(pTask, libraryItr->second))
+    {
+        std::cerr << "unable to execute task for \"" <<
+            libraryId.workLibrary() << "\" work library" << std::endl;
+    }
 }
 
-void WorkerController::WorkerExecution::discard(bool const & ignore,
-    PushJobTaskResultRequestType & pTask)
+void WorkerController::WorkerExecution::increaseCapacity(size_t count)
 {
-    boost::mutex::scoped_try_lock lock(m_threadsMutex);
-    if (! lock.owns_lock())
-    {
-        do
-        {
-            // ignore the results if possible
-            // but don't get stuck waiting for a lock
-            if (ignore)
-                return;
-            boost::this_thread::yield();
-        }
-        while (! lock.try_lock());
-    }
-    WorkId workId(pTask->workTitle(), pTask->id());
-    m_controller.add_result(ignore, pTask);
-    m_threads.erase(workId);
+    m_pThreadPool->grow(count);
 }
 
-uint32_t WorkerController::WorkerExecution::count(
-    std::vector<WorkerController::WorkId> const & taskArray)
+size_t WorkerController::WorkerExecution::count(
+    std::vector<WorkId> const & taskArray,
+    PendingRequestsLookup & requests,
+    PendingResultsLookup & results)
 {
-    boost::lock_guard<boost::mutex> lock(m_threadsMutex);
-    uint32_t tasksFound = 0;
-    std::vector<WorkerController::WorkId>::const_iterator itr;
-    for (itr = taskArray.begin(); itr != taskArray.end(); ++itr)
-    {
-        WorkerExecutionLookup::const_iterator threadItr = m_threads.find(*itr);
-        if (threadItr != m_threads.end())
-            ++tasksFound;
-    }
-    return tasksFound;
+    return m_pThreadPool->count(taskArray, requests, results);
 }
 
-size_t WorkerController::WorkerExecution::remove(
-    WorkerController::WorkId const & workId,
-    PendingRequestsLookup & pendingRequests,
-    PendingResultsLookup & pendingResults)
+size_t WorkerController::WorkerExecution::erase(WorkId const & id,
+    PendingRequestsLookup & requests,
+    PendingResultsLookup & results)
 {
-    boost::lock_guard<boost::mutex> lock(m_threadsMutex);
-    size_t count = (pendingRequests.erase(workId) +
-        pendingResults.erase(workId));
-    std::pair<WorkerExecutionLookup::iterator,
-        WorkerExecutionLookup::iterator> threadToErase =
-            m_threads.equal_range(workId);
-    if (threadToErase.first != threadToErase.second)
-    {
-        size_t const totalThreads =
-            std::count_if(threadToErase.first,
-                          threadToErase.second, always_true());
-        size_t const timeoutLimit = totalStopTimeoutLimit / totalThreads;
-        WorkerExecutionLookup::iterator itr;
-        for (itr = threadToErase.first; itr != threadToErase.second; ++itr)
-        {
-            executionPool.stop(itr->second, timeoutLimit);
-            ++count;
-        }
-        m_threads.erase(threadToErase.first, threadToErase.second);
-    }
-    m_libraries.erase(LibraryId::create(workId.workTitle()));
-    executionPool.shrink(count);
+    size_t const count = m_pThreadPool->erase(id, requests, results);
+    m_pThreadPool->shrink(count);
     return count;
 }
 
-bool WorkerController::WorkerExecution::clear(
-    PendingRequestsLookup & pendingRequests,
-    PendingResultsLookup & pendingResults)
+void WorkerController::WorkerExecution::clear()
 {
-    boost::lock_guard<boost::mutex> lock(m_threadsMutex);
-    size_t count = (pendingRequests.size() + pendingResults.size());
-    pendingRequests.clear();
-    pendingResults.clear();
-    size_t const totalThreads = m_threads.size();
-    if (totalThreads > 0)
-    {
-        size_t const timeoutLimit = totalStopTimeoutLimit / totalThreads;
-        WorkerExecutionLookup::iterator itr;
-        for (itr = m_threads.begin(); itr != m_threads.end(); ++itr)
-        {
-            executionPool.stop(itr->second, timeoutLimit);
-            ++count;
-        }
-        m_threads.clear();
-    }
-    m_libraries.clear();
-    executionPool.shrink(count);
-    return (count > 0);
+    m_pThreadPool->exit();
+    m_pThreadPool.reset(
+        new ThreadPool(initialThreadPoolSize, maximumThreadPoolSize, *this));
 }
 

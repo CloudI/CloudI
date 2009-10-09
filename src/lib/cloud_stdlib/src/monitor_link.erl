@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Tuple operations==
+%%% ==Replace a Link with a Monitor to a Process Hierarchy or a Single Process==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,14 +44,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(tuple_extensions).
+-module(monitor_link).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([match/3]).
+-export([call/5, call/6]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -59,40 +59,70 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Match tuples based on a bitmask.===
+%% ===Call a function to create a remote link that is monitored by the calling process.===
+%% Any link the called function generates is removed.  This is meant for
+%% supervisor:start_link on a remote node, or the other stdlib behaviours.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec match({any()} | {any(), any()} | {any(), any(), any()},
-            {any()} | {any(), any()} | {any(), any(), any()},
-            pos_integer()) -> bool().
+-spec call(OldPid :: pid() | 'undefined',
+           Node :: atom(),
+           M :: atom(),
+           F :: atom(),
+           A :: list()) ->
+    {'ok', pid()} |
+    {'error', any()}.
 
-match({E0}, {E0}, 2#1) ->
-    true;
-match({ _, E1}, { _, E1}, 2#01) ->
-    true;
-match({ _,  _, E2}, { _,  _, E2}, 2#001) ->
-    true;
-match({E0,  _}, {E0,  _}, 2#10) ->
-    true;
-match({ _, E1,  _}, { _, E1,  _}, 2#010) ->
-    true;
-match({E0, E1}, {E0, E1}, 2#11) ->
-    true;
-match({ _, E1, E2}, { _, E1, E2}, 2#011) ->
-    true;
-match({E0,  _,  _}, {E0,  _,  _}, 2#100) ->
-    true;
-match({E0,  _, E2}, {E0,  _, E2}, 2#101) ->
-    true;
-match({E0, E1,  _}, {E0, E1,  _}, 2#110) ->
-    true;
-match({E0, E1, E2}, {E0, E1, E2}, 2#111) ->
-    true;
-match({ _,  _,  _}, { _,  _,  _},     _) ->
-    false;
-match({ _,  _}, { _,  _},    _) ->
-    false;
-match({ _}, { _},   _) ->
-    false.
+call(OldPid, Node, M, F, A) ->
+    call(OldPid, Node, M, F, A, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Call a function to create a remote process that is monitored by the calling process, with a timeout.===
+%% Any link the called function generates is removed.  This is meant for
+%% supervisor:start_link on a remote node, or the other stdlib behaviours.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec call(OldPid :: pid() | 'undefined',
+           Node :: atom(),
+           M :: atom(),
+           F :: atom(),
+           A :: list(),
+           Timeout :: pos_integer()) ->
+    {'ok', pid()} |
+    {'error', any()}.
+
+call(OldPid, Node, M, F, A, Timeout) ->
+    Parent = self(),
+    try erlang:spawn(Node, fun() ->
+            case erlang:apply(M, F, A) of
+                {ok, Pid} = Result ->
+                    unlink(Pid),
+                    Parent ! {self(), Result};
+                {error, _} = Result ->
+                    Parent ! {self(), Result}
+            end
+        end) of
+        Child when is_pid(Child) ->
+            receive
+                {Child, {ok, Pid} = Result} ->
+                    erlang:monitor(process, Pid),
+                    Result;
+                {Child, {error, {already_started, OldPid}}} ->
+                    % assume an old monitor exists
+                    {ok, OldPid};
+                {Child, {error, {already_started, Pid}}} ->
+                    erlang:monitor(process, Pid),
+                    {ok, Pid};
+                {Child, {error, _} = Result} ->
+                    Result
+            after
+                Timeout ->
+                    {error, timeout}
+            end
+    catch
+        error:Reason ->
+            {error, Reason}
+    end.
 

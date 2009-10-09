@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Math operations==
+%%% ==String extensions==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,14 +44,17 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(math_extensions).
+-module(string_extensions).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([product/1, ceil/1, floor/1, round/2]).
+-export([after_character/2, before_character/2,
+         split_on_character/2,
+         list_to_term/1, term_to_list/1,
+         format/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -59,58 +62,90 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Find the product of a list of numbers.===
+%% ===Return the string that occurs after a character, otherwise return an empty string.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec product(list(number())) -> number().
+-spec after_character(Char :: pos_integer(), string()) -> string().
 
-product(L) when is_list(L) ->
-    lists:foldl(fun(X, Y) -> X * Y end, 1, L).
+after_character(_, []) ->
+    [];
+after_character(Char, [Char | Rest]) when is_integer(Char) ->
+    Rest;
+after_character(Char, [_ | Rest]) when is_integer(Char) ->
+    after_character(Char, Rest).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Provide a ceiling function.===
+%% ===Return the string that occurs before a character, otherwise return an empty string.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec ceil(number()) -> integer().
+-spec before_character(Char :: pos_integer(), string()) -> string().
 
-ceil(X) ->
-    erlang:round(X + 0.5).
+before_character(Char, Input) when is_integer(Char), is_list(Input) ->
+    before_character([], Char, Input).
+before_character(_, _, []) ->
+    [];
+before_character(Before, Char, [Char | _]) when is_integer(Char) ->
+    Before;
+before_character(Before, Char, [H | Input]) when is_integer(Char) ->
+    before_character(Before ++ [H], Char, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Provide a floor function (for readability).===
+%% ===Return the two strings split at the first occurrence of the character.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec floor(number()) -> integer().
+-spec split_on_character(Char :: pos_integer(), string()) ->
+    {string(), string()}.
 
-floor(X) ->
-    erlang:trunc(X).
+split_on_character(Char, Input) when is_integer(Char), is_list(Input) ->
+    split_on_character([], Char, Input).
+split_on_character(_, _, []) ->
+    {[], []};
+split_on_character(Before, Char, [Char | Input]) when is_integer(Char) ->
+    {Before, Input};
+split_on_character(Before, Char, [H | Input]) when is_integer(Char) ->
+    split_on_character(Before ++ [H], Char, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Round to a decimal place.===
+%% ===Convert a string to an Erlang term.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec round(float(), integer()) -> float().
+-spec list_to_term(L :: string()) -> any().
 
-round(X, 1) ->
-    erlang:round(X * 10) / 10.0;
-round(X, 2) ->
-    erlang:round(X * 100) / 100.0;
-round(X, 3) ->
-    erlang:round(X * 1000) / 1000.0;
-round(X, 4) ->
-    erlang:round(X * 10000) / 10000.0;
-round(X, 5) ->
-    erlang:round(X * 100000) / 100000.0;
-round(X, 6) ->
-    erlang:round(X * 1000000) / 1000000.0;
-round(X, N) when is_integer(N) ->
-    Scale = math:pow(10, N),
-    erlang:round(X * Scale) / Scale.
+list_to_term(L) when is_list(L) ->
+    {ok, S, _} = erl_scan:string(L ++ "."),
+    case erl_parse:parse_term(S) of
+        {ok, Term} ->
+            Term;
+        {error, Reason} ->
+            throw(Reason)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert an Erlang term to a string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec term_to_list(T :: any()) -> string().
+
+term_to_list(T) ->
+    format("~w", [T]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a string based on the arguments.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec format(L :: string(), A :: list()) -> string().
+
+format(L, A) when is_list(L), is_list(A) ->
+    lists:flatten(io_lib:format(L, A)).
 
