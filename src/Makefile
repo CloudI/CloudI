@@ -4,9 +4,9 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.4.0
+VERSION_NAME=0.0.5.0
 PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.4
+MAJOR_VERSION_NAME=0.0.5
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -67,12 +67,13 @@ WORKER_LIB_PATH=lib/cloud_worker/priv/lib
 WORKER_PROTOCOL_PATH=lib/cloud_worker/protocol
 INTERFACE_SRC_PATH=lib/cloud_interface/src
 INTERFACE_INC_PATH=$(ROOT_PATH)/lib/cloud_interface/include
+LOCAL_STDLIB_SRC_PATH=lib/cloud_stdlib/src
 MAIN_SRC_PATH=lib/cloud/src
 MAIN_INC_PATH=$(ROOT_PATH)/lib/cloud/include
 MAIN_BIN_PATH=lib/cloud/priv
 MAIN_CONF_PATH=lib/cloud/conf
-GXX_SRC=lib/g++/gcc-4.4.0.tar.gz
-GXX_SRC_PATH=$(ROOT_PATH)/lib/g++/releases/gcc-4.4.0
+GXX_SRC=lib/g++/gcc-4.4.1.tar.gz
+GXX_SRC_PATH=$(ROOT_PATH)/lib/g++/releases/gcc-4.4.1
 GXX_BIN_PATH=$(GXX_SRC_PATH)_install
 GXX_BIN=$(GXX_BIN_PATH)/bin/g++
 GCC_BIN=$(GXX_BIN_PATH)/bin/gcc
@@ -87,12 +88,9 @@ GMP_LIB_PATH=$(GMP_SRC_PATH)_install/lib
 PTMALLOC_SRC=lib/ptmalloc/ptmalloc3-current.tar.gz
 PTMALLOC_SRC_PATH=$(ROOT_PATH)/lib/ptmalloc/releases/ptmalloc3
 PTMALLOC_LIB_PATH=$(PTMALLOC_SRC_PATH)/lib
-#BOOST_SRC=lib/boost/boost_trunk.tar.gz
-#BOOST_SRC_PATH=lib/boost/releases/boost_trunk
-#BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include
-BOOST_SRC=lib/boost/boost_1_39_0.tar.gz
-BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_1_39_0
-BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include/boost-1_39
+BOOST_SRC=lib/boost/boost_1_40_0.tar.gz
+BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_1_40_0
+BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include
 BOOST_LIB_PATH=$(BOOST_SRC_PATH)_install/lib
 LEAKTRACER_SRC_PATH=lib/LeakTracer
 #LEAKTRACER_SRC_PATH=lib/LeakTracer-mg
@@ -102,26 +100,27 @@ WORK_TYPE1_OBJ_PATH=lib/cloud_job_tests/priv/obj
 WORK_TYPE1_LIB_PATH=lib/cloud_job_tests/priv/lib
 
 # force usage of a local compiler for c++
-GXX_CXXFLAGS=-I$(GXX_BIN_PATH)/include/c++/4.4.0/
+GXX_CXXFLAGS=-I$(GXX_BIN_PATH)/include/c++/4.4.1/
 GXX_LDFLAGS=-L$(GXX_BIN_PATH)/lib \
             -Wl,-rpath $(GXX_BIN_PATH)/lib
 LBITS=$(shell getconf LONG_BIT)
 ifeq ($(LBITS),32)
 GXX_LDFLAGS+=\
-    -L$(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.0/ \
-    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.0/
+    -L$(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.1/ \
+    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.1/
 else
 ifeq ($(LBITS),64)
 GXX_LDFLAGS+=\
-    -L$(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.0/ \
+    -L$(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.1/ \
     -L$(GXX_BIN_PATH)/lib64 -L$(GXX_BIN_PATH)/lib32 \
-    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.0/ \
+    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.1/ \
     -Wl,-rpath $(GXX_BIN_PATH)/lib64 -Wl,-rpath $(GXX_BIN_PATH)/lib32
 else
 GXX_BIN=
 GCC_BIN=
 endif
 endif
+
 GXX_BUILT=$(strip $(wildcard $(GXX_BIN)))
 ifeq ($(GXX_BUILT),)
 else
@@ -172,18 +171,20 @@ ERLANG_SRC_FILES=\
         $(MAIN_SRC_PATH)/cloud_work_status.erl \
         $(MAIN_SRC_PATH)/cloud_work_status.hrl \
         $(MAIN_SRC_PATH)/cloud_work_sup.erl \
-        $(MAIN_SRC_PATH)/dynamic_compile.erl \
-        $(MAIN_SRC_PATH)/immediate_gc.erl \
-        $(MAIN_SRC_PATH)/monitor_link.erl \
-        $(MAIN_SRC_PATH)/lists_extensions.erl \
-        $(MAIN_SRC_PATH)/math_extensions.erl \
         $(MAIN_SRC_PATH)/q.erl \
-        $(MAIN_SRC_PATH)/string_extensions.erl \
-        $(MAIN_SRC_PATH)/time_extensions.erl \
-        $(MAIN_SRC_PATH)/tuple_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/dynamic_compile.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/immediate_gc.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/monitor_link.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/lists_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/math_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/proplists_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/string_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/time_extensions.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/tuple_extensions.erl \
         lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
         lib/rb/src/rbsets.erl \
         lib/rb/src/rbdict.erl \
+        lib/ememcached/src/ememcached.erl \
         lib/epgsql/test_src/pgsql_tests.erl \
         lib/epgsql/src/pgsql_sock.erl \
         lib/epgsql/src/pgsql_idatetime.erl \
@@ -217,12 +218,12 @@ _build.cfg: _build.cfg.template
 
 g++: $(GXX_BIN)
 $(GXX_BIN): $(GXX_SRC) \
-        lib/g++/gmp-4.2.4.tar.gz \
+        $(GMP_SRC) \
         lib/g++/mpfr-2.4.1.tar.gz
 	@test -d $(GXX_SRC_PATH) || \
         (tar zxvf $(GXX_SRC) -C $(dir $(GXX_SRC_PATH)) && \
          mkdir $(GXX_SRC_PATH)/gmp && \
-         tar zxvf lib/g++/gmp-4.2.4.tar.gz --strip-components 1 \
+         tar zxvf $(GMP_SRC) --strip-components 1 \
              -C $(GXX_SRC_PATH)/gmp && \
          mkdir $(GXX_SRC_PATH)/mpfr && \
          tar zxvf lib/g++/mpfr-2.4.1.tar.gz --strip-components 1 \
@@ -283,17 +284,17 @@ boost-trunk:
 $(BOOST_LIB_PATH): $(BOOST_SRC)
 	@test -d $(BOOST_SRC_PATH) || \
         tar zxvf $(BOOST_SRC) -C $(dir $(BOOST_SRC_PATH))
-	find $(dir $(BOOST_SRC)) -name "boost_1_39_0_*.patch" | xargs -Ifile \
+	find $(dir $(BOOST_SRC)) -name "boost_1_40_0_*.patch" | xargs -Ifile \
         cp file $(BOOST_SRC_PATH)
 	@(cd $(BOOST_SRC_PATH) && \
       ls *.patch | xargs cat | patch -p1 && \
       ./bootstrap.sh --prefix=`pwd`_install --libdir=`pwd`_install/lib && \
-	  echo "using gcc : 4.4.0 : $(GXX_BIN) : \
+	  echo "using gcc : 4.4.1 : $(GXX_BIN) : \
 <root>$(GXX_BIN_PATH) \
 <compileflags>$(GXX_CXXFLAGS) <linkflags>$(GXX_LDFLAGS) ; " > \
           tools/build/v2/user-config.jam && \
       ./bjam --debug-configuration --without-python --without-mpi \
-             toolset=gcc-4.4.0 install\
+             toolset=gcc-4.4.1 install\
      )
 
 $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
@@ -322,9 +323,15 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
         -L$(GMP_LIB_PATH) $(LDFLAGS) \
         -Wl,-rpath $(BOOST_LIB_PATH) \
         -Wl,-rpath $(GMP_LIB_PATH) \
-        -lboost_thread-gcc44-mt-1_39 \
-        -lboost_system-gcc44-mt-1_39 \
+        -lboost_thread \
+        -lboost_system \
 		-lgmp
+
+#		\
+        -Wl,-Bstatic \
+        -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
+        -Wl,-Bdynamic \
+        -lc
 
 $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
@@ -393,7 +400,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
         $(WORKER_SRC_PATH)/ei_x_buff_ptr.cpp \
         $(WORKER_INC_PATH)/realloc_ptr.hpp \
         $(WORKER_SRC_PATH)/copy_ptr.hpp \
-        $(WORKER_SRC_PATH)/safe_shared_ptr.hpp \
+        $(WORKER_INC_PATH)/safe_shared_ptr.hpp \
         $(WORKER_INC_PATH)/pool_copy_ptr.hpp \
         $(WORKER_INC_PATH)/boost_thread.hpp \
         $(INTERFACE_INC_PATH)/cloud_work_interface_data.hpp \
@@ -457,22 +464,24 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          $(LDFLAGS) \
          -Wl,-rpath $(BOOST_LIB_PATH) \
          -Wl,-Bdynamic \
-         -lboost_thread-gcc44-mt-1_39  \
-         -lboost_date_time-gcc44-mt-1_39 \
-         -lboost_filesystem-gcc44-mt-1_39 \
-         -lboost_system-gcc44-mt-1_39 \
+         -lboost_thread  \
+         -lboost_date_time \
+         -lboost_filesystem \
+         -lboost_system \
          -Wl,-Bstatic \
          -L$(WORKER_LIB_PATH) -lWorkerProtocol \
          -L$(ERL_INTERFACE_LIB_PATH) -lerl_interface_st -lei_st \
          -Wl,-Bdynamic \
-         -ldl -lrt \
+         -ldl -lrt
+	@$(RM) $(WORKER_OBJ_PATH)/*.o
+
+#		 \
          -lstdc++ \
          -Wl,-Bstatic \
          -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
          -Wl,-Bdynamic \
          -lc -lpthread
 
-	@$(RM) $(WORKER_OBJ_PATH)/*.o
 
 $(MAIN_SRC_PATH)/cloud_worker_port.hrl: \
         $(GEPD_INC_PATH)/erlang_functions_hrl.h \

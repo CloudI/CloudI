@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_scheduler).
@@ -231,6 +231,8 @@ work_data_done(WorkTitle,
             {NewRunningProcesses, IdleProcesses} =
                 stop_work(ProcessNames, RunningProcesses, WorkTitle),
             ?LOG_INFO("work type ~p purged", [WorkTitle]),
+            % immediately try to schedule other work from the waiting queue
+            self() ! allocate_work,
             {IdleProcesses,
              State#state{run_queue_work_state_processes = NewRunningProcesses,
                          run_queue = NewQueue}}
@@ -524,8 +526,8 @@ allocate_work(Processes, Lookup, Queue)
                         Work#run_queue_work_state.work_arguments),
                     if
                         StartResult /= ok ->
-                            ?LOG_ERROR("ignoring work type ~p: ~P",
-                                [WorkTitle, StartResult, 5]),
+                            ?LOG_ERROR("ignoring work type ~p: ~p",
+                                [WorkTitle, StartResult]),
                             {error, 0.0};
                         true ->
                             case cloud_work_interface:get_initial_task_size(

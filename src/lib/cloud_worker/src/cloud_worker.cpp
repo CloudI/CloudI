@@ -74,8 +74,8 @@ bool worker_start(char * nodeNameStr, uint32_t nodeNameLen,
 
 bool worker_stop()
 {
-    bool const success = controller.clear_work();
-    return (NodeConnections::deinitialize() && success);
+    controller.clear_work();
+    return NodeConnections::deinitialize();
 }
 
 bool add_work(char * workTitleStr, uint32_t workTitleLen,

@@ -42,6 +42,7 @@
 
 #include <boost/pool/object_pool.hpp>
 #include "boost_thread.hpp"
+#include "safe_shared_ptr.hpp"
 #include <cassert>
 
 // thread-safe wrapper for boost::object_pool<T, UserAllocator>
@@ -57,48 +58,49 @@ class safe_object_pool
 
         element_type * malloc()
         {
-            boost::lock_guard<boost::mutex> lock(
-                const_cast<boost::mutex &>(m_mutex));
+            boost::lock_guard<boost::mutex> lock(m_mutex);
             return m_pool.malloc();
         }
         void free(element_type * const chunk)
         {
-            boost::lock_guard<boost::mutex> lock(
-                const_cast<boost::mutex &>(m_mutex));
+            boost::lock_guard<boost::mutex> lock(m_mutex);
             m_pool.free(chunk);
         }
         void destroy(element_type * const chunk)
         {
-            boost::lock_guard<boost::mutex> lock(
-                const_cast<boost::mutex &>(m_mutex));
+            boost::lock_guard<boost::mutex> lock(m_mutex);
             m_pool.destroy(chunk);
         }
     private:
         boost::object_pool<T, UserAllocator> m_pool;
-        volatile boost::mutex m_mutex;
+        boost::mutex m_mutex;
 };
 
 // copy_ptr functionality with object memory pool allocation
 template <
 typename T,
 typename POOL_T = 
-    boost::object_pool<T, boost::default_user_allocator_new_delete>
+    safe_shared_ptr<
+        boost::object_pool<T, boost::default_user_allocator_new_delete>
+    >
 >
 class pool_copy_ptr
 {
     public:
         typedef T element_type;
+        typedef POOL_T pool_ptr_type;
+        typedef typename POOL_T::element_type pool_type;
 
-        explicit pool_copy_ptr(POOL_T & pool) throw() :
-            m_pool(pool), m_p(0), m_constructed(false) {}
+        explicit pool_copy_ptr(POOL_T const & pPool) throw() :
+            m_pPool(pPool), m_p(0), m_constructed(false) {}
         ~pool_copy_ptr()
         {
             if (m_p)
             {
                 if (m_constructed)
-                    m_pool.destroy(m_p);
+                    m_pPool->destroy(m_p);
                 else
-                    m_pool.free(m_p);
+                    m_pPool->free(m_p);
             }
         }
 
@@ -107,7 +109,7 @@ class pool_copy_ptr
         void operator () (ARG&&... a)
         {
             
-            reset(m_pool.malloc());
+            reset(m_pPool->malloc());
             if (m_p)
             {
                 try
@@ -117,7 +119,7 @@ class pool_copy_ptr
                 catch (...)
                 {
                     // a constructor raised an exception
-                    m_pool.free(m_p);
+                    m_pPool->free(m_p);
                     m_p = 0;
                     throw;
                 }
@@ -130,17 +132,17 @@ class pool_copy_ptr
         // handle const & conversion
       
         pool_copy_ptr(pool_copy_ptr const & o) throw() :
-            m_pool(const_cast<pool_copy_ptr &>(o).m_pool),
+            m_pPool(o.m_pPool),
             m_p(const_cast<pool_copy_ptr &>(o).release()),
             m_constructed(o.m_constructed) {}
         template <typename RELATED>
         pool_copy_ptr(pool_copy_ptr<RELATED> const & o) throw() :
-            m_pool(const_cast<pool_copy_ptr<RELATED> &>(o).m_pool),
+            m_pPool(o.m_pPool),
             m_p(const_cast<pool_copy_ptr<RELATED> &>(o).release()),
             m_constructed(o.m_constructed) {}
         pool_copy_ptr & operator =(pool_copy_ptr const & o) throw()
         {
-            m_pool = &(const_cast<pool_copy_ptr &>(o).m_pool);
+            m_pPool = o.m_pPool;
             reset(const_cast<pool_copy_ptr &>(o).release());
             m_constructed = o.m_constructed;
             return *this;
@@ -148,7 +150,7 @@ class pool_copy_ptr
         template <typename RELATED>
         pool_copy_ptr & operator =(pool_copy_ptr<RELATED> const & o) throw()
         {
-            m_pool = &(const_cast<pool_copy_ptr<RELATED> &>(o).m_pool);
+            m_pPool = o.m_pPool;
             reset(const_cast<pool_copy_ptr<RELATED> &>(o).release());
             m_constructed = o.m_constructed;
             return *this;
@@ -157,15 +159,15 @@ class pool_copy_ptr
         // handle non-const & conversion
 
         pool_copy_ptr(pool_copy_ptr & o) throw() :
-            m_pool(o.m_pool), m_p(o.release()),
+            m_pPool(o.m_pPool), m_p(o.release()),
             m_constructed(o.m_constructed) {}
         template <typename RELATED>
         pool_copy_ptr(pool_copy_ptr<RELATED> & o) throw() :
-            m_pool(o.m_pool), m_p(o.release()),
+            m_pPool(o.m_pPool), m_p(o.release()),
             m_constructed(o.m_constructed) {}
         pool_copy_ptr & operator =(pool_copy_ptr & o) throw()
         {
-            m_pool = &(o.m_pool);
+            m_pPool = o.m_pPool;
             reset(o.release());
             m_constructed = o.m_constructed;
             return *this;
@@ -173,7 +175,7 @@ class pool_copy_ptr
         template <typename RELATED>
         pool_copy_ptr & operator =(pool_copy_ptr<RELATED> & o) throw()
         {
-            m_pool = &(o.m_pool);
+            m_pPool = o.m_pPool;
             reset(o.release());
             m_constructed = o.m_constructed;
             return *this;
@@ -214,23 +216,24 @@ class pool_copy_ptr
                 if (m_p)
                 {
                     if (m_constructed)
-                        m_pool.destroy(m_p);
+                        m_pPool->destroy(m_p);
                     else
-                        m_pool.free(m_p);
+                        m_pPool->free(m_p);
                 }
                 m_p = p;
                 m_constructed = false;
             }
         }
 
-        POOL_T & m_pool;
+        POOL_T m_pPool;
         T * m_p;
         bool m_constructed;
 };
 
 // C++0x feature not yet implemented in g++ 4.3.2
 //template <typename T>
-//using safe_pool_copy_ptr = pool_copy_ptr< T, safe_object_pool<T> >;
+//using safe_pool_copy_ptr =
+//    pool_copy_ptr< T, safe_shared_ptr< safe_object_pool<T> > >;
 
 #endif // POOL_COPY_PTR_HPP
 

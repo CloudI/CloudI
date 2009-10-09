@@ -383,7 +383,6 @@ handle_info(_Info, State) -> {noreply, State}.
 %% @hidden
 %%--------------------------------------------------------------------
 terminate(_Reason, State) ->
-    send_all(State, #request{op_code=?OP_Quit}),
     ok.
 
 %%--------------------------------------------------------------------

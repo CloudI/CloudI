@@ -1,0 +1,7 @@
+from http://github.com/ngerakines/erlang_mysql
+
+This library was written by Magnus Ahltorp <ahltorp@nada.kth.se>.
+
+My changes:
+ * Commented out code for debug logging.
+ * Updated/tweaked the build system.

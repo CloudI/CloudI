@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Enforce immediate garbage collection on a function==
+%%% ==Proplists Extensions Module==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,15 +44,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(immediate_gc).
+-module(proplists_extensions).
 -author('mjtruog [at] gmail (dot) com').
 
-%% external interface
--export([sync_fun/2, sync_fun/3,
-         async_fun/2, async_fun/3]).
+-export([take_value/3,
+         take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -60,65 +59,46 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Make a synchronous call to a function that will be garbage collected when the function returns.===
+%% ===Remove a key from the proplist.===
+%% Use the default value if the key does not exist
 %% @end
 %%-------------------------------------------------------------------------
 
--spec sync_fun(M :: atom(), F :: atom(), A :: list()) -> any().
+-spec take_value(Key :: atom(),
+                 List :: list({atom(), any()}),
+                 Default :: any()) -> {any(), list({atom(), any()})}.
 
-sync_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
-    Parent = self(),
-    Child = erlang:spawn_opt(fun() ->
-        Parent ! {self(), erlang:apply(M, F, A)},
-        erlang:garbage_collect()
-    end, [link, {fullsweep_after, 0}]),
-    receive
-        {Child, Result} -> Result
+take_value(Key, List, Default)
+    when is_atom(Key), is_list(List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            {Default, List};
+        {value, {Key, Value}, RemainingList} ->
+            {Value, RemainingList}
     end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Make a synchronous call to an anonymous function that will be garbage collected when the function returns.===
+%% ===Remove many keys from the proplist.===
+%% The defaults are provided as a proplist
 %% @end
 %%-------------------------------------------------------------------------
 
--spec sync_fun(F :: fun(), A :: list()) -> any().
+-spec take_values(DefaultList :: list({atom(), any()}),
+                  List :: list({atom(), any()})) -> list().
 
-sync_fun(F, A) when is_function(F), is_list(A) ->
-    Parent = self(),
-    Child = erlang:spawn_opt(fun() ->
-        Parent ! {self(), erlang:apply(F, A)},
-        erlang:garbage_collect()
-    end, [link, {fullsweep_after, 0}]),
-    receive
-        {Child, Result} -> Result
+take_values(DefaultList, List)
+    when is_list(DefaultList), is_list(List) ->
+    take_values([], DefaultList, List).
+take_values(Result, [], List)
+    when is_list(Result), is_list(List) ->
+    Result ++ [List];
+take_values(Result, [{Key, Default} | DefaultList], List)
+    when is_list(Result), is_atom(Key), is_list(List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            take_values(Result ++ [Default], DefaultList, List);
+        {value, {Key, Value}, RemainingList} ->
+            take_values(Result ++ [Value], DefaultList, RemainingList)
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Make an asynchronous call to a function that will be garbage collected when the function returns.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec async_fun(M :: atom(), F :: atom(), A :: list()) -> pid().
-
-async_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
-    erlang:spawn_opt(fun() ->
-        erlang:apply(M, F, A),
-        erlang:garbage_collect()
-    end, [link, {fullsweep_after, 0}]).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Make an asynchronous call to an anonymous function that will be garbage collected when the function returns.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec async_fun(F :: fun(), A :: list()) -> pid().
-
-async_fun(F, A) when is_function(F), is_list(A) ->
-    erlang:spawn_opt(fun() ->
-        erlang:apply(F, A),
-        erlang:garbage_collect()
-    end, [link, {fullsweep_after, 0}]).
 

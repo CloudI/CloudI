@@ -44,6 +44,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <assert.h>
+#include <iostream>
 #include "worker_controller.hpp"
 #include "cloud_worker_common.hpp"
 #include "node_connections.hpp"
@@ -344,6 +345,7 @@ void WorkerController::setCurrentPath(char const * const pPath)
 
 WorkerController::WorkerQuery::WorkerQuery(WorkerExecution & executingTasks) :
     m_receiveTimeout(-1),
+    m_pRequestAllocator(new PullJobTaskRequestType::pool_type),
     m_executingTasks(executingTasks)
 {
     int pipeData[2];
@@ -390,7 +392,7 @@ bool WorkerController::WorkerQuery::add(
         // (e.g., not add a worker task request that is already executing)
         typedef std::pair<WorkId, PullJobTaskRequestType> RequestPair;
         uint32_t const id = idOffset + i;
-        PullJobTaskRequestType pRequest(m_requestPool);
+        PullJobTaskRequestType pRequest(m_pRequestAllocator);
         pRequest(NodeConnections::nodeName(), workTitle, id);
         std::pair<PendingRequestsLookup::iterator, bool> requestResult =
             m_pendingRequests.insert(RequestPair(
@@ -400,9 +402,14 @@ bool WorkerController::WorkerQuery::add(
             success = false;
     }
     if (success)
-        m_executingTasks.reserveCapacity(numberOfThreads);
-    if (! trigger_event())
-        success = false;
+    {
+        m_executingTasks.increaseCapacity(numberOfThreads);
+        trigger_event();
+    }
+    else
+    {
+        m_pendingRequests.erase(WorkId(workTitle));
+    }
     return success;
 }
 
@@ -418,26 +425,9 @@ bool WorkerController::WorkerQuery::has(
         taskArray.push_back(WorkId(workTitle, idOffset - 1));
     taskArray.push_back(WorkId(workTitle, idOffset + numberOfThreads));
 
-    boost::unique_lock<boost::mutex> lock(m_resultsMutex);
-    uint32_t tasksFound = m_executingTasks.count(taskArray);
-    std::vector<WorkerController::WorkId>::const_iterator itr;
-    for (itr = taskArray.begin(); itr != taskArray.end(); ++itr)
-    {
-        PendingRequestsLookup::const_iterator requestItr = 
-            m_pendingRequests.find(*itr);
-        if (requestItr != m_pendingRequests.end())
-        {
-            tasksFound++;
-        }
-        else
-        {
-            TaskId const taskId(*itr);
-            PendingResultsLookup::const_iterator resultItr =
-                m_pendingResults.find(taskId);
-            if (resultItr != m_pendingResults.end())
-                tasksFound++;
-        }
-    }
+    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
+    uint32_t tasksFound =
+        m_executingTasks.count(taskArray, m_pendingRequests, m_pendingResults);
     return (tasksFound == numberOfThreads);
 }
 
@@ -447,26 +437,23 @@ bool WorkerController::WorkerQuery::remove(
     std::string const & workTitle)
 {
     boost::lock_guard<boost::mutex> lock(m_resultsMutex);
-    WorkId workId(workTitle);
-    return (m_executingTasks.remove(
-        workId, m_pendingRequests, m_pendingResults) > 0);
+    return (m_executingTasks.erase(
+        WorkId(workTitle), m_pendingRequests, m_pendingResults) > 0);
 }
 
-bool WorkerController::WorkerQuery::clear()
+void WorkerController::WorkerQuery::clear()
 {
     boost::lock_guard<boost::mutex> lock(m_resultsMutex);
-    return m_executingTasks.clear(m_pendingRequests, m_pendingResults);
+    m_executingTasks.clear();
+    m_pendingRequests.clear();
+    m_pendingResults.clear();
 }
 
-bool WorkerController::WorkerQuery::add(bool const & ignore,
+bool WorkerController::WorkerQuery::add(
     PushJobTaskResultRequestType & ptr)
 {
     boost::lock_guard<boost::mutex> lock(m_resultsMutex);
-    // must check if the result should be ignored after the mutex is aquired
-    if (ignore)
-        return false;
     // save the result
-    bool success = true;
     typedef std::pair<TaskId, PushJobTaskResultRequestType> RequestPair;
     std::pair<PendingResultsLookup::iterator, bool> requestResult =
         m_pendingResults.insert(RequestPair(
@@ -474,11 +461,15 @@ bool WorkerController::WorkerQuery::add(bool const & ignore,
                    ptr->taskData(), ptr->taskDataSize()),
             ptr
         ));
-    if (! requestResult.second)
-        success = false;
-    else if (! trigger_event())
-        success = false;
-    return success;
+    if (requestResult.second)
+    {
+        trigger_event();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void WorkerController::WorkerQuery::received(
@@ -493,7 +484,7 @@ void WorkerController::WorkerQuery::received(
         // (only if the request was found should the
         //  response then be added as a task to execute)
         assert(! ptr->empty());
-        m_executingTasks.add(ptr);
+        m_executingTasks.input(ptr);
     }
 }
 
@@ -501,11 +492,13 @@ void WorkerController::WorkerQuery::received(
     PushJobTaskResultResponseType & ptr)
 {
     // remove task from m_pendingResults
-    boost::unique_lock<boost::mutex> lock(m_resultsMutex);
-    size_t const removedCount = m_pendingResults.erase(
-        TaskId(ptr->workTitle(), ptr->id(),
-               ptr->taskData(), ptr->taskDataSize()));
-    lock.unlock();
+    size_t removedCount;
+    {
+        boost::lock_guard<boost::mutex> lock(m_resultsMutex);
+        removedCount = m_pendingResults.erase(
+            TaskId(ptr->workTitle(), ptr->id(),
+                   ptr->taskData(), ptr->taskDataSize()));
+    }
     if (removedCount > 0)
     {
         // use response information to put work in a queue 
@@ -513,7 +506,7 @@ void WorkerController::WorkerQuery::received(
         // (only if the request was found should the
         //  response then be added as work to request)
         typedef std::pair<WorkId, PullJobTaskRequestType> RequestPair;
-        PullJobTaskRequestType pRequest(m_requestPool);
+        PullJobTaskRequestType pRequest(m_pRequestAllocator);
         pRequest(NodeConnections::nodeName(), ptr->workTitle(), ptr->id());
         std::pair<PendingRequestsLookup::iterator, bool> requestResult =
             m_pendingRequests.insert(RequestPair(

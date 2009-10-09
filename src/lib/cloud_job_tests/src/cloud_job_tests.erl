@@ -71,8 +71,6 @@
 
 -include("cloud_logger.hrl").
 
--define(WORK_DATA_TITLE, 'cloud_data_pgsql.cloudi_tests').
-
 % example runtimes for
 % AMD Phenom 9950 Quad-Core, 64bit, linux 2.6.27-14-generic:
 % 10^6th digit in  6.5 seconds
@@ -107,8 +105,10 @@
 -spec clear_all_results() -> 'ok'.
 
 clear_all_results() ->
-    {ok, _} = cloud_data_pgsql:squery(?WORK_DATA_TITLE,
-        "DELETE FROM incoming_results_v2;"),
+    cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests',
+        "DELETE FROM incoming_results_v3;"),
+    {ok, _} = cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests',
+        "DELETE FROM incoming_results_v3;"),
     ok.
 
 %%-------------------------------------------------------------------------
@@ -120,9 +120,12 @@ clear_all_results() ->
 -spec clear_results(State :: pos_integer(), End :: pos_integer()) -> 'ok'.
 
 clear_results(Start, End) when is_integer(Start), is_integer(End) ->
-    {ok, _} = cloud_data_pgsql:equery(?WORK_DATA_TITLE,
-        "DELETE FROM incoming_results_v2 "
-        "WHERE index >= $1 AND index <= $2;", [Start, End]),
+    cloud_data_pgsql:equery('cloud_data_mysql.cloudi_tests',
+        "DELETE FROM incoming_results_v3 "
+        "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End]),
+    {ok, _} = cloud_data_pgsql:equery('cloud_data_pgsql.cloudi_tests',
+        "DELETE FROM incoming_results_v3 "
+        "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End]),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -236,15 +239,18 @@ code_change(_, State, _) ->
 setup_database() ->
     % queries for database initialization
     RequiredDatabaseQueries = [
-        "DROP TABLE IF EXISTS incoming_results;"],
+        "DROP TABLE IF EXISTS incoming_results;",
+        "DROP TABLE IF EXISTS incoming_results_v2;"],
     OptionalDatabaseQueries = [
-        "CREATE TABLE incoming_results_v2 ("
-        "index       NUMERIC(30) PRIMARY KEY,"
-        "data        TEXT"
+        "CREATE TABLE incoming_results_v3 ("
+        "digit_index   NUMERIC(30) PRIMARY KEY,"
+        "data          TEXT"
         ");"],
     % execute setup queries
     RequiredResult = lists_extensions:iter(fun(Q, Itr) ->
-        case cloud_data_pgsql:squery(?WORK_DATA_TITLE, Q) of
+        % mysql can be used, but is not required
+        cloud_data_pgsql:squery('cloud_data_mysql.cloudi_tests', Q),
+        case cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q) of
             {ok, _} ->
                 Itr();
             {ok, _, _} ->
@@ -258,7 +264,9 @@ setup_database() ->
     if
         RequiredResult == ok ->
             lists:foreach(fun(Q) ->
-                cloud_data_pgsql:squery(?WORK_DATA_TITLE, Q)
+                % mysql can be used, but is not required
+                cloud_data_pgsql:squery('cloud_data_mysql.cloudi_tests', Q),
+                cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q)
             end, OptionalDatabaseQueries),
             ok;
         true ->
@@ -273,10 +281,12 @@ update_state_from_database(#state{index_start = IndexStart,
     % determine if old data can be used from an
     % older run of the same work title
     {ok, _, [ResultLimits]} = 
-        cloud_data_pgsql:equery(?WORK_DATA_TITLE,
-        "SELECT MIN(index), MAX(index) FROM incoming_results_v2 "
-        "WHERE index >= $1 AND index <= $2;",
-        [IndexStart, IndexEnd]),
+        cloud_data_pgsql:equery(
+            'cloud_data_pgsql.cloudi_tests',
+            "SELECT MIN(digit_index), MAX(digit_index) "
+            "FROM incoming_results_v3 "
+            "WHERE digit_index >= ? AND digit_index <= ?;",
+            [IndexStart, IndexEnd]),
     case ResultLimits of
         {null, null} ->
             {ok, State};
@@ -289,10 +299,12 @@ update_state_from_database(#state{index_start = IndexStart,
                         erlang:binary_to_list(erlang:element(2, ResultLimits))),
                     % assume [MinIndex..MaxIndex] are continuous
                     {ok, _, [Position]} =
-                        cloud_data_pgsql:equery(?WORK_DATA_TITLE,
-                        "SELECT ($1 + CHARACTER_LENGTH(data)) "
-                        "FROM incoming_results_v2 WHERE index = $2;",
-                        [MaxIndex, MaxIndex]),
+                        cloud_data_pgsql:equery(
+                            'cloud_data_pgsql.cloudi_tests',
+                            "SELECT (? + CHARACTER_LENGTH(data)) "
+                            "FROM incoming_results_v3 "
+                            "WHERE digit_index = ?;",
+                            [MaxIndex, MaxIndex]),
                     NewIndexStart = erlang:element(1, Position),
                     if
                         NewIndexStart >= IndexEnd ->
@@ -303,9 +315,10 @@ update_state_from_database(#state{index_start = IndexStart,
                     end;
                 true ->
                     % results do not seem continuous
-                    {ok, _} = cloud_data_pgsql:equery(?WORK_DATA_TITLE,
-                        "DELETE FROM incoming_results_v2 "
-                        "WHERE index >= $1 AND index <= $2;",
+                    {ok, _} = cloud_data_pgsql:equery(
+                        'cloud_data_pgsql.cloudi_tests',
+                        "DELETE FROM incoming_results_v3 "
+                        "WHERE digit_index >= ? AND digit_index <= ?;",
                         [IndexStart, IndexEnd]),
                     {ok, State}
             end

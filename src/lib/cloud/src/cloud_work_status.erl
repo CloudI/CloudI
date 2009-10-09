@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_status).
@@ -297,6 +297,8 @@ get_cached_task(WorkTitle, Id, WorkStatus)
     case rbdict:find(WorkTitle, WorkStatus) of
         {ok, #work_status{working = SequenceLookup} = Status} ->
             case rbdict:find(Id, SequenceLookup) of
+                {ok, #work_status_working{task = undefined}} ->
+                    error;
                 {ok, #work_status_working{task = Task}}
                     when is_record(Task, work_status_working_task) ->
                     Task;

@@ -166,15 +166,17 @@ size_t WorkerOutboundMessage::serialize(
         return static_cast<size_t>(bytes);
 }
 
-safe_object_pool<PullJobTaskResponse> 
-    WorkerInboundMessage::m_requestsPool;
-boost::object_pool<PushJobTaskResultResponse> 
-    WorkerInboundMessage::m_resultsPool;
+safe_shared_ptr< safe_object_pool<PullJobTaskResponse> >
+    WorkerInboundMessage::m_pRequestsPool(
+        new safe_object_pool<PullJobTaskResponse>());
+safe_shared_ptr< boost::object_pool<PushJobTaskResultResponse> >
+    WorkerInboundMessage::m_pResultsPool(
+        new boost::object_pool<PushJobTaskResultResponse>());
 
 WorkerInboundMessage::WorkerInboundMessage() :
     m_incomplete(false),
-    m_pPullJobTaskResponse(m_requestsPool),
-    m_pPushJobTaskResultResponse(m_resultsPool)
+    m_pPullJobTaskResponse(m_pRequestsPool),
+    m_pPushJobTaskResultResponse(m_pResultsPool)
 {
 }
 
