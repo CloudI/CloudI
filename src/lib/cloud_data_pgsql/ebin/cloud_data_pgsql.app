@@ -3,7 +3,7 @@
 
 {application, cloud_data_pgsql, 
   [{description, "Cloud PostgreSQL Client Interface"},
-   {vsn, "0.1.1"},
+   {vsn, "0.1.2"},
    {modules, [
         cloud_data_pgsql
         ]},

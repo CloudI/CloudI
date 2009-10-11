@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -39,13 +39,15 @@
 //
 
 #include "worker_controller.hpp"
-#include "cloud_worker_common.hpp"
 #include "worker_protocol.hpp"
 #include "node_connections.hpp"
 #include "timer.hpp"
 #include "copy_ptr.hpp"
 #include "library.hpp"
-#include "boost_thread.hpp"
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <algorithm>
 #include <vector>
@@ -53,6 +55,7 @@
 
 size_t const maximumThreadPoolSize = 512;
 size_t const initialThreadPoolSize = 0;
+size_t const exitTimeoutThreadPool = 4000; // milliseconds
 
 /// ThreadPool object
 /// All methods are meant to be used by a single thread
@@ -102,34 +105,57 @@ class WorkerController::WorkerExecution::ThreadPool
             public:
                 ThreadObjectData() :
                     m_allocator(new ThreadFunctionObject::AllocatorType),
-                    m_running(false)
+                    m_running(false),
+                    m_exited(true)
                 {
                 }
 
                 ThreadObjectData(ThreadObjectData const & object) :
                     m_allocator(object.m_allocator),
                     m_running(object.m_running),
+                    m_exited(object.m_exited),
                     m_stopped(object.m_stopped)
                 {
                     // can not be called after the thread is started
                 }
-        
+
                 /// make the executing thread exit this function object
                 void exit()
                 {
                     if (! m_running)
                         return;
                     {
-                        boost::lock_guard<boost::mutex> lock(m_queueMutex);
+                        boost::unique_lock<boost::mutex> lock(m_queueMutex);
                         m_running = false;
                         m_stopped = true;
                     }
                     m_queueConditional.notify_one();
                 }
+
+                /// wait for the thread to exit, if it has not exited already
+                void wait_on_exit(boost::posix_time::time_duration & t)
+                {
+                    if (m_exited)
+                        return;
+                    timer exitTimer;
+                    {
+                        boost::unique_lock<boost::mutex> lock(m_queueMutex);
+                        m_destructionConditional.timed_wait(lock, t);
+                    }
+
+                    boost::posix_time::milliseconds elapsed(
+                        static_cast<long>(ceil(exitTimer.elapsed() * 1000.0)));
+                    if (elapsed < t)
+                        t = t - elapsed;
+                    else
+                        t = boost::posix_time::milliseconds(0);
+                }
         
                 /// stop a worker that is expected to exist in this thread
                 bool stop(WorkId const & id)
                 {
+                    if (! m_running)
+                        return false;
                     boost::lock_guard<boost::mutex> lock(m_queueMutex);
                     if (m_queue.empty())
                         return false;
@@ -161,6 +187,8 @@ class WorkerController::WorkerExecution::ThreadPool
                 /// check if a worker thread instance exists
                 bool find(WorkId const & id)
                 {
+                    if (! m_running)
+                        return false;
                     boost::lock_guard<boost::mutex> lock(m_queueMutex);
                     QueueType::const_iterator itr;
                     for (itr = m_queue.begin(); itr != m_queue.end(); ++itr)
@@ -174,6 +202,8 @@ class WorkerController::WorkerExecution::ThreadPool
                 /// add a function for the thread to execute to the queue
                 bool push_back(ThreadFunctionObject const & input)
                 {
+                    if (! m_running)
+                        return false;
                     bool wasEmpty;
                     {
                         boost::lock_guard<boost::mutex> lock(m_queueMutex);
@@ -189,33 +219,37 @@ class WorkerController::WorkerExecution::ThreadPool
                 void operator () ()
                 {
                     m_running = true;
+                    m_exited = false;
                     m_stopped = true;
-                    boost::unique_lock<boost::mutex> queueLock(m_queueMutex);
+                    boost::unique_lock<boost::mutex> lock(m_queueMutex);
                     while (m_running && m_queue.empty())
-                        m_queueConditional.wait(queueLock);
+                        m_queueConditional.wait(lock);
                     while (m_running)
                     {
                         ThreadFunctionObject function = m_queue.front();
                         m_stopped = false;
-                        queueLock.unlock();
+                        lock.unlock();
         
                         function(m_stopped, m_allocator);
                         m_stopped = true;
         
-                        queueLock.lock();
+                        lock.lock();
                         m_queue.pop_front();
                         while (m_running && m_queue.empty())
-                            m_queueConditional.wait(queueLock);
+                            m_queueConditional.wait(lock);
                     }
-                    m_running = false;
+                    m_exited = true;
+                    m_destructionConditional.notify_one();
                 }
             private:
                 ThreadFunctionObject::AllocatorPtrType m_allocator;
                 bool m_running; /// thread is running
+                bool m_exited; /// thread was terminated
                 bool m_stopped; /// queued function is stopped
                 QueueType m_queue;
                 boost::mutex m_queueMutex;
                 boost::condition_variable m_queueConditional;
+                boost::condition_variable m_destructionConditional;
         };
 
         /// boost::thread parameter container that handles encapsulation of the
@@ -242,6 +276,9 @@ class WorkerController::WorkerExecution::ThreadPool
             m_executionObject(executionObject)
         {
             configure(initialSize);
+            // configure pre-spawns the threads but the pool size
+            // still starts at 0
+            m_totalActive = initialSize;
         }
 
         /// cause all threads to exit and unconfigure the thread pool
@@ -249,6 +286,10 @@ class WorkerController::WorkerExecution::ThreadPool
         {
             for (size_t i = 0; i < m_totalConfigured; ++i)
                 m_objects[i].exit();
+            boost::posix_time::milliseconds const zero(0);
+            boost::posix_time::milliseconds t(exitTimeoutThreadPool);
+            for (size_t i = 0; i < m_totalConfigured && t > zero; ++i)
+                m_objects[i].wait_on_exit(t);
             m_currentThread = 0;
             m_totalConfigured = 0;
             m_totalActive = 0;
@@ -507,7 +548,7 @@ void WorkerController::WorkerExecution::input(
         typedef std::pair<LibraryId, safe_shared_ptr<library> > LibraryPair;
 
         // determine the library path
-        boost::filesystem::path libraryPath = m_controller.getCurrentPath();
+        boost::filesystem::path libraryPath = m_controller.get_current_path();
         std::string const libraryPrefix("work_types/lib");
         std::string const librarySuffix(".so");
         libraryPath /= 
@@ -546,7 +587,7 @@ void WorkerController::WorkerExecution::input(
     }
 }
 
-void WorkerController::WorkerExecution::increaseCapacity(size_t count)
+void WorkerController::WorkerExecution::increase_capacity(size_t count)
 {
     m_pThreadPool->grow(count);
 }

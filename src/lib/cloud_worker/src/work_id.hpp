@@ -37,69 +37,58 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#ifndef CONST_ITERATOR_MAP_MERGE_HPP
-#define CONST_ITERATOR_MAP_MERGE_HPP
+#ifndef WORK_ID_HPP
+#define WORK_ID_HPP
 
-template <typename CONTENTS, typename T1, typename T2>
-class const_iterator_map_merge
+class WorkerController::WorkId
 {
-    public:
-        const_iterator_map_merge(T1 const & t1, T2 const & t2) :
-            m_t1begin(t1.begin()), m_t1itr(t1.begin()), m_t1end(t1.end()),
-            m_t2begin(t2.begin()), m_t2itr(t2.begin()), m_t2end(t2.end()) {}
-        CONTENTS const operator *() const
-        {
-            if (m_t1itr == m_t1end)
-                return m_t2itr->second.get();
-            else
-                return m_t1itr->second.get();
-        }
-        const_iterator_map_merge operator ++(int) // postfix
-        {
-            const_iterator_map_merge<CONTENTS, T1, T2> o(*this);
-            if (m_t1itr == m_t1end)
-                ++m_t2itr;
-            else
-                ++m_t1itr;
-            return o;
-        }
-        const_iterator_map_merge & operator ++()  // prefix
-        {
-            if (m_t1itr == m_t1end)
-                ++m_t2itr;
-            else
-                ++m_t1itr;
-            return *this;
-        }
-        friend bool operator ==(const_iterator_map_merge const & lhs,
-                                const_iterator_map_merge const & rhs)
-        {
-            return (lhs.m_t1itr == rhs.m_t1itr && lhs.m_t2itr == rhs.m_t2itr);
-        }
-        friend bool operator !=(const_iterator_map_merge const & lhs,
-                                const_iterator_map_merge const & rhs)
-        {
-            return (lhs.m_t1itr != rhs.m_t1itr || lhs.m_t2itr != rhs.m_t2itr);
-        }
-        void set_begin()
-        {
-            // sets the iterators back to their state in the constructor
-            m_t1itr = m_t1begin;
-            m_t2itr = m_t2begin;
-        }
-        void set_end()
-        {
-            m_t1itr = m_t1end;
-            m_t2itr = m_t2end;
-        }
     private:
-        typename T1::const_iterator m_t1begin;
-        typename T1::const_iterator m_t1itr;
-        typename T1::const_iterator m_t1end;
-        typename T2::const_iterator m_t2begin;
-        typename T2::const_iterator m_t2itr;
-        typename T2::const_iterator m_t2end;
+        static uint32_t const maxId;
+    public:
+        // matches specific work with any worker id
+        WorkId(std::string const & workTitle) :
+            m_workTitle(workTitle), m_id(maxId) {}
+        // matches a specific worker's work
+        WorkId(std::string const & workTitle, uint32_t id) :
+            m_workTitle(workTitle), m_id(id) {}
+        inline friend bool operator <(WorkId const & lhs, WorkId const & rhs)
+        {
+            int const check1 = lhs.m_workTitle.compare(rhs.m_workTitle);
+            if (check1 < 0)
+            {
+                return true;
+            }
+            else if (check1 > 0)
+            {
+                return false;
+            }
+            else
+            {
+                if (lhs.m_id == maxId || rhs.m_id == maxId)
+                    return false;
+                else
+                    return (lhs.m_id < rhs.m_id);
+            }
+        }
+        inline friend bool operator ==(WorkId const & lhs, WorkId const & rhs)
+        {
+            bool const check1 = (lhs.m_workTitle.compare(rhs.m_workTitle) == 0);
+            if (lhs.m_id == maxId || rhs.m_id == maxId)
+                return check1;
+            else
+                return (check1 && lhs.m_id == rhs.m_id);
+        }
+        inline friend bool operator !=(WorkId const & lhs, WorkId const & rhs)
+        {
+            return ! (lhs == rhs);
+        }
+
+        std::string const & workTitle() const { return m_workTitle; }
+        uint32_t id() const { return m_id; }
+    private:
+        std::string m_workTitle;
+        uint32_t m_id;
 };
 
-#endif // CONST_ITERATOR_MAP_MERGE_HPP
+#endif // WORK_ID_HPP
 

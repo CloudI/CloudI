@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -37,28 +37,28 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#ifndef BOOST_THREAD_HPP
-#define BOOST_THREAD_HPP
+#ifndef EVENT_PIPE_HPP
+#define EVENT_PIPE_HPP
 
-// do not allow boost::thread to use broken BOOST_HAS_RVALUE_REFS
-// on g++ 4.3.2 32bit systems, bad things happen
-/*
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-#define CXX0X_GUARD __GXX_EXPERIMENTAL_CXX0X__
-#undef __GXX_EXPERIMENTAL_CXX0X__
-#endif
-*/
+/// thread-safe event processing
+class event_pipe
+{
+    public:
+        event_pipe();
+        bool valid() const
+        {
+            return (m_eventPipe[0] != -1 && m_eventPipe[1] != -1);
+        }
+        int fd() const
+        {
+            return m_eventPipe[0];
+        }
+        void flush() const;
+        void trigger() const;
+    private:
+        volatile int m_eventPipe[2];
 
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/condition_variable.hpp>
+};
 
-/*
-#ifdef CXX0X_GUARD
-#define __GXX_EXPERIMENTAL_CXX0X__ CXX0X_GUARD
-#endif
-*/
-
-#endif // BOOST_THREAD_HPP
+#endif // EVENT_PIPE_HPP
 

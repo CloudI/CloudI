@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -40,14 +40,20 @@
 #include <ei.h>
 #include <limits>
 #include <cmath>
-#include <fcntl.h>
 #include <poll.h>
-#include <unistd.h>
-#include <assert.h>
 #include <iostream>
+#include <cassert>
 #include "worker_controller.hpp"
-#include "cloud_worker_common.hpp"
 #include "node_connections.hpp"
+
+size_t const asn1InitialReceiveBufferSize = 1024;
+size_t const asn1MaxReceiveBufferSize = 4194304;    // 4MB
+size_t const asn1InitialSendBufferSize = 1024;
+size_t const asn1MaxSendBufferSize = 268435456;    // 256MB
+size_t const erlangOverheadSize = 64;
+
+// how long to wait before resending all messages
+int const maxReceiveTimeout = 1000; // milliseconds
 
 namespace
 {
@@ -153,12 +159,12 @@ size_t const WorkerController::TaskId::maxTaskDataSize =
 
 WorkerController::WorkerController() :
     m_asn1ReceiveBuffer(
-        m_asn1InitialReceiveBufferSize, m_asn1MaxReceiveBufferSize),
+        asn1InitialReceiveBufferSize, asn1MaxReceiveBufferSize),
     m_asn1SendBuffer(
-        m_asn1InitialSendBufferSize, m_asn1MaxSendBufferSize),
+        asn1InitialSendBufferSize, asn1MaxSendBufferSize),
     m_erlangSendBuffer(
-        m_asn1InitialSendBufferSize + m_erlangOverheadSize,
-        m_asn1MaxSendBufferSize),
+        asn1InitialSendBufferSize + erlangOverheadSize,
+        asn1MaxSendBufferSize),
     m_executingTasks(*this),
     m_workerQueries(m_executingTasks)
 {
@@ -168,7 +174,7 @@ WorkerController::~WorkerController()
 {
 }
 
-int WorkerController::receive(int fd)
+int WorkerController::receive_work(int fd)
 {
     erlang_msg msg;
     while (ei_xreceive_msg(fd, &msg, m_erlangReceiveBuffer.get()) != ERL_MSG)
@@ -235,11 +241,9 @@ int WorkerController::receive(int fd)
             return ExitStatus::protocol_deserialize_asn1_failed;
     }
     if (message.getPullJobTaskResponse())
-        handle_message_PullJobTaskResponse(
-            message.getPullJobTaskResponse());
+        store(message.getPullJobTaskResponse());
     else if (message.getPushJobTaskResultResponse())
-        handle_message_PushJobTaskResultResponse(
-            message.getPushJobTaskResultResponse());
+        store(message.getPushJobTaskResultResponse());
     else
         return ExitStatus::protocol_unknown_message;
     return 0;
@@ -248,10 +252,9 @@ int WorkerController::receive(int fd)
 // send all pending messages
 // (it is possible that messages may be sent more than once
 //  due to delays, but that is handled when the response is received)
-int WorkerController::send(ei_cnode * ec, struct pollfd const * pfds, int nfds,
-                           bool retransmit)
+int WorkerController::send_work(ei_cnode * ec, struct pollfd const * pfds,
+                                int nfds, bool retransmit)
 {
-    boost::lock_guard<boost::mutex> lock(m_workerQueries.resultsMutex());
     int status = 0; // first error encountered
     if (nfds > 0 && ! m_workerQueries.empty())
     {
@@ -274,7 +277,7 @@ int WorkerController::send(ei_cnode * ec, struct pollfd const * pfds, int nfds,
                 status = ASN12ErlangData(
                     m_erlangSendBuffer, erlangSendBufferIndex, erlangSize,
                     m_asn1SendBuffer, asn1Size, 
-                    m_erlangOverheadSize, ec, pfds[i].fd);
+                    erlangOverheadSize, ec, pfds[i].fd);
             if (status == 0)
             {
                 if (ei_reg_send(ec, pfds[i].fd,
@@ -297,16 +300,16 @@ int WorkerController::send(ei_cnode * ec, struct pollfd const * pfds, int nfds,
                 i = 0;
         }
     }
-    m_workerQueries.flush_events();
+    m_workerQueries.sendEvent().flush();
     return status;
 }
 
-int WorkerController::sendStderr(ei_cnode * ec, struct pollfd const & pfd,
-                                 char const * const buffer, size_t size)
+int WorkerController::send_stderr(ei_cnode * ec, struct pollfd const & pfd,
+                                  char const * const buffer, size_t size)
 {
     int totalSize;
     int status = stderr2Erlang(m_erlangSendBuffer, totalSize, buffer, size,
-                               m_erlangOverheadSize, ec, pfd.fd);
+                               erlangOverheadSize, ec, pfd.fd);
     if (status)
         return status;
     char * stderrProcess = 
@@ -323,60 +326,18 @@ int WorkerController::sendStderr(ei_cnode * ec, struct pollfd const & pfd,
     return 0;
 }
 
-void WorkerController::handle_message_PullJobTaskResponse(
-    PullJobTaskResponseType & ptr)
-{
-    if (ptr->empty())
-        return;
-    m_workerQueries.received(ptr);
-}
-
-void WorkerController::handle_message_PushJobTaskResultResponse(
-    PushJobTaskResultResponseType & ptr)
-{
-    m_workerQueries.received(ptr);
-}
-
-void WorkerController::setCurrentPath(char const * const pPath)
-{
-    m_currentPath = std::string(pPath);
-    m_currentPath.remove_filename();
-}
-
 WorkerController::WorkerQuery::WorkerQuery(WorkerExecution & executingTasks) :
-    m_receiveTimeout(-1),
     m_pRequestAllocator(new PullJobTaskRequestType::pool_type),
     m_executingTasks(executingTasks)
 {
-    int pipeData[2];
-    bool success = (pipe(pipeData) == 0);
-    int flags;
-    if (success)
-    {
-        flags = fcntl(pipeData[0], F_GETFL, 0);
-        success = (flags != -1);
-    }
-    if (success)
-    {
-        success = (fcntl(pipeData[0], F_SETFL, flags | O_NONBLOCK) == 0);
-    }
-    if (success)
-    {
-        m_eventPipe[0] = pipeData[0];
-        m_eventPipe[1] = pipeData[1];
-    }
-    else
-    {
-        m_eventPipe[0] = -1;
-        m_eventPipe[1] = -1;
-    }
 }
 
 WorkerController::WorkerQuery::~WorkerQuery()
 {
-    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
     m_pendingRequests.clear();
     m_pendingResults.clear();
+    boost::lock_guard<boost::mutex> lock(m_newResultsMutex);
+    m_newResults.clear();
 }
 
 bool WorkerController::WorkerQuery::add(
@@ -403,8 +364,8 @@ bool WorkerController::WorkerQuery::add(
     }
     if (success)
     {
-        m_executingTasks.increaseCapacity(numberOfThreads);
-        trigger_event();
+        m_executingTasks.increase_capacity(numberOfThreads);
+        m_sendEvent.trigger();
     }
     else
     {
@@ -425,7 +386,6 @@ bool WorkerController::WorkerQuery::has(
         taskArray.push_back(WorkId(workTitle, idOffset - 1));
     taskArray.push_back(WorkId(workTitle, idOffset + numberOfThreads));
 
-    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
     uint32_t tasksFound =
         m_executingTasks.count(taskArray, m_pendingRequests, m_pendingResults);
     return (tasksFound == numberOfThreads);
@@ -436,44 +396,29 @@ bool WorkerController::WorkerQuery::has(
 bool WorkerController::WorkerQuery::remove(
     std::string const & workTitle)
 {
-    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
     return (m_executingTasks.erase(
         WorkId(workTitle), m_pendingRequests, m_pendingResults) > 0);
 }
 
 void WorkerController::WorkerQuery::clear()
 {
-    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
     m_executingTasks.clear();
     m_pendingRequests.clear();
     m_pendingResults.clear();
+    boost::lock_guard<boost::mutex> lock(m_newResultsMutex);
+    m_newResults.clear();
 }
 
-bool WorkerController::WorkerQuery::add(
-    PushJobTaskResultRequestType & ptr)
+void WorkerController::WorkerQuery::store(PushJobTaskResultRequestType & ptr)
 {
-    boost::lock_guard<boost::mutex> lock(m_resultsMutex);
-    // save the result
-    typedef std::pair<TaskId, PushJobTaskResultRequestType> RequestPair;
-    std::pair<PendingResultsLookup::iterator, bool> requestResult =
-        m_pendingResults.insert(RequestPair(
-            TaskId(ptr->workTitle(), ptr->id(),
-                   ptr->taskData(), ptr->taskDataSize()),
-            ptr
-        ));
-    if (requestResult.second)
     {
-        trigger_event();
-        return true;
+        boost::lock_guard<boost::mutex> lock(m_newResultsMutex);
+        m_newResults.push_back(ptr);
     }
-    else
-    {
-        return false;
-    }
+    m_sendEvent.trigger();
 }
 
-void WorkerController::WorkerQuery::received(
-    PullJobTaskResponseType & ptr)
+void WorkerController::WorkerQuery::store(PullJobTaskResponseType & ptr)
 {
     // remove pointer from pending map
     size_t const removedCount = m_pendingRequests.erase(
@@ -488,17 +433,12 @@ void WorkerController::WorkerQuery::received(
     }
 }
 
-void WorkerController::WorkerQuery::received(
-    PushJobTaskResultResponseType & ptr)
+void WorkerController::WorkerQuery::store(PushJobTaskResultResponseType & ptr)
 {
     // remove task from m_pendingResults
-    size_t removedCount;
-    {
-        boost::lock_guard<boost::mutex> lock(m_resultsMutex);
-        removedCount = m_pendingResults.erase(
-            TaskId(ptr->workTitle(), ptr->id(),
-                   ptr->taskData(), ptr->taskDataSize()));
-    }
+    size_t removedCount = m_pendingResults.erase(
+        TaskId(ptr->workTitle(), ptr->id(),
+               ptr->taskData(), ptr->taskDataSize()));
     if (removedCount > 0)
     {
         // use response information to put work in a queue 
@@ -513,49 +453,82 @@ void WorkerController::WorkerQuery::received(
                 WorkId(ptr->workTitle(), ptr->id()), pRequest
             ));
         assert(requestResult.second);
-        trigger_event();
+        m_sendEvent.trigger();
     }
 }
 
 // determine the timeout value for each execution of the poll() system call
 int WorkerController::WorkerQuery::timeout_value()
 {
+    static int receiveTimeout = -1;
+
     if (! NodeConnections::is_initialized())
     {
-        m_receiveTimeout = -1;
-        return m_receiveTimeout;
+        return receiveTimeout;
     }
-    else if (m_receiveTimeout == -1)
+
+    static timer receiveTimeoutTimer;
+    if (receiveTimeout == -1)
     {
-        boost::lock_guard<boost::mutex> lock(m_resultsMutex);
         if (empty())
         {
             // make sure events are flushed
-            flush_events();
+            m_sendEvent.flush();
             // wait for items to send or receive
-            return m_receiveTimeout;
+            return receiveTimeout;
         }
         else
         {
             // wait for message resends
-            m_receiveTimeout = m_maxReceiveTimeout;
-            m_receiveTimeoutTimer.restart();
-            return m_receiveTimeout;
+            receiveTimeout = maxReceiveTimeout;
+            receiveTimeoutTimer.restart();
+            return receiveTimeout;
         }
     }
     int const elapsed = static_cast<int>(
-        round(m_receiveTimeoutTimer.elapsed() * 1e3));
-    if (elapsed >= m_receiveTimeout)
+        round(receiveTimeoutTimer.elapsed() * 1e3));
+    if (elapsed >= receiveTimeout)
     {
         // trigger resend of all messages
-        // (m_maxReceiveTimeout milliseconds elapsed)
-        trigger_event();
-        m_receiveTimeout = -1;
+        // (maxReceiveTimeout milliseconds elapsed)
+        m_sendEvent.trigger();
+        receiveTimeout = -1;
     }
     else
     {
-        m_receiveTimeout -= elapsed;
+        receiveTimeout -= elapsed;
     }
-    return m_receiveTimeout;
+    return receiveTimeout;
+}
+
+WorkerController::WorkerQuery::const_iterator
+    WorkerController::WorkerQuery::begin()
+{
+    {
+        boost::lock_guard<boost::mutex> lock(m_newResultsMutex);
+        while (! m_newResults.empty())
+        {
+            // save the result
+            PushJobTaskResultRequestType & ptr = m_newResults.front();
+            typedef std::pair<TaskId, PushJobTaskResultRequestType> RequestPair;
+            std::pair<PendingResultsLookup::iterator, bool> requestResult =
+                m_pendingResults.insert(RequestPair(
+                    TaskId(ptr->workTitle(), ptr->id(),
+                           ptr->taskData(), ptr->taskDataSize()),
+                    ptr
+                ));
+            assert(requestResult.second);
+            m_newResults.pop_front();
+        }
+    }
+    return const_iterator(m_pendingRequests, m_pendingResults);
+}
+
+bool WorkerController::WorkerQuery::empty()
+{
+    if (! m_pendingRequests.empty() || ! m_pendingResults.empty())
+        return false;
+    boost::lock_guard<boost::mutex> lock(m_newResultsMutex);
+    return m_newResults.empty();
 }
 

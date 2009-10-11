@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -43,24 +43,24 @@
 #include "port_main.h"
 #include "const_iterator_map_merge.hpp"
 #include "timer.hpp"
+#include "event_pipe.hpp"
 #include "library.hpp"
 #include "safe_shared_ptr.hpp"
 #include "realloc_ptr.hpp"
 #include "ei_x_buff_ptr.hpp"
 #include "worker_protocol.hpp"
-#include "boost_thread.hpp"
+#include <boost/thread/mutex.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/filesystem.hpp>
 #include <map>
+#include <list>
 #include <string>
 #include <cstring>
 #include <stdint.h>
-#include <cassert>
 
 struct pollfd;
 typedef struct ei_cnode_s ei_cnode;
-class ThreadPool;
 
 // high-level controller of work so that resources are allocated for the work
 // to take place
@@ -90,51 +90,65 @@ class WorkerController
         WorkerController();
         ~WorkerController();
 
-        inline bool add_work(std::string const & workTitle,
-                             uint32_t idOffset, uint32_t numberOfThreads)
+        /// receive work data if it is available
+        /// @return ExitStatus 0 if no error occurred
+        int receive_work(int fd);
+
+        /// send work data after an event was triggered
+        int send_work(ei_cnode * ec, struct pollfd const * pfds, int nfds,
+                      bool retransmit);
+        /// send stderr data to the "standard_error" registered process
+        int send_stderr(ei_cnode * ec, struct pollfd const & pfd,
+                        char const * const buffer, size_t size);
+
+        inline bool cloud_worker_add_work(
+            std::string const & workTitle,
+            uint32_t idOffset, uint32_t numberOfThreads)
         {
             return m_workerQueries.add(workTitle, idOffset, numberOfThreads);
         }
 
-        inline bool has_work(std::string const & workTitle,
-                             uint32_t idOffset, uint32_t numberOfThreads)
+        inline bool cloud_worker_has_work(
+            std::string const & workTitle,
+            uint32_t idOffset, uint32_t numberOfThreads)
         {
             return m_workerQueries.has(workTitle, idOffset, numberOfThreads);
         }
 
-        inline bool remove_work(std::string const & workTitle)
+        inline bool cloud_worker_remove_work(
+            std::string const & workTitle)
         {
             return m_workerQueries.remove(workTitle);
         }
 
-        inline void clear_work()
+        inline void cloud_worker_clear_work()
         {
             m_workerQueries.clear();
         }
 
-        inline bool add_result(PushJobTaskResultRequestType & ptr)
+        inline void set_current_path(char const * const pPath)
         {
-            return m_workerQueries.add(ptr);
+            m_currentPath = std::string(pPath);
+            m_currentPath.remove_filename();
+        }
+        inline boost::filesystem::path const & get_current_path() const
+        {
+            return m_currentPath;
         }
 
-        // return ExitStatus
-        int receive(int fd);
-
-        /// send data after an event was triggered
-        int send(ei_cnode * ec, struct pollfd const * pfds, int nfds,
-                 bool retransmit);
-        /// send stderr data to the "standard_error" registered process
-        int sendStderr(ei_cnode * ec, struct pollfd const & pfd,
-                       char const * const buffer, size_t size);
-
-        inline int get_event_fd() const
+        inline int get_send_event_fd() const
         {
-            return m_workerQueries.get_event_fd();
+            return m_workerQueries.sendEvent().fd();
         }
 
         inline int timeout_value()
         {
             return m_workerQueries.timeout_value();
+        }
+
+        inline void store(PushJobTaskResultRequestType & ptr)
+        {
+            m_workerQueries.store(ptr);
         }
 
         // thus spake the bearded ones (7.3.1/4):
@@ -174,23 +188,16 @@ class WorkerController
         };
 
     private:
-        void handle_message_PullJobTaskResponse(
-            PullJobTaskResponseType & ptr);
-        void handle_message_PushJobTaskResultResponse(
-            PushJobTaskResultResponseType & ptr);
-
-        // receive buffer
-        realloc_ptr<unsigned char> m_asn1ReceiveBuffer;
-        ei_x_buff_ptr m_erlangReceiveBuffer;
-        static size_t const m_asn1InitialReceiveBufferSize = 1024;
-        static size_t const m_asn1MaxReceiveBufferSize = 4194304;    // 4MB
-
-        // send buffer
-        realloc_ptr<unsigned char> m_asn1SendBuffer;
-        realloc_ptr<unsigned char> m_erlangSendBuffer;
-        static size_t const m_asn1InitialSendBufferSize = 1024;
-        static size_t const m_asn1MaxSendBufferSize = 268435456;    // 256MB
-        static size_t const m_erlangOverheadSize = 64;
+        inline void store(PullJobTaskResponseType & ptr)
+        {
+            if (ptr->empty())
+                return;
+            m_workerQueries.store(ptr);
+        }
+        inline void store(PushJobTaskResultResponseType & ptr)
+        {
+            m_workerQueries.store(ptr);
+        }
 
         // worker thread id
         class WorkId;
@@ -206,13 +213,6 @@ class WorkerController
         typedef std::map<TaskId, PushJobTaskResultRequestType>
             PendingResultsLookup;
 
-    public:
-        void setCurrentPath(char const * const pPath);
-        boost::filesystem::path const & getCurrentPath() const
-        {
-            return m_currentPath;
-        }
-
         // handle concurrent work execution with an internal thread pool
         class WorkerExecution
         {
@@ -223,9 +223,9 @@ class WorkerController
                 void input(PullJobTaskResponseType & pTask);
                 void output(PushJobTaskResultRequestType & pTask)
                 {
-                    m_controller.add_result(pTask);
+                    m_controller.store(pTask);
                 }
-                void increaseCapacity(size_t count);
+                void increase_capacity(size_t count);
                 size_t count(std::vector<WorkId> const & taskArray,
                     PendingRequestsLookup & requests,
                     PendingResultsLookup & results);
@@ -244,9 +244,6 @@ class WorkerController
                 WorkLibraryLookup m_libraries;
                 boost::scoped_ptr<ThreadPool> m_pThreadPool;
         };
-
-    private:
-        boost::filesystem::path m_currentPath;
 
         // WorkerQuery is a Message Dispatcher acting as an
         // Event Triggered Producer of messages that are Request-Reply,
@@ -275,267 +272,59 @@ class WorkerController
                 void clear();
 
                 // add the result of a work task
-                bool add(PushJobTaskResultRequestType & ptr);
+                void store(PushJobTaskResultRequestType & ptr);
 
-                void received(PullJobTaskResponseType & ptr);
-                void received(PushJobTaskResultResponseType & ptr);
+                // add the received response from a task request
+                void store(PullJobTaskResponseType & ptr);
 
-                inline void flush_events() const
-                {
-                    // thread-safe
-                    char buffer[512];
-                    while (read(m_eventPipe[0],
-                                reinterpret_cast<void *>(buffer),
-                                sizeof(buffer)) == sizeof(buffer)) {}
-                }
-                inline bool trigger_event() const
-                {
-                    // thread-safe
-                    char const value = 1;
-                    if (write(m_eventPipe[1],
-                              static_cast<void const *>(&value),
-                              sizeof(char)) == sizeof(char))
-                        return true;
-                    else
-                        return false;
-                }
-                inline int get_event_fd() const { return m_eventPipe[0]; }
+                // add the received response from a task result
+                void store(PushJobTaskResultResponseType & ptr);
+
                 int timeout_value();
 
                 typedef const_iterator_map_merge<
                     WorkerProtocol::WorkerOutboundMessage *,
                     PendingRequestsLookup, PendingResultsLookup> const_iterator;
-                inline const_iterator begin() const
-                {
-                    return const_iterator(m_pendingRequests, m_pendingResults);
-                }
+                const_iterator begin();
                 inline const_iterator end() const
                 {
                     const_iterator e(m_pendingRequests, m_pendingResults);
                     e.set_end();
                     return e;
                 }
-                inline size_t size()
-                {
-                    // make sure the m_resultsMutex has been locked
-                    assert(m_resultsMutex.try_lock() == false);
-                    return (
-                        m_pendingRequests.size() + m_pendingResults.size());
-                }
-                inline size_t empty()
-                {
-                    // make sure the m_resultsMutex has been locked
-                    assert(m_resultsMutex.try_lock() == false);
-                    return (
-                        m_pendingRequests.empty() && m_pendingResults.empty());
-                }
-                boost::mutex & resultsMutex() { return m_resultsMutex; }
+                bool empty();
+                event_pipe const & sendEvent() const { return m_sendEvent; }
 
             private:
-                // how long to wait before resending request messages
-                int m_receiveTimeout;
-                static int const m_maxReceiveTimeout = 1000; // milliseconds
-                timer m_receiveTimeoutTimer;
-
-                volatile int m_eventPipe[2];
+                event_pipe m_sendEvent;
                 PendingRequestsLookup m_pendingRequests;
                 PullJobTaskRequestType::pool_ptr_type m_pRequestAllocator;
                 
                 PendingResultsLookup m_pendingResults;
-                boost::mutex m_resultsMutex; // protect m_pendingResults
+
+                std::list<PushJobTaskResultRequestType> m_newResults;
+                boost::mutex m_newResultsMutex;
 
                 WorkerExecution & m_executingTasks;
         };
+
+        // receive buffer
+        realloc_ptr<unsigned char> m_asn1ReceiveBuffer;
+        ei_x_buff_ptr m_erlangReceiveBuffer;
+
+        // send buffer
+        realloc_ptr<unsigned char> m_asn1SendBuffer;
+        realloc_ptr<unsigned char> m_erlangSendBuffer;
+
+        boost::filesystem::path m_currentPath;
 
         WorkerExecution m_executingTasks;
         WorkerQuery m_workerQueries;
 };
 
-class WorkerController::WorkId
-{
-    private:
-        static uint32_t const maxId;
-    public:
-        // matches specific work with any worker id
-        WorkId(std::string const & workTitle) :
-            m_workTitle(workTitle), m_id(maxId) {}
-        // matches a specific worker's work
-        WorkId(std::string const & workTitle, uint32_t id) :
-            m_workTitle(workTitle), m_id(id) {}
-        inline friend bool operator <(WorkId const & lhs, WorkId const & rhs)
-        {
-            int const check1 = lhs.m_workTitle.compare(rhs.m_workTitle);
-            if (check1 < 0)
-            {
-                return true;
-            }
-            else if (check1 > 0)
-            {
-                return false;
-            }
-            else
-            {
-                if (lhs.m_id == maxId || rhs.m_id == maxId)
-                    return false;
-                else
-                    return (lhs.m_id < rhs.m_id);
-            }
-        }
-        inline friend bool operator ==(WorkId const & lhs, WorkId const & rhs)
-        {
-            bool const check1 = (lhs.m_workTitle.compare(rhs.m_workTitle) == 0);
-            if (lhs.m_id == maxId || rhs.m_id == maxId)
-                return check1;
-            else
-                return (check1 && lhs.m_id == rhs.m_id);
-        }
-        inline friend bool operator !=(WorkId const & lhs, WorkId const & rhs)
-        {
-            return ! (lhs == rhs);
-        }
-
-        std::string const & workTitle() const { return m_workTitle; }
-        uint32_t id() const { return m_id; }
-    private:
-        std::string m_workTitle;
-        uint32_t m_id;
-};
-
-class WorkerController::TaskId
-{
-    private:
-        static size_t const maxTaskDataSize;
-    public:
-        TaskId(WorkId const & workId) :
-            m_workId(workId),
-            m_taskDataSize(maxTaskDataSize)
-        {
-        }
-        TaskId(std::string const & workTitle, uint32_t id,
-               boost::scoped_array<uint8_t> const & taskData,
-               size_t taskDataSize) :
-            m_workId(workTitle, id),
-            m_taskData(new uint8_t[taskDataSize]),
-            m_taskDataSize(taskDataSize)
-        {
-            memcpy(m_taskData.get(), taskData.get(), taskDataSize);
-        }
-        TaskId(TaskId const & o) :
-            m_workId(o.m_workId),
-            m_taskDataSize(o.m_taskDataSize)
-        {
-            m_taskData.swap(const_cast<TaskId &>(o).m_taskData);
-        }
-        friend bool operator <(TaskId const & lhs, TaskId const & rhs)
-        {
-            if (lhs.m_workId != rhs.m_workId)
-                return (lhs.m_workId < rhs.m_workId);
-            if (lhs.m_taskDataSize == maxTaskDataSize ||
-                rhs.m_taskDataSize == maxTaskDataSize)
-                return false;
-            size_t const size = 
-                std::min(lhs.m_taskDataSize, rhs.m_taskDataSize);
-            int const check1 = 
-                memcmp(static_cast<void *>(lhs.m_taskData.get()),
-                       static_cast<void *>(rhs.m_taskData.get()), size);
-            if (check1 < 0)
-                return true;
-            else if (check1 > 0)
-                return false;
-            else
-                return (
-                    lhs.m_taskDataSize < rhs.m_taskDataSize);
-        }
-        friend bool operator ==(TaskId const & lhs, TaskId const & rhs)
-        {
-            if (lhs.m_workId != rhs.m_workId)
-                return false;
-            if (lhs.m_taskDataSize == maxTaskDataSize ||
-                rhs.m_taskDataSize == maxTaskDataSize)
-                return true;
-            if (lhs.m_taskDataSize != rhs.m_taskDataSize)
-                return false;
-            return (memcmp(static_cast<void *>(
-                           lhs.m_taskData.get()),
-                           static_cast<void *>(
-                           rhs.m_taskData.get()),
-                           lhs.m_taskDataSize) == 0);
-        }
-    private:
-        WorkId m_workId;
-        boost::scoped_array<uint8_t> m_taskData;
-        size_t m_taskDataSize;
-};
-
-class WorkerController::WorkerExecution::LibraryId
-{
-    private:
-        static char const invalidInstanceChar = 'x';
-    public:
-        static LibraryId create(std::string const & workTitle)
-        {
-            size_t const tagIndex = workTitle.find_first_of('.');
-            std::string workLibrary(workTitle.substr(0, tagIndex));
-            std::string workInstance(workTitle.substr(tagIndex));
-            return LibraryId(workLibrary, workInstance);
-        }
-
-        LibraryId(std::string const & workLibrary) :
-            m_workLibrary(workLibrary),
-            m_workInstance(1, invalidInstanceChar) {}
-        LibraryId(std::string const & workLibrary,
-                  std::string const & workInstance) :
-            m_workLibrary(workLibrary),
-            m_workInstance(workInstance)
-        {
-            // valid work instances always have a '.' prefix
-            assert(m_workInstance[0] == '.');
-        }
-        inline friend bool operator <(LibraryId const & lhs,
-                                      LibraryId const & rhs)
-        {
-            int const check1 = lhs.m_workLibrary.compare(rhs.m_workLibrary);
-            if (check1 < 0)
-            {
-                return true;
-            }
-            else if (check1 > 0)
-            {
-                return false;
-            }
-            else
-            {
-                if (lhs.m_workInstance[0] == invalidInstanceChar ||
-                    rhs.m_workInstance[0] == invalidInstanceChar)
-                {
-                    return check1;
-                }
-                return (lhs.m_workInstance.compare(rhs.m_workInstance) < 0);
-            }
-        }
-        inline friend bool operator ==(LibraryId const & lhs,
-                                       LibraryId const & rhs)
-        {
-            
-            bool const check1 = 
-                (lhs.m_workLibrary.compare(rhs.m_workLibrary) == 0);
-            if (lhs.m_workInstance[0] == invalidInstanceChar ||
-                rhs.m_workInstance[0] == invalidInstanceChar)
-                return check1;
-            else
-                return (check1 && lhs.m_workInstance == rhs.m_workInstance);
-        }
-        inline friend bool operator !=(LibraryId const & lhs,
-                                       LibraryId const & rhs)
-        {
-            return ! (lhs == rhs);
-        }
-
-        std::string const & workLibrary() const { return m_workLibrary; }
-    private:
-        std::string m_workLibrary;
-        std::string m_workInstance;
-};
+#include "work_id.hpp"
+#include "task_id.hpp"
+#include "library_id.hpp"
 
 #endif // WORKER_CONTROLLER_HPP
 

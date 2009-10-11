@@ -4,9 +4,9 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.5.0
+VERSION_NAME=0.0.6.0
 PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.5
+MAJOR_VERSION_NAME=0.0.6
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -217,6 +217,8 @@ _build.cfg: _build.cfg.template
 #     )
 
 g++: $(GXX_BIN)
+$(GXX_SRC):
+	bin/get.sh gcc-4.4.1.tar.gz lib/g++/
 $(GXX_BIN): $(GXX_SRC) \
         $(GMP_SRC) \
         lib/g++/mpfr-2.4.1.tar.gz
@@ -281,6 +283,8 @@ boost-trunk:
         ../revision)
 	(cd lib/boost; tar cf boost_trunk.tar boost_trunk; gzip boost_trunk.tar)
 	rm -rf lib/boost/boost_trunk
+$(BOOST_SRC):
+	bin/get.sh boost_1_40_0.tar.gz lib/boost/
 $(BOOST_LIB_PATH): $(BOOST_SRC)
 	@test -d $(BOOST_SRC_PATH) || \
         tar zxvf $(BOOST_SRC) -C $(dir $(BOOST_SRC_PATH))
@@ -352,7 +356,6 @@ $(WORKER_LIB_PATH)/libWorkerProtocol.a: \
         $(WORKER_PROTOCOL_PATH)/WorkerProtocol.asn1 \
         $(WORKER_INC_PATH)/realloc_ptr.hpp \
         $(WORKER_INC_PATH)/pool_copy_ptr.hpp \
-        $(WORKER_INC_PATH)/boost_thread.hpp \
         $(WORKER_PROTOCOL_PATH)/Makefile
 	@(cd $(WORKER_PROTOCOL_PATH) && \
       make clean && \
@@ -391,9 +394,14 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
         $(WORKER_SRC_PATH)/node_connections.hpp \
         $(WORKER_SRC_PATH)/worker_controller.cpp \
         $(WORKER_SRC_PATH)/worker_controller.hpp \
+        $(WORKER_SRC_PATH)/work_id.hpp \
+        $(WORKER_SRC_PATH)/task_id.hpp \
+        $(WORKER_SRC_PATH)/library_id.hpp \
         $(WORKER_SRC_PATH)/worker_execution.cpp \
         $(WORKER_SRC_PATH)/timer.cpp \
         $(WORKER_SRC_PATH)/timer.hpp \
+        $(WORKER_SRC_PATH)/event_pipe.cpp \
+        $(WORKER_SRC_PATH)/event_pipe.hpp \
         $(WORKER_SRC_PATH)/library.cpp \
         $(WORKER_SRC_PATH)/library.hpp \
         $(WORKER_SRC_PATH)/ei_x_buff_ptr.hpp \
@@ -402,7 +410,6 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
         $(WORKER_SRC_PATH)/copy_ptr.hpp \
         $(WORKER_INC_PATH)/safe_shared_ptr.hpp \
         $(WORKER_INC_PATH)/pool_copy_ptr.hpp \
-        $(WORKER_INC_PATH)/boost_thread.hpp \
         $(INTERFACE_INC_PATH)/cloud_work_interface_data.hpp \
         $(MAIN_INC_PATH)/cloud_worker_port.hpp
 	# creating worker library for port binary function calls
@@ -440,6 +447,9 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
 	     -o $(WORKER_OBJ_PATH)/timer.o \
          -c $(WORKER_SRC_PATH)/timer.cpp 
 	@$(CXX) $(CXXFLAGS) \
+	     -o $(WORKER_OBJ_PATH)/event_pipe.o \
+         -c $(WORKER_SRC_PATH)/event_pipe.cpp 
+	@$(CXX) $(CXXFLAGS) \
 	     -o $(WORKER_OBJ_PATH)/library.o \
          -c $(WORKER_SRC_PATH)/library.cpp 
 	@$(CXX) $(CXXFLAGS) \
@@ -459,6 +469,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          $(WORKER_OBJ_PATH)/cloud_worker.o \
          $(WORKER_OBJ_PATH)/cloud_worker_common.o \
          $(WORKER_OBJ_PATH)/timer.o \
+         $(WORKER_OBJ_PATH)/event_pipe.o \
          $(WORKER_OBJ_PATH)/library.o \
          $(WORKER_OBJ_PATH)/ei_x_buff_ptr.o \
          $(LDFLAGS) \

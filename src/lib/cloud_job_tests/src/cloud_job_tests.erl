@@ -120,7 +120,7 @@ clear_all_results() ->
 -spec clear_results(State :: pos_integer(), End :: pos_integer()) -> 'ok'.
 
 clear_results(Start, End) when is_integer(Start), is_integer(End) ->
-    cloud_data_pgsql:equery('cloud_data_mysql.cloudi_tests',
+    cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
         "DELETE FROM incoming_results_v3 "
         "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End]),
     {ok, _} = cloud_data_pgsql:equery('cloud_data_pgsql.cloudi_tests',
@@ -194,6 +194,10 @@ init([IndexStart, IndexEnd]) ->
         ok ->
             case update_state_from_database(State) of
                 {ok, _} = Result ->
+                    cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
+                        "DELETE FROM incoming_results_v3 "
+                        "WHERE digit_index >= ? AND digit_index <= ?;",
+                        [State#state.index_start, State#state.index_end]),
                     Result;
                 {error, Reason} ->
                     {stop, Reason}
@@ -249,7 +253,7 @@ setup_database() ->
     % execute setup queries
     RequiredResult = lists_extensions:iter(fun(Q, Itr) ->
         % mysql can be used, but is not required
-        cloud_data_pgsql:squery('cloud_data_mysql.cloudi_tests', Q),
+        cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q),
         case cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q) of
             {ok, _} ->
                 Itr();
@@ -265,7 +269,7 @@ setup_database() ->
         RequiredResult == ok ->
             lists:foreach(fun(Q) ->
                 % mysql can be used, but is not required
-                cloud_data_pgsql:squery('cloud_data_mysql.cloudi_tests', Q),
+                cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q),
                 cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q)
             end, OptionalDatabaseQueries),
             ok;

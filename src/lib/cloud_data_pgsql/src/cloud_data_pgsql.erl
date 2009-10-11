@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_pgsql).
@@ -276,8 +276,13 @@ do_queries_in_transaction(SQLQueryList, Connection)
 equery_argument_parse(String) ->
     equery_argument_parse_get([], 1, String).
 
--define(SPACE, 32).
--define(QUOTE, 39). % '
+-define(SPACE,   32).
+-define(QUOTE,   39). % '
+-define(PERCENT, 37). % %
+-define(SYMMETRIC_OPERATOR_GUARD(P),
+        ((P == $=) or (P == $>) or (P == $<) or
+         (P == $+) or (P == $-) or (P == $*) or
+         (P == $/) or (P == ?PERCENT))).
 
 %% handle spaces and normal punctuation when performing
 %% parameter syntax substitution
@@ -315,6 +320,36 @@ equery_argument_parse_put(NewString, $(, $?, ?SPACE,
                           false, Index, Remaining) ->
     equery_argument_parse_get(
         NewString ++ "($" ++ integer_to_list(Index) ++ " ",
+        Index + 1, Remaining);
+%% handle expression operators lacking separation spaces when
+%% performing parameter syntax substitution
+equery_argument_parse_put(NewString, Left, $?, ?SPACE,
+                          false, Index, Remaining)
+    when ?SYMMETRIC_OPERATOR_GUARD(Left) or
+         (Left == $D) or (Left == $R) ->
+    equery_argument_parse_get(
+        NewString ++ Left ++ "$" ++ integer_to_list(Index) ++ " ",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, Left, $?, $),
+                          false, Index, Remaining)
+    when ?SYMMETRIC_OPERATOR_GUARD(Left) or
+         (Left == $D) or (Left == $R) ->
+    equery_argument_parse_get(
+        NewString ++ Left ++ "$" ++ integer_to_list(Index) ++ ")",
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, ?SPACE, $?, Right,
+                          false, Index, Remaining)
+    when ?SYMMETRIC_OPERATOR_GUARD(Right) or
+         (Right == $A) or (Right == $O) or (Right == $!) ->
+    equery_argument_parse_get(
+        NewString ++ " $" ++ integer_to_list(Index) ++ Right,
+        Index + 1, Remaining);
+equery_argument_parse_put(NewString, $(, $?, Right,
+                          false, Index, Remaining)
+    when ?SYMMETRIC_OPERATOR_GUARD(Right) or
+         (Right == $A) or (Right == $O) or (Right == $!) ->
+    equery_argument_parse_get(
+        NewString ++ "($" ++ integer_to_list(Index) ++ Right,
         Index + 1, Remaining);
 %% tail recursion termination case
 equery_argument_parse_put(NewString, C1, C2, C3,

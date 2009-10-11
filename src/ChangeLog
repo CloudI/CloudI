@@ -1,3 +1,14 @@
+2009-10-10	Michael Truog   <mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.6 (alpha)
+		* cleanup other parts of the WorkerController code in the
+		  cloud_worker_port process
+		* add a wait for the ThreadPool exit
+		* add PostgreSQL "?" parameter substitution with
+		  expression operators
+		* automatically download g++ and boost from mirrors instead
+		  of requiring their presence within the source repository
+
 2009-10-09	Michael Truog   <mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.5 (alpha)
