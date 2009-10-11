@@ -56,7 +56,7 @@ if [ ! -e $MIRRORS_FILE ]; then
 fi
 
 MIRROR_SEARCH_TIME=`cat $MIRRORS_FILE | wc -l`
-echo "finding the best mirror... (please wait $MIRROR_SEARCH_TIME seconds)"
+echo -n "finding the best mirror (in $MIRROR_SEARCH_TIME seconds)"
 
 # find the best mirror by pinging each host and sorting the results
 TMP_DATA_FILE=`date +"/tmp/get_sh-%Y%m%d%H%M%S.data"`
@@ -69,7 +69,9 @@ for SOURCE in `cat $MIRRORS_FILE`; do
     if [ $PING_TIME_LEN -ge 4 ] ; then
         echo ${ZEROES:1:18-$PING_TIME_LEN}"$PING_TIME $SOURCE" >> $TMP_DATA_FILE
     fi
+    echo -n "."
 done
+echo ""
 if [ `cat $TMP_DATA_FILE | wc -l` -eq 0 ]; then
     echo "no mirror hosts can be reached"
     rm -f $TMP_DATA_FILE
@@ -86,11 +88,11 @@ which wget > /dev/null
 USE_WGET=$?
 
 if [ $USE_CURL -eq 0 ]; then
-    echo "downloading $FILE..."
+    echo "downloading $FILE"
     echo "(using $SOURCE)"
     curl --progress-bar -O -L "$SOURCE""$FILE"
 elif [ $USE_WGET -eq 0 ]; then
-    echo "downloading $FILE..."
+    echo "downloading $FILE"
     wget --progress=bar:force -O $FILE -p "$SOURCE""$FILE"
 else
     echo "install either curl or wget"
