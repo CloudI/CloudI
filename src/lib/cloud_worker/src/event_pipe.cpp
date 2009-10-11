@@ -37,10 +37,47 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#ifndef CLOUD_WORKER_COMMON_HPP
-#define CLOUD_WORKER_COMMON_HPP
+#include "event_pipe.hpp"
+#include <unistd.h>
+#include <fcntl.h>
 
-extern char const * const erl_endl;
+event_pipe::event_pipe()
+{   
+    int pipeData[2];
+    bool success = (pipe(pipeData) == 0);
+    int flags;
+    if (success)
+    {
+        flags = fcntl(pipeData[0], F_GETFL, 0);
+        success = (flags != -1);
+    }
+    if (success)
+    {
+        success = (fcntl(pipeData[0], F_SETFL, flags | O_NONBLOCK) == 0);
+    }
+    if (success)
+    {
+        m_eventPipe[0] = pipeData[0];
+        m_eventPipe[1] = pipeData[1];
+    }
+    else
+    {
+        m_eventPipe[0] = -1;
+        m_eventPipe[1] = -1;
+    }
+}
 
-#endif // CLOUD_WORKER_COMMON_HPP
+void event_pipe::flush() const
+{
+    char buffer[512];
+    while (read(m_eventPipe[0], reinterpret_cast<void *>(buffer),
+                sizeof(buffer)) == sizeof(buffer));
+}
+
+void event_pipe::trigger() const
+{
+    char const value = 1;
+    write(m_eventPipe[1], static_cast<void const *>(&value),
+          sizeof(char));
+}
 

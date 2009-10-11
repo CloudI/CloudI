@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -74,7 +74,7 @@ bool worker_start(char * nodeNameStr, uint32_t nodeNameLen,
 
 bool worker_stop()
 {
-    controller.clear_work();
+    controller.cloud_worker_clear_work();
     return NodeConnections::deinitialize();
 }
 
@@ -82,22 +82,22 @@ bool add_work(char * workTitleStr, uint32_t workTitleLen,
               uint32_t concurrentTaskIdOffset, uint32_t concurrentTasks)
 {
     std::string const workTitle(workTitleStr, workTitleLen);
-    return controller.add_work(workTitle,
-                               concurrentTaskIdOffset, concurrentTasks);
+    return controller.cloud_worker_add_work(
+        workTitle, concurrentTaskIdOffset, concurrentTasks);
 }
 
 bool has_work(char * workTitleStr, uint32_t workTitleLen,
               uint32_t concurrentTaskIdOffset, uint32_t concurrentTasks)
 {
     std::string const workTitle(workTitleStr, workTitleLen);
-    return controller.has_work(workTitle,
-                               concurrentTaskIdOffset, concurrentTasks);
+    return controller.cloud_worker_has_work(
+        workTitle, concurrentTaskIdOffset, concurrentTasks);
 }
 
 bool remove_work(char * workTitleStr, uint32_t workTitleLen)
 {
     std::string const workTitle(workTitleStr, workTitleLen);
-    return controller.remove_work(workTitle);
+    return controller.cloud_worker_remove_work(workTitle);
 }
 
 int main(int, char **argv)
@@ -110,7 +110,7 @@ int main(int, char **argv)
     // (using the option {packet, 2} for open_port/2 within GEPD)
     unsigned char buffer[32768];
    
-    controller.setCurrentPath(argv[0]);
+    controller.set_current_path(argv[0]);
     int const status = NodeConnections::worker_loop(buffer, controller);
     NodeConnections::deinitialize();
     return status;

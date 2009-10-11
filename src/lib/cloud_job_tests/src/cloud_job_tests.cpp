@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -38,17 +38,15 @@
 // DAMAGE.
 //
 #include "cloud_work_interface.hpp"
-#include "boost_thread.hpp"
 #include "piqpr8_gmp.hpp"
 #include "piqpr8_gmp_verify.hpp"
-#include <boost/random.hpp>
 #include <sstream>
+#include <iostream>
 #include <string>
 #include <stdint.h>
 #include <cassert>
-#include <sys/types.h>
-#include <unistd.h>
 
+//#include <boost/random.hpp>
 //// create random failures for testing purposes
 //class RandomFailure
 //{
@@ -98,12 +96,14 @@ extern "C"
 void initialize()
 {
     // global/"static" data is shared between multiple threads, beware!
-    //std::cerr << "initialize()" << std::endl;
+    std::clog << "cloud_job_tests global/static data "
+        "initialize()" << std::endl;
 }
 
 void deinitialize()
 {
-    //std::cerr << "deinitialize()" << std::endl;
+    std::clog << "cloud_job_tests global/static data "
+        "deinitialize()" << std::endl;
 }
 
 bool do_work(bool const & abortTask,

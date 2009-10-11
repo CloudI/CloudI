@@ -1,0 +1,14 @@
+ftp://ftp.chg.ru/pub/gnu/gcc/gcc-4.4.1/
+ftp://ftp.cs.tu-berlin.de/pub/gnu/gcc/gcc-4.4.1/
+ftp://ftp.ironie.org/ftp.gnu.org/pub/gnu/gcc/gcc-4.4.1/
+ftp://ftp.isy.liu.se/pub/gnu/gcc/releases/gcc-4.4.1/
+ftp://ftp.ring.gr.jp/pub/GNU/gcc/gcc-4.4.1/
+ftp://ftp.sh.cvut.cz/MIRRORS/gnu/pub/gnu/gcc/gcc-4.4.1/
+ftp://ftp.uninett.no/pub/gnu/gcc/gcc-4.4.1/
+ftp://mirror.anl.gov/pub/gnu/gcc/gcc-4.4.1/
+ftp://mirror.csclub.uwaterloo.ca/gnu/gcc/gcc-4.4.1/
+ftp://mirrors.kernel.org/gnu/gcc/gcc-4.4.1/
+ftp://mirrors.usc.edu/pub/gnu/gcc/gcc-4.4.1/
+ftp://sunsite.icm.edu.pl/pub/gnu/gcc/gcc-4.4.1/
+ftp://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gcc/gcc-4.4.1/
+http://mirror.clarkson.edu/gnu/gcc/gcc-4.4.1/

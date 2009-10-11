@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -40,9 +40,9 @@
 #ifndef SAFE_SHARED_PTR_HPP
 #define SAFE_SHARED_PTR_HPP
 
+#include <boost/thread/mutex.hpp>
 #include <memory>
 #include <cassert>
-#include "boost_thread.hpp"
 
 // thread-safe reference counting that handles deletion
 // with storage and lock contention overhead.

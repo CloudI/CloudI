@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -257,10 +257,11 @@ bool NodeConnections::initialize(std::string const & nodeNamePrefix,
             return false;
         }
     }
-    // make sure the event pipe is valid
-    if (controller.get_event_fd() < 0)
+    int const sendEventFD = controller.get_send_event_fd();
+    // make sure the event_pipe is valid
+    if (sendEventFD < 0)
     {
-        std::cerr << "get_event_fd() failed" << erl_endl;
+        std::cerr << "get_send_event_fd() failed" << erl_endl;
         return false;
     }
     // setup stderr so that it can be polled and forwarded
@@ -279,7 +280,7 @@ bool NodeConnections::initialize(std::string const & nodeNamePrefix,
     pollDescriptors[POLL_DESC_INDEX_STDERR].fd = stderrDup[0];
     pollDescriptors[POLL_DESC_INDEX_STDERR].events = POLLIN | POLLPRI;
     pollDescriptors[POLL_DESC_INDEX_STDERR].revents = 0;
-    pollDescriptors[POLL_DESC_INDEX_EVENT_PIPE].fd = controller.get_event_fd();
+    pollDescriptors[POLL_DESC_INDEX_EVENT_PIPE].fd = sendEventFD;
     pollDescriptors[POLL_DESC_INDEX_EVENT_PIPE].events = POLLIN | POLLPRI;
     pollDescriptors[POLL_DESC_INDEX_EVENT_PIPE].revents = 0;
     pollDescriptors[POLL_DESC_INDEX_EPMD_SOCKET].fd = epmdSocket;
@@ -372,7 +373,7 @@ static int handle_stderr(WorkerController & controller)
         nfds_t const fdCount = pollDescriptorsCount - pollDescriptorsNode0;
         if (fdIndex >= fdCount)
             fdIndex = 0;
-        int const status = controller.sendStderr(&serverCNode,
+        int const status = controller.send_stderr(&serverCNode,
             pollDescriptors[pollDescriptorsNode0 + fdIndex],
             buffer.get(), iNewline + 1);
         if (++fdIndex == fdCount)
@@ -409,7 +410,7 @@ static int handle_event_pipe(WorkerController & controller)
     else if (revents & POLLNVAL)
         return WorkerController::ExitStatus::event_pipe_NVAL;
     revents = 0;
-    return controller.send(&serverCNode,
+    return controller.send_work(&serverCNode,
         &(pollDescriptors[pollDescriptorsNode0]),
         pollDescriptorsCount - pollDescriptorsNode0, false);
 }
@@ -490,7 +491,7 @@ static int handle_node_connection(int index, WorkerController & controller)
     int status = 0;
     if (! removeNode)
     {
-        status = controller.receive(pollDescriptors[index].fd);
+        status = controller.receive_work(pollDescriptors[index].fd);
         if (status == WorkerController::ExitStatus::node_receive_EIO)
         {
             // the Erlang node has exited
@@ -534,7 +535,7 @@ int NodeConnections::worker_loop(unsigned char * buffer,
         }
         if (status == GEPD::ExitStatus::poll_timeout)
         {
-            status = controller.send(&serverCNode,
+            status = controller.send_work(&serverCNode,
                 &(pollDescriptors[pollDescriptorsNode0]),
                 pollDescriptorsCount - pollDescriptorsNode0, true);
             if (status)

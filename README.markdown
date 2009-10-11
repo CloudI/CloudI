@@ -1,4 +1,4 @@
-#CloudI 0.0.5 (alpha)
+#CloudI 0.0.6 (alpha)
 
 ## ABOUT
 
@@ -27,6 +27,7 @@ Bailey-Borwein-Plouffe formula and verifies that they are correct.
 "cloud_job_tests" requires that PostgreSQL is configured and setup because
 it stores the results.  Memcached is also used by "cloud_job_tests", but any
 results that would go to memcached are discarded if memcached isn't configured.
+MySQL is used by "cloud_job_tests" in the same way as memcached.
 
 CloudI ensures that the C/C++ work code is executed in a fault-tolerant way.
 Failover is handled with multiple CloudI instances using separate epmd daemons.
@@ -57,6 +58,8 @@ Much of the local setup is currently in the files:
 Configuration will require changing the value "host1"
 (and possibly "host2" which requires uncommenting
  ssh commands in the Makefile, adding more?) in all the files.
+Long node names are not currently supported, so make sure to
+not use a domain (just the hostname) in the "machines" section of cloud.conf.
 
 The paths for Erlang and ErlWare need to be specified in the Makefile:
     ERLANG_PATH=/home/user/installed
@@ -99,5 +102,4 @@ BSD License
 ## CONTACT
 
 Michael Truog (mjtruog [at] gmail (dot) com)
-
 
