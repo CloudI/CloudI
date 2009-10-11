@@ -2,16 +2,14 @@
 
 ## ABOUT
 
-The project is still being developed and is alpha, so please be patient if you
-have troubles with the setup.  The setup will soon become more
-dynamic and straight-forward.
+CloudI is a private cloud computing framework for secure, internal data 
+processing.  CloudI facilitates a cloud of processes for solving 
+embarrassingly parallel and divide and conquer problems with 
+dynamic load balancing work pools while maintaining fault-tolerant workers.
 
-CloudI facilitates a cloud of processes for solving embarrassingly parallel
-and divide and conquer problems with dynamic load balancing work pools
-while maintaining fault-tolerant workers.  CloudI requires pool data from
-databases or from an Erlang work module that will automatically generate
-the work.  CloudI was designed to be a generic cloud for internal
-distributed processing and could facilitate work supplied by
+CloudI requires pool data from databases or from an Erlang work module that
+will automatically generate the work.  CloudI was designed to be a multi-purpose
+cloud for internal distributed processing and could facilitate work supplied by
 an external server.  CloudI is currently focused on being an abstract
 type of cloud and interfacing to work.  External applications could manage
 security and a user interface for CloudI's functionality.  CloudI is meant
@@ -46,6 +44,10 @@ CloudI fault-tolerance test cases include:
 * a remote stop of C/C++ work code (within a cloud_worker_port OS process) due to a signal
 
 ## CONFIGURATION
+
+The project is still being developed and is alpha, so please be patient if you
+have troubles with the setup.  The setup will soon become more
+dynamic and straight-forward.
 
 CloudI does require some configuration and a brief guide exists here:
     src/docs/CONFIGURATION.txt
