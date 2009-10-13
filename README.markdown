@@ -68,6 +68,10 @@ Configuration will require changing the value "host1"
  ssh commands in the Makefile, adding more?) in all the files.
 Long node names are not currently supported, so make sure to
 not use a domain (just the hostname) in the "machines" section of cloud.conf.
+All Cloudi nodes should be of the same byte order because the native byte
+order of the Cloudi leader node is used by all other nodes
+(so the Cloudi cluster can be very heterogeneous but all machines
+ for an instance do need to be either little endian or big endian).
 
 The paths for Erlang and ErlWare need to be specified in the Makefile:
     ERLANG_PATH=/home/user/installed
