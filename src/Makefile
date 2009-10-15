@@ -72,7 +72,7 @@ MAIN_SRC_PATH=lib/cloud/src
 MAIN_INC_PATH=$(ROOT_PATH)/lib/cloud/include
 MAIN_BIN_PATH=lib/cloud/priv
 MAIN_CONF_PATH=lib/cloud/conf
-GXX_SRC=lib/g++/gcc-4.4.1.tar.gz
+GXX_SRC=lib/g++/releases/gcc-4.4.1.tar.gz
 GXX_SRC_PATH=$(ROOT_PATH)/lib/g++/releases/gcc-4.4.1
 GXX_BIN_PATH=$(GXX_SRC_PATH)_install
 GXX_BIN=$(GXX_BIN_PATH)/bin/g++
@@ -88,7 +88,7 @@ GMP_LIB_PATH=$(GMP_SRC_PATH)_install/lib
 PTMALLOC_SRC=lib/ptmalloc/ptmalloc3-current.tar.gz
 PTMALLOC_SRC_PATH=$(ROOT_PATH)/lib/ptmalloc/releases/ptmalloc3
 PTMALLOC_LIB_PATH=$(PTMALLOC_SRC_PATH)/lib
-BOOST_SRC=lib/boost/boost_1_40_0.tar.gz
+BOOST_SRC=lib/boost/releases/boost_1_40_0.tar.gz
 BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_1_40_0
 BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include
 BOOST_LIB_PATH=$(BOOST_SRC_PATH)_install/lib
@@ -221,7 +221,7 @@ _build.cfg: _build.cfg.template
 
 g++: $(GXX_BIN)
 $(GXX_SRC):
-	bin/get.sh gcc-4.4.1.tar.gz lib/g++/
+	bin/get.sh gcc-4.4.1.tar.gz lib/g++/releases/
 $(GXX_BIN): $(GXX_SRC) \
         $(GMP_SRC) \
         lib/g++/mpfr-2.4.1.tar.gz
@@ -287,7 +287,7 @@ boost-trunk:
 	(cd lib/boost; tar cf boost_trunk.tar boost_trunk; gzip boost_trunk.tar)
 	rm -rf lib/boost/boost_trunk
 $(BOOST_SRC):
-	bin/get.sh boost_1_40_0.tar.gz lib/boost/
+	bin/get.sh boost_1_40_0.tar.gz lib/boost/releases/
 $(BOOST_LIB_PATH): $(BOOST_SRC)
 	@test -d $(BOOST_SRC_PATH) || \
         tar zxvf $(BOOST_SRC) -C $(dir $(BOOST_SRC_PATH))
