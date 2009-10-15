@@ -35,7 +35,16 @@
 -export([init/8, do_recv/3]).
 
 -include("mysql.hrl").
--record(state, {mysql_version, recv_pid, socket, data, prepares = gb_trees:empty(), pool_id, last}).
+-record(state,
+    {
+    init_arguments,
+    mysql_version,
+    recv_pid,
+    socket,
+    data,
+    prepares = gb_trees:empty(),
+    pool_id,
+    last}).
 
 -define(SECURE_CONNECTION, 32768).
 -define(MYSQL_QUERY_OP, 3).
@@ -79,6 +88,9 @@ init(Host, Port, User, Password, Database, Encoding, PoolId, Parent) ->
                             set_encoding(Sock, RecvPid, Version, Encoding),
                             Parent ! self(),
                             loop(#state{
+                                init_arguments = {Host, Port, User, Password,
+                                                  Database, Encoding, PoolId,
+                                                  {undefined, undefined}},
                                 mysql_version = Version,
                                 recv_pid = RecvPid,
                                 socket   = Sock,
@@ -162,6 +174,23 @@ loop(State) ->
         {'$mysql_conn_loop', {_From, _Mref}, Unknown} ->
             error_logger:error_report([?MODULE, ?LINE, {unsuppoted_message, Unknown}]),
             loop(State);
+        % reconnect when the socket magically closes for no reason
+        {mysql_recv, _, closed, normal} ->
+            gen_tcp:close(State#state.socket),
+            {Host, Port, User, Password,
+             Database, Encoding, PoolId, _} =
+                State#state.init_arguments,
+            Parent = self(),
+            Child = erlang:spawn_link(fun() ->
+                case get_ack(Parent) of
+                    {ok, _} ->
+                        ok;
+                    {error, Reason} ->
+                        erlang:exit(Parent, Reason)
+                end
+            end),
+            init(Host, Port, User, Password,
+                 Database, Encoding, PoolId, Child);
         Unknown ->
             error_logger:error_report([?MODULE, ?LINE, {unsuppoted_message, Unknown}]),
             loop(State)
@@ -367,10 +396,10 @@ greeting(Packet) ->
 
 %% @private
 asciz(Data) when is_binary(Data) ->
-    mysql:asciz_binary(Data, []);
-asciz(Data) when is_list(Data) ->
-    {String, [0 | Rest]} = lists:splitwith(fun (C) -> C /= 0 end, Data),
-    {String, Rest}.
+    mysql:asciz_binary(Data, []).%;
+%asciz(Data) when is_list(Data) ->
+%    {String, [0 | Rest]} = lists:splitwith(fun (C) -> C /= 0 end, Data),
+%    {String, Rest}.
 
 %% @private
 %% @todo This really needs to be cleaned up.

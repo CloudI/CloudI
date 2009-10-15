@@ -48,9 +48,16 @@ class WorkerController::WorkerExecution::LibraryId
         static LibraryId create(std::string const & workTitle)
         {
             size_t const tagIndex = workTitle.find_first_of('.');
-            std::string workLibrary(workTitle.substr(0, tagIndex));
-            std::string workInstance(workTitle.substr(tagIndex));
-            return LibraryId(workLibrary, workInstance);
+            if (tagIndex == std::string::npos)
+            {
+                return LibraryId(workTitle);
+            }
+            else
+            {
+                std::string workLibrary(workTitle.substr(0, tagIndex));
+                std::string workInstance(workTitle.substr(tagIndex));
+                return LibraryId(workLibrary, workInstance);
+            }
         }
 
         LibraryId(std::string const & workLibrary) :

@@ -67,6 +67,7 @@
 // class static variables
 bool NodeConnections::m_initialized = false;
 std::string NodeConnections::m_hostName;
+std::string NodeConnections::m_machineName;
 std::string NodeConnections::m_parentProcessName;
 std::string NodeConnections::m_nodeNamePrefix;
 std::string NodeConnections::m_shortName;
@@ -180,6 +181,7 @@ bool NodeConnections::initialize(std::string const & nodeNamePrefix,
 
     // NodeConnections initialization data
     m_hostName = retrieve_hostname();
+    m_machineName = m_hostName;
     // this process is the cnode so it has the 'c' prefix on worker
     // for the Erlang registered process/node name
     m_parentProcessName = nodeNamePrefix;
@@ -188,7 +190,10 @@ bool NodeConnections::initialize(std::string const & nodeNamePrefix,
     m_nodeNamePrefix = nodeNamePrefix;
     m_shortName = nodeNamePrefix + '@' + m_hostName;
     if (domainName.size() > 0)
+    {
+        m_machineName += '.' + domainName;
         m_longName = nodeNamePrefix + '@' + m_hostName + '.' + domainName;
+    }
     m_cookie = cookie;
     m_port = port;
     m_instance = instance;

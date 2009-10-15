@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(lists_extensions).

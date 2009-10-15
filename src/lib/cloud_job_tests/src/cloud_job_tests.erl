@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.2 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_job_tests).
@@ -62,7 +62,8 @@
          handle_stop/1,
          handle_get_initial_task_size/0,
          handle_get_task_time_target/0,
-         handle_get_task/3]).
+         handle_get_task/3,
+         handle_drain_binary_output/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -144,7 +145,8 @@ start_link(WorkInstance, [IndexStart, IndexEnd])
             {error, Reason}
     end.
 
-handle_stop(WorkInstance) when is_atom(WorkInstance) ->
+handle_stop(WorkInstance)
+    when is_atom(WorkInstance) ->
     gen_server:call(WorkInstance, stop).
 
 % static work type parameter, does not use the WorkInstance
@@ -180,6 +182,11 @@ handle_get_task(WorkInstance, SequenceNumber, TaskSize)
             % exists
             {<<>>, []}
     end.
+
+% the binary data title is unused by this work module
+handle_drain_binary_output(WorkInstance, DataList)
+    when is_atom(WorkInstance), is_list(DataList) ->
+    DataList.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

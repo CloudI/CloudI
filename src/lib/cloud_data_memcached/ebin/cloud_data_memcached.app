@@ -3,7 +3,7 @@
 
 {application, cloud_data_memcached, 
   [{description, "Cloud Memcached Client Interface"},
-   {vsn, "0.1.0"},
+   {vsn, "0.1.1"},
    {modules, [
         cloud_data_memcached
         ]},

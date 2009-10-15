@@ -100,8 +100,8 @@ make_auth(User, Password) ->
 %% @private
 make_new_auth(User, Password, Database) ->
     DBCaps = case Database of
-        none -> 0;
-        _ -> ?CONNECT_WITH_DB
+        none -> 0%;
+        %_ -> ?CONNECT_WITH_DB
     end,
     Caps = ?LONG_PASSWORD bor ?LONG_FLAG bor ?TRANSACTIONS bor
         ?CLIENT_MULTI_STATEMENTS bor ?CLIENT_MULTI_RESULTS bor 
@@ -110,8 +110,8 @@ make_new_auth(User, Password, Database) ->
     UserB = list_to_binary(User),
     PasswordL = size(Password),
     DatabaseB = case Database of
-        none -> <<>>;
-        _ -> list_to_binary(Database)
+        none -> <<>>%;
+        %_ -> list_to_binary(Database)
     end,
     <<Caps:32/little, Maxsize:32/little, 8:8, 0:23/integer-unit:8,
     UserB/binary, 0:8, PasswordL:8, Password/binary, DatabaseB/binary>>.

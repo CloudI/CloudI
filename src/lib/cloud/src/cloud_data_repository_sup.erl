@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_repository_sup).
@@ -62,6 +62,7 @@
 
 -include("cloud_configuration.hrl").
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -116,7 +117,7 @@ add_data(L) when is_list(L) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_data(DataTitle :: string() | atom()) -> 'ok' | {'error', any()}.
+-spec remove_data(DataTitle :: cstring() | atom()) -> 'ok' | {'error', any()}.
 
 remove_data(DataTitle) when is_list(DataTitle) ->
     try erlang:list_to_existing_atom(DataTitle) of

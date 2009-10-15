@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_scheduler).
@@ -64,6 +64,7 @@
 -include("cloud_configuration.hrl").
 -include("cloud_run_queue.hrl").
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 -record(state,
     {
@@ -137,7 +138,7 @@ add_job(Config, #state{run_queue = Queue} = State) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_job_request(WorkTitle :: string()) -> 'ok' | 'error'.
+-spec remove_job_request(WorkTitle :: cstring()) -> 'ok' | 'error'.
 
 remove_job_request(WorkTitle) when is_list(WorkTitle) ->
     ?LOG_DEBUG("removed work ~p", [WorkTitle]),
@@ -217,7 +218,7 @@ allocate_work(NewProcesses,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec work_data_done(WorkTitle :: string(), State :: #state{}) ->
+-spec work_data_done(WorkTitle :: cstring(), State :: #state{}) ->
     {list(#run_queue_work_state_process{}), #state{}}.
 
 work_data_done(WorkTitle, 
@@ -245,7 +246,7 @@ work_data_done(WorkTitle,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec work_module_done(WorkTitle :: string(), State :: #state{}) -> #state{}.
+-spec work_module_done(WorkTitle :: cstring(), State :: #state{}) -> #state{}.
 
 work_module_done(WorkTitle, #state{run_queue = Queue} = State) ->
     case cloud_run_queue:put_done(WorkTitle, Queue) of
@@ -263,7 +264,7 @@ work_module_done(WorkTitle, #state{run_queue = Queue} = State) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec work_module_failed(WorkTitle :: string(), State :: #state{}) -> #state{}.
+-spec work_module_failed(WorkTitle :: cstring(), State :: #state{}) -> #state{}.
 
 work_module_failed(WorkTitle, #state{run_queue = Queue} = State) ->
     case cloud_run_queue:put_failed(WorkTitle, Queue) of

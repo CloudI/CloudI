@@ -44,18 +44,31 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(math_extensions).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([product/1, ceil/1, floor/1, round/2]).
+-export([sum/1, product/1, ceil/1, floor/1, round/2,
+         immediate_stddev/1,
+         stddev/0, stddev/1, stddev/2, stddev/4]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the sum of a list of numbers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec sum(list(number())) -> number().
+
+sum(L) when is_list(L) ->
+    lists:sum(L).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -113,4 +126,61 @@ round(X, 6) ->
 round(X, N) when is_integer(N) ->
     Scale = math:pow(10, N),
     erlang:round(X * Scale) / Scale.
+
+%% Standard deviation algorithms better than:
+%% StdDev = fun(L) -> M = lists:sum(L) / erlang:length(L), math:sqrt(lists:foldl(fun(V, S) -> (V - M) * (V - M) + S end, 0.0, L) / erlang:length(L)) end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Calculate the standard deviation using the compensated-summation Two-pass algorithm===
+%% Immediately calculate the standard deviation of the list.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec immediate_stddev(list(number())) -> float().
+
+immediate_stddev(L)
+    when is_list(L) ->
+    Count = erlang:length(L),
+    Mean = lists:sum(L) / Count,
+    {S1, S2} = lists_extensions:itera2(fun(V, Acc0, Acc1, Iter) ->
+        Difference = V - Mean,
+        Iter(Difference + Acc0, Difference * Difference + Acc1)
+    end, 0.0, 0.0, L),
+    math:sqrt((S2 - (S1 * S1) / Count) / (Count - 1)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Calculate the standard deviation using the On-line algorithm.===
+%% B. P. Welford (1962)."Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419–420.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec stddev() ->
+    {pos_integer(), float(), float()}.
+-spec stddev(list(number()) |
+             {pos_integer(), float(), float()}) ->
+    {pos_integer(), float(), float()} |
+    {float(), float()}.
+-spec stddev(list(number()), {pos_integer(), float(), float()}) ->
+    {pos_integer(), float(), float()}.
+-spec stddev(list(number()), pos_integer(), float(), float()) ->
+    {pos_integer(), float(), float()}.
+
+stddev() ->
+    stddev([]).
+stddev(Input)
+    when is_list(Input) ->
+    stddev(Input, 1, 0.0, 0.0);
+stddev({Count, Mean, Q}) ->
+    {Mean, math:sqrt(Q / (Count - 1))}.
+stddev(Input, {Count, Mean, Q}) ->
+    stddev(Input, Count, Mean, Q).
+stddev([], Count, Mean, Q) ->
+    {Count, Mean, Q};
+stddev([V | Input], Count, Mean, Q)
+    when is_list(Input), is_integer(Count), is_float(Mean), is_float(Q) ->
+    Difference = V - Mean,
+    NewMean = Mean + Difference / Count,
+    stddev(Input, Count + 1, NewMean, Q + Difference * (V - NewMean)).
 

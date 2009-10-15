@@ -472,6 +472,7 @@ void WorkerController::WorkerExecution::ThreadPool::ThreadFunctionObject::
         typedef bool (*WorkFunctionType)(
             bool const &,
             uint32_t const,
+            std::string const &,
             uint32_t const,
             uint32_t const,
             boost::scoped_array<uint8_t> const &,
@@ -483,6 +484,7 @@ void WorkerController::WorkerExecution::ThreadPool::ThreadFunctionObject::
         returnValue = workFunction(
                 stopped,
                 m_pTask->failureCount(),
+                NodeConnections::machineName(),
                 m_pTask->id(),
                 m_pTask->totalIds(),
                 m_pTask->taskData(),
@@ -573,7 +575,7 @@ void WorkerController::WorkerExecution::input(
             // (for this response message at least, others should be
             //  ignored in the same way)
             std::cerr << "invalid work library \"" <<
-                libraryPath.string() << "\": " <<
+                libraryId.workLibrary() << "\": " <<
                 libraryItr->second->error() << std::endl;
             m_libraries.erase(libraryItr);
             return;

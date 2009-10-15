@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(string_extensions).
@@ -53,6 +53,7 @@
 %% external interface
 -export([after_character/2, before_character/2,
          split_on_character/2,
+         binary_to_term/1,
          list_to_term/1, term_to_list/1,
          format/2]).
 
@@ -109,6 +110,17 @@ split_on_character(Before, Char, [Char | Input]) when is_integer(Char) ->
     {Before, Input};
 split_on_character(Before, Char, [H | Input]) when is_integer(Char) ->
     split_on_character(Before ++ [H], Char, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a binary string to an Erlang term.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec binary_to_term(B :: binary()) -> any().
+
+binary_to_term(B) when is_binary(B) ->
+    list_to_term(erlang:binary_to_list(B)).
 
 %%-------------------------------------------------------------------------
 %% @doc

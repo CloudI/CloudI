@@ -74,7 +74,7 @@ WorkerMessage ::= [PRIVATE 0] CHOICE {
         id             INTEGER (0..4294967295),
         sequence       INTEGER (0..4294967295),
         taskSize       OCTET STRING, -- double floating-point number < 1.0
-        taskData       OCTET STRING,
+        taskData       OCTET STRING, -- binary data
         elapsedTime    OCTET STRING, -- double floating-point number (in hours)
         returnValue    BOOLEAN,
         queries        Queries,
@@ -84,7 +84,7 @@ WorkerMessage ::= [PRIVATE 0] CHOICE {
     pushJobTaskResultResponse    [PRIVATE 4] SEQUENCE {
         workTitle      IA5String,
         id             INTEGER (0..4294967295),
-        taskData       OCTET STRING
+        taskData       OCTET STRING -- binary data
     }
 }
 
@@ -92,7 +92,7 @@ Queries ::= [PRIVATE 5] SEQUENCE OF Query
 
 Query ::= [PRIVATE 6] SEQUENCE {
     type IA5String,
-    query UTF8String
+    query UTF8String -- UTF8 or binary data
 }
 
 END

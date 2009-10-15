@@ -1,5 +1,3 @@
-from http://glozer.net/src/epgsql/
-
 Erlang PostgreSQL Database Client
 
 * Connect

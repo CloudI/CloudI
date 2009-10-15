@@ -108,6 +108,7 @@ void deinitialize()
 
 bool do_work(bool const & abortTask,
              uint32_t const,
+             std::string const &,
              uint32_t const,
              uint32_t const, 
              boost::scoped_array<uint8_t> const & taskData,
@@ -127,8 +128,7 @@ bool do_work(bool const & abortTask,
     uint32_t & digitStep =
         *(reinterpret_cast<uint32_t *>(&taskData[sizeof(uint32_t)]));
     char const * digitIndex = 
-        reinterpret_cast<char const *>(&taskData[sizeof(uint32_t) +
-                                                 sizeof(uint32_t)]);
+        reinterpret_cast<char const *>(&taskData[sizeof(uint32_t) * 2]);
 
     // perform the work
     std::ostringstream result;
@@ -165,7 +165,14 @@ bool do_work(bool const & abortTask,
     resultQuery << 
         "{set, \"" << digitIndex << "\", <<\"" << piResult << "\">>}";
     queriesOut.push_back(
-        DatabaseQuery("cloud_data_memcached.cloudi_tests", resultQuery.str()));
+        DatabaseQuery("cloud_data_memcached.cloudi_tests",
+                      resultQuery.str()));
+    resultQuery.str("");
+    resultQuery << 
+        "{put, \"" << digitIndex << "\", <<\"" << piResult << "\">>}";
+    queriesOut.push_back(
+        DatabaseQuery("cloud_data_tokyotyrant.cloudi_tests",
+                      resultQuery.str()));
 
     return true;
 }

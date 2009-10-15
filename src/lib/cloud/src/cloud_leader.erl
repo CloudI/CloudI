@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_leader).
@@ -71,6 +71,7 @@
 
 -include("cloud_logger.hrl").
 -include("cloud_configuration.hrl").
+-include("cloud_types.hrl").
 
 -record(state,
     {
@@ -113,7 +114,7 @@ add_job(L) when is_list(L) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_job(WorkTitle :: string()) -> 'ok' | 'error'.
+-spec remove_job(WorkTitle :: cstring()) -> 'ok' | 'error'.
 
 remove_job(WorkTitle) when is_list(WorkTitle) ->
     cloud_worker_scheduler:remove_job_request(WorkTitle).
@@ -193,7 +194,7 @@ restart(Node) when is_atom(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec work_data_done(WorkTitle :: string()) -> 'ok'.
+-spec work_data_done(WorkTitle :: cstring()) -> 'ok'.
 
 work_data_done(WorkTitle) ->
     ok = gen_server:cast(?MODULE, {work_data_done, WorkTitle}),

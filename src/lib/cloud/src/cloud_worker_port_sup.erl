@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_port_sup).
@@ -63,6 +63,7 @@
 -export([init/1]).
 
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 -define(WORKER_NAME(N), "cloud_" N "_port").
 % lib/cloud_worker/src/node_connections.cpp currently depends on
@@ -163,7 +164,7 @@ get_worker_index(Worker) when is_atom(Worker) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_cworker_index(Worker :: string()) ->
+-spec get_cworker_index(Worker :: cstring()) ->
     integer() |
     'error'.
 
