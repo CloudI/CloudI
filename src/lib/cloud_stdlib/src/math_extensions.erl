@@ -147,7 +147,7 @@ immediate_stddev(L)
         Difference = V - Mean,
         Iter(Difference + Acc0, Difference * Difference + Acc1)
     end, 0.0, 0.0, L),
-    math:sqrt((S2 - (S1 * S1) / Count) / (Count - 1)).
+    math:sqrt((S2 - (S1 * S1) / Count) / Count).
 
 %%-------------------------------------------------------------------------
 %% @doc
