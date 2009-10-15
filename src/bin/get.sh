@@ -82,18 +82,18 @@ SOURCE=`head -n 1 $TMP_DATA_FILE | cut -d' ' -f 2`
 rm -f $TMP_DATA_FILE
 
 # determine how to download the file
-which curl > /dev/null
-USE_CURL=$?
 which wget > /dev/null
 USE_WGET=$?
+which curl > /dev/null
+USE_CURL=$?
 
-if [ $USE_CURL -eq 0 ]; then
+if [ $USE_WGET -eq 0 ]; then
+    echo "downloading $FILE"
+    wget --progress=bar:force -O $FILE -p "$SOURCE""$FILE"
+elif [ $USE_CURL -eq 0 ]; then
     echo "downloading $FILE"
     echo "(using $SOURCE)"
     curl --progress-bar -O -L "$SOURCE""$FILE"
-elif [ $USE_WGET -eq 0 ]; then
-    echo "downloading $FILE"
-    wget --progress=bar:force -O $FILE -p "$SOURCE""$FILE"
 else
     echo "install either curl or wget"
     exit 1
