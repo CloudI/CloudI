@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_task_speed_lookup).
@@ -56,6 +56,7 @@
 -include("cloud_logger.hrl").
 -include("cloud_run_queue.hrl").
 -include("rbdict.hrl").
+-include("cloud_types.hrl").
 
 -record(task_size_state,
     {
@@ -145,7 +146,7 @@ update([FirstProcess | _] = Processes, State)
 %%-------------------------------------------------------------------------
 
 -spec add(Node :: atom(),
-          WorkTitle :: string(),
+          WorkTitle :: cstring(),
           TaskSize :: float(),
           TargetTime :: float(),
           ElapsedTime :: float(),
@@ -190,7 +191,7 @@ add(Node, WorkTitle, TaskSize, TargetTime, ElapsedTime, State)
 
 -spec get_max_tasksize(Processes :: list(#run_queue_work_state_process{}) |
                                     list(atom()),
-                       WorkTitle :: string(),
+                       WorkTitle :: cstring(),
                        InitialTaskSize :: float(),
                        State :: rbdict()) ->
     {#run_queue_work_state_process{}, float()} |
@@ -229,7 +230,7 @@ get_max_tasksize(NodeList, WorkTitle, InitialTaskSize, State)
 %%-------------------------------------------------------------------------
 
 -spec get_tasksize(Node :: atom(),
-                   WorkTitle :: string(),
+                   WorkTitle :: cstring(),
                    InitialTaskSize :: float(),
                    State :: rbdict()) -> float().
 

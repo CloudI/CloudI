@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -42,6 +42,7 @@
 
 #include <string>
 #include <vector>
+#include <cstring>
 
 class DatabaseQuery
 {
@@ -49,9 +50,15 @@ class DatabaseQuery
         DatabaseQuery() {}
         DatabaseQuery(std::string const & type, std::string const & query) :
             m_type(type), m_query(query) {}
-        // type data is ascii
+        /// store binary data to be handled within the Erlang work module
+        DatabaseQuery(void const * const pData, size_t size) :
+            m_type("binary"), m_query(size, '\0')
+        {
+            memcpy(const_cast<char *>(m_query.c_str()), pData, size);
+        }
+        /// type data is ascii
         std::string const & type() const { return m_type; }
-        // query data is utf8 encoded
+        /// query data is utf8 encoded
         std::string const & query() const { return m_query; }
     private:
         std::string m_type;

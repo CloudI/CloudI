@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_port).
@@ -69,6 +69,7 @@
 
 -include("cloud_worker_port.hrl").
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 % checks to make sure the port is still responding
 -define(WORKER_KEEP_ALIVE_INTERVAL, 60000). % 60 seconds
@@ -92,7 +93,7 @@
 %%-------------------------------------------------------------------------
 
 -spec worker_start_proxy(Process :: {atom(), atom()},
-                         CNodeName :: string(),
+                         CNodeName :: cstring(),
                          Port :: pos_integer(),
                          Instance :: non_neg_integer()) -> bool().
 
@@ -180,7 +181,7 @@ worker_stop_proxy({Name, Node} = Process) ->
 %%-------------------------------------------------------------------------
 
 -spec has_work_proxy(Process :: {atom(), atom()},
-                     WorkTitle :: string(),
+                     WorkTitle :: cstring(),
                      TaskIdOffset :: non_neg_integer(),
                      ConcurrentTasks :: pos_integer()) ->
     {'ok', bool()} |
@@ -219,7 +220,7 @@ has_work_proxy({Name, Node} = Process, WorkTitle, TaskIdOffset, ConcurrentTasks)
 %%-------------------------------------------------------------------------
 
 -spec add_work_proxy(Process :: {atom(), atom()},
-                     WorkTitle :: string(),
+                     WorkTitle :: cstring(),
                      TaskIdOffset :: non_neg_integer(),
                      ConcurrentTasks :: pos_integer()) ->
     {'ok', bool()} |
@@ -258,7 +259,7 @@ add_work_proxy({Name, Node} = Process, WorkTitle, TaskIdOffset, ConcurrentTasks)
 %%-------------------------------------------------------------------------
 
 -spec remove_work_proxy(Process :: {atom(), atom()},
-                        WorkTitle :: string()) ->
+                        WorkTitle :: cstring()) ->
     {'ok', bool()} |
     {'error', any()}.
 

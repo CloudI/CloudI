@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_run_queue).
@@ -62,6 +62,7 @@
 -include("cloud_run_queue.hrl").
 -include("cloud_logger.hrl").
 -include("cloud_configuration.hrl").
+-include("cloud_types.hrl").
 
 %%% work_manager_run_queue defines state transitions for work
 %%% as it is processed.
@@ -153,7 +154,7 @@ put_running(WorkState, #run_queue{work_running = WorkRunning} = Queue)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put_failed(WorkTitle :: string() | #run_queue_work_state{},
+-spec put_failed(WorkTitle :: cstring() | #run_queue_work_state{},
                  Queue :: #run_queue{}) ->
     'error' |
     #run_queue{}.
@@ -185,7 +186,7 @@ put_failed(WorkState, #run_queue{work_failed = WorkFailed} = Queue)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put_done(WorkTitle :: string(), Queue :: #run_queue{}) ->
+-spec put_done(WorkTitle :: cstring(), Queue :: #run_queue{}) ->
     'error' |
     #run_queue{}.
 
@@ -206,7 +207,7 @@ put_done(WorkTitle, #run_queue{work_done = WorkDone} = Queue)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_idle_work(WorkTitle :: string(), Queue :: #run_queue{}) ->
+-spec remove_idle_work(WorkTitle :: cstring(), Queue :: #run_queue{}) ->
     {list({atom(), atom()}), #run_queue{}} |
     'error'.
 

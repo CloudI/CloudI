@@ -1,4 +1,4 @@
-#CloudI 0.0.6 (alpha)
+#CloudI 0.0.7 (alpha)
 
 ## ABOUT
 
@@ -25,13 +25,15 @@ Bailey-Borwein-Plouffe formula and verifies that they are correct.
 "cloud_job_tests" requires that PostgreSQL is configured and setup because
 it stores the results.  Memcached is also used by "cloud_job_tests", but any
 results that would go to memcached are discarded if memcached isn't configured.
-MySQL is used by "cloud_job_tests" in the same way as memcached.
+MySQL and Tokyo Tyrant are used by "cloud_job_tests" in the same way as
+memcached.
 
 CloudI currently supports the following databases:
 
-* PostgreSQL
-* MySQL
-* memcached
+* memcached (>= 1.3)
+* MySQL (>= 4.0)
+* PostgreSQL (>= 7.4)
+* Tokyo Tyrant (>= 1.1.23)
 
 CloudI ensures that the C/C++ work code is executed in a fault-tolerant way.
 Failover is handled with multiple CloudI instances using separate epmd daemons.

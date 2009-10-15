@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_manager).
@@ -62,6 +62,7 @@
          terminate/2, code_change/3]).
 
 -include("cloud_work_status.hrl").
+-include("cloud_run_queue.hrl").
 -include("WorkerProtocol.hrl").
 -include("cloud_logger.hrl").
 -include("rbdict.hrl").
@@ -96,13 +97,22 @@ start_link() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the current task lookup from the work manager.===
+%% If the call has a timeout or error, an empty dictionary is returned
+%% so that everything can function but without the benefit of previous
+%% scheduling information.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec get_task_speed_lookup() -> rbdict().
 
 get_task_speed_lookup() ->
-    gen_server:call(?MODULE, get_task_speed_lookup).
+    try gen_server:call(?MODULE, get_task_speed_lookup)
+    catch
+        _:Reason ->
+            ?LOG_ERROR("unable to obtain task speed lookup "
+                "from work_manager: ~p", [Reason]),
+            rbdict:new()
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -110,7 +120,7 @@ get_task_speed_lookup() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update(Processes :: list()) -> 'ok'.
+-spec update(Processes :: list(#run_queue_work_state_process{})) -> 'ok'.
 
 update(Processes) ->
     gen_server:call(?MODULE, {update, Processes}).
@@ -478,6 +488,10 @@ check_result_queries(QueriesOut, [
     ], DataTypeLookup)
     when is_list(QueriesOut), is_list(DataTitleString), is_binary(Query) ->
     try erlang:list_to_existing_atom(DataTitleString) of
+        'binary' ->
+            check_result_queries(QueriesOut ++ [
+                    {'binary', Query}
+                ], QueriesIn, DataTypeLookup);
         DataTitle ->
             case rbsets:is_element(DataTitle, DataTypeLookup) of
                 true ->

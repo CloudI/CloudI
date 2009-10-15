@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_worker_nodes).
@@ -76,6 +76,7 @@
 -include("cloud_configuration.hrl").
 -include("cloud_run_queue.hrl").
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 % how long to wait for the Erlang VM to start on a single remote node
 -define(CLOUD_PEER_START_TIMEOUT, 5000). % 5 seconds
@@ -316,7 +317,11 @@ stop_request(Process) ->
     % other timeouts will ensure that the synchronous call terminates
     % however, it could take 5 seconds per process if all the work types
     % are not respecting the stopProcessing boolean flag for their thread.
-    gen_server:call(Process, stop, infinity).
+    try gen_server:call(Process, stop, infinity)
+    catch
+        exit:{shutdown,_} ->
+            ok
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -496,14 +501,28 @@ worker_node_ready_old(Process, State) ->
 allocate_work(#state{run_queue_work_state_processes = Processes} = State, S) ->
     {RunningProcesses, RemainingProcesses, NewS} =
         cloud_worker_scheduler:allocate_work(Processes, S),
-    if
+    Timer = if
         erlang:length(RunningProcesses) > 0 ->
-            ok = cloud_work_manager:update(RunningProcesses);
+            try cloud_work_manager:update(RunningProcesses) of
+                ok ->
+                    undefined
+            catch
+                _:Reason ->
+                    ?LOG_ERROR("unable to update the processes data on the "
+                        "work_manager: ~p", [Reason]),
+                    erlang:send_after(?WORKER_WORK_ALLOCATION_DELAY,
+                        self(), allocate_work)
+            end;
         true ->
-            ok
+            undefined
     end,
-    {State#state{run_queue_work_state_processes = RemainingProcesses,
-                 worker_scheduler_timer = undefined}, NewS}.
+    if
+        Timer /= undefined ->
+            {State#state{worker_scheduler_timer = Timer}, S};
+        true ->
+            {State#state{run_queue_work_state_processes = RemainingProcesses,
+                         worker_scheduler_timer = undefined}, NewS}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -586,7 +605,7 @@ workers_died(Pid, Reason, #state{machine_states = MachineStates} = State) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec work_data_done(WorkTitle :: string(),
+-spec work_data_done(WorkTitle :: cstring(),
                      State :: #state{},
                      S :: tuple()) -> {#state{}, tuple()}.
 

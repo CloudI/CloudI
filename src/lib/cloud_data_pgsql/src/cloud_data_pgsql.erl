@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.6 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_pgsql).
@@ -67,14 +67,14 @@
          terminate/2, code_change/3]).
 
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 -include("pgsql.hrl").
-
--define(PGSQL_TIMEOUT, 20000). % 20 seconds
 
 -define(DEFAULT_HOST_NAME, "127.0.0.1").
 -define(DEFAULT_USER_NAME, "cloudi").
 -define(DEFAULT_PASSWORD,  "").
 -define(DEFAULT_PORT,      5432).
+-define(DEFAULT_TIMEOUT,   20000). % 20 seconds
 
 -record(state,
     {
@@ -92,7 +92,7 @@
 %%-------------------------------------------------------------------------
 
 -spec equery(DataTitle :: atom(),
-             String :: string(),
+             String :: cstring(),
              Parameters :: list()) ->
     {'ok', list(#column{}), list(tuple())} |
     {'ok', non_neg_integer()} |
@@ -101,7 +101,7 @@
 
 equery(DataTitle, String, Parameters)
     when is_atom(DataTitle), is_list(String), is_list(Parameters) ->
-    % depend on PGSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle,
         {equery, equery_argument_parse(String), Parameters}, infinity).
 
@@ -112,7 +112,7 @@ equery(DataTitle, String, Parameters)
 %%-------------------------------------------------------------------------
 
 -spec squery(DataTitle :: atom(),
-             String :: string()) ->
+             String :: cstring()) ->
     {'ok', list(#column{}), list(tuple())} |
     {'ok', non_neg_integer()} |
     {'ok', non_neg_integer(), list(#column{}), list(tuple())} |
@@ -120,7 +120,7 @@ equery(DataTitle, String, Parameters)
 
 squery(DataTitle, String)
     when is_atom(DataTitle), is_list(String) ->
-    % depend on PGSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {squery, String}, infinity).
 
 %%%------------------------------------------------------------------------
@@ -142,13 +142,13 @@ handle_stop(DataTitle) when is_atom(DataTitle) ->
     gen_server:call(DataTitle, stop).
 
 -spec handle_do_queries(DataTitle :: atom(),
-                        QueryList :: list({atom(), string()})) ->
-    {'ok', list({atom(), string()})} |
-    {'error', list({atom(), string()})}.
+                        QueryList :: data_list()) ->
+    {'ok', data_list()} |
+    {'error', data_list()}.
 
 handle_do_queries(DataTitle, QueryList)
     when is_atom(DataTitle), is_list(QueryList) ->
-    % depend on PGSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {do_queries, QueryList}, infinity).
 
 %%%------------------------------------------------------------------------
@@ -202,7 +202,7 @@ init_state(DataTitle, Args) when is_atom(DataTitle), is_list(Args) ->
         {username, ?DEFAULT_USER_NAME},
         {password, ?DEFAULT_PASSWORD},
         {port, ?DEFAULT_PORT},
-        {timeout, ?PGSQL_TIMEOUT}],
+        {timeout, ?DEFAULT_TIMEOUT}],
     [HostName, UserName, Password, Port, Timeout, NewArgs] =
         proplists_extensions:take_values(Defaults, Args),
     FinalArgs = NewArgs ++ [{port, Port}, {timeout, Timeout}],
@@ -280,9 +280,9 @@ equery_argument_parse(String) ->
 -define(QUOTE,   39). % '
 -define(PERCENT, 37). % %
 -define(SYMMETRIC_OPERATOR_GUARD(P),
-        ((P == $=) or (P == $>) or (P == $<) or
-         (P == $+) or (P == $-) or (P == $*) or
-         (P == $/) or (P == ?PERCENT))).
+        P == $=; P == $>; P == $<;
+        P == $+; P == $-; P == $*;
+        P == $/; P == ?PERCENT).
 
 %% handle spaces and normal punctuation when performing
 %% parameter syntax substitution
@@ -325,29 +325,29 @@ equery_argument_parse_put(NewString, $(, $?, ?SPACE,
 %% performing parameter syntax substitution
 equery_argument_parse_put(NewString, Left, $?, ?SPACE,
                           false, Index, Remaining)
-    when ?SYMMETRIC_OPERATOR_GUARD(Left) or
-         (Left == $D) or (Left == $R) ->
+    when ?SYMMETRIC_OPERATOR_GUARD(Left);
+         Left == $D; Left == $R ->
     equery_argument_parse_get(
         NewString ++ Left ++ "$" ++ integer_to_list(Index) ++ " ",
         Index + 1, Remaining);
 equery_argument_parse_put(NewString, Left, $?, $),
                           false, Index, Remaining)
-    when ?SYMMETRIC_OPERATOR_GUARD(Left) or
-         (Left == $D) or (Left == $R) ->
+    when ?SYMMETRIC_OPERATOR_GUARD(Left);
+         Left == $D; Left == $R ->
     equery_argument_parse_get(
         NewString ++ Left ++ "$" ++ integer_to_list(Index) ++ ")",
         Index + 1, Remaining);
 equery_argument_parse_put(NewString, ?SPACE, $?, Right,
                           false, Index, Remaining)
-    when ?SYMMETRIC_OPERATOR_GUARD(Right) or
-         (Right == $A) or (Right == $O) or (Right == $!) ->
+    when ?SYMMETRIC_OPERATOR_GUARD(Right);
+         Right == $A; Right == $O; Right == $! ->
     equery_argument_parse_get(
         NewString ++ " $" ++ integer_to_list(Index) ++ Right,
         Index + 1, Remaining);
 equery_argument_parse_put(NewString, $(, $?, Right,
                           false, Index, Remaining)
-    when ?SYMMETRIC_OPERATOR_GUARD(Right) or
-         (Right == $A) or (Right == $O) or (Right == $!) ->
+    when ?SYMMETRIC_OPERATOR_GUARD(Right);
+         Right == $A; Right == $O; Right == $! ->
     equery_argument_parse_get(
         NewString ++ "($" ++ integer_to_list(Index) ++ Right,
         Index + 1, Remaining);

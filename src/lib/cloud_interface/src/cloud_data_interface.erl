@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_interface).
@@ -60,6 +60,7 @@
 -export([stop/1, do_queries/2]).
 
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
@@ -85,11 +86,22 @@ behaviour_info(_) ->
 %% ===Group queries based on the DataTitle===
 %% Do queries that are grouped based on the DataTitle to be processed
 %% (only queries that contain the specified DataTitle can be processed
-%%  with the Module:Function/2 call that is specified)
+%%  with the Module:Function/2 call that is specified
+%%  (with arguments [Processing, State] where Processing is the
+%%  list of queries and State is anything specific to the function)
 %% all the processed queries are removed from the QueryList
 %% so that it may be processed in other data modules, if necessary.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec do_queries_group(QueryList :: data_list(),
+                       Module :: atom(),
+                       Function :: atom(),
+                       State :: any(),
+                       DataTitle :: atom()) ->
+    {'ok', data_list()} |
+    {'error', data_list()}.
+
 do_queries_group(QueryList, Module, Function, State, DataTitle)
     when is_list(QueryList), is_atom(Module),
          is_atom(Function), is_atom(DataTitle) ->
@@ -116,9 +128,9 @@ stop(DataTitle) when is_atom(DataTitle) ->
 %%-------------------------------------------------------------------------
 
 -spec do_queries(DataTitle :: atom(),
-                 QueryList :: list({atom(), list(integer())})) ->
-    {'ok', list({atom(), list(integer())})} |
-    {'error', list({atom(), list(integer())})}.
+                 QueryList :: data_list()) ->
+    {'ok', data_list()} |
+    {'error', data_list()}.
 
 do_queries(DataTitle, QueryList)
     when is_atom(DataTitle), is_list(QueryList) ->

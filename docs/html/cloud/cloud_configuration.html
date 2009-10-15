@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module cloud_configuration</title>
+<meta http-equiv="Content-Type" content="text/html; charset=ascii" />
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloud_configuration</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Cloudi_Configuration">Cloudi Configuration</a></h3>.
+<p>Copyright © 2009 Michael Truog</p>
+
+<p><b>Version:</b> 0.0.7 Oct 14 2009 23:28:40
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Cloudi_Configuration">Cloudi Configuration</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#open-0">open/0</a></td><td>
+  <h4><a name="Parse_the_Cloudi_configuration_file.">Parse the Cloudi configuration file.</a></h4>
+  <h4><a name="The_configuration_file_contains_the_following_terms:">The configuration file contains the following terms:</a></h4>
+  <h5><a name="The_cookie_to_use_for_distributed_communication:">The cookie to use for distributed communication:</a></h5><p>
+    <code>{cookie, "cookie value"}</code></p>
+ 
+  <h5><a name="The_logging_settings_for_all_nodes:">The logging settings for all nodes:</a></h5><p>
+    <code>{logging, "path/to/log/file", LogLevel}</code></p>.</td></tr>
+<tr><td valign="top"><a href="#open-1">open/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#parse_data-1">parse_data/1</a></td><td>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_data_module,_e.g.:">Parse a string containing the configuration for a single data module, e.g.:</a></h4>
+ 
+  <code>"{\"cloud_data_pgsql\", [Option1, Option2, ...]}"</code></td></tr>
+<tr><td valign="top"><a href="#parse_job-1">parse_job/1</a></td><td>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_job,_e.g.:">Parse a string containing the configuration for a single job, e.g.:</a></h4>
+ 
+  <code>"{\"cloud_job_tests\", [Argument1, Argument2, ...], all, threads}"</code></td></tr>
+<tr><td valign="top"><a href="#parse_machine-2">parse_machine/2</a></td><td>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_machine_(node),_e.g.:">Parse a string containing the configuration for a single machine (node), e.g.:</a></h4>
+ 
+  <code>"{\"cloud@machine\",   [{3501, 3508}], 1, 4}"</code></td></tr>
+<tr><td valign="top"><a href="#save-1">save/1</a></td><td>
+  <h4><a name="Save_the_Cloudi_configuration_file.">Save the Cloudi configuration file.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#save-2">save/2</a></td><td>
+  <h4><a name="Save_the_Cloudi_configuration_file_at_a_specific_path.">Save the Cloudi configuration file at a specific path.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="open-0">open/0</a></h3>
+<div class="spec">
+<p><tt>open() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Parse_the_Cloudi_configuration_file.">Parse the Cloudi configuration file.</a></h4>
+  <h4><a name="The_configuration_file_contains_the_following_terms:">The configuration file contains the following terms:</a></h4>
+  <h5><a name="The_cookie_to_use_for_distributed_communication:">The cookie to use for distributed communication:</a></h5><p>
+    <code>{cookie, "cookie value"}</code></p>
+ 
+  <h5><a name="The_logging_settings_for_all_nodes:">The logging settings for all nodes:</a></h5><p>
+    <code>{logging, "path/to/log/file", LogLevel}</code></p>
+ 
+    <p>LogLevel is either one of the atoms:</p>
+ 
+    <p><code>undefined, critical, error, warning, info, debug</code></p>
+ 
+    <p>or LogLevel is an integer:</p>
+ 
+    <code>0,         1,        2,     3,       4,    5</code>
+  <h5><a name="The_jobs_that_Cloudi_will_run:">The jobs that Cloudi will run:</a></h5><p>
+    <code>{jobs, [{"cloud_job_uniquename.tag", [Argument1, Argument2, ...], Tasks, UseThreads}]}</code></p>
+ 
+    The "cloud_job_uniquename" string is both the name of a C dynamic library
+    and an Erlang module (that is locally registered) that coordinates work
+    for the C code.  "cloud_job_uniquename.tag" is called the work title
+    and defines the type of work in other parts of Cloudi.
+    The job prefix of "cloud_job_" is used as a namespace for the
+    Erlang module and the "uniquename" describes the work.  The ".tag"
+    may be ommitted but must be unique if the same "uniquename" is instanced
+    more than once in the same cloud.  The ".tag" allows separate instances
+    of the work, possibly with different Arguments.
+    The Arguments are provided to the Erlang module's start_link function.
+    The Tasks can be either the atom 'all' to allocate all machine
+    resources to the work, or it can be an integer.
+    The UseThreads can be either the atoms 'no_threads" or 'threads', or
+    it can be an integer which determines how many threads per process.
+  <h5><a name="The_data_that_Cloudi_will_use:">The data that Cloudi will use:</a></h5><p>
+    <code>{data, [{"cloud_data_uniquename", [{Parameter0, ParameterValue0}]}]}</code></p>
+ 
+    The "cloud_data_uniquename" string is the name of an Erlang module
+    (that is locally registered) that handles all data of this type.
+    If multiple databases are used by this data module, they become a suffix
+    like: "cloud_data_uniquename.databasename", for the data title.  The
+    data title is used in other parts of Cloudi to describe the destination
+    of data.  The data module prefix of "cloud_data_" is used as a namespace
+    for the Erlang module and the "uniquename" describes the data storage.
+    All the parameters supplied to the data module are specific to the
+    data module.  The cloud_data_repository_sup module does expect
+    'database' as a
+    parameter when creating data titles and starting the data modules but
+    it is not required (so a data title could be the data module name if
+    no database distinction is necessary).
+  <h5><a name="The_machines_that_Cloudi_will_run_on:">The machines that Cloudi will run on:</a></h5><p>
+    <code>{machines, [{"node1@hostname1", [{LowPort, HighPort}], Processes, Threads}]}</code></p>
+ 
+    The first entry in the machines list is the machine which Cloudi is
+    started on (all later entries can occur in any order).  The node name
+    must include a valid hostname (that can be resolved with
+    DNS or a hosts file).  LowPort and HighPort defines a range of ports
+    that must be usable on the machine for cnode worker traffic
+    (the exchange of work assignments and results).  The ports can also be
+    be specified as a list of numbers, instead of a list of tuples
+    (or integer ports can be mixed with tuple port ranges).
+    The number of ports specified must be greater than or equal to
+    Processes, which is the number of processes to be started on the
+    machine.  The Threads parameter specifies the number of threads
+    that can be used on the machine for Cloudi work allocation.</p>
+
+<h3 class="function"><a name="open-1">open/1</a></h3>
+<div class="spec">
+<p><tt>open(Path) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="parse_data-1">parse_data/1</a></h3>
+<div class="spec">
+<p><tt>parse_data(L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_data_module,_e.g.:">Parse a string containing the configuration for a single data module, e.g.:</a></h4>
+ 
+  <code>"{\"cloud_data_pgsql\", [Option1, Option2, ...]}"</code></p>
+
+<h3 class="function"><a name="parse_job-1">parse_job/1</a></h3>
+<div class="spec">
+<p><tt>parse_job(L) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_job,_e.g.:">Parse a string containing the configuration for a single job, e.g.:</a></h4>
+ 
+  <code>"{\"cloud_job_tests\", [Argument1, Argument2, ...], all, threads}"</code></p>
+
+<h3 class="function"><a name="parse_machine-2">parse_machine/2</a></h3>
+<div class="spec">
+<p><tt>parse_machine(L, LongNames) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Parse_a_string_containing_the_configuration_for_a_single_machine_(node),_e.g.:">Parse a string containing the configuration for a single machine (node), e.g.:</a></h4>
+ 
+  <code>"{\"cloud@machine\",   [{3501, 3508}], 1, 4}"</code></p>
+
+<h3 class="function"><a name="save-1">save/1</a></h3>
+<div class="spec">
+<p><tt>save(Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Save_the_Cloudi_configuration_file.">Save the Cloudi configuration file.</a></h4>
+</p>
+
+<h3 class="function"><a name="save-2">save/2</a></h3>
+<div class="spec">
+<p><tt>save(Path, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Save_the_Cloudi_configuration_file_at_a_specific_path.">Save the Cloudi configuration file at a specific path.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 14 2009, 23:28:40.</i></p>
+</body>
+</html>

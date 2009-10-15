@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_api).
@@ -54,6 +54,8 @@
 -export([add_job/1, remove_job/1,
          add_machine/1, remove_machine/1,
          add_data/1, remove_data/1]).
+
+-include("cloud_types.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -78,7 +80,7 @@ add_job(ConfigurationString) when is_list(ConfigurationString) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_job(WorkTitle :: string()) -> 'ok' | 'error'.
+-spec remove_job(WorkTitle :: cstring()) -> 'ok' | 'error'.
 
 remove_job(WorkTitle) when is_list(WorkTitle) ->
     cloud_leader:remove_job(WorkTitle).
@@ -122,7 +124,7 @@ add_data(ConfigurationString) when is_list(ConfigurationString) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec remove_data(DataTitle :: string()) -> 'ok' | {'error', any()}.
+-spec remove_data(DataTitle :: cstring()) -> 'ok' | {'error', any()}.
 
 remove_data(DataTitle) when is_list(DataTitle) ->
     cloud_data_repository_sup:remove_data(DataTitle).

@@ -1,3 +1,17 @@
+2009-10-14	Michael Truog   <mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.7 (alpha)
+		* add Tokyo Tyrant database module
+		* cleanup the memcached interface a little
+		* add cloud_job_latency work module for testing
+		  system latency with machines that have their clocks
+		  synchronized
+		* add to the Erlang work module behavior the callback
+		  "handle_drain_binary_output" for handling the
+		  "binary" data title which is automatically routed to the
+		  Erlang work module that created the work
+		  (in the same order the work was created)
+
 2009-10-10	Michael Truog   <mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.6 (alpha)

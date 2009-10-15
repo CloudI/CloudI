@@ -1,4 +1,4 @@
-// -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// -*- coding: utf-8; Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 //
 // BSD LICENSE
@@ -56,6 +56,7 @@ void deinitialize() __attribute__ ((destructor));
 /// Called to perform a task
 /// @param abort check to see if the thread of execution should abort
 /// @param failureCount how many times this task has failed
+/// @param machineName the hostname (with domain if using long node names)
 /// @param id unique thread of execution identifier
 ///           (unique across all work task instances on all nodes)
 /// @param totalIds the total number of concurrent work task instances
@@ -67,6 +68,7 @@ void deinitialize() __attribute__ ((destructor));
 /// @return bool if the work task was processed successfully, true else false
 bool do_work(bool const & abortTask,
              uint32_t const failureCount,
+             std::string const & machineName,
              uint32_t const id, uint32_t const totalIds,
              boost::scoped_array<uint8_t> const & taskData,
              size_t const taskDataSize,

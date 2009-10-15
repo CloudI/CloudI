@@ -62,6 +62,13 @@ class NodeConnections
         static int worker_loop(unsigned char * buffer,
                                WorkerController & controller);
 
+        /// return the full hostname
+        /// (includes the domain if long node names are being used)
+        static std::string const & machineName()
+        {
+            return m_machineName;
+        }
+        /// return "cnode-name@machine-name"
         static std::string const & nodeName()
         {
             if (m_longName.empty())
@@ -69,6 +76,7 @@ class NodeConnections
             else
                 return m_longName;
         }
+        /// return the cloud_worker_port locally registered process name
         static std::string const & parentProcessName()
         {
             return m_parentProcessName;
@@ -76,6 +84,7 @@ class NodeConnections
     private:
         static bool m_initialized;
         static std::string m_hostName;
+        static std::string m_machineName;
         static std::string m_parentProcessName;
         static std::string m_nodeNamePrefix;
         static std::string m_shortName;

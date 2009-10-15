@@ -4,9 +4,9 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.6.0
+VERSION_NAME=0.0.7.0
 PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.6
+MAJOR_VERSION_NAME=0.0.7
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -98,6 +98,9 @@ CLOUD_BIN_PATH=_build/development/apps/$(PROJECT_NAME)-$(MAJOR_VERSION_NAME)/pri
 WORK_TYPE1_SRC_PATH=lib/cloud_job_tests/src
 WORK_TYPE1_OBJ_PATH=lib/cloud_job_tests/priv/obj
 WORK_TYPE1_LIB_PATH=lib/cloud_job_tests/priv/lib
+WORK_TYPE2_SRC_PATH=lib/cloud_job_latency/src
+WORK_TYPE2_OBJ_PATH=lib/cloud_job_latency/priv/obj
+WORK_TYPE2_LIB_PATH=lib/cloud_job_latency/priv/lib
 
 # force usage of a local compiler for c++
 GXX_CXXFLAGS=-I$(GXX_BIN_PATH)/include/c++/4.4.1/
@@ -329,13 +332,12 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
         -Wl,-rpath $(GMP_LIB_PATH) \
         -lboost_thread \
         -lboost_system \
-		-lgmp
-
-#		\
+		-lgmp \
+        -lstdc++ \
         -Wl,-Bstatic \
         -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
         -Wl,-Bdynamic \
-        -lc
+        -lc -lpthread
 
 $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
@@ -348,6 +350,33 @@ $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
         -I$(MAIN_INC_PATH) \
         -pz $(WORK_TYPE1_OBJ_PATH) \
         $(WORK_TYPE1_SRC_PATH)/cloud_job_tests.erl
+
+$(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so: \
+        $(INTERFACE_INC_PATH)/cloud_work_interface.hpp \
+        $(WORK_TYPE2_SRC_PATH)/cloud_job_latency.cpp 
+	@$(CXX) $(CXXFLAGS) -rdynamic \
+        -I$(INTERFACE_INC_PATH) \
+        -o $(WORK_TYPE2_OBJ_PATH)/cloud_job_latency.o \
+        -c -fPIC $(WORK_TYPE2_SRC_PATH)/cloud_job_latency.cpp
+	@$(CXX) -shared -Wl,-export-dynamic \
+        -o $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so \
+        $(WORK_TYPE2_OBJ_PATH)/cloud_job_latency.o \
+        -lstdc++ \
+        -Wl,-Bstatic \
+        -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
+        -Wl,-Bdynamic \
+        -lc -lpthread
+
+$(WORK_TYPE2_LIB_PATH)/cloud_job_latency.beam: \
+        $(INTERFACE_SRC_PATH)/cloud_work_interface.erl \
+        $(WORK_TYPE2_SRC_PATH)/cloud_job_latency.erl
+	@$(ERLC_PATH) -o $(WORK_TYPE2_OBJ_PATH) \
+        -I$(INTERFACE_INC_PATH) \
+        $(INTERFACE_SRC_PATH)/cloud_work_interface.erl
+	@$(ERLC_PATH) -o $(WORK_TYPE2_LIB_PATH) \
+        -I$(MAIN_INC_PATH) \
+        -pz $(WORK_TYPE2_OBJ_PATH) \
+        $(WORK_TYPE2_SRC_PATH)/cloud_job_latency.erl
 
 $(WORKER_LIB_PATH)/libWorkerProtocol.a: \
         $(ASN1_BIN) \
@@ -483,16 +512,13 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          -L$(WORKER_LIB_PATH) -lWorkerProtocol \
          -L$(ERL_INTERFACE_LIB_PATH) -lerl_interface_st -lei_st \
          -Wl,-Bdynamic \
-         -ldl -lrt
-	@$(RM) $(WORKER_OBJ_PATH)/*.o
-
-#		 \
+         -ldl -lrt \
          -lstdc++ \
          -Wl,-Bstatic \
          -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
          -Wl,-Bdynamic \
          -lc -lpthread
-
+	@$(RM) $(WORKER_OBJ_PATH)/*.o
 
 $(MAIN_SRC_PATH)/cloud_worker_port.hrl: \
         $(GEPD_INC_PATH)/erlang_functions_hrl.h \
@@ -510,6 +536,8 @@ build: \
         $(MAIN_SRC_PATH)/WorkerProtocol.erl \
         $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so \
         $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam \
+        $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so \
+        $(WORK_TYPE2_LIB_PATH)/cloud_job_latency.beam \
         $(ERLANG_SRC_FILES)
 	@$(SINAN_PATH) build
 
@@ -518,8 +546,8 @@ _build/development/tar/$(PROJECT_NAME).tar.gz: build
 	@test -d $(CLOUD_BIN_PATH)/work_types && \
         $(RM) -rf $(CLOUD_BIN_PATH)/work_types || exit 0
 	@mkdir $(CLOUD_BIN_PATH)/work_types
-	@cp $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so \
-        $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam \
+	@cp $(WORK_TYPE1_LIB_PATH)/* \
+        $(WORK_TYPE2_LIB_PATH)/* \
         $(CLOUD_BIN_PATH)/work_types
 	@$(SINAN_PATH) release
 	
@@ -554,7 +582,7 @@ rsync-clean_TARGETS:
 rsync-clean: rsync-clean_TARGETS rsync
 
 shell: build
-	bin/execute_erl $(ERL_PATH) \
+	bin/execute_erl 0 $(ERL_PATH) \
                 -sname shell \
                 `find _build/development/apps \
                  -name "ebin" -o -name "priv" -o -name "work_types" | \
@@ -573,7 +601,11 @@ clean: _build.cfg
            $(WORK_TYPE1_OBJ_PATH)/*.o \
            $(WORK_TYPE1_OBJ_PATH)/cloud_work_interface.beam \
            $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so \
-           $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam
+           $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam \
+           $(WORK_TYPE2_OBJ_PATH)/*.o \
+           $(WORK_TYPE2_OBJ_PATH)/cloud_work_interface.beam \
+           $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so \
+           $(WORK_TYPE2_LIB_PATH)/cloud_job_latency.beam
 	@$(RM) -r _build/* _release
 	@$(SINAN_PATH) clean
 
@@ -600,9 +632,18 @@ analyze: $(DIALYZER_PLT) \
         -I$(MAIN_INC_PATH) \
         -I$(MAIN_SRC_PATH) -c \
         $(MAIN_SRC_PATH)/*.erl \
+        $(LOCAL_STDLIB_SRC_PATH)/*.erl \
         $(INTERFACE_SRC_PATH)/*.erl \
         $(WORK_TYPE1_SRC_PATH)/*.erl \
+        $(WORK_TYPE2_SRC_PATH)/*.erl \
         lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
+        lib/cloud_data_mysql/src/cloud_data_mysql.erl \
+        lib/cloud_data_memcached/src/cloud_data_memcached.erl \
+        lib/cloud_data_tokyotyrant/src/cloud_data_tokyotyrant.erl \
+        lib/epgsql/src/*.erl \
+        lib/emysql/src/*.erl \
+        lib/ememcached/src/*.erl \
+        lib/etokyotyrant/src/*.erl \
         lib/rb/src/rbdict.erl \
         lib/rb/src/rbsets.erl
 doc: _build.cfg

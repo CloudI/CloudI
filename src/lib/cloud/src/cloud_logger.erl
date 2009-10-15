@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_logger).
@@ -587,7 +587,7 @@ create_interface_module(Node, Level) when is_integer(Level) ->
         true ->
             ok
     end,
-    Process = string_extensions:format("{~p,'~p'}", [?MODULE, Node]),
+    Process = string_extensions:format("{~p,~p}", [?MODULE, Node]),
     {Module, Binary} = dynamic_compile:from_string(
         get_interface_module_code(Level, Process)),
     case code:load_binary(Module, "cloud_logger_interface.erl", Binary) of

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_data_mysql).
@@ -67,15 +67,15 @@
          terminate/2, code_change/3]).
 
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 -include("mysql.hrl").
-
--define(MYSQL_TIMEOUT, 20000). % 20 seconds
 
 -define(DEFAULT_HOST_NAME, "127.0.0.1").
 -define(DEFAULT_USER_NAME, "cloudi").
 -define(DEFAULT_PASSWORD,  "").
 -define(DEFAULT_PORT,      3306).
 -define(DEFAULT_ENCODING,  utf8).
+-define(DEFAULT_TIMEOUT,   20000). % 20 seconds
 
 -record(state,
     {
@@ -95,14 +95,14 @@
 %%-------------------------------------------------------------------------
 
 -spec equery(DataTitle :: atom(),
-             String :: string(),
+             String :: cstring(),
              Parameters :: list()) ->
     {'ok', #mysql_result{}} |
     {'error', any()}.
 
 equery(DataTitle, String, Parameters)
     when is_atom(DataTitle), is_list(String), is_list(Parameters) ->
-    % depend on MYSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {equery, String, Parameters}, infinity).
 
 %%-------------------------------------------------------------------------
@@ -114,13 +114,13 @@ equery(DataTitle, String, Parameters)
 
 -spec prepare_query(DataTitle :: atom(),
                     Identifier :: atom(),
-                    String :: string()) ->
+                    String :: cstring()) ->
     {'ok', #mysql_result{}} |
     {'error', any()}.
 
 prepare_query(DataTitle, Identifier, String)
     when is_atom(DataTitle), is_atom(Identifier), is_list(String) ->
-    % depend on MYSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {prepare, Identifier, String}, infinity).
 
 %%-------------------------------------------------------------------------
@@ -137,7 +137,7 @@ prepare_query(DataTitle, Identifier, String)
 
 execute_query(DataTitle, Identifier, Arguments)
     when is_atom(DataTitle), is_atom(Identifier), is_list(Arguments) ->
-    % depend on MYSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {execute, Identifier, Arguments}, infinity).
 
 %%-------------------------------------------------------------------------
@@ -147,13 +147,13 @@ execute_query(DataTitle, Identifier, Arguments)
 %%-------------------------------------------------------------------------
 
 -spec squery(DataTitle :: atom(),
-             String :: string()) ->
+             String :: cstring()) ->
     {'ok', #mysql_result{}} |
     {'error', any()}.
 
 squery(DataTitle, String)
     when is_atom(DataTitle), is_list(String) ->
-    % depend on MYSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {squery, String}, infinity).
 
 %%%------------------------------------------------------------------------
@@ -175,13 +175,13 @@ handle_stop(DataTitle) when is_atom(DataTitle) ->
     gen_server:call(DataTitle, stop).
 
 -spec handle_do_queries(DataTitle :: atom(),
-                        QueryList :: list({atom(), string()})) ->
-    {'ok', list({atom(), string()})} |
-    {'error', list({atom(), string()})}.
+                        QueryList :: data_list()) ->
+    {'ok', data_list()} |
+    {'error', data_list()}.
 
 handle_do_queries(DataTitle, QueryList)
     when is_atom(DataTitle), is_list(QueryList) ->
-    % depend on MYSQL_TIMEOUT for a database communication timeout
+    % depend on DEFAULT_TIMEOUT for a database communication timeout
     gen_server:call(DataTitle, {do_queries, QueryList}, infinity).
 
 %%%------------------------------------------------------------------------
@@ -280,7 +280,7 @@ init_state(DataTitle, Args) when is_atom(DataTitle), is_list(Args) ->
         {port,     ?DEFAULT_PORT},
         {database, "will_not_be_used"},
         {encoding, ?DEFAULT_ENCODING},
-        {timeout,  ?MYSQL_TIMEOUT}],
+        {timeout,  ?DEFAULT_TIMEOUT}],
     [HostName, UserName, Password, Port, Database, Encoding, Timeout, []] =
         proplists_extensions:take_values(Defaults, Args),
     try mysql_conn:start(HostName, Port, UserName, Password,

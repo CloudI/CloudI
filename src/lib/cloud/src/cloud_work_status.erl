@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_status).
@@ -57,12 +57,14 @@
          get_sequence_number/4,
          has_cached_task/3,
          get_cached_task/3, set_cached_task/4, 
-         output_length/1, store_output/5, drain_output/2]).
+         output_length/1, store_output/5,
+         drain_output/2, drain_binary_output/2]).
 
 -include("cloud_work_status.hrl").
 -include("cloud_run_queue.hrl").
 -include("cloud_logger.hrl").
 -include("rbdict.hrl").
+-include("cloud_types.hrl").
 
 % wraps the sequence number used externally while
 % internal sequence numbers do not wrap
@@ -145,7 +147,7 @@ update([FirstProcess | _] = Processes, WorkStatus)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec has_work(WorkTitle :: string(),
+-spec has_work(WorkTitle :: cstring(),
                WorkStatus :: rbdict()) -> bool().
 
 has_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
@@ -160,7 +162,7 @@ has_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec has_active_work(WorkTitle :: string(),
+-spec has_active_work(WorkTitle :: cstring(),
                       WorkStatus :: rbdict()) -> bool().
 
 has_active_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
@@ -184,7 +186,7 @@ has_active_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec is_inactive_work(WorkTitle :: string(),
+-spec is_inactive_work(WorkTitle :: cstring(),
                        WorkStatus :: rbdict()) ->
     {'ok', rbdict()} |
     'error'.
@@ -205,7 +207,7 @@ is_inactive_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
                     % do not set active to false here, since
                     % active must be true for another evaluation of this
                     % function to confirm the work is inactive
-                    {ok, rbdict:store(WorkTitle, Status, WorkStatus)}
+                    {ok, WorkStatus}
             end;
         error ->
             ?LOG_CRITICAL("unable to find work title ~p", [WorkTitle]),
@@ -220,7 +222,7 @@ is_inactive_work(WorkTitle, WorkStatus) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_sequence_number(WorkTitle :: string(),
+-spec get_sequence_number(WorkTitle :: cstring(),
                           Id :: non_neg_integer(),
                           Node :: atom(),
                           WorkStatus :: rbdict()) ->
@@ -266,7 +268,7 @@ get_sequence_number(WorkTitle, Id, Node, WorkStatus)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec has_cached_task(WorkTitle :: string(),
+-spec has_cached_task(WorkTitle :: cstring(),
                       Id :: non_neg_integer(),
                       WorkStatus :: rbdict()) ->
     bool().
@@ -286,7 +288,7 @@ has_cached_task(WorkTitle, Id, WorkStatus)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_cached_task(WorkTitle :: string(),
+-spec get_cached_task(WorkTitle :: cstring(),
                       Id :: non_neg_integer(),
                       WorkStatus :: rbdict()) ->
     #work_status_working_task{} |
@@ -317,7 +319,7 @@ get_cached_task(WorkTitle, Id, WorkStatus)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec set_cached_task(WorkTitle :: string(),
+-spec set_cached_task(WorkTitle :: cstring(),
                       Id :: non_neg_integer(),
                       Task :: #work_status_working_task{},
                       WorkStatus :: rbdict()) ->
@@ -371,10 +373,10 @@ output_length(WorkStatus) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec store_output(WorkTitle :: string(),
+-spec store_output(WorkTitle :: cstring(),
                    Id :: non_neg_integer(),
                    SequenceNumber :: non_neg_integer(),
-                   Output :: list({atom(), string()}),
+                   Output :: data_list(),
                    WorkStatus :: rbdict()) ->
     {'ok', rbdict()} |
     'duplicate' |
@@ -474,6 +476,17 @@ drain_output(WorkStatus, DataTypeLookup) ->
             drain_output_entries(Sequence, [], OutputQueue),
         if
             Sequence /= NewSequence ->
+                {BinaryDrained, DatabaseWorkResults} =
+                    cloud_data_interface:do_queries_group(WorkResults,
+                        cloud_work_status, drain_binary_output,
+                        WorkTitle, 'binary'),
+                if
+                    BinaryDrained /= ok ->
+                        ?LOG_ERROR("unable to drain binary data for"
+                            "work title ~p", [WorkTitle]);
+                    true ->
+                        ok
+                end,
                 Remaining = rbsets:fold(fun(DataTitle, Results) ->
                     {S, R} = cloud_data_interface:do_queries(
                         DataTitle, Results),
@@ -485,7 +498,7 @@ drain_output(WorkStatus, DataTypeLookup) ->
                             ok
                     end,
                     R
-                end, WorkResults, DataTypeLookup),
+                end, DatabaseWorkResults, DataTypeLookup),
                 if
                     Remaining == [] ->
                         Status#work_status{
@@ -528,6 +541,22 @@ drain_output(WorkStatus, DataTypeLookup) ->
         true ->
             {error, NewWorkStatus}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Pass the list of data that was received from the work library with the binary data title to the work module.===
+%% The list of data is handled in the same way as the list of data
+%% going to the do_queries function in a data module.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec drain_binary_output(DataList :: list(cstring()),
+                          WorkTitle :: cstring()) ->
+    list(cstring()).
+
+drain_binary_output(DataList, WorkTitle)
+    when is_list(DataList), is_list(WorkTitle) ->
+    cloud_work_interface:drain_binary_output(WorkTitle, DataList).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -572,6 +601,11 @@ increment_sequence_number(Id, #work_status{working_sequence_number = NewNumber,
 drain_output_entries(Sequence, DataQueue, [])
     when is_integer(Sequence), is_list(DataQueue) ->
     {Sequence, DataQueue, []};
+
+drain_output_entries(Sequence, DataQueue,
+                     [{Sequence, []} | OutputQueue])
+    when is_integer(Sequence), is_list(DataQueue) ->
+    drain_output_entries(Sequence + 1, DataQueue, OutputQueue);
 
 drain_output_entries(Sequence, DataQueue,
                      [{Sequence, OutputData} | OutputQueue])

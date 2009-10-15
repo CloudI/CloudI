@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.5 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(time_extensions).
@@ -65,7 +65,7 @@
 
 -spec elapsed({integer(), integer(), integer()},
               {integer(), integer(), integer()}) ->
-    integer().
+    float().
 
 elapsed({MegaSeconds2, Seconds2, MicroSeconds2},
         {MegaSeconds1, Seconds1, MicroSeconds1})
@@ -73,8 +73,12 @@ elapsed({MegaSeconds2, Seconds2, MicroSeconds2},
          is_integer(MicroSeconds2),
          is_integer(MegaSeconds1), is_integer(Seconds1),
          is_integer(MicroSeconds1) ->
-    erlang:round(
-        (MegaSeconds2 - MegaSeconds1) * 1000000000 +
-        (Seconds2 - Seconds1) * 1000 +
-        (MicroSeconds2 - MicroSeconds1) * 0.001).
+    Seconds = (MegaSeconds2 - MegaSeconds1) * 1000000000 +
+              (Seconds2 - Seconds1) * 1000,
+    if
+        Seconds == 0, MicroSeconds2 < MicroSeconds1 ->
+            (MicroSeconds2 + 1000000 - MicroSeconds1) * 0.001;
+        true ->
+            Seconds + (MicroSeconds2 - MicroSeconds1) * 0.001
+    end.
 

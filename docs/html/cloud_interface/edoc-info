@@ -1,0 +1,3 @@
+{application,cloud_interface}.
+{packages,[]}.
+{modules,[cloud_data_interface,cloud_work_interface]}.

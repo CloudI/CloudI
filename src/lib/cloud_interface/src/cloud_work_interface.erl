@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.4 {@date} {@time}
+%%% @version 0.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_work_interface).
@@ -54,9 +54,12 @@
 -export([behaviour_info/1]).
 
 %% behavior external interface
--export([stop/1, get_initial_task_size/1, get_task_time_target/1, get_task/3]).
+-export([stop/1,
+         get_initial_task_size/1, get_task_time_target/1, get_task/3,
+         drain_binary_output/2]).
 
 -include("cloud_logger.hrl").
+-include("cloud_types.hrl").
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
@@ -70,7 +73,8 @@ behaviour_info(callbacks) ->
         {handle_stop, 1},
         {handle_get_initial_task_size, 0},
         {handle_get_task_time_target, 0},
-        {handle_get_task, 3}
+        {handle_get_task, 3},
+        {handle_drain_binary_output, 2}
     ];
 behaviour_info(_) ->
     undefined.
@@ -85,7 +89,7 @@ behaviour_info(_) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec stop(WorkTitle :: string()) -> 'ok' | 'error'.
+-spec stop(WorkTitle :: cstring()) -> 'ok' | 'error'.
 
 stop(WorkTitle) when is_list(WorkTitle) ->
     call_work(WorkTitle, 'handle_stop', [], true,
@@ -98,7 +102,7 @@ stop(WorkTitle) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_initial_task_size(WorkTitle :: string()) -> float().
+-spec get_initial_task_size(WorkTitle :: cstring()) -> float().
 
 get_initial_task_size(WorkTitle) when is_list(WorkTitle) ->
     call_work(WorkTitle, 'handle_get_initial_task_size', [], false,
@@ -112,7 +116,7 @@ get_initial_task_size(WorkTitle) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_task_time_target(WorkTitle :: string()) -> float().
+-spec get_task_time_target(WorkTitle :: cstring()) -> float().
     
 get_task_time_target(WorkTitle) when is_list(WorkTitle) ->
     call_work(WorkTitle, 'handle_get_task_time_target', [], false,
@@ -124,16 +128,32 @@ get_task_time_target(WorkTitle) when is_list(WorkTitle) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_task(WorkTitle :: string(),
+-spec get_task(WorkTitle :: cstring(),
                Sequence :: non_neg_integer(),
                TaskSize :: float()) ->
-    {binary(), list({string(), string()})}.
+    {binary(), list({cstring(), cstring()})}.
 
 get_task(WorkTitle, Sequence, TaskSize)
-    when is_list(WorkTitle), is_integer(Sequence),
-         is_float(TaskSize), TaskSize < 1.0 ->
+    when is_list(WorkTitle), is_integer(Sequence), is_float(TaskSize) ->
     call_work(WorkTitle, 'handle_get_task', [Sequence, TaskSize], true,
               {<<>>, []}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the work module with any data output that uses the special 'binary' data title===
+%% All data that can not be handled by the work module (for any reason) should
+%% be returned by the function and it will be retained in the work status.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec drain_binary_output(WorkTitle :: cstring(),
+                          DataList :: list(cstring())) ->
+    list(cstring()).
+
+drain_binary_output(WorkTitle, DataList)
+    when is_list(WorkTitle), is_list(DataList) ->
+    call_work(WorkTitle, 'handle_drain_binary_output', [DataList], true,
+              DataList).
     
 %%%------------------------------------------------------------------------
 %%% Private functions
