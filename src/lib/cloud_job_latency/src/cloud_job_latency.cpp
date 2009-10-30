@@ -71,6 +71,7 @@ void deinitialize()
 bool do_work(bool const & abortTask,
              uint32_t const,
              std::string const & machineName,
+             std::string const &,
              uint32_t const,
              uint32_t const, 
              boost::scoped_array<uint8_t> const & taskData,

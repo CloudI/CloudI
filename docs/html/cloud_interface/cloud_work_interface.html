@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Module cloud_work_interface</title>
-<meta http-equiv="Content-Type" content="text/html; charset=ascii" />
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
 <body bgcolor="white">
@@ -14,7 +14,7 @@
    <h3><a name="Cloudi_Work_Interface_Behavior">Cloudi Work Interface Behavior</a></h3>.
 <p>Copyright © 2009 Michael Truog</p>
 
-<p><b>Version:</b> 0.0.7 Oct 14 2009 23:28:40
+<p><b>Version:</b> 0.0.7 Oct 29 2009 20:47:21
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -22,7 +22,10 @@
    <h3><a name="Cloudi_Work_Interface_Behavior">Cloudi Work Interface Behavior</a></h3>
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#behaviour_info-1">behaviour_info/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#behaviour_info-1">behaviour_info/1</a></td><td>
+  <h4><a name="cloud_work_interface_callbacks.">cloud_work_interface callbacks.</a></h4>
+  <h5><a name="start_link/2">start_link/2</a></h5><p>
+    <code>start_link(WorkTitle :: atom(), Arguments :: list(any())) -&gt; ok | {error, any()}.</code></p>.</td></tr>
 <tr><td valign="top"><a href="#drain_binary_output-2">drain_binary_output/2</a></td><td>
   <h4><a name="Provide_the_work_module_with_any_data_output_that_uses_the_special_'binary'_data_title">Provide the work module with any data output that uses the special 'binary' data title</a></h4>
   All data that can not be handled by the work module (for any reason) should
@@ -45,7 +48,79 @@
 <h3 class="function"><a name="behaviour_info-1">behaviour_info/1</a></h3>
 <div class="spec">
 <p><tt>behaviour_info(X1) -&gt; any()</tt></p>
-</div>
+</div><p>
+  <h4><a name="cloud_work_interface_callbacks.">cloud_work_interface callbacks.</a></h4>
+  <h5><a name="start_link/2">start_link/2</a></h5><p>
+    <code>start_link(WorkTitle :: atom(), Arguments :: list(any())) -&gt; ok | {error, any()}.</code></p>
+ 
+    <p>The start_link/2 function will perform any initialization necessary    
+before the instance (represented by the work title) is accessed    
+for creating work tasks.  The Arguments to the work module were    
+provided by the work configuration and should be paired with the    
+unique suffix on the work module to create the work title    
+(i.e., "work title" == "work_module.unique_suffix").</p>
+ 
+  <h5><a name="handle_stop/2">handle_stop/2</a></h5><p>
+    <code>handle_stop(WorkTitle :: atom()) -&gt; any().</code></p>
+ 
+    <p>The handle_stop/2 function will be called when it is no longer necessary    
+to create work tasks because the work title has either finished    
+processing, has failed, or is being interrupted.</p>
+ 
+  <h5><a name="handle_get_initial_task_size/0">handle_get_initial_task_size/0</a></h5><p>
+    <code>handle_get_initial_task_size() -&gt; float().</code></p>
+ 
+    <p>The handle_get_initial_task_size/0 function is called when determining    
+the initial task size to use when allocating a task for a worker    
+thread on a particular node.  After receiving results and the time    
+they took, the scheduler adjusts the task size so that the node    
+meets the task time target.  The initial task size is always a floating    
+point value in the range (0..1).</p>
+ 
+  <h5><a name="handle_get_task_time_target/0">handle_get_task_time_target/0</a></h5><p>
+    <code>handle_get_task_time_target() -&gt; float().</code></p>
+ 
+    <p>The handle_get_task_time_target/0 function provides the task time target.    
+The task time target is the amount of time a task should take to    
+execute.  Since the task size to achieve the task time target is    
+unknown and node specific, the scheduler changes the task size so    
+that the task execution time gets closer to the task time target.    
+The task execution time is assumed to be somewhat unstable and    
+can converge indefinitely if the work has irregular performance.    
+The initial task size gives a general hint to the scheduler so that    
+it might achieve the task time target sooner.  However, it is    
+easiest for most situations to use the smallest task size possible    
+and rely on the scheduler to determine the work task size.</p>
+ 
+  <h5><a name="handle_get_task/3">handle_get_task/3</a></h5><p>
+    <code>handle_get_task(WorkTitle :: atom(), SequenceNumber :: integer(), TaskSize :: float()) -&gt; {binary(), list(string())}.</code></p>
+ 
+    <p>The handle_get_task/3 function returns a new work task that is    
+sent to a worker thread by the work_manager process.  The TaskSize    
+determines how large of a task to allocate for the worker thread.    
+The SequenceNumber is used to identify the task (and is unique    
+for the life of the Cloudi instance, since this is the unwrapped    
+integer, i.e., an integer that could exceed 32bits) and could be    
+used as part of the task data.  The work task is defined by the    
+binary TaskData that is returned and if the TaskData is empty    
+all work is assumed to have been completed.  The work function    
+input queries are also returned in a list but are not required for a    
+work task.</p>
+ 
+  <h5><a name="handle_drain_binary_output/2">handle_drain_binary_output/2</a></h5><p>
+    <code>handle_drain_binary_output(WorkTitle :: atom(), DataList :: list(string())) -&gt; list(string()).</code></p>
+ 
+    The handle_drain_binary_output/2 function processes any output queries
+    that the C++ work function generates with the "binary" data title.
+    This function could be used as a type of feedback that alters the
+    tasks that are generated by the work module.  However, usage of this
+    function is atypical.  The handle_drain_binary_output/2 function
+    operates in the same way as any other internal data module function
+    that is passed to cloud_data_interface:do_queries_group/5.
+    The handle_drain_binary_output/2 function must consume all valid
+    queries that match the "binary" data type and return the remaining
+    queries for further processing.
+ </p>
 
 <h3 class="function"><a name="drain_binary_output-2">drain_binary_output/2</a></h3>
 <div class="spec">
@@ -86,6 +161,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 14 2009, 23:28:40.</i></p>
+<p><i>Generated by EDoc, Oct 29 2009, 20:47:21.</i></p>
 </body>
 </html>

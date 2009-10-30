@@ -142,17 +142,21 @@ round(X, N) when is_integer(N) ->
 immediate_stddev(L)
     when is_list(L) ->
     Count = erlang:length(L),
-    Mean = lists:sum(L) / Count,
-    {S1, S2} = lists_extensions:itera2(fun(V, Acc0, Acc1, Iter) ->
-        Difference = V - Mean,
-        Iter(Difference + Acc0, Difference * Difference + Acc1)
-    end, 0.0, 0.0, L),
-    math:sqrt((S2 - (S1 * S1) / Count) / Count).
+    immediate_stddev(L, 0.0, 0.0, lists:sum(L) / Count, Count).
+immediate_stddev([], SumDiff, SumSqDiff, _, Count) ->
+    math:sqrt((SumSqDiff - (SumDiff * SumDiff) / Count) / Count);
+immediate_stddev([V | L], SumDiff, SumSqDiff, Mean, Count)
+    when is_list(L) ->
+    Difference = V - Mean,
+    immediate_stddev(L,
+                     Difference + SumDiff,
+                     Difference * Difference + SumSqDiff,
+                     Mean, Count).
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Calculate the standard deviation using the On-line algorithm.===
-%% B. P. Welford (1962)."Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419–420.
+%% B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420
 %% @end
 %%-------------------------------------------------------------------------
 

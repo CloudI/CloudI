@@ -109,7 +109,8 @@ void deinitialize()
 bool do_work(bool const & abortTask,
              uint32_t const,
              std::string const &,
-             uint32_t const,
+             std::string const & workInstance,
+             uint32_t const id,
              uint32_t const, 
              boost::scoped_array<uint8_t> const & taskData,
              size_t const taskDataSize,
@@ -158,9 +159,11 @@ bool do_work(bool const & abortTask,
         "VALUES "
         "(" << digitIndex << ", '" << piResult << "');";
     queriesOut.push_back(
-        DatabaseQuery("cloud_data_pgsql.cloudi_tests", resultQuery.str()));
+        DatabaseQuery("cloud_data_pgsql.cloudi_tests",
+                      resultQuery.str()));
     queriesOut.push_back(
-        DatabaseQuery("cloud_data_mysql.cloudi_tests", resultQuery.str()));
+        DatabaseQuery("cloud_data_mysql.cloudi_tests",
+                      resultQuery.str()));
     resultQuery.str("");
     resultQuery << 
         "{set, \"" << digitIndex << "\", <<\"" << piResult << "\">>}";
@@ -173,7 +176,14 @@ bool do_work(bool const & abortTask,
     queriesOut.push_back(
         DatabaseQuery("cloud_data_tokyotyrant.cloudi_tests",
                       resultQuery.str()));
-
+    resultQuery.str("");
+    resultQuery << 
+        "{update_document, \"pi_state\","
+        " [{<<\"" << workInstance << "_" << id << "\">>, "
+           "<<\"" << digitIndex << "\">>}]}";
+    queriesOut.push_back(
+        DatabaseQuery("cloud_data_couchdb.cloudi_tests",
+                      resultQuery.str()));
     return true;
 }
 

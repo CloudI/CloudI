@@ -66,6 +66,31 @@
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===cloud_data_interface callbacks===
+%% ====start_link/2====
+%%   `start_link(DataTitle :: atom(), Arguments :: list()) -> {ok, pid()} | {error, any()}.'
+%%
+%%   The start_link/2 function starts the data module with the arguments
+%%   supplied to the data configuration.
+%%
+%% ====handle_stop/1====
+%%   `handle_stop(DataTitle :: atom()) -> any().'
+%%
+%%   The handle_stop/1 function stops the data module and causes it to exit.
+%%
+%% ====handle_do_queries/2====
+%%   `handle_do_queries(DataTitle :: atom(), QueryList :: list(string())) -> {ok, list(string())} | {error, list(string())}.'
+%%
+%%   The handle_do_queries/2 function processes all the queries that
+%%   match the data title for the data module (the data title is the
+%%   identifier for the data module instance and generally is
+%%   in the format of "data_module.database_suffix").
+%%
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
 
 behaviour_info(callbacks) ->

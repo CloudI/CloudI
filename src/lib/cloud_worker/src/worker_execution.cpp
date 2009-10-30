@@ -76,9 +76,11 @@ class WorkerController::WorkerExecution::ThreadPool
                 ThreadFunctionObject(
                     PullJobTaskResponseType & pTask,
                     safe_shared_ptr<library> const & workLibrary,
+                    std::string const & workInstance,
                     WorkerExecution::ThreadPool & threadPool) :
                         m_pTask(pTask),
                         m_workLibrary(workLibrary),
+                        m_workInstance(workInstance, 1),
                         m_threadPool(threadPool),
                         m_id(m_pTask->workTitle(), m_pTask->id())
                 {
@@ -91,6 +93,7 @@ class WorkerController::WorkerExecution::ThreadPool
             private:
                 PullJobTaskResponseType m_pTask;
                 safe_shared_ptr<library> m_workLibrary;
+                std::string m_workInstance;
                 ThreadPool & m_threadPool;
                 WorkId m_id;
         };
@@ -313,13 +316,15 @@ class WorkerController::WorkerExecution::ThreadPool
 
         /// put a function into the thread pool for execution
         bool input(WorkerController::PullJobTaskResponseType & pTask,
-                   safe_shared_ptr<library> const & workLibrary)
+                   safe_shared_ptr<library> const & workLibrary,
+                   std::string const & workInstance)
         {
             {
                 boost::lock_guard<boost::mutex> lock(m_taskInputMutex);
                 WorkId const id(pTask->workTitle(), pTask->id());
                 if (! m_objects[m_currentThread].push_back(
-                          ThreadFunctionObject(pTask, workLibrary, *this)))
+                          ThreadFunctionObject(pTask, workLibrary,
+                                               workInstance, *this)))
                     return false;
                 m_workerLookup[id] = m_currentThread;
             }
@@ -473,6 +478,7 @@ void WorkerController::WorkerExecution::ThreadPool::ThreadFunctionObject::
             bool const &,
             uint32_t const,
             std::string const &,
+            std::string const &,
             uint32_t const,
             uint32_t const,
             boost::scoped_array<uint8_t> const &,
@@ -485,6 +491,7 @@ void WorkerController::WorkerExecution::ThreadPool::ThreadFunctionObject::
                 stopped,
                 m_pTask->failureCount(),
                 NodeConnections::machineName(),
+                m_workInstance,
                 m_pTask->id(),
                 m_pTask->totalIds(),
                 m_pTask->taskData(),
@@ -582,7 +589,8 @@ void WorkerController::WorkerExecution::input(
         }
     }
 
-    if (! m_pThreadPool->input(pTask, libraryItr->second))
+    if (! m_pThreadPool->input(pTask, libraryItr->second,
+                               libraryId.workInstance()))
     {
         std::cerr << "unable to execute task for \"" <<
             libraryId.workLibrary() << "\" work library" << std::endl;

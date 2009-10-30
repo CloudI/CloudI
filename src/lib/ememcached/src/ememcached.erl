@@ -1,7 +1,9 @@
 %% Copyright (c) 2009 
+%% Michael Truog <mjtruog [at] gmail (dot) com>
+%%
+%% Derived from code by:
 %% Nick Gerakines <nick@gerakines.net>
 %% Jacob Vorreuter <jacob.vorreuter@gmail.com>
-%% Michael Truog <mjtruog [at] gmail (dot) com>
 %%
 %% Permission is hereby granted, free of charge, to any person
 %% obtaining a copy of this software and associated documentation
@@ -31,9 +33,11 @@
 
 %% external interface
 -export([start_link/1, start_link/2]).
--export([find_next_largest/2]).
+-export([add_server/4, remove_server/3,
+         print_hosts_continuum/1, find_port_in_continuum/4,
+         find_next_largest/2]).
 
-%% api interface
+%% memcached api
 -export([get/2, get/3,
          get_many/2, get_many/3,
          add/3, add/4,
@@ -59,9 +63,25 @@
 
 -include("ememcached.hrl").
 
--record(state, {continuum}).
+-record(state, {continuum,
+                socket_options,
+                timeout}).
 
+%% default timeout
 -define(TIMEOUT, 5000).
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+%% @spec start_link(CacheServers) -> {ok, pid()}
+%%       CacheServers = [{Host, Port, ConnectionPoolSize}]
+%%       Timeout = integer() | infinity
+%%       Host = string()
+%%       Port = integer()
+%%       ConnectionPoolSize = integer()
+start_link(CacheServers) ->
+    start_link(CacheServers, infinity).
 
 %% @spec start_link(CacheServers, Timeout) -> {ok, pid()}
 %%       CacheServers = [{Host, Port, ConnectionPoolSize}]
@@ -69,16 +89,83 @@
 %%       Host = string()
 %%       Port = integer()
 %%       ConnectionPoolSize = integer()
-%%
-%% Timeout is used for the tcp connect
+%% @doc Timeout is used for the tcp connect
 %%     (and all tcp sends if it is not infinity)
-start_link(CacheServers) ->
-    start_link(CacheServers, infinity).
-
 start_link(CacheServers, Timeout)
     when is_list(CacheServers) ->
     gen_server:start_link(?MODULE, [CacheServers, Timeout], []).
     
+%% @doc
+%% Add a memcached server to the continuum.
+%% @end
+add_server(Process, Host, Port, ConnectionPoolSize)
+    when is_list(Host), is_integer(Port), is_integer(ConnectionPoolSize) ->
+    gen_server:call(Process, {add_server, Host, Port, ConnectionPoolSize}).
+
+%% @doc
+%% Remove a memcached server from the continuum.
+%% @end
+remove_server(Process, Host, Port)
+    when is_list(Host), is_integer(Port) ->
+    gen_server:call(Process, {remove_server, Host, Port}).
+
+%% @doc
+%% Display the key space supported with the internal hashing
+%% and how much of the key space is allocated to each server.
+%% @end
+print_hosts_continuum(CacheServers)
+    when is_list(CacheServers) ->
+    lists:foldl(fun({Size, Host, Port, _, _}, Index) ->
+        io:format("~4.w) ~s:~w contains ~7.2f %~n",
+            [Index, Host, Port, Size * 100.0]),
+        Index + 1
+    end, 0, get_server_partitions(CacheServers)),
+    ok.
+
+%% @doc
+%% Determine a new port number when adding a server so that the
+%% key space is distributed equally in the continuum.
+%% @end
+find_port_in_continuum(CacheServers, NewHost, LowPort, HighPort)
+    when is_list(CacheServers), is_list(NewHost),
+         is_integer(LowPort), is_integer(HighPort) ->
+    {Size, _, _, Hash0, Hash1} =
+        lists:last(lists:keysort(1, get_server_partitions(CacheServers))),
+    MaxHash = max_hash_value(),
+    {Offset, HashSegment0, HashSegment1} = if
+        Hash0 < Hash1 ->
+            {0, Hash0, Hash1};
+        Hash0 > Hash1 ->
+            {MaxHash - Hash0, 0, Hash1 + (MaxHash - Hash0)}
+    end,
+    NewPartition = middle(lists:keysort(1,
+        lists:foldl(fun(Port, HashList) ->
+            case (hash_to_uint(NewHost, Port) + Offset) band MaxHash of
+                H when H > HashSegment0, H < HashSegment1 ->
+                    [{H, Port} | HashList];
+                _ ->
+                    HashList
+            end
+        end, [], lists:seq(LowPort, HighPort))), 10),
+    io:format("~7.2f % of key space can be broken into:~n", [Size * 100.0]),
+    TotalChoices = erlang:length(NewPartition),
+    lists:foldl(fun({_, Port}, Index) ->
+        if
+            Index == 0 ->
+                io:format("~3w) ~s:~9.w <---~n", [Index, NewHost, Port]);
+            true ->
+                io:format("~3w) ~s:~9.w~n", [Index, NewHost, Port])
+        end,
+        Index - 1
+    end, erlang:round(TotalChoices / 2), NewPartition),
+    ok.
+    
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the binary value stored for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get(Process, Key) ->
     get(Process, Key, ?TIMEOUT).
 
@@ -86,6 +173,12 @@ get(Process, Key, Timeout)
     when is_integer(Timeout) ->
     gen_server:call(Process,
         {get, Key, Timeout}, Timeout + 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a list of binary values for a list of keys.===
+%% @end
+%%-------------------------------------------------------------------------
 
 get_many(Process, Keys) ->
     get_many(Process, Keys, ?TIMEOUT).
@@ -95,12 +188,24 @@ get_many(Process, Keys, Timeout)
     gen_server:call(Process,
         {get_many, Keys, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value for a key if the server doesn't hold data for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 add(Process, Key, Value) ->
 	add_exp(Process, Key, Value, 0, ?TIMEOUT).
 	
 add(Process, Key, Value, Timeout) ->
 	add_exp(Process, Key, Value, 0, Timeout).
 	
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value with an expiration for a key if the server doesn't hold data for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 add_exp(Process, Key, Value, Expiration) ->
 	add_exp(Process, Key, Value, Expiration, ?TIMEOUT).
 
@@ -109,12 +214,24 @@ add_exp(Process, Key, Value, Expiration, Timeout)
     gen_server:call(Process,
         {add, Key, Value, Expiration, Timeout}, Timeout + 5000).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value for a key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 set(Process, Key, Value) ->
 	set_exp(Process, Key, Value, 0, ?TIMEOUT).
 	
 set(Process, Key, Value, Timeout) ->
 	set_exp(Process, Key, Value, 0, Timeout).
 	
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value with an expiration for a key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 set_exp(Process, Key, Value, Expiration) ->
     set_exp(Process, Key, Value, Expiration, ?TIMEOUT).
     
@@ -123,12 +240,24 @@ set_exp(Process, Key, Value, Expiration, Timeout)
     gen_server:call(Process,
         {set, Key, Value, Expiration, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value for a key if the server already holds data for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 replace(Process, Key, Value) ->
 	replace_exp(Process, Key, Value, 0, ?TIMEOUT).
 	
 replace(Process, Key, Value, Timeout) ->
 	replace_exp(Process, Key, Value, 0, Timeout).
 	
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a binary value with an expiration for a key if the server already holds data for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 replace_exp(Process, Key, Value, Expiration) ->
     replace_exp(Process, Key, Value, Expiration, ?TIMEOUT).
     
@@ -137,6 +266,12 @@ replace_exp(Process, Key, Value, Expiration, Timeout)
     gen_server:call(Process,
         {replace, Key, Value, Expiration, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove the binary value stored for a key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 delete(Process, Key) ->
     delete(Process, Key, ?TIMEOUT).
 
@@ -144,6 +279,12 @@ delete(Process, Key, Timeout)
     when is_integer(Timeout) ->
     gen_server:call(Process,
         {delete, Key, Timeout}, Timeout + 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Increment an integer value stored for a key with the provided initial value and expiration.===
+%% @end
+%%-------------------------------------------------------------------------
 
 increment_exp(Process, Key, Value, Initial, Expiration) ->
     increment_exp(Process, Key, Value, Initial, Expiration, ?TIMEOUT).
@@ -154,6 +295,12 @@ increment_exp(Process, Key, Value, Initial, Expiration, Timeout)
     gen_server:call(Process,
         {increment, Key, Value, Initial, Expiration, Timeout}, Timeout + 5000).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Decrement an integer value stored for a key with the provided initial value and expiration.===
+%% @end
+%%-------------------------------------------------------------------------
+
 decrement_exp(Process, Key, Value, Initial, Expiration) ->
     decrement_exp(Process, Key, Value, Initial, Expiration, ?TIMEOUT).
 
@@ -163,6 +310,12 @@ decrement_exp(Process, Key, Value, Initial, Expiration, Timeout)
     gen_server:call(Process,
         {decrement, Key, Value, Initial, Expiration, Timeout}, Timeout + 5000).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add the binary value after the existing value for the key.===
+%% @end
+%%-------------------------------------------------------------------------
+
 append(Process, Key, Value) ->
     append(Process, Key, Value, ?TIMEOUT).
 
@@ -170,6 +323,12 @@ append(Process, Key, Value, Timeout)
     when is_binary(Value), is_integer(Timeout) ->
     gen_server:call(Process,
         {append, Key, Value, Timeout}, Timeout + 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add the binary value before the existing value for the key.===
+%% @end
+%%-------------------------------------------------------------------------
 
 prepend(Process, Key, Value) ->
     prepend(Process, Key, Value, ?TIMEOUT).
@@ -179,6 +338,12 @@ prepend(Process, Key, Value, Timeout)
     gen_server:call(Process,
         {prepend, Key, Value, Timeout}, Timeout + 5000).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get internal server statistics===
+%% @end
+%%-------------------------------------------------------------------------
+
 stats(Process) ->
     stats(Process, ?TIMEOUT).
 
@@ -186,6 +351,12 @@ stats(Process, Timeout)
     when is_integer(Timeout) ->
     gen_server:call(Process,
         {stats, Timeout}, Timeout + 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Invalidate all data currently stored.===
+%% @end
+%%-------------------------------------------------------------------------
 
 flush(Process) ->
     flush(Process, ?TIMEOUT).
@@ -195,6 +366,12 @@ flush(Process, Timeout)
     gen_server:call(Process,
         {flush, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Invalidate all data currently stored after an expiration.===
+%% @end
+%%-------------------------------------------------------------------------
+
 flush_exp(Process, Expiration) ->
     flush_exp(Process, Expiration, ?TIMEOUT).
     
@@ -203,6 +380,12 @@ flush_exp(Process, Expiration, Timeout)
     gen_server:call(Process,
         {flush, Expiration, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make the server close the connection.===
+%% @end
+%%-------------------------------------------------------------------------
+
 quit(Process) ->
     quit(Process, ?TIMEOUT).
     
@@ -211,6 +394,12 @@ quit(Process, Timeout)
     gen_server:call(Process,
         {quit, Timeout}, Timeout + 5000).
     
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the server's version string.===
+%% @end
+%%-------------------------------------------------------------------------
+
 version(Process) ->
     version(Process, ?TIMEOUT).
 
@@ -219,33 +408,25 @@ version(Process, Timeout)
     gen_server:call(Process,
         {version, Timeout}, Timeout + 5000).
 
-%%====================================================================
-%% gen_server callbacks
-%%====================================================================
+%%%------------------------------------------------------------------------
+%%% Callback functions from gen_server
+%%%------------------------------------------------------------------------
 
-%%--------------------------------------------------------------------
-%% Function: init(Args) -> {ok, State} |
-%%                         ignore      |
-%%                         {stop, Reason}
-%% Description: Initiates the server
-%% @hidden
-%%--------------------------------------------------------------------
 init([CacheServers, Timeout]) ->
     random:seed(erlang:now()),
 
-    ConnectionOptions = [binary, {packet, 0}, {active, false}],
-    ExtraConnectionOptions = if
+    BaseOptions = [binary, {packet, 0}, {active, false}],
+    AllSocketOptions = if
         Timeout /= infinity ->
-            [{send_timeout, Timeout}];
+            [{send_timeout, Timeout} | BaseOptions];
         true ->
-            []
+            BaseOptions
     end,
 
     % Continuum = [{uint(), {Host, Port, [socket()]}}]
     Continuum = lists:foldl(fun({Host, Port, PoolSize}, Acc0) ->
         Sockets = lists:foldl(fun(_, Acc1) ->
-            case gen_tcp:connect(Host, Port, ConnectionOptions ++
-                                 ExtraConnectionOptions, Timeout) of
+            case gen_tcp:connect(Host, Port, AllSocketOptions, Timeout) of
                 {ok, S} ->
                     [S | Acc1];
                 _ ->
@@ -257,6 +438,7 @@ init([CacheServers, Timeout]) ->
                 [{hash_to_uint(Host, Port),
                   {Host, Port, PoolSize, Sockets}} | Acc0];
             true ->
+                lists:foreach(fun gen_tcp:close/1, Sockets),
                 Acc0
         end
     end, [], CacheServers),
@@ -264,19 +446,44 @@ init([CacheServers, Timeout]) ->
         erlang:length(Continuum) /= erlang:length(CacheServers) ->
             {stop, "error creating sockets"};
         true ->
-            {ok, #state{continuum = lists:keysort(1, Continuum)}}
+            {ok, #state{continuum = lists:keysort(1, Continuum),
+                        socket_options = AllSocketOptions,
+                        timeout = Timeout}}
     end.
 
-%%--------------------------------------------------------------------
-%% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
-%%                                      {reply, Reply, State, Timeout} |
-%%                                      {noreply, State} |
-%%                                      {noreply, State, Timeout} |
-%%                                      {stop, Reason, Reply, State} |
-%%                                      {stop, Reason, State}
-%% Description: Handling call messages
-%% @hidden
-%%--------------------------------------------------------------------    
+handle_call({add_server, Host, Port, PoolSize}, _,
+            #state{continuum = Continuum,
+                   socket_options = Options,
+                   timeout = Timeout} = State) ->
+    Sockets = lists:foldl(fun(_, Acc1) ->
+        case gen_tcp:connect(Host, Port, Options, Timeout) of
+            {ok, S} ->
+                [S | Acc1];
+            _ ->
+                Acc1
+        end
+    end, [], lists:seq(1, PoolSize)),
+    if
+        erlang:length(Sockets) == PoolSize ->
+            {reply, ok, State#state{
+                continuum = lists:keymerge(1,
+                    [{hash_to_uint(Host, Port),
+                      {Host, Port, PoolSize, Sockets}}], Continuum)}};
+        true ->
+            lists:foreach(fun gen_tcp:close/1, Sockets),
+            {reply, error, State}
+    end;
+
+handle_call({remove_server, Host, Port}, _,
+            #state{continuum = Continuum} = State) ->
+    case lists:keytake(hash_to_uint(Host, Port), 1, Continuum) of
+        false ->
+            {reply, error, State};
+        {value, {_, {Host, Port, _, Sockets}}, RemainingContinuum} ->
+            lists:foreach(fun gen_tcp:close/1, Sockets),
+            {reply, ok, State#state{continuum = RemainingContinuum}}
+    end;
+
 handle_call({get, Key0, Timeout}, _, State) ->
     Key = package_key(Key0),
     Socket = map_key(State, Key),
@@ -428,45 +635,21 @@ handle_call({version, Timeout}, _, State) ->
 handle_call(_, _, State) ->
     {reply, {error, invalid_call}, State}.
 
-%%--------------------------------------------------------------------
-%% Function: handle_cast(Msg, State) -> {noreply, State} |
-%%                                      {noreply, State, Timeout} |
-%%                                      {stop, Reason, State}
-%% Description: Handling cast messages
-%% @hidden
-%%--------------------------------------------------------------------
 handle_cast(_Message, State) -> {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% Function: handle_info(Info, State) -> {noreply, State} |
-%%                                       {noreply, State, Timeout} |
-%%                                       {stop, Reason, State}
-%% Description: Handling all non call/cast messages
-%% @hidden
-%%--------------------------------------------------------------------
 handle_info(_Info, State) -> {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% Function: terminate(Reason, State) -> void()
-%% Description: This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any necessary
-%% cleaning up. When it returns, the gen_server terminates with Reason.
-%% The return value is ignored.
-%% @hidden
-%%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{continuum = Continuum}) ->
+    lists:foreach(fun({_, {_, _, _, Sockets}}) ->
+        lists:foreach(fun gen_tcp:close/1, Sockets)
+    end, Continuum),
     ok.
 
-%%--------------------------------------------------------------------
-%% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% Description: Convert process state when code is changed
-%% @hidden
-%%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
-%%--------------------------------------------------------------------
-%%% Internal functions
-%%--------------------------------------------------------------------
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 send_all(#state{continuum = Continuum}, Request, Timeout) ->
     [begin
         {{Host, Port}, begin
@@ -590,6 +773,9 @@ package_key(Key) ->
 hash_to_uint(Host, Port) when is_list(Host), is_integer(Port) ->
     hash_to_uint(Host ++ integer_to_list(Port)).
 
+max_hash_value() ->
+    % assumed to always be equal to 2^N - 1 for some N
+    4294967295.
 hash_to_uint(Key) when is_list(Key) -> 
     <<Hash1:32/unsigned-integer,
       Hash2:32/unsigned-integer,
@@ -632,4 +818,53 @@ find_next_largest(Int, [{Hash, _} | Continuum], Value) when Hash =< Int ->
     find_next_largest(Int, Continuum, Value);
 find_next_largest(_, [{_, _} = Entry | _], _) ->
     Entry.
+
+%% take the server key hash to determine the partition size previous
+transform_server_continuum_to_server_partitions(HostsPartitions,
+    [], _, Size, Host0, Port0, HashStart, HashEnd) ->
+    HostsPartitions ++ [{Size, Host0, Port0, HashStart, HashEnd}];
+transform_server_continuum_to_server_partitions(HostsPartitions,
+    [{Hash, Host1, Port1, Slice1} | L],
+    Slice0, Size, Host0, Port0, HashStart, HashEnd) ->
+    transform_server_continuum_to_server_partitions(
+        HostsPartitions ++ [{Size, Host0, Port0, HashStart, HashEnd}], L,
+        Slice1, Slice1 - Slice0, Host1, Port1, HashEnd, Hash).
+
+%% determine the keyspace segments
+get_server_partitions([E | _] = CacheServers) when is_tuple(E) ->
+    HostsContinuum = lists:keysort(1, lists:map(fun(Server) ->
+        Host = erlang:element(1, Server),
+        Port = erlang:element(2, Server),
+        Hash = hash_to_uint(Host, Port),
+        {Hash, Host, Port, Hash / max_hash_value()}
+    end, CacheServers)),
+    [{Hash1, Host0, Port0, Slice1} | RemainingHostsContinuum] = HostsContinuum,
+    if
+        RemainingHostsContinuum == [] ->
+            transform_server_continuum_to_server_partitions([],
+                [], 0.0, 1.0, Host0, Port0, Hash1, Hash1 - 1);
+        true ->
+            {Hash0, _, _, Slice0} = lists:last(RemainingHostsContinuum),
+            transform_server_continuum_to_server_partitions([],
+                RemainingHostsContinuum,
+                Slice1, Slice1 + (1.0 - Slice0), Host0, Port0, Hash0, Hash1)
+    end.
+
+%% return the middle of a list
+middle(L, N) ->
+    Length = erlang:length(L),
+    if
+        Length =< N ->
+            L;
+        true ->
+            Middle = erlang:round(Length / 2 - N / 2),
+            middle_list([], L, 0, Middle, Middle + N)
+    end.    
+middle_list(M, _, Middle1, _, Middle1) ->
+    M;
+middle_list(M, [H | L], Index, Middle0, Middle1)
+    when Index >= Middle0, Index < Middle1 ->
+    middle_list(M ++ [H], L, Index + 1, Middle0, Middle1);
+middle_list(M, [_ | L], Index, Middle0, Middle1) ->
+    middle_list(M, L, Index + 1, Middle0, Middle1).
 

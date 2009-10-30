@@ -95,10 +95,10 @@
 %%% Callback functions from cloud_work_interface
 %%%------------------------------------------------------------------------
 
-start_link(WorkInstance, [])
-    when is_atom(WorkInstance) ->
+start_link(WorkTitle, [])
+    when is_atom(WorkTitle) ->
     ?LOG_ERROR("make sure all machines have their clocks synced!!!", []),
-    case gen_server:start_link({local, WorkInstance}, ?MODULE, [], []) of
+    case gen_server:start_link({local, WorkTitle}, ?MODULE, [], []) of
         {ok, _} ->
             ok;
         {error, {already_started, _}} ->
@@ -107,19 +107,19 @@ start_link(WorkInstance, [])
             {error, Reason}
     end.
 
-handle_stop(WorkInstance)
-    when is_atom(WorkInstance) ->
-    gen_server:call(WorkInstance, stop).
+handle_stop(WorkTitle)
+    when is_atom(WorkTitle) ->
+    gen_server:call(WorkTitle, stop).
 
 handle_get_initial_task_size() ->
     0.99. % percentage
 
-handle_get_task_time_target() -> (1.0 / 3600.0).   %  1 second in hours
-%handle_get_task_time_target() -> (1.0 / 60.0).     %  1 minute in hours
+%handle_get_task_time_target() -> (1.0 / 3600.0).   %  1 second in hours
+handle_get_task_time_target() -> (1.0 / 60.0).     %  1 minute in hours
 %handle_get_task_time_target() -> (5.0 / 60.0).     %  5 minutes in hours
 %handle_get_task_time_target() -> (15.0 / 60.0).    % 15 minutes in hours
 %handle_get_task_time_target() -> (30.0 / 60.0).    % 30 minutes in hours
-%handle_get_task_time_target() -> 1.0.               %  1 hour
+%handle_get_task_time_target() -> 1.0.              %  1 hour
 
 handle_get_task(_, _, TaskSize)
     when is_float(TaskSize) ->
@@ -144,9 +144,9 @@ handle_get_task(_, _, TaskSize)
                CreateMicroSecs:32/unsigned-integer-native>>, []}
     end.
 
-handle_drain_binary_output(WorkInstance, DataList)
-    when is_atom(WorkInstance), is_list(DataList) ->
-    try gen_server:call(WorkInstance, {data, DataList}) of
+handle_drain_binary_output(WorkTitle, DataList)
+    when is_atom(WorkTitle), is_list(DataList) ->
+    try gen_server:call(WorkTitle, {data, DataList}) of
         ok ->
             []
     catch

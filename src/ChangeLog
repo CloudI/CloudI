@@ -1,3 +1,17 @@
+# -*- coding: utf-8; tab-width: 4; -*-
+# ex: set fileencoding=utf-8 tabstop=4:
+
+
+2009-10-29	Michael Truog   <mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.8 (alpha)
+		* add CouchDB database module
+		* add ememcached functionality for creating a cluster
+		* add workInstance as a parameter to the do_work function
+		  in the work library (i.e., changed cloud_work_interface.hpp).
+		  The combination of the workInstance with the id will be unique
+		  for all work processed by the work module within a Cloudi instance.
+
 2009-10-14	Michael Truog   <mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.7 (alpha)

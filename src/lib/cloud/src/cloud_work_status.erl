@@ -68,7 +68,7 @@
 
 % wraps the sequence number used externally while
 % internal sequence numbers do not wrap
--define(WORKER_SEQUENCE_ID_COUNT, 4294967296).
+-define(MAX_WORKER_SEQUENCE_ID, 4294967295).
 
 % arbitrary limit to help prevent exhausting all memory
 % when drain_output/2 is waiting on a slow node
@@ -242,10 +242,10 @@ get_sequence_number(WorkTitle, Id, Node, WorkStatus)
                 {ok, #work_status_working{
                         sequence = OldNumber,
                         task = OldTask}} ->
-                    {OldNumber rem ?WORKER_SEQUENCE_ID_COUNT,
+                    {OldNumber band ?MAX_WORKER_SEQUENCE_ID,
                      TasksCount, OldTask, WorkStatus};
                 error ->
-                    {NewNumber rem ?WORKER_SEQUENCE_ID_COUNT,
+                    {NewNumber band ?MAX_WORKER_SEQUENCE_ID,
                      TasksCount, undefined,
                      rbdict:store(WorkTitle, Status#work_status{
                         working_sequence_number = NewNumber + 1,
@@ -333,7 +333,7 @@ set_cached_task(WorkTitle, Id, Task, WorkStatus)
         {ok, #work_status{working = SequenceLookup} = Status} ->
             case rbdict:find(Id, SequenceLookup) of
                 {ok, #work_status_working{sequence = Number} = CachedStatus} ->
-                    {Number rem ?WORKER_SEQUENCE_ID_COUNT,
+                    {Number band ?MAX_WORKER_SEQUENCE_ID,
                      rbdict:store(WorkTitle, Status#work_status{
                         working = rbdict:store(
                             Id, CachedStatus#work_status_working{task = Task},
@@ -567,13 +567,13 @@ drain_binary_output(DataList, WorkTitle)
 store_output_sequence_number(Number, MaxNumber)
     when is_integer(Number), is_integer(MaxNumber) ->
     store_output_sequence_number(
-        Number, Number + ?WORKER_SEQUENCE_ID_COUNT, MaxNumber).
+        Number, Number + ?MAX_WORKER_SEQUENCE_ID + 1, MaxNumber).
 
 store_output_sequence_number(PreviousNumber, Number, MaxNumber)
     when is_number(PreviousNumber), is_integer(Number), is_integer(MaxNumber),
          Number < MaxNumber ->
     store_output_sequence_number(
-        Number, Number + ?WORKER_SEQUENCE_ID_COUNT, MaxNumber);
+        Number, Number + ?MAX_WORKER_SEQUENCE_ID + 1, MaxNumber);
 
 store_output_sequence_number(PreviousNumber, _, _)
     when is_number(PreviousNumber) ->

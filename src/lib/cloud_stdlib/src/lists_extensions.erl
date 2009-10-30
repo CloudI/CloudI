@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009 Michael Truog
-%%% @version 0.0.7 {@date} {@time}
+%%% @version 0.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(lists_extensions).
@@ -55,7 +55,9 @@
          itera/3, itera2/4, itera3/5,
          checked_delete/2,
          keyptake/3, keypttake/4,
-         sort/1, keysort/2]).
+         sort/1, keysort/2,
+         rsort/1, keyrsort/2,
+         middle/1, middle/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -200,7 +202,7 @@ keypttake(_K, _N, _Match, [], _I, _L) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Sort a list.===
+%% ===Sort a list in ascending order.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -215,7 +217,22 @@ sort([_|_] = L) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Sort a list of tuples based on an element (key) in the tuple.===
+%% ===Sort a list (in reverse) in descending order.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec rsort(list()) -> list().
+
+rsort([]) ->
+    [];
+rsort([_] = L) ->
+    L;
+rsort([_|_] = L) ->
+    rquicksort(L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Sort a list of tuples based on an element (key) in the tuple in ascending order.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -227,6 +244,59 @@ keysort(_, [_] = L) ->
     L;
 keysort(I, [_|_] = L) when is_integer(I), I > 0 ->
     key_quicksort(I, L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Sort a list of tuples based on an element (key) in the tuple (in reverse) in descending order.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec keyrsort(pos_integer(), list()) -> list().
+
+keyrsort(_, []) ->
+    [];
+keyrsort(_, [_] = L) ->
+    L;
+keyrsort(I, [_|_] = L) when is_integer(I), I > 0 ->
+    key_rquicksort(I, L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the middle element of a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+middle([E]) ->
+    E;
+middle(L) when is_list(L) ->
+    middle_element(L, 1, erlang:round(erlang:length(L) / 2)).
+middle_element([H | _], Middle, Middle) ->
+    H;
+middle_element([_ | L], Index, Middle) ->
+    middle_element(L, Index + 1, Middle).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the middle segment of a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+middle(L, N) when is_list(L), is_integer(N) ->
+    Length = erlang:length(L),
+    if
+        Length =< N ->
+            L;
+        true ->
+            Middle = erlang:round(Length / 2 - N / 2),
+            middle_list([], L, 0, Middle, Middle + N)
+    end.    
+middle_list(M, _, Middle1, _, Middle1) ->
+    M;
+middle_list(M, [H | L], Index, Middle0, Middle1)
+    when Index >= Middle0, Index < Middle1 ->
+    middle_list(M ++ [H], L, Index + 1, Middle0, Middle1);
+middle_list(M, [_ | L], Index, Middle0, Middle1) ->
+    middle_list(M, L, Index + 1, Middle0, Middle1).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -254,6 +324,27 @@ quicksort_accumulator_part_if(E1, E2, [H | T], L, E, G, Acc) ->
             quicksort_accumulator_part(E2, T, L, [H | E], G, Acc)
     end.
 
+% quicksort modified to reverse the order
+rquicksort(List) ->
+    rquicksort_accumulator(List, []).
+rquicksort_accumulator([], Acc) ->
+    Acc;
+rquicksort_accumulator([H | T], Acc) ->
+    rquicksort_accumulator_part(H, T, [], [H], [], Acc).
+rquicksort_accumulator_part(_, [], L, E, G, Acc) ->
+    rquicksort_accumulator(L, E ++ rquicksort_accumulator(G, Acc));
+rquicksort_accumulator_part(E2, [H | _] = Rest, L, E, G, Acc) ->
+    rquicksort_accumulator_part_if(H, E2, Rest, L, E, G, Acc).
+rquicksort_accumulator_part_if(E1, E2, [H | T], L, E, G, Acc) ->
+    if
+        E1 > E2 ->
+            rquicksort_accumulator_part(E2, T, [H | L], E, G, Acc);
+        E1 < E2 ->
+            rquicksort_accumulator_part(E2, T, L, E, [H | G], Acc);
+        true ->
+            rquicksort_accumulator_part(E2, T, L, [H | E], G, Acc)
+    end.
+
 % quicksort modified for a list of tuples
 key_quicksort(Index, List) ->
     key_quicksort_accumulator(List, [], Index).
@@ -262,9 +353,11 @@ key_quicksort_accumulator([], Acc, _) ->
 key_quicksort_accumulator([H | T], Acc, I) ->
     key_quicksort_accumulator_part(element(I, H), T, [], [H], [], Acc, I).
 key_quicksort_accumulator_part(_, [], L, E, G, Acc, I) ->
-    key_quicksort_accumulator(L, E ++ key_quicksort_accumulator(G, Acc, I), I);
+    key_quicksort_accumulator(
+        L, E ++ key_quicksort_accumulator(G, Acc, I), I);
 key_quicksort_accumulator_part(E2, [H | _] = Rest, L, E, G, Acc, I) ->
-    key_quicksort_accumulator_part_if(element(I, H), E2, Rest, L, E, G, Acc, I).
+    key_quicksort_accumulator_part_if(
+        element(I, H), E2, Rest, L, E, G, Acc, I).
 key_quicksort_accumulator_part_if(E1, E2, [H | T], L, E, G, Acc, I) ->
     if
         E1 < E2 ->
@@ -273,5 +366,28 @@ key_quicksort_accumulator_part_if(E1, E2, [H | T], L, E, G, Acc, I) ->
             key_quicksort_accumulator_part(E2, T, L, E, [H | G], Acc, I);
         true ->
             key_quicksort_accumulator_part(E2, T, L, [H | E], G, Acc, I)
+    end.
+
+% quicksort modified for a list of tuples in reverse order
+key_rquicksort(Index, List) ->
+    key_rquicksort_accumulator(List, [], Index).
+key_rquicksort_accumulator([], Acc, _) ->
+    Acc;
+key_rquicksort_accumulator([H | T], Acc, I) ->
+    key_rquicksort_accumulator_part(element(I, H), T, [], [H], [], Acc, I).
+key_rquicksort_accumulator_part(_, [], L, E, G, Acc, I) ->
+    key_rquicksort_accumulator(
+        L, E ++ key_rquicksort_accumulator(G, Acc, I), I);
+key_rquicksort_accumulator_part(E2, [H | _] = Rest, L, E, G, Acc, I) ->
+    key_rquicksort_accumulator_part_if(
+        element(I, H), E2, Rest, L, E, G, Acc, I).
+key_rquicksort_accumulator_part_if(E1, E2, [H | T], L, E, G, Acc, I) ->
+    if
+        E1 > E2 ->
+            key_rquicksort_accumulator_part(E2, T, [H | L], E, G, Acc, I);
+        E1 < E2 ->
+            key_rquicksort_accumulator_part(E2, T, L, E, [H | G], Acc, I);
+        true ->
+            key_rquicksort_accumulator_part(E2, T, L, [H | E], G, Acc, I)
     end.
 
