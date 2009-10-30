@@ -57,6 +57,7 @@ void deinitialize() __attribute__ ((destructor));
 /// @param abort check to see if the thread of execution should abort
 /// @param failureCount how many times this task has failed
 /// @param machineName the hostname (with domain if using long node names)
+//  @param workInstance identifier for the work module arguments
 /// @param id unique thread of execution identifier
 ///           (unique across all work task instances on all nodes)
 /// @param totalIds the total number of concurrent work task instances
@@ -69,6 +70,7 @@ void deinitialize() __attribute__ ((destructor));
 bool do_work(bool const & abortTask,
              uint32_t const failureCount,
              std::string const & machineName,
+             std::string const & workInstance,
              uint32_t const id, uint32_t const totalIds,
              boost::scoped_array<uint8_t> const & taskData,
              size_t const taskDataSize,

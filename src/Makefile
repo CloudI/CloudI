@@ -2,53 +2,10 @@
 #get more out of your make: "make 2>&1 | more"
 #
 
-# project variables
-PROJECT_NAME=cloud
-VERSION_NAME=0.0.7.0
-PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.7
-# erlang variables
-ERLANG_ARGUMENTS=+A 16 +K true
-# use instrument module
-#ERLANG_ARGUMENTS+=+Mim true +Mis true
-# use erts_alloc_config module
-#ERLANG_ARGUMENTS+=+Mea config
-# erts_alloc_config suggested:
-#ERLANG_ARGUMENTS+=$(shell grep '^ ' erts_alloc_config.log)
+include build_configuration.mk
 
-ERLANG_PATH=/home/user/installed
-ERTS_VERSION=5.7.2
-ERL_INTERFACE_VERSION=3.6.2
-# erlware variables
-ERLWARE_PATH=/home/user/installed/erlware
-
-################################################################################
-
-#DEADCODESTRIP arguments Step by step...
-# (http://gcc.gnu.org/ml/gcc-help/2003-08/msg00128.html)
-#
-#-Wl,-static
-#Link against static libraries.  Required for dead-code elimination.
-#
-#-fvtable-gc
-#C++ virtual method table instrumented with garbage collection information for the linker.
-#
-#-fdata-sections
-#Keeps data in separate data sections, so they can be discarded if unused.
-#
-#-ffunction-sections
-#Keeps funcitons in separate data sections, so they can be discarded if unused.
-#
-#-Wl,--gc-sections
-#Tell the linker to garbage collect and discard unused sections.
-#
-#-s
-#Strip the debug information, so as to make the code as small as possible.
-#
-CXX_DEADCODESTRIP_ARGS=-Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s
-
-FAILOVER_HOSTS_FILE=config/failover_hosts
 ROOT_PATH=$(abspath .)
+FAILOVER_HOSTS_FILE=config/failover_hosts
 SINAN_PATH=$(ERLWARE_PATH)/bin/sinan
 ERTS_PATH=$(ERLANG_PATH)/lib/erlang/erts-$(ERTS_VERSION)
 ERL_INTERFACE_PATH=$(ERLANG_PATH)/lib/erlang/lib/erl_interface-$(ERL_INTERFACE_VERSION)
@@ -92,8 +49,6 @@ BOOST_SRC=lib/boost/releases/boost_1_40_0.tar.gz
 BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_1_40_0
 BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include
 BOOST_LIB_PATH=$(BOOST_SRC_PATH)_install/lib
-LEAKTRACER_SRC_PATH=lib/LeakTracer
-#LEAKTRACER_SRC_PATH=lib/LeakTracer-mg
 CLOUD_BIN_PATH=_build/development/apps/$(PROJECT_NAME)-$(MAJOR_VERSION_NAME)/priv
 WORK_TYPE1_SRC_PATH=lib/cloud_job_tests/src
 WORK_TYPE1_OBJ_PATH=lib/cloud_job_tests/priv/obj
@@ -140,9 +95,44 @@ CXXFLAGS+=-std=c++0x -Wall -Wextra -I$(BOOST_INC_PATH)
 # lib/g++/releases/gcc-4.4.0_install/bin/g++ -c -Q -O2 --help=optimizers > /tmp/O2-opts
 # diff /tmp/O2-opts /tmp/O3-opts | grep enable
 
+#DEADCODESTRIP arguments Step by step...
+# (http://gcc.gnu.org/ml/gcc-help/2003-08/msg00128.html)
+#
+#-Wl,-static
+#Link against static libraries.  Required for dead-code elimination.
+#
+#-fvtable-gc
+#C++ virtual method table instrumented with garbage collection information for the linker.
+#
+#-fdata-sections
+#Keeps data in separate data sections, so they can be discarded if unused.
+#
+#-ffunction-sections
+#Keeps funcitons in separate data sections, so they can be discarded if unused.
+#
+#-Wl,--gc-sections
+#Tell the linker to garbage collect and discard unused sections.
+#
+#-s
+#Strip the debug information, so as to make the code as small as possible.
+#
+CXX_DEADCODESTRIP_ARGS=-Wl,-static -fvtable-gc -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s
+
 # release or debug
-#CXXFLAGS+=-O3
+ifeq ($(DEBUG_BUILD),)
+CXXFLAGS+=-g -O3
+else
 CXXFLAGS+=-g -O0
+endif
+
+# ptmalloc3 has too many problems to be used
+#ALLOCATOR_SUFFIX=\
+#    -lstdc++ \
+#    -Wl,-Bstatic \
+#    -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
+#    -Wl,-Bdynamic \
+#    -lc -lpthread
+ALLOCATOR_SUFFIX=
 
 LDFLAGS+=-L$(BOOST_LIB_PATH)
 # debug glibc
@@ -154,6 +144,7 @@ ERLANG_SRC_FILES=\
         $(INTERFACE_SRC_PATH)/cloud_data_interface.erl \
         $(INTERFACE_SRC_PATH)/cloud_work_interface.erl \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
+        $(MAIN_INC_PATH)/cloud_types.hrl \
         $(MAIN_SRC_PATH)/cloud_api.erl \
         $(MAIN_SRC_PATH)/cloud_app.erl \
         $(MAIN_SRC_PATH)/cloud_configuration.erl \
@@ -184,11 +175,38 @@ ERLANG_SRC_FILES=\
         $(LOCAL_STDLIB_SRC_PATH)/string_extensions.erl \
         $(LOCAL_STDLIB_SRC_PATH)/time_extensions.erl \
         $(LOCAL_STDLIB_SRC_PATH)/tuple_extensions.erl \
-        lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
         lib/rb/src/rbsets.erl \
         lib/rb/src/rbdict.erl \
+        lib/cloud_data_couchdb/src/cloud_data_couchdb.erl \
+        lib/cloud_data_tokyotyrant/src/cloud_data_tokyotyrant.erl \
+        lib/cloud_data_memcached/src/cloud_data_memcached.erl \
+        lib/cloud_data_mysql/src/cloud_data_mysql.erl \
+        lib/cloud_data_pgsql/src/cloud_data_pgsql.erl \
+        lib/ecouchdb/src/ecouchdb_conn.erl \
+        lib/ecouchdb/src/ecouchdb.erl \
+        lib/ecouchdb/src/mochijson2.erl \
+        lib/ecouchdb/src/mochinum.erl \
+        lib/ecouchdb/src/mochiweb_util.erl \
+        lib/etokyotyrant/src/medici_app.erl \
+        lib/etokyotyrant/src/medici_conn.erl \
+        lib/etokyotyrant/src/medici_conn_sup.erl \
+        lib/etokyotyrant/src/medici_controller.erl \
+        lib/etokyotyrant/src/medici.erl \
+        lib/etokyotyrant/src/medici.hrl \
+        lib/etokyotyrant/src/medici_native_conn.erl \
+        lib/etokyotyrant/src/medici_native_controller.erl \
+        lib/etokyotyrant/src/medici_port_srv.erl \
+        lib/etokyotyrant/src/medici_port_sup.erl \
+        lib/etokyotyrant/src/medici_sup.erl \
+        lib/etokyotyrant/src/principe.erl \
+        lib/etokyotyrant/src/principe.hrl \
+        lib/etokyotyrant/src/principe_table.erl \
         lib/ememcached/src/ememcached.erl \
-        lib/epgsql/test_src/pgsql_tests.erl \
+        lib/ememcached/src/ememcached.hrl \
+        lib/emysql/src/mysql_auth.erl \
+        lib/emysql/src/mysql_conn.erl \
+        lib/emysql/src/mysql.erl \
+        lib/emysql/src/mysql_recv.erl \
         lib/epgsql/src/pgsql_sock.erl \
         lib/epgsql/src/pgsql_idatetime.erl \
         lib/epgsql/src/pgsql.erl \
@@ -199,7 +217,8 @@ ERLANG_SRC_FILES=\
 
 all: build
 
-_build.cfg: _build.cfg.template
+_build.cfg: _build.cfg.template \
+            build_configuration.mk
 	@sed "s/##PROJECT_NAME##/$(PROJECT_NAME)/;\
           s/##PROJECT_REPO_URL##/$(PROJECT_REPO_URL)/;\
           s/##VERSION_NAME##/$(VERSION_NAME)/"\
@@ -221,7 +240,7 @@ _build.cfg: _build.cfg.template
 
 g++: $(GXX_BIN)
 $(GXX_SRC):
-	bin/get.sh gcc-4.4.1.tar.gz lib/g++/releases/
+	bin/get.sh gcc-4.4.1.tar.gz $(dir $(GXX_SRC))
 $(GXX_BIN): $(GXX_SRC) \
         $(GMP_SRC) \
         lib/g++/mpfr-2.4.1.tar.gz
@@ -239,7 +258,9 @@ $(GXX_BIN): $(GXX_SRC) \
       make && \
       make install\
      )
-	@echo "g++ now built, rerun the makefile to compile"
+	@echo "################################################"
+	@echo "# g++ NOW BUILT, RERUN THE MAKEFILE TO COMPILE #"
+	@echo "################################################"
 	@exit 1
 
 asn1c: $(ASN1_BIN)
@@ -287,7 +308,7 @@ boost-trunk:
 	(cd lib/boost; tar cf boost_trunk.tar boost_trunk; gzip boost_trunk.tar)
 	rm -rf lib/boost/boost_trunk
 $(BOOST_SRC):
-	bin/get.sh boost_1_40_0.tar.gz lib/boost/releases/
+	bin/get.sh boost_1_40_0.tar.gz $(dir $(BOOST_SRC))
 $(BOOST_LIB_PATH): $(BOOST_SRC)
 	@test -d $(BOOST_SRC_PATH) || \
         tar zxvf $(BOOST_SRC) -C $(dir $(BOOST_SRC_PATH))
@@ -333,11 +354,7 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
         -lboost_thread \
         -lboost_system \
 		-lgmp \
-        -lstdc++ \
-        -Wl,-Bstatic \
-        -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
-        -Wl,-Bdynamic \
-        -lc -lpthread
+        $(ALLOCATOR_SUFFIX)
 
 $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
         $(MAIN_INC_PATH)/cloud_logger.hrl \
@@ -361,11 +378,7 @@ $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so: \
 	@$(CXX) -shared -Wl,-export-dynamic \
         -o $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so \
         $(WORK_TYPE2_OBJ_PATH)/cloud_job_latency.o \
-        -lstdc++ \
-        -Wl,-Bstatic \
-        -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
-        -Wl,-Bdynamic \
-        -lc -lpthread
+        $(ALLOCATOR_SUFFIX)
 
 $(WORK_TYPE2_LIB_PATH)/cloud_job_latency.beam: \
         $(INTERFACE_SRC_PATH)/cloud_work_interface.erl \
@@ -513,11 +526,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          -L$(ERL_INTERFACE_LIB_PATH) -lerl_interface_st -lei_st \
          -Wl,-Bdynamic \
          -ldl -lrt \
-         -lstdc++ \
-         -Wl,-Bstatic \
-         -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
-         -Wl,-Bdynamic \
-         -lc -lpthread
+        $(ALLOCATOR_SUFFIX)
 	@$(RM) $(WORKER_OBJ_PATH)/*.o
 
 $(MAIN_SRC_PATH)/cloud_worker_port.hrl: \
@@ -612,6 +621,7 @@ clean: _build.cfg
 test: _build.cfg
 	@$(SINAN_PATH) test
 
+# R13B01 values:
 $(DIALYZER_PLT): $(DIALYZER_PATH)
 	$(DIALYZER_PATH) --build_plt --output_plt $(DIALYZER_PLT) -r \
         $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.2/ebin \
@@ -621,13 +631,27 @@ $(DIALYZER_PLT): $(DIALYZER_PATH)
         $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.10/ebin \
         $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.2/ebin \
         $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6/ebin
+
+# R13B02-1 values:
+#$(DIALYZER_PLT): $(DIALYZER_PATH)
+#	$(DIALYZER_PATH) --build_plt --output_plt $(DIALYZER_PLT) -r \
+#        $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.3/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/kernel-2.13.3/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/stdlib-1.16.3/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/mnesia-4.4.11/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.11/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.3/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6.1/ebin
+
 analyze-prepare: $(DIALYZER_PLT)
 analyze-add: $(DIALYZER_PLT)
 	@echo "$(DIALYZER_PATH) --add_to_plt --plt $(DIALYZER_PLT) -r PATH"
+analyze-clear:
+	rm $(DIALYZER_PLT)
 analyze: $(DIALYZER_PLT) \
         $(MAIN_SRC_PATH)/cloud_worker_port.hrl \
         $(MAIN_SRC_PATH)/WorkerProtocol.erl
-	$(DIALYZER_PATH) --plt $(DIALYZER_PLT) --src \
+	$(DIALYZER_PATH) --get_warnings --plt $(DIALYZER_PLT) --src \
         -Ilib/rb/include \
         -I$(MAIN_INC_PATH) \
         -I$(MAIN_SRC_PATH) -c \
@@ -640,13 +664,17 @@ analyze: $(DIALYZER_PLT) \
         lib/cloud_data_mysql/src/cloud_data_mysql.erl \
         lib/cloud_data_memcached/src/cloud_data_memcached.erl \
         lib/cloud_data_tokyotyrant/src/cloud_data_tokyotyrant.erl \
+        lib/cloud_data_couchdb/src/cloud_data_couchdb.erl \
         lib/epgsql/src/*.erl \
         lib/emysql/src/*.erl \
         lib/ememcached/src/*.erl \
         lib/etokyotyrant/src/*.erl \
+        lib/ecouchdb/src/*.erl \
         lib/rb/src/rbdict.erl \
         lib/rb/src/rbsets.erl
-doc: _build.cfg
+doc: _build.cfg \
+     $(MAIN_SRC_PATH)/cloud_worker_port.hrl \
+	 $(MAIN_SRC_PATH)/WorkerProtocol.erl
 	@$(SINAN_PATH) doc
 	@echo "DOCUMENTATION IS NOW IN _build/development/apps/$(PROJECT_NAME)-$(MAJOR_VERSION_NAME)/docs/"
 

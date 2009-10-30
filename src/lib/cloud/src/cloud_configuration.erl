@@ -80,6 +80,7 @@
 %%   or LogLevel is an integer:
 %%
 %%   `0,         1,        2,     3,       4,    5'
+%%
 %% ====The jobs that Cloudi will run:====
 %%   `{jobs, [{"cloud_job_uniquename.tag", [Argument1, Argument2, ...], Tasks, UseThreads}]}'
 %%
@@ -97,6 +98,7 @@
 %%   resources to the work, or it can be an integer.
 %%   The UseThreads can be either the atoms 'no_threads" or 'threads', or
 %%   it can be an integer which determines how many threads per process.
+%%
 %% ====The data that Cloudi will use:====
 %%   `{data, [{"cloud_data_uniquename", [{Parameter0, ParameterValue0}]}]}'
 %%
@@ -113,6 +115,7 @@
 %%   parameter when creating data titles and starting the data modules but
 %%   it is not required (so a data title could be the data module name if
 %%   no database distinction is necessary).
+%%
 %% ====The machines that Cloudi will run on:====
 %%   `{machines, [{"node1@hostname1", [{LowPort, HighPort}], Processes, Threads}]}'
 %%
@@ -128,6 +131,7 @@
 %%   Processes, which is the number of processes to be started on the
 %%   machine.  The Threads parameter specifies the number of threads
 %%   that can be used on the machine for Cloudi work allocation.
+%%
 %% @end
 %%-------------------------------------------------------------------------
 

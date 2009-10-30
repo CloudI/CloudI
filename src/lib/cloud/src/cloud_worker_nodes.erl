@@ -717,7 +717,7 @@ get_machine_states(MachineStates, [M | MachineConfigs], 0,
     case DistributedModeResult of
         {ok, _} ->
             ok;
-        {error, {already_started, _}} ->
+        {error, {already_started, _}, _} ->
             ok;
         {error, Reason} ->
             throw(string_extensions:format(

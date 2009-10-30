@@ -112,6 +112,7 @@ class WorkerController::WorkerExecution::LibraryId
         }
 
         std::string const & workLibrary() const { return m_workLibrary; }
+        std::string const & workInstance() const { return m_workInstance; }
     private:
         std::string m_workLibrary;
         std::string m_workInstance;

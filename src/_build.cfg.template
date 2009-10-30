@@ -27,9 +27,9 @@ build_dir : _build,
 
 ignore_dirs : ["_",
                ".",
-               "pgsql",
                "cloud_worker",
                "cloud_job_tests",
+               "cloud_job_latency",
                "gepd",
                "ptmalloc",
                "g++",
@@ -38,6 +38,4 @@ ignore_dirs : ["_",
                "asn1"],
 
 ignore_apps : [],
-
-
 

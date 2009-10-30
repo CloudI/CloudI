@@ -106,8 +106,12 @@
 -spec clear_all_results() -> 'ok'.
 
 clear_all_results() ->
-    cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests',
-        "DELETE FROM incoming_results_v3;"),
+    try cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests',
+        "DELETE FROM incoming_results_v3;")
+    catch
+        exit:{noproc,_} -> 
+            ok
+    end,
     {ok, _} = cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests',
         "DELETE FROM incoming_results_v3;"),
     ok.
@@ -121,9 +125,13 @@ clear_all_results() ->
 -spec clear_results(State :: pos_integer(), End :: pos_integer()) -> 'ok'.
 
 clear_results(Start, End) when is_integer(Start), is_integer(End) ->
-    cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
+    try cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
         "DELETE FROM incoming_results_v3 "
-        "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End]),
+        "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End])
+    catch
+        exit:{noproc,_} -> 
+            ok
+    end,
     {ok, _} = cloud_data_pgsql:equery('cloud_data_pgsql.cloudi_tests',
         "DELETE FROM incoming_results_v3 "
         "WHERE digit_index >= ? AND digit_index <= ?;", [Start, End]),
@@ -133,9 +141,9 @@ clear_results(Start, End) when is_integer(Start), is_integer(End) ->
 %%% Callback functions from cloud_work_interface
 %%%------------------------------------------------------------------------
 
-start_link(WorkInstance, [IndexStart, IndexEnd])
-    when is_atom(WorkInstance), is_integer(IndexStart), is_integer(IndexEnd) ->
-    case gen_server:start_link({local, WorkInstance}, ?MODULE,
+start_link(WorkTitle, [IndexStart, IndexEnd])
+    when is_atom(WorkTitle), is_integer(IndexStart), is_integer(IndexEnd) ->
+    case gen_server:start_link({local, WorkTitle}, ?MODULE,
         [IndexStart, IndexEnd], []) of
         {ok, _} ->
             ok;
@@ -145,24 +153,24 @@ start_link(WorkInstance, [IndexStart, IndexEnd])
             {error, Reason}
     end.
 
-handle_stop(WorkInstance)
-    when is_atom(WorkInstance) ->
-    gen_server:call(WorkInstance, stop).
+handle_stop(WorkTitle)
+    when is_atom(WorkTitle) ->
+    gen_server:call(WorkTitle, stop).
 
-% static work type parameter, does not use the WorkInstance
+% static work type parameter, does not use the WorkTitle
 handle_get_initial_task_size() ->
     (1.0 / ?MAX_ITERATIONS). % percentage
 
-% static work type parameter, does not use the WorkInstance
+% static work type parameter, does not use the WorkTitle
 handle_get_task_time_target() ->
     (1.0 / 3600.0). % hours
 
-handle_get_task(WorkInstance, SequenceNumber, TaskSize)
-    when is_atom(WorkInstance), is_integer(SequenceNumber),
+handle_get_task(WorkTitle, SequenceNumber, TaskSize)
+    when is_atom(WorkTitle), is_integer(SequenceNumber),
          is_float(TaskSize) ->
     Iterations = math_extensions:ceil(TaskSize * ?MAX_ITERATIONS),
     % allocate the task
-    try gen_server:call(WorkInstance, {get_task, Iterations}) of
+    try gen_server:call(WorkTitle, {get_task, Iterations}) of
         {ok, Index, Step} ->
             % determine the size of the task and take the ceiling of the value
             % (to avoid iterations of 0)
@@ -184,8 +192,8 @@ handle_get_task(WorkInstance, SequenceNumber, TaskSize)
     end.
 
 % the binary data title is unused by this work module
-handle_drain_binary_output(WorkInstance, DataList)
-    when is_atom(WorkInstance), is_list(DataList) ->
+handle_drain_binary_output(WorkTitle, DataList)
+    when is_atom(WorkTitle), is_list(DataList) ->
     DataList.
 
 %%%------------------------------------------------------------------------
@@ -201,10 +209,14 @@ init([IndexStart, IndexEnd]) ->
         ok ->
             case update_state_from_database(State) of
                 {ok, _} = Result ->
-                    cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
+                    try cloud_data_mysql:equery('cloud_data_mysql.cloudi_tests',
                         "DELETE FROM incoming_results_v3 "
                         "WHERE digit_index >= ? AND digit_index <= ?;",
-                        [State#state.index_start, State#state.index_end]),
+                        [State#state.index_start, State#state.index_end])
+                    catch
+                        exit:{noproc,_} -> 
+                            ok
+                    end,
                     Result;
                 {error, Reason} ->
                     {stop, Reason}
@@ -248,6 +260,17 @@ code_change(_, State, _) ->
 
 %% initialize tables in the database
 setup_database() ->
+    try
+        cloud_data_couchdb:create_database(
+            'cloud_data_couchdb.cloudi_tests'),
+        cloud_data_couchdb:delete_document(
+            'cloud_data_couchdb.cloudi_tests', "pi_state"),
+        cloud_data_couchdb:create_document_id(
+            'cloud_data_couchdb.cloudi_tests', "pi_state", [])
+    catch
+        exit:{noproc,_} -> 
+            ok
+    end,
     % queries for database initialization
     RequiredDatabaseQueries = [
         "DROP TABLE IF EXISTS incoming_results;",
@@ -260,7 +283,11 @@ setup_database() ->
     % execute setup queries
     RequiredResult = lists_extensions:iter(fun(Q, Itr) ->
         % mysql can be used, but is not required
-        cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q),
+        try cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q)
+        catch
+            exit:{noproc,_} -> 
+                ok
+        end,
         case cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q) of
             {ok, _} ->
                 Itr();
@@ -276,7 +303,11 @@ setup_database() ->
         RequiredResult == ok ->
             lists:foreach(fun(Q) ->
                 % mysql can be used, but is not required
-                cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q),
+                try cloud_data_mysql:squery('cloud_data_mysql.cloudi_tests', Q)
+                catch
+                    exit:{noproc,_} -> 
+                        ok
+                end,
                 cloud_data_pgsql:squery('cloud_data_pgsql.cloudi_tests', Q)
             end, OptionalDatabaseQueries),
             ok;

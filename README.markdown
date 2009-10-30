@@ -1,4 +1,4 @@
-#CloudI 0.0.7 (alpha)
+#CloudI 0.0.8 (alpha)
 
 ## ABOUT
 
@@ -25,11 +25,12 @@ Bailey-Borwein-Plouffe formula and verifies that they are correct.
 "cloud_job_tests" requires that PostgreSQL is configured and setup because
 it stores the results.  Memcached is also used by "cloud_job_tests", but any
 results that would go to memcached are discarded if memcached isn't configured.
-MySQL and Tokyo Tyrant are used by "cloud_job_tests" in the same way as
-memcached.
+CouchDB, MySQL and Tokyo Tyrant are used by "cloud_job_tests" in the same way
+as memcached (i.e., just to test basic data storage functionality).
 
 CloudI currently supports the following databases:
 
+* CouchDB (>= 0.9.0)
 * memcached (>= 1.3)
 * MySQL (>= 4.0)
 * PostgreSQL (>= 7.4)
@@ -61,6 +62,7 @@ CloudI does require some configuration and a brief guide exists here:
     src/docs/CONFIGURATION.txt
 
 Much of the local setup is currently in the files:
+    src/build_configuration.mk
     src/Makefile
     src/cloud.conf
     src/config/failover_hosts
@@ -75,17 +77,15 @@ order of the Cloudi leader node is used by all other nodes
 (so the Cloudi cluster can be very heterogeneous but all machines
  for an instance do need to be either little endian or big endian).
 
-The paths for Erlang and ErlWare need to be specified in the Makefile:
+The paths for Erlang and ErlWare need to be specified in build_configuration.mk:
     ERLANG_PATH=/home/user/installed
     ERLWARE_PATH=/home/user/installed/erlware
 
-The Makefile is currently assuming Erlang R13B01 is used.  If you are using
-a different version, you will need to change:
+Erlang (version >= 12B5) is required.  Faxien and Sinan are also required.
+The build_configuration.mk file is currently assuming Erlang R13B01 is used.
+If you are using a different version, you will need to change:
     ERTS_VERSION=5.7.2
     ERL_INTERFACE_VERSION=3.6.2
-
-If the version of CloudI has changed and you have already ran CloudI in the
-past, execute "rm _build.cfg" before running make.
 
 ## RUNNING
 
@@ -102,6 +102,14 @@ CloudI does have an API in "src/lib/cloud/src/cloud_api.erl".  Be careful
 when using the cloud_api:remove_data/1 function.  If a data repository is
 removed that a work module is using, bad things will happen.  The usage of the
 CloudI API should respect running work that is not removed.
+
+## KNOWN BUGS
+
+* Long node names are not currently suppored in the cloud.conf file
+  (so do not use a domain name in the node name, only the hostname)
+* The ememcached application will bring down the Cloudi instance leader
+  if it is unable to connect to a memcached host specified in the configuration
+  when it receives data for a memcached cluster.
 
 ## LICENSE
 

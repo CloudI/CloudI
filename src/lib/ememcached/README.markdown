@@ -1,12 +1,6 @@
-# from <http://github.com/JacobVorreuter/mcerlang>
-
-# MC Erlang caches beats on your face
-
-Erlang binary protocol memcached client
-
 ## Dependencies
 
-Binary protocol build of memcached <http://github.com/dustin/memcached>
+Binary protocol memcached (version >= 1.3)
 
 ## External Documentation
 
@@ -73,3 +67,8 @@ Binary Protocol Spec <http://code.google.com/p/memcached/wiki/MemcacheBinaryProt
 * **flush_exp**(Process::pid(), Expiration::integer()) -> [{{Host::string(), Port::integer()}, Response::binary()}]
 * **quit**(Process::pid()) -> [{{Host::string(), Port::integer()}, Response::binary()}]
 * **version**(Process::pid()) -> [{{Host::string(), Port::integer()}, Response::binary()}]
+
+## History
+
+The ememcached code was derived from a previous version here <http://github.com/JacobVorreuter/mcerlang>.  However, the ememcached code will not use ets for hash storage since the benefits are negligible/non-existent and create side-effects.
+
