@@ -47,14 +47,16 @@
 #include <sys/time.h>
 #include <time.h>
 
-void storeNow(char * dst);
-void storeNow(char * dst,
-              uint32_t megaSecs,
-              uint32_t secs,
-              uint32_t microSecs);
-bool performSleep(bool const & abortTask,
-                  uint32_t sleepTime,
-                  uint32_t sleepUnit);
+static void storeNow(char * dst);
+static void storeNow(char * dst,
+                     uint32_t megaSecs,
+                     uint32_t secs,
+                     uint32_t microSecs);
+static bool performSleep(bool const & abortTask,
+                         uint32_t sleepTime,
+                         uint32_t sleepUnit);
+
+static struct timespec lastEndTask[512];
 
 extern "C"
 {
@@ -62,6 +64,10 @@ extern "C"
 void initialize()
 {
     // global/"static" data is shared between multiple threads, beware!
+    struct timespec startTime;
+    clock_gettime(CLOCK_MONOTONIC, &startTime);
+    for (size_t i = 0; i < (sizeof(lastEndTask) / sizeof(struct timespec)); ++i)
+        lastEndTask[i] = startTime;
 }
 
 void deinitialize()
@@ -72,13 +78,22 @@ bool do_work(bool const & abortTask,
              uint32_t const,
              std::string const & machineName,
              std::string const &,
-             uint32_t const,
+             uint32_t const id,
              uint32_t const, 
              boost::scoped_array<uint8_t> const & taskData,
              size_t const taskDataSize,
              DatabaseQueryVector const &,
              DatabaseQueryVector & queriesOut)
 {
+    struct timespec startTask;
+    clock_gettime(CLOCK_MONOTONIC, &startTask);
+    // time spent waiting before the task in milliseconds
+    const double beforeTask =
+        (static_cast<double>(
+            startTask.tv_sec - lastEndTask[id].tv_sec) * 1.0e3 +
+         static_cast<double>(
+            startTask.tv_nsec - lastEndTask[id].tv_nsec) * 1.0e-6);
+
     // get task data
     assert(taskDataSize == (sizeof(uint32_t) * 5));
     uint32_t & sleepTime =
@@ -95,8 +110,11 @@ bool do_work(bool const & abortTask,
     // time data for latency calculations are passed through
     // the work function while emulating the proper amount of work.
 
-    std::string latency(sizeof(uint32_t) * 9 + machineName.size(), '\0');
-    char * createTaskTime = const_cast<char *>(latency.c_str());
+    std::string latency(
+        sizeof(double) + sizeof(uint32_t) * 9 + machineName.size(), '\0');
+    char * interTaskTime = const_cast<char *>(latency.c_str());
+    *(reinterpret_cast<double *>(interTaskTime)) = beforeTask;
+    char * createTaskTime = &interTaskTime[sizeof(double)];
     storeNow(createTaskTime,
              createTaskTimeMegaSecs,
              createTaskTimeSecs,
@@ -112,12 +130,14 @@ bool do_work(bool const & abortTask,
 
     queriesOut.push_back(DatabaseQuery(latency.c_str(), latency.size()));
 
+    clock_gettime(CLOCK_MONOTONIC, &(lastEndTask[id]));
+
     return true;
 }
 
 }
 
-void storeNow(char * dst)
+static void storeNow(char * dst)
 {
     struct timeval now;
     int status = gettimeofday(&now, 0);
@@ -125,10 +145,10 @@ void storeNow(char * dst)
     storeNow(dst, (now.tv_sec / 1000000), (now.tv_sec % 1000000), now.tv_usec);
 }
 
-void storeNow(char * dst,
-              uint32_t megaSecs,
-              uint32_t secs,
-              uint32_t microSecs)
+static void storeNow(char * dst,
+                     uint32_t megaSecs,
+                     uint32_t secs,
+                     uint32_t microSecs)
 {
     *(reinterpret_cast<uint32_t *>(&dst[0])) = megaSecs;
     *(reinterpret_cast<uint32_t *>(&dst[sizeof(uint32_t)])) = secs;
@@ -136,9 +156,9 @@ void storeNow(char * dst,
 }
 
 // sleep to consistently represent a delay processing work
-bool performSleep(bool const & abortTask,
-                  uint32_t sleepTime,
-                  uint32_t sleepUnit)
+static bool performSleep(bool const & abortTask,
+                         uint32_t sleepTime,
+                         uint32_t sleepUnit)
 {
     static uint32_t const secondsUnit =
         *(reinterpret_cast<uint32_t const *>("sec "));

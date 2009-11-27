@@ -86,7 +86,10 @@
 
 -record(state,
     {
+    max_iterations = 0,
+    current_iteration = 0,
     % lookups host -> {mean, stddev}
+    inter_task = rbdict:new(),
     trip1 = rbdict:new(),
     processing = rbdict:new(),
     trip2 = rbdict:new()}).
@@ -95,10 +98,11 @@
 %%% Callback functions from cloud_work_interface
 %%%------------------------------------------------------------------------
 
-start_link(WorkTitle, [])
+start_link(WorkTitle, [MaxIterations])
     when is_atom(WorkTitle) ->
     ?LOG_ERROR("make sure all machines have their clocks synced!!!", []),
-    case gen_server:start_link({local, WorkTitle}, ?MODULE, [], []) of
+    case gen_server:start_link({local, WorkTitle}, ?MODULE,
+                               [MaxIterations], []) of
         {ok, _} ->
             ok;
         {error, {already_started, _}} ->
@@ -114,39 +118,53 @@ handle_stop(WorkTitle)
 handle_get_initial_task_size() ->
     0.99. % percentage
 
-%handle_get_task_time_target() -> (1.0 / 3600.0).   %  1 second in hours
-handle_get_task_time_target() -> (1.0 / 60.0).     %  1 minute in hours
+handle_get_task_time_target() -> (1.0 / 3600.0).   %  1 second in hours
+%handle_get_task_time_target() -> (1.0 / 60.0).     %  1 minute in hours
 %handle_get_task_time_target() -> (5.0 / 60.0).     %  5 minutes in hours
 %handle_get_task_time_target() -> (15.0 / 60.0).    % 15 minutes in hours
 %handle_get_task_time_target() -> (30.0 / 60.0).    % 30 minutes in hours
 %handle_get_task_time_target() -> 1.0.              %  1 hour
 
-handle_get_task(_, _, TaskSize)
-    when is_float(TaskSize) ->
-    case handle_get_task_time_target() of
-        % 1 second maximum
-        Time when Time =< (1.0000001 / 3600.0) ->
-            TargetSleep = erlang:round((Time / (1.0 / 3600.0)) * 1000000.0),
-            Sleep = math_extensions:ceil(TargetSleep * TaskSize),
-            {CreateMegaSecs, CreateSecs, CreateMicroSecs} = erlang:now(),
-            {<<Sleep:32/unsigned-integer-native, "usec",
-               CreateMegaSecs:32/unsigned-integer-native,
-               CreateSecs:32/unsigned-integer-native,
-               CreateMicroSecs:32/unsigned-integer-native>>, []};
-        % multiple seconds
-        Time ->
-            TargetSleep = erlang:round(Time * 3600.0),
-            Sleep = math_extensions:ceil(TargetSleep * TaskSize),
-            {CreateMegaSecs, CreateSecs, CreateMicroSecs} = erlang:now(),
-            {<<Sleep:32/unsigned-integer-native, "sec ",
-               CreateMegaSecs:32/unsigned-integer-native,
-               CreateSecs:32/unsigned-integer-native,
-               CreateMicroSecs:32/unsigned-integer-native>>, []}
+handle_get_task(WorkTitle, _, TaskSize)
+    when is_atom(WorkTitle), is_float(TaskSize) ->
+    try gen_server:call(WorkTitle, iterate) of
+        ok ->
+            case handle_get_task_time_target() of
+                % 1 second maximum
+                Time when Time =< (1.0000001 / 3600.0) ->
+                    TargetSleep =
+                        erlang:round((Time / (1.0 / 3600.0)) * 1000000.0),
+                    Sleep = math_extensions:ceil(TargetSleep * TaskSize),
+                    {CreateMegaSecs,
+                     CreateSecs,
+                     CreateMicroSecs} = erlang:now(),
+                    {<<Sleep:32/unsigned-integer-native, "usec",
+                       CreateMegaSecs:32/unsigned-integer-native,
+                       CreateSecs:32/unsigned-integer-native,
+                       CreateMicroSecs:32/unsigned-integer-native>>, []};
+                % multiple seconds
+                Time ->
+                    TargetSleep =
+                        erlang:round(Time * 3600.0),
+                    Sleep = math_extensions:ceil(TargetSleep * TaskSize),
+                    {CreateMegaSecs,
+                     CreateSecs,
+                     CreateMicroSecs} = erlang:now(),
+                    {<<Sleep:32/unsigned-integer-native, "sec ",
+                       CreateMegaSecs:32/unsigned-integer-native,
+                       CreateSecs:32/unsigned-integer-native,
+                       CreateMicroSecs:32/unsigned-integer-native>>, []}
+            end;
+        _ ->
+            {<<>>, []}
+    catch
+        _:_ ->
+            {<<>>, []}
     end.
 
 handle_drain_binary_output(WorkTitle, DataList)
     when is_atom(WorkTitle), is_list(DataList) ->
-    try gen_server:call(WorkTitle, {data, DataList}) of
+    try gen_server:call(WorkTitle, {data, DataList, WorkTitle}) of
         ok ->
             []
     catch
@@ -158,14 +176,17 @@ handle_drain_binary_output(WorkTitle, DataList)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([]) ->
-    {ok, #state{}}.
-handle_call({data, DataList}, _, State) ->
+init([MaxIterations]) ->
+    {ok, #state{max_iterations = MaxIterations}}.
+handle_call({data, DataList, WorkTitle}, _, State) ->
     NewState = drain_latency_data(DataList, State),
+    InterTaskLookup = NewState#state.inter_task,
     Trip1Lookup = NewState#state.trip1,
     Trip2Lookup = NewState#state.trip2,
     rbdict:fold(fun(MachineName, StdDev, _) ->
         {Count, _, _} = StdDev,
+        {InterTaskMean, InterTaskStdDev} =
+            math_extensions:stddev(rbdict:fetch(MachineName, InterTaskLookup)),
         {Trip1Mean, Trip1StdDev} =
             math_extensions:stddev(rbdict:fetch(MachineName, Trip1Lookup)),
         {ProcessingMean, ProcessingStdDev} =
@@ -173,17 +194,30 @@ handle_call({data, DataList}, _, State) ->
         {Trip2Mean, Trip2StdDev} =
             math_extensions:stddev(rbdict:fetch(MachineName, Trip2Lookup)),
         Total = Trip1Mean + ProcessingMean + Trip2Mean,
-        ?LOG_INFO("~n~s (~p samples): ~n"
+        ?LOG_INFO("~n~s (~p ~p samples): ~n"
+                  "    inter-task = ~13.3f ms +/- ~10.3f~n"
                   "         trip1 = ~13.3f ms +/- ~10.3f  (~7.3f %)~n"
                   "    processing = ~13.3f ms +/- ~10.3f  (~7.3f %)~n"
                   "         trip2 = ~13.3f ms +/- ~10.3f  (~7.3f %)",
-            [MachineName, Count - 1,
+            [MachineName, Count - 1, WorkTitle,
+             InterTaskMean, InterTaskStdDev,
              Trip1Mean, Trip1StdDev, Trip1Mean / Total * 100.0,
              ProcessingMean, ProcessingStdDev, ProcessingMean / Total * 100.0,
              Trip2Mean, Trip2StdDev, Trip2Mean / Total * 100.0]),
         ok
     end, ok, NewState#state.processing),
     {reply, ok, NewState};
+handle_call(iterate, _,
+            #state{max_iterations = MaxIterations,
+                   current_iteration = CurrentIteration} = State) ->
+    if
+        MaxIterations == 0 ->
+            {reply, ok, State};
+        MaxIterations == CurrentIteration ->
+            {stop, "all iterations complete", done, State};
+        true ->
+            {reply, ok, State#state{current_iteration = CurrentIteration + 1}}
+    end;
 handle_call(stop, _, State) ->
     {stop, "stop requested", ok, State};
 handle_call(Request, _, State) ->
@@ -206,13 +240,24 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 drain_latency_data(DataList, State) ->
-    drain_latency_data(rbdict:new(), rbdict:new(), rbdict:new(),
+    drain_latency_data(rbdict:new(), rbdict:new(), rbdict:new(), rbdict:new(),
         DataList, State).
 
-drain_latency_data(Trip1Dict, ProcessingDict, Trip2Dict, [],
-                   #state{trip1 = Trip1Lookup,
+drain_latency_data(InterTaskDict, Trip1Dict, ProcessingDict, Trip2Dict, [],
+                   #state{inter_task = InterTaskLookup,
+                          trip1 = Trip1Lookup,
                           processing = ProcessingLookup,
                           trip2 = Trip2Lookup} = State) ->
+    NewInterTaskLookup = rbdict:fold(fun(MachineName, InterTaskList, L) ->
+        case rbdict:find(MachineName, L) of
+            error ->
+                rbdict:store(MachineName,
+                    math_extensions:stddev(InterTaskList), L);
+            {ok, StdDev} ->
+                rbdict:store(MachineName,
+                    math_extensions:stddev(InterTaskList, StdDev), L)
+        end
+    end, InterTaskLookup, InterTaskDict),
     NewTrip1Lookup = rbdict:fold(fun(MachineName, Trip1List, L) ->
         case rbdict:find(MachineName, L) of
             error ->
@@ -243,12 +288,14 @@ drain_latency_data(Trip1Dict, ProcessingDict, Trip2Dict, [],
                     math_extensions:stddev(Trip2List, StdDev), L)
         end
     end, Trip2Lookup, Trip2Dict),
-    State#state{trip1 = NewTrip1Lookup,
+    State#state{inter_task = NewInterTaskLookup,
+                trip1 = NewTrip1Lookup,
                 processing = NewProcessingLookup,
                 trip2 = NewTrip2Lookup};
 
-drain_latency_data(Trip1Dict, ProcessingDict, Trip2Dict,
-                   [<<CreateMegaSecs:32/unsigned-integer-native,
+drain_latency_data(InterTaskDict, Trip1Dict, ProcessingDict, Trip2Dict,
+                   [<<InterTask:64/float-native,
+                      CreateMegaSecs:32/unsigned-integer-native,
                       CreateSecs:32/unsigned-integer-native,
                       CreateMicroSecs:32/unsigned-integer-native,
                       GetMegaSecs:32/unsigned-integer-native,
@@ -265,6 +312,9 @@ drain_latency_data(Trip1Dict, ProcessingDict, Trip2Dict,
     Trip1 = time_extensions:elapsed(GetTime, CreateTime),
     Processing = time_extensions:elapsed(ReturnTime, GetTime),
     Trip2 = time_extensions:elapsed(erlang:now(), ReturnTime),
+    NewInterTaskDict = rbdict:update(MachineName, fun(InterTaskList) ->
+        [InterTask | InterTaskList]
+    end, [InterTask], InterTaskDict),
     NewTrip1Dict = rbdict:update(MachineName, fun(Trip1List) ->
         [Trip1 | Trip1List]
     end, [Trip1], Trip1Dict),
@@ -274,6 +324,9 @@ drain_latency_data(Trip1Dict, ProcessingDict, Trip2Dict,
     NewTrip2Dict = rbdict:update(MachineName, fun(Trip2List) ->
         [Trip2 | Trip2List]
     end, [Trip2], Trip2Dict),
-    drain_latency_data(NewTrip1Dict, NewProcessingDict, NewTrip2Dict,
+    drain_latency_data(NewInterTaskDict,
+                       NewTrip1Dict,
+                       NewProcessingDict,
+                       NewTrip2Dict,
                        Remaining, State).
 
