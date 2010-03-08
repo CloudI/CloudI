@@ -51,7 +51,8 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([sum/1, product/1, ceil/1, floor/1, round/2,
+-export([sum/1, product/1,
+         ceil/1, floor/1, round/2, frac/1,
          immediate_stddev/1,
          stddev/0, stddev/1, stddev/2, stddev/4]).
 
@@ -126,6 +127,17 @@ round(X, 6) ->
 round(X, N) when is_integer(N) ->
     Scale = math:pow(10, N),
     erlang:round(X * Scale) / Scale.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fractional part of a number.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec frac(number()) -> number().
+
+frac(X) ->
+    X - erlang:trunc(X).
 
 %% Standard deviation algorithms better than:
 %% StdDev = fun(L) -> M = lists:sum(L) / erlang:length(L), math:sqrt(lists:foldl(fun(V, S) -> (V - M) * (V - M) + S end, 0.0, L) / erlang:length(L)) end.

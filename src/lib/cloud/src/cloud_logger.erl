@@ -580,13 +580,8 @@ get_interface_module_code(_, Process) -> % 5
     ", [Process, Process, Process, Process, Process]).
 
 create_interface_module(Node, Level) when is_integer(Level) ->
-    Deleted = code:delete(cloud_logger_interface),
-    if
-        Deleted ->
-            code:purge(cloud_logger_interface);
-        true ->
-            ok
-    end,
+    code:delete(cloud_logger_interface),
+    % do not purge the module, but let it get purged after the new one is loaded
     Process = string_extensions:format("{~p,~p}", [?MODULE, Node]),
     {Module, Binary} = dynamic_compile:from_string(
         get_interface_module_code(Level, Process)),

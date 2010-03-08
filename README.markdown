@@ -1,11 +1,12 @@
-#CloudI 0.0.8 (alpha)
+#[CloudI 0.0.9 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
-CloudI is a private cloud computing framework for secure, internal data 
-processing.  CloudI facilitates a cloud of processes for solving 
-embarrassingly parallel and divide and conquer problems with 
-dynamic load balancing work pools while maintaining fault-tolerant workers.
+CloudI is an open-source private cloud computing framework for secure,
+internal data processing.  CloudI facilitates a cloud of processes for solving
+embarrassingly parallel and divide and conquer problems with dynamic load
+balancing work pools while maintaining fault-tolerant workers.
+[To support CloudI development donate here.](http://pledgie.com/campaigns/9269)
 
 CloudI requires pool data from databases or from an Erlang work module that
 will automatically generate the work.  CloudI was designed to be a multi-purpose
@@ -103,13 +104,21 @@ when using the cloud_api:remove_data/1 function.  If a data repository is
 removed that a work module is using, bad things will happen.  The usage of the
 CloudI API should respect running work that is not removed.
 
-## KNOWN BUGS
+## KNOWN BUGS/PROBLEMS
 
-* Long node names are not currently suppored in the cloud.conf file
-  (so do not use a domain name in the node name, only the hostname)
-* The ememcached application will bring down the Cloudi instance leader
-  if it is unable to connect to a memcached host specified in the configuration
-  when it receives data for a memcached cluster.
+* Long node names are not currently supported in the cloud.conf file
+  (so do not use a domain name in the node name, only the hostname).
+* Database drivers may bring down the Cloudi instance leader if the
+  host can not be reached (ememcached, epgsql, etc.).
+* If a job ignores the task size and does not alter its work load
+  based on its value (within the range (0..1)) the job runs the risk of
+  creating results faster than they can be consumed by the database and
+  the database may timeout and cause the Cloudi instance leader to crash.
+  However, with a properly implemented job, the task size alters the work load
+  so that tasks converge on the task time target and stagger the database
+  results (so the results can be consumed gradually).
+* cloud_api:remove_data/1 causes undefined behavior if a data repository is
+  removed that a running job is using.
 
 ## LICENSE
 

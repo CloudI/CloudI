@@ -183,11 +183,11 @@ handle_get_task(WorkTitle, SequenceNumber, TaskSize)
                Step:32/unsigned-integer-native,
                IndexBin/binary>>, []}
     catch
-        exit:{noproc, _} ->
-            % the work module has already stopped execution
-            % but output still needs to be collected, so the work module
-            % is still being queried by workers to determine if more work
-            % exists
+        % the work module has already stopped execution
+        % but output still needs to be collected, so the work module
+        % is still being queried by workers to determine if more work
+        % exists
+        exit:_ ->
             {<<>>, []}
     end.
 

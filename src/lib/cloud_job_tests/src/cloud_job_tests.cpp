@@ -96,13 +96,13 @@ extern "C"
 void initialize()
 {
     // global/"static" data is shared between multiple threads, beware!
-    std::clog << "cloud_job_tests global/static data "
+    std::cerr << "cloud_job_tests global/static data "
         "initialize()" << std::endl;
 }
 
 void deinitialize()
 {
-    std::clog << "cloud_job_tests global/static data "
+    std::cerr << "cloud_job_tests global/static data "
         "deinitialize()" << std::endl;
 }
 

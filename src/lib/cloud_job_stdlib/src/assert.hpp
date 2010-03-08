@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog
+// Copyright (c) 2010, Michael Truog
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -36,53 +36,35 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
-//
+// 
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
 
-#include "library.hpp"
-#include "copy_ptr.hpp"
-#include <dlfcn.h>
-#include <iostream>
-#include <sstream>
+// unfortunately, many of the boost header files use the assert macro
+// from cassert/assert.h, so a "#undef assert" might be required after boost
+// include files, if using this assert macro definition
+// (best to keep it as the last include file in the file)
+#ifdef assert
+#error cassert or assert.h should not be included
+#endif
 
-class library_dlsym_failed : public std::exception
+#ifdef NDEBUG
+#define BOOST_DISABLE_ASSERTS
+#endif // NDEBUG
+
+#define BOOST_ENABLE_ASSERT_HANDLER
+
+#include <boost/assert.hpp>
+
+namespace boost
 {
-    public:
-        library_dlsym_failed(char const * const pError)
-        {
-            std::ostringstream s;
-            s << "dlsym() failed: " << pError;
-            m_pMessage.reset(new std::string(s.str()));
-        }
-        virtual ~library_dlsym_failed() throw () {}
-        char const * what() const throw () { return m_pMessage->c_str(); }
-    private:
-        copy_ptr<std::string> m_pMessage;
-
-};
-
-library::library(std::string const & name) :
-    m_handle(dlopen(name.c_str(), RTLD_NOW | RTLD_LOCAL))
-{
+    void assertion_failed(char const * expr,
+                          char const * function,
+                          char const * file,
+                          long line);
 }
 
-library::~library()
-{
-    if (m_handle)
-        dlclose(m_handle);
-}
+#endif // ASSERT_HPP
 
-char * library::error() const
-{
-    return dlerror();
-}
-
-void * library::get_function(char const * const pName)
-{
-    dlerror();
-    void * pFunction = dlsym(m_handle, pName);
-    char const * const pError = dlerror();
-    if (pError)
-        throw library_dlsym_failed(pError);
-    return pFunction;
-}
+#define assert(E) BOOST_ASSERT(E)
 

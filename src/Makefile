@@ -5,6 +5,7 @@
 include build_configuration.mk
 
 ROOT_PATH=$(abspath .)
+VERSION_NAME=$(MAJOR_VERSION_NAME).0
 FAILOVER_HOSTS_FILE=config/failover_hosts
 SINAN_PATH=$(ERLWARE_PATH)/bin/sinan
 ERTS_PATH=$(ERLANG_PATH)/lib/erlang/erts-$(ERTS_VERSION)
@@ -29,8 +30,8 @@ MAIN_SRC_PATH=lib/cloud/src
 MAIN_INC_PATH=$(ROOT_PATH)/lib/cloud/include
 MAIN_BIN_PATH=lib/cloud/priv
 MAIN_CONF_PATH=lib/cloud/conf
-GXX_SRC=lib/g++/releases/gcc-4.4.1.tar.gz
-GXX_SRC_PATH=$(ROOT_PATH)/lib/g++/releases/gcc-4.4.1
+GXX_SRC=lib/g++/releases/gcc-$(GCC_VERSION).tar.gz
+GXX_SRC_PATH=$(ROOT_PATH)/lib/g++/releases/gcc-$(GCC_VERSION)
 GXX_BIN_PATH=$(GXX_SRC_PATH)_install
 GXX_BIN=$(GXX_BIN_PATH)/bin/g++
 GCC_BIN=$(GXX_BIN_PATH)/bin/gcc
@@ -45,8 +46,8 @@ GMP_LIB_PATH=$(GMP_SRC_PATH)_install/lib
 PTMALLOC_SRC=lib/ptmalloc/ptmalloc3-current.tar.gz
 PTMALLOC_SRC_PATH=$(ROOT_PATH)/lib/ptmalloc/releases/ptmalloc3
 PTMALLOC_LIB_PATH=$(PTMALLOC_SRC_PATH)/lib
-BOOST_SRC=lib/boost/releases/boost_1_40_0.tar.gz
-BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_1_40_0
+BOOST_SRC=lib/boost/releases/boost_$(BOOST_VERSION).tar.gz
+BOOST_SRC_PATH=$(ROOT_PATH)/lib/boost/releases/boost_$(BOOST_VERSION)
 BOOST_INC_PATH=$(BOOST_SRC_PATH)_install/include
 BOOST_LIB_PATH=$(BOOST_SRC_PATH)_install/lib
 CLOUD_BIN_PATH=_build/development/apps/$(PROJECT_NAME)-$(MAJOR_VERSION_NAME)/priv
@@ -58,21 +59,23 @@ WORK_TYPE2_OBJ_PATH=lib/cloud_job_latency/priv/obj
 WORK_TYPE2_LIB_PATH=lib/cloud_job_latency/priv/lib
 
 # force usage of a local compiler for c++
-GXX_CXXFLAGS=-I$(GXX_BIN_PATH)/include/c++/4.4.1/
+GXX_CXXFLAGS=-I$(GXX_BIN_PATH)/include/c++/$(GCC_VERSION)/
 GXX_LDFLAGS=-L$(GXX_BIN_PATH)/lib \
             -Wl,-rpath $(GXX_BIN_PATH)/lib
 LBITS=$(shell getconf LONG_BIT)
 ifeq ($(LBITS),32)
 GXX_LDFLAGS+=\
-    -L$(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.1/ \
-    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/4.4.1/
+    -L$(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/$(GCC_VERSION)/ \
+    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/i686-pc-linux-gnu/$(GCC_VERSION)/
 else
 ifeq ($(LBITS),64)
 GXX_LDFLAGS+=\
-    -L$(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.1/ \
+    -L$(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/$(GCC_VERSION)/ \
     -L$(GXX_BIN_PATH)/lib64 -L$(GXX_BIN_PATH)/lib32 \
-    -Wl,-rpath $(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/4.4.1/ \
-    -Wl,-rpath $(GXX_BIN_PATH)/lib64 -Wl,-rpath $(GXX_BIN_PATH)/lib32
+    -Wl,-rpath \
+    $(GXX_BIN_PATH)/lib/gcc/x86_64-unknown-linux-gnu/$(GCC_VERSION)/ \
+    -Wl,-rpath \
+    $(GXX_BIN_PATH)/lib64 -Wl,-rpath $(GXX_BIN_PATH)/lib32
 else
 GXX_BIN=
 GCC_BIN=
@@ -121,9 +124,27 @@ CXX_DEADCODESTRIP_ARGS=-Wl,-static -fvtable-gc -fdata-sections -ffunction-sectio
 # release or debug
 ifeq ($(DEBUG_BUILD),)
 CXXFLAGS+=-g -O3
+CFLAGS+=-g -O3
 else
 CXXFLAGS+=-g -O0
+CFLAGS+=-g -O0
+# Disable the libstdc++ memory pool
+# With gcc 2.91, 2.95, 3.0 and 3.1,
+#   compile all source using the STL with -D__USE_MALLOC.
+#   Beware! This was removed from gcc starting with version 3.3.
+# With gcc 3.2.2 and later, 
+#   you should export the environment variable GLIBCPP_FORCE_NEW
+#   before running your program.
+# With gcc 3.4 and later,
+#   that variable has changed name to GLIBCXX_FORCE_NEW. 
 endif
+
+LDFLAGS+=-L$(BOOST_LIB_PATH)
+
+# debug glibc
+# Install on Ubuntu with: apt-get install libc6-dbg
+#LDFLAGS_SUFFIX=-L/usr/lib/debug/ -Wl,-rpath /usr/lib/debug/ -lc
+LDFLAGS_SUFFIX=
 
 # ptmalloc3 has too many problems to be used
 #ALLOCATOR_SUFFIX=\
@@ -131,13 +152,9 @@ endif
 #    -Wl,-Bstatic \
 #    -L$(PTMALLOC_LIB_PATH) -lptmalloc3 \
 #    -Wl,-Bdynamic \
-#    -lc -lpthread
-ALLOCATOR_SUFFIX=
+#    $(LDFLAGS_SUFFIX) -lc -lpthread
+ALLOCATOR_SUFFIX=$(LDFLAGS_SUFFIX)
 
-LDFLAGS+=-L$(BOOST_LIB_PATH)
-# debug glibc
-#/usr/lib/debug/lib  /usr/lib/debug/usr/lib /usr/lib/debug/usr/lib32  /usr/lib/debug/lib32 /usr/lib/debug/
-LDFLAGS+=-L/usr/lib/debug/
 
 # source files compiled with sinan
 ERLANG_SRC_FILES=\
@@ -240,7 +257,7 @@ _build.cfg: _build.cfg.template \
 
 g++: $(GXX_BIN)
 $(GXX_SRC):
-	bin/get.sh gcc-4.4.1.tar.gz $(dir $(GXX_SRC))
+	@bin/get.sh gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.gz $(dir $(GXX_SRC))
 $(GXX_BIN): $(GXX_SRC) \
         $(GMP_SRC) \
         lib/g++/mpfr-2.4.1.tar.gz
@@ -308,21 +325,21 @@ boost-trunk:
 	(cd lib/boost; tar cf boost_trunk.tar boost_trunk; gzip boost_trunk.tar)
 	rm -rf lib/boost/boost_trunk
 $(BOOST_SRC):
-	bin/get.sh boost_1_40_0.tar.gz $(dir $(BOOST_SRC))
+	bin/get.sh boost_$(BOOST_VERSION).tar.gz $(dir $(BOOST_SRC))
 $(BOOST_LIB_PATH): $(BOOST_SRC)
 	@test -d $(BOOST_SRC_PATH) || \
         tar zxvf $(BOOST_SRC) -C $(dir $(BOOST_SRC_PATH))
-	find $(dir $(BOOST_SRC)) -name "boost_1_40_0_*.patch" | xargs -Ifile \
-        cp file $(BOOST_SRC_PATH)
+	find $(dir $(BOOST_SRC)) -name "boost_$(BOOST_VERSION)_*.patch" | \
+        xargs -Ifile cp file $(BOOST_SRC_PATH)
 	@(cd $(BOOST_SRC_PATH) && \
       ls *.patch | xargs cat | patch -p1 && \
       ./bootstrap.sh --prefix=`pwd`_install --libdir=`pwd`_install/lib && \
-	  echo "using gcc : 4.4.1 : $(GXX_BIN) : \
+	  echo "using gcc : $(GCC_VERSION) : $(GXX_BIN) : \
 <root>$(GXX_BIN_PATH) \
 <compileflags>$(GXX_CXXFLAGS) <linkflags>$(GXX_LDFLAGS) ; " > \
           tools/build/v2/user-config.jam && \
       ./bjam --debug-configuration --without-python --without-mpi \
-             toolset=gcc-4.4.1 install\
+             toolset=gcc-$(GCC_VERSION) install\
      )
 
 $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
@@ -343,7 +360,7 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
 	@$(CXX) $(CXXFLAGS) -rdynamic -I$(GMP_INC_PATH) \
         -o $(WORK_TYPE1_OBJ_PATH)/piqpr8_gmp_verify.o \
         -c -fPIC $(WORK_TYPE1_SRC_PATH)/piqpr8_gmp_verify.cpp
-	@$(CXX) -shared -Wl,-export-dynamic \
+	@$(CC) -shared -Wl,-export-dynamic \
         -o $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so \
         $(WORK_TYPE1_OBJ_PATH)/cloud_job_tests.o \
         $(WORK_TYPE1_OBJ_PATH)/piqpr8_gmp.o \
@@ -353,7 +370,7 @@ $(WORK_TYPE1_LIB_PATH)/libcloud_job_tests.so: \
         -Wl,-rpath $(GMP_LIB_PATH) \
         -lboost_thread \
         -lboost_system \
-		-lgmp \
+        -lgmp \
         $(ALLOCATOR_SUFFIX)
 
 $(WORK_TYPE1_LIB_PATH)/cloud_job_tests.beam: \
@@ -375,7 +392,7 @@ $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so: \
         -I$(INTERFACE_INC_PATH) \
         -o $(WORK_TYPE2_OBJ_PATH)/cloud_job_latency.o \
         -c -fPIC $(WORK_TYPE2_SRC_PATH)/cloud_job_latency.cpp
-	@$(CXX) -shared -Wl,-export-dynamic \
+	@$(CC) -shared -Wl,-export-dynamic \
         -o $(WORK_TYPE2_LIB_PATH)/libcloud_job_latency.so \
         $(WORK_TYPE2_OBJ_PATH)/cloud_job_latency.o \
         $(ALLOCATOR_SUFFIX)
@@ -526,7 +543,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          -L$(ERL_INTERFACE_LIB_PATH) -lerl_interface_st -lei_st \
          -Wl,-Bdynamic \
          -ldl -lrt \
-        $(ALLOCATOR_SUFFIX)
+         $(ALLOCATOR_SUFFIX)
 	@$(RM) $(WORKER_OBJ_PATH)/*.o
 
 $(MAIN_SRC_PATH)/cloud_worker_port.hrl: \

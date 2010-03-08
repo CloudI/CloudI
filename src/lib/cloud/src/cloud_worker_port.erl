@@ -559,7 +559,7 @@ handle_info(Request, State) ->
     {noreply, State}.
 
 terminate(_, #state{keep_alive_timer = Timer,
-                    port = Port}) when is_port(Port) ->
+                    port = Port}) ->
     if
         Port /= undefined ->
             catch erlang:port_close(Port);

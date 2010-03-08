@@ -37,11 +37,12 @@
 # DAMAGE.
 
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 file destination_directory"
+    echo "Usage: $0 remote_file destination_directory"
     exit 1
 fi
-FILE=$1
+FILE=`basename $1`
 DESTINATION=$2
+MAX_DOWNLOAD_RATE=400k
 
 cd $DESTINATION
 if [ -e $FILE ]; then
@@ -55,6 +56,7 @@ if [ ! -e $MIRRORS_FILE ]; then
     exit 1
 fi
 
+echo "Downloading $FILE"
 MIRROR_SEARCH_TIME=`cat $MIRRORS_FILE | wc -l`
 echo -n "finding the best mirror (in $MIRROR_SEARCH_TIME seconds)"
 
@@ -89,11 +91,13 @@ USE_CURL=$?
 
 if [ $USE_WGET -eq 0 ]; then
     echo "downloading $FILE"
-    wget --progress=bar:force -O $FILE -p "$SOURCE""$FILE"
+    wget --limit-rate=$MAX_DOWNLOAD_RATE --progress=bar:force \
+         -O $FILE -p "$SOURCE""$1"
 elif [ $USE_CURL -eq 0 ]; then
     echo "downloading $FILE"
     echo "(using $SOURCE)"
-    curl --progress-bar -O -L "$SOURCE""$FILE"
+    curl --limit-rate $MAX_DOWNLOAD_RATE --progress-bar -O -L \
+         "$SOURCE""$1"
 else
     echo "install either curl or wget"
     exit 1

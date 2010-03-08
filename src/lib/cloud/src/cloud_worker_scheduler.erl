@@ -166,7 +166,7 @@ allocate_work(NewProcesses,
     % put work on processes
     case allocate_work(Processes, Lookup, UpdatedQueue) of
         {[], RemainingProcesses, NewQueue} ->
-            ?LOG_INFO("worker scheduler is now idle", []),
+            ?LOG_INFO("~nworker scheduler is now idle ~p", [NewQueue]),
             {[], RemainingProcesses, 
              State#state{run_queue_work_state_processes = [],
                          run_queue = NewQueue}};
@@ -520,7 +520,8 @@ allocate_work(Processes, Lookup, Queue)
                 L when is_list(L) ->
                     {list_to_atom(L), list_to_atom(WorkTitle)}
             end,
-            {WorkLoaded, InitialTaskSize} = case c:l(WorkModule) of
+            code:purge(WorkModule),
+            {WorkLoaded, InitialTaskSize} = case code:load_file(WorkModule) of
                 {module, WorkModule} ->
                     StartResult = start_work_module(self(),
                         WorkTitle, WorkModule, WorkInstance,
@@ -542,8 +543,9 @@ allocate_work(Processes, Lookup, Queue)
                                     {ok, S}
                             end
                     end;          
-                _ ->
-                    ?LOG_ERROR("error loading work ~p", [WorkTitle]),
+                {error, Reason} ->
+                    ?LOG_ERROR("error loading work ~p: ~p",
+                               [WorkTitle, Reason]),
                     {error, 0.0}
             end,
             if
@@ -564,6 +566,13 @@ allocate_work(Processes, Lookup, Queue)
                             allocate_work(ProcessesOut ++ ProcessesIn, Lookup, 
                                 cloud_run_queue:put_running(
                                     NewWork, RemainingQueue));
+                        {_, 0, ProcessesOut, [], NewWork} ->
+                            % no threads were allocated,
+                            % so just put the task back
+                            % on the queue in a waiting state
+                            {ProcessesOut, [],
+                             cloud_run_queue:put_waiting(
+                                NewWork, RemainingQueue)};
                         {all, _, ProcessesOut, [], NewWork} ->
                             % it is possible that a static number of threads
                             % were allocated per process, so attempt to
@@ -571,20 +580,11 @@ allocate_work(Processes, Lookup, Queue)
                             allocate_work(ProcessesOut, Lookup, 
                                 cloud_run_queue:put_running(
                                     NewWork, RemainingQueue));
-                        {_, ThreadsAllocated, ProcessesOut, [], NewWork}
-                            when ThreadsAllocated > 0 ->
+                        {_, _, ProcessesOut, [], NewWork} ->
                             % not all of the threads requested were allocated
                             % but some were, so just return the result
                             {ProcessesOut, [],
                              cloud_run_queue:put_running(
-                                NewWork, RemainingQueue)};
-                        {_, ThreadsAllocated, ProcessesOut, [], NewWork}
-                            when ThreadsAllocated == 0 ->
-                            % no threads were allocated,
-                            % so just put the task back
-                            % on the queue in a waiting state
-                            {ProcessesOut, [],
-                             cloud_run_queue:put_waiting(
                                 NewWork, RemainingQueue)}
                     end
             end
