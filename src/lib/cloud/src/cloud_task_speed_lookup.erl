@@ -155,32 +155,50 @@ update([FirstProcess | _] = Processes, State)
 add(Node, WorkTitle, TaskSize, TargetTime, ElapsedTime, State)
     when is_atom(Node), is_list(WorkTitle), is_float(TaskSize),
          is_float(TargetTime), is_float(ElapsedTime) ->
+    % amount of work that can be done in an hour
+    TaskScaleFactor = TargetTime / ElapsedTime,
+    ElapsedTimeMinutes = ElapsedTime * 60.0,
+    ElapsedTimeSeconds = math_extensions:frac(ElapsedTimeMinutes) * 60.0,
+    ElapsedTimeMilliSeconds =
+        math_extensions:frac(ElapsedTimeSeconds) * 1000.0,
+    TargetTimeMinutes = TargetTime * 60.0,
+    TargetTimeSeconds = math_extensions:frac(TargetTimeMinutes) * 60.0,
+    TargetTimeMilliSeconds =
+        math_extensions:frac(TargetTimeSeconds) * 1000.0,
+    ?LOG_INFO("task time on ~p is ~2w:~2..0w.~3..0w (not ~2w:~2..0w.~3..0w)",
+              [Node,
+               math_extensions:floor(ElapsedTimeMinutes),
+               math_extensions:floor(ElapsedTimeSeconds),
+               math_extensions:floor(ElapsedTimeMilliSeconds),
+               math_extensions:floor(TargetTimeMinutes),
+               math_extensions:floor(TargetTimeSeconds),
+               math_extensions:floor(TargetTimeMilliSeconds)]),
+    if
+        TaskScaleFactor < 0.1 ->
+            ?LOG_DEBUG("node ~p is too slow for ~p "
+                       "(with the current task_time_target "
+                       "of ~p hours)", [Node, WorkTitle, TargetTime]);
+        true ->
+            ok
+    end,
+
     HostName = get_hostname_from_node(Node),
     rbdict:update(HostName, fun(Value) ->
-        % amount of work that can be done in an hour
-        TaskScaleFactor = TargetTime / ElapsedTime,
-        if
-            TaskScaleFactor < 0.1 ->
-                ?LOG_DEBUG("node ~p is too slow for ~p "
-                           "(with the current task_time_target "
-                           "of ~p hours)", [Node, WorkTitle, TargetTime]);
-            true ->
-                ok
-        end,
-        SmoothTaskSize = case rbdict:find(WorkTitle, Value) of
+        NewS = case rbdict:find(WorkTitle, Value) of
             {ok, #task_size_state{threads = Threads,
                                   task_size = undefined} = S} ->
-                smooth_task_size(TaskSize * TaskScaleFactor, TaskSize,
-                    TargetTime, ElapsedTime, Threads);
+                S#task_size_state{task_size = 
+                    smooth_task_size(TaskSize * TaskScaleFactor, TaskSize,
+                                     TargetTime, ElapsedTime, Threads)};
             {ok, #task_size_state{threads = Threads,
                                   task_size = OldTaskSize} = S} ->
-                smooth_task_size(OldTaskSize * TaskScaleFactor, OldTaskSize,
-                    TargetTime, ElapsedTime, Threads)
+                S#task_size_state{task_size = 
+                    smooth_task_size(OldTaskSize * TaskScaleFactor, OldTaskSize,
+                                     TargetTime, ElapsedTime, Threads)}
         end,
-        %?LOG_DEBUG("task size on ~p off by a factor of ~p (now ~p)",
-        %           [Node, TaskScaleFactor, SmoothTaskSize]),
-        rbdict:store(WorkTitle, S#task_size_state{
-            task_size = SmoothTaskSize}, Value)
+        ?LOG_DEBUG("task size on ~p off by a factor of ~p (now ~p)",
+                   [Node, TaskScaleFactor, NewS#task_size_state.task_size]),
+        rbdict:store(WorkTitle, NewS, Value)
     end, State).
 
 %%-------------------------------------------------------------------------
@@ -261,43 +279,49 @@ smooth_task_size(NewTaskSize, OldTaskSize, TargetTime, ElapsedTime, Threads)
     % percentage difference between the elapsed time and the target time
     % (empirically found solution that is relatively stable
     %  and provides slow convergance, until a better solution is found)
-    SmoothingFactor = if
-        Difference =< 1.0 ->
-            math_extensions:product(lists:seq(
-                math_extensions:floor(math:log(Difference) / math:log(3.0)) *
-                -2 + 1,
-            1, -2)) * 8 * erlang:float(Threads);
-        true ->
-            math_extensions:product(lists:seq(
-                math_extensions:ceil(math:log(Difference) / math:log(50.0)) *
-                2 + 1,
-            1, -2)) * 8 * erlang:float(Threads)
-    end,
-    % smoothing method as separate sequences
     %SmoothingFactor = if
-    %    Difference =< 0.0625 ->
-    %        erlang:float(Threads) * 7560.0;
-    %    Difference =< 0.125 ->
-    %        erlang:float(Threads) * 840.0;
-    %    Difference =< 0.25 ->
-    %        erlang:float(Threads) * 120.0;
-    %    Difference =< 0.5 ->
-    %        erlang:float(Threads) * 24.0;
     %    Difference =< 1.0 ->
-    %        erlang:float(Threads) * 8.0;
-    %    Difference =< 50.0 ->                   % = 1.0 * 50
-    %        erlang:float(Threads) * 24.0;       % = 8.0 * 3
-    %    Difference =< 2500.0 ->                 % = 50.0 * 50
-    %        erlang:float(Threads) * 120.0;      % = 24.0 * 5
-    %    Difference =< 125000.0 ->               % = 2500.0 * 50
-    %        erlang:float(Threads) * 840.0;      % = 120.0 * 7
-    %    Difference =< 6250000.0 ->              % = 125000.0 * 50
-    %        erlang:float(Threads) * 7560.0;     % = 840.0 * 9
+    %        math_extensions:product(lists:seq(
+    %            math_extensions:floor(math:log(Difference) /
+    %            math:log(3.0)) *
+    %            -2 + 1,
+    %        1, -2)) * 8 * erlang:float(Threads);
     %    true ->
-    %        erlang:float(Threads) * 83160.0     % = 7560.0 * 11
+    %        math_extensions:product(lists:seq(
+    %            math_extensions:ceil(math:log(Difference) /
+    %            math:log(50.0)) *
+    %            2 + 1,
+    %        1, -2)) * 8 * erlang:float(Threads)
     %end,
+    % smoothing method as separate sequences
+    SmoothingFactor = if
+        Difference =< 0.0625 ->
+            erlang:float(Threads) * 7560.0;
+        Difference =< 0.125 ->
+           erlang:float(Threads) * 840.0;
+        Difference =< 0.25 ->
+            erlang:float(Threads) * 120.0;
+        Difference =< 0.5 ->
+            erlang:float(Threads) * 24.0;
+        Difference =< 1.0 ->
+            erlang:float(Threads) * 8.0;
+        Difference =< 50.0 ->                   % = 1.0 * 50
+            erlang:float(Threads) * 24.0;       % = 8.0 * 3
+        Difference =< 2500.0 ->                 % = 50.0 * 50
+            erlang:float(Threads) * 120.0;      % = 24.0 * 5
+        Difference =< 125000.0 ->               % = 2500.0 * 50
+            erlang:float(Threads) * 840.0;      % = 120.0 * 7
+        Difference =< 6250000.0 ->              % = 125000.0 * 50
+            erlang:float(Threads) * 7560.0;     % = 840.0 * 9
+        true ->
+            erlang:float(Threads) * 83160.0     % = 7560.0 * 11
+    end,
     % perform truncated moving average
-    OldTaskSize + (NewTaskSize - OldTaskSize) / SmoothingFactor.
+    % (but do not allow the value to grow,
+    %  in case the task size is being ignored)
+    erlang:min(OldTaskSize + (NewTaskSize - OldTaskSize) / SmoothingFactor,
+               1000.0).
+                
 
 find_on_find(Key1, Key2, Error, Dict1) ->
     case rbdict:find(Key1, Dict1) of

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog
+// Copyright (c) 2010, Michael Truog
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -36,53 +36,40 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
-//
-
-#include "library.hpp"
-#include "copy_ptr.hpp"
-#include <dlfcn.h>
-#include <iostream>
+// 
 #include <sstream>
+#include <exception>
+#include "assert.hpp"
 
-class library_dlsym_failed : public std::exception
+namespace boost
 {
-    public:
-        library_dlsym_failed(char const * const pError)
+    void assertion_failed(char const * expr,
+                          char const * function,
+                          char const * file,
+                          long line)
+    {
+        class assert_exception : public std::exception
         {
-            std::ostringstream s;
-            s << "dlsym() failed: " << pError;
-            m_pMessage.reset(new std::string(s.str()));
-        }
-        virtual ~library_dlsym_failed() throw () {}
-        char const * what() const throw () { return m_pMessage->c_str(); }
-    private:
-        copy_ptr<std::string> m_pMessage;
+            public:
+                assert_exception(std::string const & message) throw () :
+                    m_message(message)
+                {
+                }
+                virtual ~assert_exception() throw ()
+                {
+                }
+                virtual char const * what() const throw ()
+                {
+                    return m_message.c_str();
+                }
+            private:
+                std::string m_message;
+        };
+        std::ostringstream stream;
+        stream << file << ":" << line <<
+            " (" << function << ") failure: " << expr;
+        throw assert_exception(stream.str());
+    }
 
-};
-
-library::library(std::string const & name) :
-    m_handle(dlopen(name.c_str(), RTLD_NOW | RTLD_LOCAL))
-{
-}
-
-library::~library()
-{
-    if (m_handle)
-        dlclose(m_handle);
-}
-
-char * library::error() const
-{
-    return dlerror();
-}
-
-void * library::get_function(char const * const pName)
-{
-    dlerror();
-    void * pFunction = dlsym(m_handle, pName);
-    char const * const pError = dlerror();
-    if (pError)
-        throw library_dlsym_failed(pError);
-    return pFunction;
 }
 

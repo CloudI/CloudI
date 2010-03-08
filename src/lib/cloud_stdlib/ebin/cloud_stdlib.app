@@ -3,13 +3,14 @@
 
 {application, cloud_stdlib, 
   [{description, "Cloud Standard Library Extensions"},
-   {vsn, "0.0.5"},
+   {vsn, "0.0.6"},
    {modules, [
         dynamic_compile,
         immediate_gc,
-        monitor_link,
         lists_extensions,
         math_extensions,
+        monitor_link,
+        nd_index,
         proplists_extensions,
         time_extensions,
         tuple_extensions,

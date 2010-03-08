@@ -1,6 +1,24 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2010-03-06	Michael Truog   <mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.9 (alpha)
+		* bug fixes
+			* do not purge the cloud_logger_interface module when
+			  changing the logging level
+			* prevent a crash when jobs ignore the task size parameter
+			  (though the database may die after a severe timeout
+			  if results are generated faster than the database can store them,
+			  when ignoring the task size and not using load balancing or the
+			  task time target to reduce the load on the database)
+			* fixed a cloud scheduler bug for running multiple jobs
+			  that use the 'all' process count configuration setting
+		* added a N dimensional index (Erlang) iterator
+		  (src/lib/cloud_stdlib/src/nd_index.erl)
+		* added useful cloud job source code in src/lib/cloud_job_stdlib/
+		* make gcc and boost versions build configuration items
+		* update g++ to 4.4.2 and boost to 1.42
 
 2009-10-29	Michael Truog   <mjtruog [at] gmail (dot) com>
 

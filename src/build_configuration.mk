@@ -2,9 +2,8 @@
 
 # project variables
 PROJECT_NAME=cloud
-VERSION_NAME=0.0.8.0
 PROJECT_REPO_URL=http:\/\/host1:3001\/repo\/
-MAJOR_VERSION_NAME=0.0.8
+MAJOR_VERSION_NAME=0.0.9
 # erlang variables
 ERLANG_ARGUMENTS=+A 16 +K true
 # use instrument module
@@ -23,6 +22,8 @@ ERL_INTERFACE_VERSION=3.6.2
 #ERL_INTERFACE_VERSION=3.6.3
 # erlware variables
 ERLWARE_PATH=/home/user/installed/erlware
+#DEBUG_BUILD=true
 
-DEBUG_BUILD=true
+GCC_VERSION=4.4.2
+BOOST_VERSION=1_42_0
 
