@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2010, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,12 +43,15 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009 Michael Truog
-%%% @version 0.0.7 {@date} {@time}
+%%% @copyright 2010 Michael Truog
+%%% @version 0.0.10 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloud_api).
 -author('mjtruog [at] gmail (dot) com').
+
+%% automatically detect the API interface
+-compile({parse_transform, abstract_code}).
 
 %% external interface
 -export([add_job/1, remove_job/1,
@@ -71,6 +74,8 @@
 
 -spec add_job(ConfigurationString :: string()) -> 'ok' | {'error', any()}.
 
+add_job(ConfigurationString) when is_bitstring(ConfigurationString) ->
+    add_job(binary_to_list(ConfigurationString));
 add_job(ConfigurationString) when is_list(ConfigurationString) ->
     cloud_leader:add_job(ConfigurationString).
 
@@ -82,6 +87,8 @@ add_job(ConfigurationString) when is_list(ConfigurationString) ->
 
 -spec remove_job(WorkTitle :: cstring()) -> 'ok' | 'error'.
 
+remove_job(WorkTitle) when is_bitstring(WorkTitle) ->
+    remove_job(binary_to_list(WorkTitle));
 remove_job(WorkTitle) when is_list(WorkTitle) ->
     cloud_leader:remove_job(WorkTitle).
 
@@ -93,6 +100,8 @@ remove_job(WorkTitle) when is_list(WorkTitle) ->
 
 -spec add_machine(ConfigurationString :: string()) -> 'ok' | {'error', any()}.
 
+add_machine(ConfigurationString) when is_bitstring(ConfigurationString) ->
+    add_machine(binary_to_list(ConfigurationString));
 add_machine(ConfigurationString) when is_list(ConfigurationString) ->
     cloud_leader:add_machine(ConfigurationString).
 
@@ -104,6 +113,8 @@ add_machine(ConfigurationString) when is_list(ConfigurationString) ->
 
 -spec remove_machine(HostName :: string()) -> 'ok' | {'error', any()}.
 
+remove_machine(HostName) when is_bitstring(HostName) ->
+    remove_machine(binary_to_list(HostName));
 remove_machine(HostName) when is_list(HostName) ->
     cloud_leader:remove_machine(HostName).
 
@@ -115,6 +126,8 @@ remove_machine(HostName) when is_list(HostName) ->
 
 -spec add_data(ConfigurationString :: string()) -> 'ok' | {'error', any()}.
 
+add_data(ConfigurationString) when is_bitstring(ConfigurationString) ->
+    add_data(binary_to_list(ConfigurationString));
 add_data(ConfigurationString) when is_list(ConfigurationString) ->
     cloud_data_repository_sup:add_data(ConfigurationString).
 
@@ -126,6 +139,8 @@ add_data(ConfigurationString) when is_list(ConfigurationString) ->
 
 -spec remove_data(DataTitle :: cstring()) -> 'ok' | {'error', any()}.
 
+remove_data(DataTitle) when is_bitstring(DataTitle) ->
+    remove_data(binary_to_list(DataTitle));
 remove_data(DataTitle) when is_list(DataTitle) ->
     cloud_data_repository_sup:remove_data(DataTitle).
 

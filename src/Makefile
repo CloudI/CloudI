@@ -420,7 +420,7 @@ $(WORKER_LIB_PATH)/libWorkerProtocol.a: \
       make clean && \
       ../../../$(ASN1_BIN) -Werror WorkerProtocol.asn1 \
                                 2>&1 | cat > /dev/null && \
-      rm converter-sample.c && \
+      rm -f converter-sample.c && \
       head -n -24 Makefile.am.sample           > worker_protocol.mk && \
       echo "CLOUD_INC_PATH=$(MAIN_INC_PATH)"  >> worker_protocol.mk && \
       echo "BOOST_INC_PATH=$(BOOST_INC_PATH)" >> worker_protocol.mk && \
@@ -520,7 +520,7 @@ $(MAIN_BIN_PATH)/cloud_worker_port: \
          -I$(ERL_INTERFACE_INC_PATH) \
          -I$(WORKER_INC_PATH) \
          -o $(WORKER_OBJ_PATH)/port.o -c lib/gepd/port.cpp 
-	@$(CXX) -o $(MAIN_BIN_PATH)/cloud_worker_port \
+	@$(CC) -o $(MAIN_BIN_PATH)/cloud_worker_port \
          $(WORKER_OBJ_PATH)/port.o \
          $(WORKER_OBJ_PATH)/node_connections.o \
          $(WORKER_OBJ_PATH)/worker_controller.o \
@@ -639,26 +639,26 @@ test: _build.cfg
 	@$(SINAN_PATH) test
 
 # R13B01 values:
-$(DIALYZER_PLT): $(DIALYZER_PATH)
-	$(DIALYZER_PATH) --build_plt --output_plt $(DIALYZER_PLT) -r \
-        $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.2/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/kernel-2.13.2/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/stdlib-1.16.2/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/mnesia-4.4.10/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.10/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.2/ebin \
-        $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6/ebin
-
-# R13B02-1 values:
 #$(DIALYZER_PLT): $(DIALYZER_PATH)
 #	$(DIALYZER_PATH) --build_plt --output_plt $(DIALYZER_PLT) -r \
-#        $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.3/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/kernel-2.13.3/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/stdlib-1.16.3/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/mnesia-4.4.11/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.11/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.3/ebin \
-#        $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6.1/ebin
+#        $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.2/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/kernel-2.13.2/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/stdlib-1.16.2/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/mnesia-4.4.10/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.10/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.2/ebin \
+#        $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6/ebin
+
+# R13B02 values:
+$(DIALYZER_PLT): $(DIALYZER_PATH)
+	$(DIALYZER_PATH) --build_plt --output_plt $(DIALYZER_PLT) -r \
+        $(ERLANG_PATH)/lib/erlang/lib/erts-5.7.3/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/kernel-2.13.3/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/stdlib-1.16.3/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/mnesia-4.4.11/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/asn1-1.6.11/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/compiler-4.6.3/ebin \
+        $(ERLANG_PATH)/lib/erlang/lib/crypto-1.6.1/ebin
 
 analyze-prepare: $(DIALYZER_PLT)
 analyze-add: $(DIALYZER_PLT)

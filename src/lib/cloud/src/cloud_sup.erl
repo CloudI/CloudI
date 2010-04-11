@@ -82,10 +82,12 @@ start_link(Config) when is_record(Config, config) ->
 init([Config]) when is_record(Config, config) ->
     MaxRestarts = 5,
     MaxTime = 60, % seconds (1 minute)
-    {ok, {{rest_for_one, MaxRestarts, MaxTime}, [
-          child_specification(cloud_logger, Config),
-          child_specification(cloud_data_repository_sup, Config),
-          child_specification(cloud_work_sup, Config)]}}.
+    {ok,
+     {{rest_for_one, MaxRestarts, MaxTime},
+      [child_specification(cloud_logger, Config),
+       child_specification(cloud_data_repository_sup, Config),
+       child_specification(cloud_work_sup, Config),
+       child_specification(cloud_jsonrpc_sup, Config)]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -116,4 +118,14 @@ child_specification(cloud_work_sup, Config)
     Type = supervisor,
     {cloud_work_sup,
      {cloud_work_sup, start_link, [Config]},
-     Restart, Shutdown, Type, [cloud_work_sup]}.
+     Restart, Shutdown, Type, [cloud_work_sup]};
+
+child_specification(cloud_jsonrpc_sup, Config)
+    when is_record(Config, config) ->
+    Restart = permanent,
+    Shutdown = infinity, % allow subtree to terminate
+    Type = supervisor,
+    {cloud_jsonrpc_sup,
+     {cloud_jsonrpc_sup, start_link, [Config]},
+     Restart, Shutdown, Type, [cloud_jsonrpc_sup]}.
+

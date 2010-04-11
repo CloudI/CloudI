@@ -5,6 +5,7 @@
   [{description, "Cloud Standard Library Extensions"},
    {vsn, "0.0.6"},
    {modules, [
+        abstract_code,
         dynamic_compile,
         immediate_gc,
         lists_extensions,

@@ -3,11 +3,13 @@
 
 {application, cloud, 
   [{description, "Cloudi Application"},
-   {vsn, "0.0.9"},
+   {vsn, "0.0.10"},
    {modules, [
         cloud_api,
         cloud_app,
         cloud_sup,
+        cloud_jsonrpc_sup,
+        cloud_jsonrpc,
         cloud_peer,
         cloud_configuration,
         cloud_run_queue,
@@ -39,6 +41,7 @@
    {applications, [
         cloud_stdlib,
         cloud_interface,
+        rfc4627_jsonrpc,
         rb,
         stdlib,
         kernel

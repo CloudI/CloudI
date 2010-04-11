@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module rfc4627_jsonrpc_inets</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module rfc4627_jsonrpc_inets</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>An extension module for the Inets HTTP server, providing HTTP access to JSON-RPC services.
+<p>Copyright © 2007, 2008 Tony Garnock-Jones and LShift Ltd.</p>
+
+<p><b>Introduced in:</b> 1.2.0
+ </p>
+<p><b>Authors:</b> Tony Garnock-Jones (<a href="mailto:tonyg@kcbbs.gen.nz"><tt>tonyg@kcbbs.gen.nz</tt></a>), LShift Ltd. (<a href="mailto:query@lshift.net"><tt>query@lshift.net</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>An extension module for the Inets HTTP server, providing HTTP access to JSON-RPC services.</p>
+ 
+  <h3><a name="Configuring_HTTP_access_to_registered_JSON-RPC_services">Configuring HTTP access to registered JSON-RPC services</a></h3>
+ 
+  <p>The inets httpd uses an <code>httpd.conf</code> file to configure itself. To  
+enable HTTP access to registered JSON-RPC services, two things need  
+to be added to the httpd configuration file:</p>
+ 
+  <ul>
+  <li>an entry for <code>rfc4627_jsonrpc_inets</code> in the <code>Modules</code> configuration directive (just after <code>mod_alias</code> and <code>mod_auth</code> will do)</li>
+  <li>a <code>JsonRpcAlias</code> directive, specifying a subspace of the URLs served by the httpd that will be mapped to JSON-RPC service requests (the value used as <code>AliasPrefix</code> in calls to <a href="rfc4627_jsonrpc_http.html#invoke_service_method-4"><code>rfc4627_jsonrpc_http:invoke_service_method/4</code></a>)</li>
+  </ul>
+ 
+  <p>Here's a complete <code>httpd.conf</code>:</p>
+ 
+  <pre>  ServerName localhost
+  ServerRoot test/server_root
+  DocumentRoot test/server_root/htdocs
+  Port 5671
+  Modules mod_alias mod_auth rfc4627_jsonrpc_inets mod_actions mod_cgi mod_responsecontrol mod_trace mod_range mod_head mod_include mod_dir mod_get mod_log mod_disk_log
+  DirectoryIndex index.html
+  JsonRpcAlias /rpc
+  ErrorLog logs/error_log
+  TransferLog logs/access_log
+  SecurityLog logs/security_log&lt;/pre&gt;</pre>
+ 
+  <p>If an httpd server is started from this configuration, it will</p>
+ 
+  <ul>
+  <li>listen on port 5671</li>
+  <li>permit JSON-RPC access via URLs starting with <code>/rpc</code></li>
+  </ul>
+ 
+  <p>The URL structure for JSON-RPC requests will be</p>
+ 
+  <pre>http://localhost:5671/rpc/<i>ServiceName</i></pre>
+ 
+  <p>where ServiceName is the <a href="rfc4627_jsonrpc.html#register_service-2"><code>rfc4627_jsonrpc:register_service/2</code></a>'d name of the service. For
+  instance, the example "hello world" service defined in
+  <code>test_jsonrpc_inets.erl</code> would be accessible at</p>
+ 
+  <p><code>http://localhost:5671/rpc/test</code></p>
+ 
+  <p>The built-in service description method, <code>system.describe</code>, is  
+accessible via a POST to that URL, or a GET to</p>
+ 
+  <p><code>http://localhost:5671/rpc/test/system.describe</code></p>
+ 
+  <p>Similarly, any idempotent methods provided by a service may be  
+accessed via POST to the base URL for the service, or via GET to a  
+URL of the form</p>
+ 
+  <pre>http://localhost:5671/rpc/<i>ServiceName</i>/<i>MethodName</i>?<i>arg</i>=<i>value</i>&amp;<i>...</i></pre>
+ 
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#do-1">do/1</a></td><td>Implements the inets httpd main callback interface.</td></tr>
+<tr><td valign="top"><a href="#load-2">load/2</a></td><td>Parses the <code>"JsonRpcAlias"</code> configuration entry from the inets <code>httpd.conf</code> file.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="do-1">do/1</a></h3>
+<div class="spec">
+<p><tt>do(ModData::#mod{}) -&gt; {proceed, term()}</tt></p>
+</div><p><p>Implements the inets httpd main callback interface.</p>
+ 
+  Calls out to <a href="rfc4627_jsonrpc_http.html#invoke_service_method-4"><code>rfc4627_jsonrpc_http:invoke_service_method/4</code></a>.</p>
+
+<h3 class="function"><a name="load-2">load/2</a></h3>
+<div class="spec">
+<p><tt>load(Line::string(), AccIn::term()) -&gt; {ok, AccOut::term(), {atom(), term()}}</tt></p>
+</div><p>Parses the <code>"JsonRpcAlias"</code> configuration entry from the inets <code>httpd.conf</code> file.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

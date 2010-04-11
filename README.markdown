@@ -1,4 +1,4 @@
-#[CloudI 0.0.9 (alpha)](http://cloudi.org)
+#[CloudI 0.0.10 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
@@ -83,10 +83,10 @@ The paths for Erlang and ErlWare need to be specified in build_configuration.mk:
     ERLWARE_PATH=/home/user/installed/erlware
 
 Erlang (version >= 12B5) is required.  Faxien and Sinan are also required.
-The build_configuration.mk file is currently assuming Erlang R13B01 is used.
+The build_configuration.mk file is currently assuming Erlang R13B02 is used.
 If you are using a different version, you will need to change:
-    ERTS_VERSION=5.7.2
-    ERL_INTERFACE_VERSION=3.6.2
+    ERTS_VERSION=5.7.3
+    ERL_INTERFACE_VERSION=3.6.3
 
 ## RUNNING
 

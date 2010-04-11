@@ -1,0 +1,4 @@
+{application,rfc4627}.
+{packages,[]}.
+{modules,[rfc4627,rfc4627_jsonrpc,rfc4627_jsonrpc_http,
+          rfc4627_jsonrpc_inets,rfc4627_jsonrpc_mochiweb]}.

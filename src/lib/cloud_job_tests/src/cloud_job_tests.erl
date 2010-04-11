@@ -218,8 +218,10 @@ init([IndexStart, IndexEnd]) ->
                             ok
                     end,
                     Result;
-                {error, Reason} ->
-                    {stop, Reason}
+                {stop, Reason} ->
+                    {stop, Reason};
+                {error, _} = Error ->
+                    {stop, Error}
             end;
         error ->
             {stop, "initialization of database failed"}
@@ -350,7 +352,7 @@ update_state_from_database(#state{index_start = IndexStart,
                     NewIndexStart = erlang:element(1, Position),
                     if
                         NewIndexStart >= IndexEnd ->
-                            {error, "work is done"};
+                            {stop, normal};
                         true ->
                             {ok, State#state{index = NewIndexStart,
                                              index_start = NewIndexStart}}

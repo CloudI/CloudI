@@ -39,11 +39,13 @@ $(TARGET): ${OBJS} \
 	@$(CC) $(CFLAGS) -o ../priv/obj/$@ -c $<
 
 clean:
-	@$(RM) ../priv/lib/$(TARGET)
-	@$(RM) $(addprefix ../priv/obj/, ${OBJS})
-	@$(RM) $(ASN_MODULE_SOURCES) $(ASN_CONVERTER_SOURCES) $(ASN_MODULE_HEADERS)
-	@$(RM) Makefile.am.sample
-	@$(RM) WorkerProtocol.erl WorkerProtocol.hrl
-	@$(RM) WorkerProtocol.asn1db WorkerProtocol.beam
-	@$(RM) sizeof_WorkerMessage_t
+	@$(RM) -f ../priv/lib/$(TARGET)
+	@$(RM) -f $(addprefix ../priv/obj/, ${OBJS})
+	@$(RM) -f $(ASN_MODULE_SOURCES) \
+              $(ASN_CONVERTER_SOURCES) \
+              $(ASN_MODULE_HEADERS)
+	@$(RM) -f Makefile.am.sample
+	@$(RM) -f WorkerProtocol.erl WorkerProtocol.hrl
+	@$(RM) -f WorkerProtocol.asn1db WorkerProtocol.beam
+	@$(RM) -f sizeof_WorkerMessage_t
 
