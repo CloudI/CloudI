@@ -1,0 +1,307 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module rfc4627</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module rfc4627</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>An implementation of RFC 4627 (JSON, the JavaScript Object Notation) for Erlang.
+<p>Copyright © 2007, 2008 Tony Garnock-Jones and LShift Ltd.</p>
+
+<p><b>Authors:</b> Tony Garnock-Jones (<a href="mailto:tonyg@kcbbs.gen.nz"><tt>tonyg@kcbbs.gen.nz</tt></a>), LShift Ltd. (<a href="mailto:query@lshift.net"><tt>query@lshift.net</tt></a>).</p>
+<p><b>References</b><ul><li><a href="http://www.ietf.org/rfc/rfc4627.txt">RFC
+  4627</a>, the JSON RFC
+ </li><li><a href="http://www.json.org/">JSON in general</a>
+ </li><li>Joe Armstrong's <a href="http://www.erlang.org/ml-archive/erlang-questions/200511/msg00193.html">
+  message</a> describing the basis of the JSON data type mapping that
+  this module uses
+ </li></ul></p>
+
+<h2><a name="description">Description</a></h2><p>An implementation of RFC 4627 (JSON, the JavaScript Object Notation) for Erlang.</p>
+ 
+  <p>The basic API is comprised of the <a href="#encode-1"><code>encode/1</code></a> and <a href="#decode-1"><code>decode/1</code></a> functions.</p>
+ 
+  <h3><a name="Data_Type_Mapping">Data Type Mapping</a></h3>
+ 
+  <p>The data type mapping I've implemented is as per Joe Armstrong's
+  message <a href="http://www.erlang.org/ml-archive/erlang-questions/200511/msg00193.html" target="_top"><tt>http://www.erlang.org/ml-archive/erlang-questions/200511/msg00193.html</tt></a> - see <a href="#type-json"><code>json()</code></a>.</p>
+ 
+  <h3><a name="Unicode">Unicode</a></h3>
+ 
+  <p>When serializing a string, if characters are found with codepoint  
+&gt;127, we rely on the unicode encoder to build the proper byte  
+sequence for transmission. We still use the \uXXXX escape for  
+control characters (other than the RFC-specified specially  
+recognised ones).</p>
+ 
+  <p><a href="#decode-1"><code>decode/1</code></a> will autodetect the unicode encoding used, and any
+  strings returned in the result as binaries will contain UTF-8
+  encoded byte sequences for codepoints &gt;127. Object keys containing
+  codepoints &gt;127 will be returned as lists of codepoints, rather
+  than being UTF-8 encoded. If you have already transformed the text
+  to parse into a list of unicode codepoints, perhaps by your own use
+  of <a href="#unicode_decode-1"><code>unicode_decode/1</code></a>, then use <a href="#decode_noauto-1"><code>decode_noauto/1</code></a> to  
+avoid redundant and erroneous double-unicode-decoding.</p>
+ 
+  <p>Similarly, <a href="#encode-1"><code>encode/1</code></a> produces text that is already UTF-8
+  encoded. To get raw codepoints, use <a href="#encode_noauto-1"><code>encode_noauto/1</code></a> and
+  <a href="#encode_noauto-2"><code>encode_noauto/2</code></a>. You can use <a href="#unicode_encode-1"><code>unicode_encode/1</code></a> to  
+UTF-encode the results, if that's appropriate for your application.</p>
+ 
+  <h3><a name="Differences_to_the_specification">Differences to the specification</a></h3>
+ 
+  <p>I'm lenient in the following ways during parsing:</p>
+ 
+  <ul>
+   <li>repeated commas in arrays and objects collapse to a single comma</li>
+   <li>any character =&lt;32 is considered whitespace</li>
+   <li>leading zeros for numbers are accepted</li>
+   <li>we don't restrict the toplevel token to only object or array -
+       any JSON value can be used at toplevel</li>
+  </ul>
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-byte">byte()</a></h3>
+<p><tt>byte() = integer()</tt></p>
+<p>An integer &gt;=0 and =&lt;255.</p>
+
+<h3 class="typedecl"><a name="type-json">json()</a></h3>
+<p><tt>json() = <a href="#type-jsonobj">jsonobj()</a> | <a href="#type-jsonarray">jsonarray()</a> | <a href="#type-jsonnum">jsonnum()</a> | <a href="#type-jsonstr">jsonstr()</a> | true | false | null</tt></p>
+<p>An Erlang representation of a general JSON value.</p>
+
+<h3 class="typedecl"><a name="type-jsonarray">jsonarray()</a></h3>
+<p><tt>jsonarray() = [<a href="#type-json">json()</a>]</tt></p>
+<p>A JSON array value.</p>
+
+<h3 class="typedecl"><a name="type-jsonkey">jsonkey()</a></h3>
+<p><tt>jsonkey() = string()</tt></p>
+<p>A field-name within a JSON "object".</p>
+
+<h3 class="typedecl"><a name="type-jsonnum">jsonnum()</a></h3>
+<p><tt>jsonnum() = integer() | float()</tt></p>
+<p>A JSON numeric value.</p>
+
+<h3 class="typedecl"><a name="type-jsonobj">jsonobj()</a></h3>
+<p><tt>jsonobj() = {obj, [{<a href="#type-jsonkey">jsonkey()</a>, <a href="#type-json">json()</a>}]}</tt></p>
+<p>A JSON "object" or "struct".</p>
+
+<h3 class="typedecl"><a name="type-jsonstr">jsonstr()</a></h3>
+<p><tt>jsonstr() = binary()</tt></p>
+<p>A JSON string value.</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#decode-1">decode/1</a></td><td>Decodes a JSON value from an input binary or string of  
+Unicode-encoded text.</td></tr>
+<tr><td valign="top"><a href="#decode_noauto-1">decode_noauto/1</a></td><td>As <a href="#decode-1"><code>decode/1</code></a>, but does not perform Unicode decoding on its input.</td></tr>
+<tr><td valign="top"><a href="#digit_hex-1">digit_hex/1</a></td><td>Returns the number corresponding to Hexchar.</td></tr>
+<tr><td valign="top"><a href="#encode-1">encode/1</a></td><td>Encodes the JSON value supplied, first into Unicode  
+codepoints, and then into UTF-8.</td></tr>
+<tr><td valign="top"><a href="#encode_noauto-1">encode_noauto/1</a></td><td>Encodes the JSON value supplied into raw Unicode codepoints.</td></tr>
+<tr><td valign="top"><a href="#encode_noauto-2">encode_noauto/2</a></td><td>As <a href="#encode_noauto-1"><code>encode_noauto/1</code></a>, but prepends <i>reversed</i> text
+  to the supplied accumulator string.</td></tr>
+<tr><td valign="top"><a href="#equiv-2">equiv/2</a></td><td>Tests equivalence of JSON terms.</td></tr>
+<tr><td valign="top"><a href="#from_record-3">from_record/3</a></td><td>Used by the <code>?RFC4627_FROM_RECORD</code> macro in <code>rfc4627.hrl</code>.</td></tr>
+<tr><td valign="top"><a href="#get_field-2">get_field/2</a></td><td>Retrieves the value of a named field of a JSON "object".</td></tr>
+<tr><td valign="top"><a href="#get_field-3">get_field/3</a></td><td>Retrieves the value of a named field of a JSON "object", or a
+  default value if no such field is present.</td></tr>
+<tr><td valign="top"><a href="#hex_digit-1">hex_digit/1</a></td><td>Returns the character code corresponding to Nibble.</td></tr>
+<tr><td valign="top"><a href="#mime_type-0">mime_type/0</a></td><td>Returns the IANA-registered MIME type for JSON data.</td></tr>
+<tr><td valign="top"><a href="#set_field-3">set_field/3</a></td><td>Adds or replaces a named field with the given value.</td></tr>
+<tr><td valign="top"><a href="#to_record-3">to_record/3</a></td><td>Used by the <code>?RFC4627_TO_RECORD</code> macro in <code>rfc4627.hrl</code>.</td></tr>
+<tr><td valign="top"><a href="#unicode_decode-1">unicode_decode/1</a></td><td>Autodetects and decodes using the Unicode encoding of its input.</td></tr>
+<tr><td valign="top"><a href="#unicode_encode-1">unicode_encode/1</a></td><td>Encodes the given characters to bytes, using the given Unicode encoding.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="decode-1">decode/1</a></h3>
+<div class="spec">
+<p><tt>decode(Input::binary() | [<a href="#type-byte">byte()</a>]) -&gt; {ok, <a href="#type-json">json()</a>, Remainder} | {error, Reason}</tt>
+<ul class="definitions"><li><tt>Remainder = string()</tt></li>
+<li><tt>Reason = any()</tt></li>
+</ul></p>
+</div><p><p>Decodes a JSON value from an input binary or string of  
+Unicode-encoded text.</p>
+ 
+  <p>Given a binary, converts it to a list of bytes. Given a  
+list/string, interprets it as a list of bytes.</p>
+ 
+  <p>Uses <a href="#unicode_decode-1"><code>unicode_decode/1</code></a> on its input, which results in a list  
+of codepoints, and then decodes a JSON value from that list of  
+codepoints.</p>
+ 
+  Returns either <code>{ok, Result, Remainder}</code>, where Remainder is the
+  remaining portion of the input that was not consumed in the process
+  of decoding Result, or <code>{error, Reason}</code>.</p>
+
+<h3 class="function"><a name="decode_noauto-1">decode_noauto/1</a></h3>
+<div class="spec">
+<p><tt>decode_noauto(Input::string()) -&gt; {ok, <a href="#type-json">json()</a>, string()} | {error, any()}</tt></p>
+</div><p><p>As <a href="#decode-1"><code>decode/1</code></a>, but does not perform Unicode decoding on its input.</p>
+ 
+  Expects a list of codepoints - an ordinary Erlang string - rather
+  than a list of Unicode-encoded bytes.</p>
+
+<h3 class="function"><a name="digit_hex-1">digit_hex/1</a></h3>
+<div class="spec">
+<p><tt>digit_hex(Hexchar::char()) -&gt; integer()</tt></p>
+</div><p><p>Returns the number corresponding to Hexchar.</p>
+ 
+  Hexchar must be one of the characters <code>$0</code> through <code>$9</code>, <code>$A</code>
+  through <code>$F</code> or <code>$a</code> through <code>$f</code>.</p>
+
+<h3 class="function"><a name="encode-1">encode/1</a></h3>
+<div class="spec">
+<p><tt>encode(X::<a href="#type-json">json()</a>) -&gt; [<a href="#type-byte">byte()</a>]</tt></p>
+</div><p><p>Encodes the JSON value supplied, first into Unicode  
+codepoints, and then into UTF-8.</p>
+ 
+  <p>The resulting string is a list of byte values that should be  
+interpreted as UTF-8 encoded text.</p>
+ 
+  During encoding, atoms and binaries are accepted as keys of JSON
+  objects (type <a href="#type-jsonkey"><code>jsonkey()</code></a>) as well as the usual strings
+  (lists of character codepoints).</p>
+
+<h3 class="function"><a name="encode_noauto-1">encode_noauto/1</a></h3>
+<div class="spec">
+<p><tt>encode_noauto(X::<a href="#type-json">json()</a>) -&gt; string()</tt></p>
+</div><p><p>Encodes the JSON value supplied into raw Unicode codepoints.</p>
+ 
+  <p>The resulting string may contain codepoints with value &gt;=128. You
+  can use <a href="#unicode_encode-1"><code>unicode_encode/1</code></a> to UTF-encode the results, if  
+that's appropriate for your application.</p>
+ 
+  During encoding, atoms and binaries are accepted as keys of JSON
+  objects (type <a href="#type-jsonkey"><code>jsonkey()</code></a>) as well as the usual strings
+  (lists of character codepoints).</p>
+
+<h3 class="function"><a name="encode_noauto-2">encode_noauto/2</a></h3>
+<div class="spec">
+<p><tt>encode_noauto(Str::<a href="#type-json">json()</a>, Acc::string()) -&gt; string()</tt></p>
+</div><p>As <a href="#encode_noauto-1"><code>encode_noauto/1</code></a>, but prepends <i>reversed</i> text
+  to the supplied accumulator string.</p>
+
+<h3 class="function"><a name="equiv-2">equiv/2</a></h3>
+<div class="spec">
+<p><tt>equiv(A::<a href="#type-json">json()</a>, B::<a href="#type-json">json()</a>) -&gt; bool()</tt></p>
+</div><p><p>Tests equivalence of JSON terms.</p>
+ 
+  After Bob Ippolito's <code>equiv</code> predicate in mochijson.</p>
+
+<h3 class="function"><a name="from_record-3">from_record/3</a></h3>
+<div class="spec">
+<p><tt>from_record(R::Record, RecordName::atom(), Fields::[any()]) -&gt; <a href="#type-jsonobj">jsonobj()</a></tt>
+<ul class="definitions"><li><tt>Record = tuple()</tt></li>
+</ul></p>
+</div><p><p>Used by the <code>?RFC4627_FROM_RECORD</code> macro in <code>rfc4627.hrl</code>.</p>
+ 
+  Given a record type definiton of <code>-record(myrecord, {field1,
+  field})</code>, and a value <code>V = #myrecord{}</code>, the code
+  <code>?RFC4627_FROM_RECORD(myrecord, V)</code> will return a JSON "object"
+  with fields corresponding to the fields of the record. The macro
+  expands to a call to the <code>from_record</code> function.</p>
+
+<h3 class="function"><a name="get_field-2">get_field/2</a></h3>
+<div class="spec">
+<p><tt>get_field(JsonObject::<a href="#type-jsonobj">jsonobj()</a>, Key::atom()) -&gt; {ok, <a href="#type-json">json()</a>} | not_found</tt></p>
+</div><p>Retrieves the value of a named field of a JSON "object".</p>
+
+<h3 class="function"><a name="get_field-3">get_field/3</a></h3>
+<div class="spec">
+<p><tt>get_field(Obj::<a href="#type-jsonobj">jsonobj()</a>, Key::atom(), DefaultValue::<a href="#type-json">json()</a>) -&gt; <a href="#type-json">json()</a></tt></p>
+</div><p>Retrieves the value of a named field of a JSON "object", or a
+  default value if no such field is present.</p>
+
+<h3 class="function"><a name="hex_digit-1">hex_digit/1</a></h3>
+<div class="spec">
+<p><tt>hex_digit(Nibble::integer()) -&gt; char()</tt></p>
+</div><p><p>Returns the character code corresponding to Nibble.</p>
+ 
+  Nibble must be &gt;=0 and =&lt;16.</p>
+
+<h3 class="function"><a name="mime_type-0">mime_type/0</a></h3>
+<div class="spec">
+<p><tt>mime_type() -&gt; string()</tt></p>
+</div><p>Returns the IANA-registered MIME type for JSON data.</p>
+
+<h3 class="function"><a name="set_field-3">set_field/3</a></h3>
+<div class="spec">
+<p><tt>set_field(JsonObject::<a href="#type-jsonobj">jsonobj()</a>, Key::atom(), NewValue::<a href="#type-json">json()</a>) -&gt; <a href="#type-jsonobj">jsonobj()</a></tt></p>
+</div><p><p>Adds or replaces a named field with the given value.</p>
+ 
+  Returns a JSON "object" that contains the new field value as well
+  as all the unmodified fields from the first argument.</p>
+
+<h3 class="function"><a name="to_record-3">to_record/3</a></h3>
+<div class="spec">
+<p><tt>to_record(JsonObject::<a href="#type-jsonobj">jsonobj()</a>, DefaultValue::Record, Fields::[atom()]) -&gt; Record</tt>
+<ul class="definitions"><li><tt>Record = tuple()</tt></li>
+</ul></p>
+</div><p><p>Used by the <code>?RFC4627_TO_RECORD</code> macro in <code>rfc4627.hrl</code>.</p>
+ 
+  Given a record type definiton of <code>-record(myrecord, {field1,
+  field})</code>, and a JSON "object" <code>J = {obj, [{"field1", 123},
+  {"field2", 234}]}</code>, the code <code>?RFC4627_TO_RECORD(myrecord, J)</code>
+  will return a record <code>#myrecord{field1 = 123, field2 = 234}</code>.
+  The macro expands to a call to the <code>to_record</code> function.</p>
+
+<h3 class="function"><a name="unicode_decode-1">unicode_decode/1</a></h3>
+<div class="spec">
+<p><tt>unicode_decode(C::[<a href="#type-byte">byte()</a>]) -&gt; [char()]</tt></p>
+</div><p><p>Autodetects and decodes using the Unicode encoding of its input.</p>
+ 
+  <p>From RFC4627, section 3, "Encoding":</p>
+ 
+  <blockquote><p>     
+JSON text SHALL be encoded in Unicode.  The default encoding is     
+UTF-8.</p>
+ 
+     <p>Since the first two characters of a JSON text will always be ASCII     
+characters [RFC0020], it is possible to determine whether an octet     
+stream is UTF-8, UTF-16 (BE or LE), or UTF-32 (BE or LE) by looking     
+at the pattern of nulls in the first four octets.</p>
+ 
+             00 00 00 xx  UTF-32BE
+             00 xx 00 xx  UTF-16BE
+             xx 00 00 00  UTF-32LE
+             xx 00 xx 00  UTF-16LE
+             xx xx xx xx  UTF-8
+  </blockquote>
+ 
+  <p>Interestingly, the BOM (byte-order mark) is not mentioned. We  
+support it here by using it to detect our encoding, discarding it  
+if present, even though RFC4627 explicitly notes that the first two  
+characters of a JSON text will be ASCII.</p>
+ 
+  <p>If a BOM (<a href="http://unicode.org/faq/utf_bom.html" target="_top"><tt>http://unicode.org/faq/utf_bom.html</tt></a>) is present, we use
+  that; if not, we use RFC4627's rules (as above). Note that UTF-32
+  is the same as UCS-4 for our purposes (but see also
+  <a href="http://unicode.org/reports/tr19/tr19-9.html" target="_top"><tt>http://unicode.org/reports/tr19/tr19-9.html</tt></a>). Note that UTF-16 is  
+not the same as UCS-2!</p>
+ 
+  Note that I'm using xmerl's UCS/UTF support here. There's another
+  UTF-8 codec in asn1rt, which works on binaries instead of lists.
+ </p>
+
+<h3 class="function"><a name="unicode_encode-1">unicode_encode/1</a></h3>
+<div class="spec">
+<p><tt>unicode_encode(EncodingAndCharacters::{Encoding, [char()]}) -&gt; [<a href="#type-byte">byte()</a>]</tt>
+<ul class="definitions"><li><tt>Encoding = 'utf-32' | 'utf-32be' | 'utf-32le' | 'utf-16' | 'utf-16be' | 'utf-16le' | 'utf-8'</tt></li>
+</ul></p>
+</div><p><p>Encodes the given characters to bytes, using the given Unicode encoding.</p>
+ 
+  For convenience, we supply a partial inverse of unicode_decode; If
+  a BOM is requested, we more-or-less arbitrarily pick the big-endian
+  variant of the encoding, since big-endian is network-order. We
+  don't support UTF-8 with BOM here.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module rfc4627_jsonrpc_http</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module rfc4627_jsonrpc_http</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>General JSON-RPC HTTP transport support.
+<p>Copyright © 2007, 2008 Tony Garnock-Jones and LShift Ltd.</p>
+
+<p><b>Introduced in:</b> 1.2.0
+ </p>
+<p><b>Authors:</b> Tony Garnock-Jones (<a href="mailto:tonyg@kcbbs.gen.nz"><tt>tonyg@kcbbs.gen.nz</tt></a>), LShift Ltd. (<a href="mailto:query@lshift.net"><tt>query@lshift.net</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>General JSON-RPC HTTP transport support.</p>
+ 
+  Used by the Inets HTTP transport library, <a href="rfc4627_jsonrpc_inets.html"><code>rfc4627_jsonrpc_inets</code></a>.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#invoke_service_method-4">invoke_service_method/4</a></td><td>Uses <code>AliasPrefix</code>, <code>RequestInfo</code>, <code>Path</code> and <code>Body</code> to locate  
+and invoke a service procedure.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="invoke_service_method-4">invoke_service_method/4</a></h3>
+<div class="spec">
+<p><tt>invoke_service_method(AliasPrefix, Path, RequestInfo, Body) -&gt; Result</tt>
+<ul class="definitions"><li><tt>AliasPrefix = default | string()</tt></li>
+<li><tt>Path = string()</tt></li>
+<li><tt>RequestInfo = <a href="rfc4627.html#type-jsonobj">rfc4627:jsonobj()</a></tt></li>
+<li><tt>Body = string() | binary()</tt></li>
+<li><tt>Result = no_match | {ok, string(), <a href="#type-jsonobj">jsonobj()</a>}</tt></li>
+</ul></p>
+</div><p><p>Uses <code>AliasPrefix</code>, <code>RequestInfo</code>, <code>Path</code> and <code>Body</code> to locate  
+and invoke a service procedure.</p>
+ 
+  <p>If <code>AliasPrefix</code> is <code>default</code>, the default prefix <code>"/jsonrpc"</code> is used.</p>
+ 
+  <p><code>Path</code> is expected to be the "path" part of the request URI: a string of the form "/.../prefix/objectname[/methodname]".</p>
+ 
+  <p><code>RequestInfo</code> is a JSON "object" containing HTTP-specific request information:</p>
+ 
+  <ul>
+  <li><code>http_method</code> should be either <code>&lt;&lt;"GET"&gt;&gt;</code> (the default) or <code>&lt;&lt;"POST"&gt;&gt;</code></li>
+  <li><code>http_query_parameters</code> should be the query parameters (the part of the URL after "?")
+      decoded into a JSON "object", with one field per parameter</li>
+  <li><code>http_headers</code> should be a JSON "object" containing the HTTP request headers</li>
+  <li><code>scheme</code> should be either <code>&lt;&lt;"http"&gt;&gt;</code> or <code>&lt;&lt;"https"&gt;&gt;</code></li>
+  <li><code>remote_port</code> should be the TCP port number of the remote peer</li>
+  <li><code>remote_peername</code> should be a <code>binary()</code> containing the IP address of the
+      remote peer, in a form acceptable to <a href="inet.html#gethostbyaddr-1"><code>inet:gethostbyaddr/1</code></a></li>
+  </ul>
+ 
+  <p>All the fields in <code>RequestInfo</code> are optional.</p>
+ 
+  <p><code>Body</code> must be either a <code>binary()</code> or a <code>string()</code>  
+containing the HTTP request body.</p>
+ 
+  <p>Operation proceeds as follows. <code>Path</code> is first matched against
+  <code>AliasPrefix</code>. If it does not match, <code>no_match</code> is  
+returned. Otherwise, the matching prefix is stripped from the path,  
+and extraction of the service name, method name, and parameters from  
+the HTTP request proceeds as per the JSON-RPC specification,  
+[JSON-RPC-1-1-WD-20060807.html#ProcedureCall].</p>
+ 
+  <p>Once the service name, method name and parameters are known, The
+  service is looked up with <a href="rfc4627_jsonrpc.html#lookup_service-1"><code>rfc4627_jsonrpc:lookup_service/1</code></a>,
+  and the named method is invoked with <a href="rfc4627_jsonrpc.html#invoke_service_method-8"><code>rfc4627_jsonrpc:invoke_service_method/8</code></a>.</p>
+ 
+  The final result is encoded into a list of bytes using <a href="rfc4627.html#encode-1"><code>rfc4627:encode/1</code></a>, and returned along with the <code>ResponseInfo</code> to
+  our caller.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

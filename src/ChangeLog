@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2010-04-10	Michael Truog	<mjtruog [at] gmail (dot) com>
+
+	* CloudI version 0.0.10 (alpha)
+	    * add a JSON RPC server for the Cloudi API function calls
+		  based on the LShift JSON RPC implementation
+		  (http://www.lshift.net/blog/2007/02/17/json-and-json-rpc-for-erlang)
+		* add abstract code generation for automatic
+		  JSON RPC function call integration
+		* update referenced Erlang version to R13B02
+		  (to reflect the version currently deployed by faxien)
+
 2010-03-06	Michael Truog   <mjtruog [at] gmail (dot) com>
 
 	* CloudI version 0.0.9 (alpha)

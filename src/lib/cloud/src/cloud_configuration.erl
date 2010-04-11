@@ -70,6 +70,9 @@
 %% ====The cookie to use for distributed communication:====
 %%   `{cookie, "cookie value"}'
 %%
+%% ====The JSON RPC server settings:====
+%%   `{json_rpc, Port}'
+%%
 %% ====The logging settings for all nodes:====
 %%   `{logging, "path/to/log/file", LogLevel}'
 %%
@@ -215,6 +218,8 @@ save(Path, Config) when is_list(Path), is_record(Config, config) ->
     io:format(FD, "~p.~n", [{logging,
         (Config#config.logging)#config_logging.filename,
         (Config#config.logging)#config_logging.loglevel}]),
+    io:format(FD, "~p.~n", [{json_rpc,
+        Config#config.json_rpc_port}]),
     io:format(FD, "~p.~n", [{jobs, 
         lists:foldr(fun(Work, L) -> [{
             Work#config_work.work_title,
@@ -301,6 +306,9 @@ new([{logging, FileName, Level} | Terms], Config)
     when is_list(FileName), is_record(Config, config) ->
     new(Terms, Config#config{logging = #config_logging{
         filename = FileName, loglevel = Level}});
+new([{json_rpc, Port} | Terms], Config)
+    when is_integer(Port), Port > 0, is_record(Config, config) ->
+    new(Terms, Config#config{json_rpc_port = Port});
 new([{jobs, []} | Terms], Config) ->
     new(Terms, Config);
 new([{jobs, [H | _] = Value} | Terms], Config)

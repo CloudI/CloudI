@@ -74,6 +74,7 @@
     data = [],
     machines = [],
     logging = #config_logging{},
+    json_rpc_port = undefined,
     node_longnames = undefined,
     cookie = undefined}).
 
