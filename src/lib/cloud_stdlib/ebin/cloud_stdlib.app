@@ -14,6 +14,7 @@
         nd_index,
         proplists_extensions,
         time_extensions,
+        trie,
         tuple_extensions,
         string_extensions
         ]},
