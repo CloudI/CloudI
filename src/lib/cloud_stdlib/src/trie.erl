@@ -53,12 +53,17 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/1,
+-export([new/0,
+         new/1,
          find/2,
          find_prefix/2,
          store/2,
          store/3,
-         test/0]).
+         test/0,
+         test_size/0,
+         test_size/1]).
+
+-include_lib("kernel/include/file.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -69,6 +74,9 @@
 %% ===Create a new trie instance.===
 %% @end
 %%-------------------------------------------------------------------------
+
+new() ->
+    [].
 
 new([H | T]) ->
     {RootNode, _} = new_instance(H, T),
@@ -83,7 +91,8 @@ new_instance([_ | _] = S, L) ->
 new_instance_state([], V1, _) ->
     {[], V1};
 
-new_instance_state([H | T], V1, V0) ->
+new_instance_state([H | T], V1, V0)
+    when is_integer(H) ->
     {{H, H, {{T, V1}}}, V0}.
 
 new_instance_modify([], State) ->
@@ -105,7 +114,8 @@ find([H | _], {I0, I1, _})
     when H < I0; H > I1 ->
     error;
 
-find([H], {I0, _, Data}) ->
+find([H], {I0, _, Data})
+    when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     if
         is_tuple(Node); Node == [] ->
@@ -114,7 +124,8 @@ find([H], {I0, _, Data}) ->
             error
     end;
 
-find([H | T], {I0, _, Data}) ->
+find([H | T], {I0, _, Data})
+    when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     case Node of
         {_, _, _} ->
@@ -135,7 +146,8 @@ find_prefix([H | _], {I0, I1, _})
     when H < I0; H > I1 ->
     error;
 
-find_prefix([H], {I0, _, Data}) ->
+find_prefix([H], {I0, _, Data})
+    when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     if
         is_tuple(Node) ->
@@ -151,7 +163,8 @@ find_prefix([H], {I0, _, Data}) ->
             prefix
     end;
 
-find_prefix([H | T], {I0, _, Data}) ->
+find_prefix([H | T], {I0, _, Data})
+    when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     case Node of
         {_, _, _} ->
@@ -216,6 +229,51 @@ test() ->
     3 = trie:find("aabcde", RootNode1),
     ok.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Size Test.===
+%% Compare the size of a word list with the size of the resulting trie
+%% data structure.
+%% @end
+%%-------------------------------------------------------------------------
+
+test_size() ->
+    test_size("/usr/share/dict/words").
+
+test_size([_ | _] = FilePath) ->
+    {ok, Info} = file:read_file_info(FilePath),
+    FileSize = Info#file_info.size,
+    {ok, F} = file:open(FilePath, [read_ahead, raw, read]),
+    erlang:garbage_collect(),
+    {memory, Size0} = erlang:process_info(self(), memory),
+    Result = test_size_read(F, new()),
+    erlang:garbage_collect(),
+    {memory, Size1} = erlang:process_info(self(), memory),
+    file:close(F),
+    ResultRealSize = Size1 - Size0,
+    ResultAbstractSize = abstract_binary_size(Result),
+    ResultEstimateSize = estimate_binary_size(Result),
+    io:format("file ~s (~w bytes)~n",
+              [FilePath, FileSize]),
+    io:format("trie data:~n"
+              "  raw         ~16w bytes~n"
+              "  estimated   ~16w bytes~n"
+              "  characters  ~16w bytes~n",
+              [ResultRealSize, ResultEstimateSize, ResultAbstractSize]),
+    io:format("  characters stored  ~.1f %~n"
+              "  data stored        ~.2f x~n",
+              [erlang:round(ResultAbstractSize / FileSize * 1000) / 10,
+               erlang:round(ResultRealSize / FileSize * 100) / 100]),
+    ok.
+
+test_size_read(F, State) ->
+    case file:read_line(F) of
+        {ok, Line} ->
+            test_size_read(F, store(Line, State));
+        eof ->
+            State
+    end.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -223,7 +281,11 @@ test() ->
 modify_state([], AV, {Node, _}) ->
     {Node, AV};
 
-modify_state([AH | AT], AV, {{I0, I1, Data}, V}) ->
+modify_state([_ | _] = A, AV, {[], V}) ->
+    new_instance_state(A, AV, V);
+
+modify_state([AH | AT], AV, {{I0, I1, Data}, V})
+    when is_integer(AH) ->
     if
         AH < I0 ->
             NewData = erlang:setelement(1,
@@ -274,4 +336,58 @@ tuple_move_i(N1, _, N1, T1, _) ->
 tuple_move_i(I1, I0, N1, T1, T0) ->
     tuple_move_i(I1 + 1, I0 + 1, N1,
         erlang:setelement(I1, T1, erlang:element(I0, T0)), T0).
+
+% Provide an estimate of the data size that is comparable to the
+% trie input word list.
+abstract_binary_size(T) ->
+    abstract_binary_size(0, T).
+
+abstract_binary_size(Size0, T0) when is_tuple(T0) ->
+    lists:foldl(fun(I, Size1) ->
+        abstract_binary_size(Size1, erlang:element(I, T0))
+    end, Size0, lists:seq(1, erlang:tuple_size(T0)));
+
+abstract_binary_size(Size0, []) ->
+    Size0;
+
+abstract_binary_size(Size0, [_ | _] = T0) ->
+    lists:foldl(fun(T1, Size1) ->
+        abstract_binary_size(Size1, T1)
+    end, Size0, T0);
+
+abstract_binary_size(Size0, T0) when is_atom(T0) ->
+    Size0;
+
+abstract_binary_size(Size0, T0) when is_integer(T0) ->
+    true = T0 =< 255,
+    % count only the characters for the abstract size
+    Size0 + 1.
+
+% Provide an estimate of the data size based on available data type information
+% (http://erlang.org/doc/efficiency_guide/advanced.html#id2265992 and
+%  experimentation on a 64bit system without HIPE...
+%  the sizes do not match the html page,
+%  since those results don't match reality)
+estimate_binary_size(T) ->
+    estimate_binary_size(0, T).
+
+estimate_binary_size(Size0, T0) when is_tuple(T0) ->
+    lists:foldl(fun(I, Size1) ->
+        estimate_binary_size(Size1, erlang:element(I, T0))
+    end, Size0 + 4, lists:seq(1, erlang:tuple_size(T0)));
+
+estimate_binary_size(Size0, []) ->
+    Size0 + 4;
+
+estimate_binary_size(Size0, [_ | _] = T0) ->
+    lists:foldl(fun(T1, Size1) ->
+        estimate_binary_size(Size1, T1)
+    end, Size0 + 4 + erlang:length(T0) * 4, T0);
+
+estimate_binary_size(Size0, T0) when is_atom(T0) ->
+    Size0 + 4;
+
+estimate_binary_size(Size0, T0) when is_integer(T0) ->
+    true = T0 =< 255,
+    Size0 + 8.
 
