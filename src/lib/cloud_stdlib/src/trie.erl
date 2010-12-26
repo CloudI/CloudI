@@ -78,6 +78,9 @@
          update/4,
          update_counter/3,
          test/0,
+         test_speed/0,
+         test_speed/1,
+         test_speed_cases/3,
          test_size/0,
          test_size/1]).
 
@@ -877,6 +880,40 @@ test() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Speed Test.===
+%% @end
+%%-------------------------------------------------------------------------
+
+test_speed() ->
+    test_speed("/usr/share/dict/words").
+
+test_speed([_ | _] = FilePath) ->
+    {ok, F} = file:open(FilePath, [read_ahead, raw, read]),
+    Result0 = test_read(F, trie, trie:new()),
+    {ok, 0} = file:position(F, bof),
+    Result1 = test_read(F, dict, dict:new()),
+    {ok, 0} = file:position(F, bof),
+    {T0, _} = timer:tc(trie, test_speed_cases, [trie, F, Result0]),
+    {ok, 0} = file:position(F, bof),
+    {T1, _} = timer:tc(trie, test_speed_cases, [dict, F, Result1]),
+    file:close(F),
+    io:format("trie:             cases: ~8w µs~n", [T0]),
+    io:format("dict:             cases: ~8w µs~n", [T1]),
+    ok.
+
+test_speed_cases(Module, F, State) ->
+    case file:read_line(F) of
+        {ok, Line} ->
+            true = Module:is_key(Line, State),
+            Module:fetch(Line, State),
+            Module:find(Line, State),
+            test_speed_cases(Module, F, State);
+        eof ->
+            State
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Size Test.===
 %% Compare the size of a word list with the size of the resulting trie
 %% data structure.
@@ -892,7 +929,7 @@ test_size([_ | _] = FilePath) ->
     {ok, F} = file:open(FilePath, [read_ahead, raw, read]),
     erlang:garbage_collect(),
     {memory, Size0} = erlang:process_info(self(), memory),
-    Result = test_size_read(F, new()),
+    Result = test_read(F, trie, trie:new()),
     erlang:garbage_collect(),
     {memory, Size1} = erlang:process_info(self(), memory),
     file:close(F),
@@ -912,10 +949,10 @@ test_size([_ | _] = FilePath) ->
                erlang:round(ResultRealSize / FileSize * 100) / 100]),
     ok.
 
-test_size_read(F, State) ->
+test_read(F, Module, State) ->
     case file:read_line(F) of
         {ok, Line} ->
-            test_size_read(F, store(Line, State));
+            test_read(F, Module, Module:store(Line, empty, State));
         eof ->
             State
     end.
