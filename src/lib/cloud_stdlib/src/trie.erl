@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,20 +45,38 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2010 Michael Truog
-%%% @version 0.0.1 {@date} {@time}
+%%% @copyright 2010-2011 Michael Truog
+%%% @version 0.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/0,
-         new/1,
+-export([append/3,
+         append_list/3,
+         erase/2,
+         fetch/2,
+         fetch_keys/1,
+         filter/2,
          find/2,
          find_prefix/2,
+         fold/3,
+         foldl/3,
+         foldr/3,
+         from_list/1,
+         is_key/2,
+         map/2,
+         merge/3,
+         new/0,
+         new/1,
+         size/1,
          store/2,
          store/3,
+         to_list/1,
+         update/3,
+         update/4,
+         update_counter/3,
          test/0,
          test_size/0,
          test_size/1]).
@@ -71,38 +89,159 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Create a new trie instance.===
+%% ===Append a value as a list element in a trie instance.===
 %% @end
 %%-------------------------------------------------------------------------
 
-new() ->
-    [].
+append([_ | _] = Key, Value, Node) ->
+    update(Key, fun(OldValue) -> OldValue ++ [Value] end, [Value], Node).
 
-new([H | T]) ->
-    {RootNode, _} = new_instance(H, T),
-    RootNode.
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Append a list of values as a list element in a trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
 
-new_instance({[_ | _] = S, V}, L) ->
-    new_instance_modify(L, new_instance_state(S, V, error));
-           
-new_instance([_ | _] = S, L) ->
-    new_instance_modify(L, new_instance_state(S, empty, error)).
+append_list([_ | _] = Key, ValueList, Node) ->
+    update(Key, fun(OldValue) -> OldValue ++ ValueList end, ValueList, Node).
 
-new_instance_state([], V1, _) ->
-    {[], V1};
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Erase a value in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
 
-new_instance_state([H | T], V1, V0)
+erase([_ | _] = Key, Node) ->
+    erase_node(Key, Node).
+
+erase_node([_ | _], [] = OldNode) ->
+    OldNode;
+
+erase_node([H | _], {I0, I1, _} = OldNode)
+    when is_integer(H), H < I0;
+         is_integer(H), H > I1 ->
+    OldNode;
+
+erase_node([H | T], {I0, I1, Data} = OldNode)
     when is_integer(H) ->
-    {{H, H, {{T, V1}}}, V0}.
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    if
+        T == Node ->
+            if
+                Value == error ->
+                    OldNode;
+                true ->
+                    {I0, I1, erlang:setelement(I, Data, {[], error})}
+            end;
+        T == [] ->
+            if
+                Value == error ->
+                    OldNode;
+                true ->
+                    {I0, I1, erlang:setelement(I, Data, {Node, error})}
+            end;
+        is_list(Node) ->
+            OldNode;
+        is_tuple(Node) ->
+            {I0, I1, erlang:setelement(I, Data, {erase_node(T, Node), Value})}
+    end.
 
-new_instance_modify([], State) ->
-    State;
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fetch a value from a trie.===
+%% @end
+%%-------------------------------------------------------------------------
 
-new_instance_modify([{[_ | _] = S, V} | T], State) ->
-    new_instance_modify(T, modify_state(S, V, State));
+fetch([H], {I0, I1, Data})
+    when is_integer(H), H >= I0, H =< I1 ->
+    {Node, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(Node); Node == [] ->
+            if
+                Value /= error ->
+                    Value
+            end
+    end;
 
-new_instance_modify([[_ | _] = S | T], State) ->
-    new_instance_modify(T, modify_state(S, empty, State)).
+fetch([H | T], {I0, I1, Data})
+    when is_integer(H), H >= I0, H =< I1 ->
+    {Node, Value} = erlang:element(H - I0 + 1, Data),
+    case Node of
+        {_, _, _} ->
+            fetch(T, Node);
+        T when Value /= error ->
+            Value
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fetch all the keys in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+fetch_keys(Node) ->
+    foldr(fun(Key, _, L) -> [Key | L] end, [], Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Filter a trie with a predicate function.===
+%% @end
+%%-------------------------------------------------------------------------
+
+filter(F, Node) when is_function(F, 2) ->
+    filter_node(F, [], Node).
+
+filter_node(F, Key, {I0, I1, Data}) ->
+    {I0, I1, filter_element(F, I1 - I0 + 1, I0 - 1, Key, Data)};
+
+filter_node(_, _, [_ | _] = L) ->
+    L.
+
+filter_element(_, 0, _, _, Data) ->
+    Data;
+
+filter_element(F, I, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        Node == [] ->
+            if
+                Value == error ->
+                    filter_element(F, I - 1, Offset, Key, Data);
+                true ->
+                    case F(Key ++ [Offset + I], Value) of
+                        true ->
+                            filter_element(F, I - 1, Offset, Key, Data);
+                        false ->
+                            filter_element(F, I - 1, Offset, Key,
+                                erlang:setelement(I, Data, {[], error}))
+                    end
+            end;
+        Value == error ->
+            filter_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
+                {filter_node(F, Key ++ [Offset + I], Node), Value}));
+        true ->
+            NewKey = Key ++ [Offset + I],
+            if
+                is_list(Node) == true ->
+                    case F(NewKey ++ Node, Value) of
+                        true ->
+                            filter_element(F, I - 1, Offset, Key, Data);
+                        false ->
+                            filter_element(F, I - 1, Offset, Key,
+                                erlang:setelement(I, Data, {[], error}))
+                    end;
+                true ->
+                    case F(NewKey, Value) of
+                        true ->
+                            filter_element(F, I - 1, Offset, Key, Data);
+                        false ->
+                            filter_element(F, I - 1, Offset, Key,
+                                erlang:setelement(I, Data, 
+                                    {filter_node(F, NewKey, Node), error}))
+                    end
+            end
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -184,16 +323,419 @@ find_prefix([H | T], {I0, _, Data})
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Fold a function over the trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+fold(F, A, Node) when is_function(F, 3) ->
+    foldl(F, A, Node).
+
+foldl(F, A, Node) when is_function(F, 3) ->
+    foldl(F, A, [], Node).
+
+foldl(F, A, Key, {I0, I1, Data}) ->
+    foldl_element(F, A, 1, I1 - I0 + 2, I0 - 1, Key, Data).
+
+foldl_element(_, A, N, N, _, _, _) ->
+    A;
+
+foldl_element(F, A, I, N, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    foldl_element(F, foldl(F, A, Key ++ [Offset + I], Node),
+                        I + 1, N, Offset, Key, Data);
+                true ->
+                    NewKey = Key ++ [Offset + I],
+                    foldl_element(F,
+                        foldl(F, F(NewKey, Value, A), NewKey, Node),
+                        I + 1, N, Offset, Key, Data)
+            end;
+        true ->
+            if
+                Value == error ->
+                    foldl_element(F, A,
+                        I + 1, N, Offset, Key, Data);
+                true ->
+                    foldl_element(F, F((Key ++ [Offset + I]) ++ Node, Value, A),
+                        I + 1, N, Offset, Key, Data)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the trie in reverse.===
+%% @end
+%%-------------------------------------------------------------------------
+
+foldr(F, A, Node) when is_function(F, 3) ->
+    foldr(F, A, [], Node).
+
+foldr(F, A, Key, {I0, I1, Data}) ->
+    foldr_element(F, A, I1 - I0 + 1, I0 - 1, Key, Data).
+
+foldr_element(_, A, 0, _, _, _) ->
+    A;
+
+foldr_element(F, A, I, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    foldr_element(F, foldr(F, A, Key ++ [Offset + I], Node),
+                        I - 1, Offset, Key, Data);
+                true ->
+                    NewKey = Key ++ [Offset + I],
+                    foldr_element(F,
+                        F(NewKey, Value, foldr(F, A, NewKey, Node)),
+                        I - 1, Offset, Key, Data)
+            end;
+        true ->
+            if
+                Value == error ->
+                    foldr_element(F, A,
+                        I - 1, Offset, Key, Data);
+                true ->
+                    foldr_element(F, F((Key ++ [Offset + I]) ++ Node, Value, A),
+                        I - 1, Offset, Key, Data)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a trie from a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+from_list(L) ->
+    new(L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine if a key exists in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+is_key([H | _], {I0, I1, _})
+    when H < I0; H > I1 ->
+    false;
+
+is_key([H], {I0, _, Data})
+    when is_integer(H) ->
+    {Node, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(Node); Node == [] ->
+            (Value /= error);
+        true ->
+            false
+    end;
+
+is_key([H | T], {I0, _, Data})
+    when is_integer(H) ->
+    {Node, Value} = erlang:element(H - I0 + 1, Data),
+    case Node of
+        {_, _, _} ->
+            is_key(T, Node);
+        T ->
+            (Value /= error);
+        _ ->
+            false
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Map a function over a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+map(F, Node) when is_function(F, 2) ->
+    map_node(F, [], Node).
+
+map_node(F, Key, {I0, I1, Data}) ->
+    {I0, I1, map_element(F, I1 - I0 + 1, I0 - 1, Key, Data)};
+
+map_node(_, _, [_ | _] = L) ->
+    L.
+
+map_element(_, 0, _, _, Data) ->
+    Data;
+
+map_element(F, I, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    NewKey = Key ++ [Offset + I],
+    if
+        Node == [] ->
+            if
+                Value == error ->
+                    map_element(F, I - 1, Offset, Key, Data);
+                true ->
+                    map_element(F, I - 1, Offset, Key,
+                        erlang:setelement(I, Data, {Node, F(NewKey, Value)}))
+            end;
+        Value == error ->
+            map_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
+                {map_node(F, NewKey, Node), Value}));
+        is_list(Node) == true ->
+            map_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
+                {map_node(F, NewKey, Node), F(NewKey ++ Node, Value)}));
+        true ->
+            map_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
+                {map_node(F, NewKey, Node), F(NewKey, Value)}))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Merge two trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
+
+merge(F, Node1, Node2) when is_function(F, 3) ->
+    fold(fun (Key, V1, Node) ->
+            update(Key, fun (V2) -> F(Key, V1, V2) end, V1, Node)
+         end, Node2, Node1).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a new trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
+
+new() ->
+    [].
+
+new(L) ->
+    new_instance(L, new()).
+
+new_instance([], Node) ->
+    Node;
+
+new_instance([{[_ | _] = Key, Value} | T], Node) ->
+    new_instance(T, store(Key, Value, Node));
+
+new_instance([[_ | _] = Key | T], Node) ->
+    new_instance(T, store(Key, Node)).
+
+new_instance_state([H | T], V1, V0)
+    when is_integer(H) ->
+    {{H, H, {{T, V1}}}, V0}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Size of a trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
+
+size(Node) ->
+    fold(fun(_, _, I) -> I + 1 end, 0, Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Store a value in a trie instance.===
 %% @end
 %%-------------------------------------------------------------------------
 
-store([_ | _] = S, RootNode) ->
-    store(S, empty, RootNode).
+store(Key, Node) ->
+    store(Key, empty, Node).
 
-store([_ | _] = S, V, RootNode) ->
-    {NewRootNode, _} = modify_state(S, V, {RootNode, error}),
-    NewRootNode.
+store([H | T], NewValue, [])
+    when is_integer(H) ->
+    {H, H, {{T, NewValue}}};
+
+store([H | T], NewValue, {I0, I1, Data})
+    when is_integer(H), H < I0 ->
+    NewData = erlang:setelement(1,
+        tuple_move(I0 - H + 1, I1 - H + 1, Data, {[], error}),
+        {T, NewValue}),
+    {H, I1, NewData};
+
+store([H | T], NewValue, {I0, I1, Data})
+    when is_integer(H), H > I1 ->
+    N = H - I0 + 1,
+    NewData = erlang:setelement(N,
+        tuple_move(1, N, Data, {[], error}),
+        {T, NewValue}),
+    {I0, H, NewData};
+
+store([H] = Key, NewValue, {I0, I1, Data})
+    when is_integer(H) ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_tuple(Node); Node == [] ->
+            {I0, I1, erlang:setelement(I, Data, {Node, NewValue})};
+        true ->
+            NewNode = {I0, I1,
+               erlang:setelement(I, Data,
+                   new_instance_state(Node, Value, error))},
+            store(Key, NewValue, NewNode)
+    end;
+
+store([H | T] = Key, NewValue, {I0, I1, Data})
+    when is_integer(H) ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    case Node of
+        {_, _, _} ->
+            {I0, I1, erlang:setelement(I, Data,
+                {store(T, NewValue, Node), Value})};
+        T ->
+            {I0, I1, erlang:setelement(I, Data, {Node, Value})};
+        [] ->
+            if
+                Value == error ->
+                    {I0, I1, erlang:setelement(I, Data, {T, NewValue})};
+                true ->
+                    {I0, I1, erlang:setelement(I, Data,
+                        new_instance_state(T, NewValue, Value))}
+            end;
+        [BH | BT] ->
+            NewNode = {I0, I1,
+                erlang:setelement(I, Data, {{BH, BH, {{BT, Value}}}, error})},
+            store(Key, NewValue, NewNode)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert all entries in a trie to a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+to_list(Node) ->
+    to_list_node([], [], Node).
+
+to_list_node(L, Key, {I0, I1, Data}) ->
+    to_list_element(L, I1 - I0 + 1, I0 - 1, Key, Data).
+
+to_list_element(L, 0, _, _, _) ->
+    L;
+
+to_list_element(L, I, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    NewKey = Key ++ [Offset + I],
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    to_list_element(
+                        to_list_node(L, NewKey, Node),
+                        I - 1, Offset, Key, Data);
+                true ->
+                    to_list_element(
+                        [{NewKey, Value} | to_list_node(L, NewKey, Node)],
+                        I - 1, Offset, Key, Data)
+            end;
+        true ->
+            if
+                Value == error ->
+                    to_list_element(L, I - 1, Offset, Key, Data);
+                true ->
+                    to_list_element([{NewKey ++ Node, Value} | L],
+                        I - 1, Offset, Key, Data)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+update([H], F, {I0, I1, Data})
+    when is_integer(H), H >= I0, H =< I1 ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_tuple(Node); Node == [], Value /= error ->
+            {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
+    end;
+
+update([H | T], F, {I0, I1, Data})
+    when is_integer(H), H >= I0, H =< I1 ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    case Node of
+        {_, _, _} ->
+            {I0, I1, erlang:setelement(I, Data, {update(T, F, Node), Value})};
+        T ->
+            true = Value /= error,
+            {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update or add a value in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+update([H | T], _, Initial, {I0, I1, Data})
+    when H < I0 ->
+    NewData = erlang:setelement(1,
+        tuple_move(I0 - H + 1, I1 - H + 1, Data, {[], error}),
+        {T, Initial}),
+    {H, I1, NewData};
+
+update([H | T], _, Initial, {I0, I1, Data})
+    when H > I1 ->
+    N = H - I0 + 1,
+    NewData = erlang:setelement(N,
+        tuple_move(1, N, Data, {[], error}),
+        {T, Initial}),
+    {I0, H, NewData};
+
+update([H] = Key, F, Initial, {I0, I1, Data})
+    when is_integer(H) ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_tuple(Node); Node == [] ->
+            if
+                Value == error ->
+                    {I0, I1, erlang:setelement(I, Data, {Node, Initial})};
+                true ->
+                    {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
+            end;
+        true ->
+            [BH | BT] = Node,
+            NewNode = {I0, I1,
+               erlang:setelement(I, Data, {{BH, BH, {{BT, Value}}}, error})},
+            update(Key, F, Initial, NewNode)
+    end;
+
+update([H | T] = Key, F, Initial, {I0, I1, Data})
+    when is_integer(H) ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    case Node of
+        {_, _, _} ->
+            {I0, I1, erlang:setelement(I, Data,
+                {update(T, F, Initial, Node), Value})};
+        T ->
+            {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})};
+        [] ->
+            if
+                Value == error ->
+                    {I0, I1, erlang:setelement(I, Data, {T, Initial})};
+                true ->
+                    {I0, I1, erlang:setelement(I, Data,
+                        new_instance_state(T, Initial, Value))}
+            end;
+        [BH | BT] ->
+            NewNode = {I0, I1,
+                erlang:setelement(I, Data, {{BH, BH, {{BT, Value}}}, error})},
+            update(Key, F, Initial, NewNode)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a counter in a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+update_counter(Key, Increment, Node) ->
+    update(Key, fun(I) -> I + Increment end, Increment, Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -225,8 +767,112 @@ test() ->
     error = trie:find_prefix("aacX", RootNode0),
     {97,97,{{{97,98,{{{98,99,{{"cde",3},{[],2}}},error},{"cdefghijklmnopqrstuvwxyz",1}}},error}}} =
         RootNode1 = trie:store("aabcde", 3, RootNode0),
+    {97,97,{{{97,98,{{{98,99,{{"cde",13},{[],12}}},error},{"cdefghijklmnopqrstuvwxyz",11}}},error}}} =
+        map(fun(_, V) -> V + 10 end, RootNode1),
+    {97,97,{{{97,98,{{{98,99,{{[],error},{[],error}}},error},{"cdefghijklmnopqrstuvwxyz",1}}},error}}} =
+        filter(fun(_, V) -> V =< 1 end, RootNode1),
+    {97,97,{{{97,98,{{{98,99,{{[],error},{[],2}}},error},{"cdefghijklmnopqrstuvwxyz",1}}},error}}} =
+        filter(fun(_, V) -> V =< 2 end, RootNode1),
+    ["aabcde", "aac", "abcdefghijklmnopqrstuvwxyz"] =
+        trie:fetch_keys(RootNode1),
+    [{"aabcde", 3}, {"aac", 2}, {"abcdefghijklmnopqrstuvwxyz", 1}] =
+        trie:to_list(RootNode1),
+    [{"aabcde", 3}, {"aac", 12}, {"abcdefghijklmnopqrstuvwxyz", 1}] =
+        trie:to_list(trie:update("aac", fun(I) -> I + 10 end, RootNode1)),
+    [{"aaa", 4}, {"aabcde", 3}, {"aac", 2}, {"abcdefghijklmnopqrstuvwxyz", 1}] =
+        trie:to_list(trie:update("aaa", fun(I) -> I + 10 end, 4, RootNode1)),
+    6 = foldl(fun(_, I, A) -> I + A end, 0, RootNode1),
+    [{"aabcde", 3},{"aac", 2},{"abcdefghijklmnopqrstuvwxyz", 1}] =
+        foldr(fun(K, V, A) -> [{K,V} | A] end, [], RootNode1),
+    [{"abcdefghijklmnopqrstuvwxyz", 1}, {"aac", 2}, {"aabcde", 3}] =
+        foldl(fun(K, V, A) -> [{K,V} | A] end, [], RootNode1),
     error = trie:find("aabcde", RootNode0),
     3 = trie:find("aabcde", RootNode1),
+    RootNode2 = trie:erase("aac", RootNode0),
+    1 = trie:find("abcdefghijklmnopqrstuvwxyz", RootNode2),
+    {97,98,{{{98,98,{{[],[2]}}},[1]},{"c",[3]}}} =
+        RootNode3 = trie:new([{"a", [1]},{"ab", [2]},{"bc", [3]}]),
+    {97,98,{{{98,98,{{[],[2]}}},[1,2]},{"c",[3]}}} =
+        trie:append("a", 2, RootNode3),
+
+    RootNode4 = trie:new([
+        {"ammmmmmm",      7},
+        {"aaaaaaaaaaa",   4},
+        {"aaa",           2},
+        {"ab",            0},
+        {"ab",            5},
+        {"aa",            1},
+        {"aba",           6},
+        {"aaaaaaaa",      3}]),
+    {97,97,
+     {{{97,109,
+        {{{97,97,
+           {{{97,97,
+              {{{97,97,
+                 {{{97,97,
+                    {{{97,97,
+                       {{{97,97,
+                          {{{97,97,
+                             {{"aa",4}}},
+                            3}}},
+                         error}}},
+                     error}}},
+                   error}}},
+                error}}},
+             2}}},
+          1},
+         {{97,97,{{[],6}}},5},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {[],error},
+         {"mmmmmm",7}}},
+       error}}} = RootNode4,
+    [{"aa",1},
+     {"aaa",2},
+     {"aaaaaaaa",3},
+     {"aaaaaaaaaaa",4},
+     {"ab",5},
+     {"aba",6},
+     {"ammmmmmm",7}] = trie:to_list(trie:from_list(trie:to_list(RootNode4))),
+    % trie:map happens to go through in reverse order
+    ["aa",
+     "aaa",
+     "aaaaaaaa",
+     "aaaaaaaaaaa",
+     "ab",
+     "aba",
+     "ammmmmmm"] = trie:fetch_keys(RootNode4),
+    ["aa",
+     "aaa",
+     "aaaaaaaa",
+     "aaaaaaaaaaa",
+     "ab",
+     "aba",
+     "ammmmmmm"] = trie:foldr(fun(Key, _, L) -> [Key | L] end, [], RootNode4),
+    ["ammmmmmm",
+     "aba",
+     "ab",
+     "aaaaaaaaaaa",
+     "aaaaaaaa",
+     "aaa",
+     "aa"] = trie:foldl(fun(Key, _, L) -> [Key | L] end, [], RootNode4),
+    RootNode5 = trie:store("a", 0, trie:store("aaaa", 2.5, RootNode4)),
+    2.5 = trie:find("aaaa", RootNode5),
+    error = trie:find("aaaa", RootNode4),
+    2.5 = trie:find_prefix("aaaa", RootNode5),
+    prefix = trie:find_prefix("aaaa", RootNode4),
+    2.5 = trie:fetch("aaaa", RootNode5),
+    {'EXIT', {if_clause, _}} = (catch trie:fetch("aaaa", RootNode4)),
+    RootNode4 = trie:erase("a", trie:erase("aaaa", RootNode5)),
+    true = trie:is_key("aaaa", RootNode5),
+    false = trie:is_key("aaaa", RootNode4),
     ok.
 
 %%-------------------------------------------------------------------------
@@ -277,51 +923,6 @@ test_size_read(F, State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-modify_state([], AV, {Node, _}) ->
-    {Node, AV};
-
-modify_state([_ | _] = A, AV, {[], V}) ->
-    new_instance_state(A, AV, V);
-
-modify_state([AH | AT], AV, {{I0, I1, Data}, V})
-    when is_integer(AH) ->
-    if
-        AH < I0 ->
-            NewData = erlang:setelement(1,
-                tuple_move(I0 - AH + 1, I1 - AH + 1, Data, {[], error}),
-                {AT, AV}),
-            {{AH, I1, NewData}, V};
-        AH > I1 ->
-            N = AH - I0 + 1,
-            NewData = erlang:setelement(N,
-                tuple_move(1, N, Data, {[], error}),
-                {AT, AV}),
-            {{I0, AH, NewData}, V};
-        true ->
-            I = AH - I0 + 1,
-            {Node, BV} = State = erlang:element(I, Data),
-            NewData = case Node of
-                [] ->
-                    if
-                        BV == error ->
-                            erlang:setelement(I, Data, {AT, AV});
-                        true ->
-                            erlang:setelement(I, Data,
-                                new_instance_state(AT, AV, BV))
-                    end;
-                AT ->
-                    erlang:setelement(I, Data, {AT, AV});
-                [BH | BT] ->
-                    erlang:setelement(I, Data,
-                        modify_state(AT, AV,
-                            {{BH, BH, {{BT, BV}}}, error}));
-                {_, _, _} ->
-                    erlang:setelement(I, Data,
-                        modify_state(AT, AV, State))
-            end,
-            {{I0, I1, NewData}, V}
-    end.
 
 %% make a new tuple with arity N and default D, then
 %% move tuple T into the new tuple at index I
