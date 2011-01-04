@@ -519,7 +519,18 @@ new_instance([{[_ | _] = Key, Value} | T], Node) ->
     new_instance(T, store(Key, Value, Node));
 
 new_instance([[_ | _] = Key | T], Node) ->
-    new_instance(T, store(Key, Node)).
+    new_instance(T, store(Key, Node));
+
+new_instance([Tuple | T], Node)
+    when is_tuple(Tuple) ->
+    FirstElement = erlang:element(1, Tuple),
+    Key = if
+        is_atom(FirstElement) == true ->
+            erlang:element(2, Tuple);
+        true ->
+            FirstElement
+    end,
+    new_instance(T, store(Key, Tuple, Node)).
 
 new_instance_state([H | T], V1, V0)
     when is_integer(H) ->
