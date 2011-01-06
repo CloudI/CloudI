@@ -64,8 +64,11 @@
          fold/3,
          foldl/3,
          foldr/3,
+         foreach/2,
          from_list/1,
          is_key/2,
+         iter/2,
+         itera/3,
          map/2,
          merge/3,
          new/0,
@@ -77,14 +80,7 @@
          update/3,
          update/4,
          update_counter/3,
-         test/0,
-         test_speed/0,
-         test_speed/1,
-         test_speed_cases/3,
-         test_size/0,
-         test_size/1]).
-
--include_lib("kernel/include/file.hrl").
+         test/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -327,6 +323,7 @@ find_prefix([H | T], {I0, _, Data})
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Fold a function over the trie.===
+%% Traverses in alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -370,6 +367,7 @@ foldl_element(F, A, I, N, Offset, Key, Data) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Fold a function over the trie in reverse.===
+%% Traverses in reverse alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -404,6 +402,46 @@ foldr_element(F, A, I, Offset, Key, Data) ->
                 true ->
                     foldr_element(F, F((Key ++ [Offset + I]) ++ Node, Value, A),
                         I - 1, Offset, Key, Data)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Call a function for each element.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+foreach(F, Node) when is_function(F, 2) ->
+    foreach(F, [], Node).
+
+foreach(F, Key, {I0, I1, Data}) ->
+    foreach_element(F, 1, I1 - I0 + 2, I0 - 1, Key, Data).
+
+foreach_element(_, N, N, _, _, _) ->
+    ok;
+
+foreach_element(F, I, N, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    foreach(F, Key ++ [Offset + I], Node),
+                    foreach_element(F, I + 1, N, Offset, Key, Data);
+                true ->
+                    NewKey = Key ++ [Offset + I],
+                    F(NewKey, Value),
+                    foreach(F, NewKey, Node),
+                    foreach_element(F, I + 1, N, Offset, Key, Data)
+            end;
+        true ->
+            if
+                Value == error ->
+                    foreach_element(F, I + 1, N, Offset, Key, Data);
+                true ->
+                    F((Key ++ [Offset + I]) ++ Node, Value),
+                    foreach_element(F, I + 1, N, Offset, Key, Data)
             end
     end.
 
@@ -450,7 +488,114 @@ is_key([H | T], {I0, _, Data})
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Iterate over a trie.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+iter(F, Node) when is_function(F, 3) ->
+    iter(F, [], Node),
+    ok.
+
+iter(F, Key, {I0, I1, Data}) ->
+    iter_element(F, 1, I1 - I0 + 2, I0 - 1, Key, Data).
+
+iter_element(_, N, N, _, _, _) ->
+    trie_iter_done;
+
+iter_element(F, I, N, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    iter(F, Key ++ [Offset + I], Node),
+                    iter_element(F, I + 1, N, Offset, Key, Data);
+                true ->
+                    NewKey = Key ++ [Offset + I],
+                    Iter = fun() ->
+                        iter(F, NewKey, Node)
+                    end,
+                    case F(NewKey, Value, Iter) of
+                        trie_iter_done ->
+                            iter_element(F, I + 1, N, Offset, Key, Data);
+                        _ ->
+                            ok
+                    end
+            end;
+        true ->
+            if
+                Value == error ->
+                    iter_element(F, I + 1, N, Offset, Key, Data);
+                true ->
+                    Iter = fun() ->
+                        iter_element(F, I + 1, N, Offset, Key, Data)
+                    end,
+                    F((Key ++ [Offset + I]) ++ Node, Value, Iter)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Iterate over a trie with an accumulator.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+itera(F, A, Node) when is_function(F, 4) ->
+    {trie_itera_done, NewA} = itera(F, {trie_itera_done, A}, [], Node),
+    NewA.
+
+itera(F, ReturnValue, Key, {I0, I1, Data}) ->
+    itera_element(F, ReturnValue, 1, I1 - I0 + 2, I0 - 1, Key, Data).
+
+itera_element(_, {trie_itera_done, _} = ReturnValue, N, N, _, _, _) ->
+    ReturnValue;
+
+itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
+    {Node, Value} = erlang:element(I, Data),
+    if
+        is_list(Node) == false ->
+            if
+                Value == error ->
+                    itera_element(F,
+                        itera(F, ReturnValue, Key ++ [Offset + I], Node),
+                        I + 1, N, Offset, Key, Data);
+                true ->
+                    NewKey = Key ++ [Offset + I],
+                    Iter = fun(NewA) ->
+                        itera(F, {trie_itera_done, NewA}, NewKey, Node)
+                    end,
+                    case F(NewKey, Value, A, Iter) of
+                        {trie_itera_done, _} = NewReturnValue ->
+                            itera_element(F, NewReturnValue,
+                                I + 1, N, Offset, Key, Data);
+                        Result ->
+                            {trie_itera_done, Result}
+                    end
+            end;
+        true ->
+            if
+                Value == error ->
+                    itera_element(F, ReturnValue, I + 1, N, Offset, Key, Data);
+                true ->
+                    Iter = fun(NewA) ->
+                        itera_element(F, {trie_itera_done, NewA},
+                            I + 1, N, Offset, Key, Data)
+                    end,
+                    case F((Key ++ [Offset + I]) ++ Node, Value, A, Iter) of
+                        {trie_itera_done, _} = NewReturnValue ->
+                            NewReturnValue;
+                        Result ->
+                            {trie_itera_done, Result}
+                    end
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Map a function over a trie.===
+%% Traverses in reverse alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -492,6 +637,8 @@ map_element(F, I, Offset, Key, Data) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Merge two trie instance.===
+%% Update the second trie parameter with all of the elements
+%% found within the first trie parameter.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -855,6 +1002,23 @@ test() ->
      {"ab",5},
      {"aba",6},
      {"ammmmmmm",7}] = trie:to_list(trie:from_list(trie:to_list(RootNode4))),
+    Liter =  ["aa", "aaa", "aaaaaaaa", "aaaaaaaaaaa", "ab", "aba"],
+    Fiter = fun(Key, _, Iter) ->
+        case lists:member(Key, Liter) of
+            true ->
+                Iter();
+            false ->
+                done
+        end
+    end,
+    Fitera = fun
+        (_, _, [], _) ->
+            done;
+        (Key, _, [Key | T], Iter) ->
+            Iter(T)
+    end,
+    ok = trie:iter(Fiter, RootNode4),
+    done = trie:itera(Fitera, Liter, RootNode4),
     % trie:map happens to go through in reverse order
     ["aa",
      "aaa",
@@ -889,85 +1053,6 @@ test() ->
     false = trie:is_key("aaaa", RootNode4),
     ok.
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Speed Test.===
-%% @end
-%%-------------------------------------------------------------------------
-
-test_speed() ->
-    test_speed("/usr/share/dict/words").
-
-test_speed([_ | _] = FilePath) ->
-    {ok, F} = file:open(FilePath, [read_ahead, raw, read]),
-    Result0 = test_read(F, trie, trie:new()),
-    {ok, 0} = file:position(F, bof),
-    Result1 = test_read(F, dict, dict:new()),
-    {ok, 0} = file:position(F, bof),
-    {T0, _} = timer:tc(trie, test_speed_cases, [trie, F, Result0]),
-    {ok, 0} = file:position(F, bof),
-    {T1, _} = timer:tc(trie, test_speed_cases, [dict, F, Result1]),
-    file:close(F),
-    io:format("trie:             cases: ~8w µs~n", [T0]),
-    io:format("dict:             cases: ~8w µs~n", [T1]),
-    ok.
-
-test_speed_cases(Module, F, State) ->
-    case file:read_line(F) of
-        {ok, Line} ->
-            true = Module:is_key(Line, State),
-            Module:fetch(Line, State),
-            Module:find(Line, State),
-            test_speed_cases(Module, F, State);
-        eof ->
-            State
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Size Test.===
-%% Compare the size of a word list with the size of the resulting trie
-%% data structure.
-%% @end
-%%-------------------------------------------------------------------------
-
-test_size() ->
-    test_size("/usr/share/dict/words").
-
-test_size([_ | _] = FilePath) ->
-    {ok, Info} = file:read_file_info(FilePath),
-    FileSize = Info#file_info.size,
-    {ok, F} = file:open(FilePath, [read_ahead, raw, read]),
-    erlang:garbage_collect(),
-    {memory, Size0} = erlang:process_info(self(), memory),
-    Result = test_read(F, trie, trie:new()),
-    erlang:garbage_collect(),
-    {memory, Size1} = erlang:process_info(self(), memory),
-    file:close(F),
-    ResultRealSize = Size1 - Size0,
-    ResultAbstractSize = abstract_binary_size(Result),
-    ResultEstimateSize = estimate_binary_size(Result),
-    io:format("file ~s (~w bytes)~n",
-              [FilePath, FileSize]),
-    io:format("trie data:~n"
-              "  raw         ~16w bytes~n"
-              "  estimated   ~16w bytes~n"
-              "  characters  ~16w bytes~n",
-              [ResultRealSize, ResultEstimateSize, ResultAbstractSize]),
-    io:format("  characters stored  ~.1f %~n"
-              "  data stored        ~.2f x~n",
-              [erlang:round(ResultAbstractSize / FileSize * 1000) / 10,
-               erlang:round(ResultRealSize / FileSize * 100) / 100]),
-    ok.
-
-test_read(F, Module, State) ->
-    case file:read_line(F) of
-        {ok, Line} ->
-            test_read(F, Module, Module:store(Line, empty, State));
-        eof ->
-            State
-    end.
-
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -985,58 +1070,4 @@ tuple_move_i(N1, _, N1, T1, _) ->
 tuple_move_i(I1, I0, N1, T1, T0) ->
     tuple_move_i(I1 + 1, I0 + 1, N1,
         erlang:setelement(I1, T1, erlang:element(I0, T0)), T0).
-
-% Provide an estimate of the data size that is comparable to the
-% trie input word list.
-abstract_binary_size(T) ->
-    abstract_binary_size(0, T).
-
-abstract_binary_size(Size0, T0) when is_tuple(T0) ->
-    lists:foldl(fun(I, Size1) ->
-        abstract_binary_size(Size1, erlang:element(I, T0))
-    end, Size0, lists:seq(1, erlang:tuple_size(T0)));
-
-abstract_binary_size(Size0, []) ->
-    Size0;
-
-abstract_binary_size(Size0, [_ | _] = T0) ->
-    lists:foldl(fun(T1, Size1) ->
-        abstract_binary_size(Size1, T1)
-    end, Size0, T0);
-
-abstract_binary_size(Size0, T0) when is_atom(T0) ->
-    Size0;
-
-abstract_binary_size(Size0, T0) when is_integer(T0) ->
-    true = T0 =< 255,
-    % count only the characters for the abstract size
-    Size0 + 1.
-
-% Provide an estimate of the data size based on available data type information
-% (http://erlang.org/doc/efficiency_guide/advanced.html#id2265992 and
-%  experimentation on a 64bit system without HIPE...
-%  the sizes do not match the html page,
-%  since those results don't match reality)
-estimate_binary_size(T) ->
-    estimate_binary_size(0, T).
-
-estimate_binary_size(Size0, T0) when is_tuple(T0) ->
-    lists:foldl(fun(I, Size1) ->
-        estimate_binary_size(Size1, erlang:element(I, T0))
-    end, Size0 + 4, lists:seq(1, erlang:tuple_size(T0)));
-
-estimate_binary_size(Size0, []) ->
-    Size0 + 4;
-
-estimate_binary_size(Size0, [_ | _] = T0) ->
-    lists:foldl(fun(T1, Size1) ->
-        estimate_binary_size(Size1, T1)
-    end, Size0 + 4 + erlang:length(T0) * 4, T0);
-
-estimate_binary_size(Size0, T0) when is_atom(T0) ->
-    Size0 + 4;
-
-estimate_binary_size(Size0, T0) when is_integer(T0) ->
-    true = T0 =< 255,
-    Size0 + 8.
 
