@@ -93,7 +93,8 @@
 %%-------------------------------------------------------------------------
 
 append([_ | _] = Key, Value, Node) ->
-    update(Key, fun(OldValue) -> OldValue ++ [Value] end, [Value], Node).
+    ValueList = [Value],
+    update(Key, fun(OldValue) -> OldValue ++ ValueList end, ValueList, Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -272,7 +273,10 @@ find([H | T], {I0, _, Data})
             Value;
         _ ->
             error
-    end.
+    end;
+
+find(_, []) ->
+    error.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -318,7 +322,10 @@ find_prefix([H | T], {I0, _, Data})
                 false ->
                     error
             end
-    end.
+    end;
+
+find_prefix(_, []) ->
+    error.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -329,6 +336,9 @@ find_prefix([H | T], {I0, _, Data})
 
 fold(F, A, Node) when is_function(F, 3) ->
     foldl(F, A, Node).
+
+foldl(F, A, []) when is_function(F, 3) ->
+    A;
 
 foldl(F, A, Node) when is_function(F, 3) ->
     foldl(F, A, [], Node).
@@ -371,6 +381,9 @@ foldl_element(F, A, I, N, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+foldr(F, A, []) when is_function(F, 3) ->
+    A;
+
 foldr(F, A, Node) when is_function(F, 3) ->
     foldr(F, A, [], Node).
 
@@ -411,6 +424,9 @@ foldr_element(F, A, I, Offset, Key, Data) ->
 %% Traverses in alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
+
+foreach(F, []) when is_function(F, 2) ->
+    ok;
 
 foreach(F, Node) when is_function(F, 2) ->
     foreach(F, [], Node).
@@ -484,7 +500,10 @@ is_key([H | T], {I0, _, Data})
             (Value /= error);
         _ ->
             false
-    end.
+    end;
+
+is_key(_, []) ->
+    false.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -492,6 +511,9 @@ is_key([H | T], {I0, _, Data})
 %% Traverses in alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
+
+iter(F, []) when is_function(F, 3) ->
+    ok;
 
 iter(F, Node) when is_function(F, 3) ->
     iter(F, [], Node),
@@ -541,6 +563,9 @@ iter_element(F, I, N, Offset, Key, Data) ->
 %% Traverses in alphabetical order.
 %% @end
 %%-------------------------------------------------------------------------
+
+itera(F, A, []) when is_function(F, 4) ->
+    A;
 
 itera(F, A, Node) when is_function(F, 4) ->
     {trie_itera_done, NewA} = itera(F, {trie_itera_done, A}, [], Node),
@@ -599,6 +624,9 @@ itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+map(F, [] = Node) when is_function(F, 2) ->
+    Node;
+
 map(F, Node) when is_function(F, 2) ->
     map_node(F, [], Node).
 
@@ -641,6 +669,12 @@ map_element(F, I, Offset, Key, Data) ->
 %% found within the first trie parameter.
 %% @end
 %%-------------------------------------------------------------------------
+
+merge(F, Node1, []) when is_function(F, 3) ->
+    Node1;
+
+merge(F, [], Node2) when is_function(F, 3) ->
+    Node2;
 
 merge(F, Node1, Node2) when is_function(F, 3) ->
     fold(fun (Key, V1, Node) ->
@@ -764,6 +798,9 @@ store([H | T] = Key, NewValue, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
+to_list([]) ->
+    [];
+
 to_list(Node) ->
     to_list_node([], [], Node).
 
@@ -805,7 +842,7 @@ to_list_element(L, I, Offset, Key, Data) ->
 %%-------------------------------------------------------------------------
 
 update([H], F, {I0, I1, Data})
-    when is_integer(H), H >= I0, H =< I1 ->
+    when is_integer(H), H >= I0, H =< I1, is_function(F, 1) ->
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     if
@@ -814,7 +851,7 @@ update([H], F, {I0, I1, Data})
     end;
 
 update([H | T], F, {I0, I1, Data})
-    when is_integer(H), H >= I0, H =< I1 ->
+    when is_integer(H), H >= I0, H =< I1, is_function(F, 1) ->
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     case Node of
@@ -830,6 +867,9 @@ update([H | T], F, {I0, I1, Data})
 %% ===Update or add a value in a trie.===
 %% @end
 %%-------------------------------------------------------------------------
+
+update(Key, _, Initial, [] = Node) ->
+    store(Key, Initial, Node);
 
 update([H | T], _, Initial, {I0, I1, Data})
     when H < I0 ->
@@ -847,7 +887,7 @@ update([H | T], _, Initial, {I0, I1, Data})
     {I0, H, NewData};
 
 update([H] = Key, F, Initial, {I0, I1, Data})
-    when is_integer(H) ->
+    when is_integer(H), is_function(F, 1) ->
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     if
@@ -866,7 +906,7 @@ update([H] = Key, F, Initial, {I0, I1, Data})
     end;
 
 update([H | T] = Key, F, Initial, {I0, I1, Data})
-    when is_integer(H) ->
+    when is_integer(H), is_function(F, 1) ->
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     case Node of
