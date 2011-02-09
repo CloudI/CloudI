@@ -1,3 +1,0 @@
-{application,cloud_data_mysql}.
-{packages,[]}.
-{modules,[cloud_data_mysql]}.

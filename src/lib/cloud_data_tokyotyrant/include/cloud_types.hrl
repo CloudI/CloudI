@@ -1,1 +1,0 @@
-../../cloud/include/cloud_types.hrl

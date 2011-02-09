@@ -1,3 +1,0 @@
-{application,cloud_data_pgsql}.
-{packages,[]}.
-{modules,[cloud_data_pgsql]}.
