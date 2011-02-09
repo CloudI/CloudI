@@ -1,5 +1,0 @@
-{application,cloud_stdlib}.
-{packages,[]}.
-{modules,[abstract_code,dynamic_compile,immediate_gc,lists_extensions,
-          math_extensions,monitor_link,nd_index,proplists_extensions,
-          string_extensions,time_extensions,tuple_extensions]}.

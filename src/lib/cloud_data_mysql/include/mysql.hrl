@@ -1,1 +1,0 @@
-../../emysql/include/mysql.hrl
