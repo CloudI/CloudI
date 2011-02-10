@@ -138,7 +138,7 @@ start_external(ThreadsPerProcess,
     end, [], lists:seq(1, ThreadsPerProcess)),
     if
         is_list(Ports) ->
-            SpawnProcess = pool:get(cloudi_os_spawn),
+            SpawnProcess = pool2:get(cloudi_os_spawn),
             ProtocolChar = if Protocol == tcp -> $t; Protocol == udp -> $u end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,

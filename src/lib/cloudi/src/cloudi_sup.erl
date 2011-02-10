@@ -115,11 +115,11 @@ child_specification(cloudi_job_sup) ->
 child_specification(cloudi_os_spawn_pool) ->
     Shutdown = 2000, % milliseconds
     {cloudi_os_spawn_pool,
-     {pool_sup, start_link,
+     {pool2_sup, start_link,
       [cloudi_os_spawn, os_process_count(),
        {undefined, {cloudi_os_spawn, start_link, []},
         permanent, Shutdown, worker, [cloudi_os_spawn]}]},
-     permanent, infinity, supervisor, [pool_sup]};
+     permanent, infinity, supervisor, [pool2_sup]};
 
 child_specification(cloudi_socket_sup) ->
     {cloudi_socket_sup,
