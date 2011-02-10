@@ -48,7 +48,7 @@
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(pool).
+-module(pool2).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -156,7 +156,7 @@ code_change(_, State, _) ->
 
 update(I, #state{supervisor = Supervisor} = State) ->
     Pids = lists:foldl(fun
-        ({pool, _, _, _}, L) ->
+        ({pool2, _, _, _}, L) ->
             L;
         ({_, undefined, _, _}, L) ->
             L;

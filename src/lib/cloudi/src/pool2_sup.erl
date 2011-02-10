@@ -47,7 +47,7 @@
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(pool_sup).
+-module(pool2_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
@@ -88,9 +88,9 @@ init([Name, ChildSpecs]) ->
     MaxTime = 60, % seconds (1 minute)
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{one_for_one, MaxRestarts, MaxTime}, 
-          [{pool,
-            {pool, start_link, [Name, ChildSpecs, self()]},
-            permanent, Shutdown, worker, [pool]}]}}.
+          [{pool2,
+            {pool2, start_link, [Name, ChildSpecs, self()]},
+            permanent, Shutdown, worker, [pool2]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

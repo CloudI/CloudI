@@ -82,13 +82,10 @@ init([]) ->
     % port/port_driver find/load/open
     erlang:process_flag(trap_exit, true),
     Name = local_port_name(),
-    case load_local_port(Name) of
-        {ok, Port} when is_port(Port) ->
-            {ok, #state{last_port_name = Name,
-                        port = Port}};
-        {error, Reason} ->
-            {stop, Reason}
-    end.
+    Port = load_local_port(Name),
+    true = is_port(Port),
+    {ok, #state{last_port_name = Name,
+                port = Port}}.
 
 %% handle synchronous function calls on the port/port_driver
 handle_call({call, Command, Msg}, Client,
@@ -329,13 +326,8 @@ local_port_name() ->
 %    ok.
 load_local_port(Name) when is_list(Name) ->
     {ok, Path} = load_path(Name),
-    case erlang:open_port({spawn, Path ++ "/" ++ Name},
-                          [{packet, 4}, binary, exit_status, nouse_stdio]) of
-        P when is_port(P) ->
-            {ok, P};
-        Error ->
-            {error, Error}
-    end.
+    erlang:open_port({spawn, Path ++ "/" ++ Name},
+                     [{packet, 4}, binary, exit_status, nouse_stdio]).
 transform_data(D) ->
     erlang:binary_to_term(D).
 %call_port_async(Process, Command, Msg) ->
