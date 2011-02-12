@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * pgsql, mysql, TokyoTyrant, couchdb, memcached data modules converted
+      to the cloudi_job behavior, though the binary responses need work
+
 2011-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * python API added with BSD licensed encoding for Erlang term

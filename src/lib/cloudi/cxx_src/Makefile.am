@@ -9,7 +9,7 @@ CLEANFILES = $(INTERFACE_HEADER) \
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn.h \
-                     $(nodist_bin_PROGRAMS)
+                     $(bin_PROGRAMS)
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) -include cloudi_os_spawn.h \
            -E -P cloudi_os_spawn_hrl.h > $@
 	cp cloudi_os_spawn_vsn_1 ../priv

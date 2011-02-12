@@ -97,8 +97,9 @@
 behaviour_info(callbacks) ->
     [
         {cloudi_job_init, 2},
-        {cloudi_job_handle_request, 7},
-        {cloudi_job_handle_info, 3}
+        {cloudi_job_handle_request, 8},
+        {cloudi_job_handle_info, 3},
+        {cloudi_job_terminate, 2}
     ];
 behaviour_info(_) ->
     undefined.
@@ -125,22 +126,20 @@ unsubscribe(Dispatcher, Name)
     gen_server:cast(Dispatcher, {'unsubscribe', Name}).
 
 send_async(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name), is_binary(Request) ->
+    when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, Request}, infinity).
 
 send_async(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Request), is_integer(Timeout) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout), Timeout > 0 ->
     gen_server:call(Dispatcher, {'send_async', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 send_sync(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name), is_binary(Request) ->
+    when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, Request}, infinity).
 
 send_sync(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Request), is_integer(Timeout) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout), Timeout > 0 ->
     gen_server:call(Dispatcher, {'send_sync', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA}, Timeout).
 
@@ -151,21 +150,20 @@ forward(Dispatcher, 'send_sync', Name, Request, Timeout, TransId, Pid) ->
     forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid).
 
 forward_async(Dispatcher, Name, Request, Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Request), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'forward_async', Name, Request, Timeout, TransId, Pid},
     erlang:throw(forward).
 
 forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Request), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'forward_sync', Name, Request, Timeout, TransId, Pid},
     erlang:throw(forward).
 
 recv_async(Dispatcher, Timeout, TransId)
-    when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId) ->
+    when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
+         Timeout > 0 ->
     gen_server:call(Dispatcher, {'recv_async', Timeout - ?TIMEOUT_DELTA,
                                  TransId}, Timeout).
 
@@ -176,16 +174,14 @@ return(Dispatcher, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
     return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid).
 
 return_async(Dispatcher, Name, Response, Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Response), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'return_async', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
 
 return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name),
-         is_binary(Response), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid) ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'return_sync', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
 
@@ -199,8 +195,8 @@ init([Module, Args, Dispatcher]) ->
             {ok, #state{module = Module,
                         dispatcher = Dispatcher,
                         job_state = JobState}};
-        {error, Reason} ->
-            {stop, Reason}
+        {stop, _} = Stop ->
+            Stop
     end.
 
 handle_call(Request, _, State) ->
@@ -252,11 +248,14 @@ handle_info(Request,
                    dispatcher = Dispatcher,
                    job_state = JobState} = State) ->
     {noreply, NewJobState} =  Module:cloudi_job_handle_info(Request, 
-                                                            Dispatcher,
-                                                            JobState),
+                                                            JobState,
+                                                            Dispatcher),
     {noreply, State#state{job_state = NewJobState}}.
 
-terminate(_, _) ->
+terminate(Reason,
+          #state{module = Module,
+                 job_state = JobState}) ->
+    Module:cloudi_job_terminate(Reason, JobState),
     ok.
 
 code_change(_, State, _) ->

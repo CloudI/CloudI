@@ -1,0 +1,24 @@
+Medici is a Tokyo Tyrant interface for Erlang.  It is composed of two
+basic parts, principe and the medici server.
+
+Principe is a thin Erlang wrapper around the Tokyo Tyrant TCP/IP API.
+It suports hash, b-tree, and table databases (the latter via the
+principe_table module). Principe does not do any connection handling
+beyond providing a simple connect() function, it just makes requests
+to a tyrant server and returns the results.
+
+Medici is an Erlang app that provides a supervised pool of client
+connections to the tyrant service (via principe) and a client controller
+that provides an fairly robust api for other processes to use when
+accessing the tyrant service.  The medici app can also run a tyrant
+server as a port, controlling the server from Erlang and eliminating
+the necessity to start/stop this server outside of the Erlang application.
+
+
+---------
+Mad props to Bob Ippolito for the pytyrant package that I used as a
+template and to Harish Mallipeddi whose tora package provided the
+response handling functions I am using with a few minor tweaks.
+
+Additional thanks to Yurii Rashkovski and Bhasker V Kode for bug fixes.
+
