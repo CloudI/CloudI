@@ -1,0 +1,187 @@
+@author Jim McCoy <jim.mccoy@gmail.com>
+@copyright 2009 Jim McCoy 
+@version 0.5
+@title Medici documentation
+
+@doc
+== Introduction ==
+
+Medici and the associated principe/principe_table modules are Erlang
+interfaces for the Tokyo Tyrant network database interface.  Principe
+provides a thin wrapper for the Tyrant TCP/IP protocol but does not do
+any connection management beyond providing a simple connect function.
+The medici application provides connection management, a non-blocking
+interface for the pool of principe connections, standard OTP
+restart/fault-tolerance capabilities, and the ability to run the
+Tyrant server as an Erlang port for full control of the server from
+within Erlang.
+
+== Using Principe ==
+
+If you just want a raw connection to a Tyrant server the principe
+module will provide an interface for hash, b+ tree, and fixed-length
+databases while the principe_table module will provide a similar
+functionality for the Tyrant table database.
+
+=== Keys, Values, and Columns ===
+
+All keys for principle and principe_table are iolists.  Values can be
+iolists, integers, and floats.  For the principle_table module the
+names of columns are iolists, but care should be taken to try to avoid
+using column names that contain null characters.  A null byte is used
+by tyrant to separate column names from values and things can get
+confused quite quickly if a column is given a name that contains a
+null.  Just don't do it.  If you want unicode column names you should
+probably encoded the column name in base64 or similar null-safe
+encoding and use the encoded values when interfacing with principe and
+medici.
+
+Returned data is always a binary, list of binaries, or proplist with
+binaries as keys and values.
+
+=== Principe Connection Parameters ===
+
+The principe connect() function accepts a proplist argument that
+contains information regarding how to connect to the remote database.
+If a property with the atom "hostname" as its key exists then principe
+will connect to the host name or IP address provided as a string
+value.  If a property with the atom "port" as its key exists then
+principe will connect to the port number provided as the integer value
+of this property.  If the proplist contains a connect_opts property
+with a list of gen_tcp:connect() options at its value then that value
+will be used when opening the connection to the remote database.  The
+default values for these parameters is the following:
+```
+  {hostname, "127.0.0.1"}
+  {port, 1978}
+  {connect_opts,  [binary, {packet, 0}, {nodelay, true}, {active, true},
+  {keepalive, true}]}
+'''
+
+=== A Note About Byte-Order ===
+
+While the Tyrant protocol itself uses network byte-order, the on-disk
+storage by the Tokyo Cabinet back-end will be done using the host
+byte-order for the server.  In most cases byte-order differences
+between the client and server does not matter too much, but there are
+a few cases, such as functions to add integers or doubles to existing
+values on the server, where server byte-order matters.  For these
+use-cases the principe module supports put and get operations that
+accept an additional optional parameter to tell the function what
+byte-order to use when encoding integers and floats to be sent to the
+remote database.
+
+If you do not intend on using clients on systems whose byte-order
+differs from the server, nor intend on using the addint() or
+addfloat() functions to increment values then you can safely ignore
+the whole byte-order issue.
+
+== Using Medici ==
+
+Once started the medici server will register itself using either the
+default name of 'medici' or another name that was provided as a
+configuration option.  To access the Tyrant server you send this
+process tuples whose first element is the operation to be performed
+and with additional elements that become the args for the Tyrant
+operation indicated by the first element.  For example, sending the
+tuple {put, "key1", "val1"} to medici will store "val1" with the key
+"key1".  You can also use gen_server:call() to access the medici
+service.
+
+The medici supervisory tree will handle the connections to the Tyrant
+server, retry requests when needed, and otherwise manage the interface
+to the Tyrant server so that you don't need to worry about it.
+
+=== Configuration/Connection Options ===
+
+The various options are available for setting configuration or connection
+parameters. 
+
+The principe and principe_table connect() function uses the hostname,
+port, connect_opts to tell gen_tcp where the Tyrant server is located.
+
+The medici application configuration options can be set as OTP
+application env values. The "options" env key has as its value a
+proplist that contains the various configuration options to be used.
+Modify the medici.app file for making persistent changes, tweak the
+values from the command-line for changing the values when the Erlang
+VM starts, or pass in the options proplist as the argument to
+medici:start() to modify the settings at runtime.
+
+The following options are examined and used by medici to modify how it
+operates, each option is a key in the options proplist with a specific
+value (and meaning for that value) as follows:
+
+controller_name: If present the value should be an atom that is used as the
+registered name for the medici service.  If not present then the
+service is registered using the name 'medici'.  If you change the
+controller name then you will no longer be able to use the simple API
+provided by the medici.erl module, see the docs for that module or
+comments within the module itself for more info.
+
+native: This is a boolean value (false is assumed if property is not
+present in configuration options) that turns the medici service into
+an erlang term storage server.  Erlang terms will be used as the keys
+and all values returned will be erlang terms.  If the native flag is set in
+the configuration options the tyrant server cannot be of the table or
+fixed-length types.
+
+num_connections:This is an integer that tells the connection controler
+how  many connection clients to keep active in the pool.  The default
+of 8 is also the number of work threads that a tyrant server will start as
+its default, so if you change this number you should also start your
+tyrant server with an equivalent number of worker threads for best
+performance.
+
+run_server: This value is used to tell the medici application to run
+the Tyrant server itself using a port server.  The value for this
+property is a proplist that contains up to six additional key/value
+pairs: server_name, tyrant_bin, tyrant_opts, data_file, tuning_opts, and
+port_opts.  Server_name is the name to register the port server under.
+The value of the port_opts proplist element should be a list
+containing valid options for the erlang:open_port() function. The
+remainder are strings containing the pathname for the ttserver binary
+(tyrant_bin), the command-line options for ttserver (tyrant_opts), the
+pathname of the database file to use (data_file), and any additional
+tuning options to apply to this database (tuning_opts).
+
+auto_sync: This configuration option tells the medici application to
+run a periodic task that will send a sync message to the tyrant server
+on an interval.  The auto_sync option can be a property with a boolean
+value or have an integer value (e.g. {auto_sync, true}, {auto_sync, 3} 
+are all examples of valid options.)  If the value of the auto_sync
+option is an integer then the sync task will run every X seconds,
+where X is the value provided, if the value evaluates to true then the 
+auto_sync task will run with a default frequency.
+
+auto_tune: This option tells the medici controller to examine the
+database periodically and to optimize the database tuning
+parameters if warranted.  The auto_tune option can be a property with
+a boolean value or have an integer value (e.g. {auto_tune, true},
+{auto_tune, 3} are all examples of valid options.)  If the value of
+the auto_tune option is an integer then the tuning service will run
+every X seconds, where X is the value provided, if the value evaluates
+to true then the auto_tune task will run with a default frequency of
+every five minutes. The optimizations applied will also update the
+tuning options for the port server if the run_server option is enabled
+(so that tuning changes will survive port restarts.)  NOTE: The
+changes made by auto_tune will not persist through an application
+restart and are only applied to the current instance of the medici
+application.
+
+auto_copy: The auto_copy option takes a tuple as its parameter, with
+the first element being a string that specifies the filepath to which
+the database copy should be stored and the second element being the
+frequency (in seconds) at which this copy operation should run with a
+minimum value for the frequency being 60 seconds.  The filepath should
+specific the full pathname and filename for the copy and when the copy
+runs it will overwrite any existing file copy.  This is basically a
+way to get an automatic backup copy of the database.
+
+watch_disk: If medici is running a port server to manage the tyrant
+server (see run_server) then this option tells the task manager to
+check available disk space and shutdown the medici application if it
+appears that the system is in danger of exceeding available disk space
+(which can cause catestrophic failures for the database.) [Currently
+unimplemented]
+@end

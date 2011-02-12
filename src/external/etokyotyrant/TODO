@@ -1,0 +1,13 @@
+principe: need to test against fixed-length TT databases.
+
+principe_table: schema converter? a fun that you pass in (perhaps
+as a module parameter) which automatically performs input/output
+type conversion for column values and will convert column keys to
+atoms. This would basically be the equivalent of native term storage
+for table mode, but in a manner that does not make the various
+table search functions useless.
+
+medici: need to flesh-out/test support for running multiple medici
+instances (e.g. one for tyrant server A and one for tyrant server B)
+
+medici: add eunit test

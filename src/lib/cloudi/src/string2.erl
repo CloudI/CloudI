@@ -53,8 +53,8 @@
 %% external interface
 -export([afterl/2, beforel/2, splitl/2,
          afterr/2, beforer/2,
-         binary_to_term/1,
-         list_to_term/1, term_to_list/1,
+         binary_to_term/1, list_to_term/1,
+         term_to_binary/1, term_to_list/1,
          format/2]).
 
 %%%------------------------------------------------------------------------
@@ -172,6 +172,15 @@ list_to_term(L) when is_list(L) ->
         {error, Reason} ->
             throw(Reason)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert an Erlang term to a binary string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+term_to_binary(T) ->
+    erlang:iolist_to_binary(io_lib:format("~w", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc

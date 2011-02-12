@@ -8,6 +8,7 @@
 cloudi_app,
 cloudi_job_dispatcher,
 cloudi_job,
+cloudi_job_db_pgsql,
 cloudi_job_sup,
 cloudi_logger,
 cloudi_os_spawn,
@@ -32,6 +33,7 @@ uuid
         cloudi_os_spawn
         ]},
    {applications, [
+epgsql,
         stdlib,
         kernel
         ]},
