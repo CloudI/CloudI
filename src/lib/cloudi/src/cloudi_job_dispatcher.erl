@@ -54,7 +54,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/7]).
+-export([start_link/9]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -77,7 +77,9 @@
                          % lazy_closest |
                          % immediate_random |
                          % lazy_random, destination pid refresh
-        list_pg_data = list_pg_data:get_empty_groups() % dest_refresh lazy
+        list_pg_data = list_pg_data:get_empty_groups(), % dest_refresh lazy
+        dest_deny,       % is the socket denied from sending to a destination
+        dest_allow       % is the socket allowed to send to a destination
     }).
 
 %%%------------------------------------------------------------------------
@@ -85,7 +87,7 @@
 %%%------------------------------------------------------------------------
 
 start_link(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh)
+           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (DestRefresh == immediate_closest) or
@@ -93,13 +95,15 @@ start_link(Module, Args, Timeout, Prefix,
            (DestRefresh == immediate_random) or
            (DestRefresh == lazy_random),
     gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutSync,
-                                    TimeoutAsync, DestRefresh], []).
+                                    TimeoutAsync, DestRefresh,
+                                    DestDeny, DestAllow], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync, DestRefresh]) ->
+init([Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync,
+      DestRefresh, DestDeny, DestAllow]) ->
     case cloudi_job:start_link(Module, Args, Timeout) of
         {ok, Job} ->
             destination_refresh_start(DestRefresh),
@@ -108,7 +112,9 @@ init([Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync, DestRefresh]) ->
                         timeout_sync = TimeoutSync,
                         timeout_async = TimeoutAsync,
                         uuid_generator = uuid:new(Job),
-                        dest_refresh = DestRefresh}};
+                        dest_refresh = DestRefresh,
+                        dest_deny = DestDeny,
+                        dest_allow = DestAllow}};
         ignore ->
             ignore;
         {error, Reason} ->
@@ -122,22 +128,30 @@ handle_call({'send_async', Name, Request}, Client,
 handle_call({'send_async', Name, Request, Timeout}, {Exclude, _} = Client,
             #state{uuid_generator = UUID,
                    dest_refresh = DestRefresh,
-                   list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
-        {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
-            erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
-                              {'send_async', Name, Request,
-                               Timeout - ?SEND_ASYNC_INTERVAL,
-                               Client}),
-            {noreply, State};
-        {error, _} ->
-            {reply, {error, timeout}, State};
-        Pid ->
-            TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
-            {reply, {ok, TransId},
-             send_async_timeout_start(Timeout, TransId, State)}
-            
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            case destination_get(DestRefresh, Name, Exclude, Groups) of
+                {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
+                    erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
+                                      {'send_async', Name, Request,
+                                       Timeout - ?SEND_ASYNC_INTERVAL,
+                                       Client}),
+                    {noreply, State};
+                {error, _} ->
+                    {reply, {error, timeout}, State};
+                Pid ->
+                    TransId = uuid:get_v1(UUID),
+                    Pid ! {'send_async', Name, Request,
+                           Timeout, TransId, self()},
+                    {reply, {ok, TransId},
+                     send_async_timeout_start(Timeout, TransId, State)}
+                    
+            end;
+        false ->
+            {reply, {error, timeout}, State}
     end;
 
 handle_call({'send_sync', Name, Request}, Client,
@@ -147,28 +161,35 @@ handle_call({'send_sync', Name, Request}, Client,
 handle_call({'send_sync', Name, Request, Timeout}, {Exclude, _} = Client,
             #state{uuid_generator = UUID,
                    dest_refresh = DestRefresh,
-                   list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
-        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
-                              {'send_sync', Name, Request,
-                               Timeout - ?SEND_SYNC_INTERVAL,
-                               Client}),
-            {noreply, State};
-        {error, _} ->
-            {reply, {error, timeout}, State};
-        Pid ->
-            TransId = uuid:get_v1(UUID),
-            Self = self(),
-            Pid ! {'send_sync', Name, Request,
-                   Timeout - ?TIMEOUT_DELTA, TransId, Self},
-            receive
-                {'return_sync', Name, Response, _, TransId, Self} ->
-                    {reply, {ok, Response}, State}
-            after
-                Timeout ->
-                    {reply, {error, timeout}, State}
-            end
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            case destination_get(DestRefresh, Name, Exclude, Groups) of
+                {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+                    erlang:send_after(?SEND_SYNC_INTERVAL, self(),
+                                      {'send_sync', Name, Request,
+                                       Timeout - ?SEND_SYNC_INTERVAL,
+                                       Client}),
+                    {noreply, State};
+                {error, _} ->
+                    {reply, {error, timeout}, State};
+                Pid ->
+                    TransId = uuid:get_v1(UUID),
+                    Self = self(),
+                    Pid ! {'send_sync', Name, Request,
+                           Timeout - ?TIMEOUT_DELTA, TransId, Self},
+                    receive
+                        {'return_sync', Name, Response, _, TransId, Self} ->
+                            {reply, {ok, Response}, State}
+                    after
+                        Timeout ->
+                            {reply, {error, timeout}, State}
+                    end
+            end;
+        false ->
+            {reply, {error, timeout}, State}
     end;
 
 handle_call({'recv_async', Timeout, TransId}, Client,
@@ -284,35 +305,51 @@ handle_info({'send_sync', Name, Request, Timeout, {Exclude, _} = Client},
 
 handle_info({'forward_async', Name, Request, Timeout, TransId, Pid},
             #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Pid, Groups) of
-        {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
-                              {'forward_async', Name, Request,
-                               Timeout - ?FORWARD_ASYNC_INTERVAL,
-                               TransId, Pid}),
-            ok;
-        {error, _} ->
-            ok;
-        NextPid ->
-            NextPid ! {'send_async', Name, Request, Timeout, TransId, Pid}
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            case destination_get(DestRefresh, Name, Pid, Groups) of
+                {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
+                    erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
+                                      {'forward_async', Name, Request,
+                                       Timeout - ?FORWARD_ASYNC_INTERVAL,
+                                       TransId, Pid}),
+                    ok;
+                {error, _} ->
+                    ok;
+                NextPid ->
+                    NextPid ! {'send_async', Name, Request,
+                               Timeout, TransId, Pid}
+            end;
+        false ->
+            ok
     end,
     {noreply, State};
 
 handle_info({'forward_sync', Name, Request, Timeout, TransId, Pid},
             #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Pid, Groups) of
-        {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
-                              {'forward_sync', Name, Request,
-                               Timeout - ?FORWARD_SYNC_INTERVAL,
-                               TransId, Pid}),
-            ok;
-        {error, _} ->
-            ok;
-        NextPid ->
-            NextPid ! {'send_sync', Name, Request, Timeout, TransId, Pid}
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            case destination_get(DestRefresh, Name, Pid, Groups) of
+                {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
+                    erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
+                                      {'forward_sync', Name, Request,
+                                       Timeout - ?FORWARD_SYNC_INTERVAL,
+                                       TransId, Pid}),
+                    ok;
+                {error, _} ->
+                    ok;
+                NextPid ->
+                    NextPid ! {'send_sync', Name, Request,
+                               Timeout, TransId, Pid}
+            end;
+        false ->
+            ok
     end,
     {noreply, State};
 
@@ -401,6 +438,26 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+destination_allowed(_, undefined, undefined) ->
+    true;
+
+destination_allowed(Name, undefined, DestAllow) ->
+    Prefix = string2:beforer($/, Name),
+    trie:is_prefix(Prefix, DestAllow);
+
+destination_allowed(Name, DestDeny, undefined) ->
+    Prefix = string2:beforer($/, Name),
+    not trie:is_prefix(Prefix, DestDeny);
+
+destination_allowed(Name, DestDeny, DestAllow) ->
+    Prefix = string2:beforer($/, Name),
+    case trie:is_prefix(Prefix, DestDeny) of
+        true ->
+            false;
+        false ->
+            trie:is_prefix(Prefix, DestAllow)
+    end.
 
 destination_refresh_start(lazy_closest) ->
     list_pg_data:get_groups(?DEST_REFRESH_SLOW);

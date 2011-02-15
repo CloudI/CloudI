@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Job Supervisor==
+%%% ==Cloudi Misultin Integration Module==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -47,68 +47,81 @@
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_sup).
+-module(cloudi_job_misultin).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
+-behaviour(cloudi_job).
 
 %% external interface
--export([start_link/0,
-         create_job/9]).
 
-%% supervisor callbacks
--export([init/1]).
+%% cloudi_job callbacks
+-export([cloudi_job_init/2,
+         cloudi_job_handle_request/8,
+         cloudi_job_handle_info/3,
+         cloudi_job_terminate/2]).
+
+-include("cloudi_logger.hrl").
+
+-define(DEFAULT_PORT, 8080).
+
+-record(state,
+    {
+        process
+    }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
+%%%------------------------------------------------------------------------
+%%% Callback functions from cloudi_job
+%%%------------------------------------------------------------------------
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-create_job(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
-    case supervisor:start_child(?MODULE, [Module, Args, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow]) of
-        {ok, Pid} ->
-            {ok, Pid};
-        {ok, Pid, _} ->
-            {ok, Pid};
-        {error, _} = Error ->
-            Error
+cloudi_job_init(Args, Dispatcher) ->
+    Defaults = [
+        {port, ?DEFAULT_PORT}],
+    [Port, []] = proplists2:take_values(Defaults, Args),
+    Loop = fun(HttpRequest) ->
+        handle_http(HttpRequest, Dispatcher)
+    end,
+    case misultin:start_link([{port, Port}, {loop, Loop}]) of
+        {ok, Process} ->
+            {ok, #state{process = Process}};
+        {error, Reason} ->
+            {stop, Reason}
     end.
 
-%%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
-%%%------------------------------------------------------------------------
+cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
+                          State, _Dispatcher) ->
+    {reply, <<>>, State}.
 
-init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
-          [{undefined,
-            {cloudi_job_dispatcher, start_link, []},
-            temporary, Shutdown, worker, []}]}}.
+cloudi_job_handle_info(Request, State, _) ->
+    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    {noreply, State}.
+
+cloudi_job_terminate(_, #state{process = Process}) ->
+    misultin:stop(Process),
+    ok.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+handle_http(HttpRequest, Dispatcher) ->
+    Name = HttpRequest:get(str_uri),
+    Request = case HttpRequest:get(method) of
+        'GET' ->
+            erlang:list_to_binary(HttpRequest:get(args));
+        'POST' ->
+            HttpRequest:get(body)
+    end,
+    case cloudi_job:send_sync(Dispatcher, Name, Request) of
+        {ok, Response} ->
+            HttpRequest:raw_headers_respond(Response);
+        {error, timeout} ->
+            HttpRequest:respond(504);
+        {error, Reason} ->
+            ?LOG_ERROR("Request Failed: ~p", [Reason]),
+            HttpRequest:respond(500)
+    end.
 
