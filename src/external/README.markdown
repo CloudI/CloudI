@@ -64,3 +64,12 @@ commit 712f8ead7585e6d3736a
 October 14, 2009
 BSD (https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl)
 
+misultin
+--------
+
+Fast Erlang HTTP Server
+http://github.com/ostinelli/misultin
+commit 6c3d1952ec3d5de3cdb2
+Sat Feb 12 14:55:04 PST 2011
+BSD
+

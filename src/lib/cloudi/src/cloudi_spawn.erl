@@ -51,7 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/7,
+-export([start_internal/9,
          start_external/13]).
 
 %%%------------------------------------------------------------------------
@@ -78,20 +78,33 @@
 
 
 start_internal(Module, Args, Timeout, Prefix,
-               TimeoutSync, TimeoutAsync, DestRefresh)
+               TimeoutSync, TimeoutAsync, DestRefresh,
+               DestDenyList, DestAllowList)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
            (DestRefresh == lazy_random),
+    DestDeny = if
+        DestDenyList == undefined ->
+            undefined;
+        is_list(DestDenyList) ->
+            trie:new(DestDenyList)
+    end,
+    DestAllow = if
+        DestAllowList == undefined ->
+            undefined;
+        is_list(DestAllowList) ->
+            trie:new(DestAllowList)
+    end,
     case code:is_loaded(Module) of
         false ->
             {error, not_loaded};
         {file, _} ->
             case cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
                                            TimeoutSync, TimeoutAsync,
-                                           DestRefresh) of
+                                           DestRefresh, DestDeny, DestAllow) of
                 {ok, _} ->
                     ok;
                 {error, _} = Error ->

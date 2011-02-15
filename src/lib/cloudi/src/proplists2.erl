@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Job Supervisor==
+%%% ==Proplists Extensions Module==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,17 +47,11 @@
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_sup).
+-module(proplists2).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
-
-%% external interface
--export([start_link/0,
-         create_job/9]).
-
-%% supervisor callbacks
--export([init/1]).
+-export([take_value/3,
+         take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -65,50 +59,46 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Remove a key from the proplist.===
+%% Use the default value if the key does not exist
 %% @end
 %%-------------------------------------------------------------------------
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+-spec take_value(Key :: atom(),
+                 List :: list({atom(), any()}),
+                 Default :: any()) -> {any(), list({atom(), any()})}.
+
+take_value(Key, List, Default)
+    when is_atom(Key), is_list(List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            {Default, List};
+        {value, {Key, Value}, RemainingList} ->
+            {Value, RemainingList}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Remove many keys from the proplist.===
+%% The defaults are provided as a proplist
 %% @end
 %%-------------------------------------------------------------------------
 
-create_job(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
-    case supervisor:start_child(?MODULE, [Module, Args, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow]) of
-        {ok, Pid} ->
-            {ok, Pid};
-        {ok, Pid, _} ->
-            {ok, Pid};
-        {error, _} = Error ->
-            Error
+-spec take_values(DefaultList :: list({atom(), any()}),
+                  List :: list({atom(), any()})) -> list().
+
+take_values(DefaultList, List)
+    when is_list(DefaultList), is_list(List) ->
+    take_values([], DefaultList, List).
+take_values(Result, [], List)
+    when is_list(Result), is_list(List) ->
+    Result ++ [List];
+take_values(Result, [{Key, Default} | DefaultList], List)
+    when is_list(Result), is_atom(Key), is_list(List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            take_values(Result ++ [Default], DefaultList, List);
+        {value, {Key, Value}, RemainingList} ->
+            take_values(Result ++ [Value], DefaultList, RemainingList)
     end.
-
-%%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
-%%%------------------------------------------------------------------------
-
-init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
-          [{undefined,
-            {cloudi_job_dispatcher, start_link, []},
-            temporary, Shutdown, worker, []}]}}.
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
 
