@@ -73,3 +73,21 @@ commit 6c3d1952ec3d5de3cdb2
 Sat Feb 12 14:55:04 PST 2011
 BSD
 
+erlzmq
+------
+
+ZeroMQ (http://www.zeromq.org/) Erlang Driver
+http://github.com/zeromq/erlzmq
+commit ab65e4897fcb9b03cbea
+Tue Feb 15 16:24:30 PST 2011
+BSD
+
+ZeroMQ
+------
+
+ZeroMQ master branch
+http://github.com/zeromq/zeromq2
+commit fbe5d859f461b0deaa60
+Tue Feb 15 16:30:41 PST 2011
+LGPL
+
