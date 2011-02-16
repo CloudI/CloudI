@@ -62,7 +62,12 @@
 
 -include("cloudi_logger.hrl").
 
--define(DEFAULT_PORT, 8080).
+-define(DEFAULT_PORT,                   8080).
+-define(DEFAULT_BACKLOG,                 128).
+-define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds
+-define(DEFAULT_SSL,                   false).
+-define(DEFAULT_COMPRESS,              false).
+-define(DEFAULT_WS_AUTOEXIT,            true).
 
 -record(state,
     {
@@ -79,12 +84,24 @@
 
 cloudi_job_init(Args, Dispatcher) ->
     Defaults = [
-        {port, ?DEFAULT_PORT}],
-    [Port, []] = proplists2:take_values(Defaults, Args),
+        {port,            ?DEFAULT_PORT},
+        {backlog,         ?DEFAULT_BACKLOG},
+        {recv_timeout,    ?DEFAULT_RECV_TIMEOUT},
+        {ssl,             ?DEFAULT_SSL},
+        {compress,        ?DEFAULT_COMPRESS},
+        {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT}],
+    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit, []] =
+        proplists2:take_values(Defaults, Args),
     Loop = fun(HttpRequest) ->
         handle_http(HttpRequest, Dispatcher)
     end,
-    case misultin:start_link([{port, Port}, {loop, Loop}]) of
+    case misultin:start_link([{port, Port},
+                              {backlog, Backlog},
+                              {recv_timeout, RecvTimeout},
+                              {ssl, SSL},
+                              {compress, Compress},
+                              {ws_autoexit, WsAutoExit},
+                              {loop, Loop}]) of
         {ok, Process} ->
             {ok, #state{process = Process}};
         {error, Reason} ->
@@ -107,13 +124,38 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+content_type(Headers) ->
+    case misultin_utility:get_key_value('Content-Type', Headers) of
+        undefined ->
+            "";
+        ContentType ->
+            case string2:beforel($;, ContentType) of
+                [] ->
+                    ContentType;
+                L ->
+                    L
+            end
+    end.
+
 handle_http(HttpRequest, Dispatcher) ->
     Name = HttpRequest:get(str_uri),
     Request = case HttpRequest:get(method) of
         'GET' ->
             erlang:list_to_binary(HttpRequest:get(args));
         'POST' ->
-            HttpRequest:get(body)
+            % do not pass type information along with the request!
+            % make sure to encourage good design that provides
+            % one type per name (path),
+            % though multiple names may lead to the same callback
+            % (i.e., the name can be checked in the callback if different
+            %  types must be handled in the same area of code)
+            Type = content_type(HttpRequest:get(headers)),
+            if
+                Type == "application/zip" ->
+                    zlib:unzip(HttpRequest:get(body));
+                true ->
+                    HttpRequest:get(body)
+            end
     end,
     case cloudi_job:send_sync(Dispatcher, Name, Request) of
         {ok, Response} ->

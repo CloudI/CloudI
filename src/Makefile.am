@@ -21,6 +21,7 @@ dialyze: rebar
 run: all
 	$(ERLANG_ROOT_DIR)/bin/erl \
       -pz external/epgsql/ebin \
+      -pz external/emysql/ebin \
       -pz external/etokyotyrant/ebin \
       -pz external/ememcached/ebin \
       -pz external/ecouchdb/ebin \
