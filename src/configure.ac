@@ -20,6 +20,14 @@ AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/;
 AC_CONFIG_FILES([Makefile
                  api/Makefile
                  api/c/Makefile
+                 api/java/Makefile
+                 api/java/org/Makefile
+                 api/java/org/cloudi/Makefile
+                 api/java/com/Makefile
+                 api/java/com/ericsson/Makefile
+                 api/java/com/ericsson/otp/Makefile
+                 api/java/com/ericsson/otp/erlang/Makefile
+                 api/java/jar/Makefile
                  lib/Makefile
                  lib/cloudi/Makefile
                  lib/cloudi/cxx_src/Makefile])
