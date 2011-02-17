@@ -1,1 +1,1 @@
-SUBDIRS = c
+SUBDIRS = java c
