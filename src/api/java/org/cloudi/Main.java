@@ -55,11 +55,11 @@ public class Main
         }
 
         int thread_count = Integer.parseInt(args[0]);
-        //String protocol = args[1];
+        String protocol = args[1];
         int buffer_size = Integer.parseInt(args[2]);
         ExecutorService threads = Executors.newFixedThreadPool(thread_count);
         for (int index = 0; index < thread_count; ++index)
-            threads.execute(new Task(index, buffer_size));
+            threads.execute(new Task(index, protocol, buffer_size));
 
         threads.shutdown();
     }

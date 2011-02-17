@@ -1,5 +1,5 @@
-// -*- coding: utf-8; Mode: java; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-// ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+// -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 //
 // BSD LICENSE
 // 
@@ -38,40 +38,30 @@
 // DAMAGE.
 //
 
-package org.cloudi;
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
 
-import com.ericsson.otp.erlang.OtpErlangPid;
+#ifdef assert
+#error cassert or assert.h should not be included
+#endif
 
-class Task implements Runnable
+#ifdef NDEBUG
+#define BOOST_DISABLE_ASSERTS
+#endif // NDEBUG
+
+#define BOOST_ENABLE_ASSERT_HANDLER
+
+#include <boost/assert.hpp>
+
+namespace boost
 {
-    private API api;
-     
-    public Task(final int index, final String protocol, final int buffer_size)
-    {
-        api = new API(index, protocol, buffer_size);
-    }
-
-    public void foobar(Integer command, String name, byte[] request,
-                       Integer timeout, byte[] transId, OtpErlangPid pid)
-                       throws API.ReturnAsyncException, API.ReturnSyncException
-    {
-        System.out.println("got foobar");
-        api.return_(command, name, ("bye").getBytes(), timeout, transId, pid);
-    }
- 
-    public void run()
-    {
-        api.subscribe("foobar", this, "foobar");
-        boolean running = true;
-        while (running)
-        {
-            Object result = api.poll();
-            if (result == null)
-                running = false;
-            else
-                System.out.println("(java) received: " + result.toString());
-        }
-        System.out.println("exited thread");
-    }
+    void assertion_failed(char const * expr,
+                          char const * function,
+                          char const * file,
+                          long line);
 }
+
+#endif // ASSERT_HPP
+
+#define assert(E) BOOST_ASSERT(E)
 

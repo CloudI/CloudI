@@ -89,10 +89,10 @@ public class API
     private int timeout_sync;
     private int timeout_async;
 
-    public API(final int fd, final int size)
+    public API(final int index, final String protocol, final int size)
     {
-        this.socket = API.storeFD(fd);
-        assert this.socket != null : fd;
+        this.socket = API.storeFD(index + 3);
+        assert this.socket != null : (index + 3);
         this.output = new FileOutputStream(this.socket);
         this.input = new FileInputStream(this.socket);
         this.callbacks = new HashMap<String, Function6<Integer,
@@ -426,8 +426,8 @@ public class API
                     {
                         int prefixSize = buffer.getInt();
                         this.prefix = API.getString(buffer, prefixSize);
-                        this.timeout_sync = buffer.getInt();
                         this.timeout_async = buffer.getInt();
+                        this.timeout_sync = buffer.getInt();
                         return null;
                     }
                     case MESSAGE_SEND_ASYNC:

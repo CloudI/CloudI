@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = lib
+SUBDIRS = api lib
 
 all-local: rebar 
 	./rebar compile
@@ -13,7 +13,9 @@ clean-configure: config.log
 	rm -rf autom4te.cache
 	rm -rf lib/cloudi/cxx_src/.deps/
 	find lib -name "Makefile.in" | xargs rm -f
+	find api -name "Makefile.in" | xargs rm -f
 	find lib -name "Makefile" | xargs rm -f
+	find api -name "Makefile" | xargs rm -f
 
 dialyze: rebar
 	./rebar dialyze

@@ -1,5 +1,5 @@
-// -*- coding: utf-8; Mode: java; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-// ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+// -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+// ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 //
 // BSD LICENSE
 // 
@@ -38,40 +38,38 @@
 // DAMAGE.
 //
 
-package org.cloudi;
+#include <sstream>
+#include <exception>
+#include "assert.hpp"
 
-import com.ericsson.otp.erlang.OtpErlangPid;
-
-class Task implements Runnable
+namespace boost
 {
-    private API api;
-     
-    public Task(final int index, final String protocol, final int buffer_size)
+    void assertion_failed(char const * expr,
+                          char const * function,
+                          char const * file,
+                          long line)
     {
-        api = new API(index, protocol, buffer_size);
-    }
-
-    public void foobar(Integer command, String name, byte[] request,
-                       Integer timeout, byte[] transId, OtpErlangPid pid)
-                       throws API.ReturnAsyncException, API.ReturnSyncException
-    {
-        System.out.println("got foobar");
-        api.return_(command, name, ("bye").getBytes(), timeout, transId, pid);
-    }
- 
-    public void run()
-    {
-        api.subscribe("foobar", this, "foobar");
-        boolean running = true;
-        while (running)
+        class assert_exception : public std::exception
         {
-            Object result = api.poll();
-            if (result == null)
-                running = false;
-            else
-                System.out.println("(java) received: " + result.toString());
-        }
-        System.out.println("exited thread");
+            public:
+                assert_exception(std::string const & message) throw () :
+                    m_message(message)
+                {
+                }
+                virtual ~assert_exception() throw ()
+                {
+                }
+                virtual char const * what() const throw ()
+                {
+                    return m_message.c_str();
+                }
+            private:
+                std::string m_message;
+        };
+        std::ostringstream stream;
+        stream << file << ":" << line <<
+            " (" << function << ") failure: " << expr;
+        throw assert_exception(stream.str());
     }
 }
 

@@ -68,8 +68,8 @@
     {
         job,             % job pid
         prefix,          % subscribe/unsubscribe name prefix
-        timeout_sync,    % default timeout for send_sync
         timeout_async,   % default timeout for send_async
+        timeout_sync,    % default timeout for send_sync
         send_timeouts = dict:new(),    % tracking for timeouts
         async_responses = dict:new(),  % tracking for async messages
         uuid_generator,  % transaction id generator
@@ -87,30 +87,30 @@
 %%%------------------------------------------------------------------------
 
 start_link(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
+           TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
            (DestRefresh == lazy_random),
-    gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutSync,
-                                    TimeoutAsync, DestRefresh,
+    gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutAsync,
+                                    TimeoutSync, DestRefresh,
                                     DestDeny, DestAllow], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync,
+init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow]) ->
     case cloudi_job:start_link(Module, Args, Timeout) of
         {ok, Job} ->
             destination_refresh_start(DestRefresh),
             {ok, #state{job = Job,
                         prefix = Prefix,
-                        timeout_sync = TimeoutSync,
                         timeout_async = TimeoutAsync,
+                        timeout_sync = TimeoutSync,
                         uuid_generator = uuid:new(Job),
                         dest_refresh = DestRefresh,
                         dest_deny = DestDeny,
