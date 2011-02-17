@@ -83,8 +83,8 @@
         acceptor,        % tcp acceptor
         socket,          % data socket
         prefix,          % subscribe/unsubscribe name prefix
-        timeout_sync,    % default timeout for send_sync
         timeout_async,   % default timeout for send_async
+        timeout_sync,    % default timeout for send_sync
         send_timeouts = dict:new(),    % tracking for timeouts
         async_responses = dict:new(),  % tracking for async messages
         uuid_generator,  % transaction id generator
@@ -102,9 +102,9 @@
 %%%------------------------------------------------------------------------
 
 start_link(Protocol, BufferSize, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
+           TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow)
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (Protocol == tcp) or (Protocol == udp),
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
@@ -139,8 +139,8 @@ init([tcp, BufferSize, Timeout, Prefix,
                                    listener = Listener,
                                    acceptor = Acceptor,
                                    prefix = Prefix,
-                                   timeout_sync = TimeoutSync,
                                    timeout_async = TimeoutAsync,
+                                   timeout_sync = TimeoutSync,
                                    uuid_generator = uuid:new(self()),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
@@ -163,8 +163,8 @@ init([udp, BufferSize, Timeout, Prefix,
                                    port = Port,
                                    socket = Socket,
                                    prefix = Prefix,
-                                   timeout_sync = TimeoutSync,
                                    timeout_async = TimeoutAsync,
+                                   timeout_sync = TimeoutSync,
                                    uuid_generator = uuid:new(self()),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
@@ -176,9 +176,9 @@ init([udp, BufferSize, Timeout, Prefix,
 % incoming messages (from the port socket to other Erlang pids)
 
 'CONNECT'(init, #state{prefix = Prefix,
-                       timeout_sync = TimeoutSync,
-                       timeout_async = TimeoutAsync} = StateData) ->
-    send('init_out'(Prefix, TimeoutSync, TimeoutAsync), StateData),
+                       timeout_async = TimeoutAsync,
+                       timeout_sync = TimeoutSync} = StateData) ->
+    send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
     {next_state, 'HANDLE', StateData};
 
 'CONNECT'(timeout, StateData) ->
@@ -543,27 +543,27 @@ code_change(_, StateName, StateData, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-'init_out'(Prefix, TimeoutSync, TimeoutAsync)
-    when is_list(Prefix), is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+'init_out'(Prefix, TimeoutAsync, TimeoutSync)
+    when is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     PrefixBin = erlang:list_to_binary(Prefix),
-    PrefixSize = erlang:byte_size(PrefixBin),
+    PrefixSize = erlang:byte_size(PrefixBin) + 1,
     <<?MESSAGE_INIT:32/unsigned-integer-native,
       PrefixSize:32/unsigned-integer-native,
-      PrefixBin/binary,
-      TimeoutSync:32/unsigned-integer-native,
-      TimeoutAsync:32/unsigned-integer-native>>.
+      PrefixBin/binary, 0,
+      TimeoutAsync:32/unsigned-integer-native,
+      TimeoutSync:32/unsigned-integer-native>>.
 
 'send_async_out'(Name, Request, Timeout, TransId, Pid)
     when is_list(Name), is_binary(Request), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid) ->
     NameBin = erlang:list_to_binary(Name),
-    NameSize = erlang:byte_size(NameBin),
+    NameSize = erlang:byte_size(NameBin) + 1,
     RequestSize = erlang:byte_size(Request),
     PidBin = erlang:term_to_binary(Pid),
     PidSize = erlang:byte_size(PidBin),
     <<?MESSAGE_SEND_ASYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
-      NameBin/binary,
+      NameBin/binary, 0,
       RequestSize:32/unsigned-integer-native,
       Request/binary,
       Timeout:32/unsigned-integer-native,
@@ -575,13 +575,13 @@ code_change(_, StateName, StateData, _) ->
     when is_list(Name), is_binary(Request), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid) ->
     NameBin = erlang:list_to_binary(Name),
-    NameSize = erlang:byte_size(NameBin),
+    NameSize = erlang:byte_size(NameBin) + 1,
     RequestSize = erlang:byte_size(Request),
     PidBin = erlang:term_to_binary(Pid),
     PidSize = erlang:byte_size(PidBin),
     <<?MESSAGE_SEND_SYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
-      NameBin/binary,
+      NameBin/binary, 0,
       RequestSize:32/unsigned-integer-native,
       Request/binary,
       Timeout:32/unsigned-integer-native,

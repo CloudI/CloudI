@@ -78,10 +78,10 @@
 
 
 start_internal(Module, Args, Timeout, Prefix,
-               TimeoutSync, TimeoutAsync, DestRefresh,
+               TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
@@ -103,7 +103,7 @@ start_internal(Module, Args, Timeout, Prefix,
             {error, not_loaded};
         {file, _} ->
             case cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
-                                           TimeoutSync, TimeoutAsync,
+                                           TimeoutAsync, TimeoutSync,
                                            DestRefresh, DestDeny, DestAllow) of
                 {ok, _} ->
                     ok;
@@ -115,12 +115,12 @@ start_internal(Module, Args, Timeout, Prefix,
 start_external(ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
-               TimeoutSync, TimeoutAsync, DestRefresh,
+               TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList)
     when is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (Protocol == tcp) or (Protocol == udp),
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
@@ -140,7 +140,7 @@ start_external(ThreadsPerProcess,
     end,
     Ports = lists2:itera(fun(_, L, F) ->
         case cloudi_socket_sup:create_socket(Protocol, BufferSize, Timeout,
-                                             Prefix, TimeoutSync, TimeoutAsync,
+                                             Prefix, TimeoutAsync, TimeoutSync,
                                              DestRefresh,
                                              DestDeny, DestAllow) of
             {ok, _, Port} ->

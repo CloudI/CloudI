@@ -56,12 +56,12 @@ class API(object):
     __ASYNC  =  1
     __SYNC   = -1
 
-    def __init__(self, sock, size):
-        self.__s = sock
+    def __init__(self, index, protocol, size):
+        self.__s = socket.fromfd(index + 3, socket.AF_INET, protocol)
         self.__size = size
         self.__callbacks = {}
         sock.send(term_to_binary(OtpErlangAtom("init")))
-        self.__prefix, self.__timeout_sync, self.__timeout_async = self.poll()
+        self.__prefix, self.__timeout_async, self.__timeout_sync = self.poll()
 
     def __del__(self):
         self.__s.close()
@@ -224,9 +224,9 @@ class _return_async_exception(SystemExit):
         pass
 
 class _Task(threading.Thread):
-    def __init__(self, sock, size):
+    def __init__(self, index, protocol, size):
         threading.Thread.__init__(self)
-        self.__api = API(sock, size)
+        self.__api = API(index, protocol, size)
 
     def foobar(self, command, name, request, timeout, transId, pid):
         print "got foobar"
@@ -258,10 +258,7 @@ if __name__ == '__main__':
     buffer_size = int(sys.argv[3])
     assert thread_count >= 1
     
-    threads = [
-        _Task(socket.fromfd(3 + i, socket.AF_INET, protocol), buffer_size)
-        for i in range(thread_count)
-    ]
+    threads = [_Task(i, protocol, buffer_size) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:
