@@ -121,6 +121,33 @@ init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
             {stop, Reason}
     end.
 
+handle_call({'get_pid', Name}, Client,
+            #state{timeout_sync = TimeoutSync} = State) ->
+    handle_call({'get_pid', Name, TimeoutSync}, Client, State);
+
+handle_call({'get_pid', Name, Timeout}, {Exclude, _} = Client,
+            #state{dest_refresh = DestRefresh,
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            case destination_get(DestRefresh, Name, Exclude, Groups) of
+                {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+                    erlang:send_after(?SEND_SYNC_INTERVAL, self(),
+                                      {'get_pid', Name,
+                                       Timeout - ?SEND_SYNC_INTERVAL,
+                                       Client}),
+                    {noreply, State};
+                {error, _} ->
+                    {reply, {error, timeout}, State};
+                Pid ->
+                    {reply, {ok, Pid}, State}
+            end;
+        false ->
+            {reply, {error, timeout}, State}
+    end;
+
 handle_call({'send_async', Name, Request}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async', Name, Request, TimeoutAsync}, Client, State);
@@ -153,6 +180,12 @@ handle_call({'send_async', Name, Request, Timeout}, {Exclude, _} = Client,
         false ->
             {reply, {error, timeout}, State}
     end;
+
+handle_call({'send_async', Name, Request, Timeout, Pid}, _,
+            #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+    {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
 
 handle_call({'send_sync', Name, Request}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
@@ -189,6 +222,19 @@ handle_call({'send_sync', Name, Request, Timeout}, {Exclude, _} = Client,
                     end
             end;
         false ->
+            {reply, {error, timeout}, State}
+    end;
+
+handle_call({'send_sync', Name, Request, Timeout, Pid}, _,
+            #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Self = self(),
+    Pid ! {'send_sync', Name, Request, Timeout - ?TIMEOUT_DELTA, TransId, Self},
+    receive
+        {'return_sync', Name, Response, _, TransId, Self} ->
+            {reply, {ok, Response}, State}
+    after
+        Timeout ->
             {reply, {error, timeout}, State}
     end;
 
@@ -252,6 +298,24 @@ handle_info({list_pg_data, Groups},
     destination_refresh_start(DestRefresh),
     {noreply, State#state{list_pg_data = Groups}};
 
+handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
+            #state{dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Exclude, Groups) of
+        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
+                              {'get_pid', Name,
+                               Timeout - ?SEND_SYNC_INTERVAL,
+                               Client}),
+            {noreply, State};
+        {error, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        Pid ->
+            gen_server:reply(Client, {ok, Pid}),
+            {noreply, State}
+    end;
+
 handle_info({'send_async', Name, Request, Timeout, {Exclude, _} = Client},
             #state{uuid_generator = UUID,
                    dest_refresh = DestRefresh,
@@ -294,7 +358,7 @@ handle_info({'send_sync', Name, Request, Timeout, {Exclude, _} = Client},
             Self = self(),
             Pid ! {'send_sync', Name, Request, Timeout, TransId, Self},
             receive
-                {'return_sync', Name, Response, Timeout, TransId, Self} ->
+                {'return_sync', Name, Response, _, TransId, Self} ->
                     gen_server:reply(Client, {ok, Response})
             after
                 Timeout ->

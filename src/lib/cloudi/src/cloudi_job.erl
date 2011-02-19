@@ -58,10 +58,14 @@
 %% behavior interface
 -export([subscribe/2,
          unsubscribe/2,
+         get_pid/2,
+         get_pid/3,
          send_async/3,
          send_async/4,
+         send_async/5,
          send_sync/3,
          send_sync/4,
+         send_sync/5,
          forward/7,
          forward_async/6,
          forward_sync/6,
@@ -117,31 +121,122 @@ start_link(Module, Args, Timeout)
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------
 
+-spec subscribe(Dispatcher :: pid(),
+                Name :: string()) -> ok.
+
 subscribe(Dispatcher, Name)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:cast(Dispatcher, {'subscribe', Name}).
+
+-spec unsubscribe(Dispatcher :: pid(),
+                  Name :: string()) -> ok.
 
 unsubscribe(Dispatcher, Name)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:cast(Dispatcher, {'unsubscribe', Name}).
 
+-spec get_pid(Dispatcher :: pid(),
+              Name :: string()) ->
+    {'ok', pid()} |
+    {'error', atom()}.
+
+get_pid(Dispatcher, Name)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pid', Name}, infinity).
+
+-spec get_pid(Dispatcher :: pid(),
+              Name :: string(),
+              Timeout :: pos_integer()) ->
+    {'ok', pid()} |
+    {'error', atom()}.
+
+get_pid(Dispatcher, Name, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'get_pid', Name,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+-spec send_async(Dispatcher :: pid(),
+                 Name :: string(),
+                 Request :: any()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
 send_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, Request}, infinity).
 
+-spec send_async(Dispatcher :: pid(),
+                 Name :: string(),
+                 Request :: any(),
+                 Timeout :: pos_integer()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
 send_async(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout), Timeout > 0 ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'send_async', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+-spec send_async(Dispatcher :: pid(),
+                 Name :: string(),
+                 Request :: any(),
+                 Timeout :: pos_integer(),
+                 Pid :: pid()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async(Dispatcher, Name, Request, Timeout, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async', Name, Request,
+                                 Timeout - ?TIMEOUT_DELTA, Pid}, Timeout).
+
+-spec send_sync(Dispatcher :: pid(),
+                Name :: string(),
+                Request :: any()) ->
+    {'ok', any()} |
+    {'error', atom()}.
 
 send_sync(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, Request}, infinity).
 
+-spec send_sync(Dispatcher :: pid(),
+                Name :: string(),
+                Request :: any(),
+                Timeout :: pos_integer()) ->
+    {'ok', any()} |
+    {'error', atom()}.
+
 send_sync(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout), Timeout > 0 ->
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'send_sync', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+-spec send_sync(Dispatcher :: pid(),
+                Name :: string(),
+                Request :: any(),
+                Timeout :: pos_integer(),
+                Pid :: pid()) ->
+    {'ok', any()} |
+    {'error', atom()}.
+
+send_sync(Dispatcher, Name, Request, Timeout, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_sync', Name, Request,
+                                 Timeout - ?TIMEOUT_DELTA, Pid}, Timeout).
+
+-spec forward(Dispatcher :: pid(),
+              'send_async' | 'send_sync',
+              Name :: string(),
+              Request :: any(),
+              Timeout :: pos_integer(),
+              TransId :: binary(),
+              Pid :: pid()) -> none().
 
 forward(Dispatcher, 'send_async', Name, Request, Timeout, TransId, Pid) ->
     forward_async(Dispatcher, Name, Request, Timeout, TransId, Pid);
@@ -149,11 +244,25 @@ forward(Dispatcher, 'send_async', Name, Request, Timeout, TransId, Pid) ->
 forward(Dispatcher, 'send_sync', Name, Request, Timeout, TransId, Pid) ->
     forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid).
 
+-spec forward_async(Dispatcher :: pid(),
+                    Name :: string(),
+                    Request :: any(),
+                    Timeout :: pos_integer(),
+                    TransId :: binary(),
+                    Pid :: pid()) -> none().
+
 forward_async(Dispatcher, Name, Request, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'forward_async', Name, Request, Timeout, TransId, Pid},
     erlang:throw(forward).
+
+-spec forward_sync(Dispatcher :: pid(),
+                   Name :: string(),
+                   Request :: any(),
+                   Timeout :: pos_integer(),
+                   TransId :: binary(),
+                   Pid :: pid()) -> none().
 
 forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -161,11 +270,25 @@ forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid)
     Dispatcher ! {'forward_sync', Name, Request, Timeout, TransId, Pid},
     erlang:throw(forward).
 
+-spec recv_async(Dispatcher :: pid(),
+                 Timeout :: pos_integer(),
+                 TransId :: binary()) ->
+    {'ok', any()} |
+    {'error', atom()}.
+
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
-         Timeout > 0 ->
+         Timeout > ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'recv_async', Timeout - ?TIMEOUT_DELTA,
                                  TransId}, Timeout).
+
+-spec return(Dispatcher :: pid(),
+             'send_async' | 'send_sync',
+             Name :: string(),
+             Request :: any(),
+             Timeout :: pos_integer(),
+             TransId :: binary(),
+             Pid :: pid()) -> none().
 
 return(Dispatcher, 'send_async', Name, Response, Timeout, TransId, Pid) ->
     return_async(Dispatcher, Name, Response, Timeout, TransId, Pid);
@@ -173,11 +296,25 @@ return(Dispatcher, 'send_async', Name, Response, Timeout, TransId, Pid) ->
 return(Dispatcher, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
     return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid).
 
+-spec return_async(Dispatcher :: pid(),
+                   Name :: string(),
+                   Request :: any(),
+                   Timeout :: pos_integer(),
+                   TransId :: binary(),
+                   Pid :: pid()) -> none().
+
 return_async(Dispatcher, Name, Response, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'return_async', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
+
+-spec return_sync(Dispatcher :: pid(),
+                  Name :: string(),
+                  Request :: any(),
+                  Timeout :: pos_integer(),
+                  TransId :: binary(),
+                  Pid :: pid()) -> none().
 
 return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),

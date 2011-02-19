@@ -10,14 +10,14 @@ commit 7710ab0d9f5be0833179
 Wed Feb  9 12:31:54 PST 2011
 Apache License
 
-boost.m4
---------
+ax_boost_base.m4, ax_boost_thread.m4
+------------------------------------
 
-autoconf m4 macros for boost C++ library detection
-https://github.com/tsuna/boost.m4/blob/master/build-aux/boost.m4
-commit 6afaafefb83734db5051
-Wed Feb  9 17:30:00 PST 2011
-GPLv3
+autoconf m4 macros for boost detection
+http://www.gnu.org/software/autoconf-archive/ax_boost_base.html
+http://www.gnu.org/software/autoconf-archive/ax_boost_thread.html
+Thu Feb 17 18:34:44 PST 2011
+BSD-like
 
 epgsql
 ------

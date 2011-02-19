@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * misultin now accepts incoming requests and can handle compressed requests
+    * simple tests exist to use curl for misultin and a python test service
+    * C API added
+
 2011-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * pgsql, mysql, TokyoTyrant, couchdb, memcached data modules converted

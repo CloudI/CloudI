@@ -36,7 +36,7 @@ namespace
                 // kills the pid if it isn't dead,
                 // to avoid blocking on a closed pipe
                 kill(m_pid, 9);
-                assert(waitpid(m_pid, NULL, 0) == m_pid);
+                assert(waitpid(m_pid, NULL, 0) == static_cast<signed>(m_pid));
             }
 
             void close()
@@ -380,7 +380,7 @@ namespace
 }
 
 int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
-              char * filename, uint32_t filename_len,
+              char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len)
 {
@@ -429,7 +429,7 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             int sockfd = socket(AF_INET, type, 0);
             if (sockfd == -1)
                 _exit(spawn_status::errno_socket());
-            assert(sockfd == i + 3);
+            assert(sockfd == static_cast<signed>(i + 3));
             
             struct sockaddr_in localhost;
             localhost.sin_family = AF_INET;
