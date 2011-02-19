@@ -631,6 +631,7 @@ public class API
 
     public class ReturnSyncException extends Exception
     {
+        private static final long serialVersionUID = 1L;
         ReturnSyncException()
         {
             super("Synchronous Call Return Invalid");
@@ -639,6 +640,7 @@ public class API
     
     public class ReturnAsyncException extends Exception
     {
+        private static final long serialVersionUID = 1L;
         ReturnAsyncException()
         {
             super("Asynchronous Call Return Invalid");
