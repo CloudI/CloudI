@@ -12,7 +12,8 @@ clean-configure: config.log
           config.status stamp-h1 config/* \
           rebar Makefile Makefile.in configure \
           m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
-          m4/ltversion.m4 m4/lt~obsolete.m4
+          m4/ltversion.m4 m4/lt~obsolete.m4 \
+          external/rebar/ebin/*.beam
 	rm -rf autom4te.cache
 	rm -rf lib/cloudi/cxx_src/.deps/
 	find api -name "Makefile.in" -o -name "Makefile" | xargs rm -f

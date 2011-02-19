@@ -141,6 +141,8 @@ cloudi_job_handle_info(task,
                     end,
                     <<ElapsedTime:32/float-native,
                       PiResult/binary>> = Response,
+
+%XXX
                     
                     NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
                                                              TargetTime,

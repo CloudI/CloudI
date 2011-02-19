@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog
+// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,11 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
+#if HAVE_CLOCK_GETTIME_MONOTONIC
 #include <time.h>
+#else
+#include <sys/time.h>
+#endif
 
 class timer
 {
@@ -50,7 +54,11 @@ class timer
         // get elapsed time in seconds
         double elapsed() const;
     private:
+#if HAVE_CLOCK_GETTIME_MONOTONIC
         struct timespec m_start;
+#else
+        struct timeval m_start;
+#endif
         
 };
 

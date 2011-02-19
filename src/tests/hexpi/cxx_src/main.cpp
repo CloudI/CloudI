@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog
+// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,6 @@
 // DAMAGE.
 //
 #include "cloudi.h"
-#include "assert.hpp"
 #include "timer.hpp"
 #include "thread_pool.hpp"
 #include "piqpr8_gmp.hpp"
@@ -48,6 +47,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include "assert.hpp"
 
 class ThreadData
 {

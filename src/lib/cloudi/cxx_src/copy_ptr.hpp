@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog
+// Copyright (c) 2009, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@
 #define COPY_PTR_HPP
 
 #include <memory>
-#include <cassert>
+#include "assert.hpp"
 
 // The functionality of std::auto_ptr,
 // with a goal similar to the c++0x unique_ptr

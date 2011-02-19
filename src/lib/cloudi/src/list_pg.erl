@@ -142,6 +142,10 @@ init([]) ->
     net_kernel:monitor_nodes(true),
     lists:foreach(fun(N) ->
                           {?MODULE, N} ! {new, node()}
+                          % data is not persistent in ets, so trust the
+                          % State coming from other nodes if this server
+                          % has restarted and wants previous state
+                          %self() ! {nodeup, N} % pg2 does this
                   end, Ns),
     {ok, #state{}}.
 

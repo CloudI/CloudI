@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog
+// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -40,21 +40,45 @@
 
 #include "timer.hpp"
 
+#if HAVE_CLOCK_GETTIME_MONOTONIC
+
 timer::timer()
 {
-    clock_gettime(CLOCK_MONOTONIC, &m_start);
+    ::clock_gettime(CLOCK_MONOTONIC, &m_start);
 }
 
 void timer::restart()
 {
-    clock_gettime(CLOCK_MONOTONIC, &m_start);
+    ::clock_gettime(CLOCK_MONOTONIC, &m_start);
 }
 
 double timer::elapsed() const
 {
     struct timespec end;
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    ::clock_gettime(CLOCK_MONOTONIC, &end);
     return (static_cast<double>(end.tv_sec - m_start.tv_sec) +
             static_cast<double>(end.tv_nsec - m_start.tv_nsec) * 1.0e-9);
 }
+
+#else
+
+timer::timer()
+{
+    ::gettimeofday(&m_start, 0);
+}
+
+void timer::restart()
+{
+    ::gettimeofday(&m_start, 0);
+}
+
+double timer::elapsed() const
+{
+    struct timeval end;
+    ::gettimeofday(&end, 0);
+    return (static_cast<double>(end.tv_sec - m_start.tv_sec) +
+            static_cast<double>(end.tv_usec - m_start.tv_usec) * 1.0e-6);
+}
+
+#endif
 

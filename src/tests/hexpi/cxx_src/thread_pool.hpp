@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog
+// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <algorithm>
 #include <vector>
+#include "assert.hpp"
 
 /// ThreadPool object
 /// All methods are meant to be used by a single thread

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog
+// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
+#include "assert.hpp"
 
 // the functionality of boost::scoped_array, however,
 // use malloc/realloc/free to resize the array by powers of two.
