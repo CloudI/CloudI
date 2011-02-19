@@ -1,26 +1,25 @@
-AC_INIT([CloudI], [0.1.0], [mjtruog.at.gmail...], [cloudi], [http://cloudi.org/])
+AC_INIT([CloudI], [0.1.0], [mjtruog at gmail dot com], [cloudi],
+        [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
-#AC_CONFIG_SRCDIR(src/foobar.cpp)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.10 no-define])
 AC_PROG_CC
-#${cxxflags_save="$CXXFLAGS"}
-#${cppflags_save="$CPPFLAGS"}
 AC_PROG_CXX
-#${CXXFLAGS="$cxxflags_save"}
-#${CPPFLAGS="$cppflags_save"}
-#AC_SUBST([AM_CPPFLAGS], [-Wall -Wextra -Werror -O0 -g])
-#AC_SUBST([AM_CXXFLAGS], [-std=c++98])
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 AC_CHECK_LIB(gmp, __gmpz_init, ,
              [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
-AX_BOOST_BASE([1.33], ,
-              [AC_MSG_ERROR([Boost > 1.33 not found, see http://boost.org/])])
+AX_CLOCK_GETTIME
+
+AX_BOOST_BASE([1.36], ,
+              [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
 AX_BOOST_THREAD
-AC_CHECK_HEADER(boost/preprocessor.hpp, , [boost::preprocessor not found], )
+AX_CXX_CHECK_HEADER(boost/preprocessor.hpp, ,
+                    [AC_MSG_ERROR([boost::preprocessor not found])], )
+AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
+                    [AC_MSG_ERROR([boost::unordered_map not found])], )
 
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()

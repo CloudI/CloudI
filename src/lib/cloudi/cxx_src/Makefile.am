@@ -14,7 +14,7 @@ $(INTERFACE_HEADER): Makefile \
            -E -P cloudi_os_spawn_hrl.h > $@
 	cp cloudi_os_spawn_vsn_1 ../priv
 
-cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp
+cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp assert.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \
  -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
  -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \

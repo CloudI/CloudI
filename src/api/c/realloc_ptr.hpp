@@ -42,7 +42,7 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
+#include "assert.hpp"
 
 // the functionality of boost::scoped_array, however,
 // use malloc/realloc/free to resize the array by powers of two.
