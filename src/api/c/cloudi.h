@@ -47,15 +47,6 @@
 extern "C" {
 #endif
 
-typedef void (*cloudi_callback_t)(int const command,
-                                  char const * const name,
-                                  void const * const request,
-                                  uint32_t const request_size,
-                                  uint32_t timeout,
-                                  char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size);
-
 #define CLOUDI_MAX_BUFFERSIZE 4194304 /* 4MB */
 
 typedef struct {
@@ -73,6 +64,17 @@ typedef struct {
     char * trans_id;   /* always 16 characters (128 bits) */
 
 } cloudi_instance_t;
+
+typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
+                                  int const command,
+                                  char const * const name,
+                                  void const * const request,
+                                  uint32_t const request_size,
+                                  uint32_t timeout,
+                                  char const * const trans_id,
+                                  char const * const pid,
+                                  uint32_t const pid_size);
+
 
 #define cloudi_get_response(p)          (p->response)
 #define cloudi_get_response_size(p)     (p->response_size)
@@ -174,11 +176,13 @@ int cloudi_recv_async(cloudi_instance_t * p,
                       uint32_t timeout,
                       char const * const trans_id);
 
-int cloudi_poll(cloudi_instance_t * p);
+int cloudi_poll(cloudi_instance_t * p,
+                int timeout);
 
 enum {
 
     cloudi_success = 0,
+    cloudi_timeout,
     cloudi_error_function_parameter,
     cloudi_error_read_EAGAIN,
     cloudi_error_read_EBADF,
@@ -187,8 +191,6 @@ enum {
     cloudi_error_read_EINVAL,
     cloudi_error_read_EIO,
     cloudi_error_read_EISDIR,
-    cloudi_error_read_null,
-    cloudi_error_read_overflow,
     cloudi_error_read_unknown,
     cloudi_error_write_EAGAIN,
     cloudi_error_write_EBADF,

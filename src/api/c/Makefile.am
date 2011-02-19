@@ -11,8 +11,8 @@ CLEANFILES = cloudi_libtool.cpp assert_libtool.cpp
 
 libcloudi_la_SOURCES = cloudi_libtool.cpp assert_libtool.cpp
 libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/
-libcloudi_la_LIBADD = -lei
 libcloudi_la_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
+libcloudi_la_LIBADD = -lei
 
 libcloudi_a_SOURCES = cloudi.cpp assert.cpp
 libcloudi_a_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/

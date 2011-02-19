@@ -51,9 +51,9 @@ import threading, socket
 from cloudi import API
 
 class _Task(threading.Thread):
-    def __init__(self, sock, size):
+    def __init__(self, index, protocol, size):
         threading.Thread.__init__(self)
-        self.__api = API(sock, size)
+        self.__api = API(index, protocol, size)
 
     def text(self, command, name, request, timeout, transId, pid):
         print "(" + request + ")"
@@ -87,10 +87,7 @@ if __name__ == '__main__':
     buffer_size = int(sys.argv[3])
     assert thread_count >= 1
     
-    threads = [
-        _Task(socket.fromfd(3 + i, socket.AF_INET, protocol), buffer_size)
-        for i in range(thread_count)
-    ]
+    threads = [_Task(i, protocol, buffer_size) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

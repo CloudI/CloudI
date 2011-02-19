@@ -21,6 +21,7 @@
         cloudi_socket_sup,
         cloudi_spawn,
         cloudi_sup,
+        cloudi_task_size,
         dynamic_compile,
         list_pg_data,
         list_pg,

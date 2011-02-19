@@ -113,13 +113,13 @@
 
 -spec create_database(Dispatcher :: pid(),
                       Name :: string()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 -spec create_database(Dispatcher :: pid(),
                       Name :: string(),
                       Timeout :: pos_integer()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 create_database(Dispatcher, Name)
@@ -140,13 +140,13 @@ create_database(Dispatcher, Name, Timeout)
 
 -spec delete_database(Dispatcher :: pid(),
                       Name :: string()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 -spec delete_database(Dispatcher :: pid(),
                       Name :: string(),
                       Timeout :: pos_integer()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 delete_database(Dispatcher, Name)
@@ -167,13 +167,13 @@ delete_database(Dispatcher, Name, Timeout)
 
 -spec database_info(Dispatcher :: pid(),
                     Name :: string()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 -spec database_info(Dispatcher :: pid(),
                     Name :: string(),
                     Timeout :: pos_integer()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 database_info(Dispatcher, Name)
@@ -194,13 +194,13 @@ database_info(Dispatcher, Name, Timeout)
 
 -spec server_info(Dispatcher :: pid(),
                   Name :: string()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 -spec server_info(Dispatcher :: pid(),
                   Name :: string(),
                   Timeout :: pos_integer()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 server_info(Dispatcher, Name)
@@ -221,13 +221,13 @@ server_info(Dispatcher, Name, Timeout)
 
 -spec retrieve_all_dbs(Dispatcher :: pid(),
                        Name :: string()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 -spec retrieve_all_dbs(Dispatcher :: pid(),
                        Name :: string(),
                        Timeout :: pos_integer()) ->
-    'ok' |
+    {'ok', any()} |
     {'error', any()}.
 
 retrieve_all_dbs(Dispatcher, Name)

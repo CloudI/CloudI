@@ -751,7 +751,7 @@ case BOOST_PP_DEC(I):\
     ; \
     int index = BOOST_PP_SEQ_ELEM(1, OFFSETS); \
     STORE_RETURN_VALUE(GET_RETURN(FUNCTION), BOOST_PP_DEC(I)) \
-    if (status = write_cmd(buffer, index - BOOST_PP_SEQ_ELEM(1, OFFSETS))) \
+    if ((status = write_cmd(buffer, index - BOOST_PP_SEQ_ELEM(1, OFFSETS)))) \
         return status; \
     return InternalExitStatus::success;\
 }

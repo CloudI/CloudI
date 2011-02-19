@@ -45,6 +45,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <ei.h>
+#include <boost/unordered_map.hpp>
 #include <map>
 #include <string>
 #include <cstring>
@@ -131,13 +132,8 @@ namespace {
         do
         {
             i = ::read(fd, buffer + total, buffer_size);
-            if (i <= 0)
-            {
-                if (i == -1)
-                    return errno_read();
-                else
-                    return cloudi_error_read_null;
-            }
+            if (i < 0)
+                return errno_read();
             total += i;
         }
         while (i == buffer_size);
@@ -189,16 +185,17 @@ namespace {
 
 }
 
-typedef std::map<std::string, cloudi_callback_t> lookup_t;
+typedef boost::unordered_map<std::string, cloudi_callback_t> lookup_t;
 typedef realloc_ptr<char> buffer_t;
 
 extern "C" {
 
 int cloudi_initialize(cloudi_instance_t * p,
                       int index,
-                      char const * const protocol,
+                      char const * const /*protocol*/,
                       uint32_t buffer_size)
 {
+    assert(index >= 0);
     p->fd = index + 3;
     p->buffer_size = buffer_size;
     p->lookup = new lookup_t();
@@ -216,7 +213,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     int result = write_exact(p->fd, buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p);
+    result = cloudi_poll(p, -1);
     if (result)
         return result;
 
@@ -225,20 +222,25 @@ int cloudi_initialize(cloudi_instance_t * p,
 
 void cloudi_destroy(cloudi_instance_t * p)
 {
-    ::close(p->fd);
-    delete reinterpret_cast<lookup_t *>(p->lookup);
-    if (p->prefix)
-        delete p->prefix;
+    if (p->fd != 0)
+    {
+        ::close(p->fd);
+        delete reinterpret_cast<lookup_t *>(p->lookup);
+        delete reinterpret_cast<buffer_t *>(p->buffer_send);
+        delete reinterpret_cast<buffer_t *>(p->buffer_recv);
+        if (p->prefix)
+            delete p->prefix;
+    }
 }
 
 int cloudi_subscribe(cloudi_instance_t * p,
                      char const * const name,
                      cloudi_callback_t f)
 {
-    std::string str(p->prefix);
-    str += name;
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup.insert(std::pair<std::string, cloudi_callback_t>(str, f));
+    lookup.insert(std::pair<std::string,
+                            cloudi_callback_t>(std::string(p->prefix) + name,
+                                               f));
 
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
@@ -318,7 +320,7 @@ static int cloudi_send_(cloudi_instance_t * p,
     int result = write_exact(p->fd, buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p);
+    result = cloudi_poll(p, -1);
     if (result)
         return result;
     return cloudi_success;
@@ -420,12 +422,14 @@ int cloudi_forward(cloudi_instance_t * p,
     {
         result = cloudi_return_(p, "forward_async", name, request, request_size,
                                 timeout, trans_id, pid, pid_size);
+        assert(result == cloudi_success);
         throw return_async_exception();
     }
     else               // CLOUDI_SYNC
     {
         result = cloudi_return_(p, "forward_sync", name, request, request_size,
                                 timeout, trans_id, pid, pid_size);
+        assert(result == cloudi_success);
         throw return_sync_exception();
     }
     return result;
@@ -443,6 +447,7 @@ int cloudi_forward_async(cloudi_instance_t * p,
     int const result = cloudi_return_(p, "forward_async", name,
                                       request, request_size,
                                       timeout, trans_id, pid, pid_size);
+    assert(result == cloudi_success);
     throw return_async_exception();
     return result;
 }
@@ -459,6 +464,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
     int const result = cloudi_return_(p, "forward_sync", name,
                                       request, request_size,
                                       timeout, trans_id, pid, pid_size);
+    assert(result == cloudi_success);
     throw return_sync_exception();
     return result;
 }
@@ -479,6 +485,7 @@ int cloudi_return(cloudi_instance_t * p,
         result = cloudi_return_(p, "return_async", name,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
+        assert(result == cloudi_success);
         throw return_async_exception();
     }
     else               // CLOUDI_SYNC
@@ -486,6 +493,7 @@ int cloudi_return(cloudi_instance_t * p,
         result = cloudi_return_(p, "return_sync", name,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
+        assert(result == cloudi_success);
         throw return_sync_exception();
     }
     return result;
@@ -503,6 +511,7 @@ int cloudi_return_async(cloudi_instance_t * p,
     int const result = cloudi_return_(p, "return_async", name,
                                       response, response_size,
                                       timeout, trans_id, pid, pid_size);
+    assert(result == cloudi_success);
     throw return_async_exception();
     return result;
 }
@@ -519,6 +528,7 @@ int cloudi_return_sync(cloudi_instance_t * p,
     int const result = cloudi_return_(p, "return_sync", name,
                                       response, response_size,
                                       timeout, trans_id, pid, pid_size);
+    assert(result == cloudi_success);
     throw return_sync_exception();
     return result;
 }
@@ -542,7 +552,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
     int result = write_exact(p->fd, buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p);
+    result = cloudi_poll(p, -1);
     if (result)
         return result;
     return cloudi_success;
@@ -574,8 +584,10 @@ static void callback(cloudi_instance_t * p,
     {
         try
         {
-            f(CLOUDI_ASYNC, name, request, request_size,
+            f(p, CLOUDI_ASYNC, name, request, request_size,
               timeout, trans_id, pid, pid_size);
+            cloudi_return_async(p, name, "", 0, timeout,
+                                trans_id, pid, pid_size);
         }
         catch (return_async_exception const &)
         {
@@ -590,8 +602,10 @@ static void callback(cloudi_instance_t * p,
     {
         try
         {
-            f(CLOUDI_SYNC, name, request, request_size,
+            f(p, CLOUDI_SYNC, name, request, request_size,
               timeout, trans_id, pid, pid_size);
+            cloudi_return_sync(p, name, "", 0, timeout,
+                               trans_id, pid, pid_size);
         }
         catch (return_async_exception const &)
         {
@@ -627,13 +641,16 @@ static void store_incoming_uint32(buffer_t const & buffer,
     index += sizeof(uint32_t);
 }
 
-int cloudi_poll(cloudi_instance_t * p)
+int cloudi_poll(cloudi_instance_t * p,
+                int timeout)
 {
     while (true)
     {
         struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
-        int count = ::poll(fds, 1, -1);
-        if (count <= 0)
+        int count = ::poll(fds, 1, timeout);
+        if (count == 0)
+            return cloudi_timeout;
+        else if (count < 0)
             return errno_poll();
     
         buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_recv);
@@ -666,10 +683,10 @@ int cloudi_poll(cloudi_instance_t * p)
                 store_incoming_uint32(buffer, index, request_size);
                 char * request = &buffer[index];
                 index += request_size;
-                char * trans_id = &buffer[index];
-                index += 16;
                 uint32_t timeout;
                 store_incoming_uint32(buffer, index, timeout);
+                char * trans_id = &buffer[index];
+                index += 16;
                 uint32_t pid_size;
                 store_incoming_uint32(buffer, index, pid_size);
                 char * pid = &buffer[index];

@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = api lib
+SUBDIRS = api lib tests
 
 all-local: rebar 
 	./rebar compile
@@ -8,16 +8,16 @@ clean-local: rebar
 	./rebar clean
 
 clean-configure: config.log
-	rm -f aclocal.m4 config.h config.h.in config.log config.status stamp-h1 \
-          config/* rebar Makefile Makefile.in configure \
+	rm -f aclocal.m4 config.h config.h.in config.h.in~ config.log \
+          config.status stamp-h1 config/* \
+          rebar Makefile Makefile.in configure \
           m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
           m4/ltversion.m4 m4/lt~obsolete.m4
 	rm -rf autom4te.cache
 	rm -rf lib/cloudi/cxx_src/.deps/
-	find lib -name "Makefile.in" | xargs rm -f
-	find api -name "Makefile.in" | xargs rm -f
-	find lib -name "Makefile" | xargs rm -f
-	find api -name "Makefile" | xargs rm -f
+	find api -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+	find lib -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+	find tests -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 
 dialyze: rebar
 	./rebar dialyze
@@ -30,6 +30,7 @@ run: all
       -pz external/ememcached/ebin \
       -pz external/ecouchdb/ebin \
       -pz external/misultin/ebin \
+      -pz tests/hexpi/ebin \
       `find lib/ -name "ebin" -o -name "priv" | sed 's/^/-pz /'`
 
 #./rebar generate
