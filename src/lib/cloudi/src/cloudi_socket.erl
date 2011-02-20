@@ -474,6 +474,9 @@ handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
         error ->
             % send_async timeout already occurred
             {next_state, StateName, StateData};
+        {ok, Tref} when Response == <<>> ->
+            erlang:cancel_timer(Tref),
+            {next_state, StateName, send_timeout_end(TransId, StateData)};
         {ok, Tref} ->
             erlang:cancel_timer(Tref),
             {next_state, StateName,

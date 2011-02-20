@@ -215,7 +215,12 @@ handle_call({'send_sync', Name, Request, Timeout}, {Exclude, _} = Client,
                            Timeout - ?TIMEOUT_DELTA, TransId, Self},
                     receive
                         {'return_sync', Name, Response, _, TransId, Self} ->
-                            {reply, {ok, Response}, State}
+                            if
+                                Response == <<>> ->
+                                    {reply, {error, timeout}, State};
+                                true ->
+                                    {reply, {ok, Response}, State}
+                            end
                     after
                         Timeout ->
                             {reply, {error, timeout}, State}
@@ -232,7 +237,12 @@ handle_call({'send_sync', Name, Request, Timeout, Pid}, _,
     Pid ! {'send_sync', Name, Request, Timeout - ?TIMEOUT_DELTA, TransId, Self},
     receive
         {'return_sync', Name, Response, _, TransId, Self} ->
-            {reply, {ok, Response}, State}
+            if
+                Response == <<>> ->
+                    {reply, {error, timeout}, State};
+                true ->
+                    {reply, {ok, Response}, State}
+            end
     after
         Timeout ->
             {reply, {error, timeout}, State}
@@ -359,7 +369,12 @@ handle_info({'send_sync', Name, Request, Timeout, {Exclude, _} = Client},
             Pid ! {'send_sync', Name, Request, Timeout, TransId, Self},
             receive
                 {'return_sync', Name, Response, _, TransId, Self} ->
-                    gen_server:reply(Client, {ok, Response})
+                    if
+                        Response == <<>> ->
+                            gen_server:reply(Client, {error, timeout});
+                        true ->
+                            gen_server:reply(Client, {ok, Response})
+                    end
             after
                 Timeout ->
                     gen_server:reply(Client, {error, timeout})
@@ -461,6 +476,9 @@ handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
         error ->
             % send_async timeout already occurred
             {noreply, State};
+        {ok, Tref} when Response == <<>> ->
+            erlang:cancel_timer(Tref),
+            {noreply, send_timeout_end(TransId, State)};
         {ok, Tref} ->
             erlang:cancel_timer(Tref),
             {noreply,

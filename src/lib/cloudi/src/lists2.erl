@@ -151,9 +151,9 @@ itera3(F, Acc0, Acc1, Acc2, [H | T]) ->
 delete_checked(Elem, List) when is_list(List) ->
     delete_checked(Elem, [], List).
 delete_checked(Elem, L, [Elem | T]) ->
-    L ++ T;
+    lists:reverse(L) ++ T;
 delete_checked(Elem, L, [H | T]) ->
-    delete_checked(Elem, L ++ [H], T);
+    delete_checked(Elem, [H | L], T);
 delete_checked(_, _, []) ->
     false.
 
@@ -171,9 +171,9 @@ delete_all(Elem, List) when is_list(List) ->
 delete_all(Elem, L, [Elem | T]) ->
     delete_all(Elem, L, T);
 delete_all(Elem, L, [H | T]) ->
-    delete_all(Elem, L ++ [H], T);
+    delete_all(Elem, [H | L], T);
 delete_all(_, L, []) ->
-    L.
+    lists:reverse(L).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -181,17 +181,17 @@ delete_all(_, L, []) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec keyptake(_, pos_integer(), [_]) ->
-    {'value', non_neg_integer(), tuple(), [_]} |
+-spec keyptake(any(), pos_integer(), list()) ->
+    {'value', non_neg_integer(), tuple(), list()} |
     'false'.
 
 keyptake(Key, N, L) when is_integer(N), N > 0 ->
     keyptake(Key, N, L, 0, []).
 
 keyptake(Key, N, [H | T], I, L) when element(N, H) == Key ->
-    {value, I, H, L ++ T};
+    {value, I, H, lists:reverse(L) ++ T};
 keyptake(Key, N, [H | T], I, L) ->
-    keyptake(Key, N, T, I + 1, L ++ [H]);
+    keyptake(Key, N, T, I + 1, [H | L]);
 keyptake(_K, _N, [], _I, _L) ->
     false.
 
@@ -201,8 +201,8 @@ keyptake(_K, _N, [], _I, _L) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec keypttake(_, pos_integer(), pos_integer(), [_]) ->
-    {'value', non_neg_integer(), tuple(), [_]} |
+-spec keypttake(any(), pos_integer(), pos_integer(), list()) ->
+    {'value', non_neg_integer(), tuple(), list()} |
     'false'.
 
 keypttake(Key, N, Match, L) when is_integer(N), N > 0 ->
@@ -211,9 +211,9 @@ keypttake(Key, N, Match, L) when is_integer(N), N > 0 ->
 keypttake(Key, N, Match, [H | T], I, L) ->
     case tuple2:match(element(N, H), Key, Match) of
         true ->
-            {value, I, H, L ++ T};
+            {value, I, H, lists:reverse(L) ++ T};
         false ->
-            keypttake(Key, N, Match, T, I + 1, L ++ [H])
+            keypttake(Key, N, Match, T, I + 1, [H | L])
     end;
 keypttake(_K, _N, _Match, [], _I, _L) ->
     false.
@@ -309,10 +309,10 @@ middle(L, N) when is_list(L), is_integer(N) ->
             middle_list([], L, 0, Middle, Middle + N)
     end.    
 middle_list(M, _, Middle1, _, Middle1) ->
-    M;
+    lists:reverse(M);
 middle_list(M, [H | L], Index, Middle0, Middle1)
     when Index >= Middle0, Index < Middle1 ->
-    middle_list(M ++ [H], L, Index + 1, Middle0, Middle1);
+    middle_list([H | M], L, Index + 1, Middle0, Middle1);
 middle_list(M, [_ | L], Index, Middle0, Middle1) ->
     middle_list(M, L, Index + 1, Middle0, Middle1).
 

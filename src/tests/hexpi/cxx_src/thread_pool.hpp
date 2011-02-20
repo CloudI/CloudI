@@ -81,6 +81,7 @@ class ThreadPool
                 INPUT m_task;
                 ThreadPool & m_threadPool;
         };
+        friend class ThreadFunctionObject;
 
         /// Active Object design pattern
         /// with round-robin scheduling in the ThreadPool
@@ -245,22 +246,6 @@ class ThreadPool
             return true;
         }
 
-        /// get a result object from a thread that is almost done executing
-        void output(OUTPUT_DATA & result)
-        {
-            boost::mutex::scoped_try_lock lock(m_taskOutputMutex);
-            while (! lock.owns_lock())
-            {
-                if (m_stop)
-                    return;
-                boost::this_thread::yield();
-                lock.try_lock();
-            }
-            if (m_stop)
-                return;
-            m_outputObject.output(result);
-        }
-
         /// make the thread pool grow by an increment
         void grow(size_t increment)
         {
@@ -309,6 +294,22 @@ class ThreadPool
                     m_currentThread = 0;
             }
             m_totalActive = count;
+        }
+
+        /// get a result object from a thread that is almost done executing
+        void output(OUTPUT_DATA & result)
+        {
+            boost::mutex::scoped_try_lock lock(m_taskOutputMutex);
+            while (! lock.owns_lock())
+            {
+                if (m_stop)
+                    return;
+                boost::this_thread::yield();
+                lock.try_lock();
+            }
+            if (m_stop)
+                return;
+            m_outputObject.output(result);
         }
 
         std::vector< copy_ptr<boost::thread> > m_threads;

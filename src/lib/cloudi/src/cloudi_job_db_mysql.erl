@@ -171,7 +171,7 @@ cloudi_job_init(Args, Dispatcher) ->
         {port,     ?DEFAULT_PORT},
         {database, undefined},
         {encoding, ?DEFAULT_ENCODING}],
-    [HostName, UserName, Password, Port, DatabaseName, Encoding, []] =
+    [HostName, UserName, Password, Port, DatabaseName, Encoding] =
         proplists2:take_values(Defaults, Args),
     try mysql_conn:start(HostName, Port, UserName, Password,
                          DatabaseName, Encoding, undefined) of
