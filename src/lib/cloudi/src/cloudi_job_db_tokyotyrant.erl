@@ -1192,7 +1192,7 @@ cloudi_job_init([{database, DatabaseName, Args}], Dispatcher) ->
         {auto_copy, ?DEFAULT_AUTO_COPY},
         {run_server, ?DEFAULT_RUN_SERVER}],
     [HostName, Port, Timeout, Connections, AutoSync, AutoTune,
-     Native, ConnectOpts, AutoCopy, RunServer, []] =
+     Native, ConnectOpts, AutoCopy, RunServer] =
         proplists2:take_values(Defaults, Args),
     MediciOptions = [   
         {hostname, HostName},

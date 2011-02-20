@@ -168,21 +168,6 @@ start_external(ThreadsPerProcess,
             Ports
     end.
 
-% configure processes prefix list "/prefix/"
-
-% TransId == 128bit (time, messageid), always >= 1, 0 reserved
-
-% {init, TransId}
-% {subscribe, TransId, "name"}
-% {unsubscribe, TransId, "name"}
-% {send_async, TransId, "name", <<Data/binary>>, Timeout} returns TransId
-% {send_sync, TransId, "name", <<Data/binary>>, Timeout} returns binary
-% {recv_async, TransId, AsyncTransId, Timeout}
-% {return_async, TransId, "name", <<Data/binary>>, Timeout, Pid}
-% {return_sync, TransId, "name", <<Data/binary>>, Timeout, Pid}
-% {forward_async, TransId, "name", <<Data/binary>>, Timeout, Pid}
-% {forward_sync, TransId, "name", <<Data/binary>>, Timeout, Pid}
-
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -197,7 +182,7 @@ parse_arguments(Args) ->
     parse_arguments([], none, Args).
 
 parse_arguments(Output, none, []) ->
-    Output ++ [0];
+    lists:reverse([0 | Output]);
 
 parse_arguments(Output, none, [$' | T]) ->
     parse_arguments(Output, $', T);
@@ -212,7 +197,7 @@ parse_arguments(Output, none, [32 | [32 | _] = T]) ->
     parse_arguments(Output, none, T);
 
 parse_arguments(Output, none, [32 | T]) ->
-    parse_arguments(Output ++ [0], none, T);
+    parse_arguments([0 | Output], none, T);
 
 parse_arguments(Output, $', [$' | T]) ->
     parse_arguments(Output, none, T);
@@ -224,7 +209,7 @@ parse_arguments(Output, $`, [$` | T]) ->
     parse_arguments(Output, none, T);
 
 parse_arguments(Output, Delim, [H | T]) ->
-    parse_arguments(Output ++ [H], Delim, T).
+    parse_arguments([H | Output], Delim, T).
 
 format_environment([]) ->
     [0];

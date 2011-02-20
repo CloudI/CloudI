@@ -1,8 +1,8 @@
 beamdir = ../ebin
-beam_DATA = cloud_job_hexpi.beam
-EXTRA_DIST = cloud_job_hexpi.erl
+beam_DATA = cloudi_job_hexpi.beam
+EXTRA_DIST = cloudi_job_hexpi.erl
 CLEANFILES = $(beam_DATA) \
-             $(beamdir)/cloud_job_hexpi.beam
+             $(beamdir)/cloudi_job_hexpi.beam
 
 all-local: $(beam_DATA)
 	cp $(beam_DATA) $(beamdir)

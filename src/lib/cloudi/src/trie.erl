@@ -74,6 +74,7 @@
          merge/3,
          new/0,
          new/1,
+         prefix/3,
          size/1,
          store/2,
          store/3,
@@ -854,6 +855,19 @@ new_instance([Tuple | T], Node)
 new_instance_state([H | T], V1, V0)
     when is_integer(H) ->
     {{H, H, {{T, V1}}}, V0}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Insert a value as the first list element in a trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec prefix(Key :: string(),
+             Value :: any(),
+             Node :: trie()) -> trie_return().
+
+prefix([_ | _] = Key, Value, Node) ->
+    update(Key, fun(OldValue) -> [Value | OldValue] end, [Value], Node).
 
 %%-------------------------------------------------------------------------
 %% @doc

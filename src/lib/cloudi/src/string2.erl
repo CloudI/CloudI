@@ -106,9 +106,9 @@ beforel(Char, Input) when is_integer(Char), is_list(Input) ->
 beforel(_, _, []) ->
     [];
 beforel(Before, Char, [Char | _]) when is_integer(Char) ->
-    Before;
+    lists:reverse(Before);
 beforel(Before, Char, [H | Input]) when is_integer(Char) ->
-    beforel(Before ++ [H], Char, Input).
+    beforel([H | Before], Char, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -123,9 +123,9 @@ beforer(Char, Input) when is_integer(Char), is_list(Input) ->
 beforer(Before, _, _, []) ->
     Before;
 beforer(Before, L, Char, [Char | Input]) ->
-    beforer(Before ++ L, [Char], Char, Input);
+    beforer(Before ++ lists:reverse(L), [Char], Char, Input);
 beforer(Before, L, Char, [H | Input]) ->
-    beforer(Before, L ++ [H], Char, Input).
+    beforer(Before, [H | L], Char, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -141,9 +141,9 @@ splitl(Char, Input) when is_integer(Char), is_list(Input) ->
 splitl(_, _, []) ->
     {[], []};
 splitl(Before, Char, [Char | Input]) when is_integer(Char) ->
-    {Before, Input};
+    {lists:reverse(Before), Input};
 splitl(Before, Char, [H | Input]) when is_integer(Char) ->
-    splitl(Before ++ [H], Char, Input).
+    splitl([H | Before], Char, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -856,7 +856,7 @@ cloudi_job_init(Args, Dispatcher) ->
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},
         {database, ?DEFAULT_DATABASE}],
-    [HostName, Port, Timeout, DatabaseName, []] =
+    [HostName, Port, Timeout, DatabaseName] =
         proplists2:take_values(Defaults, Args),
     case ecouchdb:connect(HostName, Port, Timeout) of
         {ok, Connection} ->

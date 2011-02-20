@@ -3,12 +3,18 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Misultin Integration==
+%%% ==Cloudi Work Manager==
+%%% Queues up results that need to be sent to data modules, to avoid
+%%% overloading the data repositories. This cloudi job can store a
+%%% specific destination that is used for all binary traffic.  Many
+%%% destinations are handled in one work manager if any internal
+%%% jobs (i.e., Erlang jobs, using the cloud_job behavior) send
+%%% "{Name, Data}" tuples to this job.
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,11 +49,11 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
+%%% @copyright 2009-2011 Michael Truog
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_misultin).
+-module(cloudi_job_work_manager).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_job).
@@ -62,16 +68,15 @@
 
 -include("cloudi_logger.hrl").
 
--define(DEFAULT_PORT,                   8080).
--define(DEFAULT_BACKLOG,                 128).
--define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds
--define(DEFAULT_SSL,                   false).
--define(DEFAULT_COMPRESS,              false).
--define(DEFAULT_WS_AUTOEXIT,            true).
+-define(DEFAULT_DELAY,                  1000). % milliseconds
+-define(DEFAULT_DESTINATION,       undefined). % a Name, e.g. "/db/pgsql"
 
 -record(state,
     {
-        process
+        delay,
+        destination,
+        delay_timer,
+        queue = trie:new()
     }).
 
 %%%------------------------------------------------------------------------
@@ -82,88 +87,78 @@
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init(Args, Dispatcher) ->
+cloudi_job_init(Args, _Dispatcher) ->
     Defaults = [
-        {port,            ?DEFAULT_PORT},
-        {backlog,         ?DEFAULT_BACKLOG},
-        {recv_timeout,    ?DEFAULT_RECV_TIMEOUT},
-        {ssl,             ?DEFAULT_SSL},
-        {compress,        ?DEFAULT_COMPRESS},
-        {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT}],
-    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit, []] =
+        {delay,           ?DEFAULT_DELAY},
+        {destination,     ?DEFAULT_DESTINATION}],
+    [Delay, Destination] =
         proplists2:take_values(Defaults, Args),
-    Loop = fun(HttpRequest) ->
-        handle_http(HttpRequest, Dispatcher)
-    end,
-    case misultin:start_link([{port, Port},
-                              {backlog, Backlog},
-                              {recv_timeout, RecvTimeout},
-                              {ssl, SSL},
-                              {compress, Compress},
-                              {ws_autoexit, WsAutoExit},
-                              {loop, Loop}]) of
-        {ok, Process} ->
-            {ok, #state{process = Process}};
-        {error, Reason} ->
-            {stop, Reason}
+    true = is_integer(Delay),
+    true = is_list(Destination),
+    {ok, #state{delay = Delay,
+                destination = Destination,
+                delay_timer = erlang:send_after(Delay, self(), empty)}}.
+
+cloudi_job_handle_request(_Type, _Name, Request, _Timeout, _TransId, _Pid,
+                          #state{destination = Destination,
+                                 queue = Queue} = State,
+                          _Dispatcher) ->
+    case Request of
+        {DestinationName, Data} when is_list(DestinationName) ->
+            {reply, ok,
+             State#state{queue = trie:prefix(DestinationName, Data, Queue)}};
+        Data when is_binary(Data) ->
+            {reply, <<16#ff:8>>,
+             State#state{queue = trie:prefix(Destination, Data, Queue)}}
     end.
 
-cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
-                          State, _Dispatcher) ->
-    {reply, <<>>, State}.
+cloudi_job_handle_info(empty, #state{delay = Delay,
+                                     queue = Queue} = State, Dispatcher) ->
+    
+    NewQueue = trie:map(fun(Name, DataList) ->
+        send_data(lists:reverse(DataList), Name, Dispatcher)
+    end, Queue),
+    {noreply,
+     State#state{queue = NewQueue,
+                 delay_timer = erlang:send_after(Delay, self(), empty)}};
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARNING("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_job_terminate(_, #state{process = Process}) ->
-    misultin:stop(Process),
+cloudi_job_terminate(_, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-content_type(Headers) ->
-    case misultin_utility:get_key_value('Content-Type', Headers) of
-        undefined ->
-            "";
-        ContentType ->
-            case string2:beforel($;, ContentType) of
-                [] ->
-                    ContentType;
-                L ->
-                    L
-            end
-    end.
+send_data([], _, _) ->
+    [];
 
-handle_http(HttpRequest, Dispatcher) ->
-    Name = HttpRequest:get(str_uri),
-    Request = case HttpRequest:get(method) of
-        'GET' ->
-            erlang:list_to_binary(HttpRequest:get(args));
-        'POST' ->
-            % do not pass type information along with the request!
-            % make sure to encourage good design that provides
-            % one type per name (path),
-            % though multiple names may lead to the same callback
-            % (i.e., the name can be checked in the callback if different
-            %  types must be handled in the same area of code)
-            Type = content_type(HttpRequest:get(headers)),
-            if
-                Type == "application/zip" ->
-                    zlib:unzip(HttpRequest:get(body));
-                true ->
-                    HttpRequest:get(body)
-            end
-    end,
-    case cloudi_job:send_sync(Dispatcher, Name, Request) of
-        {ok, Response} ->
-            HttpRequest:raw_headers_respond(Response);
-        {error, timeout} ->
-            HttpRequest:respond(504);
+send_data(L, Name, Dispatcher) ->
+    send_data([], 0, L, Name, Dispatcher).
+
+send_data([], 0, [], _, _) ->
+    [];
+
+send_data(Failed, FailedCount, [], Name, _) ->
+    ?LOG_WARNING("~s failed ~w requests", [Name, FailedCount]),
+    lists:reverse(Failed);
+
+send_data(Failed, FailedCount, [Data | L], Name, Dispatcher) ->
+    case cloudi_job:send_sync(Dispatcher, Name, Data) of
+        {ok, <<>>} ->
+            send_data([Data | Failed], FailedCount + 1, L, Name, Dispatcher);
+        {ok, _} ->
+            send_data(Failed, FailedCount, L, Name, Dispatcher);
         {error, Reason} ->
-            ?LOG_ERROR("Request Failed: ~p", [Reason]),
-            HttpRequest:respond(500)
+            if
+                Reason =/= timeout ->
+                    ?LOG_ERROR("~s error ~p", [Name, Reason]);
+                true ->
+                    ok
+            end,
+            send_data([Data | Failed], FailedCount + 1, L, Name, Dispatcher)
     end.
 

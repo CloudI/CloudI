@@ -43,7 +43,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
+%%% @copyright 2009-2011 Michael Truog
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -92,13 +92,13 @@ take_values(DefaultList, List)
     take_values([], DefaultList, List).
 take_values(Result, [], List)
     when is_list(Result), is_list(List) ->
-    Result ++ [List];
+    lists:reverse(Result) ++ List;
 take_values(Result, [{Key, Default} | DefaultList], List)
     when is_list(Result), is_atom(Key), is_list(List) ->
     case lists:keytake(Key, 1, List) of
         false ->
-            take_values(Result ++ [Default], DefaultList, List);
+            take_values([Default | Result], DefaultList, List);
         {value, {Key, Value}, RemainingList} ->
-            take_values(Result ++ [Value], DefaultList, RemainingList)
+            take_values([Value | Result], DefaultList, RemainingList)
     end.
 
