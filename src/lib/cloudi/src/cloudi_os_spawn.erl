@@ -151,7 +151,14 @@ handle_info({Port, {data, Data}},
             FormattedOutput = lists:flatmap(fun(Line) ->
                 io_lib:format(" ~s~n", [Line])
             end, string:tokens(Output, "\n")),
-            ?LOG_ERROR("~w (pid ~w):~n~s", [Stream, OsPid, FormattedOutput]),
+            if
+                Stream == stderr ->
+                    ?LOG_ERROR("stderr (pid ~w):~n~s",
+                               [OsPid, FormattedOutput]);
+                Stream == stdout ->
+                    ?LOG_INFO("stdout (pid ~w):~n~s",
+                              [OsPid, FormattedOutput])
+            end,
             {noreply, State};
         {Command, Success} ->
             case lists:keytake(Command, 1, Replies) of
