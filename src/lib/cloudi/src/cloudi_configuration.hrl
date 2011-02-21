@@ -65,8 +65,8 @@
 
 -record(config_logging,
     {
-    filename = "cloudi.log",
-    loglevel = warning}).
+    level = trace,
+    filename = "logs/cloudi.log"}).
 
 -record(config,
     {

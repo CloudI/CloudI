@@ -53,9 +53,8 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/1,
-         load_interface_module/1, flush/0, reopen/0,
-         critical/5, error/5, warning/5, info/5, debug/5]).
+-export([start_link/1, reopen/0,
+         fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -64,30 +63,11 @@
 
 -include("cloudi_configuration.hrl").
 
--define(LOGLEVEL_FLUSH_THRESHOLD, 2).   % critical/error is flushed immediately
--define(LOG_DATA_FLUSH_TIMEOUT, 60000). % 1 minute
-
--record(state_last_log_entry,
-    {
-        key = "",
-        message = "",
-        count = 1
-    }).
-
 -record(state,
     {
-        loglevel_names = {
-            "CRITICAL",
-            "ERROR",
-            "WARNING",
-            "INFO",
-            "DEBUG"
-        },
-        filename = "",
-        interface_module = undefined,
-        fd = undefined,
-        flush_timer = undefined,
-        last_log_entry = erlang:make_tuple(5, #state_last_log_entry{})
+        filename,
+        interface_module,
+        fd
     }).
 
 %%%------------------------------------------------------------------------
@@ -104,36 +84,6 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Load the binary for the logger interface module.===
-%% @end
-%%-------------------------------------------------------------------------
-
-load_interface_module(Node) when is_atom(Node) ->
-    Binary = gen_server:call(?MODULE, interface_module),
-    case rpc:call(Node, code, load_binary,
-                  [cloudi_logger_interface,
-                   "cloudi_logger_interface.erl", Binary]) of
-        {badrpc, Reason} ->
-            {error, Reason};
-        {error, _} = Error ->
-            Error;
-        {module, cloud_logger_interface} ->
-            ok
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Flush all logging data to the log file.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec flush() -> 'ok'.
-
-flush() ->
-    gen_server:call(?MODULE, flush).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -154,35 +104,33 @@ reopen() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec critical(Process :: atom() | {atom(), atom()},
-               Module :: atom(),
-               Line :: integer(),
-               Format :: string(),
-               Args :: list()) ->
-    'ok'.
-
-critical(Process, Module, Line, [_|_] = Format, Args)
-    when is_atom(Module), is_integer(Line), is_list(Args) ->
-    log_message(Process, 1, Module, Line, Format, Args).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Error log message,===
-%% which indicates a subsystem has failed but the failure is not critical.
-%% Called with ?LOG_ERROR(Format, []).
-%% @end
-%%-------------------------------------------------------------------------
-
--spec error(Process :: atom() | {atom(), atom()},
+-spec fatal(Process :: atom(),
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list()) ->
     'ok'.
 
-error(Process, Module, Line, [_|_] = Format, Args)
-    when is_atom(Module), is_integer(Line), is_list(Args) ->
-    log_message(Process, 2, Module, Line, Format, Args).
+fatal(Process, Module, Line, Format, Args) ->
+    log_message(Process, fatal, Module, Line, Format, Args).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Error log message,===
+%% which indicates a subsystem has failed but the failure is not fatal.
+%% Called with ?LOG_ERROR(Format, []).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec error(Process :: atom(),
+            Module :: atom(),
+            Line :: integer(),
+            Format :: string(),
+            Args :: list()) ->
+    'ok'.
+
+error(Process, Module, Line, Format, Args) ->
+    log_message(Process, error, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -192,16 +140,15 @@ error(Process, Module, Line, [_|_] = Format, Args)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec warning(Process :: atom() | {atom(), atom()},
-              Module :: atom(),
-              Line :: integer(),
-              Format :: string(),
-              Args :: list(any())) ->
+-spec warn(Process :: atom(),
+           Module :: atom(),
+           Line :: integer(),
+           Format :: string(),
+           Args :: list()) ->
     'ok'.
 
-warning(Process, Module, Line, [_|_] = Format, Args)
-    when is_atom(Module), is_integer(Line), is_list(Args) ->
-    log_message(Process, 3, Module, Line, Format, Args).
+warn(Process, Module, Line, Format, Args) ->
+    log_message(Process, warn, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -211,16 +158,15 @@ warning(Process, Module, Line, [_|_] = Format, Args)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec info(Process :: atom() | {atom(), atom()},
+-spec info(Process :: atom(),
            Module :: atom(),
            Line :: integer(),
            Format :: string(),
-           Args :: list(any())) ->
+           Args :: list()) ->
     'ok'.
 
-info(Process, Module, Line, [_|_] = Format, Args)
-    when is_atom(Module), is_integer(Line), is_list(Args) ->
-    log_message(Process, 4, Module, Line, Format, Args).
+info(Process, Module, Line, Format, Args) ->
+    log_message(Process, info, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -230,45 +176,53 @@ info(Process, Module, Line, [_|_] = Format, Args)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec debug(Process :: atom() | {atom(), atom()},
+-spec debug(Process :: atom(),
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
-            Args :: list(any())) ->
+            Args :: list()) ->
     'ok'.
 
-debug(Process, Module, Line, [_|_] = Format, Args)
-    when is_atom(Module), is_integer(Line), is_list(Args) ->
-    log_message(Process, 5, Module, Line, Format, Args).
+debug(Process, Module, Line, Format, Args) ->
+    log_message(Process, debug, Module, Line, Format, Args).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Trace log message,===
+%% which reports subsystem data that is only for tracing execution.
+%% Called with ?LOG_TRACE(Format, []).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trace(Process :: atom(),
+            Module :: atom(),
+            Line :: integer(),
+            Format :: string(),
+            Args :: list()) ->
+    'ok'.
+
+trace(Process, Module, Line, Format, Args) ->
+    log_message(Process, trace, Module, Line, Format, Args).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([#config_logging{loglevel = Level,
+init([#config_logging{level = Level,
                       filename = FileName}]) ->
     case file:open(FileName, [append, raw]) of
         {ok, Fd} ->
-            case create_interface_module(get_loglevel_integer(Level)) of
+            case load_interface_module(Level) of
                 {ok, Binary} ->
-                    FlushTimer = erlang:send_after(?LOG_DATA_FLUSH_TIMEOUT,
-                                                   self(), flush),
                     {ok, #state{filename = FileName,
                                 interface_module = Binary,
-                                fd = Fd,
-                                flush_timer = FlushTimer}};
+                                fd = Fd}};
                 {error, Reason} ->
                     {stop, Reason}
             end;
         {error, Reason} ->
             {stop, Reason}
     end.
-
-handle_call(interface_module, _, #state{interface_module = Binary} = State) ->
-    {reply, Binary, State, hibernate};
-
-handle_call(flush, _, State) ->
-    {reply, ok, output_queued(State), hibernate};
 
 handle_call(Request, _, State) ->
     {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
@@ -292,44 +246,36 @@ handle_cast(reopen, #state{filename = FileName, fd = Fd} = State) ->
             {stop, Reason, State#state{fd = undefined}}
     end;
 
-handle_cast({log, Level, {_, _, MicroSeconds} = Now,
-             Module, Line, Pid, Format, Args},
-            #state{loglevel_names = LogLevelNames} = State) ->
-    Description = io_lib:format(Format, Args),
+handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
+             Module, Line, Format, Args},
+            #state{fd = Fd} = State)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    Description = lists:map(fun(S) ->
+      io_lib:format("    ~s~n", [S])
+    end, string:tokens(string2:format(Format, Args), "\n")),
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     Message = string2:format("~4..0w-~2..0w-~2..0wT"
-                             "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                             "~~s (~p:~p:~p) ~s~n",
+                             "~2..0w:~2..0w:~2..0w.~6..0wZ ~s"
+                             " (~p:~p:~p)~n~s",
                              [DateYYYY, DateMM, DateDD,
                               TimeHH, TimeMM, TimeSS, MicroSeconds,
-                              erlang:element(Level, LogLevelNames),
+                              level_to_string(Level),
                               Module, Line, Pid, Description]),
-    % used to determine duplicate entries
-    Key = io_lib:format("~p,~p,~p", [Module, Line, Description]),
-    {noreply, output(Key, Message, Level, State)};
+    file:write(Fd, Message),
+    %file:sync(Fd),
+    {noreply, State};
 
 handle_cast(Request, State) ->
     {stop, string2:format("Unknown cast \"~p\"~n", [Request]), State}.
 
-handle_info(flush, State) ->
-    NewState = output_queued(State),
-    FlushTimer = erlang:send_after(?LOG_DATA_FLUSH_TIMEOUT, self(), flush),
-    {noreply, NewState#state{flush_timer = FlushTimer}, hibernate};
-
 handle_info(Request, State) ->
     {stop, string2:format("Unknown info \"~p\"~n", [Request]), State}.
 
-terminate(_, #state{fd = Fd, flush_timer = FlushTimer} = State) ->
-    output_queued(State),
-    if
-        Fd /= undefined ->
-            file:close(Fd);
-        true ->
-            ok
-    end,
-    erlang:cancel_timer(FlushTimer),
+terminate(_, #state{fd = Fd}) ->
+    file:close(Fd),
     ok.
 
 code_change(_, State, _) ->
@@ -339,37 +285,153 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-log_message(Process, Level, Module, Line, [_|_] = Format, Args)
-    when is_integer(Level), is_atom(Module), is_integer(Line) ->
-    gen_server:cast(Process, {log, Level, erlang:now(),
-                              Module, Line, self(), Format, Args}).
+log_message(Process, Level, Module, Line, Format, Args)
+    when is_atom(Level), is_atom(Module), is_integer(Line) ->
+    gen_server:cast(Process, {Level, erlang:now(), self(),
+                              Module, Line, Format, Args}).
 
-%% convert a loglevel atom into an integer value
-%% that has meaning limited to this module
-get_loglevel_integer(Level) when is_integer(Level) ->
-    Level;
-get_loglevel_integer(Level) when is_atom(Level) ->
-    get_loglevel_integer(0,
-        [undefined, critical, error, warning, info, debug], Level).
+level_to_string(fatal) ->
+    "FATAL";
+level_to_string(error) ->
+    "ERROR";
+level_to_string(warn) ->
+    "WARN ";
+level_to_string(info) ->
+    "INFO ";
+level_to_string(debug) ->
+    "DEBUG";
+level_to_string(trace) ->
+    "TRACE".
 
-get_loglevel_integer(_, [], _) ->
-    0;
-get_loglevel_integer(LevelInteger, [LevelAtom | _], LevelAtom)
-    when is_integer(LevelInteger), is_atom(LevelAtom) ->
-    LevelInteger;
-get_loglevel_integer(LevelInteger, [_ | OtherLevelAtoms], LevelAtom)
-    when is_integer(LevelInteger), is_atom(LevelAtom) ->
-    get_loglevel_integer(LevelInteger + 1, OtherLevelAtoms, LevelAtom).
+-define(INTERFACE_MODULE_HEADER,
+    "
+    -module(cloudi_logger_interface).
+    -author('mjtruog [at] gmail (dot) com').
+    -export([fatal/4, error/4, warn/4, info/4, debug/4]).").
+get_interface_module_code(off, _) ->
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(_, _, _, _) -> ok.
+    error(_, _, _, _) -> ok.
+    warn(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    trace(_, _, _, _) -> ok.
+    ";
+get_interface_module_code(fatal, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(_, _, _, _) -> ok.
+    warn(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    trace(_, _, _, _) -> ok.
+    ", [Process]);
+get_interface_module_code(error, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+    warn(_, _, _, _) -> ok.
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    trace(_, _, _, _) -> ok.
+    ", [Process, Process]);
+get_interface_module_code(warn, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+    warn(Module, Line, Format, Arguments) ->
+        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+    info(_, _, _, _) -> ok.
+    debug(_, _, _, _) -> ok.
+    trace(_, _, _, _) -> ok.
+    ", [Process, Process, Process]);
+get_interface_module_code(info, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+    warn(Module, Line, Format, Arguments) ->
+        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+    info(Module, Line, Format, Arguments) ->
+        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+    debug(_, _, _, _) -> ok.
+    trace(_, _, _, _) -> ok.
+    ", [Process, Process, Process, Process]);
+get_interface_module_code(debug, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+    warn(Module, Line, Format, Arguments) ->
+        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+    info(Module, Line, Format, Arguments) ->
+        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+    debug(Module, Line, Format, Arguments) ->
+        cloudi_logger:debug(~p, Module, Line, Format, Arguments).
+    trace(_, _, _, _) -> ok.
+    ", [Process, Process, Process, Process, Process]);
+get_interface_module_code(trace, Process) ->
+    string2:format(
+    ?INTERFACE_MODULE_HEADER
+    "
+    fatal(Module, Line, Format, Arguments) ->
+        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+    error(Module, Line, Format, Arguments) ->
+        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+    warn(Module, Line, Format, Arguments) ->
+        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+    info(Module, Line, Format, Arguments) ->
+        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+    debug(Module, Line, Format, Arguments) ->
+        cloudi_logger:debug(~p, Module, Line, Format, Arguments).
+    trace(Module, Line, Format, Arguments) ->
+        cloudi_logger:trace(~p, Module, Line, Format, Arguments).
+    ", [Process, Process, Process, Process, Process, Process]).
+
+load_interface_module(Level) when is_atom(Level) ->
+    code:delete(cloudi_logger_interface),
+    % do not purge the module, but let it get purged after the new one is loaded
+    {Module, Binary} =
+        dynamic_compile:from_string(get_interface_module_code(Level, ?MODULE)),
+    case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
+        {module, Module} ->
+            {ok, Binary};
+        {error, _} = Error ->
+            Error
+    end.
 
 %% determine what types of events sasl wants to log
 %% taken from lib/erlang/lib/sasl-2.1.6/src/sasl.erl
 get_sasl_error_logger_type() ->
     case application:get_env(sasl, errlog_type) of
-        {ok, error} -> error;
-        {ok, progress} -> progress;
-        {ok, all} -> all;
-        {ok, Bad} -> exit({bad_config, {sasl, {errlog_type, Bad}}});
-        _ -> all
+        {ok, error} ->
+            error;
+        {ok, progress} ->
+            progress;
+        {ok, all} ->
+            all;
+        {ok, Bad} ->
+            exit({bad_config, {sasl, {errlog_type, Bad}}});
+        _ ->
+            all
     end.
 
 %% reopen the sasl log file after moving the file
@@ -387,155 +449,3 @@ reopen_sasl() ->
         _ ->
             {error, "sasl sasl_error_logger application env invalid"}
     end.
-
-%% append all queued log messages
-output_queued(#state{fd = Fd,
-                     last_log_entry = LastLogEntry} = State) ->
-    PreviousEntries = lists:foldl(fun(Level, L) ->
-        [erlang:element(Level, LastLogEntry) | L]
-    end, [], lists:seq(?LOGLEVEL_FLUSH_THRESHOLD + 1,
-                       erlang:size(LastLogEntry))),
-    % order the log messages based on the timestamp
-    lists:foreach(fun(Entry) ->
-        output_to_file(Entry#state_last_log_entry.message,
-                       Entry#state_last_log_entry.count, Fd)
-    end, lists:keysort(#state_last_log_entry.message, PreviousEntries)),
-    ok = file:sync(Fd),
-    State#state{last_log_entry = erlang:make_tuple(5, #state_last_log_entry{})}.
-
-%% take the log data as strings to append 
-output(Key, Message, Level,
-       #state{fd = Fd,
-              last_log_entry = LastLogEntry} = State) ->
-    if
-        Level =< ?LOGLEVEL_FLUSH_THRESHOLD ->
-            % write to the file and flush
-            output_to_file(Message, 1, Fd),
-            ok = file:sync(Fd),
-            State;
-        true ->
-            % store the message or count repetitions
-            % write the last message to the file for this logging level
-            % if the current message is a unique one
-            PreviousEntry = erlang:element(Level, LastLogEntry),
-            State#state{last_log_entry = (if
-                PreviousEntry#state_last_log_entry.key == Key ->
-                    erlang:setelement(Level, LastLogEntry,
-                        PreviousEntry#state_last_log_entry{
-                            count = 1 + PreviousEntry#state_last_log_entry.count
-                        });
-                true ->
-                    output_to_file(
-                        PreviousEntry#state_last_log_entry.message,
-                        PreviousEntry#state_last_log_entry.count, Fd),
-                    erlang:setelement(Level, LastLogEntry,
-                        #state_last_log_entry{
-                            key = Key,
-                            message = Message
-                        })
-            end)}
-    end.
-
-%% append the time and log data to the file,
-%% with the repetition count if necessary
-output_to_file("", _, _) ->
-    ok;
-output_to_file(Message, 1, Fd)
-    when is_list(Message) ->
-    file:write(Fd, io_lib:format(Message, ["---"]));
-output_to_file(Message, Count, Fd)
-    when is_list(Message), is_integer(Count) ->
-    file:write(Fd, io_lib:format(Message, [io_lib:format("(x~p)", [Count])])).
-
--define(INTERFACE_MODULE_HEADER,
-    "
-    -module(cloudi_logger_interface).
-    -author('mjtruog [at] gmail (dot) com').
-    -export([critical/4, error/4, warning/4, info/4, debug/4]).").
-get_interface_module_code(0, _) ->
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(_, _, _, _) -> ok.
-    error(_, _, _, _) -> ok.
-    warning(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    ";
-get_interface_module_code(1, Process) ->
-    string2:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(Module, Line, Format, Arguments) ->
-        cloudi_logger:critical(~p, Module, Line, Format, Arguments).
-    error(_, _, _, _) -> ok.
-    warning(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    ", [Process]);
-get_interface_module_code(2, Process) ->
-    string2:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(Module, Line, Format, Arguments) ->
-        cloudi_logger:critical(~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
-    warning(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    ", [Process, Process]);
-get_interface_module_code(3, Process) ->
-    string2:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(Module, Line, Format, Arguments) ->
-        cloudi_logger:critical(~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
-    warning(Module, Line, Format, Arguments) ->
-        cloudi_logger:warning(~p, Module, Line, Format, Arguments).
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    ", [Process, Process, Process]);
-get_interface_module_code(4, Process) ->
-    string2:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(Module, Line, Format, Arguments) ->
-        cloudi_logger:critical(~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
-    warning(Module, Line, Format, Arguments) ->
-        cloudi_logger:warning(~p, Module, Line, Format, Arguments).
-    info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, Module, Line, Format, Arguments).
-    debug(_, _, _, _) -> ok.
-    ", [Process, Process, Process, Process]);
-get_interface_module_code(_, Process) -> % 5
-    string2:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    critical(Module, Line, Format, Arguments) ->
-        cloudi_logger:critical(~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
-    warning(Module, Line, Format, Arguments) ->
-        cloudi_logger:warning(~p, Module, Line, Format, Arguments).
-    info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, Module, Line, Format, Arguments).
-    debug(Module, Line, Format, Arguments) ->
-        cloudi_logger:debug(~p, Module, Line, Format, Arguments).
-    ", [Process, Process, Process, Process, Process]).
-
-create_interface_module(Level) when is_integer(Level) ->
-    code:delete(cloudi_logger_interface),
-    % do not purge the module, but let it get purged after the new one is loaded
-    {Module, Binary} = dynamic_compile:from_string(
-        get_interface_module_code(Level, ?MODULE)),
-    case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
-        {module, Module} ->
-            {ok, Binary};
-        {error, _} = Error ->
-            Error
-    end.
-

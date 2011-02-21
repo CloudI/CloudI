@@ -169,14 +169,15 @@ cloudi_job_init(Args, Dispatcher) ->
         {username, ?DEFAULT_USER_NAME},
         {password, ?DEFAULT_PASSWORD},
         {port,     ?DEFAULT_PORT},
-        {database, undefined},
-        {encoding, ?DEFAULT_ENCODING}],
-    [HostName, UserName, Password, Port, DatabaseName, Encoding] =
+        {encoding, ?DEFAULT_ENCODING},
+        {database, undefined}],
+    [HostName, UserName, Password, Port, Encoding, Database] =
         proplists2:take_values(Defaults, Args),
+    true = is_list(Database),
     try mysql_conn:start(HostName, Port, UserName, Password,
-                         DatabaseName, Encoding, undefined) of
+                         Database, Encoding, undefined) of
         {ok, Process} ->
-            cloudi_job:subscribe(Dispatcher, DatabaseName),
+            cloudi_job:subscribe(Dispatcher, Database),
             {ok, #state{process = Process}};
         {error, Reason} ->
             {stop, Reason}
@@ -228,7 +229,7 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
     end.
 
 cloudi_job_handle_info(Request, State, _) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 cloudi_job_terminate(_, #state{process = Process}) ->

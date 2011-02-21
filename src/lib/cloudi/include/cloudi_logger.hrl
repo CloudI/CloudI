@@ -41,18 +41,22 @@
 %%%
 %%%------------------------------------------------------------------------
 
--define(LOG_CRITICAL(Format, Args),
-    cloudi_logger_interface:critical(?MODULE, ?LINE, Format, Args)).
+-define(LOG_FATAL(Format, Args),
+    cloudi_logger_interface:fatal(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_ERROR(Format, Args),
     cloudi_logger_interface:error(?MODULE, ?LINE, Format, Args)).
 
--define(LOG_WARNING(Format, Args),
-    cloudi_logger_interface:warning(?MODULE, ?LINE, Format, Args)).
+-define(LOG_WARN(Format, Args),
+    cloudi_logger_interface:warn(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_INFO(Format, Args),
     cloudi_logger_interface:info(?MODULE, ?LINE, Format, Args)).
 
 -define(LOG_DEBUG(Format, Args),
     cloudi_logger_interface:debug(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_TRACE(Format, Args),
+    cloudi_logger_interface:trace(?MODULE, ?LINE, Format, Args)).
+
 

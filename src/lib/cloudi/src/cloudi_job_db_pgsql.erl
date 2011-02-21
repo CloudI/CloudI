@@ -122,21 +122,23 @@ squery(Dispatcher, Name, String, Timeout)
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init([{database, DatabaseName, Args}], Dispatcher) ->
+cloudi_job_init(Args, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {username, ?DEFAULT_USER_NAME},
         {password, ?DEFAULT_PASSWORD},
         {port, ?DEFAULT_PORT},
-        {timeout, ?DEFAULT_TIMEOUT}],
-    [HostName, UserName, Password, Port, Timeout, NewArgs] =
+        {timeout, ?DEFAULT_TIMEOUT},
+        {database, undefined}],
+    [HostName, UserName, Password, Port, Timeout, Database | NewArgs] =
         proplists2:take_values(Defaults, Args),
-    FinalArgs = NewArgs ++ [{port, Port},
-                            {timeout, Timeout},
-                            {database, DatabaseName}],
+    true = is_list(Database),
+    FinalArgs = [{port, Port},
+                 {timeout, Timeout},
+                 {database, Database} | NewArgs],
     case pgsql:connect(HostName, UserName, Password, FinalArgs) of
         {ok, Connection} ->
-            cloudi_job:subscribe(Dispatcher, DatabaseName),
+            cloudi_job:subscribe(Dispatcher, Database),
             {ok, #state{connection = Connection}};
         {error, Reason} ->
             {stop, Reason}
@@ -191,7 +193,7 @@ cloudi_job_handle_request(_Type, _Name, Request, _Timeout, TransId, _Pid,
     end.
 
 cloudi_job_handle_info(Request, State, _) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 cloudi_job_terminate(_, #state{connection = Connection}) ->

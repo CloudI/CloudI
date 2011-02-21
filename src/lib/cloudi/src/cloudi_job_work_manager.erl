@@ -87,14 +87,17 @@
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init(Args, _Dispatcher) ->
+cloudi_job_init(Args, Dispatcher) ->
     Defaults = [
         {delay,           ?DEFAULT_DELAY},
-        {destination,     ?DEFAULT_DESTINATION}],
-    [Delay, Destination] =
+        {destination,     ?DEFAULT_DESTINATION},
+        {name,            undefined}],
+    [Delay, Destination, Name] =
         proplists2:take_values(Defaults, Args),
     true = is_integer(Delay),
     true = is_list(Destination),
+    true = is_list(Name),
+    cloudi_job:subscribe(Dispatcher, Name),
     {ok, #state{delay = Delay,
                 destination = Destination,
                 delay_timer = erlang:send_after(Delay, self(), empty)}}.
@@ -123,7 +126,7 @@ cloudi_job_handle_info(empty, #state{delay = Delay,
                  delay_timer = erlang:send_after(Delay, self(), empty)}};
 
 cloudi_job_handle_info(Request, State, _) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 cloudi_job_terminate(_, #state{}) ->
@@ -143,7 +146,7 @@ send_data([], 0, [], _, _) ->
     [];
 
 send_data(Failed, FailedCount, [], Name, _) ->
-    ?LOG_WARNING("~s failed ~w requests", [Name, FailedCount]),
+    ?LOG_WARN("~s failed ~w requests", [Name, FailedCount]),
     lists:reverse(Failed);
 
 send_data(Failed, FailedCount, [Data | L], Name, Dispatcher) ->
