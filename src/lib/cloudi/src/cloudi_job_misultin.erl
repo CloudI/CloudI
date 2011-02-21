@@ -113,7 +113,7 @@ cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
     {reply, <<>>, State}.
 
 cloudi_job_handle_info(Request, State, _) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 cloudi_job_terminate(_, #state{process = Process}) ->

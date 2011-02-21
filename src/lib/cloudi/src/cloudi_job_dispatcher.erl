@@ -121,6 +121,12 @@ init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
             {stop, Reason}
     end.
 
+handle_call(timeout_async, _, #state{timeout_async = TimeoutAsync} = State) ->
+    {reply, TimeoutAsync, State};
+
+handle_call(timeout_sync, _, #state{timeout_sync = TimeoutSync} = State) ->
+    {reply, TimeoutSync, State};
+
 handle_call({'get_pid', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'get_pid', Name, TimeoutSync}, Client, State);
@@ -284,7 +290,7 @@ handle_call({'recv_async', Timeout, TransId}, Client,
     end;
 
 handle_call(Request, _, State) ->
-    ?LOG_WARNING("Unknown call \"~p\"", [Request]),
+    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
 
 handle_cast({'subscribe', Name},
@@ -300,7 +306,7 @@ handle_cast({'unsubscribe', Name},
     {noreply, State};
 
 handle_cast(Request, State) ->
-    ?LOG_WARNING("Unknown cast \"~p\"", [Request]),
+    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({list_pg_data, Groups},
@@ -508,7 +514,7 @@ handle_info({'recv_async_timeout', TransId},
     {noreply, recv_async_timeout_end(TransId, State)};
 
 handle_info(Request, State) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 terminate(_, _) ->

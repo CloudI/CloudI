@@ -111,11 +111,11 @@ handle_call(get, _, #state{pool = Pool,
     end;
 
 handle_call(Request, _, State) ->
-    ?LOG_WARNING("Unknown call \"~p\"", [Request]),
+    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
 
 handle_cast(Request, State) ->
-    ?LOG_WARNING("Unknown cast \"~p\"", [Request]),
+    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
@@ -141,7 +141,7 @@ handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
     end;
 
 handle_info(Request, State) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
 terminate(_, _) ->

@@ -364,11 +364,11 @@ handle_sync_event(port, _, StateName, #state{port = Port} = StateData) ->
     {reply, Port, StateName, StateData};
 
 handle_sync_event(Event, _From, StateName, StateData) ->
-    ?LOG_WARNING("Unknown event \"~p\"", [Event]),
+    ?LOG_WARN("Unknown event \"~p\"", [Event]),
     {stop, {StateName, undefined_event, Event}, StateData}.
 
 handle_event(Event, StateName, StateData) ->
-    ?LOG_WARNING("Unknown event \"~p\"", [Event]),
+    ?LOG_WARN("Unknown event \"~p\"", [Event]),
     {stop, {StateName, undefined_event, Event}, StateData}.
 
 handle_info({udp, Socket, _, Port, Data}, StateName,
@@ -524,7 +524,7 @@ handle_info({'recv_async_timeout', TransId}, StateName, StateData) ->
     {next_state, StateName, recv_async_timeout_end(TransId, StateData)};
 
 handle_info(Request, StateName, StateData) ->
-    ?LOG_WARNING("Unknown info \"~p\"", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {next_state, StateName, StateData}.
 
 terminate(_, _, #state{protocol = tcp,

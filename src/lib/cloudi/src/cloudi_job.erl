@@ -58,6 +58,8 @@
 %% behavior interface
 -export([subscribe/2,
          unsubscribe/2,
+         timeout_async/1,
+         timeout_sync/1,
          get_pid/2,
          get_pid/3,
          send_async/3,
@@ -134,6 +136,16 @@ subscribe(Dispatcher, Name)
 unsubscribe(Dispatcher, Name)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:cast(Dispatcher, {'unsubscribe', Name}).
+
+-spec timeout_async(Dispatcher :: pid()) -> pos_integer().
+
+timeout_async(Dispatcher) ->
+    gen_server:call(Dispatcher, timeout_async, infinity).
+
+-spec timeout_sync(Dispatcher :: pid()) -> pos_integer().
+
+timeout_sync(Dispatcher) ->
+    gen_server:call(Dispatcher, timeout_sync, infinity).
 
 -spec get_pid(Dispatcher :: pid(),
               Name :: string()) ->
@@ -337,11 +349,11 @@ init([Module, Args, Dispatcher]) ->
     end.
 
 handle_call(Request, _, State) ->
-    ?LOG_WARNING("Unknown call \"~p\"", [Request]),
+    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
 
 handle_cast(Request, State) ->
-    ?LOG_WARNING("Unknown cast \"~p\"", [Request]),
+    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({'send_async', Name, Request, Timeout, TransId, Pid},

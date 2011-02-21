@@ -61,6 +61,7 @@
          handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
+-include("cloudi_logger.hrl").
 -include("cloudi_os_spawn.hrl").
 
 -record(state, {last_port_name,
@@ -100,7 +101,7 @@ handle_call({call, Command, Msg}, Client,
     end;
 
 handle_call(Request, _, State) ->
-    io:format("Unknown call \"~p\"~n", [Request]),
+    ?LOG_ERROR("Unknown call \"~p\"~n", [Request]),
     {stop, "Unknown call", State}.
 
 %% handle asynchronous function calls on the port driver
@@ -111,13 +112,13 @@ handle_cast({call, _, Msg},
         ok ->
             ok;
         {error, Reason} ->
-            io:format("error ~p~n", [Reason]),
+            ?LOG_ERROR("port_command error ~p~n", [Reason]),
             ok
     end,
     {noreply, State};
 
 handle_cast(Request, State) ->
-    io:format("Unknown cast \"~p\"~n", [Request]),
+    ?LOG_WARN("Unknown cast \"~p\"~n", [Request]),
     {noreply, State}.
 
 %% port exited with a fatal error/signal
@@ -148,9 +149,9 @@ handle_info({Port, {data, Data}},
             end;
         {Stream, OsPid, Output} when Stream == stdout; Stream == stderr ->
             FormattedOutput = lists:flatmap(fun(Line) ->
-                io_lib:format("    ~s~n", [Line])
+                io_lib:format(" ~s~n", [Line])
             end, string:tokens(Output, "\n")),
-            io:format("~w (pid ~w):~n~s", [Stream, OsPid, FormattedOutput]),
+            ?LOG_ERROR("~w (pid ~w):~n~s", [Stream, OsPid, FormattedOutput]),
             {noreply, State};
         {Command, Success} ->
             case lists:keytake(Command, 1, Replies) of
@@ -252,7 +253,7 @@ handle_info({'EXIT', Port, PosixCode},
     {stop, Reason, State#state{port = undefined}};
 
 handle_info(Request, State) ->
-    io:format("Unknown info \"~p\"~n", [Request]),
+    ?LOG_WARN("Unknown info \"~p\"~n", [Request]),
     {noreply, State}.
 
 terminate(_, #state{port = Port}) when is_port(Port) ->
