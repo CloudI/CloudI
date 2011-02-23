@@ -90,7 +90,7 @@ cloudi_job_init(Args, Dispatcher) ->
         {ssl,             ?DEFAULT_SSL},
         {compress,        ?DEFAULT_COMPRESS},
         {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT}],
-    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit, []] =
+    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit] =
         proplists2:take_values(Defaults, Args),
     Loop = fun(HttpRequest) ->
         handle_http(HttpRequest, Dispatcher)

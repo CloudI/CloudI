@@ -189,7 +189,7 @@ restart_stage2(#service{service_m = M,
                         max_r = 0},
                Services, State) ->
     % no restarts allowed
-    ?LOG_INFO("max restarts (MaxR = 0) ~p:~p~p", [M, F, A]),
+    ?LOG_INFO("max restarts (MaxR = 0)~n ~p:~p~p", [M, F, A]),
     State#state{services = Services};
 
 restart_stage2(#service{service_m = M,
@@ -217,7 +217,7 @@ restart_stage2(#service{service_m = M,
                                            restart_times = [Now]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_INFO("failed ~p restart ~p:~p~p", [Error, M, F, A]),
+            ?LOG_INFO("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [Now]}},
@@ -239,14 +239,14 @@ restart_stage2(#service{service_m = M,
     NewRestartTimes = lists:reverse(lists:dropwhile(fun(T) ->
         erlang:trunc(timer:now_diff(Now, T) * 1.0e-6) > MaxT
     end, lists:reverse(RestartTimes))),
-    NewRestartCount = lists:length(NewRestartTimes),
+    NewRestartCount = erlang:length(NewRestartTimes),
     if
         NewRestartCount < RestartCount ->
             restart_stage2(Service#service{restart_count = NewRestartCount,
                                            restart_times = NewRestartTimes},
                            Services, State);
         true ->
-            ?LOG_INFO("max restarts (MaxR = ~p, MaxT = ~p) ~p:~p~p",
+            ?LOG_INFO("max restarts (MaxR = ~p, MaxT = ~p)~n ~p:~p~p",
                       [MaxR, MaxT, M, F, A]),
             State#state{services = Services}
     end;
@@ -277,7 +277,7 @@ restart_stage2(#service{service_m = M,
                                                             RestartTimes]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_INFO("failed ~p restart ~p:~p~p", [Error, M, F, A]),
+            ?LOG_INFO("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = RestartCount + 1,
                                       restart_times = [Now | RestartTimes]}},
