@@ -79,5 +79,5 @@ BSD License
 
 ## CONTACT
 
-Michael Truog <mjtruog at gmail dot com>
+Michael Truog (mjtruog [at] gmail (dot) com)
 

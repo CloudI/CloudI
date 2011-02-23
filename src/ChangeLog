@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 0.1.0 (alpha) released
+
 2011-02-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * hexpi test created with previous hexidecimal pi generation test, but
