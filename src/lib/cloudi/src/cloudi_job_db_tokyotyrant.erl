@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Tokyo Tyrant Data Module==
+%%% ==CloudI Tokyo Tyrant Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE

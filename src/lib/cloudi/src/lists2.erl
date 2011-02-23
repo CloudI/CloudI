@@ -305,7 +305,7 @@ middle(L, N) when is_list(L), is_integer(N) ->
         Length =< N ->
             L;
         true ->
-            Middle = erlang:round(Length / 2 - N / 2),
+            Middle = erlang:round((Length - N) / 2),
             middle_list([], L, 0, Middle, Middle + N)
     end.    
 middle_list(M, _, Middle1, _, Middle1) ->

@@ -25,12 +25,6 @@
 % have time to unravel all synchronous calls
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
-
-%unused
--define(DATABASE_PREFIX, "/db/").
-
--define(LOCALHOST_MTU, 16436).
-
-% maximum time an external cloudi process can take to connect
--define(CONNECT_TIMEOUT, 5000).
+% maximum wait time before a reconnect is attempted with a node
+-define(NODE_RECONNECT, 60000). % milliseconds
 

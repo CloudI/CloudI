@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Logger==
+%%% ==CloudI Logger==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -65,7 +65,7 @@
 
 -record(state,
     {
-        filename,
+        file_path,
         interface_module,
         fd
     }).
@@ -209,12 +209,12 @@ trace(Process, Module, Line, Format, Args) ->
 %%%------------------------------------------------------------------------
 
 init([#config_logging{level = Level,
-                      filename = FileName}]) ->
-    case file:open(FileName, [append, raw]) of
+                      file = FilePath}]) ->
+    case file:open(FilePath, [append, raw]) of
         {ok, Fd} ->
             case load_interface_module(Level) of
                 {ok, Binary} ->
-                    {ok, #state{filename = FileName,
+                    {ok, #state{file_path = FilePath,
                                 interface_module = Binary,
                                 fd = Fd}};
                 {error, Reason} ->
@@ -227,13 +227,13 @@ init([#config_logging{level = Level,
 handle_call(Request, _, State) ->
     {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
 
-handle_cast(reopen, #state{filename = FileName, fd = Fd} = State) ->
+handle_cast(reopen, #state{file_path = FilePath, fd = Fd} = State) ->
     file:close(Fd),
-    case file:rename(FileName, filename:rootname(FileName) ++ "-old.log") of
+    case file:rename(FilePath, filename:rootname(FilePath) ++ "-old.log") of
         ok ->
             case reopen_sasl() of
                 ok ->
-                    case file:open(FileName, [append, raw]) of
+                    case file:open(FilePath, [append, raw]) of
                         {ok, NewFd} ->
                             {noreply, State#state{fd = NewFd}};
                         {error, Reason} ->
@@ -252,7 +252,7 @@ handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     Description = lists:map(fun(S) ->
-      io_lib:format("    ~s~n", [S])
+      io_lib:format(" ~s~n", [S])
     end, string:tokens(string2:format(Format, Args), "\n")),
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
@@ -437,15 +437,16 @@ get_sasl_error_logger_type() ->
 %% reopen the sasl log file after moving the file
 reopen_sasl() ->
     case application:get_env(sasl, sasl_error_logger) of
-        {ok, {file, SASLFileName}} ->
+        {ok, {file, SASLFilePath}} ->
             error_logger:delete_report_handler(sasl_report_file_h),
-            OldSASLFileName = filename:rootname(SASLFileName) ++ "-old.log",
-            Result = file:rename(SASLFileName, OldSASLFileName),
+            OldSASLFilePath = filename:rootname(SASLFilePath) ++ "-old.log",
+            Result = file:rename(SASLFilePath, OldSASLFilePath),
             error_logger:add_report_handler(sasl_report_file_h,
-                {SASLFileName, get_sasl_error_logger_type()}),
+                {SASLFilePath, get_sasl_error_logger_type()}),
             Result;
         undefined ->
             {error, "sasl sasl_error_logger application env not set"};
         _ ->
             {error, "sasl sasl_error_logger application env invalid"}
     end.
+

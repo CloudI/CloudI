@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Spawn==
+%%% ==CloudI Spawn==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -58,25 +58,6 @@
 %%% External interface
 %%%------------------------------------------------------------------------
 
-% enforce permissions as prefixes
-%
-% {internal_prefixes, ["/cloudi/"]}
-
-% configure per process:
-% {port_tcp | port_udp,
-%  name_prefix, buffer_size, max_startup_time,
-%  dest_refresh == lazy_closest | immediate_closest |
-%                  lazy_random | immediate_random,
-%  threads_per_process, processes,
-%  filename, arguments, environment}
-% {erlang,
-%  name_prefix, max_startup_time,
-%  dest_refresh == lazy_closest | immediate_closest |
-%                  lazy_random | immediate_random,
-%  processes,
-%  module_name}
-
-
 start_internal(Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList)
@@ -102,14 +83,9 @@ start_internal(Module, Args, Timeout, Prefix,
         false ->
             {error, not_loaded};
         {file, _} ->
-            case cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
-                                           TimeoutAsync, TimeoutSync,
-                                           DestRefresh, DestDeny, DestAllow) of
-                {ok, _} ->
-                    ok;
-                {error, _} = Error ->
-                    Error
-            end
+            cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
+                                      TimeoutAsync, TimeoutSync,
+                                      DestRefresh, DestDeny, DestAllow)
     end.
 
 start_external(ThreadsPerProcess,
@@ -138,19 +114,23 @@ start_external(ThreadsPerProcess,
         is_list(DestAllowList) ->
             trie:new(DestAllowList)
     end,
-    Ports = lists2:itera(fun(_, L, F) ->
+    {Pids, Ports} = lists2:itera2(fun(_, L1, L2, F) ->
         case cloudi_socket_sup:create_socket(Protocol, BufferSize, Timeout,
                                              Prefix, TimeoutAsync, TimeoutSync,
                                              DestRefresh,
                                              DestDeny, DestAllow) of
-            {ok, _, Port} ->
-                F([Port | L]);
+            {ok, Pid, Port} ->
+                F([Pid | L1], [Port | L2]);
             {error, _} = Error ->
+                lists:foreach(fun(P) -> erlang:exit(P, kill) end, L1),
                 Error
         end
-    end, [], lists:seq(1, ThreadsPerProcess)),
+    end, [], [], lists:seq(1, ThreadsPerProcess)),
     if
-        is_list(Ports) ->
+        Pids == error ->
+            % an error occurred in cloudi_socket_sup:create_socket
+            {Pids, Ports};
+        true ->
             SpawnProcess = pool2:get(cloudi_os_spawn),
             ProtocolChar = if Protocol == tcp -> $t; Protocol == udp -> $u end,
             case cloudi_os_spawn:spawn(SpawnProcess,
@@ -159,13 +139,11 @@ start_external(ThreadsPerProcess,
                                        terminate_string(Filename),
                                        parse_arguments(Arguments),
                                        format_environment(Environment)) of
-                {ok, _} = Success ->
-                    Success;
+                {ok, _} ->
+                    {ok, Pids};
                 {error, _} = Error ->
                     Error
-            end;
-        true ->
-            Ports
+            end
     end.
 
 %%%------------------------------------------------------------------------

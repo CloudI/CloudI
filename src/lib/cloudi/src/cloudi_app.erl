@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Application==
+%%% ==CloudI Application==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -63,13 +63,11 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start the Cloudi application.===
+%% ===Start the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
 start(_, _) ->
-    %Config = cloud_configuration:open(),
-    application:start(sasl),
-    case cloudi_sup:start_link(#config{}) of
+    case cloudi_sup:start_link(cloudi_configuration:open()) of
         {ok, Pid} ->
             {ok, Pid};
         {error, _} = Error ->
@@ -78,7 +76,7 @@ start(_, _) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Stop the Cloudi application.===
+%% ===Stop the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
 stop(_) ->

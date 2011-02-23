@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi CouchDB Data Module==
+%%% ==CloudI CouchDB Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE

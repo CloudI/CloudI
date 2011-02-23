@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Task Size Calculation==
+%%% ==CloudI Task Size Calculation==
 %%% @end
 %%%
 %%% BSD LICENSE

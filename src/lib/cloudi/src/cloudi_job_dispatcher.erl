@@ -3,8 +3,11 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Job Dispatcher==
+%%% ==CloudI Job Dispatcher==
 %%% Parent process for each cloudi_job behaviour process.
+%%% The dispatcher handles all cloudi_job process outgoing requests to 
+%%% prevent undesirable synchronous function call paths that are prone to
+%%% deadlocks.
 %%% @end
 %%%
 %%% BSD LICENSE

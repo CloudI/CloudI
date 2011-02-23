@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Socket Supervisor==
+%%% ==CloudI Socket Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE

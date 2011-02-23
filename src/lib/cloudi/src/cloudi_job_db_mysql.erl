@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi MySQL Data Module==
+%%% ==CloudI MySQL Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE

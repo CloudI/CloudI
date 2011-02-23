@@ -41,40 +41,55 @@
 %%%
 %%%------------------------------------------------------------------------
 
--record(config_work,
-    {
-    % work_title == work_module ++ ".optional_tag"
-    work_title = "",
-    work_arguments = [],
-    concurrent_tasks = undefined,
-    use_threads = undefined}).
-
--record(config_data,
-    {
-    data_module = "",
-    % data_title == data_module ++ "." ++ database_name
-    arguments = []}).
-                             
--record(config_machine,
-    {
-    node_name = undefined,
-    node_name_parsed = {},
-    ports = [],
-    processes = 0,
-    threads = 0}).
-
 -record(config_logging,
     {
-    level = trace,
-    filename = "logs/cloudi.log"}).
+        level = trace,
+        file = "logs/cloudi.log"
+    }).
+
+% internal job parameters
+-record(config_job_internal,
+    {
+        prefix,
+        module,
+        args,
+        dest_refresh,
+        timeout_init,
+        timeout_async,
+        timeout_sync,
+        dest_list_deny,
+        dest_list_allow,
+        count_process,
+        max_r,
+        max_t
+    }).
+
+% external job parameters
+-record(config_job_external,
+    {
+        prefix,
+        file_path,
+        args,
+        env,
+        dest_refresh,
+        protocol,
+        buffer_size,
+        timeout_init,
+        timeout_async,
+        timeout_sync,
+        dest_list_deny,
+        dest_list_allow,
+        count_process,
+        count_thread,
+        max_r,
+        max_t
+    }).
 
 -record(config,
     {
-    jobs = [],
-    data = [],
-    machines = [],
-    logging = #config_logging{},
-    json_rpc_port = undefined,
-    node_longnames = undefined,
-    cookie = undefined}).
+        logging = #config_logging{},
+        acl = dict:new(),
+        jobs = [],
+        nodes = []
+    }).
 

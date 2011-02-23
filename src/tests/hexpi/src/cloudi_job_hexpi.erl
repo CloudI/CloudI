@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Work Module For hexpi Test==
+%%% ==CloudI Work Module For hexpi Test==
 %%% @end
 %%%
 %%% BSD LICENSE
