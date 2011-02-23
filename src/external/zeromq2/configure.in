@@ -1,0 +1,431 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+AC_PREREQ(2.61)
+#
+# The 0MQ version number is extracted from include/zmq.h using
+# the version.sh script. Hence, it should be updated there.
+# The version in git should reflect the *next* version planned.
+#
+AC_INIT([zeromq],[m4_esyscmd([./version.sh])],[zeromq-dev@lists.zeromq.org])
+
+AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR(config)
+AM_CONFIG_HEADER(src/platform.hpp)
+AM_INIT_AUTOMAKE(tar-ustar dist-zip foreign)
+
+# This lets us use PACKAGE_VERSION in Makefiles
+AC_SUBST(PACKAGE_VERSION)
+
+# Libtool -version-info (ABI version)
+#
+# Don't change this unless you know exactly what you're doing and have read and
+# understand:
+# http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+#
+# Changes:
+#
+# ZeroMQ versions prior to 2.1.0 use 0.0.0 ("unstable")
+# ZeroMQ version 2.1.0: 1:0:0
+#
+# libzmq -version-info current:revision:age
+LTVER="1:0:0"
+AC_SUBST(LTVER)
+
+# Take a copy of original flags
+ZMQ_ORIG_CFLAGS="${CFLAGS:-none}"
+ZMQ_ORIG_CPPFLAGS="${CPPFLAGS:-none}"
+ZMQ_ORIG_CXXFLAGS="${CXXFLAGS:-none}"
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_CC_C99
+AC_PROG_CXX
+AM_PROG_CC_C_O
+AC_PROG_SED
+AC_PROG_AWK
+
+# Libtool configuration for different targets. See acinclude.m4
+AC_ZMQ_CONFIG_LIBTOOL
+AC_LIBTOOL_WIN32_DLL
+AC_PROG_LIBTOOL
+
+# Check whether to build a with debug symbols
+AC_ZMQ_CHECK_ENABLE_DEBUG
+
+# Checks for libraries.
+AC_CHECK_LIB([pthread], [pthread_create])
+
+# Set pedantic
+ac_zmq_pedantic="yes"
+
+# By default compiling with -Werror except OSX.
+ac_zmq_werror="yes"
+
+# By default use DSO visibility
+ac_zmq_dso_visibility="yes"
+
+# Whether we are on mingw or not.
+ac_zmq_on_mingw32="no"
+
+# Set some default features required by 0MQ code.
+CPPFLAGS="-D_REENTRANT -D_THREAD_SAFE $CPPFLAGS"
+
+# For host type checks
+AC_CANONICAL_HOST
+
+# OS-specific tests
+case "${host_os}" in
+    *linux*)
+        # Define on Linux to enable all library features. Define if using a gnu compiler
+        if test "x$GXX" = "xyes"; then
+            CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
+        fi
+        AC_DEFINE(ZMQ_HAVE_LINUX, 1, [Have Linux OS])
+        AC_CHECK_LIB(rt, sem_init)
+        AC_CHECK_LIB(uuid, uuid_generate, , 
+            [AC_MSG_ERROR([cannot link with -luuid, install uuid-dev.])])
+        ;;
+    *solaris*)
+        # Define on Solaris to enable all library features
+        CPPFLAGS="-D_PTHREADS $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_SOLARIS, 1, [Have Solaris OS])
+        AC_CHECK_LIB(socket, socket)
+        AC_CHECK_LIB(nsl, gethostbyname)
+        AC_CHECK_LIB(rt, sem_init)
+        AC_CHECK_LIB(uuid, uuid_generate, ,
+            [AC_MSG_ERROR([cannot link with -luuid, install uuid-dev.])])
+        AC_MSG_CHECKING([whether atomic operations can be used])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+            [[#include <atomic.h>]],
+            [[uint32_t value;
+              atomic_cas_32 (&value, 0, 0);
+              return 0;]])],
+            [solaris_has_atomic=yes],
+            [solaris_has_atomic=no])
+        AC_MSG_RESULT([$solaris_has_atomic])
+        # Solaris 8 does not have atomic operations exported to user space.
+        if test "x$solaris_has_atomic" = "xno"; then
+            AC_DEFINE(ZMQ_FORCE_MUTEXES, 1, [Force to use mutexes])
+        fi
+        ;;
+    *freebsd*)
+        # Define on FreeBSD to enable all library features
+        CPPFLAGS="-D__BSD_VISIBLE $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_FREEBSD, 1, [Have FreeBSD OS])
+        ;;
+    *darwin*)
+        # Define on Darwin to enable all library features
+        CPPFLAGS="-D_DARWIN_C_SOURCE $CPPFLAGS"
+        ac_zmq_pedantic="no"
+        ac_zmq_werror="no"
+        AC_DEFINE(ZMQ_HAVE_OSX, 1, [Have DarwinOSX OS])
+        AC_LANG_PUSH([C++])
+        AC_ZMQ_CHECK_LANG_FLAG_PREPEND([-Wno-uninitialized])
+        AC_LANG_POP([C++])
+        ;;
+    *netbsd*)
+        # Define on NetBSD to enable all library features
+        CPPFLAGS="-D_NETBSD_SOURCE $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_NETBSD, 1, [Have NetBSD OS])
+        # NetBSD 5.0 and newer provides atomic operations but we can
+        # only use these on systems where PR #42842 has been fixed so
+        # we must try and link a test program using C++.
+        ac_zmq_netbsd_has_atomic=no
+        AC_MSG_CHECKING([whether atomic operations can be used])
+        AC_LANG_PUSH([C++])
+        AC_LINK_IFELSE([AC_LANG_PROGRAM(
+            [[#include <atomic.h>]],
+            [[uint32_t value;
+              atomic_cas_32 (&value, 0, 0);
+              return 0;]])],
+            [ac_zmq_netbsd_has_atomic=yes],
+            [ac_zmq_netbsd_has_atomic=no])
+        AC_LANG_POP([C++])
+        AC_MSG_RESULT([$ac_zmq_netbsd_has_atomic])
+        if test "x$ac_zmq_netbsd_has_atomic" = "xno"; then
+            AC_DEFINE(ZMQ_FORCE_MUTEXES, 1, [Force to use mutexes])
+        fi
+        ;;
+    *openbsd*)
+        # Define on OpenBSD to enable all library features
+        CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_OPENBSD, 1, [Have OpenBSD OS])
+        ;;
+    *nto-qnx*)
+        ac_zmq_pedantic="no"
+        AC_DEFINE(ZMQ_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
+        AC_CHECK_LIB(socket, socket)
+        AC_CHECK_LIB(crypto, RAND_bytes)
+        ;;
+    *aix*)
+        AC_DEFINE(ZMQ_HAVE_AIX, 1, [Have AIX OS])
+        AC_CHECK_LIB(crypto,RAND_bytes)
+        ;;
+    *hpux*)
+        # Define on HP-UX to enable all library features
+        CPPFLAGS="-D_POSIX_C_SOURCE=200112L $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_HPUX, 1, [Have HPUX OS])
+        AC_CHECK_LIB(rt, sem_init)
+        AC_CHECK_LIB(crypto, RAND_bytes)
+        ;;
+    *mingw32*)
+        AC_DEFINE(ZMQ_HAVE_WINDOWS, 1, [Have Windows OS])
+        AC_DEFINE(ZMQ_HAVE_MINGW32, 1, [Have MinGW32])
+        AC_CHECK_HEADERS(windows.h)
+        AC_CHECK_LIB(ws2_32, main, ,
+            [AC_MSG_ERROR([cannot link with ws2_32.dll.])])
+        AC_CHECK_LIB(rpcrt4, main, ,
+            [AC_MSG_ERROR([cannot link with rpcrt4.dll.])])
+        AC_CHECK_LIB(iphlpapi, main, ,
+            [AC_MSG_ERROR([cannot link with iphlpapi.dll.])])
+        # mingw32 defines __int64_t as long long
+        AC_LANG_PUSH([C++])
+        AC_ZMQ_CHECK_LANG_FLAG_PREPEND([-Wno-long-long])
+        AC_LANG_POP([C++])
+        ac_zmq_on_mingw32="yes"
+        ac_zmq_dso_visibility="no"
+
+        if test "x$enable_static" = "xyes"; then
+            AC_MSG_ERROR([Building static libraries is not supported under MinGW32])
+        fi
+        ;;
+    *cygwin*)
+        # Define on Cygwin to enable all library features
+        CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
+        AC_DEFINE(ZMQ_HAVE_CYGWIN, 1, [Have Cygwin])
+        # Cygwin provides libuuid as part of the e2fsprogs package, and somewhat
+        # uselessly installs the library in /usr/lib/e2fsprogs
+        LDFLAGS="-L/usr/lib/e2fsprogs ${LDFLAGS}"
+        AC_CHECK_LIB(uuid, uuid_generate, ,
+            [AC_MSG_ERROR([cannot link with -luuid, install the e2fsprogs package.])])
+
+        if test "x$enable_static" = "xyes"; then
+            AC_MSG_ERROR([Building static libraries is not supported under Cygwin])
+        fi
+        ;;
+    *)
+        AC_MSG_ERROR([unsupported system: ${host_os}.])
+        ;;
+esac
+
+#
+# Check if the compiler supports -fvisibility=hidden flag. MinGW32 uses __declspec
+#
+if test "x$ac_zmq_dso_visibility" = "xyes"; then
+    AC_LANG_PUSH([C])
+    AC_ZMQ_CHECK_LANG_VISIBILITY([LIBZMQ_EXTRA_CFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_visibility_flag ${LIBZMQ_EXTRA_CFLAGS}"])
+    AC_LANG_POP([C])
+
+    AC_LANG_PUSH([C++])
+    AC_ZMQ_CHECK_LANG_VISIBILITY([LIBZMQ_EXTRA_CXXFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_visibility_flag ${LIBZMQ_EXTRA_CXXFLAGS}"])
+    AC_LANG_POP([C++])
+fi
+
+# CPU-specific optimizations
+case "${host_cpu}" in
+    *sparc*)
+        AC_LANG_PUSH([C++])
+        AC_ZMQ_CHECK_LANG_FLAG_PREPEND([-mcpu=v9])
+        AC_LANG_POP([C++])
+    ;;
+    *)
+    ;;
+esac
+
+# Check whether to build docs / install man pages
+AC_ZMQ_CHECK_DOC_BUILD
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(errno.h arpa/inet.h netinet/tcp.h netinet/in.h stddef.h \
+stdlib.h string.h sys/socket.h sys/time.h unistd.h limits.h)
+
+# Check if we have ifaddrs.h header file.
+AC_CHECK_HEADERS(ifaddrs.h, [AC_DEFINE(ZMQ_HAVE_IFADDRS, 1, [Have ifaddrs.h header.])])
+
+# Use c++ in subsequent tests
+AC_LANG_PUSH(C++)
+
+AC_HEADER_STDBOOL
+AC_C_CONST
+AC_C_INLINE
+# Checks for typedefs, structures, and compiler characteristics.
+if test "x$ac_zmq_cv_[]_AC_LANG_ABBREV[]_intel_compiler" = "xyes"; then
+    dnl 279: controlling expression is constant
+    dnl Fixes build with ICC 12.x
+    AC_ZMQ_CHECK_WITH_FLAG([-wd279], [AC_TYPE_SIZE_T])
+    AC_ZMQ_CHECK_WITH_FLAG([-wd279], [AC_TYPE_SSIZE_T])
+else
+    AC_TYPE_SIZE_T
+    AC_TYPE_SSIZE_T
+fi
+AC_HEADER_TIME
+AC_TYPE_UINT32_T
+AC_C_VOLATILE
+
+#  PGM extension
+ac_zmq_pgm_ext="no"
+
+pgm_basename="libpgm-5.0.92~dfsg"
+
+AC_SUBST(pgm_basename)
+
+AC_ARG_WITH([pgm], [AS_HELP_STRING([--with-pgm], 
+    [build libzmq with PGM extension [default=no]])], 
+    [with_pgm_ext=yes], [with_pgm_ext=no])
+
+if test "x$with_pgm_ext" != "xno"; then
+
+    if test "x$ac_cv_prog_cc_c99" = "xno"; then
+        AC_MSG_WARN([The C compiler is not set to C99 mode. The build will most likely fail])
+    fi
+    
+    AC_MSG_CHECKING([if the PGM extension is supported on this platform])
+    # OpenPGM is only supported by the vendor on x86, AMD64, and SPARC platforms...
+    case "${host_cpu}" in
+        i*86|x86_64|amd64|*sparc*|s390*)
+            # Supported
+        ;;
+        *)
+            AC_MSG_ERROR([the PGM extension is not supported on the ${host_cpu} platform.])
+        ;;
+    esac
+
+    # ... and on Linux/Windows/Solaris/FreeBSD/OSX systems.
+    case "${host_os}" in
+        *linux*|*mingw32*|*solaris*|*freebsd*|*darwin*)
+            AC_MSG_RESULT([yes])
+
+            AC_LANG_PUSH([C++])
+            AC_ZMQ_CHECK_LANG_FLAG([-Wno-variadic-macros], [LIBZMQ_EXTRA_CXXFLAGS="-Wno-variadic-macros $LIBZMQ_EXTRA_CXXFLAGS"])
+            AC_ZMQ_CHECK_LANG_FLAG([-Wno-long-long], [LIBZMQ_EXTRA_CXXFLAGS="-Wno-long-long $LIBZMQ_EXTRA_CXXFLAGS"])
+            AC_LANG_POP([C++])
+
+            AC_LANG_PUSH([C])
+            AC_ZMQ_LANG_STRICT([LIBZMQ_EXTRA_CFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_strict_flag $LIBZMQ_EXTRA_CFLAGS"])
+
+            if test "x$ac_zmq_cv_[]_AC_LANG_ABBREV[]_intel_compiler" = "xyes" -o \
+                    "x$ac_zmq_cv_[]_AC_LANG_ABBREV[]_sun_studio_compiler" = "xyes"; then
+                LIBZMQ_EXTRA_CFLAGS="-Dasm=__asm__ $LIBZMQ_EXTRA_CFLAGS"
+            fi
+            AC_LANG_POP([C])
+        ;;
+        *)
+            AC_MSG_ERROR([the PGM extension is not supported on system ${host_os}.])
+        ;;
+    esac
+
+    #  Gzip, Perl and Python are required during PGM build
+    AC_CHECK_PROG(ac_zmq_have_gzip, gzip, yes, no)
+    if test "x$ac_zmq_have_gzip" != "xyes"; then
+        AC_MSG_ERROR([gzip is required for building the PGM extension.])
+    fi
+    AC_CHECK_PROG(ac_zmq_have_perl, perl, yes, no)
+    if test "x$ac_zmq_have_perl" != "xyes"; then
+        AC_MSG_ERROR([perl is required for building the PGM extension.])
+    fi
+    AC_CHECK_PROG(ac_zmq_have_python, python, yes, no)
+    if test "x$ac_zmq_have_python" != "xyes"; then
+        AC_MSG_ERROR([python is required for building the PGM extension.])
+    fi
+
+    #  Unpack libpgm
+    AC_MSG_NOTICE([Unpacking ${pgm_basename}.tar.gz])
+    ac_zmq_pwd=`pwd`
+    cd foreign/openpgm
+
+    if ! (gzip -dc "${pgm_basename}.tar.gz" || echo "failed") | ${am__untar}; then
+        AC_MSG_ERROR([cannot unpack the foreign/openpgm/${pgm_basename}.tar.gz file])
+    fi
+    cd "${ac_zmq_pwd}"
+
+    #  Success!
+    AC_DEFINE(ZMQ_HAVE_OPENPGM, 1, [Have OpenPGM extension])
+    ac_zmq_pgm_ext="yes"
+
+    # these break OpenPGM so don't specify them if we are building with it.
+    ac_zmq_pedantic="no"
+    ac_zmq_werror="no"
+fi
+
+# Set -Wall, -Werror and -pedantic
+AC_LANG_PUSH([C++])
+
+# Check how to enable -Wall
+AC_ZMQ_LANG_WALL([CPPFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_wall_flag $CPPFLAGS"])
+
+if test "x$ac_zmq_werror" = "xyes" -a "x$ac_zmq_cv_[]_AC_LANG_ABBREV[]_sun_studio_compiler" != "xyes"; then
+    AC_ZMQ_LANG_WERROR([CPPFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_werror_flag $CPPFLAGS"])
+fi
+
+if test "x$ac_zmq_pedantic" = "xyes"; then
+    AC_ZMQ_LANG_STRICT([CPPFLAGS="$ac_zmq_cv_[]_AC_LANG_ABBREV[]_strict_flag $CPPFLAGS"])
+fi
+AC_LANG_POP([C++])
+
+AM_CONDITIONAL(BUILD_PGM, test "x$ac_zmq_pgm_ext" = "xyes")
+AM_CONDITIONAL(ON_MINGW, test "x$ac_zmq_on_mingw32" = "xyes")
+
+# Checks for library functions.
+AC_TYPE_SIGNAL
+AC_CHECK_FUNCS(perror gettimeofday memset socket getifaddrs freeifaddrs)
+AC_CHECK_HEADERS([alloca.h])
+
+if test "x$with_pgm_ext" != "xno"; then
+
+    # Check additional functions for PGM build
+    AC_CHECK_FUNCS(poll epoll_create pselect getopt vasprintf getprotobyname_r2 getprotobyname_r)
+
+    if test "x$ac_cv_func_gettimeofday" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_GETTIMEOFDAY $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_getprotobyname_r2" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_GETPROTOBYNAME_R2 $LIBZMQ_EXTRA_CFLAGS"
+    fi    
+    if test "x$ac_cv_func_poll" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_POLL $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_epoll_create" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_EPOLL $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_getifaddrs" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_GETIFADDRS $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_getopt" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_GETOPT $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_pselect" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_PSELECT $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_header_alloca_h" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_ALLOCA_H $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_c_compiler_gnu" = "xno"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_ISO_VARARGS $LIBZMQ_EXTRA_CFLAGS"
+    else
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_GNU_VARARGS $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    if test "x$ac_cv_func_vasprintf" = "xyes"; then
+        LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_VASPRINTF $LIBZMQ_EXTRA_CFLAGS"
+    fi
+    case "${host_cpu}" in
+        i*86|x86_64|amd64|*sparc*)
+            LIBZMQ_EXTRA_CFLAGS="-DCONFIG_HAVE_TSC -DCONFIG_HAVE_RTC -DCONFIG_HAVE_HPET $LIBZMQ_EXTRA_CFLAGS"
+        ;;
+        *sparc*|s390*)
+        ;;
+    esac
+fi
+
+# Subst LIBZMQ_EXTRA_CFLAGS & CXXFLAGS & LDFLAGS
+AC_SUBST(LIBZMQ_EXTRA_CFLAGS)
+AC_SUBST(LIBZMQ_EXTRA_CXXFLAGS)
+AC_SUBST(LIBZMQ_EXTRA_LDFLAGS)
+
+AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile
+    perf/Makefile src/libzmq.pc \
+    devices/Makefile devices/zmq_forwarder/Makefile \
+    devices/zmq_streamer/Makefile devices/zmq_queue/Makefile \
+    builds/msvc/Makefile tests/Makefile])
+AC_OUTPUT
+

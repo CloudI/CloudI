@@ -1,0 +1,1 @@
+SUBDIRS = com org jar
