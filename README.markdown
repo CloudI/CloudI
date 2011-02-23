@@ -1,33 +1,57 @@
-#[CloudI 0.0.10 (alpha)](http://cloudi.org)
+#[CloudI 0.1.0 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
 CloudI is an open-source private cloud computing framework for secure,
-internal data processing.  CloudI facilitates a cloud of processes for solving
-embarrassingly parallel and divide and conquer problems with dynamic load
-balancing work pools while maintaining fault-tolerant workers.
-[To support CloudI development donate here.](http://pledgie.com/campaigns/9269)
+internal data processing.  CloudI manages a dynamic cloud of services with
+an internal messaging bus.  Services can be created in Erlang, C, C++, Java,
+or Python, by using the CloudI interface (API).  The interface provides
+a small set of functions that are commonly used for creating 
+Service-Oriented Architecture (SOA):
 
-CloudI requires pool data from databases or from an Erlang work module that
-will automatically generate the work.  CloudI was designed to be a multi-purpose
-cloud for internal distributed processing and could facilitate work supplied by
-an external server.  CloudI is currently focused on being an abstract
-type of cloud and interfacing to work.  External applications could manage
-security and a user interface for CloudI's functionality.  CloudI is meant
-to be the bare essentials for efficient fault-tolerant processing on a cloud.
+* subscribe, unsubscribe
+* send_async, send_sync
+* recv_async
+* return, forward
 
-CloudI uses Erlang/OTP to provide fault-tolerance.  CloudI work consists
-of an Erlang module to handle allocating the work as tasks and
-a dynamic library created with C/C++ to execute the work.
-An example of using CloudI can be found in "src/lib/cloud_job_tests/src/",
-which defines the work title "cloud_job_tests" referenced in src/cloud.conf.
-"cloud_job_tests" finds hexadecimal digits of the constant PI using the
-Bailey-Borwein-Plouffe formula and verifies that they are correct.
-"cloud_job_tests" requires that PostgreSQL is configured and setup because
-it stores the results.  Memcached is also used by "cloud_job_tests", but any
-results that would go to memcached are discarded if memcached isn't configured.
-CouchDB, MySQL and Tokyo Tyrant are used by "cloud_job_tests" in the same way
-as memcached (i.e., just to test basic data storage functionality).
+CloudI offers a simple way to integrate diverse services into a
+fault-tolerant framework.  Messages are easily load balanced based on a
+service's destination refresh method.  Access Control Lists (ACL) can be
+defined for services that must explicitly allow and/or deny messages from
+being sent to other services.  All CloudI functionality supports the creation
+of RESTful (Representational State Transfer) services.  Prefixes are given
+to service code in their configuration and act like a directory path,
+into which a service name is created by calling the "subscribe" interface
+function (e.g., "/db/pgsql/" is a prefix for the Erlang service code
+cloudi_job_db_pgsql which creates the service name "cloudi_tests"
+(also, the database name) so that all messages can reference the service with
+"/db/pgsql/cloudi_tests" and ACLs can allow or deny prefixes like "/db/pgsql/").
+More features are currently explained in the configuration file
+(src/cloudi.conf), but proper documentation will be added soon.
+
+Many changes occurred between the CloudI version 0.0.10 and version 0.1.0.
+The changes are summarized below:
+
+* CloudI is now a naturally master-less distributed system
+  (i.e., requires no special configuration or redundancy)
+* messaging can occur between services (i.e., jobs) which
+  may exist on other CloudI nodes
+* all service (i.e., job) names rely on strings rather than dynamic atoms,
+  along with the trie data structure for efficient lookups
+* cnodes are no longer used for external service (i.e., job) communication,
+  instead sockets are used for each thread (either UDP or TCP can be used)
+* HTTP can be used to call services, but JSON-RPC is not supported like it was
+  in 0.0.10 (support for JSON-RPC will be added again soon)
+* a normal autotools/rebar build system is used that doesn't attempt to
+  install critical dependencies locally (it just requires that they exist)
+* restarting stopped (e.g., SIGSTOP) OS processes is not implemented in 
+  0.1.0 (but may be added back, as necessary)
+
+The default configuration runs the hexadecimal PI test using the
+Bailey-Borwein-Plouffe formula and verifies that the digits are correct
+(the test can be found in src/tests/hexpi/).  A HTTP test also is in the
+default configuration and uses the command line curl for simple test cases
+(the test can be found in src/tests/http/ with the client script run.sh).
 
 CloudI currently supports the following databases:
 
@@ -37,88 +61,17 @@ CloudI currently supports the following databases:
 * PostgreSQL (>= 7.4)
 * Tokyo Tyrant (>= 1.1.23)
 
-CloudI ensures that the C/C++ work code is executed in a fault-tolerant way.
-Failover is handled with multiple CloudI instances using separate epmd daemons.
-However, the coordination of the failover of running work is not yet
-implemented, since that will occur in a separate external application that
-is not yet written.  Current failover requires knowledge of the cloud_api
-module and commands fed to the Erlang VM shell, so it is a manual process.
-
-CloudI fault-tolerance test cases include:
-
-* a local death of a CloudI instance coordinating Erlang VM
-* a local death of C/C++ work code (within a cloud_worker_port OS process) due to a signal
-* a local stop of C/C++ work code (within a cloud_worker_port OS process) due to a signal
-* a remote death of a CloudI instance Erlang VM
-* a remote death of C/C++ work code (within a cloud_worker_port OS process) due to a signal
-* a remote stop of C/C++ work code (within a cloud_worker_port OS process) due to a signal
+[To support CloudI development donate here.](http://pledgie.com/campaigns/9269)
 
 ## CONFIGURATION
 
-The project is still being developed and is alpha, so please be patient if you
-have troubles with the setup.  The setup will soon become more
-dynamic and straight-forward.
-
-CloudI does require some configuration and a brief guide exists here:
-    src/docs/CONFIGURATION.txt
-
-Much of the local setup is currently in the files:
-    src/build_configuration.mk
-    src/Makefile
-    src/cloud.conf
-    src/config/failover_hosts
-
-Configuration will require changing the value "host1"
-(and possibly "host2" which requires uncommenting
- ssh commands in the Makefile, adding more?) in all the files.
-Long node names are not currently supported, so make sure to
-not use a domain (just the hostname) in the "machines" section of cloud.conf.
-All Cloudi nodes should be of the same byte order because the native byte
-order of the Cloudi leader node is used by all other nodes
-(so the Cloudi cluster can be very heterogeneous but all machines
- for an instance do need to be either little endian or big endian).
-
-The paths for Erlang and ErlWare need to be specified in build_configuration.mk:
-    ERLANG_PATH=/home/user/installed
-    ERLWARE_PATH=/home/user/installed/erlware
-
-Erlang (version >= 12B5) is required.  Faxien and Sinan are also required.
-The build_configuration.mk file is currently assuming Erlang R13B02 is used.
-If you are using a different version, you will need to change:
-    ERTS_VERSION=5.7.3
-    ERL_INTERFACE_VERSION=3.6.3
+CloudI was developed with Erlang R14B01 and it is possible that new features
+were used that make the code unusable with older versions.  However, no
+specific problems currently exist, so CloudI may work with older versions.
 
 ## RUNNING
 
-Once configuration has been completed, you can run "make" and it will
-compile any specific dependencies CloudI requires
-(it does build its own version of g++, boost, etc., so it takes awhile
- but is only done once) and then CloudI itself.
-
-To run CloudI you can run "make run" and an Erlang shell will be opened.
-To exit CloudI use the statement "q:q()." and the cloud will be shutdown
-without leaving any nodes running.
-
-CloudI does have an API in "src/lib/cloud/src/cloud_api.erl".  Be careful
-when using the cloud_api:remove_data/1 function.  If a data repository is
-removed that a work module is using, bad things will happen.  The usage of the
-CloudI API should respect running work that is not removed.
-
-## KNOWN BUGS/PROBLEMS
-
-* Long node names are not currently supported in the cloud.conf file
-  (so do not use a domain name in the node name, only the hostname).
-* Database drivers may bring down the Cloudi instance leader if the
-  host can not be reached (ememcached, epgsql, etc.).
-* If a job ignores the task size and does not alter its work load
-  based on its value (within the range (0..1)) the job runs the risk of
-  creating results faster than they can be consumed by the database and
-  the database may timeout and cause the Cloudi instance leader to crash.
-  However, with a properly implemented job, the task size alters the work load
-  so that tasks converge on the task time target and stagger the database
-  results (so the results can be consumed gradually).
-* cloud_api:remove_data/1 causes undefined behavior if a data repository is
-  removed that a running job is using.
+See src/README
 
 ## LICENSE
 
@@ -126,5 +79,5 @@ BSD License
 
 ## CONTACT
 
-Michael Truog (mjtruog [at] gmail (dot) com)
+Michael Truog <mjtruog at gmail dot com>
 

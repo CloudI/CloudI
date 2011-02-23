@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# flags common for development
+make CXXFLAGS="-Wall -Wextra -Werror -O0 -g"
