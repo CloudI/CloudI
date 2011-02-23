@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-02-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * hexpi test created with previous hexidecimal pi generation test, but
+      now structured with services.
+    * configuration format added to represent new configuration information
+    * service supervision added with monitors to restart with
+      previous configuration
+    * node connection management added
+
 2011-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * misultin now accepts incoming requests and can handle compressed requests

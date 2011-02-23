@@ -54,7 +54,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/0,
+-export([start_link/1,
          add/1,
          alive/0,
          dead/0]).
@@ -66,6 +66,7 @@
 
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
+-include("cloudi_configuration.hrl").
 
 -record(state,
     {
@@ -78,8 +79,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+start_link(Config) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 add(Node) ->
     gen_server:call(?MODULE, {add, Node}).
@@ -94,9 +95,10 @@ dead() ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([]) ->
+init([Config]) ->
     net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
-    {ok, #state{nodes_alive = nodes()}}.
+    self() ! reconnect,
+    {ok, #state{nodes_dead = Config#config.nodes}}.
 
 handle_call({add, Node}, _,
             #state{nodes_dead = NodesDead,
@@ -107,7 +109,7 @@ handle_call({add, Node}, _,
         _ ->
             NewTimerReconnect = if
                 TimerReconnect == undefined ->
-                    erlang:send_after(reconnect, self(), ?NODE_RECONNECT);
+                    erlang:send_after(?NODE_RECONNECT, self(), reconnect);
                 true ->
                     TimerReconnect
             end,
@@ -145,7 +147,7 @@ handle_info({'nodedown', Node, InfoList},
     ?LOG_INFO("nodedown ~p ~p", [Node, InfoList]),
     NewTimerReconnect = if
         TimerReconnect == undefined ->
-            erlang:send_after(reconnect, self(), ?NODE_RECONNECT);
+            erlang:send_after(?NODE_RECONNECT, self(), reconnect);
         true ->
             TimerReconnect
     end,
@@ -156,12 +158,14 @@ handle_info({'nodedown', Node, InfoList},
 handle_info(reconnect, #state{nodes_dead = NodesDead} = State) ->
     if
         NodesDead /= [] ->
+            ?LOG_INFO("currently dead nodes ~p", [NodesDead]),
             lists:foreach(fun(Node) ->
                 net_kernel:connect_node(Node)
             end, NodesDead),
             {noreply,
-             State#state{timer_reconnect = erlang:send_after(reconnect, self(),
-                                                             ?NODE_RECONNECT)}};
+             State#state{timer_reconnect = erlang:send_after(?NODE_RECONNECT,
+                                                             self(),
+                                                             reconnect)}};
         true ->
             {noreply, State}
     end;
