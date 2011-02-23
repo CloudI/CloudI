@@ -49,7 +49,9 @@ The changes are summarized below:
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct
-(the test can be found in src/tests/hexpi/).
+(the test can be found in src/tests/hexpi/).  A HTTP test also is in the
+default configuration and uses the command line curl for simple test cases
+(the test can be found in src/tests/http/ with the client script run.sh).
 
 CloudI currently supports the following databases:
 
