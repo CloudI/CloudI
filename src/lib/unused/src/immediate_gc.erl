@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Job Supervisor==
+%%% ==Enforce immediate garbage collection on a function==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,21 +43,16 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
+%%% @copyright 2009-2011 Michael Truog
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_sup).
+-module(immediate_gc).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
-
 %% external interface
--export([start_link/0,
-         create_job/9]).
-
-%% supervisor callbacks
--export([init/1]).
+-export([sync_fun/2, sync_fun/3,
+         async_fun/2, async_fun/3]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -65,50 +60,65 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Make a synchronous call to a function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+-spec sync_fun(M :: atom(), F :: atom(), A :: list()) -> any().
+
+sync_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
+    Parent = self(),
+    Child = erlang:spawn_opt(fun() ->
+        Parent ! {self(), erlang:apply(M, F, A)},
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]),
+    receive
+        {Child, Result} -> Result
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Make a synchronous call to an anonymous function that will be garbage collected when the function returns.===
 %% @end
 %%-------------------------------------------------------------------------
 
-create_job(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
-    case supervisor:start_child(?MODULE, [Module, Args, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow]) of
-        {ok, Pid} ->
-            {ok, Pid};
-        {ok, Pid, _} ->
-            {ok, Pid};
-        {error, _} = Error ->
-            Error
+-spec sync_fun(F :: fun(), A :: list()) -> any().
+
+sync_fun(F, A) when is_function(F), is_list(A) ->
+    Parent = self(),
+    Child = erlang:spawn_opt(fun() ->
+        Parent ! {self(), erlang:apply(F, A)},
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]),
+    receive
+        {Child, Result} -> Result
     end.
 
-%%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
-%%%------------------------------------------------------------------------
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make an asynchronous call to a function that will be garbage collected when the function returns.===
+%% @end
+%%-------------------------------------------------------------------------
 
-init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
-          [{undefined,
-            {cloudi_job_dispatcher, start_link, []},
-            temporary, Shutdown, worker, []}]}}.
+-spec async_fun(M :: atom(), F :: atom(), A :: list()) -> pid().
 
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
+async_fun(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
+    erlang:spawn_opt(fun() ->
+        erlang:apply(M, F, A),
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make an asynchronous call to an anonymous function that will be garbage collected when the function returns.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec async_fun(F :: fun(), A :: list()) -> pid().
+
+async_fun(F, A) when is_function(F), is_list(A) ->
+    erlang:spawn_opt(fun() ->
+        erlang:apply(F, A),
+        erlang:garbage_collect()
+    end, [link, {fullsweep_after, 0}]).
 

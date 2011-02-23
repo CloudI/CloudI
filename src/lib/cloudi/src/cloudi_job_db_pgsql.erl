@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi PostgreSQL Data Module==
+%%% ==CloudI PostgreSQL Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE

@@ -185,7 +185,7 @@ class Output
         void output(OutputData & data)
         {
             if (data.error())
-                std::cout << "cloudi error " << data.error() << std::endl;
+                std::cerr << "CloudI error " << data.error() << std::endl;
             m_got_output = true;
         }
 

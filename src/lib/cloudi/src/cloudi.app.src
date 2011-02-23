@@ -6,6 +6,7 @@
    {vsn, "0.1.0"},
    {modules, [
         cloudi_app,
+        cloudi_configurator,
         cloudi_job_db_couchdb,
         cloudi_job_db_memcached,
         cloudi_job_db_mysql,
@@ -18,6 +19,8 @@
         cloudi_job_work_manager,
         cloudi_logger,
         cloudi_os_spawn,
+        cloudi_nodes,
+        cloudi_services,
         cloudi_socket,
         cloudi_socket_sup,
         cloudi_spawn,
@@ -37,9 +40,12 @@
         ]},
    {registered,[
         list_pg,
+        cloudi_configurator,
         cloudi_logger,
         cloudi_job_sup,
+        cloudi_nodes,
         cloudi_os_spawn,
+        cloudi_services,
         cloudi_socket_sup
         ]},
    {applications, [
@@ -49,6 +55,7 @@
         epgsql,
         etokyotyrant,
         misultin,
+        sasl,
         stdlib,
         kernel
         ]},

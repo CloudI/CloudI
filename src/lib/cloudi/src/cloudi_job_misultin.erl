@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Misultin Integration==
+%%% ==CloudI Misultin Integration==
 %%% @end
 %%%
 %%% BSD LICENSE

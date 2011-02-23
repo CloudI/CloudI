@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Memcached Data Module==
+%%% ==CloudI Memcached Data Module==
 %%% @end
 %%%
 %%% BSD LICENSE

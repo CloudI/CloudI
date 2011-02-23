@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Work Manager==
+%%% ==CloudI Work Manager==
 %%% Queues up results that need to be sent to data modules, to avoid
-%%% overloading the data repositories. This cloudi job can store a
+%%% overloading the data repositories. This CloudI job can store a
 %%% specific destination that is used for all binary traffic.  Many
 %%% destinations are handled in one work manager if any internal
-%%% jobs (i.e., Erlang jobs, using the cloud_job behavior) send
+%%% jobs (i.e., Erlang jobs, using the cloudi_job behavior) send
 %%% "{Name, Data}" tuples to this job.
 %%% @end
 %%%

@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Cloudi Application Supervisor==
+%%% ==CloudI Application Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -66,7 +66,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start the Cloudi application supervisor.===
+%% ===Start the CloudI application supervisor.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -86,9 +86,12 @@ init([Config]) when is_record(Config, config) ->
      {{rest_for_one, MaxRestarts, MaxTime},
       [child_specification(cloudi_logger, Config),
        child_specification(list_pg),
+       child_specification(cloudi_nodes),
+       child_specification(cloudi_services),
        child_specification(cloudi_job_sup),
        child_specification(cloudi_os_spawn_pool),
-       child_specification(cloudi_socket_sup)]}}.
+       child_specification(cloudi_socket_sup),
+       child_specification(cloudi_configurator, Config)]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -99,13 +102,32 @@ child_specification(cloudi_logger, Config)
     Shutdown = 2000, % milliseconds
     {cloudi_logger,
      {cloudi_logger, start_link, [Config]},
-     permanent, Shutdown, worker, [cloud_logger]}.
+     permanent, Shutdown, worker, [cloud_logger]};
+
+child_specification(cloudi_configurator, Config)
+    when is_record(Config, config) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_configurator,
+     {cloudi_configurator, start_link, [Config]},
+     transient, Shutdown, worker, [cloud_configurator]}.
 
 child_specification(list_pg) ->
     Shutdown = 2000, % milliseconds
     {list_pg,
      {list_pg, start_link, []},
      permanent, Shutdown, worker, [list_pg]};
+
+child_specification(cloudi_nodes) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_nodes,
+     {cloudi_nodes, start_link, []},
+     permanent, Shutdown, worker, [cloudi_nodes]};
+
+child_specification(cloudi_services) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_services,
+     {cloudi_services, start_link, []},
+     permanent, Shutdown, worker, [cloudi_services]};
 
 child_specification(cloudi_job_sup) ->
     {cloudi_job_sup,
