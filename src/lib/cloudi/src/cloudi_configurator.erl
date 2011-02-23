@@ -117,7 +117,12 @@ configure(Config) ->
 
 start_job(Job)
     when is_record(Job, config_job_internal) ->
-    code:load_file(Job#config_job_internal.module),
+    case code:is_loaded(Job#config_job_internal.module) of
+        false ->
+            code:load_file(Job#config_job_internal.module);
+        _ ->
+            ok
+    end,
     start_job_internal(Job#config_job_internal.count_process, Job);
 
 start_job(Job)

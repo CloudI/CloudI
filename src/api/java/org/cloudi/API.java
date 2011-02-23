@@ -501,7 +501,9 @@ public class API
 
     private static String getString(ByteBuffer buffer, final int size)
     {
-        return new String(API.getBytes(buffer, size));
+        String value = new String(API.getBytes(buffer, size - 1));
+        buffer.getChar(); // skip the '\0' terminator
+        return value;
     }
 
     private static OtpErlangPid getPid(ByteBuffer buffer, final int size)

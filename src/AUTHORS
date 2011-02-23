@@ -1,1 +1,11 @@
-Michael Truog
+CloudI        Michael Truog <mjtruog at gmail dot com>
+
+
+Dependencies:
+
+misultin      Roberto Ostinelli <roberto@ostinelli.net>
+etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
+epgsql        Will Glozer
+emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
+ememcached    Nick Gerakines <nick@gerakines.net>
+ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
