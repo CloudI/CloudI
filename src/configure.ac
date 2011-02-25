@@ -46,5 +46,12 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/hexpi/Makefile
                  tests/hexpi/src/Makefile
-                 tests/hexpi/cxx_src/Makefile])
+                 tests/hexpi/cxx_src/Makefile
+                 tests/http/Makefile
+                 tests/http/service/Makefile
+                 tests/http/service/jar/Makefile
+                 tests/http/service/org/Makefile
+                 tests/http/service/org/cloudi/Makefile
+                 tests/http/service/org/cloudi/tests/Makefile
+                 tests/http/service/org/cloudi/tests/http/Makefile])
 AC_OUTPUT

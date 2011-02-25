@@ -1,0 +1,3 @@
+Main-Class: org.cloudi.tests.http.Main
+Class-Path: cloudi.jar
+
