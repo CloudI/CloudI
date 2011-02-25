@@ -133,18 +133,11 @@ cloudi_job_handle_info(setup, State, Dispatcher) ->
     {noreply, setup(State, Dispatcher)};
 
 cloudi_job_handle_info(task,
-                       #state{concurrent_tasks = ConcurrentTasks,
-                              task_size_lookup = TaskSizeLookup} = State,
+                       #state{concurrent_tasks = ConcurrentTasks} = State,
                        Dispatcher) ->
     {Requests, Done, NewState} = send_tasks(ConcurrentTasks, [],
                                             State, Dispatcher),
-    if
-        Done == false ->
-            self() ! task;
-        true ->
-            ok
-    end,
-    {noreply, recv_tasks(Requests, TaskSizeLookup, NewState, Dispatcher)};
+    {noreply, recv_tasks(Requests, Done, NewState, Dispatcher)};
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -294,7 +287,7 @@ send_task(Name,
     end.
 
 send_tasks(0, L, State, _) ->
-    {L, false, State};
+    {lists:reverse(L), false, State};
 
 send_tasks(Count, L, State, Dispatcher) ->
     Name = "/tests/hexpi",
@@ -314,24 +307,39 @@ send_tasks(Count, L, State, Dispatcher) ->
             {L, false, State}
     end.
 
-recv_tasks([], TaskSizeLookup, State, _) ->
-    State#state{task_size_lookup = TaskSizeLookup};
+recv_tasks([], Done, State, _) ->
+    if
+        Done == false ->
+            self() ! task;
+        true ->
+            ok
+    end,
+    State;
 
 recv_tasks([{TaskSize, Iterations, Step, Index, Pid, Timeout, TransId} | L],
-           TaskSizeLookup,
+           Done,
            #state{tasks_failed = Failed,
-                  target_time = TargetTime} = State, Dispatcher) ->
+                  target_time = TargetTime,
+                  task_size_lookup = TaskSizeLookup} = State, Dispatcher) ->
 
     case cloudi_job:recv_async(Dispatcher, Timeout, TransId) of
         {ok, Response} ->
             <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
             send_results(Index, PiResult, Pid, State, Dispatcher),
-            recv_tasks(L, cloudi_task_size:put(TaskSize,
-                                               TargetTime,
-                                               ElapsedTime,
-                                               Pid,
-                                               TaskSizeLookup),
-                       State, Dispatcher);
+            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
+                                                     TargetTime,
+                                                     ElapsedTime,
+                                                     Pid,
+                                                     TaskSizeLookup),
+            NextState = State#state{task_size_lookup = NewTaskSizeLookup},
+            if
+                Done == false ->
+                    {Task, NewDone, FinalState} = send_tasks(1, [], NextState,
+                                                             Dispatcher),
+                    recv_tasks(L ++ Task, NewDone, FinalState, Dispatcher);
+                true ->
+                    recv_tasks(L, Done, NextState, Dispatcher)
+            end;
         {error, timeout} ->
             ?LOG_ERROR("index ~p result timeout (after ~p ms)~n",
                        [Index, Timeout]),
@@ -342,16 +350,18 @@ recv_tasks([{TaskSize, Iterations, Step, Index, Pid, Timeout, TransId} | L],
                          step = Step,
                          index = Index,
                          timeout = Timeout * 2},
-            recv_tasks(L, cloudi_task_size:put(TaskSize,
-                                               TargetTime,
-                                               ElapsedTime,
-                                               Pid,
-                                               TaskSizeLookup),
-                       State#state{tasks_failed = [Task | Failed]},
+            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
+                                                     TargetTime,
+                                                     ElapsedTime,
+                                                     Pid,
+                                                     TaskSizeLookup),
+            recv_tasks(L, Done,
+                       State#state{tasks_failed = [Task | Failed],
+                                   task_size_lookup = NewTaskSizeLookup},
                        Dispatcher);
         {error, Reason} ->
             ?LOG_ERROR("recv_async error ~p~n", [Reason]),
-            recv_tasks(L, TaskSizeLookup, State, Dispatcher)
+            recv_tasks(L, Done, State, Dispatcher)
     end.
 
 send_results(DigitIndex, PiResult, Pid,
