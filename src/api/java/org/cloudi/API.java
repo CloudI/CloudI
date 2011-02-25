@@ -502,7 +502,7 @@ public class API
     private static String getString(ByteBuffer buffer, final int size)
     {
         String value = new String(API.getBytes(buffer, size - 1));
-        buffer.getChar(); // skip the '\0' terminator
+        buffer.position(buffer.position() + 1); // skip the '\0' terminator
         return value;
     }
 
