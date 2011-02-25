@@ -43,7 +43,7 @@ import sys, os
 cwd = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(
     os.path.sep.join(
-        cwd.split(os.path.sep)[:-2] + ["api", "python"]
+        cwd.split(os.path.sep)[:-3] + ["api", "python"]
     )
 )
 
