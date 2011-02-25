@@ -3,7 +3,9 @@ dist_libexec_SCRIPTS = cloudi.jar
 
 CLEANFILES = $(dist_libexec_SCRIPTS)
 
-cloudi.jar: org com manifest.txt
+cloudi.jar: org/cloudi/*.class \
+            com/ericsson/otp/erlang/*.class \
+            manifest.txt
 	jar cvfm cloudi.jar manifest.txt com org
 
 clean-local:
