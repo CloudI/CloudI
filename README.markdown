@@ -69,9 +69,10 @@ CloudI currently supports the following databases:
 
 ## CONFIGURATION
 
-CloudI was developed with Erlang R14B01 and it is possible that new features
-were used that make the code unusable with older versions.  However, no
-specific problems currently exist, so CloudI may work with older versions.
+CloudI requires Erlang R14B01 because of dependencies on new standard modules.
+The ETS bug in R14B01 does not affect CloudI (CloudI does not use ETS, so that
+referential transparency is maintained and the system is scalable without
+global data locks).
 
 ## RUNNING
 
