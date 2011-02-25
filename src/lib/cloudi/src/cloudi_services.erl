@@ -141,6 +141,10 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
+handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
+            #state{services = Services} = State) ->
+    {noreply, State#state{services = dict:erase(Pid, Services)}};
+
 handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             #state{services = Services} = State) ->
     case dict:find(Pid, Services) of
