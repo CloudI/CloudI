@@ -11,7 +11,8 @@
 %%% bitwise-XORed (i.e., 3 OCI (Organizationally Unique Identifier)
 %%% bytes and 3 NIC (Network Interface Controller) specific bytes) down to
 %%% 16 bits. The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
-%%% The version 4 (random) identifier is provided as specified within the RFC.
+%%% The version 3 (MD5), version 4 (random), and version 5 (SHA)
+%%% methods are provided as specified within the RFC.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -60,7 +61,11 @@
 
 %% external interface
 -export([new/1,
-         get_v1/1, get_v4/0,
+         get_v1/1,
+         get_v3/1,
+         get_v4/0,
+         get_v5/1,
+         uuid_to_string/1,
          increment/1]).
 
 -record(uuid_state,
@@ -123,6 +128,16 @@ get_v1(#uuid_state{node_id = NodeId,
       ClockSeqLow:8,
       NodeId/binary>>.
 
+get_v3([I | _] = Name)
+    when is_integer(I) ->
+    <<B1:60, B2a:6, B2b:6, B3:56>> = crypto:md5(Name),
+    B2 = B2a bxor B2b,
+    <<B1:60,
+      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      B2:6,
+      0:1, 1:1,            % reserved bits
+      B3:56>>.
+
 get_v4() ->
     Rand1 = random:uniform(1073741824) - 1, % random 30 bits
     Rand2 = random:uniform(1073741824) - 1, % random 30 bits
@@ -134,6 +149,26 @@ get_v4() ->
       Rand3Part1:6,
       0:1, 1:1,            % reserved bits
       Rand3Part2:24, Rand4:32>>.
+
+get_v5([I | _] = Name)
+    when is_integer(I) ->
+    <<B1:60, B2:6, B3a:56, B3b:38>> = crypto:sha(Name),
+    B3 = B3a bxor B3b,
+    <<B1:60,
+      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      B2:6,
+      0:1, 1:1,            % reserved bits
+      B3:56>>.
+
+uuid_to_string(Value)
+    when is_binary(Value), byte_size(Value) == 16 ->
+    <<B1:32/unsigned-integer,
+      B2:16/unsigned-integer,
+      B3:16/unsigned-integer,
+      B4:16/unsigned-integer,
+      B5:48/unsigned-integer>> = Value,
+    lists:flatten(io_lib:format("~.16b-~.16b-~.16b-~.16b-~.16b",
+                                [B1, B2, B3, B4, B5])).
 
 % increment the clock sequence counter if the system clock was set backwards
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
