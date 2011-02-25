@@ -40,6 +40,10 @@ The changes are summarized below:
   along with the trie data structure for efficient lookups
 * cnodes are no longer used for external service (i.e., job) communication,
   instead sockets are used for each thread (either UDP or TCP can be used)
+* external services (i.e., jobs) are no longer implemented in dynamic libraries
+  but are instead implemented in executables.  this change makes running various
+  VMs or interpreters easy and avoids dynamic library link dependency problems
+  with various version dependencies (i.e., helps support Java, Python, etc.)
 * HTTP can be used to call services, but JSON-RPC is not supported like it was
   in 0.0.10 (support for JSON-RPC will be added again soon)
 * a normal autotools/rebar build system is used that doesn't attempt to
