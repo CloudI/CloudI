@@ -468,7 +468,13 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             int sockfd = socket(AF_INET, type, 0);
             if (sockfd == -1)
                 _exit(spawn_status::errno_socket());
-            assert(sockfd == static_cast<signed>(i + 3));
+
+            if (static_cast<size_t>(sockfd) != i + 3)
+            {
+                if (dup2(sockfd, i + 3) == -1)
+                    _exit(spawn_status::errno_dup());
+                sockfd = i + 3;
+            }
             
             struct sockaddr_in localhost;
             localhost.sin_family = AF_INET;
@@ -479,7 +485,6 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
                         reinterpret_cast<struct sockaddr *>(&localhost),
                         sizeof(localhost)) == -1)
                 _exit(spawn_status::errno_connect());
-
         }
 
         int argv_count = 2;
