@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * tests/http now includes a java service implementation
+    * the java API is functional after some bugfixes and changing the jar
+    * various bugfixes
+
 2011-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 0.1.0 (alpha) released

@@ -23,10 +23,15 @@ AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
 
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AC_ERLANG_SUBST_ERTS_VER
+#AX_ERLANG_SUBST_OTP_VER
+#AC_ERLANG_SUBST_ERTS_VER
+AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
+                          [AC_MSG_ERROR([Required Erlang not found])])
 AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
+AC_ERLANG_CHECK_LIB([crypto], ,
+                    [AC_MSG_ERROR([Erlang crypto required for epgsql])])
 AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
                               ./bootstrap && mv ./rebar ../../ || exit 1)])
 AC_CONFIG_FILES([Makefile
