@@ -30,8 +30,7 @@ AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
 AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
-AC_ERLANG_CHECK_LIB([crypto], ,
-                    [AC_MSG_ERROR([Erlang crypto required for epgsql])])
+AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
 AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
                               `dirname $ERLC`/escript bootstrap &&
                               mv ./rebar ../../ || exit 1)],
