@@ -33,7 +33,9 @@ AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([crypto], ,
                     [AC_MSG_ERROR([Erlang crypto required for epgsql])])
 AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
-                              ./bootstrap && mv ./rebar ../../ || exit 1)])
+                              `dirname $ERLC`/escript bootstrap &&
+                              mv ./rebar ../../ || exit 1)],
+                   [ERLC=$ERLC])
 AC_CONFIG_FILES([Makefile
                  api/Makefile
                  api/c/Makefile
