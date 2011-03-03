@@ -8,13 +8,11 @@ INSTALLING WITH TEST CONFIGURATION
 
 To install CloudI, do the following steps:
 
-1) ./autogen.sh
+1) ./configure (--prefix=/path/to/installation/directory)
 
-2) ./configure (--prefix=/path/to/installation/directory)
+2) make
 
-3) make
-
-4) make install
+3) make install
 
 The installation includes the hexpi and http tests along with the configuration
 file to start the tests.
@@ -24,19 +22,17 @@ RUNNING LOCALLY
 
 To compile CloudI, do the following steps:
 
-1) ./autogen.sh
+1) ./configure
 
-2) ./configure
-
-3) make
+2) make
 
 After CloudI has been compiled, you can start CloudI with:
 
-1) make run
+3) make run
 
 (on the Erlang prompt)
 
-2) application:start(crypto), application:start(public_key), application:start(ssl), application:start(epgsql), application:start(ecouchdb), application:start(emysql), application:start(ememcached), application:start(etokyotyrant), application:start(misultin), application:start(sasl), application:start(cloudi).
+4) application:start(crypto), application:start(public_key), application:start(ssl), application:start(epgsql), application:start(ecouchdb), application:start(emysql), application:start(ememcached), application:start(etokyotyrant), application:start(misultin), application:start(sasl), application:start(cloudi).
 
 Running CloudI locally would only be useful for development tasks and is
 not meant for a production deployment.
