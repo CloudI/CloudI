@@ -1,10 +1,3 @@
-CloudI changed dramatically between the versions 0.0.10 and 0.1.0.
-So, a build system is now in place that doesn't force locally compiled
-dependencies.  The configure script checks the local dependencies and
-produces a meaningful error if some dependency is missing.
-
-
-INSTALLING WITH TEST CONFIGURATION
 
 To install CloudI, do the following steps:
 
@@ -15,25 +8,14 @@ To install CloudI, do the following steps:
 3) make install
 
 The installation includes the hexpi and http tests along with the configuration
-file to start the tests.
+file to start the tests.  Each test is configured to use 4 threads.
 
 
-RUNNING LOCALLY
+Within the installation directory the "bin/cloudi" script controls CloudI.
 
-To compile CloudI, do the following steps:
+To start CloudI:
+bin/cloudi start
 
-1) ./configure
-
-2) make
-
-After CloudI has been compiled, you can start CloudI with:
-
-3) make run
-
-(on the Erlang prompt)
-
-4) application:start(crypto), application:start(public_key), application:start(ssl), application:start(epgsql), application:start(ecouchdb), application:start(emysql), application:start(ememcached), application:start(etokyotyrant), application:start(misultin), application:start(sasl), application:start(cloudi).
-
-Running CloudI locally would only be useful for development tasks and is
-not meant for a production deployment.
+To stop CloudI:
+bin/cloudi stop
 
