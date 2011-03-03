@@ -73,6 +73,7 @@
 -define(MESSAGE_RECV_ASYNC,      4).
 -define(MESSAGE_RETURN_ASYNC,    5).
 -define(MESSAGE_RETURN_SYNC,     6).
+-define(MESSAGE_RETURNS_ASYNC,   7).
 
 -record(state,
     {
@@ -258,6 +259,42 @@ init([udp, BufferSize, Timeout, Prefix,
             {next_state, 'HANDLE', StateData}
     end;
 
+'HANDLE'({'mcast_async', Name, Request, Timeout},
+         #state{uuid_generator = UUID,
+                dest_refresh = DestRefresh,
+                list_pg_data = Groups,
+                dest_deny = DestDeny,
+                dest_allow = DestAllow} = StateData) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            Self = self(),
+            case destination_all(DestRefresh, Name, Self, Groups) of
+                {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+                    erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
+                                      {'mcast_async', Name, Request,
+                                       Timeout - ?MCAST_ASYNC_INTERVAL}),
+                    {next_state, 'HANDLE', StateData};
+                {error, _} ->
+                    send('returns_async_out'(), StateData),
+                    {next_state, 'HANDLE', StateData};
+                PidList ->
+                    TransIdList = lists:map(fun(Pid) ->
+                        TransId = uuid:get_v1(UUID),
+                        Pid ! {'send_async', Name, Request, Timeout,
+                               TransId, Self},
+                        TransId
+                    end, PidList),
+                    send('returns_async_out'(TransIdList), StateData),
+                    NewStateData = lists:foldl(fun(Id, S) ->
+                        send_async_timeout_start(Timeout, Id, S)
+                    end, StateData, TransIdList),
+                    {next_state, 'HANDLE', NewStateData}
+            end;
+        false ->
+            send('returns_async_out'(), StateData),
+            {next_state, 'HANDLE', StateData}
+    end;
+
 'HANDLE'({'forward_async', Name, Request, Timeout, TransId, Pid},
          #state{dest_refresh = DestRefresh,
                 list_pg_data = Groups,
@@ -440,17 +477,112 @@ handle_info({list_pg_data, Groups}, StateName,
     destination_refresh_start(DestRefresh),
     {next_state, StateName, StateData#state{list_pg_data = Groups}};
 
-handle_info({'send_async', _, _, _} = T, StateName, StateData) ->
-    ?MODULE:StateName(T, StateData);
+handle_info({'send_async', Name, Request, Timeout}, StateName,
+            #state{uuid_generator = UUID,
+                   dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = StateData) ->
+    Self = self(),
+    case destination_get(DestRefresh, Name, Self, Groups) of
+        {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
+            erlang:send_after(?SEND_ASYNC_INTERVAL, Self,
+                              {'send_async', Name, Request,
+                               Timeout - ?SEND_ASYNC_INTERVAL}),
+            {next_state, StateName, StateData};
+        {error, _} ->
+            send('return_async_out'(), StateData),
+            {next_state, StateName, StateData};
+        Pid ->
+            TransId = uuid:get_v1(UUID),
+            Pid ! {'send_async', Name, Request, Timeout, TransId, Self},
+            send('return_async_out'(TransId), StateData),
+            {next_state, StateName, send_async_timeout_start(Timeout,
+                                                             TransId,
+                                                             StateData)}
+    end;
 
-handle_info({'send_sync', _, _, _} = T, StateName, StateData) ->
-    ?MODULE:StateName(T, StateData);
+handle_info({'send_sync', Name, Request, Timeout}, StateName,
+            #state{uuid_generator = UUID,
+                   dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = StateData) ->
+    Self = self(),
+    case destination_get(DestRefresh, Name, Self, Groups) of
+        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+            erlang:send_after(?SEND_SYNC_INTERVAL, Self,
+                              {'send_sync', Name, Request,
+                               Timeout - ?SEND_SYNC_INTERVAL}),
+            {next_state, StateName, StateData};
+        {error, _} ->
+            send('return_sync_out'(), StateData),
+            {next_state, StateName, StateData};
+        Pid ->
+            TransId = uuid:get_v1(UUID),
+            Pid ! {'send_sync', Name, Request, Timeout, TransId, Self},
+            {next_state, StateName, send_sync_timeout_start(Timeout,
+                                                            TransId,
+                                                            StateData)}
+    end;
 
-handle_info({'forward_async', _, _, _, _} = T, StateName, StateData) ->
-    ?MODULE:StateName(T, StateData);
+handle_info({'mcast_async', Name, Request, Timeout}, StateName,
+            #state{uuid_generator = UUID,
+                   dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = StateData) ->
+    Self = self(),
+    case destination_all(DestRefresh, Name, Self, Groups) of
+        {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
+                              {'mcast_async', Name, Request,
+                               Timeout - ?MCAST_ASYNC_INTERVAL}),
+            {next_state, StateName, StateData};
+        {error, _} ->
+            send('returns_async_out'(), StateData),
+            {next_state, StateName, StateData};
+        PidList ->
+            TransIdList = lists:map(fun(Pid) ->
+                TransId = uuid:get_v1(UUID),
+                Pid ! {'send_async', Name, Request, Timeout,
+                       TransId, Self},
+                TransId
+            end, PidList),
+            send('returns_async_out'(TransIdList), StateData),
+            NewStateData = lists:foldl(fun(Id, S) ->
+                send_async_timeout_start(Timeout, Id, S)
+            end, StateData, TransIdList),
+            {next_state, StateName, NewStateData}
+    end;
 
-handle_info({'forward_sync', _, _, _, _} = T, StateName, StateData) ->
-    ?MODULE:StateName(T, StateData);
+handle_info({'forward_async', Name, Request, Timeout, TransId, Pid}, StateName,
+            #state{dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = StateData) ->
+    case destination_get(DestRefresh, Name, Pid, Groups) of
+        {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
+            erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
+                              {'forward_async', Name, Request,
+                               Timeout - ?FORWARD_ASYNC_INTERVAL,
+                               TransId, Pid}),
+            ok;
+        {error, _} ->
+            ok;
+        NextPid ->
+            NextPid ! {'send_async', Name, Request, Timeout, TransId, Pid}
+    end,
+    {next_state, StateName, StateData};
+
+handle_info({'forward_sync', Name, Request, Timeout, TransId, Pid}, StateName,
+            #state{dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = StateData) ->
+    case destination_get(DestRefresh, Name, Pid, Groups) of
+        {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
+            erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
+                              {'forward_sync', Name, Request,
+                               Timeout - ?FORWARD_SYNC_INTERVAL,
+                               TransId, Pid}),
+            ok;
+        {error, _} ->
+            ok;
+        NextPid ->
+            NextPid ! {'send_sync', Name, Request, Timeout, TransId, Pid}
+    end,
+    {next_state, StateName, StateData};
 
 handle_info({'recv_async', _, _} = T, StateName, StateData) ->
     ?MODULE:StateName(T, StateData);
@@ -570,7 +702,7 @@ code_change(_, StateName, StateData, _) ->
       RequestSize:32/unsigned-integer-native,
       Request/binary,
       Timeout:32/unsigned-integer-native,
-      TransId/binary,       % 128 bits
+      TransId/binary,             % 128 bits
       PidSize:32/unsigned-integer-native,
       PidBin/binary>>.
 
@@ -588,29 +720,29 @@ code_change(_, StateName, StateData, _) ->
       RequestSize:32/unsigned-integer-native,
       Request/binary,
       Timeout:32/unsigned-integer-native,
-      TransId/binary,       % 128 bits
+      TransId/binary,             % 128 bits
       PidSize:32/unsigned-integer-native,
       PidBin/binary>>.
 
 'return_async_out'() ->
     <<?MESSAGE_RETURN_ASYNC:32/unsigned-integer-native,
-      0:128>>.              % 128 bits
+      0:128>>.                    % 128 bits
 
 'return_async_out'(TransId)
     when is_binary(TransId) ->
     <<?MESSAGE_RETURN_ASYNC:32/unsigned-integer-native,
-      TransId/binary>>.     % 128 bits
+      TransId/binary>>.           % 128 bits
 
 'return_sync_out'() ->
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
       0:32,
-      0:128>>.              % 128 bits
+      0:128>>.                    % 128 bits
 
 'return_sync_out'(timeout, TransId)
     when is_binary(TransId) ->
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
       0:32,
-      TransId/binary>>;     % 128 bits
+      TransId/binary>>;           % 128 bits
 
 'return_sync_out'(Response, TransId)
     when is_binary(Response), is_binary(TransId) ->
@@ -618,13 +750,25 @@ code_change(_, StateName, StateData, _) ->
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
       ResponseSize:32/unsigned-integer-native,
       Response/binary,
-      TransId/binary>>.     % 128 bits
+      TransId/binary>>.           % 128 bits
+
+'returns_async_out'() ->
+    <<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
+      0:32>>.
+
+'returns_async_out'(TransIdList)
+    when is_list(TransIdList) ->
+    TransIdListBin = erlang:list_to_binary(TransIdList),
+    TransIdListCount = erlang:length(TransIdList),
+    <<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
+      TransIdListCount:32/unsigned-integer-native,
+      TransIdListBin/binary>>.    % 128 bits * count
 
 'recv_async_out'(timeout, TransId)
     when is_binary(TransId) ->
     <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
       0:32,
-      TransId/binary>>;     % 128 bits
+      TransId/binary>>;           % 128 bits
 
 'recv_async_out'(Response, TransId)
     when is_binary(Response), is_binary(TransId) ->
@@ -632,7 +776,7 @@ code_change(_, StateName, StateData, _) ->
     <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
       ResponseSize:32/unsigned-integer-native,
       Response/binary,
-      TransId/binary>>.     % 128 bits
+      TransId/binary>>.           % 128 bits
 
 send(Data, #state{protocol = Protocol,
                   incoming_port = Port,
@@ -691,6 +835,22 @@ destination_get(immediate_closest, Name, Pid, _)
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
     list_pg:get_random_pid(Name, Pid).
+
+destination_all(lazy_closest, Name, Pid, Groups)
+    when is_list(Name) ->
+    list_pg_data:get_members(Name, Pid, Groups);
+
+destination_all(lazy_random, Name, Pid, Groups)
+    when is_list(Name) ->
+    list_pg_data:get_members(Name, Pid, Groups);
+
+destination_all(immediate_closest, Name, Pid, _)
+    when is_list(Name) ->
+    list_pg:get_members(Name, Pid);
+
+destination_all(immediate_random, Name, Pid, _)
+    when is_list(Name) ->
+    list_pg:get_members(Name, Pid).
 
 send_async_timeout_start(Timeout, TransId,
                          #state{send_timeouts = Ids} = StateData)

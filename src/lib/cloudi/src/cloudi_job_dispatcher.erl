@@ -257,6 +257,44 @@ handle_call({'send_sync', Name, Request, Timeout, Pid}, _,
             {reply, {error, timeout}, State}
     end;
 
+handle_call({'mcast_async', Name, Request}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'mcast_async', Name, Request, TimeoutAsync}, Client, State);
+
+handle_call({'mcast_async', Name, Request, Timeout}, {Exclude, _} = Client,
+            #state{uuid_generator = UUID,
+                   dest_refresh = DestRefresh,
+                   list_pg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            Self = self(),
+            case destination_all(DestRefresh, Name, Exclude, Groups) of
+                {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+                    erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
+                                      {'mcast_async', Name, Request,
+                                       Timeout - ?MCAST_ASYNC_INTERVAL,
+                                       Client}),
+                    {noreply, State};
+                {error, _} ->
+                    {reply, {error, timeout}, State};
+                PidList ->
+                    TransIdList = lists:map(fun(Pid) ->
+                        TransId = uuid:get_v1(UUID),
+                        Pid ! {'send_async', Name, Request, Timeout,
+                               TransId, Self},
+                        TransId
+                    end, PidList),
+                    NewState = lists:foldl(fun(Id, S) ->
+                        send_async_timeout_start(Timeout, Id, S)
+                    end, State, TransIdList),
+                    {reply, {ok, TransIdList}, NewState}
+            end;
+        false ->
+            {reply, {error, timeout}, State}
+    end;
+
 handle_call({'recv_async', Timeout, TransId}, Client,
             #state{async_responses = AsyncResponses} = State) ->
     if
@@ -389,6 +427,36 @@ handle_info({'send_sync', Name, Request, Timeout, {Exclude, _} = Client},
                     gen_server:reply(Client, {error, timeout})
             end,
             {noreply, State}
+    end;
+
+handle_info({'mcast_async', Name, Request, Timeout, {Exclude, _} = Client},
+            #state{uuid_generator = UUID,
+                   dest_refresh = DestRefresh,
+                   list_pg_data = Groups} = State) ->
+    Self = self(),
+    case destination_all(DestRefresh, Name, Exclude, Groups) of
+        {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
+                              {'mcast_async', Name, Request,
+                               Timeout - ?MCAST_ASYNC_INTERVAL,
+                               Client}),
+            {noreply, State};
+        {error, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        PidList ->
+            TransIdList = lists:map(fun(Pid) ->
+                TransId = uuid:get_v1(UUID),
+                Pid ! {'send_async', Name, Request, Timeout,
+                       TransId, Self},
+                TransId
+            end, PidList),
+            gen_server:reply(Client, {ok, TransIdList}),
+            NewState = lists:foldl(fun(Id, S) ->
+                send_async_timeout_start(Timeout, Id, S)
+            end, State, TransIdList),
+            {noreply, NewState}
+            
     end;
 
 handle_info({'forward_async', Name, Request, Timeout, TransId, Pid},
@@ -577,6 +645,22 @@ destination_get(immediate_closest, Name, Pid, _)
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
     list_pg:get_random_pid(Name, Pid).
+
+destination_all(lazy_closest, Name, Pid, Groups)
+    when is_list(Name) ->
+    list_pg_data:get_members(Name, Pid, Groups);
+
+destination_all(lazy_random, Name, Pid, Groups)
+    when is_list(Name) ->
+    list_pg_data:get_members(Name, Pid, Groups);
+
+destination_all(immediate_closest, Name, Pid, _)
+    when is_list(Name) ->
+    list_pg:get_members(Name, Pid);
+
+destination_all(immediate_random, Name, Pid, _)
+    when is_list(Name) ->
+    list_pg:get_members(Name, Pid).
 
 send_async_timeout_start(Timeout, TransId,
                          #state{send_timeouts = Ids} = State)
