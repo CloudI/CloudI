@@ -38,7 +38,7 @@ run: all
       -pz external/ecouchdb/ebin \
       -pz external/misultin/ebin \
       -pz tests/hexpi/ebin \
-      `find lib/ -name "ebin" -o -name "priv" | sed 's/^/-pz /'`
+      `find lib/ -name "ebin" | sed 's/^/-pz /'`
 
 distdir:
 	@echo
