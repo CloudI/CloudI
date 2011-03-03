@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * make install now works using autoconf/automake/rebar
+
 2011-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * tests/http now includes a java service implementation

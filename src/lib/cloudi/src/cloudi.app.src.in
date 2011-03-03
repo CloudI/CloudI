@@ -3,7 +3,7 @@
 
 {application, cloudi, 
   [{description, "Cloudi Application"},
-   {vsn, "0.1.0"},
+   {vsn, "@VERSION@"},
    {modules, [
         cloudi_app,
         cloudi_configurator,

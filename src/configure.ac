@@ -1,9 +1,10 @@
-AC_INIT([CloudI], [0.1.0], [mjtruog at gmail dot com], [cloudi],
-        [http://cloudi.org/])
+AC_INIT([CloudI], [0.1.0],
+        [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_FILES([lib/cloudi/src/cloudi.app.src])
 AM_INIT_AUTOMAKE([1.10 no-define])
 AC_PROG_CC
 AC_PROG_CXX
@@ -23,8 +24,6 @@ AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
 
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-#AX_ERLANG_SUBST_OTP_VER
-#AC_ERLANG_SUBST_ERTS_VER
 AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
                           [AC_MSG_ERROR([Required Erlang not found])])
 AC_ERLANG_SUBST_ROOT_DIR
