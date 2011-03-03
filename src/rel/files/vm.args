@@ -1,6 +1,6 @@
 
 ## Name of the node
--name cloudi@127.0.0.1
+-sname cloudi
 
 ## Cookie for distributed erlang
 -setcookie cloudi
@@ -17,5 +17,8 @@
 -env ERL_MAX_PORTS 4096
 
 ## Tweak GC to run more often
--env ERL_FULLSWEEP_AFTER 10
+#-env ERL_FULLSWEEP_AFTER 10
+
+# hexpi tests service module not included in an application
+-pz tests/hexpi/ebin/
 
