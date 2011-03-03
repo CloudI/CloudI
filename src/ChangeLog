@@ -4,6 +4,8 @@
 2011-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * make install now works using autoconf/automake/rebar
+    * configure files now included
+    * version 0.1.0 package created
 
 2011-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
