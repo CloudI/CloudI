@@ -364,6 +364,25 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                         request, request_size, timeout);
 }
 
+int cloudi_mcast_async(cloudi_instance_t * p,
+                       char const * const name,
+                       void const * const request,
+                       uint32_t const request_size)
+{
+    return cloudi_send_(p, "mcast_async", name,
+                        request, request_size, p->timeout_async);
+}
+
+int cloudi_mcast_async_(cloudi_instance_t * p,
+                        char const * const name,
+                        void const * const request,
+                        uint32_t const request_size,
+                        uint32_t timeout)
+{
+    return cloudi_send_(p, "mcast_async", name,
+                        request, request_size, timeout);
+}
+
 static int cloudi_return_(cloudi_instance_t * p,
                           char const * const command_name,
                           char const * const name,
@@ -564,6 +583,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
 #define MESSAGE_RECV_ASYNC     4
 #define MESSAGE_RETURN_ASYNC   5
 #define MESSAGE_RETURN_SYNC    6
+#define MESSAGE_RETURNS_ASYNC  7
 
 static void callback(cloudi_instance_t * p,
                      int const command,
@@ -709,8 +729,17 @@ int cloudi_poll(cloudi_instance_t * p,
             }
             case MESSAGE_RETURN_ASYNC:
             {
+                p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
+                assert(index == size);
+                return cloudi_success;
+            }
+            case MESSAGE_RETURNS_ASYNC:
+            {
+                store_incoming_uint32(buffer, index, p->trans_id_count);
+                p->trans_id = &buffer[index];
+                index += 16 * p->trans_id_count;
                 assert(index == size);
                 return cloudi_success;
             }

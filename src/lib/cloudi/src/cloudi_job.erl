@@ -68,6 +68,8 @@
          send_sync/3,
          send_sync/4,
          send_sync/5,
+         mcast_async/3,
+         mcast_async/4,
          forward/7,
          forward_async/6,
          forward_sync/6,
@@ -241,6 +243,29 @@ send_sync(Dispatcher, Name, Request, Timeout, Pid)
          Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
     gen_server:call(Dispatcher, {'send_sync', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA, Pid}, Timeout).
+
+-spec mcast_async(Dispatcher :: pid(),
+                  Name :: string(),
+                  Request :: any()) ->
+    {'ok', list(binary())} |
+    {'error', atom()}.
+
+mcast_async(Dispatcher, Name, Request)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async', Name, Request}, infinity).
+
+-spec mcast_async(Dispatcher :: pid(),
+                  Name :: string(),
+                  Request :: any(),
+                  Timeout :: pos_integer()) ->
+    {'ok', list(binary())} |
+    {'error', atom()}.
+
+mcast_async(Dispatcher, Name, Request, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'mcast_async', Name, Request,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 -spec forward(Dispatcher :: pid(),
               'send_async' | 'send_sync',

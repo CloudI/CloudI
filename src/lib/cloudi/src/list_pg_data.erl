@@ -57,6 +57,7 @@
          get_groups/1,
          get_empty_groups/0,
          get_members/2,
+         get_members/3,
          get_local_members/2,
          which_groups/1,
          get_closest_pid/2,
@@ -84,6 +85,33 @@ get_members(Name, Groups) when is_list(Name) ->
             lists:foldl(fun({Pid, _}, T) ->
                             [Pid | T]
                         end, [], Members)
+    end.
+
+get_members(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
+    case trie:find(Name, Groups) of
+        error ->
+            {error, {'no_such_group', Name}};
+        {ok, []} ->
+            {error, {'no_process', Name}};
+        {ok, [{Exclude, _}]} ->
+            {error, {'no_process', Name}};
+        {ok, [{Pid, _}]} ->
+            [Pid];
+        {ok, L} ->
+            Members = lists:foldl(fun({Pid, _}, T) ->
+                                      if
+                                          Pid =/= Exclude ->
+                                              [Pid | T];
+                                          true ->
+                                              T
+                                      end
+                                  end, [], L),
+            if
+                Members == [] ->
+                    {error, {'no_process', Name}};
+                true ->
+                    Members
+            end
     end.
 
 get_local_members(Name, Groups) when is_list(Name) ->

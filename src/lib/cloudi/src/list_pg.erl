@@ -29,6 +29,7 @@
          join/2,
          leave/2,
          get_members/1,
+         get_members/2,
          get_local_members/1,
          which_groups/0,
          get_closest_pid/1,
@@ -91,10 +92,14 @@ leave(Name, Pid) when is_list(Name), is_pid(Pid) ->
 -type get_members_ret() :: [pid()] | {'error', {'no_such_group', name()}}.
 
 -spec get_members(name()) -> get_members_ret().
-
    
 get_members(Name) when is_list(Name) ->
     gen_server:call(?MODULE, {get_members, Name}).
+
+-spec get_members(name(), pid()) -> list(pid()) | {'error', gcp_error_reason()}.
+   
+get_members(Name, Exclude) when is_list(Name), is_pid(Exclude) ->
+    gen_server:call(?MODULE, {get_members, Name, Exclude}).
 
 -spec get_local_members(name()) -> get_members_ret().
 
@@ -174,6 +179,9 @@ handle_call(list_pg_data, _, #state{groups = Groups} = State) ->
 
 handle_call({get_members, Name}, _, #state{groups = Groups} = State) ->
     {reply, list_pg_data:get_members(Name, Groups), State};
+
+handle_call({get_members, Name, Exclude}, _, #state{groups = Groups} = State) ->
+    {reply, list_pg_data:get_members(Name, Exclude, Groups), State};
 
 handle_call({get_local_members, Name}, _, #state{groups = Groups} = State) ->
     {reply, list_pg_data:get_local_members(Name, Groups), State};

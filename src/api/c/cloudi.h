@@ -61,7 +61,8 @@ typedef struct {
     uint32_t timeout_sync;
     char * response;
     uint32_t response_size;
-    char * trans_id;   /* always 16 characters (128 bits) */
+    char * trans_id;   /* always 16 characters (128 bits) length */
+    uint32_t trans_id_count;
 
 } cloudi_instance_t;
 
@@ -115,6 +116,17 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                       void const * const request,
                       uint32_t const request_size,
                       uint32_t timeout);
+
+int cloudi_mcast_async(cloudi_instance_t * p,
+                       char const * const name,
+                       void const * const request,
+                       uint32_t const request_size);
+
+int cloudi_mcast_async_(cloudi_instance_t * p,
+                        char const * const name,
+                        void const * const request,
+                        uint32_t const request_size,
+                        uint32_t timeout);
 
 int cloudi_forward(cloudi_instance_t * p,
                    int const command,

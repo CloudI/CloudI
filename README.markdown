@@ -10,7 +10,7 @@ a small set of functions that are commonly used for creating
 Service-Oriented Architecture (SOA):
 
 * subscribe, unsubscribe
-* send_async, send_sync
+* send_async, send_sync, mcast_async
 * recv_async
 * return, forward
 

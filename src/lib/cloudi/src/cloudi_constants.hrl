@@ -8,6 +8,9 @@
 % interval at which synchronous messages are sent
 -define(SEND_SYNC_INTERVAL, 500). % milliseconds
 
+% interval at which multicast asynchronous messages are sent
+-define(MCAST_ASYNC_INTERVAL, 500). % milliseconds
+
 % interval at which synchronous forwarded messages are sent
 -define(FORWARD_SYNC_INTERVAL, 500). % milliseconds
 

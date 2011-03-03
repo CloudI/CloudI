@@ -46,6 +46,8 @@ import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.lang.reflect.Constructor;
@@ -68,12 +70,13 @@ public class API
     private static final int ASYNC  =  1;
     private static final int SYNC   = -1;
 
-    private static final int MESSAGE_INIT         = 1;
-    private static final int MESSAGE_SEND_ASYNC   = 2;
-    private static final int MESSAGE_SEND_SYNC    = 3;
-    private static final int MESSAGE_RECV_ASYNC   = 4;
-    private static final int MESSAGE_RETURN_ASYNC = 5;
-    private static final int MESSAGE_RETURN_SYNC  = 6;
+    private static final int MESSAGE_INIT            = 1;
+    private static final int MESSAGE_SEND_ASYNC      = 2;
+    private static final int MESSAGE_SEND_SYNC       = 3;
+    private static final int MESSAGE_RECV_ASYNC      = 4;
+    private static final int MESSAGE_RETURN_ASYNC    = 5;
+    private static final int MESSAGE_RETURN_SYNC     = 6;
+    private static final int MESSAGE_RETURNS_ASYNC   = 7;
 
     private FileDescriptor socket;
     private FileOutputStream output;
@@ -187,6 +190,34 @@ public class API
             send_sync.write_any(new OtpErlangTuple(tuple));
             send(send_sync);
             return (Response) poll();
+        }
+        catch (OtpErlangRangeException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public List<TransId> mcast_async(String name, byte[] request)
+    {
+        return mcast_async(name, request, this.timeout_async);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<TransId> mcast_async(String name, byte[] request,
+                                     Integer timeout)
+    {
+        try
+        {
+            OtpOutputStream mcast_async = new OtpOutputStream();
+            mcast_async.write(OtpExternal.versionTag);
+            final OtpErlangObject[] tuple = {new OtpErlangAtom("mcast_async"),
+                                             new OtpErlangString(name),
+                                             new OtpErlangBinary(request),
+                                             new OtpErlangUInt(timeout)};
+            mcast_async.write_any(new OtpErlangTuple(tuple));
+            send(mcast_async);
+            return (List<TransId>) poll();
         }
         catch (OtpErlangRangeException e)
         {
@@ -456,6 +487,17 @@ public class API
                     {
                         byte[] transId = API.getBytes(buffer, 16);
                         return new TransId(transId);
+                    }
+                    case MESSAGE_RETURNS_ASYNC:
+                    {
+                        int transIdCount = buffer.getInt();
+                        List<TransId> transIdList = new ArrayList<TransId>();
+                        for (int i = 0; i < transIdCount; ++i)
+                        {
+                            byte[] transId = API.getBytes(buffer, 16);
+                            transIdList.add(new TransId(transId));
+                        }
+                        return transIdList;
                     }
                     default:
                         return null;
