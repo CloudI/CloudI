@@ -40,6 +40,16 @@ run: all
       -pz tests/hexpi/ebin \
       `find lib/ -name "ebin" -o -name "priv" | sed 's/^/-pz /'`
 
+distdir:
+	@echo
+	@echo "*************************************"
+	@echo "* AUTOMAKE DISTRIBUTION IS NOT USED *"
+	@echo "*************************************"
+	@echo
+	@exit 1
+
+dist: distdir
+
 install-exec-hook: tests-install \
                    tests-hexpi-install \
                    tests-http-install \
