@@ -361,17 +361,16 @@ call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
     end.
 
 load_path(File) when is_list(File) ->
-    Paths = lists:filter(fun(D) ->
-        case file:read_file_info(filename:join([D, File])) of
-            {ok, _} -> true;
-            _ -> false
-        end
-    end, code:get_path()),
-    case Paths of
-        [Dir|_] ->
-            {ok, Dir};
-        [] ->
-            {error, enoent}
+    case code:priv_dir(cloudi) of
+        {error, _} ->
+            {error, enotdir};
+        Path ->
+            case file:read_file_info(filename:join([Path, File])) of
+                {ok, _} ->
+                    {ok, Path};
+                _ ->
+                    {error, enoent}
+            end
     end.
 
 %% exit status messages

@@ -7,6 +7,7 @@ all-local: rebar
 clean-local: rebar
 	./rebar clean
 	rm -f api/python/cloudi.pyc api/python/erlang.pyc
+	rm -rf rel/cloudi
 
 clean-configure: config.log
 	rm -f aclocal.m4 config.h config.h.in config.h.in~ config.log \
@@ -39,6 +40,83 @@ run: all
       -pz tests/hexpi/ebin \
       `find lib/ -name "ebin" -o -name "priv" | sed 's/^/-pz /'`
 
-#./rebar generate
-#./rebar console
+install-exec-hook: tests-install \
+                   tests-hexpi-install \
+                   tests-http-install \
+                   api-install \
+                   api-c-install \
+                   api-java-install \
+                   api-python-install
+	rm -rf $(DESTDIR)$(bindir)
+	rm -rf $(DESTDIR)$(includedir)
+	rm -rf $(DESTDIR)$(libdir)
+	rm -rf $(DESTDIR)$(libexecdir)
+	rm -rf $(DESTDIR)$(datarootdir)
+	test ! -d $(top_builddir)/rel/cloudi/ && ./rebar generate || exit 0
+	cp -rf $(top_builddir)/rel/cloudi/bin $(DESTDIR)$(bindir)
+	cp -rf $(top_builddir)/rel/cloudi/lib $(DESTDIR)$(libdir)
+	cp -rf $(top_builddir)/rel/cloudi/etc $(DESTDIR)$(sysconfdir)
+	cp -rf $(top_builddir)/rel/cloudi/erts-* $(DESTDIR)$(prefix)
+	cp -rf $(top_builddir)/rel/cloudi/releases $(DESTDIR)$(prefix)
+	mkdir $(DESTDIR)$(prefix)/logs
+	cp -f $(top_builddir)/cloudi.conf $(DESTDIR)$(prefix)
 
+tests-install:
+	mkdir $(DESTDIR)${prefix}/tests
+
+tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam
+	mkdir $(DESTDIR)${prefix}/tests/hexpi
+	mkdir $(DESTDIR)${prefix}/tests/hexpi/ebin
+	cp -f $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
+          $(DESTDIR)${prefix}/tests/hexpi/ebin/
+	mkdir $(DESTDIR)${prefix}/tests/hexpi/priv
+	mv -f $(DESTDIR)$(bindir)/hexpi \
+          $(DESTDIR)${prefix}/tests/hexpi/priv/
+
+tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
+                    $(top_builddir)/tests/http/service/jar/service.jar
+	mkdir $(DESTDIR)${prefix}/tests/http
+	cp -f $(top_builddir)/tests/http/run.sh \
+          $(DESTDIR)${prefix}/tests/http/
+	mkdir $(DESTDIR)${prefix}/tests/http/service
+	mkdir $(DESTDIR)${prefix}/tests/http/service/jar
+	cp -f $(top_builddir)/tests/http/service/jar/cloudi.jar \
+          $(DESTDIR)${prefix}/tests/http/service/jar/
+	cp -f $(top_builddir)/tests/http/service/jar/service.jar \
+          $(DESTDIR)${prefix}/tests/http/service/jar/
+	cp -f $(top_builddir)/tests/http/service/service.py \
+          $(DESTDIR)${prefix}/tests/http/service/
+	mkdir $(DESTDIR)${prefix}/tests/http/input
+	cp -f $(top_builddir)/tests/http/input/* \
+          $(DESTDIR)${prefix}/tests/http/input/
+	mkdir $(DESTDIR)${prefix}/tests/http/input.zip
+	cp -f $(top_builddir)/tests/http/input.zip/* \
+          $(DESTDIR)${prefix}/tests/http/input.zip/
+	mkdir $(DESTDIR)${prefix}/tests/http/output
+	cp -f $(top_builddir)/tests/http/output/* \
+          $(DESTDIR)${prefix}/tests/http/output/
+	mkdir $(DESTDIR)${prefix}/tests/http/tmp
+
+api-install:
+	mkdir $(DESTDIR)${prefix}/api
+
+api-c-install:
+	mkdir $(DESTDIR)${prefix}/api/c
+	mkdir $(DESTDIR)${prefix}/api/c/include
+	mkdir $(DESTDIR)${prefix}/api/c/lib
+	mv -f $(DESTDIR)$(includedir)/cloudi.h \
+          $(DESTDIR)${prefix}/api/c/include/
+	mv -f $(DESTDIR)$(libdir)/libcloudi.* \
+          $(DESTDIR)${prefix}/api/c/lib/
+
+api-java-install:
+	mkdir $(DESTDIR)${prefix}/api/java
+	mv -f $(DESTDIR)$(libexecdir)/cloudi.jar \
+          $(DESTDIR)${prefix}/api/java
+
+api-python-install:
+	mkdir $(DESTDIR)${prefix}/api/python
+	cp -f $(top_builddir)/api/python/erlang.py \
+          $(DESTDIR)${prefix}/api/python/
+	cp -f $(top_builddir)/api/python/cloudi.py \
+          $(DESTDIR)${prefix}/api/python/

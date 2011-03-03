@@ -5,14 +5,14 @@ bin_PROGRAMS = cloudi_os_spawn_vsn_1
 
 BUILT_SOURCES = $(INTERFACE_HEADER)
 CLEANFILES = $(INTERFACE_HEADER) \
-             ../priv/cloudi_os_spawn_vsn_1
+             ../priv/cloudi_os_spawn_$(CURRENT_VERSION)
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn.h \
                      $(bin_PROGRAMS)
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) -include cloudi_os_spawn.h \
            -E -P cloudi_os_spawn_hrl.h > $@
-	cp cloudi_os_spawn_vsn_1 ../priv
+	cp cloudi_os_spawn_$(CURRENT_VERSION) ../priv
 
 cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp assert.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \
