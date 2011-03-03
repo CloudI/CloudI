@@ -219,7 +219,7 @@ send_task(Name,
           Dispatcher) ->
     case cloudi_job:get_pid(Dispatcher, Name) of
         {ok, Pid} ->
-            io:format("~p iterations starting at digit ~p (retry)~n",
+            ?LOG_INFO("~p iterations starting at digit ~p (retry)~n",
                       [Iterations, Index]),
             % define the task
             IndexStr = erlang:integer_to_list(Index),
@@ -256,7 +256,7 @@ send_task(Name,
             Iterations = math2:ceil(TaskSize * ?MAX_ITERATIONS),
             % determine the size of the task and take the ceiling of the value
             % (to avoid iterations of 0)
-            io:format("~p iterations starting at digit ~p~n",
+            ?LOG_INFO("~p iterations starting at digit ~p~n",
                       [Iterations, Index]),
             % define the task
             IndexStr = erlang:integer_to_list(Index),
