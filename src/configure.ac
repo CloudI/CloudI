@@ -37,8 +37,15 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
 
 # ruby checks
 AC_PATH_PROG([RUBY],[ruby])
-AX_PROG_RUBY_VERSION([1.8.0], ,
-                     [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
+AX_PROG_RUBY_VERSION([1.8.0], , [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
+AC_PATH_PROG([RUBY_RAKE],[rake])
+if test "x$RUBY_RAKE" = "x"; then
+    AC_MSG_ERROR([ruby rake not found])
+fi
+AC_PATH_PROG([RUBY_GEM],[gem])
+if test "x$RUBY_GEM" = "x"; then
+    AC_MSG_ERROR([ruby gem not found])
+fi
 
 # erlang checks
 AC_ERLANG_NEED_ERLC()
