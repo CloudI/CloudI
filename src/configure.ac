@@ -24,19 +24,27 @@ AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
                     [AC_MSG_ERROR([boost::unordered_map not found])], )
 
 # java checks
-JAVAC=javac
+AC_PATH_PROG([JAVAC],[javac])
 AX_PROG_JAVAC
-JAVA=java
+AC_PATH_PROG([JAVA],[java])
 AX_PROG_JAVA
+AC_PATH_PROG([JAR],[jar])
 AX_PROG_JAR
-AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer)
-AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor)
+AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer, ,
+                    [AC_MSG_ERROR([java nio not found])])
+AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
+                    [AC_MSG_ERROR([java reflection not found])])
+
+# ruby checks
+AC_PATH_PROG([RUBY],[ruby])
+AX_PROG_RUBY_VERSION([1.8.0], ,
+                     [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
 
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
 AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
-                          [AC_MSG_ERROR([Required Erlang not found])])
+                          [AC_MSG_ERROR([Erlang >= R14B01 not found])])
 AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
