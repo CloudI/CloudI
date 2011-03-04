@@ -14,6 +14,7 @@ AC_CHECK_LIB(gmp, __gmpz_init, ,
              [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
 AX_CLOCK_GETTIME
 
+# c++ boost checks
 AX_BOOST_BASE([1.36], ,
               [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
 AX_BOOST_THREAD
@@ -22,6 +23,16 @@ AX_CXX_CHECK_HEADER(boost/preprocessor.hpp, ,
 AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
                     [AC_MSG_ERROR([boost::unordered_map not found])], )
 
+# java checks
+JAVAC=javac
+AX_PROG_JAVAC
+JAVA=java
+AX_PROG_JAVA
+AX_PROG_JAR
+AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer)
+AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor)
+
+# erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
 AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
@@ -30,6 +41,7 @@ AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
+
 AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
                               `dirname $ERLC`/escript bootstrap &&
                               mv ./rebar ../../ || exit 1)],
