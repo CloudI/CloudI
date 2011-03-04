@@ -1,0 +1,3 @@
+class ErlectricityError < StandardError
+
+end
