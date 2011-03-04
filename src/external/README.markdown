@@ -33,6 +33,14 @@ http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html
 Fri Mar  4 00:01:29 PST 2011
 BSD-like
 
+ax_prog_ruby_version.m4, ax_compare_version.m4
+----------------------------------------------
+autoconf m4 macros for ruby detection
+http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html
+http://www.gnu.org/software/autoconf-archive/ax_compare_version.html
+Fri Mar  4 00:19:03 PST 2011
+BSD-like
+
 epgsql
 ------
 Erlang PostgreSQL (native) Driver
