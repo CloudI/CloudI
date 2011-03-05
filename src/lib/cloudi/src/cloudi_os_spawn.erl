@@ -345,7 +345,11 @@ transform_data(D) ->
 
 call_port_sync(Process, Command, Msg)
     when is_integer(Command), is_list(Msg) ->
-    gen_server:call(Process, {call, Command, Msg}).
+    try gen_server:call(Process, {call, Command, Msg})
+    catch
+        _:Reason ->
+            {error, Reason}
+    end.
 
 call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
     try erlang:port_command(Port, Msg) of

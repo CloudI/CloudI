@@ -62,6 +62,7 @@ class _Task(threading.Thread):
                            timeout, transId, pid)
 
     def run(self):
+        print "> 32 characters to test stdout<"
         self.__api.subscribe("text", self.text)
 
         running = True

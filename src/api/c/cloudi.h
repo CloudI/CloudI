@@ -203,6 +203,7 @@ enum {
     cloudi_error_read_EINVAL,
     cloudi_error_read_EIO,
     cloudi_error_read_EISDIR,
+    cloudi_error_read_underflow,
     cloudi_error_read_unknown,
     cloudi_error_write_EAGAIN,
     cloudi_error_write_EBADF,

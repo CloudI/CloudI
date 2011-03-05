@@ -7,5 +7,4 @@ hexpi_LDADD = -lcloudi -lboost_thread
 if HAVE_CLOCK_GETTIME_RT
 hexpi_LDADD += -lrt
 endif
-CLEANFILES = ../priv/hexpi
 

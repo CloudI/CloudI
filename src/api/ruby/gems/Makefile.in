@@ -33,7 +33,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = api/java/org/cloudi
+subdir = api/ruby/gems
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_boost_base.m4 \
@@ -62,8 +62,6 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
-CLASSPATH_ENV = CLASSPATH=$(JAVAROOT):$(srcdir)/$(JAVAROOT):$$CLASSPATH
-am__installdirs = "$(DESTDIR)$(javadir)"
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -200,9 +198,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-JAVACFLAGS = -Xlint -Werror
-JAVAROOT = $(top_builddir)/api/java/jar/
-java_JAVA = API.java Function6.java
+ERLECTRICITY_VERSION = 1.1.1
+ERLECTRICITY_DESTINATION = gems/erlectricity-$(ERLECTRICITY_VERSION)
 all: all-am
 
 .SUFFIXES:
@@ -215,9 +212,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu api/java/org/cloudi/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu api/ruby/gems/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu api/java/org/cloudi/Makefile
+	  $(AUTOMAKE) --gnu api/ruby/gems/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -242,34 +239,6 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-
-classjava.stamp: $(java_JAVA)
-	@list1='$?'; list2=; if test -n "$$list1"; then \
-	  for p in $$list1; do \
-	    if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
-	    list2="$$list2 $$d$$p"; \
-	  done; \
-	  echo '$(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) $(AM_JAVACFLAGS) $(JAVACFLAGS) '"$$list2"; \
-	  $(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) $(AM_JAVACFLAGS) $(JAVACFLAGS) $$list2; \
-	else :; fi
-	echo timestamp > classjava.stamp
-install-javaJAVA: classjava.stamp
-	@$(NORMAL_INSTALL)
-	test -z "$(javadir)" || $(MKDIR_P) "$(DESTDIR)$(javadir)"
-	@test -n "$(java_JAVA)" && test -n "$(javadir)" || exit 0; \
-	set x *.class; shift; test "$$1" != "*.class" || exit 0; \
-	echo " $(INSTALL_DATA)" "$$@" "'$(DESTDIR)$(javadir)/$$p'"; \
-	$(INSTALL_DATA) "$$@" "$(DESTDIR)$(javadir)"
-
-uninstall-javaJAVA:
-	@$(NORMAL_UNINSTALL)
-	@test -n "$(java_JAVA)" && test -n "$(javadir)" || exit 0; \
-	set x *.class; shift; test "$$1" != "*.class" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(javadir)' && rm -f" "$$@" ")"; \
-	cd "$(DESTDIR)$(javadir)" && rm -f "$$@"
-
-clean-javaJAVA:
-	-rm -f *.class classjava.stamp
 tags: TAGS
 TAGS:
 
@@ -309,11 +278,8 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile classjava.stamp
+all-am: Makefile all-local
 installdirs:
-	for dir in "$(DESTDIR)$(javadir)"; do \
-	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -341,7 +307,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-javaJAVA clean-libtool mostlyclean-am
+clean-am: clean-generic clean-libtool clean-local mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
@@ -359,7 +325,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-javaJAVA
+install-data-am:
 
 install-dvi: install-dvi-am
 
@@ -403,22 +369,32 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-javaJAVA
+uninstall-am:
 
 .MAKE: install-am install-strip
 
-.PHONY: all all-am check check-am clean clean-generic clean-javaJAVA \
-	clean-libtool distclean distclean-generic distclean-libtool \
-	distdir dvi dvi-am html html-am info info-am install \
-	install-am install-data install-data-am install-dvi \
+.PHONY: all all-am all-local check check-am clean clean-generic \
+	clean-libtool clean-local distclean distclean-generic \
+	distclean-libtool distdir dvi dvi-am html html-am info info-am \
+	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-javaJAVA \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am uninstall uninstall-am uninstall-javaJAVA
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	uninstall uninstall-am
 
+
+all-local: $(ERLECTRICITY_DESTINATION)
+
+$(ERLECTRICITY_DESTINATION): $(top_builddir)/external/erlectricity
+	@PWD=`pwd`
+	@(cd $(top_builddir)/external/erlectricity; \
+      $(RUBY_GEM) install --install-dir $(PWD) erlectricity)
+
+clean-local:
+	rm -rf cache doc gems specifications
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

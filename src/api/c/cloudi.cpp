@@ -53,7 +53,10 @@
 #define CLOUDI_ASYNC     1
 #define CLOUDI_SYNC     -1
 
-namespace {
+namespace
+{
+    typedef boost::unordered_map<std::string, cloudi_callback_t> lookup_t;
+    typedef realloc_ptr<char> buffer_t;
 
     int errno_read()
     {
@@ -124,19 +127,34 @@ namespace {
         }
     }
 
-    int read_all(int fd, char * const buffer, uint32_t * const size,
+    int data_ready(int fd, bool & ready)
+    {
+        struct pollfd fds[1] = {{fd, POLLIN | POLLPRI, 0}};
+        int const count = poll(fds, 1, 0);
+        if (count == -1)
+            return errno_poll();
+        ready = (count == 1);
+        return cloudi_success;
+    }
+
+    int read_all(int fd, buffer_t & buffer, uint32_t & total,
                  uint32_t const buffer_size)
     {
-        uint32_t & total = *size;
-        ssize_t i;
-        do
+        bool ready = true;
+        while (ready)
         {
-            i = ::read(fd, buffer + total, buffer_size);
+            ssize_t i = ::read(fd, &buffer[total], buffer_size);
             if (i < 0)
                 return errno_read();
             total += i;
+            ready = (i == buffer_size);
+            if (ready)
+            {
+                int const status = data_ready(fd, ready);
+                if (status)
+                    return status;
+            }
         }
-        while (i == buffer_size);
 
         return cloudi_success;
     }
@@ -184,9 +202,6 @@ namespace {
     };
 
 }
-
-typedef boost::unordered_map<std::string, cloudi_callback_t> lookup_t;
-typedef realloc_ptr<char> buffer_t;
 
 extern "C" {
 
@@ -675,7 +690,7 @@ int cloudi_poll(cloudi_instance_t * p,
     
         buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_recv);
         uint32_t size = 0;
-        int result = read_all(p->fd, buffer.get<char>(), &size, p->buffer_size);
+        int result = read_all(p->fd, buffer, size, p->buffer_size);
         if (result)
             return result;
         
@@ -711,7 +726,8 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, pid_size);
                 char * pid = &buffer[index];
                 index += pid_size;
-                assert(index == size);
+                if (index != size)
+                    return cloudi_error_read_underflow;
                 callback(p, command, name, request, request_size,
                          timeout, trans_id, pid, pid_size);
                 break;
@@ -724,7 +740,8 @@ int cloudi_poll(cloudi_instance_t * p,
                 index += p->response_size;
                 p->trans_id = &buffer[index];
                 index += 16;
-                assert(index == size);
+                if (index != size)
+                    ::exit(cloudi_error_read_underflow);
                 return cloudi_success;
             }
             case MESSAGE_RETURN_ASYNC:
@@ -732,7 +749,8 @@ int cloudi_poll(cloudi_instance_t * p,
                 p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
-                assert(index == size);
+                if (index != size)
+                    ::exit(cloudi_error_read_underflow);
                 return cloudi_success;
             }
             case MESSAGE_RETURNS_ASYNC:
@@ -740,7 +758,8 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, p->trans_id_count);
                 p->trans_id = &buffer[index];
                 index += 16 * p->trans_id_count;
-                assert(index == size);
+                if (index != size)
+                    ::exit(cloudi_error_read_underflow);
                 return cloudi_success;
             }
         }

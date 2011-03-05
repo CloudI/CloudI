@@ -806,6 +806,16 @@ case BOOST_PP_DEC(I):\
         return InternalExitStatus::success;
     }
 
+    int data_ready(int fd, bool & ready)
+    {
+        struct pollfd fds[1] = {{fd, POLLIN | POLLPRI, 0}};
+        int const count = poll(fds, 1, 0);
+        if (count == -1)
+            return InternalExitStatus::errno_poll();
+        ready = (count == 1);
+        return InternalExitStatus::success;
+    }
+
     enum
     {
         INDEX_STDOUT = 0,
@@ -834,6 +844,10 @@ int GEPD::consume_stream(int fd, short & revents,
     {
         i += left;
         left = stream.size() - i;
+        bool ready;
+        data_ready(fd, ready);
+        if (ready == false)
+            break;
     }
     if (readBytes == 0 && i == 0)
         return InternalExitStatus::success;
@@ -903,6 +917,10 @@ int GEPD::flush_stream(int fd, short revents,
     {
         i += left;
         left = stream.size() - i;
+        bool ready;
+        data_ready(fd, ready);
+        if (ready == false)
+            break;
     }
     if (readBytes == 0 && i == 0)
         return InternalExitStatus::success;
