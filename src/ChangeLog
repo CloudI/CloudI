@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * add ruby/gem build integration
+    * add ruby erlectricity integration, API in-progress
+    * fix major bugs with overloading external processes and
+      file descriptor blocking reading at allocation boundaries
+
 2011-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * add mcast_async API function

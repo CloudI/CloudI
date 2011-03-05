@@ -1503,6 +1503,44 @@ m4trace:m4/ax_boost_thread.m4:35: -1- AC_DEFUN([AX_BOOST_THREAD], [
 	LDFLAGS="$LDFLAGS_SAVED"
 	fi
 ])
+m4trace:m4/ax_check_class.m4:56: -1- AU_DEFUN([AC_CHECK_CLASS], [m4_if($#, 0, [AX_CHECK_CLASS], [AX_CHECK_CLASS($@)])])
+m4trace:m4/ax_check_class.m4:56: -1- AC_DEFUN([AC_CHECK_CLASS], [AC_DIAGNOSE([obsolete], [The macro `AC_CHECK_CLASS' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_CHECK_CLASS], [AX_CHECK_CLASS($@)])])
+m4trace:m4/ax_check_class.m4:57: -1- AC_DEFUN([AX_CHECK_CLASS], [
+AC_REQUIRE([AX_PROG_JAVA])
+ac_var_name=`echo $1 | sed 's/\./_/g'`
+dnl Normaly I'd use a AC_CACHE_CHECK here but since the variable name is
+dnl dynamic I need an extra level of extraction
+AC_MSG_CHECKING([for $1 class])
+AC_CACHE_VAL(ax_cv_class_$ac_var_name, [
+AX_TRY_COMPILE_JAVA([$1], , [eval "ac_cv_class_$ac_var_name=yes"],
+        [eval "ac_cv_class_$ac_var_name=no"])
+eval "ac_var_val=$`eval echo ac_cv_class_$ac_var_name`"
+eval "HAVE_$ac_var_name=$`echo ac_cv_class_$ac_var_val`"
+HAVE_LAST_CLASS=$ac_var_val
+if test x$ac_var_val = xyes; then
+        ifelse([$2], , :, [$2])
+else
+        ifelse([$3], , :, [$3])
+fi
+])
+dnl for some reason the above statment didn't fall though here?
+dnl do scripts have variable scoping?
+eval "ac_var_val=$`eval echo ac_cv_class_$ac_var_name`"
+AC_MSG_RESULT($ac_var_val)
+])
+m4trace:m4/ax_check_rqrd_class.m4:55: -1- AU_DEFUN([AC_CHECK_RQRD_CLASS], [m4_if($#, 0, [AX_CHECK_RQRD_CLASS], [AX_CHECK_RQRD_CLASS($@)])])
+m4trace:m4/ax_check_rqrd_class.m4:55: -1- AC_DEFUN([AC_CHECK_RQRD_CLASS], [AC_DIAGNOSE([obsolete], [The macro `AC_CHECK_RQRD_CLASS' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_CHECK_RQRD_CLASS], [AX_CHECK_RQRD_CLASS($@)])])
+m4trace:m4/ax_check_rqrd_class.m4:56: -1- AC_DEFUN([AX_CHECK_RQRD_CLASS], [
+CLASS=`echo $1|sed 's/\./_/g'`
+AC_CHECK_CLASS($1)
+if test "$HAVE_LAST_CLASS" = "no"; then
+        AC_MSG_ERROR([Required class $1 missing, exiting.])
+fi
+])
 m4trace:m4/ax_clock_gettime.m4:55: -1- AC_DEFUN([AX_CLOCK_GETTIME], [
     clock_gettime=no
     AC_CHECK_LIB(rt, clock_gettime,
@@ -1527,6 +1565,99 @@ m4trace:m4/ax_clock_gettime.m4:55: -1- AC_DEFUN([AX_CLOCK_GETTIME], [
         [AC_DEFINE([HAVE_CLOCK_GETTIME_MONOTONIC], [1],
                     [Define if clock_gettime supports CLOCK_MONOTONIC])])
     fi
+])
+m4trace:m4/ax_compare_version.m4:85: -1- AC_DEFUN([AX_COMPARE_VERSION], [
+  AC_REQUIRE([AC_PROG_AWK])
+
+  # Used to indicate true or false condition
+  ax_compare_version=false
+
+  # Convert the two version strings to be compared into a format that
+  # allows a simple string comparison.  The end result is that a version
+  # string of the form 1.12.5-r617 will be converted to the form
+  # 0001001200050617.  In other words, each number is zero padded to four
+  # digits, and non digits are removed.
+  AS_VAR_PUSHDEF([A],[ax_compare_version_A])
+  A=`echo "$1" | sed -e 's/\([[0-9]]*\)/Z\1Z/g' \
+                     -e 's/Z\([[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/Z\([[0-9]][[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/Z\([[0-9]][[0-9]][[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/[[^0-9]]//g'`
+
+  AS_VAR_PUSHDEF([B],[ax_compare_version_B])
+  B=`echo "$3" | sed -e 's/\([[0-9]]*\)/Z\1Z/g' \
+                     -e 's/Z\([[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/Z\([[0-9]][[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/Z\([[0-9]][[0-9]][[0-9]]\)Z/Z0\1Z/g' \
+                     -e 's/[[^0-9]]//g'`
+
+  dnl # In the case of le, ge, lt, and gt, the strings are sorted as necessary
+  dnl # then the first line is used to determine if the condition is true.
+  dnl # The sed right after the echo is to remove any indented white space.
+  m4_case(m4_tolower($2),
+  [lt],[
+    ax_compare_version=`echo "x$A
+x$B" | sed 's/^ *//' | sort -r | sed "s/x${A}/false/;s/x${B}/true/;1q"`
+  ],
+  [gt],[
+    ax_compare_version=`echo "x$A
+x$B" | sed 's/^ *//' | sort | sed "s/x${A}/false/;s/x${B}/true/;1q"`
+  ],
+  [le],[
+    ax_compare_version=`echo "x$A
+x$B" | sed 's/^ *//' | sort | sed "s/x${A}/true/;s/x${B}/false/;1q"`
+  ],
+  [ge],[
+    ax_compare_version=`echo "x$A
+x$B" | sed 's/^ *//' | sort -r | sed "s/x${A}/true/;s/x${B}/false/;1q"`
+  ],[
+    dnl Split the operator from the subversion count if present.
+    m4_bmatch(m4_substr($2,2),
+    [0],[
+      # A count of zero means use the length of the shorter version.
+      # Determine the number of characters in A and B.
+      ax_compare_version_len_A=`echo "$A" | $AWK '{print(length)}'`
+      ax_compare_version_len_B=`echo "$B" | $AWK '{print(length)}'`
+
+      # Set A to no more than B's length and B to no more than A's length.
+      A=`echo "$A" | sed "s/\(.\{$ax_compare_version_len_B\}\).*/\1/"`
+      B=`echo "$B" | sed "s/\(.\{$ax_compare_version_len_A\}\).*/\1/"`
+    ],
+    [[0-9]+],[
+      # A count greater than zero means use only that many subversions
+      A=`echo "$A" | sed "s/\(\([[0-9]]\{4\}\)\{m4_substr($2,2)\}\).*/\1/"`
+      B=`echo "$B" | sed "s/\(\([[0-9]]\{4\}\)\{m4_substr($2,2)\}\).*/\1/"`
+    ],
+    [.+],[
+      AC_WARNING(
+        [illegal OP numeric parameter: $2])
+    ],[])
+
+    # Pad zeros at end of numbers to make same length.
+    ax_compare_version_tmp_A="$A`echo $B | sed 's/./0/g'`"
+    B="$B`echo $A | sed 's/./0/g'`"
+    A="$ax_compare_version_tmp_A"
+
+    # Check for equality or inequality as necessary.
+    m4_case(m4_tolower(m4_substr($2,0,2)),
+    [eq],[
+      test "x$A" = "x$B" && ax_compare_version=true
+    ],
+    [ne],[
+      test "x$A" != "x$B" && ax_compare_version=true
+    ],[
+      AC_WARNING([illegal OP parameter: $2])
+    ])
+  ])
+
+  AS_VAR_POPDEF([A])dnl
+  AS_VAR_POPDEF([B])dnl
+
+  dnl # Execute ACTION-IF-TRUE / ACTION-IF-FALSE.
+  if test "$ax_compare_version" = "true" ; then
+    m4_ifvaln([$4],[$4],[:])dnl
+    m4_ifvaln([$5],[else $5])dnl
+  fi
 ])
 m4trace:m4/ax_cxx_check_header.m4:50: -1- AC_DEFUN([AX_CXX_CHECK_HEADER], [
     AC_LANG_SAVE
@@ -1604,6 +1735,167 @@ m4trace:m4/ax_erlang_otp_version.m4:41: -1- AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER]
         ifelse([$3], , :, [$3])
     fi
 ])
+m4trace:m4/ax_prog_jar.m4:42: -1- AU_DEFUN([AC_PROG_JAR], [m4_if($#, 0, [AX_PROG_JAR], [AX_PROG_JAR($@)])])
+m4trace:m4/ax_prog_jar.m4:42: -1- AC_DEFUN([AC_PROG_JAR], [AC_DIAGNOSE([obsolete], [The macro `AC_PROG_JAR' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_PROG_JAR], [AX_PROG_JAR($@)])])
+m4trace:m4/ax_prog_jar.m4:43: -1- AC_DEFUN([AX_PROG_JAR], [
+AC_REQUIRE([AC_EXEEXT])dnl
+if test "x$JAVAPREFIX" = x; then
+        test "x$JAR" = x && AC_CHECK_PROGS(JAR, jar$EXEEXT)
+else
+        test "x$JAR" = x && AC_CHECK_PROGS(JAR, jar, $JAVAPREFIX)
+fi
+test "x$JAR" = x && AC_MSG_ERROR([no acceptable jar program found in \$PATH])
+AC_PROVIDE([$0])dnl
+])
+m4trace:m4/ax_prog_java.m4:105: -1- AU_DEFUN([AC_PROG_JAVA], [m4_if($#, 0, [AX_PROG_JAVA], [AX_PROG_JAVA($@)])])
+m4trace:m4/ax_prog_java.m4:105: -1- AC_DEFUN([AC_PROG_JAVA], [AC_DIAGNOSE([obsolete], [The macro `AC_PROG_JAVA' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_PROG_JAVA], [AX_PROG_JAVA($@)])])
+m4trace:m4/ax_prog_java.m4:106: -1- AC_DEFUN([AX_PROG_JAVA], [
+if test x$JAVAPREFIX = x; then
+        test x$JAVA = x && AC_CHECK_PROGS(JAVA, kaffe java)
+else
+        test x$JAVA = x && AC_CHECK_PROGS(JAVA, kaffe java, $JAVAPREFIX)
+fi
+test x$JAVA = x && AC_MSG_ERROR([no acceptable Java virtual machine found in \$PATH])
+AX_PROG_JAVA_WORKS
+AC_PROVIDE([$0])dnl
+])
+m4trace:m4/ax_prog_java_works.m4:52: -1- AU_DEFUN([AC_PROG_JAVA_WORKS], [m4_if($#, 0, [AX_PROG_JAVA_WORKS], [AX_PROG_JAVA_WORKS($@)])])
+m4trace:m4/ax_prog_java_works.m4:52: -1- AC_DEFUN([AC_PROG_JAVA_WORKS], [AC_DIAGNOSE([obsolete], [The macro `AC_PROG_JAVA_WORKS' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_PROG_JAVA_WORKS], [AX_PROG_JAVA_WORKS($@)])])
+m4trace:m4/ax_prog_java_works.m4:53: -1- AC_DEFUN([AX_PROG_JAVA_WORKS], [
+if test x$ac_cv_prog_javac_works = xno; then
+        AC_MSG_ERROR([Cannot compile java source. $JAVAC does not work properly])
+fi
+if test x$ac_cv_prog_javac_works = x; then
+        AX_PROG_JAVAC
+fi
+AC_CACHE_CHECK(if $JAVA works, ac_cv_prog_java_works, [
+JAVA_TEST=Test.java
+CLASS_TEST=Test.class
+TEST=Test
+changequote(, )dnl
+cat << \EOF > $JAVA_TEST
+/* [#]line __oline__ "configure" */
+public class Test {
+public static void main (String args[]) {
+        System.exit (0);
+} }
+EOF
+changequote([, ])dnl
+if AC_TRY_COMMAND($JAVAC $JAVACFLAGS $JAVA_TEST) && test -s $CLASS_TEST; then
+        :
+else
+  echo "configure: failed program was:" >&AC_FD_CC
+  cat $JAVA_TEST >&AC_FD_CC
+  AC_MSG_ERROR(The Java compiler $JAVAC failed (see config.log, check the CLASSPATH?))
+fi
+if AC_TRY_COMMAND($JAVA $JAVAFLAGS $TEST) >/dev/null 2>&1; then
+  ac_cv_prog_java_works=yes
+else
+  echo "configure: failed program was:" >&AC_FD_CC
+  cat $JAVA_TEST >&AC_FD_CC
+  AC_MSG_ERROR(The Java VM $JAVA failed (see config.log, check the CLASSPATH?))
+fi
+rm -fr $JAVA_TEST $CLASS_TEST Test.uue
+])
+AC_PROVIDE([$0])dnl
+
+])
+m4trace:m4/ax_prog_javac.m4:69: -1- AU_DEFUN([AC_PROG_JAVAC], [m4_if($#, 0, [AX_PROG_JAVAC], [AX_PROG_JAVAC($@)])])
+m4trace:m4/ax_prog_javac.m4:69: -1- AC_DEFUN([AC_PROG_JAVAC], [AC_DIAGNOSE([obsolete], [The macro `AC_PROG_JAVAC' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_PROG_JAVAC], [AX_PROG_JAVAC($@)])])
+m4trace:m4/ax_prog_javac.m4:70: -1- AC_DEFUN([AX_PROG_JAVAC], [
+if test "x$JAVAPREFIX" = x; then
+        test "x$JAVAC" = x && AC_CHECK_PROGS(JAVAC, "gcj -C" guavac jikes javac)
+else
+        test "x$JAVAC" = x && AC_CHECK_PROGS(JAVAC, "gcj -C" guavac jikes javac, $JAVAPREFIX)
+fi
+test "x$JAVAC" = x && AC_MSG_ERROR([no acceptable Java compiler found in \$PATH])
+AX_PROG_JAVAC_WORKS
+AC_PROVIDE([$0])dnl
+])
+m4trace:m4/ax_prog_javac_works.m4:52: -1- AU_DEFUN([AC_PROG_JAVAC_WORKS], [m4_if($#, 0, [AX_PROG_JAVAC_WORKS], [AX_PROG_JAVAC_WORKS($@)])])
+m4trace:m4/ax_prog_javac_works.m4:52: -1- AC_DEFUN([AC_PROG_JAVAC_WORKS], [AC_DIAGNOSE([obsolete], [The macro `AC_PROG_JAVAC_WORKS' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_PROG_JAVAC_WORKS], [AX_PROG_JAVAC_WORKS($@)])])
+m4trace:m4/ax_prog_javac_works.m4:53: -1- AC_DEFUN([AX_PROG_JAVAC_WORKS], [
+AC_CACHE_CHECK([if $JAVAC works], ac_cv_prog_javac_works, [
+JAVA_TEST=Test.java
+CLASS_TEST=Test.class
+cat << \EOF > $JAVA_TEST
+/* [#]line __oline__ "configure" */
+public class Test {
+}
+EOF
+if AC_TRY_COMMAND($JAVAC $JAVACFLAGS $JAVA_TEST) >/dev/null 2>&1; then
+  ac_cv_prog_javac_works=yes
+else
+  AC_MSG_ERROR([The Java compiler $JAVAC failed (see config.log, check the CLASSPATH?)])
+  echo "configure: failed program was:" >&AC_FD_CC
+  cat $JAVA_TEST >&AC_FD_CC
+fi
+rm -f $JAVA_TEST $CLASS_TEST
+])
+AC_PROVIDE([$0])dnl
+])
+m4trace:m4/ax_prog_ruby_version.m4:40: -1- AC_DEFUN([AX_PROG_RUBY_VERSION], [
+    AC_REQUIRE([AC_PROG_SED])
+    AC_REQUIRE([AC_PROG_GREP])
+
+    AS_IF([test -n "$RUBY"],[
+        ax_ruby_version="$1"
+
+        AC_MSG_CHECKING([for ruby version])
+        changequote(<<,>>)
+        ruby_version=`$RUBY --version 2>&1 | $GREP "^ruby " | $SED -e 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\) .*/\1/'`
+        changequote([,])
+        AC_MSG_RESULT($ruby_version)
+
+    AC_SUBST([RUBY_VERSION],[$ruby_version])
+
+        AX_COMPARE_VERSION([$ax_ruby_version],[le],[$ruby_version],[
+        :
+            $2
+        ],[
+        :
+            $3
+        ])
+    ],[
+        AC_MSG_WARN([could not find the ruby interpreter])
+        $3
+    ])
+])
+m4trace:m4/ax_try_compile_java.m4:34: -1- AU_DEFUN([AC_TRY_COMPILE_JAVA], [m4_if($#, 0, [AX_TRY_COMPILE_JAVA], [AX_TRY_COMPILE_JAVA($@)])])
+m4trace:m4/ax_try_compile_java.m4:34: -1- AC_DEFUN([AC_TRY_COMPILE_JAVA], [AC_DIAGNOSE([obsolete], [The macro `AC_TRY_COMPILE_JAVA' is obsolete.
+You should run autoupdate.])dnl
+m4_if($#, 0, [AX_TRY_COMPILE_JAVA], [AX_TRY_COMPILE_JAVA($@)])])
+m4trace:m4/ax_try_compile_java.m4:35: -1- AC_DEFUN([AX_TRY_COMPILE_JAVA], [
+AC_REQUIRE([AX_PROG_JAVAC])dnl
+cat << \EOF > Test.java
+/* [#]line __oline__ "configure" */
+ifelse([$1], , , [import $1;])
+public class Test {
+[$2]
+}
+EOF
+if AC_TRY_COMMAND($JAVAC $JAVACFLAGS Test.java) && test -s Test.class
+then
+dnl Don't remove the temporary files here, so they can be examined.
+  ifelse([$3], , :, [$3])
+else
+  echo "configure: failed program was:" >&AC_FD_CC
+  cat Test.java >&AC_FD_CC
+ifelse([$4], , , [  rm -fr Test*
+  $4
+])dnl
+fi
+rm -fr Test*])
 m4trace:m4/libtool.m4:67: -1- AC_DEFUN([LT_INIT], [AC_PREREQ([2.58])dnl We use AC_INCLUDES_DEFAULT
 AC_BEFORE([$0], [LT_LANG])dnl
 AC_BEFORE([$0], [LT_OUTPUT])dnl
@@ -2689,117 +2981,117 @@ m4trace:configure.ac:10: -1- m4_pattern_allow([^am__fastdepCXX_TRUE$])
 m4trace:configure.ac:10: -1- m4_pattern_allow([^am__fastdepCXX_FALSE$])
 m4trace:configure.ac:10: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_TRUE])
 m4trace:configure.ac:10: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_FALSE])
-m4trace:configure.ac:12: -1- m4_pattern_allow([^RANLIB$])
-m4trace:configure.ac:13: -1- AC_PROG_LIBTOOL
-m4trace:configure.ac:13: -1- _m4_warn([obsolete], [The macro `AC_PROG_LIBTOOL' is obsolete.
+m4trace:configure.ac:11: -1- m4_pattern_allow([^RANLIB$])
+m4trace:configure.ac:12: -1- AC_PROG_LIBTOOL
+m4trace:configure.ac:12: -1- _m4_warn([obsolete], [The macro `AC_PROG_LIBTOOL' is obsolete.
 You should run autoupdate.], [m4/libtool.m4:102: AC_PROG_LIBTOOL is expanded from...
-configure.ac:13: the top level])
-m4trace:configure.ac:13: -1- LT_INIT
-m4trace:configure.ac:13: -1- m4_pattern_forbid([^_?LT_[A-Z_]+$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^(_LT_EOF|LT_DLGLOBAL|LT_DLLAZY_OR_NOW|LT_MULTI_MODULE)$])
-m4trace:configure.ac:13: -1- LTOPTIONS_VERSION
-m4trace:configure.ac:13: -1- LTSUGAR_VERSION
-m4trace:configure.ac:13: -1- LTVERSION_VERSION
-m4trace:configure.ac:13: -1- LTOBSOLETE_VERSION
-m4trace:configure.ac:13: -1- _LT_PROG_LTMAIN
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LIBTOOL$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^build$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^build_cpu$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^build_vendor$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^build_os$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^host$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^host_cpu$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^host_vendor$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^host_os$])
-m4trace:configure.ac:13: -1- LT_PATH_LD
-m4trace:configure.ac:13: -1- m4_pattern_allow([^SED$])
-m4trace:configure.ac:13: -1- AC_PROG_EGREP
-m4trace:configure.ac:13: -1- m4_pattern_allow([^GREP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^EGREP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^FGREP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^GREP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LD$])
-m4trace:configure.ac:13: -1- LT_PATH_NM
-m4trace:configure.ac:13: -1- m4_pattern_allow([^DUMPBIN$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^ac_ct_DUMPBIN$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^DUMPBIN$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^NM$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LN_S$])
-m4trace:configure.ac:13: -1- LT_CMD_MAX_LEN
-m4trace:configure.ac:13: -1- m4_pattern_allow([^OBJDUMP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^OBJDUMP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^AR$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^STRIP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^RANLIB$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([LT_OBJDIR])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LT_OBJDIR$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^lt_ECHO$])
-m4trace:configure.ac:13: -1- _LT_CC_BASENAME([$compiler])
-m4trace:configure.ac:13: -1- _LT_PATH_TOOL_PREFIX([${ac_tool_prefix}file], [/usr/bin$PATH_SEPARATOR$PATH])
-m4trace:configure.ac:13: -1- _LT_PATH_TOOL_PREFIX([file], [/usr/bin$PATH_SEPARATOR$PATH])
-m4trace:configure.ac:13: -1- LT_SUPPORTED_TAG([CC])
-m4trace:configure.ac:13: -1- _LT_COMPILER_BOILERPLATE
-m4trace:configure.ac:13: -1- _LT_LINKER_BOILERPLATE
-m4trace:configure.ac:13: -1- _LT_COMPILER_OPTION([if $compiler supports -fno-rtti -fno-exceptions], [lt_cv_prog_compiler_rtti_exceptions], [-fno-rtti -fno-exceptions], [], [_LT_TAGVAR(lt_prog_compiler_no_builtin_flag, )="$_LT_TAGVAR(lt_prog_compiler_no_builtin_flag, ) -fno-rtti -fno-exceptions"])
-m4trace:configure.ac:13: -1- _LT_COMPILER_OPTION([if $compiler PIC flag $_LT_TAGVAR(lt_prog_compiler_pic, ) works], [_LT_TAGVAR(lt_cv_prog_compiler_pic_works, )], [$_LT_TAGVAR(lt_prog_compiler_pic, )@&t@m4_if([],[],[ -DPIC],[m4_if([],[CXX],[ -DPIC],[])])], [], [case $_LT_TAGVAR(lt_prog_compiler_pic, ) in
+configure.ac:12: the top level])
+m4trace:configure.ac:12: -1- LT_INIT
+m4trace:configure.ac:12: -1- m4_pattern_forbid([^_?LT_[A-Z_]+$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^(_LT_EOF|LT_DLGLOBAL|LT_DLLAZY_OR_NOW|LT_MULTI_MODULE)$])
+m4trace:configure.ac:12: -1- LTOPTIONS_VERSION
+m4trace:configure.ac:12: -1- LTSUGAR_VERSION
+m4trace:configure.ac:12: -1- LTVERSION_VERSION
+m4trace:configure.ac:12: -1- LTOBSOLETE_VERSION
+m4trace:configure.ac:12: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LIBTOOL$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^build$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^build_cpu$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^build_vendor$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^build_os$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^host$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^host_cpu$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^host_vendor$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^host_os$])
+m4trace:configure.ac:12: -1- LT_PATH_LD
+m4trace:configure.ac:12: -1- m4_pattern_allow([^SED$])
+m4trace:configure.ac:12: -1- AC_PROG_EGREP
+m4trace:configure.ac:12: -1- m4_pattern_allow([^GREP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^EGREP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^FGREP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^GREP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LD$])
+m4trace:configure.ac:12: -1- LT_PATH_NM
+m4trace:configure.ac:12: -1- m4_pattern_allow([^DUMPBIN$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^ac_ct_DUMPBIN$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^DUMPBIN$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^NM$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LN_S$])
+m4trace:configure.ac:12: -1- LT_CMD_MAX_LEN
+m4trace:configure.ac:12: -1- m4_pattern_allow([^OBJDUMP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^OBJDUMP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^AR$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^STRIP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^RANLIB$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([LT_OBJDIR])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LT_OBJDIR$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^lt_ECHO$])
+m4trace:configure.ac:12: -1- _LT_CC_BASENAME([$compiler])
+m4trace:configure.ac:12: -1- _LT_PATH_TOOL_PREFIX([${ac_tool_prefix}file], [/usr/bin$PATH_SEPARATOR$PATH])
+m4trace:configure.ac:12: -1- _LT_PATH_TOOL_PREFIX([file], [/usr/bin$PATH_SEPARATOR$PATH])
+m4trace:configure.ac:12: -1- LT_SUPPORTED_TAG([CC])
+m4trace:configure.ac:12: -1- _LT_COMPILER_BOILERPLATE
+m4trace:configure.ac:12: -1- _LT_LINKER_BOILERPLATE
+m4trace:configure.ac:12: -1- _LT_COMPILER_OPTION([if $compiler supports -fno-rtti -fno-exceptions], [lt_cv_prog_compiler_rtti_exceptions], [-fno-rtti -fno-exceptions], [], [_LT_TAGVAR(lt_prog_compiler_no_builtin_flag, )="$_LT_TAGVAR(lt_prog_compiler_no_builtin_flag, ) -fno-rtti -fno-exceptions"])
+m4trace:configure.ac:12: -1- _LT_COMPILER_OPTION([if $compiler PIC flag $_LT_TAGVAR(lt_prog_compiler_pic, ) works], [_LT_TAGVAR(lt_cv_prog_compiler_pic_works, )], [$_LT_TAGVAR(lt_prog_compiler_pic, )@&t@m4_if([],[],[ -DPIC],[m4_if([],[CXX],[ -DPIC],[])])], [], [case $_LT_TAGVAR(lt_prog_compiler_pic, ) in
      "" | " "*) ;;
      *) _LT_TAGVAR(lt_prog_compiler_pic, )=" $_LT_TAGVAR(lt_prog_compiler_pic, )" ;;
      esac], [_LT_TAGVAR(lt_prog_compiler_pic, )=
      _LT_TAGVAR(lt_prog_compiler_can_build_shared, )=no])
-m4trace:configure.ac:13: -1- _LT_LINKER_OPTION([if $compiler static flag $lt_tmp_static_flag works], [lt_cv_prog_compiler_static_works], [$lt_tmp_static_flag], [], [_LT_TAGVAR(lt_prog_compiler_static, )=])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^DSYMUTIL$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^NMEDIT$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LIPO$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^OTOOL$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^OTOOL64$])
-m4trace:configure.ac:13: -1- LT_SYS_DLOPEN_SELF
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CPP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CPPFLAGS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CPP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^STDC_HEADERS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^HAVE_DLFCN_H$])
-m4trace:configure.ac:13: -1- LT_LANG([CXX])
-m4trace:configure.ac:13: -1- LT_SUPPORTED_TAG([CXX])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXX$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXXFLAGS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LDFLAGS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LIBS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CPPFLAGS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXX$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^ac_ct_CXX$])
-m4trace:configure.ac:13: -1- _AM_DEPENDENCIES([CXX])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXXDEPMODE$])
-m4trace:configure.ac:13: -1- AM_CONDITIONAL([am__fastdepCXX], [
+m4trace:configure.ac:12: -1- _LT_LINKER_OPTION([if $compiler static flag $lt_tmp_static_flag works], [lt_cv_prog_compiler_static_works], [$lt_tmp_static_flag], [], [_LT_TAGVAR(lt_prog_compiler_static, )=])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^DSYMUTIL$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^NMEDIT$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LIPO$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^OTOOL$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^OTOOL64$])
+m4trace:configure.ac:12: -1- LT_SYS_DLOPEN_SELF
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CPP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CPPFLAGS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CPP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^STDC_HEADERS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^HAVE_DLFCN_H$])
+m4trace:configure.ac:12: -1- LT_LANG([CXX])
+m4trace:configure.ac:12: -1- LT_SUPPORTED_TAG([CXX])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXX$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXXFLAGS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LDFLAGS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LIBS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CPPFLAGS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXX$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^ac_ct_CXX$])
+m4trace:configure.ac:12: -1- _AM_DEPENDENCIES([CXX])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXXDEPMODE$])
+m4trace:configure.ac:12: -1- AM_CONDITIONAL([am__fastdepCXX], [
   test "x$enable_dependency_tracking" != xno \
   && test "$am_cv_CXX_dependencies_compiler_type" = gcc3])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^am__fastdepCXX_TRUE$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^am__fastdepCXX_FALSE$])
-m4trace:configure.ac:13: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_TRUE])
-m4trace:configure.ac:13: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_FALSE])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXXCPP$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CPPFLAGS$])
-m4trace:configure.ac:13: -1- m4_pattern_allow([^CXXCPP$])
-m4trace:configure.ac:13: -1- _LT_COMPILER_BOILERPLATE
-m4trace:configure.ac:13: -1- _LT_LINKER_BOILERPLATE
-m4trace:configure.ac:13: -1- _LT_CC_BASENAME([$compiler])
-m4trace:configure.ac:13: -1- LT_PATH_LD
-m4trace:configure.ac:13: -1- m4_pattern_allow([^LD$])
-m4trace:configure.ac:13: -1- _LT_COMPILER_OPTION([if $compiler PIC flag $_LT_TAGVAR(lt_prog_compiler_pic, CXX) works], [_LT_TAGVAR(lt_cv_prog_compiler_pic_works, CXX)], [$_LT_TAGVAR(lt_prog_compiler_pic, CXX)@&t@m4_if([CXX],[],[ -DPIC],[m4_if([CXX],[CXX],[ -DPIC],[])])], [], [case $_LT_TAGVAR(lt_prog_compiler_pic, CXX) in
+m4trace:configure.ac:12: -1- m4_pattern_allow([^am__fastdepCXX_TRUE$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^am__fastdepCXX_FALSE$])
+m4trace:configure.ac:12: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_TRUE])
+m4trace:configure.ac:12: -1- _AM_SUBST_NOTMAKE([am__fastdepCXX_FALSE])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXXCPP$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CPPFLAGS$])
+m4trace:configure.ac:12: -1- m4_pattern_allow([^CXXCPP$])
+m4trace:configure.ac:12: -1- _LT_COMPILER_BOILERPLATE
+m4trace:configure.ac:12: -1- _LT_LINKER_BOILERPLATE
+m4trace:configure.ac:12: -1- _LT_CC_BASENAME([$compiler])
+m4trace:configure.ac:12: -1- LT_PATH_LD
+m4trace:configure.ac:12: -1- m4_pattern_allow([^LD$])
+m4trace:configure.ac:12: -1- _LT_COMPILER_OPTION([if $compiler PIC flag $_LT_TAGVAR(lt_prog_compiler_pic, CXX) works], [_LT_TAGVAR(lt_cv_prog_compiler_pic_works, CXX)], [$_LT_TAGVAR(lt_prog_compiler_pic, CXX)@&t@m4_if([CXX],[],[ -DPIC],[m4_if([CXX],[CXX],[ -DPIC],[])])], [], [case $_LT_TAGVAR(lt_prog_compiler_pic, CXX) in
      "" | " "*) ;;
      *) _LT_TAGVAR(lt_prog_compiler_pic, CXX)=" $_LT_TAGVAR(lt_prog_compiler_pic, CXX)" ;;
      esac], [_LT_TAGVAR(lt_prog_compiler_pic, CXX)=
      _LT_TAGVAR(lt_prog_compiler_can_build_shared, CXX)=no])
-m4trace:configure.ac:13: -1- _LT_LINKER_OPTION([if $compiler static flag $lt_tmp_static_flag works], [lt_cv_prog_compiler_static_works_CXX], [$lt_tmp_static_flag], [], [_LT_TAGVAR(lt_prog_compiler_static, CXX)=])
-m4trace:configure.ac:14: -1- m4_pattern_allow([^HAVE_LIBGMP$])
-m4trace:configure.ac:16: -1- AX_CLOCK_GETTIME
-m4trace:configure.ac:16: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT$])
-m4trace:configure.ac:16: -1- AM_CONDITIONAL([HAVE_CLOCK_GETTIME_RT], [test "x$ac_cv_lib_rt_clock_gettime" = xtrue])
-m4trace:configure.ac:16: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT_TRUE$])
-m4trace:configure.ac:16: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT_FALSE$])
-m4trace:configure.ac:16: -1- _AM_SUBST_NOTMAKE([HAVE_CLOCK_GETTIME_RT_TRUE])
-m4trace:configure.ac:16: -1- _AM_SUBST_NOTMAKE([HAVE_CLOCK_GETTIME_RT_FALSE])
-m4trace:configure.ac:16: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_NONRT$])
-m4trace:configure.ac:16: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_MONOTONIC$])
+m4trace:configure.ac:12: -1- _LT_LINKER_OPTION([if $compiler static flag $lt_tmp_static_flag works], [lt_cv_prog_compiler_static_works_CXX], [$lt_tmp_static_flag], [], [_LT_TAGVAR(lt_prog_compiler_static, CXX)=])
+m4trace:configure.ac:13: -1- m4_pattern_allow([^HAVE_LIBGMP$])
+m4trace:configure.ac:15: -1- AX_CLOCK_GETTIME
+m4trace:configure.ac:15: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT$])
+m4trace:configure.ac:15: -1- AM_CONDITIONAL([HAVE_CLOCK_GETTIME_RT], [test "x$ac_cv_lib_rt_clock_gettime" = xtrue])
+m4trace:configure.ac:15: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT_TRUE$])
+m4trace:configure.ac:15: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_RT_FALSE$])
+m4trace:configure.ac:15: -1- _AM_SUBST_NOTMAKE([HAVE_CLOCK_GETTIME_RT_TRUE])
+m4trace:configure.ac:15: -1- _AM_SUBST_NOTMAKE([HAVE_CLOCK_GETTIME_RT_FALSE])
+m4trace:configure.ac:15: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_NONRT$])
+m4trace:configure.ac:15: -1- m4_pattern_allow([^HAVE_CLOCK_GETTIME_MONOTONIC$])
 m4trace:configure.ac:18: -1- AX_BOOST_BASE([1.36], [], [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
 m4trace:configure.ac:18: -1- m4_pattern_allow([^BOOST_CPPFLAGS$])
 m4trace:configure.ac:18: -1- m4_pattern_allow([^BOOST_LDFLAGS$])
@@ -2836,52 +3128,202 @@ m4trace:configure.ac:23: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' i
 You should run autoupdate.], [../../lib/autoconf/lang.m4:135: AC_LANG_RESTORE is expanded from...
 m4/ax_cxx_check_header.m4:50: AX_CXX_CHECK_HEADER is expanded from...
 configure.ac:23: the top level])
-m4trace:configure.ac:26: -1- m4_pattern_allow([^ERLC$])
-m4trace:configure.ac:26: -1- m4_pattern_allow([^ERLC$])
-m4trace:configure.ac:26: -1- m4_pattern_allow([^ERLCFLAGS$])
-m4trace:configure.ac:27: -1- m4_pattern_allow([^ERL$])
-m4trace:configure.ac:27: -1- m4_pattern_allow([^ERL$])
-m4trace:configure.ac:28: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B01], [], [AC_MSG_ERROR([Required Erlang not found])])
-m4trace:configure.ac:28: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
-m4/ax_erlang_otp_version.m4:41: AX_ERLANG_REQUIRE_OTP_VER is expanded from...
+m4trace:configure.ac:27: -1- m4_pattern_allow([^JAVAC$])
+m4trace:configure.ac:28: -1- AX_PROG_JAVAC
+m4trace:configure.ac:28: -1- m4_pattern_allow([^JAVAC$])
+m4trace:configure.ac:28: -1- m4_pattern_allow([^JAVAC$])
+m4trace:configure.ac:28: -1- AX_PROG_JAVAC_WORKS
+m4trace:configure.ac:28: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_javac_works.m4:53: AX_PROG_JAVAC_WORKS is expanded from...
+m4/ax_prog_javac.m4:70: AX_PROG_JAVAC is expanded from...
 configure.ac:28: the top level])
-m4trace:configure.ac:30: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+m4trace:configure.ac:28: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_javac_works.m4:53: AX_PROG_JAVAC_WORKS is expanded from...
+m4/ax_prog_javac.m4:70: AX_PROG_JAVAC is expanded from...
+configure.ac:28: the top level])
+m4trace:configure.ac:29: -1- m4_pattern_allow([^JAVA$])
+m4trace:configure.ac:30: -1- AX_PROG_JAVA
+m4trace:configure.ac:30: -1- m4_pattern_allow([^JAVA$])
+m4trace:configure.ac:30: -1- m4_pattern_allow([^JAVA$])
+m4trace:configure.ac:30: -1- AX_PROG_JAVA_WORKS
+m4trace:configure.ac:30: -1- AX_PROG_JAVAC
+m4trace:configure.ac:30: -1- m4_pattern_allow([^JAVAC$])
+m4trace:configure.ac:30: -1- m4_pattern_allow([^JAVAC$])
+m4trace:configure.ac:30: -1- AX_PROG_JAVAC_WORKS
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_javac_works.m4:53: AX_PROG_JAVAC_WORKS is expanded from...
+m4/ax_prog_javac.m4:70: AX_PROG_JAVAC is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_javac_works.m4:53: AX_PROG_JAVAC_WORKS is expanded from...
+m4/ax_prog_javac.m4:70: AX_PROG_JAVAC is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:30: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
+m4/ax_prog_java_works.m4:53: AX_PROG_JAVA_WORKS is expanded from...
+m4/ax_prog_java.m4:106: AX_PROG_JAVA is expanded from...
+configure.ac:30: the top level])
+m4trace:configure.ac:31: -1- m4_pattern_allow([^JAR$])
+m4trace:configure.ac:32: -1- AX_PROG_JAR
+m4trace:configure.ac:32: -1- m4_pattern_allow([^JAR$])
+m4trace:configure.ac:32: -1- m4_pattern_allow([^JAR$])
+m4trace:configure.ac:33: -1- AX_CHECK_RQRD_CLASS([java.nio.ByteBuffer], [], [AC_MSG_ERROR([java nio not found])])
+m4trace:configure.ac:33: -1- AC_CHECK_CLASS([java.nio.ByteBuffer])
+m4trace:configure.ac:33: -1- _m4_warn([obsolete], [The macro `AC_CHECK_CLASS' is obsolete.
+You should run autoupdate.], [m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:33: the top level])
+m4trace:configure.ac:33: -1- AX_CHECK_CLASS([java.nio.ByteBuffer])
+m4trace:configure.ac:33: -1- AX_TRY_COMPILE_JAVA([java.nio.ByteBuffer], [], [eval "ac_cv_class_$ac_var_name=yes"], [eval "ac_cv_class_$ac_var_name=no"])
+m4trace:configure.ac:33: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+m4/ax_try_compile_java.m4:35: AX_TRY_COMPILE_JAVA is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+m4/ax_check_class.m4:57: AX_CHECK_CLASS is expanded from...
+m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:33: the top level])
+m4trace:configure.ac:33: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+m4/ax_try_compile_java.m4:35: AX_TRY_COMPILE_JAVA is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+m4/ax_check_class.m4:57: AX_CHECK_CLASS is expanded from...
+m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:33: the top level])
+m4trace:configure.ac:35: -1- AX_CHECK_RQRD_CLASS([java.lang.reflect.Constructor], [], [AC_MSG_ERROR([java reflection not found])])
+m4trace:configure.ac:35: -1- AC_CHECK_CLASS([java.lang.reflect.Constructor])
+m4trace:configure.ac:35: -1- _m4_warn([obsolete], [The macro `AC_CHECK_CLASS' is obsolete.
+You should run autoupdate.], [m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:35: the top level])
+m4trace:configure.ac:35: -1- AX_CHECK_CLASS([java.lang.reflect.Constructor])
+m4trace:configure.ac:35: -1- AX_TRY_COMPILE_JAVA([java.lang.reflect.Constructor], [], [eval "ac_cv_class_$ac_var_name=yes"], [eval "ac_cv_class_$ac_var_name=no"])
+m4trace:configure.ac:35: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+m4/ax_try_compile_java.m4:35: AX_TRY_COMPILE_JAVA is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+m4/ax_check_class.m4:57: AX_CHECK_CLASS is expanded from...
+m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:35: the top level])
+m4trace:configure.ac:35: -1- _m4_warn([obsolete], [The macro `AC_FD_CC' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/general.m4:377: AC_FD_CC is expanded from...
+m4/ax_try_compile_java.m4:35: AX_TRY_COMPILE_JAVA is expanded from...
+../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
+../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
+m4/ax_check_class.m4:57: AX_CHECK_CLASS is expanded from...
+m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
+m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
+configure.ac:35: the top level])
+m4trace:configure.ac:39: -1- m4_pattern_allow([^RUBY$])
+m4trace:configure.ac:40: -1- AX_PROG_RUBY_VERSION([1.8.0], [], [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
+m4trace:configure.ac:40: -1- m4_pattern_allow([^RUBY_VERSION$])
+m4trace:configure.ac:40: -1- AX_COMPARE_VERSION([$ax_ruby_version], [le], [$ruby_version], [
+        :
+            
+        ], [
+        :
+            AC_MSG_ERROR([Ruby >= 1.8.0 not found])
+        ])
+m4trace:configure.ac:42: -1- m4_pattern_allow([^RUBY_RAKE$])
+m4trace:configure.ac:46: -1- m4_pattern_allow([^RUBY_GEM$])
+m4trace:configure.ac:52: -1- m4_pattern_allow([^ERLC$])
+m4trace:configure.ac:52: -1- m4_pattern_allow([^ERLC$])
+m4trace:configure.ac:52: -1- m4_pattern_allow([^ERLCFLAGS$])
+m4trace:configure.ac:53: -1- m4_pattern_allow([^ERL$])
+m4trace:configure.ac:53: -1- m4_pattern_allow([^ERL$])
+m4trace:configure.ac:54: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B01], [], [AC_MSG_ERROR([Erlang >= R14B01 not found])])
+m4trace:configure.ac:54: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+m4/ax_erlang_otp_version.m4:41: AX_ERLANG_REQUIRE_OTP_VER is expanded from...
+configure.ac:54: the top level])
+m4trace:configure.ac:56: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:217: AC_ERLANG_SUBST_ROOT_DIR is expanded from...
-configure.ac:30: the top level])
-m4trace:configure.ac:30: -1- m4_pattern_allow([^ERLANG_ROOT_DIR$])
-m4trace:configure.ac:31: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:56: the top level])
+m4trace:configure.ac:56: -1- m4_pattern_allow([^ERLANG_ROOT_DIR$])
+m4trace:configure.ac:57: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:241: AC_ERLANG_SUBST_LIB_DIR is expanded from...
-configure.ac:31: the top level])
-m4trace:configure.ac:31: -1- m4_pattern_allow([^ERLANG_LIB_DIR$])
-m4trace:configure.ac:32: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:57: the top level])
+m4trace:configure.ac:57: -1- m4_pattern_allow([^ERLANG_LIB_DIR$])
+m4trace:configure.ac:58: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:175: AC_ERLANG_CHECK_LIB is expanded from...
-configure.ac:32: the top level])
-m4trace:configure.ac:32: -1- m4_pattern_allow([^ERLANG_LIB_DIR_erl_interface$])
-m4trace:configure.ac:32: -1- m4_pattern_allow([^ERLANG_LIB_VER_erl_interface$])
-m4trace:configure.ac:33: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:58: the top level])
+m4trace:configure.ac:58: -1- m4_pattern_allow([^ERLANG_LIB_DIR_erl_interface$])
+m4trace:configure.ac:58: -1- m4_pattern_allow([^ERLANG_LIB_VER_erl_interface$])
+m4trace:configure.ac:59: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:175: AC_ERLANG_CHECK_LIB is expanded from...
-configure.ac:33: the top level])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
-m4trace:configure.ac:63: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:63: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:63: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:63: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:63: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:63: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:63: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:63: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:63: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:63: -1- _LT_PROG_LTMAIN
+configure.ac:59: the top level])
+m4trace:configure.ac:59: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
+m4trace:configure.ac:59: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
+m4trace:configure.ac:92: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:92: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:92: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:92: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:92: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:92: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:92: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:92: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:92: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:92: -1- _LT_PROG_LTMAIN

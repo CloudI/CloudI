@@ -1,6 +1,5 @@
 
 JAVAROOT = $(top_builddir)/api/java/jar/
-javadir = $(datadir)/java
 java_JAVA = OtpErlangAtom.java \
             OtpErlangBinary.java \
             OtpErlangBitstr.java \

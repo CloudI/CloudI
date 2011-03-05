@@ -49,119 +49,16 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <iostream>
 
 namespace
 {
-    class process_data
-    {
-        public:
-            process_data(unsigned long const pid,
-                         int const index_stdout,
-                         int const index_stderr) :
-                m_pid(pid),
-                m_index_stdout(index_stdout),
-                m_index_stderr(index_stderr),
-                m_index_stream1(0),
-                m_index_stream2(0),
-                m_stream1(1, 16384),
-                m_stream2(1, 16384)
-            {
-            }
-
-            ~process_data()
-            {
-                GEPD::nfds -= 2;
-
-                // kills the pid if it isn't dead,
-                // to avoid blocking on a closed pipe
-                kill(m_pid, 9);
-                assert(waitpid(m_pid, NULL, 0) == static_cast<signed>(m_pid));
-            }
-
-            void close()
-            {
-                ::close(GEPD::fds[m_index_stdout].fd);
-                ::close(GEPD::fds[m_index_stderr].fd);
-            }
-
-            void shift()
-            {
-                int const old_index_stdout = m_index_stdout;
-                int const old_index_stderr = m_index_stderr;
-                m_index_stdout -= 2;
-                m_index_stderr -= 2;
-                GEPD::fds[m_index_stdout] = GEPD::fds[old_index_stdout];
-                GEPD::fds[m_index_stderr] = GEPD::fds[old_index_stderr];
-            }
-
-            int flush(int & count, realloc_ptr<unsigned char> & send_buffer)
-            {
-                using namespace GEPD;
-                int status;
-                if (count > 0 && fds[m_index_stderr].revents != 0)
-                {
-                    if ((status = flush_stream(fds[m_index_stderr].fd,
-                                               fds[m_index_stderr].revents,
-                                               "stderr", m_pid, send_buffer,
-                                               m_stream2, m_index_stream2)))
-                        return status;
-                    --count;
-                }
-                if (count > 0 && fds[m_index_stdout].revents != 0)
-                {
-                    if ((status = flush_stream(fds[m_index_stdout].fd,
-                                               fds[m_index_stdout].revents,
-                                               "stdout", m_pid, send_buffer,
-                                               m_stream1, m_index_stream1)))
-                        return status;
-                    --count;
-                }
-                return 0;
-            }
-
-            int check(int & count, realloc_ptr<unsigned char> & send_buffer)
-            {
-                using namespace GEPD;
-                int status;
-                if (count > 0 && fds[m_index_stderr].revents != 0)
-                {
-                    if ((status = consume_stream(fds[m_index_stderr].fd,
-                                                 fds[m_index_stderr].revents,
-                                                 "stderr", m_pid, send_buffer,
-                                                 m_stream2, m_index_stream2)))
-                        return status;
-                    --count;
-                }
-                if (count > 0 && fds[m_index_stdout].revents != 0)
-                {
-                    if ((status = consume_stream(fds[m_index_stdout].fd,
-                                                 fds[m_index_stdout].revents,
-                                                 "stdout", m_pid, send_buffer,
-                                                 m_stream1, m_index_stream1)))
-                        return status;
-                    --count;
-                }
-                return 0;
-            }
-    
-        private:
-            unsigned long const m_pid;
-            int m_index_stdout;
-            int m_index_stderr;
-            size_t m_index_stream1;
-            size_t m_index_stream2;
-            realloc_ptr<unsigned char> m_stream1;
-            realloc_ptr<unsigned char> m_stream2;
-    };
-
-    std::vector< copy_ptr<process_data> > processes;
-
     namespace spawn_status
     {
         enum
         {
             success = 0,
-            invalid_input = -127,
+            invalid_input                   = 11,
             out_of_memory,
             pipe_EFAULT,
             pipe_EINVAL,
@@ -170,7 +67,7 @@ namespace
             pipe_unknown,
             fork_EAGAIN,
             fork_ENOMEM,
-            fork_unknown,
+            fork_unknown,                  // 20
             socket_EACCES,
             socket_EAFNOSUPPORT,
             socket_EINVAL,
@@ -180,7 +77,7 @@ namespace
             socket_ENOMEM,
             socket_EPROTONOSUPPORT,
             socket_unknown,
-            dup_EBADF,
+            dup_EBADF,                     // 30
             dup_EBUSY,
             dup_EINTR,
             dup_EINVAL,
@@ -190,7 +87,7 @@ namespace
             close_EINTR,
             close_EIO,
             close_unknown,
-            waitpid_ECHILD,
+            waitpid_ECHILD,                // 40
             waitpid_EINTR,
             waitpid_EINVAL,
             waitpid_unknown,
@@ -200,7 +97,7 @@ namespace
             connect_EAFNOSUPPORT,
             connect_EAGAIN,
             connect_EALREADY,
-            connect_EBADF,
+            connect_EBADF,                 // 50
             connect_ECONNREFUSED,
             connect_EFAULT,
             connect_EINPROGRESS,
@@ -210,7 +107,7 @@ namespace
             connect_ENOTSOCK,
             connect_ETIMEDOUT,
             connect_unknown,
-            exec_E2BIG,
+            exec_E2BIG,                    // 60
             exec_EACCES,
             exec_EFAULT,
             exec_EINVAL,
@@ -220,15 +117,221 @@ namespace
             exec_ELOOP,
             exec_EMFILE,
             exec_ENAMETOOLONG,
-            exec_ENFILE,
+            exec_ENFILE,                   // 70
             exec_ENOENT,
             exec_ENOEXEC,
             exec_ENOMEM,
             exec_ENOTDIR,
             exec_EPERM,
             exec_ETXTBSY,
-            exec_unknown
+            exec_unknown,
+            last_value
         };
+
+        char const * string(int status)
+        {
+            switch (status)
+            {
+                case invalid_input:
+                    return "invalid_input";
+                case out_of_memory:
+                    return "out_of_memory";
+                case pipe_EFAULT:
+                    return "pipe_EFAULT";
+                case pipe_EINVAL:
+                    return "pipe_EINVAL";
+                case pipe_EMFILE:
+                    return "pipe_EMFILE";
+                case pipe_ENFILE:
+                    return "pipe_ENFILE";
+                case pipe_unknown:
+                    return "pipe_unknown";
+                case fork_EAGAIN:
+                    return "fork_EAGAIN";
+                case fork_ENOMEM:
+                    return "fork_ENOMEM";
+                case fork_unknown:
+                    return "fork_unknown";
+                case socket_EACCES:
+                    return "socket_EACCES";
+                case socket_EAFNOSUPPORT:
+                    return "socket_EAFNOSUPPORT";
+                case socket_EINVAL:
+                    return "socket_EINVAL";
+                case socket_EMFILE:
+                    return "socket_EMFILE";
+                case socket_ENFILE:
+                    return "socket_ENFILE";
+                case socket_ENOBUFS:
+                    return "socket_ENOBUFS";
+                case socket_ENOMEM:
+                    return "socket_ENOMEM";
+                case socket_EPROTONOSUPPORT:
+                    return "socket_EPROTONOSUPPORT";
+                case socket_unknown:
+                    return "socket_unknown";
+                case dup_EBADF:
+                    return "dup_EBADF";
+                case dup_EBUSY:
+                    return "dup_EBUSY";
+                case dup_EINTR:
+                    return "dup_EINTR";
+                case dup_EINVAL:
+                    return "dup_EINVAL";
+                case dup_EMFILE:
+                    return "dup_EMFILE";
+                case dup_unknown:
+                    return "dup_unknown";
+                case close_EBADF:
+                    return "close_EBADF";
+                case close_EINTR:
+                    return "close_EINTR";
+                case close_EIO:
+                    return "close_EIO";
+                case close_unknown:
+                    return "close_unknown";
+                case waitpid_ECHILD:
+                    return "waitpid_ECHILD";
+                case waitpid_EINTR:
+                    return "waitpid_EINTR";
+                case waitpid_EINVAL:
+                    return "waitpid_EINVAL";
+                case waitpid_unknown:
+                    return "waitpid_unknown";
+                case connect_EACCES:
+                    return "connect_EACCES";
+                case connect_EPERM:
+                    return "connect_EPERM";
+                case connect_EADDRINUSE:
+                    return "connect_EADDRINUSE";
+                case connect_EAFNOSUPPORT:
+                    return "connect_EAFNOSUPPORT";
+                case connect_EAGAIN:
+                    return "connect_EAGAIN";
+                case connect_EALREADY:
+                    return "connect_EALREADY";
+                case connect_EBADF:
+                    return "connect_EBADF";
+                case connect_ECONNREFUSED:
+                    return "connect_ECONNREFUSED";
+                case connect_EFAULT:
+                    return "connect_EFAULT";
+                case connect_EINPROGRESS:
+                    return "connect_EINPROGRESS";
+                case connect_EINTR:
+                    return "connect_EINTR";
+                case connect_EISCONN:
+                    return "connect_EISCONN";
+                case connect_ENETUNREACH:
+                    return "connect_ENETUNREACH";
+                case connect_ENOTSOCK:
+                    return "connect_ENOTSOCK";
+                case connect_ETIMEDOUT:
+                    return "connect_ETIMEDOUT";
+                case connect_unknown:
+                    return "connect_unknown";
+                case exec_E2BIG:
+                    return "exec_E2BIG";
+                case exec_EACCES:
+                    return "exec_EACCES";
+                case exec_EFAULT:
+                    return "exec_EFAULT";
+                case exec_EINVAL:
+                    return "exec_EINVAL";
+                case exec_EIO:
+                    return "exec_EIO";
+                case exec_EISDIR:
+                    return "exec_EISDIR";
+                case exec_ELIBBAD:
+                    return "exec_ELIBBAD";
+                case exec_ELOOP:
+                    return "exec_ELOOP";
+                case exec_EMFILE:
+                    return "exec_EMFILE";
+                case exec_ENAMETOOLONG:
+                    return "exec_ENAMETOOLONG";
+                case exec_ENFILE:
+                    return "exec_ENFILE";
+                case exec_ENOENT:
+                    return "exec_ENOENT";
+                case exec_ENOEXEC:
+                    return "exec_ENOEXEC";
+                case exec_ENOMEM:
+                    return "exec_ENOMEM";
+                case exec_ENOTDIR:
+                    return "exec_ENOTDIR";
+                case exec_EPERM:
+                    return "exec_EPERM";
+                case exec_ETXTBSY:
+                    return "exec_ETXTBSY";
+                case exec_unknown:
+                    return "exec_unknown";
+                case 129:
+                    return "SIGHUP";
+                case 130:
+                    return "SIGINT";
+                case 131:
+                    return "SIGQUIT";
+                case 132:
+                    return "SIGILL";
+                case 133:
+                    return "SIGTRAP";
+                case 134:
+                    return "SIGABRT";
+                case 135:
+                    return "SIGBUS/SIGEMT";
+                case 136:
+                    return "SIGFPE";
+                case 137:
+                    return "SIGKILL";
+                case 138:
+                    return "SIGUSR1/SIGBUS";
+                case 139:
+                    return "SIGSEGV";
+                case 140:
+                    return "SIGUSR2/SIGSYS";
+                case 141:
+                    return "SIGPIPE";
+                case 142:
+                    return "SIGALRM";
+                case 143:
+                    return "SIGTERM";
+                case 144:
+                    return "SIGUSR1/SIGURG";
+                case 145:
+                    return "SIGUSR2/SIGCHLD/SIGSTOP";
+                case 146:
+                    return "SIGCHLD/SIGCONT/SIGTSTP";
+                case 147:
+                    return "SIGCONT/SIGSTOP/SIGPWR";
+                case 148:
+                    return "SIGCHLD/SIGTSTP/SIGWINCH";
+                case 149:
+                    return "SIGTTIN/SIGURG";
+                case 150:
+                    return "SIGTTOU/SIGIO";
+                case 151:
+                    return "SIGSTOP/SIGURG/SIGIO";
+                case 152:
+                    return "SIGTSTP/SIGXCPU";
+                case 153:
+                    return "SIGCONT/SIGXFSZ";
+                case 154:
+                    return "SIGTTIN/SIGVTALRM";
+                case 155:
+                    return "SIGTTOU/SIGPROF";
+                case 156:
+                    return "SIGVTALRM/SIGWINCH";
+                case 157:
+                    return "SIGPROF/SIGIO/SIGPWR";
+                case 158:
+                    return "SIGUSR1/SIGXCPU/SIGPWR";
+                case 159:
+                    return "SIGUSR2/SIGXFSZ/SIGSYS";
+                default:
+                    return 0;
+            }
+        }
 
         int errno_pipe()
         {
@@ -416,6 +519,134 @@ namespace
             }
         }
     }
+
+    class process_data
+    {
+        public:
+            process_data(unsigned long const pid,
+                         int const index_stdout,
+                         int const index_stderr) :
+                m_pid(pid),
+                m_index_stdout(index_stdout),
+                m_index_stderr(index_stderr),
+                m_index_stream1(0),
+                m_index_stream2(0),
+                m_stream1(1, 16384),
+                m_stream2(1, 16384)
+            {
+            }
+
+            ~process_data()
+            {
+                GEPD::nfds -= 2;
+
+                // kills the pid if it isn't dead,
+                // to avoid blocking on a closed pipe
+                kill(m_pid, 9);
+                int status;
+                int const pid = waitpid(m_pid, &status, 0);
+                assert(pid == static_cast<signed>(m_pid));
+
+                if (WIFEXITED(status))
+                {
+                    status = WEXITSTATUS(status);
+                }
+                else if (WIFSIGNALED(status))
+                {
+                    status = WTERMSIG(status) + 128;
+                }
+                else
+                {
+                    assert(false);
+                }
+                if (status != 0)
+                {
+                    char const * const error = spawn_status::string(status);
+                    std::cerr << "OS pid " << m_pid << " exited with ";
+                    if (error)
+                        std::cerr << error << std::endl;
+                    else
+                        std::cerr << status << std::endl;
+                }
+            }
+
+            void close()
+            {
+                ::close(GEPD::fds[m_index_stdout].fd);
+                ::close(GEPD::fds[m_index_stderr].fd);
+            }
+
+            void shift()
+            {
+                int const old_index_stdout = m_index_stdout;
+                int const old_index_stderr = m_index_stderr;
+                m_index_stdout -= 2;
+                m_index_stderr -= 2;
+                GEPD::fds[m_index_stdout] = GEPD::fds[old_index_stdout];
+                GEPD::fds[m_index_stderr] = GEPD::fds[old_index_stderr];
+            }
+
+            int flush(int & count, realloc_ptr<unsigned char> & send_buffer)
+            {
+                using namespace GEPD;
+                int status;
+                if (count > 0 && fds[m_index_stderr].revents != 0)
+                {
+                    if ((status = flush_stream(fds[m_index_stderr].fd,
+                                               fds[m_index_stderr].revents,
+                                               "stderr", m_pid, send_buffer,
+                                               m_stream2, m_index_stream2)))
+                        return status;
+                    --count;
+                }
+                if (count > 0 && fds[m_index_stdout].revents != 0)
+                {
+                    if ((status = flush_stream(fds[m_index_stdout].fd,
+                                               fds[m_index_stdout].revents,
+                                               "stdout", m_pid, send_buffer,
+                                               m_stream1, m_index_stream1)))
+                        return status;
+                    --count;
+                }
+                return 0;
+            }
+
+            int check(int & count, realloc_ptr<unsigned char> & send_buffer)
+            {
+                using namespace GEPD;
+                int status;
+                if (count > 0 && fds[m_index_stderr].revents != 0)
+                {
+                    if ((status = consume_stream(fds[m_index_stderr].fd,
+                                                 fds[m_index_stderr].revents,
+                                                 "stderr", m_pid, send_buffer,
+                                                 m_stream2, m_index_stream2)))
+                        return status;
+                    --count;
+                }
+                if (count > 0 && fds[m_index_stdout].revents != 0)
+                {
+                    if ((status = consume_stream(fds[m_index_stdout].fd,
+                                                 fds[m_index_stdout].revents,
+                                                 "stdout", m_pid, send_buffer,
+                                                 m_stream1, m_index_stream1)))
+                        return status;
+                    --count;
+                }
+                return 0;
+            }
+    
+        private:
+            unsigned long const m_pid;
+            int m_index_stdout;
+            int m_index_stderr;
+            size_t m_index_stream1;
+            size_t m_index_stream2;
+            realloc_ptr<unsigned char> m_stream1;
+            realloc_ptr<unsigned char> m_stream2;
+    };
+
+    std::vector< copy_ptr<process_data> > processes;
 }
 
 int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
@@ -557,7 +788,7 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             return spawn_status::errno_close();
 
         if (GEPD::fds.reserve(GEPD::nfds + 2) == false)
-            _exit(spawn_status::out_of_memory);
+            exit(spawn_status::out_of_memory);
         size_t const index_stdout = GEPD::nfds;
         size_t const index_stderr = GEPD::nfds + 1;
         GEPD::fds[index_stdout].fd = fds_stdout[0];
@@ -580,6 +811,7 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
 int main()
 {
     typedef std::vector< copy_ptr<process_data> >::iterator iterator;
+    assert(spawn_status::last_value == GEPD::ExitStatus::min);
 
     int const timeout = -1; // milliseconds
     realloc_ptr<unsigned char> erlang_buffer(32768, 4194304); // 4MB
@@ -605,11 +837,12 @@ int main()
                 (*dead)->close();
                 for (++itr; itr != processes.end(); ++itr)
                     (*itr)->shift();
-                processes.erase(dead);
-                itr = processes.begin();
-                continue;
+                itr = processes.erase(dead);
             }
-            ++itr;
+            else
+            {
+                ++itr;
+            }
         }
     }
     return status;

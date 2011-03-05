@@ -233,7 +233,6 @@ hexpi_SOURCES = assert.cpp main.cpp timer.cpp \
 hexpi_CPPFLAGS = -I$(top_builddir)/api/c/
 hexpi_LDFLAGS = -L$(top_builddir)/api/c/
 hexpi_LDADD = -lcloudi -lboost_thread $(am__append_1)
-CLEANFILES = ../priv/hexpi
 all: all-am
 
 .SUFFIXES:
@@ -530,7 +529,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)

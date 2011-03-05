@@ -5,7 +5,7 @@ CLEANFILES = $(dist_libexec_SCRIPTS)
 
 cloudi.jar: org/cloudi/*.class \
             com/ericsson/otp/erlang/*.class
-	jar cvf cloudi.jar com org
+	$(JAR) cvf cloudi.jar com org
 
 clean-local:
 	rm -rf org com

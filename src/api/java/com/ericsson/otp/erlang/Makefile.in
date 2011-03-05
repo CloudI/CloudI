@@ -201,7 +201,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 JAVAROOT = $(top_builddir)/api/java/jar/
-javadir = $(datadir)/java
 java_JAVA = OtpErlangAtom.java \
             OtpErlangBinary.java \
             OtpErlangBitstr.java \
