@@ -169,6 +169,8 @@ class API(object):
                 assert False
         else:
             assert False
+
+    def __data_ready():
             
     def poll(self):
         while True:
@@ -180,10 +182,14 @@ class API(object):
                 if len(IN) > 0:
                     ready = True
     
-            data = fragment = self.__s.recv(self.__size)
-            while len(fragment) == self.__size:
+            data = ''
+            while ready == True:
                 fragment = self.__s.recv(self.__size)
                 data += fragment
+                ready = (len(fragment) == self.__size)
+                if ready:
+                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
+                    ready == (len(IN) > 0)
     
             if len(data) == 0:
                 return None # socket was closed

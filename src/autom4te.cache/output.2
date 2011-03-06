@@ -746,6 +746,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIB@&t@OBJS
+ESCRIPT
 ERLANG_LIB_VER_ssl
 ERLANG_LIB_DIR_ssl
 ERLANG_LIB_VER_erl_interface
@@ -16061,7 +16062,7 @@ $as_echo "no" >&6; }
 fi
 
 
-if test x$RUBY_RAKE = x; then
+if test "x$RUBY_RAKE" = "x"; then
     as_fn_error "ruby rake not found" "$LINENO" 5
 fi
 # Extract the first word of "gem", so it can be a program name with args.
@@ -16104,7 +16105,7 @@ $as_echo "no" >&6; }
 fi
 
 
-if test x$RUBY_GEM = x; then
+if test "x$RUBY_GEM" = "x"; then
     as_fn_error "ruby gem not found" "$LINENO" 5
 fi
 
@@ -16675,8 +16676,70 @@ if test "$ac_cv_erlang_lib_dir_ssl" = "not found"; then :
   as_fn_error "Erlang ssl required for epgsql" "$LINENO" 5
 fi
 
+# Extract the first word of "escript", so it can be a program name with args.
+set dummy escript; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_ESCRIPT+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ESCRIPT in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ESCRIPT="$ESCRIPT" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in `$as_dirname -- $ERLC ||
+$as_expr X$ERLC : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
+	 X$ERLC : 'X\(//\)[^/]' \| \
+	 X$ERLC : 'X\(//\)$' \| \
+	 X$ERLC : 'X\(/\)' \| . 2>/dev/null ||
+$as_echo X$ERLC |
+    sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\/\)[^/].*/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\/\)$/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\).*/{
+	    s//\1/
+	    q
+	  }
+	  s/.*/./; q'`
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_ESCRIPT="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ESCRIPT=$ac_cv_path_ESCRIPT
+if test -n "$ESCRIPT"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ESCRIPT" >&5
+$as_echo "$ESCRIPT" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
 
 ac_config_commands="$ac_config_commands rebar"
+
 
 ac_config_files="$ac_config_files Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile api/ruby/Makefile api/ruby/gems/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile"
 
@@ -17745,7 +17808,7 @@ fi
 
 
 
-ERLC=$ERLC
+ESCRIPT=$ESCRIPT
 
 _ACEOF
 
@@ -19269,7 +19332,7 @@ _LT_EOF
 
  ;;
     "rebar":C) (cd external/rebar/; 
-                              `dirname $ERLC`/escript bootstrap &&
+                              $ESCRIPT bootstrap &&
                               mv ./rebar ../../ || exit 1) ;;
 
   esac

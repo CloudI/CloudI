@@ -40,11 +40,11 @@ AC_PATH_PROG([RUBY],[ruby])
 AX_PROG_RUBY_VERSION([1.8.0], ,
                      [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
 AC_PATH_PROG([RUBY_RAKE],[rake])
-if test x$RUBY_RAKE = x; then
+if test "x$RUBY_RAKE" = "x"; then
     AC_MSG_ERROR([ruby rake not found])
 fi
 AC_PATH_PROG([RUBY_GEM],[gem])
-if test x$RUBY_GEM = x; then
+if test "x$RUBY_GEM" = "x"; then
     AC_MSG_ERROR([ruby gem not found])
 fi
 
@@ -57,11 +57,12 @@ AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
-
+AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
-                              `dirname $ERLC`/escript bootstrap &&
+                              $ESCRIPT bootstrap &&
                               mv ./rebar ../../ || exit 1)],
-                   [ERLC=$ERLC])
+                   [ESCRIPT=$ESCRIPT])
+
 AC_CONFIG_FILES([Makefile
                  api/Makefile
                  api/c/Makefile

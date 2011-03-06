@@ -3317,13 +3317,14 @@ m4trace:configure.ac:59: -1- _m4_warn([cross], [AC_RUN_IFELSE called without def
 configure.ac:59: the top level])
 m4trace:configure.ac:59: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
 m4trace:configure.ac:59: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
-m4trace:configure.ac:92: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:92: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:92: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:92: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:92: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:92: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:92: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:92: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:92: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:92: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:60: -1- m4_pattern_allow([^ESCRIPT$])
+m4trace:configure.ac:93: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:93: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:93: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:93: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:93: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:93: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:93: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:93: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:93: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:93: -1- _LT_PROG_LTMAIN

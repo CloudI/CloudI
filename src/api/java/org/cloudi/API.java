@@ -531,7 +531,8 @@ public class API
     
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         int read = 0;
-        while ((read = input.read(bytes, 0, size)) == size)
+        while ((read = input.read(bytes, 0, size)) == size &&
+               input.available() > 0)
             output.write(bytes, 0, size);
 
         if (read == -1)
