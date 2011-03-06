@@ -808,8 +808,8 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             
             struct sockaddr_in localhost;
             localhost.sin_family = AF_INET;
-            localhost.sin_port = ::htons(ports[i]);
-            localhost.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
+            localhost.sin_port = htons(ports[i]);
+            localhost.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
             if (::connect(sockfd,
                           reinterpret_cast<struct sockaddr *>(&localhost),
