@@ -2,10 +2,10 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
 all-local: rebar 
-	./rebar compile
+	$(ESCRIPT) rebar compile
 
 clean-local: rebar
-	./rebar clean
+	$(ESCRIPT) rebar clean
 	rm -f api/python/cloudi.pyc api/python/erlang.pyc
 	rm -rf rel/cloudi
 
@@ -28,7 +28,7 @@ clean-configure: config.log
 	find tests -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 
 dialyze: rebar
-	./rebar dialyze
+	$(ESCRIPT) rebar dialyze
 
 run: all
 	$(ERLANG_ROOT_DIR)/bin/erl -config config/sys \
@@ -63,7 +63,7 @@ install-exec-hook: tests-install \
 	rm -rf $(DESTDIR)$(libdir)
 	rm -rf $(DESTDIR)$(libexecdir)
 	rm -rf $(DESTDIR)$(datarootdir)
-	test ! -d $(top_builddir)/rel/cloudi/ && ./rebar generate || exit 0
+	test ! -d $(top_builddir)/rel/cloudi/ && $(ESCRIPT) rebar generate || exit 0
 	cp -rf $(top_builddir)/rel/cloudi/bin $(DESTDIR)$(bindir)
 	cp -rf $(top_builddir)/rel/cloudi/lib $(DESTDIR)$(libdir)
 	cp -rf $(top_builddir)/rel/cloudi/etc $(DESTDIR)$(sysconfdir)

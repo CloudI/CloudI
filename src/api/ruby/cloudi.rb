@@ -41,6 +41,8 @@
 
 $:.unshift File.join(File.dirname(__FILE__),
                      *%w[gems gems erlectricity-1.1.1 lib])
+$stdout.sync = true
+$stderr.sync = true
 
 require 'erlectricity'
 
@@ -57,13 +59,11 @@ module Cloudi
         MESSAGE_RETURNS_ASYNC  = 7
 
         def initialize(index, protocol, size)
-            $stdout.sync = true
-            $stderr.sync = true
-
             @socket = IO.for_fd(index + 3, File::RDWR)
             @socket.sync = true
             @size = size
             @encoder = Erlectricity::Encoder.new(@socket)
+            @encoder.write_any(:init)
         end
 
         def poll
@@ -79,10 +79,14 @@ module Cloudi
                     end
                 end
 
-                data = fragment = @socket.read(@size)
-                while fragment.bytesize == @size
+                data = ""
+                while ready == true
                     fragment = @socket.read(@size)
                     data += fragment
+                    ready = (fragment.bytesize == @size)
+                    if ready
+                        ready = IO.select([@socket], nil, nil, 0)[0].length > 0
+                    end
                 end
 
                 if data.bytesize == 0
@@ -113,6 +117,8 @@ if __FILE__ == $PROGRAM_NAME
     thread_count = Integer(ARGV[0])
     protocol = ARGV[1]
     buffer_size = Integer(ARGV[2])
+
+    puts "starting threads"
 
     threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |index|
         puts "start"
