@@ -351,7 +351,7 @@ handle_info({udp, Socket, _, Port, Data}, StateName,
                    incoming_port = Port,
                    socket = Socket} = StateData) ->
     inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), StateData)
+    try ?MODULE:StateName(erlang:binary_to_term(Data), StateData)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
@@ -362,7 +362,7 @@ handle_info({udp, Socket, _, Port, Data}, StateName,
             #state{protocol = udp,
                    socket = Socket} = StateData) ->
     inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]),
+    try ?MODULE:StateName(erlang:binary_to_term(Data),
                           StateData#state{incoming_port = Port})
     catch
         error:badarg ->
@@ -379,7 +379,7 @@ handle_info({tcp, Socket, Data}, StateName,
             #state{protocol = tcp,
                    socket = Socket} = StateData) ->
     inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), StateData)
+    try ?MODULE:StateName(erlang:binary_to_term(Data), StateData)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),

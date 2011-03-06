@@ -170,8 +170,6 @@ class API(object):
         else:
             assert False
 
-    def __data_ready():
-            
     def poll(self):
         while True:
             ready = False
