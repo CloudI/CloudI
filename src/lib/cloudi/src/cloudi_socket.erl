@@ -88,7 +88,7 @@
         timeout_sync,    % default timeout for send_sync
         send_timeouts = dict:new(),    % tracking for timeouts
         queue_messages = false,        % is the external process busy?
-        queued = lqueue:new(),         % queued incoming messages
+        queued = queue:new(),          % queued incoming messages
         async_responses = dict:new(),  % tracking for async messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
@@ -471,7 +471,7 @@ handle_info({'send_async', Name, Request, Timeout, TransId, Pid}, StateName,
 handle_info({'send_async', _, _, _, _, _} = T, StateName,
             #state{queue_messages = true,
                    queued = Queue} = StateData) ->
-    {next_state, StateName, StateData#state{queued = lqueue:in(T, Queue)}};
+    {next_state, StateName, StateData#state{queued = queue:in(T, Queue)}};
 
 handle_info({'send_sync', Name, Request, Timeout, TransId, Pid}, StateName,
             #state{queue_messages = false} = StateData) ->
@@ -481,7 +481,7 @@ handle_info({'send_sync', Name, Request, Timeout, TransId, Pid}, StateName,
 handle_info({'send_sync', _, _, _, _, _} = T, StateName,
             #state{queue_messages = true,
                    queued = Queue} = StateData) ->
-    {next_state, StateName, StateData#state{queued = lqueue:in(T, Queue)}};
+    {next_state, StateName, StateData#state{queued = queue:in(T, Queue)}};
 
 handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
             StateName, StateData) ->
@@ -842,7 +842,7 @@ recv_async_timeout_end(TransId,
 
 process_queue(#state{queue_messages = true,
                      queued = Queue} = StateData) ->
-    case lqueue:out(Queue) of
+    case queue:out(Queue) of
         {empty, Queue} ->
             StateData#state{queue_messages = false};
         {{value, {'send_async', Name, Request, Timeout, TransId, Pid}},
