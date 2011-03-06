@@ -706,7 +706,8 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_binary(buffer, index, p->prefix);
                 store_incoming_uint32(buffer, index, p->timeout_async);
                 store_incoming_uint32(buffer, index, p->timeout_sync);
-                assert(index == size);
+                if (index != size)
+                    ::exit(cloudi_error_read_underflow);
                 return cloudi_success;
             }
             case MESSAGE_SEND_ASYNC:
