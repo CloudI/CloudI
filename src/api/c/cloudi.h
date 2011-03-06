@@ -44,13 +44,14 @@
 #include <stdint.h>
 
 #if defined __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #define CLOUDI_MAX_BUFFERSIZE 4194304 /* 4MB */
 
-typedef struct {
-
+typedef struct
+{
     int fd;
     uint32_t buffer_size;
     void * lookup;
@@ -61,7 +62,7 @@ typedef struct {
     uint32_t timeout_sync;
     char * response;
     uint32_t response_size;
-    char * trans_id;   /* always 16 characters (128 bits) length */
+    char * trans_id;          /* always 16 characters (128 bits) length */
     uint32_t trans_id_count;
 
 } cloudi_instance_t;
@@ -79,7 +80,8 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 
 #define cloudi_get_response(p)          (p->response)
 #define cloudi_get_response_size(p)     (p->response_size)
-#define cloudi_get_trans_id(p)          (p->trans_id)
+#define cloudi_get_trans_id_count(p)    (p->trans_id_count)
+#define cloudi_get_trans_id(p, i)       (&(p->trans_id[i * 16]))
 
 int cloudi_initialize(cloudi_instance_t * p,
                       int index,
@@ -191,44 +193,50 @@ int cloudi_recv_async(cloudi_instance_t * p,
 int cloudi_poll(cloudi_instance_t * p,
                 int timeout);
 
-enum {
+enum
+{
+    cloudi_success                             =   0,
+    // programs can use exit status values [1..6] without conflicts
+    // with internal cloudi error conditions
 
-    cloudi_success = 0,
-    cloudi_timeout,
-    cloudi_error_function_parameter,
-    cloudi_error_read_EAGAIN,
-    cloudi_error_read_EBADF,
-    cloudi_error_read_EFAULT,
-    cloudi_error_read_EINTR,
-    cloudi_error_read_EINVAL,
-    cloudi_error_read_EIO,
-    cloudi_error_read_EISDIR,
-    cloudi_error_read_underflow,
-    cloudi_error_read_unknown,
-    cloudi_error_write_EAGAIN,
-    cloudi_error_write_EBADF,
-    cloudi_error_write_EFAULT,
-    cloudi_error_write_EFBIG,
-    cloudi_error_write_EINTR,
-    cloudi_error_write_EINVAL,
-    cloudi_error_write_EIO,
-    cloudi_error_write_ENOSPC,
-    cloudi_error_write_EPIPE,
-    cloudi_error_write_null,
-    cloudi_error_write_overflow,
-    cloudi_error_write_unknown,
-    cloudi_error_ei_encode,
-    cloudi_error_ei_decode,
-    cloudi_error_poll_EBADF,
-    cloudi_error_poll_EFAULT,
-    cloudi_error_poll_EINTR,
-    cloudi_error_poll_EINVAL,
-    cloudi_error_poll_ENOMEM,
-    cloudi_error_poll_ERR,
-    cloudi_error_poll_HUP,
-    cloudi_error_poll_NVAL,
-    cloudi_error_poll_unknown
-
+    // API specific errors
+    cloudi_timeout                             =   7,
+    cloudi_error_function_parameter            =   8,
+    cloudi_error_read_underflow                =   9,
+    cloudi_error_ei_decode                     =  10,
+    // reuse some exit status values from os_spawn
+    cloudi_out_of_memory                       =  12,
+    // reuse some exit status values from GEPD
+    cloudi_error_read_EAGAIN                   =  81,
+    cloudi_error_read_EBADF                    =  82,
+    cloudi_error_read_EFAULT                   =  83,
+    cloudi_error_read_EINTR                    =  84,
+    cloudi_error_read_EINVAL                   =  85,
+    cloudi_error_read_EIO                      =  86,
+    cloudi_error_read_EISDIR                   =  87,
+    cloudi_error_read_unknown                  =  90,
+    cloudi_error_write_EAGAIN                  =  91,
+    cloudi_error_write_EBADF                   =  92,
+    cloudi_error_write_EFAULT                  =  93,
+    cloudi_error_write_EFBIG                   =  94,
+    cloudi_error_write_EINTR                   =  95,
+    cloudi_error_write_EINVAL                  =  96,
+    cloudi_error_write_EIO                     =  97,
+    cloudi_error_write_ENOSPC                  =  98,
+    cloudi_error_write_EPIPE                   =  99,
+    cloudi_error_write_null                    = 100,
+    cloudi_error_write_overflow                = 101,
+    cloudi_error_write_unknown                 = 102,
+    cloudi_error_ei_encode                     = 103,
+    cloudi_error_poll_EBADF                    = 104,
+    cloudi_error_poll_EFAULT                   = 105,
+    cloudi_error_poll_EINTR                    = 106,
+    cloudi_error_poll_EINVAL                   = 107,
+    cloudi_error_poll_ENOMEM                   = 108,
+    cloudi_error_poll_ERR                      = 109,
+    cloudi_error_poll_HUP                      = 110,
+    cloudi_error_poll_NVAL                     = 111,
+    cloudi_error_poll_unknown                  = 112
 };
 
 #if defined __cplusplus

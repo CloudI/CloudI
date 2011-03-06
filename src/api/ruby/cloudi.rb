@@ -57,8 +57,8 @@ module Cloudi
         MESSAGE_RETURNS_ASYNC  = 7
 
         def initialize(index, protocol, size)
-            STDOUT.sync = true
-            STDERR.sync = true
+            $stdout.sync = true
+            $stderr.sync = true
 
             @socket = IO.for_fd(index + 3, File::RDWR)
             @socket.sync = true

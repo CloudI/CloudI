@@ -154,13 +154,13 @@ extern "C"
     (void)
 #define STORE_RETURN_VALUE_TYPE_void(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_atom(buffer.get<char>(), &index, "ok"))                     \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_char(N)                                       \
     sizeof(char)
@@ -170,13 +170,13 @@ extern "C"
     char returnValue = 
 #define STORE_RETURN_VALUE_TYPE_char(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_uchar(N)                                      \
     sizeof(unsigned char)
@@ -186,13 +186,13 @@ extern "C"
     unsigned char returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_char(buffer.get<char>(), &index, (char) returnValue))       \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_bool(N)                                       \
     sizeof(uint8_t)
@@ -202,13 +202,13 @@ extern "C"
     bool returnValue = 
 #define STORE_RETURN_VALUE_TYPE_bool(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_boolean(buffer.get<char>(), &index, (int) returnValue))     \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_int8_t(N)                                     \
     sizeof(int8_t)
@@ -218,13 +218,13 @@ extern "C"
     int8_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int8_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_uint8_t(N)                                    \
     sizeof(uint8_t)
@@ -234,13 +234,13 @@ extern "C"
     uint8_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint8_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_int16_t(N)                                    \
     sizeof(int16_t)
@@ -250,13 +250,13 @@ extern "C"
     int16_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int16_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_uint16_t(N)                                   \
     sizeof(uint16_t)
@@ -266,13 +266,13 @@ extern "C"
     uint16_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint16_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_int32_t(N)                                    \
     sizeof(int32_t)
@@ -282,13 +282,13 @@ extern "C"
     int32_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int32_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_uint32_t(N)                                   \
     sizeof(uint32_t)
@@ -298,13 +298,13 @@ extern "C"
     uint32_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint32_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_int64_t(N)                                    \
     sizeof(int64_t)
@@ -314,13 +314,13 @@ extern "C"
     int64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int64_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_longlong(buffer.get<char>(), &index, returnValue))          \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_uint64_t(N)                                   \
     sizeof(uint64_t)
@@ -330,13 +330,13 @@ extern "C"
     uint64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint64_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_time_t(N)                                     \
     sizeof(uint64_t)
@@ -346,13 +346,13 @@ extern "C"
     uint64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_time_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_float(N)                                      \
     sizeof(double)
@@ -362,13 +362,13 @@ extern "C"
     double returnValue =
 #define STORE_RETURN_VALUE_TYPE_float(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_double(N)                                     \
     sizeof(double)
@@ -378,13 +378,13 @@ extern "C"
     double returnValue =
 #define STORE_RETURN_VALUE_TYPE_double(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
 
 #define GET_TYPE_SIZE_FROM_TYPE_pchar_len(N)                                  \
     sizeof(uint32_t) + *((uint32_t *) &(buffer[(                              \
@@ -397,15 +397,15 @@ extern "C"
     char const * returnValue =
 #define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return InternalExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                           \
     if (buffer.reserve(index + strlen(returnValue) + 1) == false)             \
-        return InternalExitStatus::write_overflow;                            \
+        return GEPD::ExitStatus::write_overflow;                            \
     if (ei_encode_string(buffer.get<char>(), &index, returnValue))            \
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     
 #define GET_TYPE_SIZE_FROM_TYPE_puint32_len(N)                                \
     sizeof(uint32_t) + *((uint32_t *) &(buffer[(                              \
@@ -425,183 +425,123 @@ namespace
         char const * const invalid_function = "Invalid function call";
     }
 
-    // provide a single list of exit_status values
-    // (use exit_status as an option to erlang:open_port/2)
-
-    // port will exit for conditions related to reading/writing
-    namespace InternalExitStatus
+    int errno_read()
     {
-        enum
+        switch (errno)
         {
-            success = 0,
-            erlang_exit = GEPD::ExitStatus::errors_min,
-            read_EAGAIN,
-            read_EBADF,
-            read_EFAULT,
-            read_EINTR,
-            read_EINVAL,
-            read_EIO,
-            read_EISDIR,
-            read_null,
-            read_overflow,
-            read_unknown,                     //  90
-            write_EAGAIN,
-            write_EBADF,
-            write_EFAULT,
-            write_EFBIG,
-            write_EINTR,
-            write_EINVAL,
-            write_EIO,
-            write_ENOSPC,
-            write_EPIPE,
-            write_null,                       // 100
-            write_overflow,
-            write_unknown,
-            ei_encode_error,
-            poll_EBADF,
-            poll_EFAULT,
-            poll_EINTR,
-            poll_EINVAL,
-            poll_ENOMEM,
-            poll_ERR,
-            poll_HUP,                         // 110
-            poll_NVAL,
-            poll_unknown,
-            pipe_EFAULT,
-            pipe_EINVAL,
-            pipe_EMFILE,
-            pipe_ENFILE,
-            pipe_unknown,
-            dup_EBADF,
-            dup_EBUSY,
-            dup_EINTR,                        // 120
-            dup_EINVAL,
-            dup_EMFILE,
-            dup_unknown,
-            close_EBADF,
-            close_EINTR,
-            close_EIO,
-            close_unknown                     // 127
-        };
-
-        int errno_read()
-        {
-            switch (errno)
-            {
-                case EAGAIN:
-                    return read_EAGAIN;
-                case EBADF:
-                    return read_EBADF;
-                case EFAULT:
-                    return read_EFAULT;
-                case EINTR:
-                    return read_EINTR;
-                case EINVAL:
-                    return read_EINVAL;
-                case EIO:
-                    return read_EIO;
-                case EISDIR:
-                    return read_EISDIR;
-                default:
-                    return read_unknown;
-            }
+            case EAGAIN:
+                return GEPD::ExitStatus::read_EAGAIN;
+            case EBADF:
+                return GEPD::ExitStatus::read_EBADF;
+            case EFAULT:
+                return GEPD::ExitStatus::read_EFAULT;
+            case EINTR:
+                return GEPD::ExitStatus::read_EINTR;
+            case EINVAL:
+                return GEPD::ExitStatus::read_EINVAL;
+            case EIO:
+                return GEPD::ExitStatus::read_EIO;
+            case EISDIR:
+                return GEPD::ExitStatus::read_EISDIR;
+            default:
+                return GEPD::ExitStatus::read_unknown;
         }
+    }
 
-        int errno_write()
+    int errno_write()
+    {
+        switch (errno)
         {
-            switch (errno)
-            {
-                case EAGAIN:
-                    return write_EAGAIN;
-                case EBADF:
-                    return write_EBADF;
-                case EFAULT:
-                    return write_EFAULT;
-                case EFBIG:
-                    return write_EFBIG;
-                case EINTR:
-                    return write_EINTR;
-                case EINVAL:
-                    return write_EINVAL;
-                case EIO:
-                    return write_EIO;
-                case ENOSPC:
-                    return write_ENOSPC;
-                case EPIPE:
-                    return write_EPIPE;
-                default:
-                    return write_unknown;
-            }
+            case EAGAIN:
+                return GEPD::ExitStatus::write_EAGAIN;
+            case EBADF:
+                return GEPD::ExitStatus::write_EBADF;
+            case EFAULT:
+                return GEPD::ExitStatus::write_EFAULT;
+            case EFBIG:
+                return GEPD::ExitStatus::write_EFBIG;
+            case EINTR:
+                return GEPD::ExitStatus::write_EINTR;
+            case EINVAL:
+                return GEPD::ExitStatus::write_EINVAL;
+            case EIO:
+                return GEPD::ExitStatus::write_EIO;
+            case ENOSPC:
+                return GEPD::ExitStatus::write_ENOSPC;
+            case EPIPE:
+                return GEPD::ExitStatus::write_EPIPE;
+            default:
+                return GEPD::ExitStatus::write_unknown;
         }
+    }
 
-        int errno_poll()
+    int errno_poll()
+    {
+        switch (errno)
         {
-            switch (errno)
-            {
-                case EBADF:
-                    return poll_EBADF;
-                case EFAULT:
-                    return poll_EFAULT;
-                case EINTR:
-                    return poll_EINTR;
-                case EINVAL:
-                    return poll_EINVAL;
-                case ENOMEM:
-                    return poll_ENOMEM;
-                default:
-                    return poll_unknown;
-            }
+            case EBADF:
+                return GEPD::ExitStatus::poll_EBADF;
+            case EFAULT:
+                return GEPD::ExitStatus::poll_EFAULT;
+            case EINTR:
+                return GEPD::ExitStatus::poll_EINTR;
+            case EINVAL:
+                return GEPD::ExitStatus::poll_EINVAL;
+            case ENOMEM:
+                return GEPD::ExitStatus::poll_ENOMEM;
+            default:
+                return GEPD::ExitStatus::poll_unknown;
         }
+    }
 
-        int errno_pipe()
+    int errno_pipe()
+    {
+        switch (errno)
         {
-            switch (errno)
-            {
-                case EFAULT:
-                    return pipe_EFAULT;
-                case EINVAL:
-                    return pipe_EINVAL;
-                case EMFILE:
-                    return pipe_EMFILE;
-                case ENFILE:
-                    return pipe_ENFILE;
-                default:
-                    return pipe_unknown;
-            }
+            case EFAULT:
+                return GEPD::ExitStatus::pipe_EFAULT;
+            case EINVAL:
+                return GEPD::ExitStatus::pipe_EINVAL;
+            case EMFILE:
+                return GEPD::ExitStatus::pipe_EMFILE;
+            case ENFILE:
+                return GEPD::ExitStatus::pipe_ENFILE;
+            default:
+                return GEPD::ExitStatus::pipe_unknown;
         }
+    }
 
-        int errno_dup()
+    int errno_dup()
+    {
+        switch (errno)
         {
-            switch (errno)
-            {
-                case EBADF:
-                    return dup_EBADF;
-                case EBUSY:
-                    return dup_EBUSY;
-                case EINTR:
-                    return dup_EINTR;
-                case EINVAL:
-                    return dup_EINVAL;
-                case EMFILE:
-                    return dup_EMFILE;
-                default:
-                    return dup_unknown;
-            }
+            case EBADF:
+                return GEPD::ExitStatus::dup_EBADF;
+            case EBUSY:
+                return GEPD::ExitStatus::dup_EBUSY;
+            case EINTR:
+                return GEPD::ExitStatus::dup_EINTR;
+            case EINVAL:
+                return GEPD::ExitStatus::dup_EINVAL;
+            case EMFILE:
+                return GEPD::ExitStatus::dup_EMFILE;
+            default:
+                return GEPD::ExitStatus::dup_unknown;
         }
+    }
 
-        int errno_close()
+    int errno_close()
+    {
+        switch (errno)
         {
-            switch (errno)
-            {
-                case EBADF:
-                    return close_EBADF;
-                case EINTR:
-                    return close_EINTR;
-                case EIO:
-                    return close_EIO;
-                default:
-                    return close_unknown;
-            }
+            case EBADF:
+                return GEPD::ExitStatus::close_EBADF;
+            case EINTR:
+                return GEPD::ExitStatus::close_EINTR;
+            case EIO:
+                return GEPD::ExitStatus::close_EIO;
+            default:
+                return GEPD::ExitStatus::close_unknown;
         }
     }
 
@@ -616,15 +556,15 @@ namespace
             if (i <= 0)
             {
                 if (i == -1)
-                    return InternalExitStatus::errno_read();
+                    return errno_read();
                 else
-                    return InternalExitStatus::read_null;
+                    return GEPD::ExitStatus::read_null;
             }
             total += i;
         }
         if (total > length)
-            return InternalExitStatus::read_overflow;
-        return InternalExitStatus::success;
+            return GEPD::ExitStatus::read_overflow;
+        return GEPD::ExitStatus::success;
     }
     
     int write_exact(unsigned char const * const buffer,
@@ -638,15 +578,15 @@ namespace
             if (i <= 0)
             {
                 if (i == -1)
-                    return InternalExitStatus::errno_write();
+                    return errno_write();
                 else
-                    return InternalExitStatus::write_null;
+                    return GEPD::ExitStatus::write_null;
             }
             total += i;
         }
         if (total > length)
-            return InternalExitStatus::write_overflow;
-        return InternalExitStatus::success;
+            return GEPD::ExitStatus::write_overflow;
+        return GEPD::ExitStatus::success;
     }
     
     int read_cmd(realloc_ptr<unsigned char> & buffer)
@@ -676,18 +616,18 @@ namespace
                            int & index, uint16_t cmd, char const * const str)
     {
         if (ei_encode_version(buffer.get<char>(), &index))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_tuple_header(buffer.get<char>(), &index, 3))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_atom(buffer.get<char>(), &index, "error"))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_ulong(buffer.get<char>(), &index, cmd))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (buffer.reserve(index + strlen(str) + 1) == false)
-            return InternalExitStatus::write_overflow;
+            return GEPD::ExitStatus::write_overflow;
         if (ei_encode_string(buffer.get<char>(), &index, str))
-            return InternalExitStatus::ei_encode_error;
-        return InternalExitStatus::success;
+            return GEPD::ExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::success;
     }
 
 #define STORE_RETURN_VALUE(TYPE, CMD) \
@@ -753,17 +693,17 @@ case BOOST_PP_DEC(I):\
     STORE_RETURN_VALUE(GET_RETURN(FUNCTION), BOOST_PP_DEC(I)) \
     if ((status = write_cmd(buffer, index - BOOST_PP_SEQ_ELEM(1, OFFSETS)))) \
         return status; \
-    return InternalExitStatus::success;\
+    return GEPD::ExitStatus::success;\
 }
 
     int consume_erlang(short & revents, realloc_ptr<unsigned char> & buffer)
     {
         if (revents & POLLERR)
-            return InternalExitStatus::poll_ERR;
+            return GEPD::ExitStatus::poll_ERR;
         else if (revents & POLLHUP)
-            return InternalExitStatus::erlang_exit;
+            return GEPD::ExitStatus::erlang_exit;
         else if (revents & POLLNVAL)
-            return InternalExitStatus::poll_NVAL;
+            return GEPD::ExitStatus::poll_NVAL;
         revents = 0;
         int status;
         if ((status = read_cmd(buffer)))
@@ -788,7 +728,7 @@ case BOOST_PP_DEC(I):\
                     if ((status = write_cmd(buffer, index -
                                             sizeof(OUTPUT_PREFIX_TYPE))))
                         return status;
-                    return InternalExitStatus::success;
+                    return GEPD::ExitStatus::success;
             }
         }
     }
@@ -797,13 +737,13 @@ case BOOST_PP_DEC(I):\
     {
         int fds[2] = {-1, -1};
         if (pipe(fds) == -1)
-            return InternalExitStatus::errno_pipe();
+            return errno_pipe();
         if (dup2(fds[1], in) == -1)
-            return InternalExitStatus::errno_dup();
+            return errno_dup();
         if (close(fds[1]) == -1)
-            return InternalExitStatus::errno_close();
+            return errno_close();
         out = fds[0];
-        return InternalExitStatus::success;
+        return GEPD::ExitStatus::success;
     }
 
     int data_ready(int fd, bool & ready)
@@ -811,9 +751,9 @@ case BOOST_PP_DEC(I):\
         struct pollfd fds[1] = {{fd, POLLIN | POLLPRI, 0}};
         int const count = poll(fds, 1, 0);
         if (count == -1)
-            return InternalExitStatus::errno_poll();
+            return errno_poll();
         ready = (count == 1);
-        return InternalExitStatus::success;
+        return GEPD::ExitStatus::success;
     }
 
     enum
@@ -830,11 +770,11 @@ int GEPD::consume_stream(int fd, short & revents,
                          realloc_ptr<unsigned char> & stream, size_t & i)
 {
     if (revents & POLLERR)
-        return InternalExitStatus::poll_ERR;
+        return GEPD::ExitStatus::poll_ERR;
     else if (revents & POLLHUP)
-        return InternalExitStatus::poll_HUP;
+        return GEPD::ExitStatus::poll_HUP;
     else if (revents & POLLNVAL)
-        return InternalExitStatus::poll_NVAL;
+        return GEPD::ExitStatus::poll_NVAL;
     revents = 0;
 
     ssize_t left = stream.size() - i;
@@ -850,9 +790,9 @@ int GEPD::consume_stream(int fd, short & revents,
             break;
     }
     if (readBytes == 0 && i == 0)
-        return InternalExitStatus::success;
+        return GEPD::ExitStatus::success;
     else if (readBytes == -1)
-        return InternalExitStatus::errno_read();
+        return errno_read();
     i += readBytes; // i is the next index to read at, always
 
     // only send stderr output before the last newline character
@@ -871,18 +811,18 @@ int GEPD::consume_stream(int fd, short & revents,
     {
         int index = sizeof(OUTPUT_PREFIX_TYPE);
         if (ei_encode_version(send_buffer.get<char>(), &index))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_tuple_header(send_buffer.get<char>(), &index, 3))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_atom(send_buffer.get<char>(), &index, name))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_ulong(send_buffer.get<char>(), &index, pid))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         if (send_buffer.reserve(index + (iNewline + 1) + 1) == false)
-            return InternalExitStatus::write_overflow;
+            return GEPD::ExitStatus::write_overflow;
         if (ei_encode_string_len(send_buffer.get<char>(), &index,
                                  stream.get<char>(), iNewline + 1))
-            return InternalExitStatus::ei_encode_error;
+            return GEPD::ExitStatus::ei_encode_error;
         int status;
         if ((status = write_cmd(send_buffer, index -
                                 sizeof(OUTPUT_PREFIX_TYPE))))
@@ -899,7 +839,7 @@ int GEPD::consume_stream(int fd, short & revents,
             i = remainingBytes;
         }
     }
-    return InternalExitStatus::success;
+    return GEPD::ExitStatus::success;
 }
 
 int GEPD::flush_stream(int fd, short revents,
@@ -908,7 +848,7 @@ int GEPD::flush_stream(int fd, short revents,
                        realloc_ptr<unsigned char> & stream, size_t & i)
 {
     if ((revents & POLLIN) == false)
-        return InternalExitStatus::success;
+        return GEPD::ExitStatus::success;
 
     ssize_t left = stream.size() - i;
     ssize_t readBytes;
@@ -923,7 +863,7 @@ int GEPD::flush_stream(int fd, short revents,
             break;
     }
     if (readBytes == 0 && i == 0)
-        return InternalExitStatus::success;
+        return GEPD::ExitStatus::success;
     else if (readBytes != -1)
         i += readBytes; // i is the next index to read at, always
 
@@ -932,24 +872,24 @@ int GEPD::flush_stream(int fd, short revents,
 
     int index = sizeof(OUTPUT_PREFIX_TYPE);
     if (ei_encode_version(send_buffer.get<char>(), &index))
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     if (ei_encode_tuple_header(send_buffer.get<char>(), &index, 3))
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     if (ei_encode_atom(send_buffer.get<char>(), &index, name))
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     if (ei_encode_ulong(send_buffer.get<char>(), &index, pid))
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     if (send_buffer.reserve(index + total + 1) == false)
-        return InternalExitStatus::write_overflow;
+        return GEPD::ExitStatus::write_overflow;
     if (ei_encode_string_len(send_buffer.get<char>(), &index,
                              stream.get<char>(), total))
-        return InternalExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;
     int status;
     if ((status = write_cmd(send_buffer, index -
                             sizeof(OUTPUT_PREFIX_TYPE))))
         return status;
 
-    return InternalExitStatus::success;
+    return GEPD::ExitStatus::success;
 }
 
 realloc_ptr<struct pollfd> GEPD::fds(4, 65536);
@@ -993,7 +933,7 @@ int GEPD::init()
     fds[INDEX_ERLANG].events = POLLIN | POLLPRI;
     fds[INDEX_ERLANG].revents = 0;
     nfds += 3;
-    return InternalExitStatus::success;
+    return GEPD::ExitStatus::success;
 }
 
 int GEPD::wait(int & count, int const timeout,
@@ -1039,6 +979,6 @@ int GEPD::wait(int & count, int const timeout,
     if (count == 0)
         return GEPD::ExitStatus::timeout;
     else
-        return InternalExitStatus::errno_poll();
+        return errno_poll();
 }
 
