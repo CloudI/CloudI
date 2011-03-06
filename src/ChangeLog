@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * add ruby API and ruby service for http test
+
 2011-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * add ruby/gem build integration

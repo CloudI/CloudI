@@ -102,10 +102,10 @@ class API(object):
         return self.poll()
 
     def forward_(self, command, name, request, timeout, transId, pid):
-        if command == API.__SYNC:
-            self.forward_sync(name, request, timeout, transId, pid)
-        elif command == API.__ASYNC:
+        if command == API.__ASYNC:
             self.forward_async(name, request, timeout, transId, pid)
+        elif command == API.__SYNC:
+            self.forward_sync(name, request, timeout, transId, pid)
         else:
             assert False
 
@@ -122,10 +122,10 @@ class API(object):
         raise _return_sync_exception()
 
     def return_(self, command, name, response, timeout, transId, pid):
-        if command == API.__SYNC:
-            self.return_sync(name, response, timeout, transId, pid)
-        elif command == API.__ASYNC:
+        if command == API.__ASYNC:
             self.return_async(name, response, timeout, transId, pid)
+        elif command == API.__SYNC:
+            self.return_sync(name, response, timeout, transId, pid)
         else:
             assert False
 
@@ -193,19 +193,19 @@ class API(object):
                 return None # socket was closed
 
             i, j = 0, 4
-            (command,) = struct.unpack("=I", data[i:j])
+            command = struct.unpack("=I", data[i:j])[0]
             if command == _MESSAGE_INIT:
                 i, j = j, j + 4
-                (prefixSize,) = struct.unpack("=I", data[i:j])
+                prefixSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + prefixSize + 4 + 4
-                (prefix, null_terminator, timeoutSync,
-                 timeoutAsync) = struct.unpack("=%dscII" % (prefixSize - 1),
+                (prefix, null_terminator, timeoutAsync,
+                 timeoutSync) = struct.unpack("=%dscII" % (prefixSize - 1),
                                                data[i:j])
                 return (prefix, timeoutSync, timeoutAsync)
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
-                (nameSize,) = struct.unpack("=I", data[i:j])
+                nameSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + nameSize + 4
                 (name, null_terminator,
                  requestSize) = struct.unpack("=%dscI" % (nameSize - 1),
@@ -214,30 +214,25 @@ class API(object):
                 (request, timeout, transId,
                  pidSize) = struct.unpack("=%dsI16sI" % requestSize, data[i:j])
                 i, j = j, j + pidSize
-                (pid,) = struct.unpack("=%ds" % pidSize, data[i:j])
+                pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
                 self.__callback(command, name, request, timeout,
                                 transId, binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
-                (responseSize,) = struct.unpack("=I", data[i:j])
+                responseSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + responseSize + 16
-                (response,
-                 transId) = struct.unpack("=%ds16s" % responseSize, data[i:j])
-                return (response, transId)
+                return struct.unpack("=%ds16s" % responseSize, data[i:j])
+                #return (response, transId)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
-                (transId,) = struct.unpack("=16s", data[i:j])
-                return transId
+                return struct.unpack("=16s", data[i:j])[0]
+                #return transId
             elif command == _MESSAGE_RETURNS_ASYNC:
                 i, j = j, j + 4
-                (transIdCount,) = struct.unpack("=I", data[i:j])
-                transIdList = []
-                for count in range(transIdCount):
-                    i, j = j, j + 16
-                    (transId,) = struct.unpack("=16s", data[i:j])
-                    transIdList.append(transId)
-                return transIdList
+                transIdCount = struct.unpack("=I", data[i:j])[0]
+                i, j = j, j + 16 * transIdCount
+                return struct.unpack("=" + "16s" * transIdCount, data[i:j])
 
 class _return_sync_exception(SystemExit):
     def __init__(self):
