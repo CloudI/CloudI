@@ -162,8 +162,9 @@
         5000, 5000, 5000, undefined, undefined, 1, 5, 60},
     {external,
         "/tests/http/",
-        "tests/http/service/service.py",
-        "4 tcp 16384", [{"PYTHONUNBUFFERED", "true"}],
+        "@PYTHON@",
+        "tests/http/service/service.py 4 tcp 16384",
+        [{"PYTHONUNBUFFERED", "true"}],
         lazy_closest, tcp, 16384,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
     {external,
@@ -174,8 +175,8 @@
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
-        "tests/http/service/service.rb",
-        "1 tcp 16384", [],
+        "@RUBY@",
+        "tests/http/service/service.rb 1 tcp 16384", [],
         lazy_closest, tcp, 16384,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60}
 ]}.
