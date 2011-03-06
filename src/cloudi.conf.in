@@ -168,17 +168,16 @@
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
-        "/usr/bin/env",
-        "java -jar tests/http/service/jar/service.jar 4 tcp 16384", [],
+        "@JAVA@",
+        "-jar tests/http/service/jar/service.jar 4 tcp 16384", [],
         lazy_closest, tcp, 16384,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
-    % Ruby API is not ready yet
     {external,
-        "/a/b/c/",
-        "api/ruby/cloudi.rb",
+        "/tests/http/",
+        "tests/http/service/service.rb",
         "1 tcp 16384", [],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 1, 5, 60}
+        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60}
 ]}.
 {nodes, [
     'cloudi@host1',

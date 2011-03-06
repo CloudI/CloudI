@@ -35,8 +35,8 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(top_srcdir)/configure \
+	$(srcdir)/Makefile.in $(srcdir)/cloudi.conf.in \
+	$(srcdir)/config.h.in $(top_srcdir)/configure \
 	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in AUTHORS COPYING \
 	ChangeLog INSTALL NEWS config/config.guess config/config.sub \
 	config/depcomp config/install-sh config/ltmain.sh \
@@ -66,7 +66,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = lib/cloudi/src/cloudi.app.src
+CONFIG_CLEAN_FILES = cloudi.conf lib/cloudi/src/cloudi.app.src
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -314,6 +314,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+cloudi.conf: $(top_builddir)/config.status $(srcdir)/cloudi.conf.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 lib/cloudi/src/cloudi.app.src: $(top_builddir)/config.status $(top_srcdir)/lib/cloudi/src/cloudi.app.src.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 
@@ -708,7 +710,7 @@ clean-configure: config.log
           m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
           m4/ltversion.m4 m4/lt~obsolete.m4 libtool \
           external/rebar/ebin/*.beam \
-          lib/cloudi/src/cloudi.app.src
+          lib/cloudi/src/cloudi.app.src cloudi.conf
 	rm -rf autom4te.cache
 	rm -rf api/c/.deps/ \
            lib/cloudi/cxx_src/.deps/ \

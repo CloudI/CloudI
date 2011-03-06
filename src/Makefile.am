@@ -18,7 +18,7 @@ clean-configure: config.log
           m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
           m4/ltversion.m4 m4/lt~obsolete.m4 libtool \
           external/rebar/ebin/*.beam \
-          lib/cloudi/src/cloudi.app.src
+          lib/cloudi/src/cloudi.app.src cloudi.conf
 	rm -rf autom4te.cache
 	rm -rf api/c/.deps/ \
            lib/cloudi/cxx_src/.deps/ \

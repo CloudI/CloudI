@@ -4,7 +4,6 @@ AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_FILES([lib/cloudi/src/cloudi.app.src])
 AM_INIT_AUTOMAKE([1.10 no-define])
 AC_PROG_CC
 AC_PROG_CXX
@@ -37,8 +36,8 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
 
 # ruby checks
 AC_PATH_PROG([RUBY],[ruby])
-AX_PROG_RUBY_VERSION([1.8.0], ,
-                     [AC_MSG_ERROR([Ruby >= 1.8.0 not found])])
+AX_PROG_RUBY_VERSION([1.9.0], ,
+                     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 AC_PATH_PROG([RUBY_RAKE],[rake])
 if test "x$RUBY_RAKE" = "x"; then
     AC_MSG_ERROR([ruby rake not found])
@@ -63,7 +62,9 @@ AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/;
                               mv ./rebar ../../ || exit 1)],
                    [ESCRIPT=$ESCRIPT])
 
-AC_CONFIG_FILES([Makefile
+AC_CONFIG_FILES([cloudi.conf
+                 lib/cloudi/src/cloudi.app.src
+                 Makefile
                  api/Makefile
                  api/c/Makefile
                  api/java/Makefile
