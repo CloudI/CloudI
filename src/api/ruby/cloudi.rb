@@ -62,8 +62,8 @@ module Cloudi
             @socket = IO.for_fd(index + 3, File::RDWR)
             @socket.sync = true
             @size = size
-            @encoder = Erlectricity::Encoder.new(@socket)
-            @encoder.write_any(:init)
+            @encoder = Erlectricity::Encoder.new(nil)
+            send(:init)
         end
 
         def poll
@@ -103,7 +103,9 @@ module Cloudi
         private
 
         def send(term)
+            @encoder.out = StringIO.new('', 'w')
             @encoder.write_any(term)
+            @socket.write(@encoder.out.string)
         end
 
     end
