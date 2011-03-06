@@ -143,6 +143,8 @@ namespace
         bool ready = true;
         while (ready)
         {
+            if (buffer.reserve(total + buffer_size) == false)
+                return cloudi_out_of_memory;
             ssize_t i = ::read(fd, &buffer[total], buffer_size);
             if (i < 0)
                 return errno_read();

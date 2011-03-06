@@ -57,7 +57,7 @@ namespace
     {
         enum
         {
-            success = 0,
+            success                         =  0,
             invalid_input                   = 11,
             out_of_memory,
             pipe_EFAULT,
@@ -125,13 +125,14 @@ namespace
             exec_EPERM,
             exec_ETXTBSY,
             exec_unknown,
-            last_value
+            last_value                     // 78
         };
 
         char const * string(int status)
         {
             switch (status)
             {
+                // internal spawn_status errors
                 case invalid_input:
                     return "invalid_input";
                 case out_of_memory:
@@ -266,6 +267,104 @@ namespace
                     return "exec_ETXTBSY";
                 case exec_unknown:
                     return "exec_unknown";
+
+                // GEPD::ExitStatus values reused
+                case GEPD::ExitStatus::read_EAGAIN:
+                    return "read_EAGAIN";
+                case GEPD::ExitStatus::read_EBADF:
+                    return "read_EBADF";
+                case GEPD::ExitStatus::read_EFAULT:
+                    return "read_EFAULT";
+                case GEPD::ExitStatus::read_EINTR:
+                    return "read_EINTR";
+                case GEPD::ExitStatus::read_EINVAL:
+                    return "read_EINVAL";
+                case GEPD::ExitStatus::read_EIO:
+                    return "read_EIO";
+                case GEPD::ExitStatus::read_EISDIR:
+                    return "read_EISDIR";
+                case GEPD::ExitStatus::read_null:
+                    return "read_null";
+                case GEPD::ExitStatus::read_overflow:
+                    return "read_overflow";
+                case GEPD::ExitStatus::read_unknown:
+                    return "read_unknown";
+                case GEPD::ExitStatus::write_EAGAIN:
+                    return "write_EAGAIN";
+                case GEPD::ExitStatus::write_EBADF:
+                    return "write_EBADF";
+                case GEPD::ExitStatus::write_EFAULT:
+                    return "write_EFAULT";
+                case GEPD::ExitStatus::write_EFBIG:
+                    return "write_EFBIG";
+                case GEPD::ExitStatus::write_EINTR:
+                    return "write_EINTR";
+                case GEPD::ExitStatus::write_EINVAL:
+                    return "write_EINVAL";
+                case GEPD::ExitStatus::write_EIO:
+                    return "write_EIO";
+                case GEPD::ExitStatus::write_ENOSPC:
+                    return "write_ENOSPC";
+                case GEPD::ExitStatus::write_EPIPE:
+                    return "write_EPIPE";
+                case GEPD::ExitStatus::write_null:
+                    return "write_null";
+                case GEPD::ExitStatus::write_overflow:
+                    return "write_overflow";
+                case GEPD::ExitStatus::write_unknown:
+                    return "write_unknown";
+                case GEPD::ExitStatus::ei_encode_error:
+                    return "ei_encode_error";
+                case GEPD::ExitStatus::poll_EBADF:
+                    return "poll_EBADF";
+                case GEPD::ExitStatus::poll_EFAULT:
+                    return "poll_EFAULT";
+                case GEPD::ExitStatus::poll_EINTR:
+                    return "poll_EINTR";
+                case GEPD::ExitStatus::poll_EINVAL:
+                    return "poll_EINVAL";
+                case GEPD::ExitStatus::poll_ENOMEM:
+                    return "poll_ENOMEM";
+                case GEPD::ExitStatus::poll_ERR:
+                    return "poll_ERR";
+                case GEPD::ExitStatus::poll_HUP:
+                    return "poll_HUP";
+                case GEPD::ExitStatus::poll_NVAL:
+                    return "poll_NVAL";
+                case GEPD::ExitStatus::poll_unknown:
+                    return "poll_unknown";
+                case GEPD::ExitStatus::pipe_EFAULT:
+                    return "pipe_EFAULT";
+                case GEPD::ExitStatus::pipe_EINVAL:
+                    return "pipe_EINVAL";
+                case GEPD::ExitStatus::pipe_EMFILE:
+                    return "pipe_EMFILE";
+                case GEPD::ExitStatus::pipe_ENFILE:
+                    return "pipe_ENFILE";
+                case GEPD::ExitStatus::pipe_unknown:
+                    return "pipe_unknown";
+                case GEPD::ExitStatus::dup_EBADF:
+                    return "dup_EBADF";
+                case GEPD::ExitStatus::dup_EBUSY:
+                    return "dup_EBUSY";
+                case GEPD::ExitStatus::dup_EINTR:
+                    return "dup_EINTR";
+                case GEPD::ExitStatus::dup_EINVAL:
+                    return "dup_EINVAL";
+                case GEPD::ExitStatus::dup_EMFILE:
+                    return "dup_EMFILE";
+                case GEPD::ExitStatus::dup_unknown:
+                    return "dup_unknown";
+                case GEPD::ExitStatus::close_EBADF:
+                    return "close_EBADF";
+                case GEPD::ExitStatus::close_EINTR:
+                    return "close_EINTR";
+                case GEPD::ExitStatus::close_EIO:
+                    return "close_EIO";
+                case GEPD::ExitStatus::close_unknown:
+                    return "close_unknown";
+
+                // signals
                 case 129:
                     return "SIGHUP";
                 case 130:
@@ -542,9 +641,9 @@ namespace
 
                 // kills the pid if it isn't dead,
                 // to avoid blocking on a closed pipe
-                kill(m_pid, 9);
+                ::kill(m_pid, 9);
                 int status;
-                int const pid = waitpid(m_pid, &status, 0);
+                int const pid = ::waitpid(m_pid, &status, 0);
                 assert(pid == static_cast<signed>(m_pid));
 
                 if (WIFEXITED(status))
@@ -669,9 +768,9 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
     }
     int fds_stdout[2] = {-1, -1};
     int fds_stderr[2] = {-1, -1};
-    if (pipe(fds_stdout) == -1)
+    if (::pipe(fds_stdout) == -1)
         return spawn_status::errno_pipe();
-    if (pipe(fds_stderr) == -1)
+    if (::pipe(fds_stderr) == -1)
         return spawn_status::errno_pipe();
     pid_t const pid = fork();
     if (pid == -1)
@@ -682,40 +781,40 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
     {
         for (size_t i = 0; i < GEPD::nfds; ++i)
         {
-            if (close(GEPD::fds[i].fd) == -1)
-                _exit(spawn_status::errno_close());
+            if (::close(GEPD::fds[i].fd) == -1)
+                ::_exit(spawn_status::errno_close());
         }
-        if (dup2(fds_stdout[1], 1) == -1)
-            _exit(spawn_status::errno_dup());
-        if (close(fds_stdout[0]) == -1 || close(fds_stdout[1]) == -1)
-            _exit(spawn_status::errno_close());
-        if (dup2(fds_stderr[1], 2) == -1)
-            _exit(spawn_status::errno_dup());
-        if (close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
-            _exit(spawn_status::errno_close());
+        if (::dup2(fds_stdout[1], 1) == -1)
+            ::_exit(spawn_status::errno_dup());
+        if (::close(fds_stdout[0]) == -1 || close(fds_stdout[1]) == -1)
+            ::_exit(spawn_status::errno_close());
+        if (::dup2(fds_stderr[1], 2) == -1)
+            ::_exit(spawn_status::errno_dup());
+        if (::close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
+            ::_exit(spawn_status::errno_close());
 
         for (size_t i = 0; i < ports_len; ++i)
         {
-            int sockfd = socket(AF_INET, type, 0);
+            int sockfd = ::socket(AF_INET, type, 0);
             if (sockfd == -1)
-                _exit(spawn_status::errno_socket());
+                ::_exit(spawn_status::errno_socket());
 
             if (static_cast<size_t>(sockfd) != i + 3)
             {
-                if (dup2(sockfd, i + 3) == -1)
-                    _exit(spawn_status::errno_dup());
+                if (::dup2(sockfd, i + 3) == -1)
+                    ::_exit(spawn_status::errno_dup());
                 sockfd = i + 3;
             }
             
             struct sockaddr_in localhost;
             localhost.sin_family = AF_INET;
-            localhost.sin_port = htons(ports[i]);
-            localhost.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            localhost.sin_port = ::htons(ports[i]);
+            localhost.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
 
-            if (connect(sockfd,
-                        reinterpret_cast<struct sockaddr *>(&localhost),
-                        sizeof(localhost)) == -1)
-                _exit(spawn_status::errno_connect());
+            if (::connect(sockfd,
+                          reinterpret_cast<struct sockaddr *>(&localhost),
+                          sizeof(localhost)) == -1)
+                ::_exit(spawn_status::errno_connect());
         }
 
         int argv_count = 2;
@@ -777,18 +876,18 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             }
         }
 
-        execve(filename, execve_argv, execve_env);
-        _exit(spawn_status::errno_exec());
+        ::execve(filename, execve_argv, execve_env);
+        ::_exit(spawn_status::errno_exec());
     }
     else
     {
-        if (close(fds_stdout[1]) == -1)
+        if (::close(fds_stdout[1]) == -1)
             return spawn_status::errno_close();
-        if (close(fds_stderr[1]) == -1)
+        if (::close(fds_stderr[1]) == -1)
             return spawn_status::errno_close();
 
         if (GEPD::fds.reserve(GEPD::nfds + 2) == false)
-            exit(spawn_status::out_of_memory);
+            ::exit(spawn_status::out_of_memory);
         size_t const index_stdout = GEPD::nfds;
         size_t const index_stderr = GEPD::nfds + 1;
         GEPD::fds[index_stdout].fd = fds_stdout[0];
