@@ -34,6 +34,11 @@ AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer, ,
 AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
                     [AC_MSG_ERROR([java reflection not found])])
 
+# python check
+AC_PATH_PROG([PYTHON],[python])
+AX_PROG_PYTHON_VERSION([2.5.0], ,
+                       [AC_MSG_ERROR([Python >= 2.5.0 not found])])
+
 # ruby checks
 AC_PATH_PROG([RUBY],[ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,

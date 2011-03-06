@@ -41,6 +41,13 @@ http://www.gnu.org/software/autoconf-archive/ax_compare_version.html
 Fri Mar  4 00:19:03 PST 2011
 BSD-like
 
+ax_prog_python_version.m4
+-------------------------
+autoconf m4 macros for python detection
+http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html
+Sun Mar  6 13:31:11 PST 2011
+BSD-like
+
 epgsql
 ------
 Erlang PostgreSQL (native) Driver

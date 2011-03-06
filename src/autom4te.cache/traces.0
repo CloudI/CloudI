@@ -2755,6 +2755,33 @@ rm -f $JAVA_TEST $CLASS_TEST
 ])
 AC_PROVIDE([$0])dnl
 ])
+m4trace:m4/ax_prog_python_version.m4:40: -1- AC_DEFUN([AX_PROG_PYTHON_VERSION], [
+    AC_REQUIRE([AC_PROG_SED])
+    AC_REQUIRE([AC_PROG_GREP])
+
+    AS_IF([test -n "$PYTHON"],[
+        ax_python_version="$1"
+
+        AC_MSG_CHECKING([for python version])
+        changequote(<<,>>)
+        python_version=`$PYTHON -V 2>&1 | $GREP "^Python " | $SED -e 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\)/\1/'`
+        changequote([,])
+        AC_MSG_RESULT($python_version)
+
+    AC_SUBST([PYTHON_VERSION],[$python_version])
+
+        AX_COMPARE_VERSION([$ax_python_version],[le],[$python_version],[
+        :
+            $2
+        ],[
+        :
+            $3
+        ])
+    ],[
+        AC_MSG_WARN([could not find the python interpreter])
+        $3
+    ])
+])
 m4trace:m4/ax_prog_ruby_version.m4:40: -1- AC_DEFUN([AX_PROG_RUBY_VERSION], [
     AC_REQUIRE([AC_PROG_SED])
     AC_REQUIRE([AC_PROG_GREP])
@@ -3266,65 +3293,75 @@ m4/ax_check_class.m4:57: AX_CHECK_CLASS is expanded from...
 m4/ax_check_class.m4:56: AC_CHECK_CLASS is expanded from...
 m4/ax_check_rqrd_class.m4:56: AX_CHECK_RQRD_CLASS is expanded from...
 configure.ac:34: the top level])
-m4trace:configure.ac:38: -1- m4_pattern_allow([^RUBY$])
-m4trace:configure.ac:39: -1- AX_PROG_RUBY_VERSION([1.9.0], [], [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
-m4trace:configure.ac:39: -1- m4_pattern_allow([^RUBY_VERSION$])
-m4trace:configure.ac:39: -1- AX_COMPARE_VERSION([$ax_ruby_version], [le], [$ruby_version], [
+m4trace:configure.ac:38: -1- m4_pattern_allow([^PYTHON$])
+m4trace:configure.ac:39: -1- AX_PROG_PYTHON_VERSION([2.5.0], [], [AC_MSG_ERROR([Python >= 2.5.0 not found])])
+m4trace:configure.ac:39: -1- m4_pattern_allow([^PYTHON_VERSION$])
+m4trace:configure.ac:39: -1- AX_COMPARE_VERSION([$ax_python_version], [le], [$python_version], [
+        :
+            
+        ], [
+        :
+            AC_MSG_ERROR([Python >= 2.5.0 not found])
+        ])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^RUBY$])
+m4trace:configure.ac:44: -1- AX_PROG_RUBY_VERSION([1.9.0], [], [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
+m4trace:configure.ac:44: -1- m4_pattern_allow([^RUBY_VERSION$])
+m4trace:configure.ac:44: -1- AX_COMPARE_VERSION([$ax_ruby_version], [le], [$ruby_version], [
         :
             
         ], [
         :
             AC_MSG_ERROR([Ruby >= 1.9.0 not found])
         ])
-m4trace:configure.ac:41: -1- m4_pattern_allow([^RUBY_RAKE$])
-m4trace:configure.ac:45: -1- m4_pattern_allow([^RUBY_GEM$])
-m4trace:configure.ac:51: -1- m4_pattern_allow([^ERLC$])
-m4trace:configure.ac:51: -1- m4_pattern_allow([^ERLC$])
-m4trace:configure.ac:51: -1- m4_pattern_allow([^ERLCFLAGS$])
-m4trace:configure.ac:52: -1- m4_pattern_allow([^ERL$])
-m4trace:configure.ac:52: -1- m4_pattern_allow([^ERL$])
-m4trace:configure.ac:53: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B01], [], [AC_MSG_ERROR([Erlang >= R14B01 not found])])
-m4trace:configure.ac:53: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+m4trace:configure.ac:46: -1- m4_pattern_allow([^RUBY_RAKE$])
+m4trace:configure.ac:50: -1- m4_pattern_allow([^RUBY_GEM$])
+m4trace:configure.ac:56: -1- m4_pattern_allow([^ERLC$])
+m4trace:configure.ac:56: -1- m4_pattern_allow([^ERLC$])
+m4trace:configure.ac:56: -1- m4_pattern_allow([^ERLCFLAGS$])
+m4trace:configure.ac:57: -1- m4_pattern_allow([^ERL$])
+m4trace:configure.ac:57: -1- m4_pattern_allow([^ERL$])
+m4trace:configure.ac:58: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B01], [], [AC_MSG_ERROR([Erlang >= R14B01 not found])])
+m4trace:configure.ac:58: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 m4/ax_erlang_otp_version.m4:41: AX_ERLANG_REQUIRE_OTP_VER is expanded from...
-configure.ac:53: the top level])
-m4trace:configure.ac:55: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:58: the top level])
+m4trace:configure.ac:60: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:217: AC_ERLANG_SUBST_ROOT_DIR is expanded from...
-configure.ac:55: the top level])
-m4trace:configure.ac:55: -1- m4_pattern_allow([^ERLANG_ROOT_DIR$])
-m4trace:configure.ac:56: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:60: the top level])
+m4trace:configure.ac:60: -1- m4_pattern_allow([^ERLANG_ROOT_DIR$])
+m4trace:configure.ac:61: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:241: AC_ERLANG_SUBST_LIB_DIR is expanded from...
-configure.ac:56: the top level])
-m4trace:configure.ac:56: -1- m4_pattern_allow([^ERLANG_LIB_DIR$])
-m4trace:configure.ac:57: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:61: the top level])
+m4trace:configure.ac:61: -1- m4_pattern_allow([^ERLANG_LIB_DIR$])
+m4trace:configure.ac:62: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:175: AC_ERLANG_CHECK_LIB is expanded from...
-configure.ac:57: the top level])
-m4trace:configure.ac:57: -1- m4_pattern_allow([^ERLANG_LIB_DIR_erl_interface$])
-m4trace:configure.ac:57: -1- m4_pattern_allow([^ERLANG_LIB_VER_erl_interface$])
-m4trace:configure.ac:58: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+configure.ac:62: the top level])
+m4trace:configure.ac:62: -1- m4_pattern_allow([^ERLANG_LIB_DIR_erl_interface$])
+m4trace:configure.ac:62: -1- m4_pattern_allow([^ERLANG_LIB_VER_erl_interface$])
+m4trace:configure.ac:63: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 ../../lib/m4sugar/m4sh.m4:598: AS_IF is expanded from...
 ../../lib/autoconf/general.m4:1998: AC_CACHE_VAL is expanded from...
 ../../lib/autoconf/general.m4:2019: AC_CACHE_CHECK is expanded from...
 ../../lib/autoconf/erlang.m4:175: AC_ERLANG_CHECK_LIB is expanded from...
-configure.ac:58: the top level])
-m4trace:configure.ac:58: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
-m4trace:configure.ac:58: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
-m4trace:configure.ac:59: -1- m4_pattern_allow([^ESCRIPT$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:94: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:94: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:94: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:94: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:94: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:94: -1- _LT_PROG_LTMAIN
+configure.ac:63: the top level])
+m4trace:configure.ac:63: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
+m4trace:configure.ac:63: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
+m4trace:configure.ac:64: -1- m4_pattern_allow([^ESCRIPT$])
+m4trace:configure.ac:99: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:99: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:99: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:99: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:99: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:99: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:99: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:99: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:99: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:99: -1- _LT_PROG_LTMAIN
