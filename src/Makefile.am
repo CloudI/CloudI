@@ -57,7 +57,8 @@ install-exec-hook: tests-install \
                    api-install \
                    api-c-install \
                    api-java-install \
-                   api-python-install
+                   api-python-install \
+                   api-ruby-install
 	rm -rf $(DESTDIR)$(bindir)
 	rm -rf $(DESTDIR)$(includedir)
 	rm -rf $(DESTDIR)$(libdir)
@@ -97,6 +98,8 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
           $(DESTDIR)${prefix}/tests/http/service/jar/
 	cp -f $(top_builddir)/tests/http/service/service.py \
           $(DESTDIR)${prefix}/tests/http/service/
+	cp -f $(top_builddir)/tests/http/service/service.rb \
+          $(DESTDIR)${prefix}/tests/http/service/
 	mkdir $(DESTDIR)${prefix}/tests/http/input
 	cp -f $(top_builddir)/tests/http/input/* \
           $(DESTDIR)${prefix}/tests/http/input/
@@ -131,3 +134,12 @@ api-python-install:
           $(DESTDIR)${prefix}/api/python/
 	cp -f $(top_builddir)/api/python/cloudi.py \
           $(DESTDIR)${prefix}/api/python/
+
+api-ruby-install:
+	mkdir $(DESTDIR)${prefix}/api/ruby
+	cp -f $(top_builddir)/api/ruby/cloudi.rb \
+          $(DESTDIR)${prefix}/api/ruby/
+	mkdir $(DESTDIR)${prefix}/api/ruby/gems
+	cp -rf $(top_builddir)/api/ruby/gems/gems \
+           $(DESTDIR)${prefix}/api/ruby/gems
+
