@@ -20,7 +20,7 @@ To stop CloudI:
 bin/cloudi stop
 
 
-Many bugs currently exist with the 0.1.0 version.  The code is a major
+Many bugs currently exist with the 0.1.x versions.  The code is a major
 rewrite, so it will take some time to work through all the issues.
 The 0.0.10 version is more stable and more fully tested, but has less features.
 

@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [0.1.0],
+AC_INIT([CloudI], [0.1.1],
         [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
@@ -62,9 +62,10 @@ AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
-AC_CONFIG_COMMANDS([rebar], [(cd external/rebar/; 
-                              $ESCRIPT bootstrap &&
-                              mv ./rebar ../../ || exit 1)],
+AC_CONFIG_COMMANDS([rebar],
+                   [(cd external/rebar/; 
+                     $ESCRIPT bootstrap &&
+                     mv ./rebar ../../ || exit 1)],
                    [ESCRIPT=$ESCRIPT])
 
 AC_CONFIG_FILES([cloudi.conf

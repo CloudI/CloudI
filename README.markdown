@@ -1,11 +1,11 @@
-#[CloudI 0.1.0 (alpha)](http://cloudi.org)
+#[CloudI 0.1.1 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
 CloudI is an open-source private cloud computing framework for secure,
 internal data processing.  CloudI manages a dynamic cloud of services with
 an internal messaging bus.  Services can be created in Erlang, C, C++, Java,
-or Python, by using the CloudI interface (API).  The interface provides
+Python, or Ruby, by using the CloudI interface (API).  The interface provides
 a small set of functions that are commonly used for creating 
 Service-Oriented Architecture (SOA):
 
@@ -50,7 +50,7 @@ The changes are summarized below:
 * a normal autotools/rebar build system is used that doesn't attempt to
   install critical dependencies locally (it just requires that they exist)
 * restarting stopped (e.g., SIGSTOP) OS processes is not implemented in 
-  0.1.0 (but may be added back, as necessary)
+  0.1.1 (but may be added back, as necessary)
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct
