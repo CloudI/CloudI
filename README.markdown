@@ -38,7 +38,7 @@ The changes are summarized below:
   may exist on other CloudI nodes
 * all service (i.e., job) names rely on strings rather than dynamic atoms,
   lookups use the trie data structure for efficiency close to the performance
-  of the process dictionary
+  of the process dictionary (the fastest Erlang data structure)
 * cnodes are no longer used for external service (i.e., job) communication,
   instead sockets are used for each thread (either UDP or TCP can be used)
 * external services (i.e., jobs) are no longer implemented in dynamic libraries
