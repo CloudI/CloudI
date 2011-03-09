@@ -96,14 +96,6 @@ commit 6c3d1952ec3d5de3cdb2
 Sat Feb 12 14:55:04 PST 2011
 BSD
 
-erlectricity
-------------
-Ruby Erlang Integration
-https://github.com/mojombo/erlectricity
-commit 0473d25b87ae15990d99
-Thu Mar  3 15:03:04 PST 2011
-BSD
-
 erlzmq
 ------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
