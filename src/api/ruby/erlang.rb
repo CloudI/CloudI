@@ -23,7 +23,7 @@
 #       written permission
 # 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-# CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
@@ -61,9 +61,9 @@ module Erlang
             @value = value
         end
         def to_s
-            if @value.kind_of? Integer
+            if @value.kind_of?(Integer)
                 return TAG_ATOM_CACHE_REF.chr + @value.chr
-            elsif @value.kind_of? String
+            elsif @value.kind_of?(String)
                 size = @value.length
                 if size < 256
                     return TAG_SMALL_ATOM_EXT.chr + size.chr + @value
