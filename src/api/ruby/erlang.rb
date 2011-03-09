@@ -388,6 +388,10 @@ module Erlang
             return integer_to_binary(term)
         elsif term.kind_of?(Symbol)
             return OtpErlangAtom.new(term.to_s).to_s
+        elsif term.kind_of?(TrueClass)
+            return OtpErlangAtom.new("true").to_s
+        elsif term.kind_of?(FalseClass)
+            return OtpErlangAtom.new("false").to_s
         elsif term.kind_of?(OtpErlangAtom)
             return term.to_s
         elsif term.kind_of?(OtpErlangBinary)

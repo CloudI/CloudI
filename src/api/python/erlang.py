@@ -346,6 +346,8 @@ def _term_to_binary(term):
         return _float_to_binary(term)
     elif type(term) == types.IntType:
         return _integer_to_binary(term)
+    elif type(term) == types.BooleanType:
+        return str(OtpErlangAtom(term and "true" or "false"))
     elif isinstance(term, OtpErlangAtom):
         return str(term)
     elif isinstance(term, OtpErlangBinary):
