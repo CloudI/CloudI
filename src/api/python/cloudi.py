@@ -215,19 +215,17 @@ class API(object):
                  pidSize) = struct.unpack("=%dsI16sI" % requestSize, data[i:j])
                 i, j = j, j + pidSize
                 pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
-                self.__callback(command, name, request, timeout,
-                                transId, binary_to_term(pid))
+                self.__callback(command, name, request, timeout, transId,
+                                binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
                 responseSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + responseSize + 16
                 return struct.unpack("=%ds16s" % responseSize, data[i:j])
-                #return (response, transId)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
                 return struct.unpack("=16s", data[i:j])[0]
-                #return transId
             elif command == _MESSAGE_RETURNS_ASYNC:
                 i, j = j, j + 4
                 transIdCount = struct.unpack("=I", data[i:j])[0]

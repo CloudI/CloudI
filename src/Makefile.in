@@ -199,8 +199,6 @@ PYTHON = @PYTHON@
 PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
 RUBY = @RUBY@
-RUBY_GEM = @RUBY_GEM@
-RUBY_RAKE = @RUBY_RAKE@
 RUBY_VERSION = @RUBY_VERSION@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -834,9 +832,8 @@ api-ruby-install:
 	mkdir $(DESTDIR)${prefix}/api/ruby
 	cp -f $(top_builddir)/api/ruby/cloudi.rb \
           $(DESTDIR)${prefix}/api/ruby/
-	mkdir $(DESTDIR)${prefix}/api/ruby/gems
-	cp -rf $(top_builddir)/api/ruby/gems/gems \
-           $(DESTDIR)${prefix}/api/ruby/gems
+	cp -f $(top_builddir)/api/ruby/erlang.rb \
+          $(DESTDIR)${prefix}/api/ruby/
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

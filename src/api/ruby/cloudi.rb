@@ -39,33 +39,33 @@
 # DAMAGE.
 #
 
-$:.unshift File.join(File.dirname(__FILE__),
-                     *%w[gems gems erlectricity-1.1.1 lib])
+$:.unshift File.dirname(__FILE__)
+
 $stdout.sync = true
 $stderr.sync = true
 
-require 'erlectricity'
+require 'erlang'
 
 module Cloudi
     class API
+        include Erlang
         def initialize(index, protocol, size)
             @socket = IO.for_fd(index + 3, File::RDWR, autoclose: false)
             @socket.sync = true
             @size = size
             @callbacks = Hash.new
-            @encoder = Erlectricity::Encoder.new(nil)
-            send(:init)
+            @socket.write(term_to_binary(:init))
             poll
         end
 
         def subscribe(name, function)
             @callbacks[@prefix + name] = function
-            send([:subscribe, string(name)])
+            @socket.write(term_to_binary([:subscribe, name]))
         end
 
         def unsubscribe(name, function)
             @callbacks.delete(@prefix + name)
-            send([:unsubscribe, string(name)])
+            @socket.write(term_to_binary([:unsubscribe, name]))
         end
 
         def send_async(name, request)
@@ -73,7 +73,9 @@ module Cloudi
         end
 
         def send_async(name, request, timeout)
-            send([:send_async, string(name), request, timeout])
+            @socket.write(term_to_binary([:send_async, name,
+                                          OtpErlangBinary.new(request),
+                                          timeout]))
             return poll
         end
 
@@ -82,7 +84,9 @@ module Cloudi
         end
 
         def send_sync(name, request, timeout)
-            send([:send_sync, string(name), request, timeout])
+            @socket.write(term_to_binary([:send_sync, name,
+                                          OtpErlangBinary.new(request),
+                                          timeout]))
             return poll
         end
 
@@ -91,7 +95,9 @@ module Cloudi
         end
 
         def mcast_async(name, request, timeout)
-            send([:mcast_async, string(name), request, timeout])
+            @socket.write(term_to_binary([:mcast_async, name,
+                                          OtpErlangBinary.new(request),
+                                          timeout]))
             return poll
         end
 
@@ -105,14 +111,18 @@ module Cloudi
         end
 
         def forward_async(name, response, timeout, transId, pid)
-            send([:forward_async, string(name), response,
-                  timeout, transId, pid])
+            @socket.write(term_to_binary([:forward_async, name,
+                                          OtpErlangBinary.new(response),
+                                          timeout,
+                                          OtpErlangBinary.new(transId), pid]))
             raise ReturnAsyncException
         end
 
         def forward_sync(name, response, timeout, transId, pid)
-            send([:forward_sync, string(name), response,
-                  timeout, transId, pid])
+            @socket.write(term_to_binary([:forward_sync, name, 
+                                          OtpErlangBinary.new(response),
+                                          timeout,
+                                          OtpErlangBinary.new(transId), pid]))
             raise ReturnSyncException
         end
 
@@ -126,19 +136,24 @@ module Cloudi
         end
 
         def return_async(name, response, timeout, transId, pid)
-            send([:return_async, string(name), response,
-                  timeout, transId, pid])
+            @socket.write(term_to_binary([:return_async, name,
+                                          OtpErlangBinary.new(response),
+                                          timeout,
+                                          OtpErlangBinary.new(transId), pid]))
             raise ReturnAsyncException
         end
 
         def return_sync(name, response, timeout, transId, pid)
-            send([:return_sync, string(name), response,
-                  timeout, transId, pid])
+            @socket.write(term_to_binary([:return_sync, name,
+                                          OtpErlangBinary.new(response),
+                                          timeout,
+                                          OtpErlangBinary.new(transId), pid]))
             raise ReturnSyncException
         end
 
         def recv_async(timeout, transId)
-            send([:recv_async, timeout, transId])
+            @socket.write(term_to_binary([:recv_async, timeout,
+                                          OtpErlangBinary.new(transId)]))
             return poll
         end
 
@@ -225,7 +240,7 @@ module Cloudi
                     i = j; j += pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     callback(command, name, request, timeout, transId,
-                             Erlectricity::Decoder.decode(pid))
+                             binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i = j; j += 4
                     responseSize = data[i, j].unpack("L")[0]
@@ -258,16 +273,6 @@ module Cloudi
 
         def assert
             raise "Assertion failed !" unless yield if $DEBUG
-        end
-
-        def send(term)
-            @encoder.out = StringIO.new('', 'w')
-            @encoder.write_any(term)
-            @socket.write(@encoder.out.string)
-        end
-
-        def string(s)
-            return Erlectricity::List.new(s.unpack("C#{s.length}"))
         end
 
         class ReturnSyncException < SystemExit

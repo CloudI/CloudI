@@ -1,1 +1,1 @@
-SUBDIRS = c java ruby
+SUBDIRS = c java

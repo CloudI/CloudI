@@ -756,8 +756,6 @@ ERLANG_ROOT_DIR
 ERL
 ERLCFLAGS
 ERLC
-RUBY_GEM
-RUBY_RAKE
 RUBY_VERSION
 RUBY
 PYTHON_VERSION
@@ -16134,92 +16132,6 @@ $as_echo "$as_me: WARNING: could not find the ruby interpreter" >&2;}
     
 fi
 
-# Extract the first word of "rake", so it can be a program name with args.
-set dummy rake; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_RUBY_RAKE+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $RUBY_RAKE in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_RUBY_RAKE="$RUBY_RAKE" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_RUBY_RAKE="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-RUBY_RAKE=$ac_cv_path_RUBY_RAKE
-if test -n "$RUBY_RAKE"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RUBY_RAKE" >&5
-$as_echo "$RUBY_RAKE" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-if test "x$RUBY_RAKE" = "x"; then
-    as_fn_error "ruby rake not found" "$LINENO" 5
-fi
-# Extract the first word of "gem", so it can be a program name with args.
-set dummy gem; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_RUBY_GEM+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $RUBY_GEM in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_RUBY_GEM="$RUBY_GEM" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_RUBY_GEM="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-RUBY_GEM=$ac_cv_path_RUBY_GEM
-if test -n "$RUBY_GEM"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RUBY_GEM" >&5
-$as_echo "$RUBY_GEM" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-if test "x$RUBY_GEM" = "x"; then
-    as_fn_error "ruby gem not found" "$LINENO" 5
-fi
 
 # erlang checks
 if test -n "$ERLC"; then
@@ -16853,7 +16765,7 @@ fi
 ac_config_commands="$ac_config_commands rebar"
 
 
-ac_config_files="$ac_config_files cloudi.conf lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile api/ruby/Makefile api/ruby/gems/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile"
+ac_config_files="$ac_config_files cloudi.conf lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -17947,8 +17859,6 @@ do
     "api/java/com/ericsson/otp/Makefile") CONFIG_FILES="$CONFIG_FILES api/java/com/ericsson/otp/Makefile" ;;
     "api/java/com/ericsson/otp/erlang/Makefile") CONFIG_FILES="$CONFIG_FILES api/java/com/ericsson/otp/erlang/Makefile" ;;
     "api/java/jar/Makefile") CONFIG_FILES="$CONFIG_FILES api/java/jar/Makefile" ;;
-    "api/ruby/Makefile") CONFIG_FILES="$CONFIG_FILES api/ruby/Makefile" ;;
-    "api/ruby/gems/Makefile") CONFIG_FILES="$CONFIG_FILES api/ruby/gems/Makefile" ;;
     "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
     "lib/cloudi/Makefile") CONFIG_FILES="$CONFIG_FILES lib/cloudi/Makefile" ;;
     "lib/cloudi/cxx_src/Makefile") CONFIG_FILES="$CONFIG_FILES lib/cloudi/cxx_src/Makefile" ;;
