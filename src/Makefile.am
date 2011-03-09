@@ -139,7 +139,6 @@ api-ruby-install:
 	mkdir $(DESTDIR)${prefix}/api/ruby
 	cp -f $(top_builddir)/api/ruby/cloudi.rb \
           $(DESTDIR)${prefix}/api/ruby/
-	mkdir $(DESTDIR)${prefix}/api/ruby/gems
-	cp -rf $(top_builddir)/api/ruby/gems/gems \
-           $(DESTDIR)${prefix}/api/ruby/gems
+	cp -f $(top_builddir)/api/ruby/erlang.rb \
+          $(DESTDIR)${prefix}/api/ruby/
 

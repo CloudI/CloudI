@@ -43,14 +43,6 @@ AX_PROG_PYTHON_VERSION([2.5.0], ,
 AC_PATH_PROG([RUBY],[ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
                      [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
-AC_PATH_PROG([RUBY_RAKE],[rake])
-if test "x$RUBY_RAKE" = "x"; then
-    AC_MSG_ERROR([ruby rake not found])
-fi
-AC_PATH_PROG([RUBY_GEM],[gem])
-if test "x$RUBY_GEM" = "x"; then
-    AC_MSG_ERROR([ruby gem not found])
-fi
 
 # erlang checks
 AC_ERLANG_NEED_ERLC()
@@ -81,8 +73,6 @@ AC_CONFIG_FILES([cloudi.conf
                  api/java/com/ericsson/otp/Makefile
                  api/java/com/ericsson/otp/erlang/Makefile
                  api/java/jar/Makefile
-                 api/ruby/Makefile
-                 api/ruby/gems/Makefile
                  lib/Makefile
                  lib/cloudi/Makefile
                  lib/cloudi/cxx_src/Makefile
