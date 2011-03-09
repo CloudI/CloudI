@@ -231,10 +231,10 @@ module Erlang
             i = result[0]; tmp = result[1]
             result = binary_to_term_(i, data)
             i = result[0]; tail = result[1]
-            if tail.iskind? OtpErlangList == false
+            if tail.iskind?(OtpErlangList) == false
                 tmp.append(tail)
             end
-            return [i, tmp]
+            return [i, OtpErlangList.new(tmp)]
         elsif tag == TAG_BINARY_EXT
             j = data[i,4].unpack('N')[0]
             i += 4
@@ -368,29 +368,29 @@ module Erlang
     # term_to_binary
     
     def term_to_binary_(term)
-        if term.kind_of? String
+        if term.kind_of?(String)
             return string_to_binary(term)
-        elsif term.kind_of? OtpErlangList
+        elsif term.kind_of?(OtpErlangList)
             return term.to_s
-        elsif term.kind_of? Array
+        elsif term.kind_of?(Array)
             return tuple_to_binary(term)
-        elsif term.kind_of? Float
+        elsif term.kind_of?(Float)
             return float_to_binary(term)
-        elsif term.kind_of? Integer
+        elsif term.kind_of?(Integer)
             return integer_to_binary(term)
-        elsif term.kind_of? Symbol
+        elsif term.kind_of?(Symbol)
             return OtpErlangAtom.new(term.to_s).to_s
-        elsif term.kind_of? OtpErlangAtom
+        elsif term.kind_of?(OtpErlangAtom)
             return term.to_s
-        elsif term.kind_of? OtpErlangBinary
+        elsif term.kind_of?(OtpErlangBinary)
             return term.to_s
-        elsif term.kind_of? OtpErlangFunction
+        elsif term.kind_of?(OtpErlangFunction)
             return term.to_s
-        elsif term.kind_of? OtpErlangReference
+        elsif term.kind_of?(OtpErlangReference)
             return term.to_s
-        elsif term.kind_of? OtpErlangPort
+        elsif term.kind_of?(OtpErlangPort)
             return term.to_s
-        elsif term.kind_of? OtpErlangPid
+        elsif term.kind_of?(OtpErlangPid)
             return term.to_s
         else
             raise OutputException, 'unknown ruby type', caller
