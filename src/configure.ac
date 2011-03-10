@@ -9,6 +9,7 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
+AM_PROG_CC_C_O
 AC_CHECK_LIB(gmp, __gmpz_init, ,
              [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
 AX_CLOCK_GETTIME
