@@ -1,1 +1,1 @@
-SUBDIRS = hexpi http
+SUBDIRS = hexpi http http_req
