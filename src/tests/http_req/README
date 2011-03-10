@@ -1,0 +1,59 @@
+Recent results for a single OS process and no threads
+(with the command line below)
+
+$ ab -n 8000 -c 1000 http://127.0.0.1:8080/tests/http_req/http
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient)
+Completed 800 requests
+Completed 1600 requests
+Completed 2400 requests
+Completed 3200 requests
+Completed 4000 requests
+Completed 4800 requests
+Completed 5600 requests
+Completed 6400 requests
+Completed 7200 requests
+Completed 8000 requests
+Finished 8000 requests
+
+
+Server Software:        
+Server Hostname:        127.0.0.1
+Server Port:            8080
+
+Document Path:          /tests/http_req/http
+Document Length:        84 bytes
+
+Concurrency Level:      1000
+Time taken for tests:   1.570 seconds
+Complete requests:      8000
+Failed requests:        0
+Write errors:           0
+Total transferred:      1136000 bytes
+HTML transferred:       672000 bytes
+Requests per second:    5096.71 [#/sec] (mean)
+Time per request:       196.205 [ms] (mean)
+Time per request:       0.196 [ms] (mean, across all concurrent requests)
+Transfer rate:          706.77 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    5  11.7      0      54
+Processing:    14  175  32.2    184     213
+Waiting:       14  175  32.1    183     210
+Total:         68  180  25.0    184     249
+
+Percentage of the requests served within a certain time (ms)
+  50%    184
+  66%    190
+  75%    196
+  80%    199
+  90%    204
+  95%    206
+  98%    212
+  99%    228
+ 100%    249 (longest request)
+

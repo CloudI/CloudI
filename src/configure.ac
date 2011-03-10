@@ -86,5 +86,7 @@ AC_CONFIG_FILES([cloudi.conf
                  tests/http/service/org/Makefile
                  tests/http/service/org/cloudi/Makefile
                  tests/http/service/org/cloudi/tests/Makefile
-                 tests/http/service/org/cloudi/tests/http/Makefile])
+                 tests/http/service/org/cloudi/tests/http/Makefile
+                 tests/http_req/Makefile
+                 tests/http_req/c_src/Makefile])
 AC_OUTPUT

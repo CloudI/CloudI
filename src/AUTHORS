@@ -1,6 +1,5 @@
 CloudI        Michael Truog <mjtruog at gmail dot com>
 
-
 Dependencies:
 
 misultin      Roberto Ostinelli <roberto@ostinelli.net>
@@ -9,4 +8,3 @@ epgsql        Will Glozer
 emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
 ememcached    Nick Gerakines <nick@gerakines.net>
 ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
-erlectricity  Scott Fleckenstein and Tom Preston-Werner

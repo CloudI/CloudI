@@ -178,7 +178,12 @@
         "@RUBY@",
         "tests/http/service/service.rb 1 tcp 16384", [],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60}
+        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
+    {external,
+        "/tests/http_req/",
+        "tests/http_req/priv/http_req", "1 tcp 16384", [],
+        lazy_closest, tcp, 16384,
+        5000, 5000, 5000, undefined, undefined, 1, 1, 5, 60}
 ]}.
 {nodes, [
     'cloudi@host1',
