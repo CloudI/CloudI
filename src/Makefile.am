@@ -22,7 +22,8 @@ clean-configure: config.log
 	rm -rf autom4te.cache
 	rm -rf api/c/.deps/ \
            lib/cloudi/cxx_src/.deps/ \
-           tests/hexpi/cxx_src/.deps/
+           tests/hexpi/cxx_src/.deps/ \
+           tests/http_req/c_src/.deps/
 	find api -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 	find lib -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 	find tests -name "Makefile.in" -o -name "Makefile" | xargs rm -f
@@ -54,6 +55,7 @@ dist: distdir
 install-exec-hook: tests-install \
                    tests-hexpi-install \
                    tests-http-install \
+                   tests-http_req-install \
                    api-install \
                    api-c-install \
                    api-java-install \
@@ -110,6 +112,12 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
 	cp -f $(top_builddir)/tests/http/output/* \
           $(DESTDIR)${prefix}/tests/http/output/
 	mkdir $(DESTDIR)${prefix}/tests/http/tmp
+
+tests-http_req-install:
+	mkdir $(DESTDIR)${prefix}/tests/http_req
+	mkdir $(DESTDIR)${prefix}/tests/http_req/priv
+	mv -f $(DESTDIR)$(bindir)/http_req \
+          $(DESTDIR)${prefix}/tests/http_req/priv/
 
 api-install:
 	mkdir $(DESTDIR)${prefix}/api
