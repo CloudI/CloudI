@@ -70,18 +70,29 @@ CloudI currently supports the following databases:
 
 ## CONFIGURATION
 
-CloudI requires Erlang R14B01 because of dependencies on new standard modules.
-The ETS bug in R14B01 does not affect CloudI (CloudI does not use ETS, so that
-referential transparency is maintained and the system is scalable without
-global data locks).
+Build Requirements:
+
+* GNU MP library (libgmp3-dev package in Ubuntu, gmp package in OSX ports)
+* Erlang >= R14B01
+* Ruby >= 1.9.0 (ruby1.9 package in Ubuntu, ruby19 package in OSX ports)
+* boost >= 1.36.0 
+* Java
+* Python >= 2.5.0
+
+On OSX, to run configure with the OSX ports paths, use:
+CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+
+See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme) for basic build information
+
+See [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in) for system configuration information
 
 ## RUNNING
 
-See src/README
+See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme)
 
 ## LICENSE
 
-BSD License
+[BSD License](https://github.com/okeuday/CloudI/blob/master/src/LICENSE)
 
 ## CONTACT
 
