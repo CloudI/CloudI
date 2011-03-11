@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_job_timers for sending messages on timers
+    * Add simple HTTP request test with one OS process, no threads
+    * Convert python erlang ei encoding to ruby to remove erlectricity
+
 2011-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 0.1.1 (alpha) released, packaged
