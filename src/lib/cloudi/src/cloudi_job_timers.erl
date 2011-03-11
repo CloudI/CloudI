@@ -99,7 +99,7 @@ cloudi_job_handle_request(_Type, _Name, Request, _Timeout, _TransId, _Pid,
         is_tuple(Request), tuple_size(Request) == 4 ->
             Request
     end,
-    true = (Type == once) or (Type == continuous),
+    true = (Type == once) or (Type == always),
     TimeValue = time_to_milliseconds(Time),
     true = is_atom(F),
     true = is_list(A),
@@ -111,7 +111,7 @@ cloudi_job_handle_info({once, _, F, A}, State, Dispatcher) ->
     erlang:apply(cloudi_job, F, [Dispatcher | A]),
     {noreply, State};
 
-cloudi_job_handle_info({continuous, TimeValue, F, A} = Message,
+cloudi_job_handle_info({always, TimeValue, F, A} = Message,
                        State, Dispatcher) ->
     erlang:apply(cloudi_job, F, [Dispatcher | A]),
     erlang:send_after(TimeValue, self(), Message),
@@ -132,7 +132,7 @@ process_timers([]) ->
     ok;
 
 process_timers([{Type, Time, F, A} | T]) ->
-    true = (Type == once) or (Type == continuous),
+    true = (Type == once) or (Type == always),
     TimeValue = time_to_milliseconds(Time),
     true = is_atom(F),
     true = is_list(A),
