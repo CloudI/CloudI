@@ -54,7 +54,8 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/1]).
+-export([start_link/1,
+         start_job/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -77,6 +78,20 @@
 start_link(Config)
     when is_record(Config, config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+
+start_job(Job)
+    when is_record(Job, config_job_internal) ->
+    case code:is_loaded(Job#config_job_internal.module) of
+        false ->
+            code:load_file(Job#config_job_internal.module);
+        _ ->
+            ok
+    end,
+    start_job_internal(Job#config_job_internal.count_process, Job);
+
+start_job(Job)
+    when is_record(Job, config_job_external) ->
+    start_job_external(Job#config_job_external.count_process, Job).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -114,20 +129,6 @@ code_change(_, State, _) ->
 
 configure(Config) ->
     lists:foreach(fun(Job) -> start_job(Job) end, Config#config.jobs).
-
-start_job(Job)
-    when is_record(Job, config_job_internal) ->
-    case code:is_loaded(Job#config_job_internal.module) of
-        false ->
-            code:load_file(Job#config_job_internal.module);
-        _ ->
-            ok
-    end,
-    start_job_internal(Job#config_job_internal.count_process, Job);
-
-start_job(Job)
-    when is_record(Job, config_job_external) ->
-    start_job_external(Job#config_job_external.count_process, Job).
 
 start_job_internal(0, _) ->
     ok;
