@@ -741,6 +741,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, p->response_size);
                 p->response = &buffer[index];
                 index += p->response_size;
+                p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
                 if (index != size)
