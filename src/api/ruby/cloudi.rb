@@ -216,43 +216,43 @@ module Cloudi
                 command = data[i, j].unpack("L")[0]
                 case command
                 when MESSAGE_INIT
-                    i = j; j += 4
+                    i += j; j = 4
                     prefixSize = data[i, j].unpack("L")[0]
-                    i = j; j += prefixSize + 4 + 4
+                    i += j; j = prefixSize + 4 + 4
                     tmp = data[i, j].unpack("Z#{prefixSize}LL")
                     @prefix = tmp[0]
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
                     return
                 when MESSAGE_SEND_ASYNC, MESSAGE_SEND_SYNC
-                    i = j; j += 4
+                    i += j; j = 4
                     nameSize = data[i, j].unpack("L")[0]
-                    i = j; j += nameSize + 4
+                    i += j; j = nameSize + 4
                     tmp = data[i, j].unpack("Z#{nameSize}L")
                     name = tmp[0]
                     requestSize = tmp[1]
-                    i = j; j += requestSize + 4 + 16 + 4
+                    i += j; j = requestSize + 4 + 16 + 4
                     tmp = data[i, j].unpack("a#{requestSize}La16L")
                     request = tmp[0]
                     timeout = tmp[1]
                     transId = tmp[2]
                     pidSize = tmp[3]
-                    i = j; j += pidSize
+                    i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     callback(command, name, request, timeout, transId,
                              binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
-                    i = j; j += 4
+                    i += j; j = 4
                     responseSize = data[i, j].unpack("L")[0]
-                    i = j; j += responseSize + 16
+                    i += j; j = responseSize + 16
                     return data[i, j].unpack("a#{responseSize}a16")
                 when MESSAGE_RETURN_ASYNC
-                    i = j; j += 16
+                    i += j; j = 16
                     return data[i, j].unpack("a16")[0]
                 when MESSAGE_RETURNS_ASYNC
-                    i = j; j += 4
+                    i += j; j = 4
                     transIdCount = data[i, j].unpack("L")[0]
-                    i = j; j += 16 * transIdCount
+                    i += j; j = 16 * transIdCount
                     return data[i, j].unpack("a16" * transIdCount)
                 end
             end
