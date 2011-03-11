@@ -44,14 +44,16 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([open/0, open/1]).
+-export([open/0, open/1,
+         acl_add/2, acl_remove/2,
+         job_add/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -135,20 +137,34 @@ open(Path) when is_list(Path) ->
     {ok, Terms} = file:consult(Path),
     new(Terms, #config{}).
 
+acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
+    when is_atom(A) ->
+    Config#config{acl = dict:merge(fun(_, L, _) -> L end,
+                                   acl_lookup(Value), ACL)}.
+
+acl_remove([A | _] = Value, #config{acl = ACL} = Config)
+    when is_atom(A) ->
+    Config#config{acl = lists:foldl(fun(E, D) ->
+                                        dict:erase(E, D)
+                                    end, ACL, Value)}.
+
+job_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
+    when is_record(T, internal); is_record(T, external) ->
+    NewJobs = jobs_acl_update([], jobs_validate([], Value), ACL),
+    lists:foreach(fun(J) -> cloudi_configurator:start_job(J) end, NewJobs),
+    Config#config{jobs = NewJobs ++ Jobs}.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-new([], Config) when is_record(Config, config) ->
-    Config#config{jobs = jobs_acl_update([],
-                                         Config#config.jobs,
-                                         Config#config.acl)};
+new([], #config{jobs = Jobs, acl = ACL} = Config) ->
+    Config#config{jobs = jobs_acl_update([], Jobs, ACL)};
 
 new([{'jobs', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'jobs', [T | _] = Value} | Terms], Config)
-    when is_record(T, internal);
-         is_record(T, external) ->
+    when is_record(T, internal); is_record(T, external) ->
     new(Terms, Config#config{jobs = jobs_validate([], Value)});
 new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
