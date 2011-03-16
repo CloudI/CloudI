@@ -86,6 +86,7 @@
         prefix,          % subscribe/unsubscribe name prefix
         timeout_async,   % default timeout for send_async
         timeout_sync,    % default timeout for send_sync
+        os_pid = undefined,            % os_pid reported by the socket
         send_timeouts = dict:new(),    % tracking for timeouts
         queue_messages = false,        % is the external process busy?
         queued = queue:new(),          % queued incoming messages
@@ -177,6 +178,9 @@ init([udp, BufferSize, Timeout, Prefix,
     end.
 
 % outgoing messages (from the port socket to other Erlang pids)
+
+'CONNECT'({'pid', OsPid}, StateData) ->
+    {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
 
 'CONNECT'(init, #state{prefix = Prefix,
                        timeout_async = TimeoutAsync,
@@ -545,14 +549,18 @@ handle_info(Request, StateName, StateData) ->
 
 terminate(_, _, #state{protocol = tcp,
                        listener = Listener,
-                       socket = Socket}) ->
+                       socket = Socket,
+                       os_pid = OsPid}) ->
     catch gen_tcp:close(Listener),
     catch gen_tcp:close(Socket),
+    os_pid_kill(OsPid),
     ok;
 
 terminate(_, _, #state{protocol = udp,
-                       socket = Socket}) ->
+                       socket = Socket,
+                       os_pid = OsPid}) ->
     catch gen_udp:close(Socket),
+    os_pid_kill(OsPid),
     ok.
 
 code_change(_, StateName, StateData, _) ->
@@ -561,6 +569,15 @@ code_change(_, StateName, StateData, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+os_pid_kill(undefined) ->
+    ok;
+
+os_pid_kill(OsPid) ->
+    % if the OsPid exists at this point, it is probably stuck.
+    % without this kill, the process could just stay around, while
+    % being unresponsive and without its Erlang socket pids.
+    os:cmd(string2:format("kill -9 ~w", [OsPid])).
 
 handle_send_async(Name, Request, Timeout, StateName,
                   #state{uuid_generator = UUID,

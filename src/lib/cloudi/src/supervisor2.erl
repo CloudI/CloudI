@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Socket Supervisor==
+%%% ==Supervisor operations==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,21 +44,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_socket_sup).
+-module(supervisor2).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
-
 %% external interface
--export([start_link/0,
-         create_socket/9,
-         delete_sockets/2]).
-
-%% supervisor callbacks
--export([init/1]).
+-export([delete_children/3]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -66,59 +59,25 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Delete supervisor children.===
 %% @end
 %%-------------------------------------------------------------------------
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+delete_children(SupRef, Index, Count)
+    when is_integer(Index), Index >= 1, is_integer(Count), Count >= 1 ->
+    {_, L} = lists:split(Index - 1, supervisor:which_children(SupRef)),
+    delete_child(Count, L, SupRef).
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
+delete_child(0, _, _) ->
+    ok;
 
-create_socket(Protocol, BufferSize, Timeout, Prefix,
-              TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
-    when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (Protocol == tcp) or (Protocol == udp),
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
-    case supervisor:start_child(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow]) of
-        {ok, Pid} ->
-            {ok, Pid, cloudi_socket:port(Pid)};
-        {ok, Pid, _} ->
-            {ok, Pid, cloudi_socket:port(Pid)};
-        {error, _} = Error ->
-            Error
-    end.
+delete_child(I, [{undefined, Pid, _, _} | L], SupRef) ->
+    % simple_one_for_one should have Id as undefined
+    erlang:exit(Pid, kill),
+    delete_child(I - 1, L, SupRef);
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-delete_sockets(Index, Count) ->
-    supervisor2:delete_children(?MODULE, Index, Count).
-
-%%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
-%%%------------------------------------------------------------------------
-
-init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
-          [{undefined,
-            {cloudi_socket, start_link, []},
-            temporary, Shutdown, worker, [cloudi_socket]}]}}.
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
+delete_child(I, [{Id, _, _, _} | L], SupRef) ->
+    ok = supervisor:terminate_child(SupRef, Id),
+    ok = supervisor:delete_child(SupRef, Id),
+    delete_child(I - 1, L, SupRef).
 
