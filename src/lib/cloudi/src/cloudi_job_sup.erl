@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_sup).
@@ -102,7 +102,7 @@ create_job(Module, Args, Timeout, Prefix,
 %%-------------------------------------------------------------------------
 
 delete_jobs(Index, Count) ->
-    supervisor2:delete_children(?MODULE, Index, Count).
+    supervisor2:delete_children(?MODULE, simple_one_for_one, Index, Count).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor

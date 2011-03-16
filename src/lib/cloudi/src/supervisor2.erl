@@ -51,7 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([delete_children/3]).
+-export([delete_children/4]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -63,18 +63,25 @@
 %% @end
 %%-------------------------------------------------------------------------
 
-delete_children(SupRef, Index, Count)
+delete_children(SupRef, Type, Index, Count)
     when is_integer(Index), Index >= 1, is_integer(Count), Count >= 1 ->
     {_, L} = lists:split(Index - 1, supervisor:which_children(SupRef)),
-    delete_child(Count, L, SupRef).
+    if
+        Type =:= simple_one_for_one ->
+            delete_child_simple(Count, lists2:keysort(2, L), SupRef);
+        true ->
+            delete_child(Count, L, SupRef)
+    end.
+
+delete_child_simple(0, _, _) ->
+    ok;
+
+delete_child_simple(I, [{undefined, Pid, _, _} | L], SupRef) ->
+    erlang:exit(Pid, kill),
+    delete_child_simple(I - 1, L, SupRef).
 
 delete_child(0, _, _) ->
     ok;
-
-delete_child(I, [{undefined, Pid, _, _} | L], SupRef) ->
-    % simple_one_for_one should have Id as undefined
-    erlang:exit(Pid, kill),
-    delete_child(I - 1, L, SupRef);
 
 delete_child(I, [{Id, _, _, _} | L], SupRef) ->
     ok = supervisor:terminate_child(SupRef, Id),
