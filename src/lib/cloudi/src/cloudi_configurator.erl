@@ -55,6 +55,9 @@
 
 %% external interface
 -export([start_link/1,
+         acl_add/2, acl_remove/2,
+         jobs_add/2, jobs_remove/2,
+         nodes_add/2, nodes_remove/2,
          job_start/1,
          job_stop/2]).
 
@@ -79,6 +82,40 @@
 start_link(Config)
     when is_record(Config, config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+
+acl_add(L, Timeout) ->
+    gen_server:call(?MODULE, {acl_add, L,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+acl_remove(L, Timeout) ->
+    gen_server:call(?MODULE, {acl_remove, L,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+jobs_add(L, Timeout) ->
+    gen_server:call(?MODULE, {jobs_add, L,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+jobs_remove(L, Timeout) ->
+    gen_server:call(?MODULE, {jobs_remove, L,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+nodes_add(L, Timeout) ->
+    global:trans({{?MODULE, L}, self()},
+                 fun() ->
+                     gen_server:multi_call(?MODULE,
+                                           {nodes_add, L,
+                                            Timeout - ?TIMEOUT_DELTA}, Timeout)
+                 end),
+    ok.
+
+nodes_remove(L, Timeout) ->
+    global:trans({{?MODULE, L}, self()},
+                 fun() ->
+                     gen_server:multi_call(?MODULE,
+                                           {nodes_remove, L,
+                                            Timeout - ?TIMEOUT_DELTA}, Timeout)
+                 end),
+    ok.
 
 job_start(Job)
     when is_record(Job, config_job_internal) ->
@@ -110,6 +147,38 @@ init([Config]) ->
     self() ! configure,
     {ok, #state{configuration = Config}}.
 
+handle_call({acl_add, L, _}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:acl_add(L, Config),
+    {noreply, State#state{configuration = NewConfig}};
+
+handle_call({acl_remove, L, _}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:acl_remove(L, Config),
+    {noreply, State#state{configuration = NewConfig}};
+
+handle_call({jobs_add, L, _}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:jobs_add(L, Config),
+    {noreply, State#state{configuration = NewConfig}};
+
+handle_call({jobs_remove, L, _}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:jobs_remove(L, Config),
+    {noreply, State#state{configuration = NewConfig}};
+
+handle_call({nodes_add, L, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:nodes_add(L, Config),
+    cloudi_nodes:reconfigure(NewConfig, Timeout),
+    {noreply, State#state{configuration = NewConfig}};
+
+handle_call({nodes_remove, L, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:nodes_remove(L, Config),
+    cloudi_nodes:reconfigure(NewConfig, Timeout),
+    {noreply, State#state{configuration = NewConfig}};
+
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
@@ -120,7 +189,7 @@ handle_cast(Request, State) ->
 
 handle_info(configure, #state{configuration = Config} = State) ->
     configure(Config),
-    {stop, normal, State};
+    {noreply, State};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

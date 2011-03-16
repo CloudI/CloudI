@@ -55,7 +55,7 @@
 
 %% external interface
 -export([start_link/1,
-         add/1,
+         reconfigure/2,
          alive/0,
          dead/0]).
 
@@ -82,8 +82,9 @@
 start_link(Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
-add(Node) ->
-    gen_server:call(?MODULE, {add, Node}).
+reconfigure(Config, Timeout) ->
+    gen_server:call(?MODULE, {reconfigure, Config,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 alive() ->
     gen_server:call(?MODULE, alive).
@@ -100,22 +101,31 @@ init([Config]) ->
     self() ! reconnect,
     {ok, #state{nodes_dead = Config#config.nodes}}.
 
-handle_call({add, Node}, _,
-            #state{nodes_dead = NodesDead,
+handle_call({reconfigure, Config, _}, _,
+            #state{nodes_alive = NodesAlive,
                    timer_reconnect = TimerReconnect} = State) ->
-    case net_kernel:connect_node(Node) of
+    NewNodesDead = lists:foldl(fun(N, L) ->
+        case lists2:delete_checked(N, L) of
+            false ->
+                % node is alive, but is no longer configured
+                net_kernel:disconnect(N),
+                L;
+            NewL ->
+                NewL
+        end
+    end, Config#config.nodes, NodesAlive),
+    NewNodesAlive = lists:filter(fun(N) ->
+        not lists:member(N, NewNodesDead)
+    end, Config#config.nodes),
+    NewTimerReconnect = if
+        NewNodesDead /= [], TimerReconnect == undefined ->
+            erlang:send_after(?NODE_RECONNECT, self(), reconnect);
         true ->
-            {reply, ok, State};
-        _ ->
-            NewTimerReconnect = if
-                TimerReconnect == undefined ->
-                    erlang:send_after(?NODE_RECONNECT, self(), reconnect);
-                true ->
-                    TimerReconnect
-            end,
-            {reply, ok, State#state{nodes_dead = [Node | NodesDead],
-                                    timer_reconnect = NewTimerReconnect}}
-    end;
+            TimerReconnect
+    end,
+    {reply, ok, State#state{nodes_dead = NewNodesDead,
+                            nodes_alive = NewNodesAlive,
+                            timer_reconnect = NewTimerReconnect}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -138,7 +148,7 @@ handle_info({'nodeup', Node, InfoList},
                    nodes_dead = NodesDead} = State) ->
     ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
     {noreply, State#state{nodes_alive = [Node | NodesAlive],
-                          nodes_dead = lists:delete(Node, NodesDead)}};
+                          nodes_dead = lists2:delete_all(Node, NodesDead)}};
 
 handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,
