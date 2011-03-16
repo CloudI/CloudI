@@ -41,6 +41,7 @@
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
 #include "os_spawn.hpp"
+#include <ei.h>
 #include <vector>
 #include <errno.h>
 #include <unistd.h>
@@ -617,6 +618,33 @@ namespace
                     return exec_unknown;
             }
         }
+
+        int errno_write()
+        {
+            switch (errno)
+            {
+                case EAGAIN:
+                    return GEPD::ExitStatus::write_EAGAIN;
+                case EBADF:
+                    return GEPD::ExitStatus::write_EBADF;
+                case EFAULT:
+                    return GEPD::ExitStatus::write_EFAULT;
+                case EFBIG:
+                    return GEPD::ExitStatus::write_EFBIG;
+                case EINTR:
+                    return GEPD::ExitStatus::write_EINTR;
+                case EINVAL:
+                    return GEPD::ExitStatus::write_EINVAL;
+                case EIO:
+                    return GEPD::ExitStatus::write_EIO;
+                case ENOSPC:
+                    return GEPD::ExitStatus::write_ENOSPC;
+                case EPIPE:
+                    return GEPD::ExitStatus::write_EPIPE;
+                default:
+                    return GEPD::ExitStatus::write_unknown;
+            }
+        }
     }
 
     class process_data
@@ -793,6 +821,18 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
         if (::close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
             ::_exit(spawn_status::errno_close());
 
+        char pid_message[1024];
+        int pid_message_index = 0;
+        unsigned long const pid_child = ::getpid();
+        if (ei_encode_version(pid_message, &pid_message_index))
+            ::_exit(GEPD::ExitStatus::ei_encode_error);
+        if (ei_encode_tuple_header(pid_message, &pid_message_index, 2))
+            ::_exit(GEPD::ExitStatus::ei_encode_error);
+        if (ei_encode_atom(pid_message, &pid_message_index, "pid"))
+            ::_exit(GEPD::ExitStatus::ei_encode_error);
+        if (ei_encode_ulong(pid_message, &pid_message_index, pid_child))
+            ::_exit(GEPD::ExitStatus::ei_encode_error);
+
         for (size_t i = 0; i < ports_len; ++i)
         {
             int sockfd = ::socket(AF_INET, type, 0);
@@ -815,6 +855,14 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
                           reinterpret_cast<struct sockaddr *>(&localhost),
                           sizeof(localhost)) == -1)
                 ::_exit(spawn_status::errno_connect());
+
+            if (i == 0)
+            {
+                // let the first connection get a pid message for attempting
+                // to kill the OS process when the Erlang process terminates
+                if (::write(sockfd, pid_message, pid_message_index) == -1)
+                    ::_exit(spawn_status::errno_write());
+            }
         }
 
         int argv_count = 2;

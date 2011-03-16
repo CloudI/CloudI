@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         job_add/2]).
+         job_add/2, job_remove/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -151,8 +151,31 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
 job_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
     when is_record(T, internal); is_record(T, external) ->
     NewJobs = jobs_acl_update([], jobs_validate([], Value), ACL),
-    lists:foreach(fun(J) -> cloudi_configurator:start_job(J) end, NewJobs),
+    lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
     Config#config{jobs = NewJobs ++ Jobs}.
+
+job_remove([I | _] = Value, #config{jobs = Jobs} = Config)
+    when is_integer(I) ->
+    NewJobs = lists:foldl(fun(Index, L) ->
+        {NewL1, [Job | NewL2]} = lists:split(Index - 1, L),
+        Type = erlang:element(1, Job),
+        SupervisorIndex = lists:foldl(fun(J, C) ->
+            if
+                erlang:element(1, J) == Type ->
+                    if
+                        config_job_internal == Type ->
+                            C + Job#config_job_internal.count_process;
+                        config_job_external == Type ->
+                            C + Job#config_job_external.count_process
+                    end;
+                true ->
+                    C
+            end
+        end, 1, NewL1),
+        cloudi_configurator:job_stop(SupervisorIndex, Job),
+        NewL1 ++ NewL2
+    end, Jobs, lists2:rsort(Value)),
+    Config#config{jobs = NewJobs}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

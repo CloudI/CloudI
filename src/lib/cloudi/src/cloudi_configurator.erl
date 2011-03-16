@@ -55,7 +55,8 @@
 
 %% external interface
 -export([start_link/1,
-         start_job/1]).
+         job_start/1,
+         job_stop/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -79,7 +80,7 @@ start_link(Config)
     when is_record(Config, config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
-start_job(Job)
+job_start(Job)
     when is_record(Job, config_job_internal) ->
     case code:is_loaded(Job#config_job_internal.module) of
         false ->
@@ -87,11 +88,19 @@ start_job(Job)
         _ ->
             ok
     end,
-    start_job_internal(Job#config_job_internal.count_process, Job);
+    job_start_internal(Job#config_job_internal.count_process, Job);
 
-start_job(Job)
+job_start(Job)
     when is_record(Job, config_job_external) ->
-    start_job_external(Job#config_job_external.count_process, Job).
+    job_start_external(Job#config_job_external.count_process, Job).
+
+job_stop(I, Job)
+    when is_record(Job, config_job_internal) ->
+    job_stop_internal(I, Job);
+
+job_stop(I, Job)
+    when is_record(Job, config_job_external) ->
+    job_stop_external(I, Job).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -128,11 +137,11 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(Config) ->
-    lists:foreach(fun(Job) -> start_job(Job) end, Config#config.jobs).
+    lists:foreach(fun(Job) -> job_start(Job) end, Config#config.jobs).
 
-start_job_internal(0, _) ->
+job_start_internal(0, _) ->
     ok;
-start_job_internal(Count, Job)
+job_start_internal(Count, Job)
     when is_record(Job, config_job_internal) ->
     case cloudi_services:monitor(cloudi_spawn, start_internal,
                                  [Job#config_job_internal.module,
@@ -153,11 +162,11 @@ start_job_internal(Count, Job)
                        [Job#config_job_internal.module, Reason]),
             ok
     end,
-    start_job_internal(Count - 1, Job).
+    job_start_internal(Count - 1, Job).
 
-start_job_external(0, _) ->
+job_start_external(0, _) ->
     ok;
-start_job_external(Count, Job)
+job_start_external(Count, Job)
     when is_record(Job, config_job_external) ->
     case cloudi_services:monitor(cloudi_spawn, start_external,
                                  [Job#config_job_external.count_thread,
@@ -182,5 +191,11 @@ start_job_external(Count, Job)
                        [Job#config_job_external.file_path, Reason]),
             ok
     end,
-    start_job_external(Count - 1, Job).
+    job_start_external(Count - 1, Job).
+
+job_stop_internal(I, Job) ->
+    cloudi_job_sup:delete_jobs(I, Job#config_job_internal.count_process).
+
+job_stop_external(I, Job) ->
+    cloudi_socket_sup:delete_sockets(I, Job#config_job_external.count_process).
 

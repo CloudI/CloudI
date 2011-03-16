@@ -54,6 +54,7 @@
 -export([iter/3,
          itera/3, itera2/4, itera3/5,
          delete_checked/2, delete_all/2,
+         nth_take/2,
          keyptake/3, keypttake/4,
          sort/1, keysort/2,
          rsort/1, keyrsort/2,
@@ -174,6 +175,25 @@ delete_all(Elem, L, [H | T]) ->
     delete_all(Elem, [H | L], T);
 delete_all(_, L, []) ->
     lists:reverse(L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===lists:nth/2 functionality, but removes the element.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nth_take(I :: pos_integer(), L :: list()) ->
+    {value, any(), list()} | false.
+
+nth_take(I, L)
+    when is_integer(I) ->
+    nth_take(1, [], I, L).
+nth_take(_, _, _, []) ->
+    false;
+nth_take(I, NewL, I, [H | T]) ->
+    {value, H, lists:reverse(NewL) ++ T};
+nth_take(Count, NewL, I, [H | T]) ->
+    nth_take(Count + 1, [H | NewL], I, T).
 
 %%-------------------------------------------------------------------------
 %% @doc

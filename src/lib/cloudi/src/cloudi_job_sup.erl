@@ -54,7 +54,8 @@
 
 %% external interface
 -export([start_link/0,
-         create_job/9]).
+         create_job/9,
+         delete_jobs/2]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -94,6 +95,14 @@ create_job(Module, Args, Timeout, Prefix,
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
+
+delete_jobs(Index, Count) ->
+    supervisor2:delete_children(?MODULE, Index, Count).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
