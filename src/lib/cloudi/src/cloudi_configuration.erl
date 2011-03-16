@@ -53,7 +53,8 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         job_add/2, job_remove/2]).
+         jobs_add/2, jobs_remove/2,
+         nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -148,13 +149,13 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
                                         dict:erase(E, D)
                                     end, ACL, Value)}.
 
-job_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
+jobs_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
     when is_record(T, internal); is_record(T, external) ->
     NewJobs = jobs_acl_update([], jobs_validate([], Value), ACL),
     lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
     Config#config{jobs = NewJobs ++ Jobs}.
 
-job_remove([I | _] = Value, #config{jobs = Jobs} = Config)
+jobs_remove([I | _] = Value, #config{jobs = Jobs} = Config)
     when is_integer(I) ->
     NewJobs = lists:foldl(fun(Index, L) ->
         {NewL1, [Job | NewL2]} = lists:split(Index - 1, L),
@@ -176,6 +177,17 @@ job_remove([I | _] = Value, #config{jobs = Jobs} = Config)
         NewL1 ++ NewL2
     end, Jobs, lists2:rsort(Value)),
     Config#config{jobs = NewJobs}.
+
+nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
+    when is_atom(A) ->
+    Config#config{nodes = Nodes ++ Value}.
+
+nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
+    when is_atom(A) ->
+    NewNodes = lists:foldl(fun(N, L) ->
+        lists:delete(N, L)
+    end, Nodes, Value),
+    Config#config{nodes = NewNodes}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
