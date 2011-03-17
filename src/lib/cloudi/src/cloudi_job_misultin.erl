@@ -68,6 +68,7 @@
 -define(DEFAULT_SSL,                   false).
 -define(DEFAULT_COMPRESS,              false).
 -define(DEFAULT_WS_AUTOEXIT,            true).
+-define(DEFAULT_OUTPUT,               binary).
 
 -record(state,
     {
@@ -89,11 +90,12 @@ cloudi_job_init(Args, Dispatcher) ->
         {recv_timeout,    ?DEFAULT_RECV_TIMEOUT},
         {ssl,             ?DEFAULT_SSL},
         {compress,        ?DEFAULT_COMPRESS},
-        {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT}],
-    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit] =
+        {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT},
+        {output,          ?DEFAULT_OUTPUT}],
+    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit, OutputType] =
         proplists2:take_values(Defaults, Args),
     Loop = fun(HttpRequest) ->
-        handle_http(HttpRequest, Dispatcher)
+        handle_http(HttpRequest, OutputType, Dispatcher)
     end,
     case misultin:start_link([{port, Port},
                               {backlog, Backlog},
@@ -137,9 +139,9 @@ content_type(Headers) ->
             end
     end.
 
-handle_http(HttpRequest, Dispatcher) ->
+handle_http(HttpRequest, OutputType, Dispatcher) ->
     Name = HttpRequest:get(str_uri),
-    Request = case HttpRequest:get(method) of
+    RequestBinary = case HttpRequest:get(method) of
         'GET' ->
             erlang:list_to_binary(HttpRequest:get(args));
         'POST' ->
@@ -157,9 +159,21 @@ handle_http(HttpRequest, Dispatcher) ->
                     HttpRequest:get(body)
             end
     end,
+    Request = if
+        OutputType =:= list ->
+            erlang:binary_to_list(RequestBinary);
+        OutputType =:= binary ->
+            RequestBinary
+    end,
     case cloudi_job:send_sync(Dispatcher, Name, Request) of
         {ok, Response} ->
-            HttpRequest:raw_headers_respond(Response);
+            if
+                OutputType =:= list ->
+                    ResponseBinary = string2:term_to_binary(Response),
+                    HttpRequest:raw_headers_respond(ResponseBinary);
+                OutputType =:= binary ->
+                    HttpRequest:raw_headers_respond(Response)
+            end;
         {error, timeout} ->
             HttpRequest:respond(504);
         {error, Reason} ->
