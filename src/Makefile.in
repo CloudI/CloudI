@@ -695,6 +695,7 @@ uninstall-am:
 
 
 all-local: rebar 
+	rm -rf rel/cloudi/
 	$(ESCRIPT) rebar compile
 
 clean-local: rebar

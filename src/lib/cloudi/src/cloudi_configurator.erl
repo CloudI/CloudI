@@ -150,34 +150,34 @@ init([Config]) ->
 handle_call({acl_add, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:acl_add(L, Config),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({acl_remove, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:acl_remove(L, Config),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({jobs_add, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:jobs_add(L, Config),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({jobs_remove, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:jobs_remove(L, Config),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:nodes_add(L, Config),
     cloudi_nodes:reconfigure(NewConfig, Timeout),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({nodes_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:nodes_remove(L, Config),
     cloudi_nodes:reconfigure(NewConfig, Timeout),
-    {noreply, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

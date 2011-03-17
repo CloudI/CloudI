@@ -56,8 +56,9 @@
 %% external interface
 -export([start_link/1,
          reconfigure/2,
-         alive/0,
-         dead/0]).
+         alive/1,
+         dead/1,
+         nodes/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -72,7 +73,8 @@
     {
         nodes_alive = [],
         nodes_dead = [],
-        timer_reconnect = undefined
+        timer_reconnect = undefined,
+        nodes = []
     }).
 
 %%%------------------------------------------------------------------------
@@ -86,11 +88,14 @@ reconfigure(Config, Timeout) ->
     gen_server:call(?MODULE, {reconfigure, Config,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
-alive() ->
-    gen_server:call(?MODULE, alive).
+alive(Timeout) ->
+    gen_server:call(?MODULE, alive, Timeout).
 
-dead() ->
-    gen_server:call(?MODULE, dead).
+dead(Timeout) ->
+    gen_server:call(?MODULE, dead, Timeout).
+
+nodes(Timeout) ->
+    gen_server:call(?MODULE, nodes, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -99,7 +104,8 @@ dead() ->
 init([Config]) ->
     net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
     self() ! reconnect,
-    {ok, #state{nodes_dead = Config#config.nodes}}.
+    {ok, #state{nodes_dead = Config#config.nodes,
+                nodes = Config#config.nodes}}.
 
 handle_call({reconfigure, Config, _}, _,
             #state{nodes_alive = NodesAlive,
@@ -125,7 +131,8 @@ handle_call({reconfigure, Config, _}, _,
     end,
     {reply, ok, State#state{nodes_dead = NewNodesDead,
                             nodes_alive = NewNodesAlive,
-                            timer_reconnect = NewTimerReconnect}};
+                            timer_reconnect = NewTimerReconnect,
+                            nodes = Config#config.nodes}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -134,6 +141,10 @@ handle_call(alive, _,
 handle_call(dead, _,
             #state{nodes_dead = NodesDead} = State) ->
     {reply, NodesDead, State};
+
+handle_call(nodes, _,
+            #state{nodes = Nodes} = State) ->
+    {reply, Nodes, State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
 all-local: rebar 
+	rm -rf rel/cloudi/
 	$(ESCRIPT) rebar compile
 
 clean-local: rebar
