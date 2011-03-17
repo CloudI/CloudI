@@ -4,8 +4,8 @@ Recent results for a single OS process and no threads
 
 (doing a test similar to http://nichol.as/benchmark-of-python-web-servers
  but with harsher constraints)
-$ httperf --client=0/1 --server=127.0.0.1 --port=8080  --uri=/tests/http_req/http --send-buffer=4096 --recv-buffer=16384 --num-conns=400 --num-calls=10 --rate=8000
-httperf --client=0/1 --server=127.0.0.1 --port=8080 --uri=/tests/http_req/http --rate=8000 --send-buffer=4096 --recv-buffer=16384 --num-conns=400 --num-calls=10
+$ httperf --client=0/1 --server=127.0.0.1 --port=8080  --uri=/tests/http_req/c.html --send-buffer=4096 --recv-buffer=16384 --num-conns=400 --num-calls=10 --rate=8000
+httperf --client=0/1 --server=127.0.0.1 --port=8080 --uri=/tests/http_req/c.html --rate=8000 --send-buffer=4096 --recv-buffer=16384 --num-conns=400 --num-calls=10
 Maximum connect burst length: 66
 
 Total: connections 400 requests 4000 replies 4000 test-duration 0.820 s
@@ -32,7 +32,7 @@ Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0
 
 
 
-$ ab -n 8000 -c 1000 http://127.0.0.1:8080/tests/http_req/http
+$ ab -n 8000 -c 1000 http://127.0.0.1:8080/tests/http_req/c.html
 This is ApacheBench, Version 2.3 <$Revision: 655654 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/

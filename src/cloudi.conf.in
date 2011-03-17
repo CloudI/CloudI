@@ -206,7 +206,13 @@
         "tests/http_req/priv/http_req", "1 tcp 16384",
         [{"LD_LIBRARY_PATH", "api/c/lib/"}],
         none, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 1, 5, 60}
+        5000, 5000, 5000, [api], undefined, 1, 1, 5, 60},
+    {internal,
+        "/tests/http_req/",
+        cloudi_job_filesystem,
+        [{directory, "tests/http_req/webroot/"}],
+        none,
+        5000, 5000, 5000, [api], undefined, 1, 5, 60}
 ]}.
 {nodes, [
     'cloudi@host1',

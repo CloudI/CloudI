@@ -781,6 +781,9 @@ send(Data, #state{protocol = Protocol,
             ok = gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
 
+destination_allowed([], _, _) ->
+    false;
+
 destination_allowed(_, undefined, undefined) ->
     true;
 

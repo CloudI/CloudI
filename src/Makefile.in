@@ -770,79 +770,82 @@ install-exec-hook: tests-install \
 	cp -f $(top_builddir)/cloudi.conf $(DESTDIR)$(prefix)
 
 tests-install:
-	mkdir $(DESTDIR)${prefix}/tests
+	mkdir $(DESTDIR)$(prefix)/tests
 
 tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam
-	mkdir $(DESTDIR)${prefix}/tests/hexpi
-	mkdir $(DESTDIR)${prefix}/tests/hexpi/ebin
+	mkdir $(DESTDIR)$(prefix)/tests/hexpi
+	mkdir $(DESTDIR)$(prefix)/tests/hexpi/ebin
 	cp -f $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
-          $(DESTDIR)${prefix}/tests/hexpi/ebin/
-	mkdir $(DESTDIR)${prefix}/tests/hexpi/priv
+          $(DESTDIR)$(prefix)/tests/hexpi/ebin/
+	mkdir $(DESTDIR)$(prefix)/tests/hexpi/priv
 	mv -f $(DESTDIR)$(bindir)/hexpi \
-          $(DESTDIR)${prefix}/tests/hexpi/priv/
+          $(DESTDIR)$(prefix)/tests/hexpi/priv/
 
 tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
                     $(top_builddir)/tests/http/service/jar/service.jar
-	mkdir $(DESTDIR)${prefix}/tests/http
+	mkdir $(DESTDIR)$(prefix)/tests/http
 	cp -f $(top_builddir)/tests/http/run.sh \
-          $(DESTDIR)${prefix}/tests/http/
-	mkdir $(DESTDIR)${prefix}/tests/http/service
-	mkdir $(DESTDIR)${prefix}/tests/http/service/jar
+          $(DESTDIR)$(prefix)/tests/http/
+	mkdir $(DESTDIR)$(prefix)/tests/http/service
+	mkdir $(DESTDIR)$(prefix)/tests/http/service/jar
 	cp -f $(top_builddir)/tests/http/service/jar/cloudi.jar \
-          $(DESTDIR)${prefix}/tests/http/service/jar/
+          $(DESTDIR)$(prefix)/tests/http/service/jar/
 	cp -f $(top_builddir)/tests/http/service/jar/service.jar \
-          $(DESTDIR)${prefix}/tests/http/service/jar/
+          $(DESTDIR)$(prefix)/tests/http/service/jar/
 	cp -f $(top_builddir)/tests/http/service/service.py \
-          $(DESTDIR)${prefix}/tests/http/service/
+          $(DESTDIR)$(prefix)/tests/http/service/
 	cp -f $(top_builddir)/tests/http/service/service.rb \
-          $(DESTDIR)${prefix}/tests/http/service/
-	mkdir $(DESTDIR)${prefix}/tests/http/input
+          $(DESTDIR)$(prefix)/tests/http/service/
+	mkdir $(DESTDIR)$(prefix)/tests/http/input
 	cp -f $(top_builddir)/tests/http/input/* \
-          $(DESTDIR)${prefix}/tests/http/input/
-	mkdir $(DESTDIR)${prefix}/tests/http/input.zip
+          $(DESTDIR)$(prefix)/tests/http/input/
+	mkdir $(DESTDIR)$(prefix)/tests/http/input.zip
 	cp -f $(top_builddir)/tests/http/input.zip/* \
-          $(DESTDIR)${prefix}/tests/http/input.zip/
-	mkdir $(DESTDIR)${prefix}/tests/http/output
+          $(DESTDIR)$(prefix)/tests/http/input.zip/
+	mkdir $(DESTDIR)$(prefix)/tests/http/output
 	cp -f $(top_builddir)/tests/http/output/* \
-          $(DESTDIR)${prefix}/tests/http/output/
-	mkdir $(DESTDIR)${prefix}/tests/http/tmp
+          $(DESTDIR)$(prefix)/tests/http/output/
+	mkdir $(DESTDIR)$(prefix)/tests/http/tmp
 
 tests-http_req-install:
-	mkdir $(DESTDIR)${prefix}/tests/http_req
-	mkdir $(DESTDIR)${prefix}/tests/http_req/priv
+	mkdir $(DESTDIR)$(prefix)/tests/http_req
+	mkdir $(DESTDIR)$(prefix)/tests/http_req/priv
 	mv -f $(DESTDIR)$(bindir)/http_req \
-          $(DESTDIR)${prefix}/tests/http_req/priv/
+          $(DESTDIR)$(prefix)/tests/http_req/priv/
+	mkdir $(DESTDIR)$(prefix)/tests/http_req/webroot
+	cp -rf $(top_builddir)/tests/http_req/webroot/* \
+           $(DESTDIR)$(prefix)/tests/http_req/webroot/
 
 api-install:
-	mkdir $(DESTDIR)${prefix}/api
+	mkdir $(DESTDIR)$(prefix)/api
 
 api-c-install:
-	mkdir $(DESTDIR)${prefix}/api/c
-	mkdir $(DESTDIR)${prefix}/api/c/include
-	mkdir $(DESTDIR)${prefix}/api/c/lib
+	mkdir $(DESTDIR)$(prefix)/api/c
+	mkdir $(DESTDIR)$(prefix)/api/c/include
+	mkdir $(DESTDIR)$(prefix)/api/c/lib
 	mv -f $(DESTDIR)$(includedir)/cloudi.h \
-          $(DESTDIR)${prefix}/api/c/include/
+          $(DESTDIR)$(prefix)/api/c/include/
 	mv -f $(DESTDIR)$(libdir)/libcloudi.* \
-          $(DESTDIR)${prefix}/api/c/lib/
+          $(DESTDIR)$(prefix)/api/c/lib/
 
 api-java-install:
-	mkdir $(DESTDIR)${prefix}/api/java
+	mkdir $(DESTDIR)$(prefix)/api/java
 	mv -f $(DESTDIR)$(libexecdir)/cloudi.jar \
-          $(DESTDIR)${prefix}/api/java
+          $(DESTDIR)$(prefix)/api/java
 
 api-python-install:
-	mkdir $(DESTDIR)${prefix}/api/python
+	mkdir $(DESTDIR)$(prefix)/api/python
 	cp -f $(top_builddir)/api/python/erlang.py \
-          $(DESTDIR)${prefix}/api/python/
+          $(DESTDIR)$(prefix)/api/python/
 	cp -f $(top_builddir)/api/python/cloudi.py \
-          $(DESTDIR)${prefix}/api/python/
+          $(DESTDIR)$(prefix)/api/python/
 
 api-ruby-install:
-	mkdir $(DESTDIR)${prefix}/api/ruby
+	mkdir $(DESTDIR)$(prefix)/api/ruby
 	cp -f $(top_builddir)/api/ruby/cloudi.rb \
-          $(DESTDIR)${prefix}/api/ruby/
+          $(DESTDIR)$(prefix)/api/ruby/
 	cp -f $(top_builddir)/api/ruby/erlang.rb \
-          $(DESTDIR)${prefix}/api/ruby/
+          $(DESTDIR)$(prefix)/api/ruby/
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

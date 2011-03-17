@@ -56,7 +56,7 @@
 %% external interface
 
 %% cloudi_job callbacks
--export([cloudi_job_init/2,
+-export([cloudi_job_init/3,
          cloudi_job_handle_request/8,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
@@ -95,7 +95,7 @@
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init(_Args, Dispatcher) ->
+cloudi_job_init(_Args, _Prefix, Dispatcher) ->
     % names are [prefix]function/format (i.e., request format)
     cloudi_job:subscribe(Dispatcher, "acl_add/erlang"),
     cloudi_job:subscribe(Dispatcher, "acl_remove/erlang"),

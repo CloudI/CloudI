@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_memcached).
@@ -73,7 +73,7 @@
          version/2, version/3]).
 
 %% cloudi_job callbacks
--export([cloudi_job_init/2,
+-export([cloudi_job_init/3,
          cloudi_job_handle_request/8,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
@@ -637,7 +637,7 @@ version(Dispatcher, Name, Timeout)
 %%%------------------------------------------------------------------------
 
 cloudi_job_init([{database, DatabaseName,
-                  [{_,_,_}|_] = HostList}], Dispatcher) ->
+                  [{_,_,_}|_] = HostList}], _Prefix, Dispatcher) ->
     case ememcached:start_link(HostList) of
         {ok, Pid} when is_pid(Pid) ->
             cloudi_job:subscribe(Dispatcher, DatabaseName),
