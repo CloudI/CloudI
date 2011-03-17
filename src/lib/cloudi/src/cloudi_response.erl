@@ -107,6 +107,6 @@ convert_list_to_binary([I | _] = L)
     
 convert_string_to_binary(S) ->
     Length = erlang:length(S),
-    <<Length:32/unsigned-integer-native, S/binary>>.
-
+    Data = erlang:list_to_binary(S),
+    <<Length:32/unsigned-integer-native, Data/binary>>.
 
