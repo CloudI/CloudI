@@ -119,9 +119,9 @@ tests-http_req-install:
 	mkdir $(DESTDIR)$(prefix)/tests/http_req/priv
 	mv -f $(DESTDIR)$(bindir)/http_req \
           $(DESTDIR)$(prefix)/tests/http_req/priv/
-	mkdir $(DESTDIR)$(prefix)/tests/http_req/webroot
-	cp -rf $(top_builddir)/tests/http_req/webroot/* \
-           $(DESTDIR)$(prefix)/tests/http_req/webroot/
+	mkdir $(DESTDIR)$(prefix)/tests/http_req/public_html
+	cp -rf $(top_builddir)/tests/http_req/public_html/* \
+           $(DESTDIR)$(prefix)/tests/http_req/public_html/
 
 api-install:
 	mkdir $(DESTDIR)$(prefix)/api
