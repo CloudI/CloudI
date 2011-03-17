@@ -594,6 +594,20 @@ int cloudi_recv_async(cloudi_instance_t * p,
     return cloudi_success;
 }
 
+static int keepalive(cloudi_instance_t * p)
+{
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    int index = 0;
+    if (ei_encode_version(buffer.get<char>(), &index))
+        return cloudi_error_ei_encode;
+    if (ei_encode_atom(buffer.get<char>(), &index, "keepalive"))
+        return cloudi_error_ei_encode;
+    int result = write_exact(p->fd, buffer.get<char>(), index);
+    if (result)
+        return result;
+    return cloudi_success;
+}
+
 #define MESSAGE_INIT           1
 #define MESSAGE_SEND_ASYNC     2
 #define MESSAGE_SEND_SYNC      3
@@ -601,6 +615,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
 #define MESSAGE_RETURN_ASYNC   5
 #define MESSAGE_RETURN_SYNC    6
 #define MESSAGE_RETURNS_ASYNC  7
+#define MESSAGE_KEEPALIVE      8
 
 static void callback(cloudi_instance_t * p,
                      int const command,
@@ -765,6 +780,15 @@ int cloudi_poll(cloudi_instance_t * p,
                 if (index != size)
                     ::exit(cloudi_error_read_underflow);
                 return cloudi_success;
+            }
+            case MESSAGE_KEEPALIVE:
+            {
+                if (index != size)
+                    ::exit(cloudi_error_read_underflow); // overflow here
+                result = keepalive(p);
+                if (result)
+                    ::exit(result);
+                break;
             }
         }
     }

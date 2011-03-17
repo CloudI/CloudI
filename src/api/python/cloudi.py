@@ -52,6 +52,7 @@ _MESSAGE_RECV_ASYNC     = 4
 _MESSAGE_RETURN_ASYNC   = 5
 _MESSAGE_RETURN_SYNC    = 6
 _MESSAGE_RETURNS_ASYNC  = 7
+_MESSAGE_KEEPALIVE      = 8
 
 class API(object):
     __ASYNC  =  1
@@ -231,6 +232,10 @@ class API(object):
                 transIdCount = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + 16 * transIdCount
                 return struct.unpack("=" + "16s" * transIdCount, data[i:j])
+            elif command == _MESSAGE_KEEPALIVE:
+                self.__s.send(term_to_binary(OtpErlangAtom("keepalive")))
+            else:
+                assert False
 
 class _return_sync_exception(SystemExit):
     def __init__(self):
