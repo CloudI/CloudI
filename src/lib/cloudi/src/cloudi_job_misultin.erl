@@ -69,6 +69,7 @@
 -define(DEFAULT_COMPRESS,              false).
 -define(DEFAULT_WS_AUTOEXIT,            true).
 -define(DEFAULT_OUTPUT,               binary).
+-define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
 
 -record(state,
     {
@@ -91,11 +92,13 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {ssl,             ?DEFAULT_SSL},
         {compress,        ?DEFAULT_COMPRESS},
         {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT},
-        {output,          ?DEFAULT_OUTPUT}],
-    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit, OutputType] =
+        {output,          ?DEFAULT_OUTPUT},
+        {content_type,    ?DEFAULT_CONTENT_TYPE}],
+    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
+     OutputType, DefaultContentType] =
         proplists2:take_values(Defaults, Args),
     Loop = fun(HttpRequest) ->
-        handle_http(HttpRequest, OutputType, Dispatcher)
+        handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher)
     end,
     case misultin:start_link([{port, Port},
                               {backlog, Backlog},
@@ -139,7 +142,7 @@ content_type(Headers) ->
             end
     end.
 
-handle_http(HttpRequest, OutputType, Dispatcher) ->
+handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
     Name = HttpRequest:get(str_uri),
     RequestBinary = case HttpRequest:get(method) of
         'GET' ->
@@ -175,6 +178,8 @@ handle_http(HttpRequest, OutputType, Dispatcher) ->
             end,
             FileName = string2:afterr($/, Name),
             Headers = if
+                is_list(DefaultContentType) ->
+                    [{'Content-Type', DefaultContentType}];
                 FileName == [] ->
                     [{'Content-Type', "text/html"}];
                 true ->
@@ -208,6 +213,7 @@ get_content_type(Extension) ->
     case Extension of
         % most common first
         [] -> "text/plain";
+        ".json" -> "application/json";
         ".doc" -> "application/msword";
         ".exe" -> "application/octet-stream";
         ".pdf" -> "application/pdf";
