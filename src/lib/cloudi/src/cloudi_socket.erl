@@ -113,7 +113,8 @@ start_link(Protocol, BufferSize, Timeout, Prefix,
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
+           (DestRefresh == lazy_random) or
+           (DestRefresh == none),
     gen_fsm:start_link(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                  TimeoutAsync, TimeoutSync, DestRefresh,
                                  DestDeny, DestAllow], []).
@@ -137,6 +138,7 @@ init([tcp, BufferSize, Timeout, Prefix,
         {ok, Listener} ->
             {ok, Port} = inet:port(Listener),
             {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+            destination_refresh_first(DestRefresh),
             destination_refresh_start(DestRefresh),
             {ok, 'CONNECT', #state{protocol = tcp,
                                    port = Port,
@@ -162,6 +164,7 @@ init([udp, BufferSize, Timeout, Prefix,
     case gen_udp:open(0, Opts) of
         {ok, Socket} ->
             {ok, Port} = inet:port(Socket),
+            destination_refresh_first(DestRefresh),
             destination_refresh_start(DestRefresh),
             {ok, 'CONNECT', #state{protocol = udp,
                                    port = Port,
@@ -798,6 +801,21 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             trie:is_prefix(Prefix, DestAllow)
     end.
 
+destination_refresh_first(lazy_closest) ->
+    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+
+destination_refresh_first(lazy_random) ->
+    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+
+destination_refresh_first(immediate_closest) ->
+    ok;
+
+destination_refresh_first(immediate_random) ->
+    ok;
+
+destination_refresh_first(none) ->
+    ok.
+
 destination_refresh_start(lazy_closest) ->
     list_pg_data:get_groups(?DEST_REFRESH_SLOW);
 
@@ -808,6 +826,9 @@ destination_refresh_start(immediate_closest) ->
     ok;
 
 destination_refresh_start(immediate_random) ->
+    ok;
+
+destination_refresh_start(none) ->
     ok.
 
 destination_get(lazy_closest, Name, Pid, Groups)

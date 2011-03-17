@@ -66,7 +66,8 @@ start_internal(Module, Args, Timeout, Prefix,
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
+           (DestRefresh == lazy_random) or
+           (DestRefresh == none),
     DestDeny = if
         DestDenyList == undefined ->
             undefined;
@@ -101,7 +102,8 @@ start_external(ThreadsPerProcess,
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
+           (DestRefresh == lazy_random) or
+           (DestRefresh == none),
     DestDeny = if
         DestDenyList == undefined ->
             undefined;

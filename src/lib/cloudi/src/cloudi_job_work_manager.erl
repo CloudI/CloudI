@@ -111,7 +111,7 @@ cloudi_job_handle_request(_Type, _Name, Request, _Timeout, _TransId, _Pid,
             {reply, ok,
              State#state{queue = trie:prefix(DestinationName, Data, Queue)}};
         Data when is_binary(Data) ->
-            {reply, <<16#ff:8>>,
+            {reply, cloudi_response:new(Data, ok),
              State#state{queue = trie:prefix(Destination, Data, Queue)}}
     end.
 
@@ -151,8 +151,6 @@ send_data(Failed, FailedCount, [], Name, _) ->
 
 send_data(Failed, FailedCount, [Data | L], Name, Dispatcher) ->
     case cloudi_job:send_sync(Dispatcher, Name, Data) of
-        {ok, <<>>} ->
-            send_data([Data | Failed], FailedCount + 1, L, Name, Dispatcher);
         {ok, _} ->
             send_data(Failed, FailedCount, L, Name, Dispatcher);
         {error, Reason} ->
