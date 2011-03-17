@@ -276,10 +276,12 @@ mcast_async(Dispatcher, Name, Request, Timeout)
               Pid :: pid()) -> none().
 
 forward(Dispatcher, 'send_async', Name, Request, Timeout, TransId, Pid) ->
-    forward_async(Dispatcher, Name, Request, Timeout, TransId, Pid);
+    forward_async(Dispatcher, Name, Request, Timeout, TransId, Pid),
+    erlang:throw(forward);
 
 forward(Dispatcher, 'send_sync', Name, Request, Timeout, TransId, Pid) ->
-    forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid).
+    forward_sync(Dispatcher, Name, Request, Timeout, TransId, Pid),
+    erlang:throw(forward).
 
 -spec forward_async(Dispatcher :: pid(),
                     Name :: string(),
@@ -328,10 +330,12 @@ recv_async(Dispatcher, Timeout, TransId)
              Pid :: pid()) -> none().
 
 return(Dispatcher, 'send_async', Name, Response, Timeout, TransId, Pid) ->
-    return_async(Dispatcher, Name, Response, Timeout, TransId, Pid);
+    return_async(Dispatcher, Name, Response, Timeout, TransId, Pid),
+    erlang:throw(return);
 
 return(Dispatcher, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
-    return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid).
+    return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid),
+    erlang:throw(return).
 
 -spec return_async(Dispatcher :: pid(),
                    Name :: string(),

@@ -100,18 +100,20 @@ jobs_remove(L, Timeout) ->
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 nodes_add(L, Timeout) ->
+    Nodes = [node() | nodes()],
     global:trans({{?MODULE, L}, self()},
                  fun() ->
-                     gen_server:multi_call(?MODULE,
+                     gen_server:multi_call(Nodes, ?MODULE,
                                            {nodes_add, L,
                                             Timeout - ?TIMEOUT_DELTA}, Timeout)
                  end),
     ok.
 
 nodes_remove(L, Timeout) ->
+    Nodes = [node() | nodes()],
     global:trans({{?MODULE, L}, self()},
                  fun() ->
-                     gen_server:multi_call(?MODULE,
+                     gen_server:multi_call(Nodes, ?MODULE,
                                            {nodes_remove, L,
                                             Timeout - ?TIMEOUT_DELTA}, Timeout)
                  end),
