@@ -210,7 +210,7 @@
     {internal,
         "/tests/http_req/",
         cloudi_job_filesystem,
-        [{directory, "tests/http_req/webroot/"}],
+        [{directory, "tests/http_req/public_html/"}],
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 60}
 ]}.
