@@ -6,7 +6,8 @@
     % in this list generate errors).
     {all, [database, tests]},
     {database, ["/db/"]},
-    {tests, ["/tests/"]}
+    {tests, ["/tests/"]},
+    {api, ["/cloudi/api/"]}
 ]}.
 {jobs, [
     % tests/hexpi/ services
@@ -15,13 +16,12 @@
     % the job below provides a queue for specific database queries
     {internal,
         % prefix specified for all subscriptions
-        "/db/pgsql/",
+        "/cloudi/api/",
         % module name of a module in a reachable path
-        cloudi_job_work_manager,
+        cloudi_job_api,
         % module arguments are supplied as a list for the
         % cloudi_job_init/2 function
-        [{destination, "/db/pgsql/cloudi_tests"},
-         {name, "cloudi_tests_proxy"}],
+        [],
         % destination refresh controls how quickly services propogate
         % any process that sends to long-lived processes can use
         % a 'lazy' prefix destination refresh (otherwise, if sending to
@@ -32,7 +32,7 @@
         % nodes, the 'random' suffix destination refresh should be used.
         % (so the choices are:  'lazy_closest', 'lazy_random',
         %                       'immediate_closest', 'immediate_random')
-        immediate_closest,
+        lazy_closest,
         % timeout for executing the cloudi_job_init/2 function
         5000,
         % default timeout for asynchronous calls
@@ -63,6 +63,7 @@
         5,
         % MaxT (maximum time)
         60}, % seconds
+
     % an external job is an OS process connected
     % with a socket to the loopback device for each thread
     % the job below processes the Hexidecimal digits of PI (as a test)
@@ -104,7 +105,7 @@
         % if the destination deny list is 'undefined' any destination is valid.
         % a blocked message will just return a timeout
         % (earlier than the timeout specified for the message).
-        undefined,
+        [api],
         % destination allow list is used as an ACL (Access Control List) that
         % allows the process to send to destinations with the specified
         % prefixes.  if atoms are used within the list, they must exist as an
@@ -134,15 +135,22 @@
     %     {port, 5432},
     %     {database, "cloudi_tests"}],
     %    lazy_closest,
-    %    5000, 5000, 5000, undefined, undefined, 1, 5, 60},
+    %    5000, 5000, 5000, [api], undefined, 1, 5, 60},
     % the job below provides a queue for specific database queries
+    {internal,
+        "/db/pgsql/",
+        cloudi_job_work_manager,
+        [{destination, "/db/pgsql/cloudi_tests"},
+         {name, "cloudi_tests_proxy"}],
+        immediate_closest,
+        5000, 5000, 5000, [api], undefined, 1, 5, 60},
     {internal,
         "/db/mysql/",
         cloudi_job_work_manager,
         [{destination, "/db/mysql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
         immediate_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 60},
     % the job below manages the Hexidecimal PI test
     {internal,
         "/tests/",
@@ -151,7 +159,7 @@
          65536,   % ending index
          4],      % concurrent tasks
         immediate_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 60},
 
     % tests/http/ services
     {internal,
@@ -159,32 +167,32 @@
         cloudi_job_misultin,
         [{compress, true}],
         immediate_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 60},
     {external,
         "/tests/http/",
         "@PYTHON@",
         "tests/http/service/service.py 4 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
         "@JAVA@",
         "-jar tests/http/service/jar/service.jar 4 tcp 16384", [],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
         "@RUBY@",
         "tests/http/service/service.rb 1 tcp 16384", [],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "1 tcp 16384",
         [{"LD_LIBRARY_PATH", "api/c/lib/"}],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, undefined, undefined, 1, 1, 5, 60}
+        5000, 5000, 5000, [api], undefined, 1, 1, 5, 60}
 ]}.
 {nodes, [
     'cloudi@host1',
@@ -193,3 +201,4 @@
 {logging, [
     {level, trace} % levels: off, fatal, error, warn, info, debug, trace
 ]}.
+

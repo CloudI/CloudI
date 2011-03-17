@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(string2).
@@ -52,7 +52,7 @@
 
 %% external interface
 -export([afterl/2, beforel/2, splitl/2,
-         afterr/2, beforer/2,
+         afterr/2, beforer/2, splitr/2,
          binary_to_term/1, list_to_term/1,
          term_to_binary/1, term_to_list/1,
          format/2]).
@@ -133,8 +133,7 @@ beforer(Before, L, Char, [H | Input]) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec splitl(Char :: pos_integer(), string()) ->
-    {string(), string()}.
+-spec splitl(Char :: pos_integer(), string()) -> {string(), string()}.
 
 splitl(Char, Input) when is_integer(Char), is_list(Input) ->
     splitl([], Char, Input).
@@ -144,6 +143,28 @@ splitl(Before, Char, [Char | Input]) when is_integer(Char) ->
     {lists:reverse(Before), Input};
 splitl(Before, Char, [H | Input]) when is_integer(Char) ->
     splitl([H | Before], Char, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the two strings split at the first occurrence of the character, when traversing right to left.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec splitr(Char :: pos_integer(), string()) -> {string(), string()}.
+
+splitr(Char, Input) when is_integer(Char), is_list(Input) ->
+    splitr([], [], Char, Input).
+splitr([Char | L1], [], Char, []) ->
+    {lists:reverse(L1), []};
+splitr(_, [], _, []) ->
+    {[], []};
+splitr(L1, L2, Char, []) ->
+    [Char | NewL1] = lists:foldl(fun(_, [_ | L]) -> L end, L1, L2),
+    {lists:reverse(NewL1), L2};
+splitr(L1, _, Char, [Char | Rest]) ->
+    splitr([Char | L1], Rest, Char, Rest);
+splitr(L1, L2, Char, [C | Rest]) ->
+    splitr([C | L1], L2, Char, Rest).
 
 %%-------------------------------------------------------------------------
 %% @doc

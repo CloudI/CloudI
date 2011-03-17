@@ -249,7 +249,7 @@ jobs_acl_update_list(Output, [], _) ->
     Output;
 jobs_acl_update_list(Output, [E | L], Lookup)
     when is_atom(E) ->
-    jobs_acl_update_list([dict:fetch(E, Lookup) | Output], L, Lookup);
+    jobs_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
 jobs_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
     jobs_acl_update_list([E | Output], L, Lookup).
