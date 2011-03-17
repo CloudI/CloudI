@@ -77,6 +77,7 @@ public class API
     private static final int MESSAGE_RETURN_ASYNC    = 5;
     private static final int MESSAGE_RETURN_SYNC     = 6;
     private static final int MESSAGE_RETURNS_ASYNC   = 7;
+    private static final int MESSAGE_KEEPALIVE       = 8;
 
     private FileDescriptor socket;
     private FileOutputStream output;
@@ -498,6 +499,14 @@ public class API
                             transIdList.add(new TransId(transId));
                         }
                         return transIdList;
+                    }
+                    case MESSAGE_KEEPALIVE:
+                    {
+                        OtpOutputStream keepalive = new OtpOutputStream();
+                        keepalive.write(OtpExternal.versionTag);
+                        keepalive.write_any(new OtpErlangAtom("keepalive"));
+                        send(keepalive);
+                        break;
                     }
                     default:
                         return null;

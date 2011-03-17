@@ -78,7 +78,7 @@
         "tests/hexpi/priv/hexpi",
         % command line arguments for the executable
         % (for all tests the arguments are: thread_count protocol buffer_size)
-        "4 tcp 16384",
+        "4 udp 16384",
         % {Key, Value} pairs to specify environment variables
         [{"LD_LIBRARY_PATH", "api/c/lib/"}],
         % destination refresh controls how quickly services propogate
@@ -97,7 +97,7 @@
         %                       'none')
         none,
         % protocol used for each socket
-        tcp,
+        udp,
         % buffer size used for each socket
         16384, % bytes
         % timeout for receiving an initialization message from a socket
@@ -166,7 +166,7 @@
         [1,       % starting index
          65536,   % ending index
          4],      % concurrent tasks
-        lazy_closest,
+        immediate_closest, % recover from failures (process deaths) immediately
         5000, 5000, 5000, [api], undefined, 1, 5, 60},
 
     % tests/http/ services

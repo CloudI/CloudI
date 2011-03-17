@@ -254,6 +254,8 @@ module Cloudi
                     transIdCount = data[i, j].unpack("L")[0]
                     i += j; j = 16 * transIdCount
                     return data[i, j].unpack("a16" * transIdCount)
+                when MESSAGE_KEEPALIVE
+                    @socket.write(term_to_binary(:keepalive))
                 end
             end
         end
@@ -270,6 +272,7 @@ module Cloudi
         MESSAGE_RETURN_ASYNC   = 5
         MESSAGE_RETURN_SYNC    = 6
         MESSAGE_RETURNS_ASYNC  = 7
+        MESSAGE_KEEPALIVE      = 8
 
         def assert
             raise "Assertion failed !" unless yield if $DEBUG

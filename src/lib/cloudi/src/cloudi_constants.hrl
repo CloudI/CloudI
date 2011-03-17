@@ -34,3 +34,6 @@
 % maximum wait time before a reconnect is attempted with a node
 -define(NODE_RECONNECT, 60000). % milliseconds
 
+% periodic connection checks to determine if the udp connection is still active
+-define(KEEPALIVE_UDP, 5000). % milliseconds
+

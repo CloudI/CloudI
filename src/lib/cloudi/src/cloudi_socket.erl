@@ -74,6 +74,7 @@
 -define(MESSAGE_RETURN_ASYNC,    5).
 -define(MESSAGE_RETURN_SYNC,     6).
 -define(MESSAGE_RETURNS_ASYNC,   7).
+-define(MESSAGE_KEEPALIVE,       8).
 
 -record(state,
     {
@@ -87,6 +88,7 @@
         timeout_async,   % default timeout for send_async
         timeout_sync,    % default timeout for send_sync
         os_pid = undefined,            % os_pid reported by the socket
+        keepalive = undefined,         % stores if a keepalive succeeded
         send_timeouts = dict:new(),    % tracking for timeouts
         queue_messages = false,        % is the external process busy?
         queued = queue:new(),          % queued incoming messages
@@ -185,10 +187,18 @@ init([udp, BufferSize, Timeout, Prefix,
 'CONNECT'({'pid', OsPid}, StateData) ->
     {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
 
-'CONNECT'(init, #state{prefix = Prefix,
+'CONNECT'('init', #state{protocol = Protocol,
+                       prefix = Prefix,
                        timeout_async = TimeoutAsync,
                        timeout_sync = TimeoutSync} = StateData) ->
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
+    if
+        Protocol =:= udp ->
+            send('keepalive_out'(), StateData),
+            erlang:send_after(?KEEPALIVE_UDP, self(), keepalive_udp);
+        true ->
+            ok
+    end,
     {next_state, 'HANDLE', StateData};
 
 'CONNECT'(timeout, StateData) ->
@@ -339,6 +349,9 @@ init([udp, BufferSize, Timeout, Prefix,
     Pid ! T,
     {next_state, 'HANDLE', process_queue(StateData)};
 
+'HANDLE'('keepalive', StateData) ->
+    {next_state, 'HANDLE', StateData#state{keepalive = received}};
+
 'HANDLE'(Request, StateData) ->
     {stop, {'HANDLE', undefined_message, Request}, StateData}.
 
@@ -376,6 +389,18 @@ handle_info({udp, Socket, _, Port, Data}, StateName,
             ?LOG_ERROR("Protocol Error ~p", [Data]),
             {stop, {error, protocol}, StateData}
     end;
+
+handle_info(keepalive_udp, StateName,
+            #state{keepalive = undefined,
+                   socket = Socket} = StateData) ->
+    self() ! {udp_closed, Socket},
+    {next_state, StateName, StateData};
+
+handle_info(keepalive_udp, StateName,
+            #state{keepalive = received} = StateData) ->
+    send('keepalive_out'(), StateData),
+    erlang:send_after(?KEEPALIVE_UDP, self(), keepalive_udp),
+    {next_state, StateName, StateData#state{keepalive = undefined}};
 
 handle_info({udp_closed, Socket}, _,
             #state{protocol = udp,
@@ -680,6 +705,9 @@ handle_mcast_async(Name, Request, Timeout, StateName,
       PrefixBin/binary, 0,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native>>.
+
+'keepalive_out'() ->
+    <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.
 
 'send_async_out'(Name, Request, Timeout, TransId, Pid)
     when is_list(Name), is_binary(Request), is_integer(Timeout),
