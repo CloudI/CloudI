@@ -108,7 +108,7 @@ start_link(Module, Args, Timeout, Prefix,
 
 init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow]) ->
-    case cloudi_job:start_link(Module, Args, Timeout) of
+    case cloudi_job:start_link(Module, Args, Prefix, Timeout) of
         {ok, Job} ->
             destination_refresh_first(DestRefresh),
             destination_refresh_start(DestRefresh),
@@ -533,6 +533,9 @@ handle_mcast_async(Name, Request, Timeout, {Exclude, _} = Client,
             {noreply, NewState}
             
     end.
+
+destination_allowed([], _, _) ->
+    false;
 
 destination_allowed(_, undefined, undefined) ->
     true;

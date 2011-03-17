@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_tokyotyrant).
@@ -93,7 +93,7 @@
          update/4, update/5]).
 
 %% cloudi_job callbacks
--export([cloudi_job_init/2,
+-export([cloudi_job_init/3,
          cloudi_job_handle_request/8,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
@@ -1179,7 +1179,7 @@ update(Dispatcher, Name, Key, NewCols, Timeout)
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init([{database, DatabaseName, Args}], Dispatcher) ->
+cloudi_job_init([{database, DatabaseName, Args}], _Prefix, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},

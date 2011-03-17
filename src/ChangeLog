@@ -4,6 +4,7 @@
 2011-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_job_api service for dynamic configuration
+    * Add cloudi_job_filesystem service for caching static files
     * various bugfixes
 
 2011-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job).
@@ -53,7 +53,7 @@
 -behaviour(gen_server).
 
 %% dispatcher interface
--export([start_link/3]).
+-export([start_link/4]).
 
 %% behavior interface
 -export([subscribe/2,
@@ -104,7 +104,7 @@
 
 behaviour_info(callbacks) ->
     [
-        {cloudi_job_init, 2},
+        {cloudi_job_init, 3},
         {cloudi_job_handle_request, 8},
         {cloudi_job_handle_info, 3},
         {cloudi_job_terminate, 2}
@@ -116,9 +116,9 @@ behaviour_info(_) ->
 %%% Dispatcher interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Module, Args, Timeout)
+start_link(Module, Args, Prefix, Timeout)
     when is_atom(Module), is_list(Args), is_integer(Timeout) ->
-    gen_server:start_link(?MODULE, [Module, Args, self()],
+    gen_server:start_link(?MODULE, [Module, Args, Prefix, self()],
                           [{timeout, Timeout}]).
 
 %%%------------------------------------------------------------------------
@@ -367,8 +367,8 @@ return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Module, Args, Dispatcher]) ->
-    case Module:cloudi_job_init(Args, Dispatcher) of
+init([Module, Args, Prefix, Dispatcher]) ->
+    case Module:cloudi_job_init(Args, Prefix, Dispatcher) of
         {ok, JobState} ->
             {ok, #state{module = Module,
                         dispatcher = Dispatcher,

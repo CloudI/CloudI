@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_couchdb).
@@ -80,7 +80,7 @@
          invoke_view_keys/5, invoke_view_keys/6]).
 
 %% cloudi_job callbacks
--export([cloudi_job_init/2,
+-export([cloudi_job_init/3,
          cloudi_job_handle_request/8,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
@@ -851,7 +851,7 @@ invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys, Timeout)
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init(Args, Dispatcher) ->
+cloudi_job_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},
