@@ -271,7 +271,8 @@ jobs_validate(Output, [Job | L])
     true = (Job#internal.dest_refresh == immediate_closest) or
            (Job#internal.dest_refresh == lazy_closest) or
            (Job#internal.dest_refresh == immediate_random) or
-           (Job#internal.dest_refresh == lazy_random),
+           (Job#internal.dest_refresh == lazy_random) or
+           (Job#internal.dest_refresh == none),
     true = Job#internal.timeout_init > 0,
     true = Job#internal.timeout_async > ?TIMEOUT_DELTA,
     true = Job#internal.timeout_sync > ?TIMEOUT_DELTA,
@@ -319,7 +320,8 @@ jobs_validate(Output, [Job | L])
     true = (Job#external.dest_refresh == immediate_closest) or
            (Job#external.dest_refresh == lazy_closest) or
            (Job#external.dest_refresh == immediate_random) or
-           (Job#external.dest_refresh == lazy_random),
+           (Job#external.dest_refresh == lazy_random) or
+           (Job#external.dest_refresh == none),
     true = (Job#external.protocol == tcp) or
            (Job#external.protocol == udp),
     true = Job#external.buffer_size >= 1024, % should be roughly 16436

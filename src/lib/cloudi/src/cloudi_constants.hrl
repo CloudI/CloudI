@@ -24,6 +24,9 @@
 %  short-lived processes).
 -define(DEST_REFRESH_SLOW, 300000). % milliseconds
 
+% after startup, assign the initial process group membership
+-define(DEST_REFRESH_FIRST,  500). % milliseconds
+
 % blocking operations must decrement the timeout to make sure timeouts
 % have time to unravel all synchronous calls
 -define(TIMEOUT_DELTA, 100). % milliseconds

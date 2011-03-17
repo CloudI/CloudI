@@ -96,7 +96,8 @@ start_link(Module, Args, Timeout, Prefix,
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
+           (DestRefresh == lazy_random) or
+           (DestRefresh == none),
     gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutAsync,
                                     TimeoutSync, DestRefresh,
                                     DestDeny, DestAllow], []).
@@ -109,6 +110,7 @@ init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow]) ->
     case cloudi_job:start_link(Module, Args, Timeout) of
         {ok, Job} ->
+            destination_refresh_first(DestRefresh),
             destination_refresh_start(DestRefresh),
             {ok, #state{job = Job,
                         prefix = Prefix,
@@ -552,6 +554,21 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             trie:is_prefix(Prefix, DestAllow)
     end.
 
+destination_refresh_first(lazy_closest) ->
+    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+
+destination_refresh_first(lazy_random) ->
+    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+
+destination_refresh_first(immediate_closest) ->
+    ok;
+
+destination_refresh_first(immediate_random) ->
+    ok;
+
+destination_refresh_first(none) ->
+    ok.
+
 destination_refresh_start(lazy_closest) ->
     list_pg_data:get_groups(?DEST_REFRESH_SLOW);
 
@@ -562,6 +579,9 @@ destination_refresh_start(immediate_closest) ->
     ok;
 
 destination_refresh_start(immediate_random) ->
+    ok;
+
+destination_refresh_start(none) ->
     ok.
 
 destination_get(lazy_closest, Name, Pid, Groups)

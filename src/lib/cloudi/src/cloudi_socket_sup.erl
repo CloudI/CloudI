@@ -85,7 +85,8 @@ create_socket(Protocol, BufferSize, Timeout, Prefix,
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random),
+           (DestRefresh == lazy_random) or
+           (DestRefresh == none),
     case supervisor:start_child(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow]) of

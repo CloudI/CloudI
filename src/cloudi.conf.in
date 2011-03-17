@@ -30,9 +30,13 @@
         % rather than using remote processes (processes on other nodes).  if a
         % destination should be automatically load balanced across all connected
         % nodes, the 'random' suffix destination refresh should be used.
+        % if the process doesn't send to any other processes, then 'none' can
+        % be used and the process will die if it attempts to send to another
+        % process (it is as if the destination deny list contains all services).
         % (so the choices are:  'lazy_closest', 'lazy_random',
-        %                       'immediate_closest', 'immediate_random')
-        lazy_closest,
+        %                       'immediate_closest', 'immediate_random',
+        %                       'none')
+        none,
         % timeout for executing the cloudi_job_init/2 function
         5000,
         % default timeout for asynchronous calls
@@ -85,9 +89,13 @@
         % rather than using remote processes (processes on other nodes).  if a
         % destination should be automatically load balanced across all connected
         % nodes, the 'random' suffix destination refresh should be used.
+        % if the process doesn't send to any other processes, then 'none' can
+        % be used and the process will die if it attempts to send to another
+        % process (it is as if the destination deny list contains all services).
         % (so the choices are:  'lazy_closest', 'lazy_random',
-        %                       'immediate_closest', 'immediate_random')
-        lazy_closest,
+        %                       'immediate_closest', 'immediate_random',
+        %                       'none')
+        none,
         % protocol used for each socket
         tcp,
         % buffer size used for each socket
@@ -134,7 +142,7 @@
     %     {password, "sdehmtr1g9qs"},
     %     {port, 5432},
     %     {database, "cloudi_tests"}],
-    %    lazy_closest,
+    %    none,
     %    5000, 5000, 5000, [api], undefined, 1, 5, 60},
     % the job below provides a queue for specific database queries
     {internal,
@@ -142,14 +150,14 @@
         cloudi_job_work_manager,
         [{destination, "/db/pgsql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
-        immediate_closest,
+        lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 60},
     {internal,
         "/db/mysql/",
         cloudi_job_work_manager,
         [{destination, "/db/mysql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
-        immediate_closest,
+        lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 60},
     % the job below manages the Hexidecimal PI test
     {internal,
@@ -158,7 +166,7 @@
         [1,       % starting index
          65536,   % ending index
          4],      % concurrent tasks
-        immediate_closest,
+        lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 60},
 
     % tests/http/ services
@@ -166,38 +174,38 @@
         "/tests/http/",
         cloudi_job_misultin,
         [{compress, true}, {port, 8080}, {output, binary}],
-        immediate_closest,
+        lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 60},
     {internal,
         "/tests/http/",
         cloudi_job_misultin,
         [{compress, true}, {port, 8081}, {output, list}],
-        immediate_closest,
+        lazy_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 60},
     {external,
         "/tests/http/",
         "@PYTHON@",
         "tests/http/service/service.py 4 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
-        lazy_closest, tcp, 16384,
+        none, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
         "@JAVA@",
         "-jar tests/http/service/jar/service.jar 4 tcp 16384", [],
-        lazy_closest, tcp, 16384,
+        none, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http/",
         "@RUBY@",
         "tests/http/service/service.rb 1 tcp 16384", [],
-        lazy_closest, tcp, 16384,
+        none, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "1 tcp 16384",
         [{"LD_LIBRARY_PATH", "api/c/lib/"}],
-        lazy_closest, tcp, 16384,
+        none, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 60}
 ]}.
 {nodes, [
