@@ -467,6 +467,10 @@ handle_info({'recv_async', _, _} = T, StateName, StateData) ->
 
 % incoming messages (from Erlang pids to the port socket)
 
+handle_info({'send_async', _, Request, _, _, _}, StateName, StateData)
+    when is_binary(Request) =:= false ->
+    {next_state, StateName, StateData};
+
 handle_info({'send_async', Name, Request, Timeout, TransId, Pid}, StateName,
             #state{queue_messages = false} = StateData) ->
     send('send_async_out'(Name, Request, Timeout, TransId, Pid), StateData),
@@ -477,6 +481,10 @@ handle_info({'send_async', _, _, _, _, _} = T, StateName,
                    queued = Queue} = StateData) ->
     {next_state, StateName, StateData#state{queued = queue:in(T, Queue)}};
 
+handle_info({'send_sync', _, Request, _, _, _}, StateName, StateData)
+    when is_binary(Request) =:= false ->
+    {next_state, StateName, StateData};
+
 handle_info({'send_sync', Name, Request, Timeout, TransId, Pid}, StateName,
             #state{queue_messages = false} = StateData) ->
     send('send_sync_out'(Name, Request, Timeout, TransId, Pid), StateData),
@@ -486,6 +494,10 @@ handle_info({'send_sync', _, _, _, _, _} = T, StateName,
             #state{queue_messages = true,
                    queued = Queue} = StateData) ->
     {next_state, StateName, StateData#state{queued = queue:in(T, Queue)}};
+
+handle_info({'return_async', _, Response, _, _, _}, StateName, StateData)
+    when is_binary(Response) =:= false ->
+    {next_state, StateName, StateData};
 
 handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
             StateName, StateData) ->
@@ -503,6 +515,10 @@ handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
              recv_async_timeout_start(Response, Timeout, TransId,
                                       send_timeout_end(TransId, StateData))}
     end;
+
+handle_info({'return_sync', _, Response, _, _, _}, StateName, StateData)
+    when is_binary(Response) =:= false ->
+    {next_state, StateName, StateData};
 
 handle_info({'return_sync', _Name, Response, _Timeout, TransId, Pid},
             StateName, StateData) ->

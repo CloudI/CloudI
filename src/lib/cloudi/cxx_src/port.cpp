@@ -154,11 +154,11 @@ extern "C"
     (void)
 #define STORE_RETURN_VALUE_TYPE_void(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_atom(buffer.get<char>(), &index, "ok"))                     \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -170,11 +170,11 @@ extern "C"
     char returnValue = 
 #define STORE_RETURN_VALUE_TYPE_char(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -186,11 +186,11 @@ extern "C"
     unsigned char returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_char(buffer.get<char>(), &index, (char) returnValue))       \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -202,11 +202,11 @@ extern "C"
     bool returnValue = 
 #define STORE_RETURN_VALUE_TYPE_bool(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_boolean(buffer.get<char>(), &index, (int) returnValue))     \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -218,11 +218,11 @@ extern "C"
     int8_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int8_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -234,11 +234,11 @@ extern "C"
     uint8_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint8_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -250,11 +250,11 @@ extern "C"
     int16_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int16_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -266,11 +266,11 @@ extern "C"
     uint16_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint16_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -282,11 +282,11 @@ extern "C"
     int32_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int32_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -298,11 +298,11 @@ extern "C"
     uint32_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint32_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -314,11 +314,11 @@ extern "C"
     int64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_int64_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_longlong(buffer.get<char>(), &index, returnValue))          \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -330,11 +330,11 @@ extern "C"
     uint64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_uint64_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -346,11 +346,11 @@ extern "C"
     uint64_t returnValue = 
 #define STORE_RETURN_VALUE_TYPE_time_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -362,11 +362,11 @@ extern "C"
     double returnValue =
 #define STORE_RETURN_VALUE_TYPE_float(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -378,11 +378,11 @@ extern "C"
     double returnValue =
 #define STORE_RETURN_VALUE_TYPE_double(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
         return GEPD::ExitStatus::ei_encode_error;
 
@@ -397,13 +397,13 @@ extern "C"
     char const * returnValue =
 #define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
-        return GEPD::ExitStatus::ei_encode_error;                           \
+        return GEPD::ExitStatus::ei_encode_error;                             \
     if (buffer.reserve(index + strlen(returnValue) + 1) == false)             \
-        return GEPD::ExitStatus::write_overflow;                            \
+        return GEPD::ExitStatus::write_overflow;                              \
     if (ei_encode_string(buffer.get<char>(), &index, returnValue))            \
         return GEPD::ExitStatus::ei_encode_error;
     
