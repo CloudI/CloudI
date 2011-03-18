@@ -40,6 +40,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
          code_change/3, terminate/2]).
 
+-include("list_pg_data.hrl").
+
 %%% monitors are used instead of links.
 
 %%%
@@ -253,7 +255,8 @@ code_change(_, State, _) ->
 %%%
 
 create_group(Name, #state{groups = Groups} = State) ->
-    NewGroups = trie:update(Name, fun(OldValue) -> OldValue end, [], Groups),
+    NewGroups = trie:update(Name, fun(OldValue) -> OldValue end,
+                            #list_pg_data{}, Groups),
     State#state{groups = NewGroups}.
 
 delete_group(Name, #state{groups = Groups,
@@ -261,50 +264,82 @@ delete_group(Name, #state{groups = Groups,
     case trie:find(Name, Groups) of
         error ->
             State;
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0, remote_count = 0}} ->
             State#state{groups = trie:erase(Name, Groups)};
-        {ok, Members} ->
-            NewPids = lists:foldl(fun({Pid, Ref}, P) ->
+        {ok, #list_pg_data{local = Local, remote_count = Remote}} ->
+            NewPids = lists:foldl(fun(#list_pg_data_pid{pid = Pid,
+                                                        monitor = Ref}, P) ->
                 true = erlang:demonitor(Ref, [flush]),
                 dict:update(Pid,
                             fun(OldValue) ->
                                 lists:delete(Name, OldValue)
                             end, P)
-            end, Pids, Members),
+            end, Pids, Local ++ Remote),
             State#state{groups = trie:erase(Name, Groups),
                         pids = NewPids}
     end.
 
 join_group(Name, Pid, #state{groups = Groups,
                              pids = Pids} = State) ->
-    Entry = {Pid, erlang:monitor(process, Pid)},
+    Entry = #list_pg_data_pid{pid = Pid,
+                              monitor = erlang:monitor(process, Pid)},
     Fgroups = if
         node() =:= node(Pid) ->
-            fun(OldValue) -> [Entry | OldValue] end;
+            fun(#list_pg_data{local_count = LocalI,
+                              local = Local} = OldValue) ->
+                OldValue#list_pg_data{local_count = LocalI + 1,
+                                      local = [Entry | Local]}
+            end;
         true ->
-            fun(OldValue) -> [OldValue] ++ [Entry] end
+            fun(#list_pg_data{remote_count = RemoteI,
+                              remote = Remote} = OldValue) ->
+                OldValue#list_pg_data{remote_count = RemoteI + 1,
+                                      remote = [Entry | Remote]}
+            end
+    end,
+    Default = if
+        node() =:= node(Pid) ->
+            #list_pg_data{local_count = 1,
+                          local = [Entry]};
+        true ->
+            #list_pg_data{remote_count = 1,
+                          remote = [Entry]}
     end,
     NameList = [Name],
     Fpids = fun(OldValue) ->
         lists:umerge(OldValue, NameList)
     end,
-    State#state{groups = trie:update(Name, Fgroups, [Entry], Groups),
+    State#state{groups = trie:update(Name, Fgroups, Default, Groups),
                 pids = dict:update(Pid, Fpids, NameList, Pids)}.
 
 leave_group(Name, Pid, #state{groups = Groups,
                               pids = Pids} = State) ->
-    Fgroups = fun(OldValue) ->
-        F = fun({P, Ref}) ->
-            if 
-                P == Pid ->
-                    true = erlang:demonitor(Ref, [flush]),
-                    true;
-                true ->
-                    false
+    Fpartition = fun(#list_pg_data_pid{pid = P, monitor = Ref}) ->
+        if 
+            P == Pid ->
+                true = erlang:demonitor(Ref, [flush]),
+                true;
+            true ->
+                false
+        end
+    end,
+    Fgroups = if
+        node() =:= node(Pid) ->
+            fun(#list_pg_data{local_count = LocalI,
+                              local = Local} = OldValue) ->
+                {PidEntries, NewLocal} = lists:partition(Fpartition, Local),
+                NewLocalI = LocalI - erlang:length(PidEntries),
+                OldValue#list_pg_data{local_count = NewLocalI,
+                                      local = NewLocal}
+            end;
+        true ->
+            fun(#list_pg_data{remote_count = RemoteI,
+                              remote = Remote} = OldValue) ->
+                {PidEntries, NewRemote} = lists:partition(Fpartition, Remote),
+                NewRemoteI = RemoteI - erlang:length(PidEntries),
+                OldValue#list_pg_data{remote_count = NewRemoteI,
+                                      remote = NewRemote}
             end
-        end,
-        {_, Value} = lists:partition(F, OldValue),
-        Value
     end,
     Fpids = fun(OldValue) ->
         lists:delete(Name, OldValue)
@@ -316,31 +351,101 @@ store(#state{groups = ExternalGroups,
              pids = ExternalPids},
       #state{groups = Groups,
              pids = Pids} = State) ->
-    Fgroups = fun(_, V1, V2) ->
-        lists:foldl(fun({Pid, _}, V) ->
-            case lists:keymember(Pid, 1, V) of
-                false when node() =:= node(Pid) ->
-                    [{Pid, erlang:monitor(process, Pid)} | V];
-                false ->
-                    V ++ [{Pid, erlang:monitor(process, Pid)}];
+    Fgroups = fun(_, #list_pg_data{local = V1Local,
+                                   remote = V1Remote}, V2) ->
+        % V1 is external
+        V1All = V1Local ++ V1Remote,
+        V1AllPids = lists:usort(lists:map(fun(#list_pg_data_pid{pid = Pid}) ->
+            Pid
+        end, V1All)),
+        lists:foldl(fun(Pid, #list_pg_data{local_count = LocalI,
+                                           local = Local,
+                                           remote_count = RemoteI,
+                                           remote = Remote} = V) ->
+            Fpartition = fun(#list_pg_data_pid{pid = P}) ->
+                if 
+                    P == Pid ->
+                        true;
+                    true ->
+                        false
+                end
+            end,
+            if
+                node() =:= node(Pid) ->
+                    {V1Pids, _} = lists:partition(Fpartition, V1All),
+                    {V2Pids, LocalRest} = lists:partition(Fpartition, Local),
+                    I = erlang:length(V1Pids) - erlang:length(V2Pids),
+                    if
+                        I > 0 ->
+                            % add
+                            NewLocal = lists:foldl(fun(_, L) ->
+                                Ref = erlang:monitor(process, Pid),
+                                [#list_pg_data_pid{pid = Pid,
+                                                   monitor = Ref} | L]
+                            end, V2Pids, lists:seq(1, I)),
+                            V#list_pg_data{local_count = LocalI + I,
+                                           local = NewLocal};
+                        I < 0 ->
+                            % remove
+%XXX strange case
+                            {Remove, NewV2Pids} = lists:split(I * -1, V2Pids),
+                            lists:foreach(fun(#list_pg_data_pid{monitor = M}) ->
+                                true = erlang:demonitor(M, [flush])
+                            end, Remove),
+                            V#list_pg_data{local_count = LocalI + I,
+                                           local = NewV2Pids ++ LocalRest};
+                        true ->
+                            V
+                    end;
                 true ->
-                    V
+                    {V1Pids, _} = lists:partition(Fpartition, V1All),
+                    {V2Pids, RemoteRest} = lists:partition(Fpartition, Remote),
+                    I = erlang:length(V1Pids) - erlang:length(V2Pids),
+                    if
+                        I > 0 ->
+                            % add
+                            NewRemote = lists:foldl(fun(_, L) ->
+                                Ref = erlang:monitor(process, Pid),
+                                [#list_pg_data_pid{pid = Pid,
+                                                   monitor = Ref} | L]
+                            end, V2Pids, lists:seq(1, I)),
+                            V#list_pg_data{remote_count = RemoteI + I,
+                                           remote = NewRemote};
+                        I < 0 ->
+                            % remove
+                            {Remove, NewV2Pids} = lists:split(I * -1, V2Pids),
+                            lists:foreach(fun(#list_pg_data_pid{monitor = M}) ->
+                                true = erlang:demonitor(M, [flush])
+                            end, Remove),
+                            V#list_pg_data{remote_count = RemoteI + I,
+                                           remote = NewV2Pids ++ RemoteRest};
+                        true ->
+                            V
+                    end
             end
-        end, V2, V1)
+        end, V2, V1AllPids)
     end,
     NewGroups = trie:fold(fun(Key, V1, T) ->
         case trie:is_key(Key, T) of
             true ->
                 trie:update(Key, fun(V2) -> Fgroups(Key, V1, V2) end, T);
             false ->
-                NewV1 = lists:foldl(fun({Pid, _}, V) ->
+                NewV1 = lists:foldl(fun(#list_pg_data_pid{pid = Pid} = E,
+                                        #list_pg_data{local_count = LocalI,
+                                                      local = Local,
+                                                      remote_count = RemoteI,
+                                                      remote = Remote} = V) ->
+                    NewE = E#list_pg_data_pid{
+                        monitor = erlang:monitor(process, Pid)},
                     if
                         node() =:= node(Pid) ->
-                            [{Pid, erlang:monitor(process, Pid)} | V];
+                            V#list_pg_data{local_count = LocalI + 1,
+                                           local = [NewE | Local]};
                         true ->
-                            V ++ [{Pid, erlang:monitor(process, Pid)}]
+                            V#list_pg_data{remote_count = RemoteI + 1,
+                                           remote = [NewE | Remote]}
                     end
-                end, [], V1),
+                end, #list_pg_data{}, V1),
                 trie:store(Key, NewV1, T)
         end
     end, Groups, ExternalGroups),
