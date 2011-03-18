@@ -65,6 +65,8 @@
          get_random_pid/2,
          get_random_pid/3]).
 
+-include("list_pg_data.hrl").
+
 get_groups() ->
     gen_server:call(list_pg, list_pg_data).
 
@@ -79,33 +81,33 @@ get_members(Name, Groups) when is_list(Name) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             [];
-        {ok, Members} ->
-            lists:foldl(fun({Pid, _}, T) ->
-                            [Pid | T]
-                        end, [], Members)
+        {ok, #list_pg_data{local = Local,
+                           remote = Remote}} ->
+            lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+                [Pid | L]
+            end, [], Local ++ Remote)
     end.
 
 get_members(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             {error, {'no_process', Name}};
-        {ok, [{Exclude, _}]} ->
-            {error, {'no_process', Name}};
-        {ok, [{Pid, _}]} ->
-            [Pid];
-        {ok, L} ->
-            Members = lists:foldl(fun({Pid, _}, T) ->
-                                      if
-                                          Pid =/= Exclude ->
-                                              [Pid | T];
-                                          true ->
-                                              T
-                                      end
-                                  end, [], L),
+        {ok, #list_pg_data{local = Local,
+                           remote = Remote}} ->
+            Members = lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+                if
+                    Pid =/= Exclude ->
+                        [Pid | L];
+                    true ->
+                        L
+                end
+            end, [], Local ++ Remote),
             if
                 Members == [] ->
                     {error, {'no_process', Name}};
@@ -118,17 +120,10 @@ get_local_members(Name, Groups) when is_list(Name) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
-            [];
-        {ok, Members} ->
-            lists:foldl(fun({Pid, _}, T) ->
-                            if
-                                node(Pid) =:= node() ->
-                                    [Pid | T];
-                                true ->
-                                    T
-                            end
-                        end, [], Members)
+        {ok, #list_pg_data{local = Local}} ->
+            lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
+                [Pid | L]
+            end, [], Local)
     end.
 
 which_groups(Groups) ->
@@ -138,119 +133,98 @@ get_closest_pid(Name, Groups) when is_list(Name) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             {error, {'no_process', Name}};
-        {ok, [{Pid, _}]} ->
-            Pid;
-        {ok, Members} ->
-            case lists:splitwith(fun({Pid, _}) ->
-                                     node(Pid) =:= node()
-                                 end, Members) of
-                {[], [{Pid, _}]} ->
-                    Pid;
-                {[], Remote} ->
-                    {_, _, X} = erlang:now(),
-                    {Pid, _} = lists:nth((X rem length(Remote)) + 1, Remote),
-                    Pid;
-                {[{Pid, _}], _} ->
-                    Pid;
-                {Local, _} ->
-                    {_, _, X} = erlang:now(),
-                    {Pid, _} = lists:nth((X rem length(Local)) + 1, Local),
-                    Pid
-            end
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = RemoteCount,
+                           remote = Remote}} ->
+            pick(RemoteCount, Remote);
+        {ok, #list_pg_data{local_count = LocalCount,
+                           local = Local}} ->
+            pick(LocalCount, Local)
     end.
 
 get_closest_pid(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             {error, {'no_process', Name}};
-        {ok, [{Exclude, _}]} ->
-            {error, {'no_process', Name}};
-        {ok, [{Pid, _}]} ->
-            Pid;
-        {ok, Members} ->
-            case lists:splitwith(fun({Pid, _}) ->
-                                     node(Pid) =:= node()
-                                 end, Members) of
-                {[], [{Exclude, _}]} ->
-                    {error, {'no_process', Name}};
-                {[], [{Pid, _}]} ->
-                    Pid;
-                {[], L} ->
-                    Remote = lists:filter(fun({P, _}) ->
-                                              P =/= Exclude
-                                          end, L),
-                    if
-                        Remote == [] ->
-                            {error, {'no_process', Name}};
-                        true ->
-                            {_, _, X} = erlang:now(),
-                            {Pid, _} = lists:nth((X rem length(Remote)) + 1,
-                                                 Remote),
-                            Pid
-                    end;
-                {[{Exclude, _}], Remote} ->
-                    {_, _, X} = erlang:now(),
-                    {Pid, _} = lists:nth((X rem length(Remote)) + 1, Remote),
-                    Pid;
-                {[{Pid, _}], _} ->
-                    Pid;
-                {L, Remote} ->
-                    Local = lists:filter(fun({P, _}) ->
-                                             P =/= Exclude
-                                         end, L),
-                    {_, _, X} = erlang:now(),
-                    if
-                        Local == [] ->
-                            {Pid, _} = lists:nth((X rem length(Remote)) + 1,
-                                                 Remote),
-                            Pid;
-                        true ->
-                            {Pid, _} = lists:nth((X rem length(Local)) + 1,
-                                                 Local),
-                            Pid
-                    end
-            end
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = RemoteCount,
+                           remote = Remote}} ->
+            pick(RemoteCount, Remote, Name, Exclude);
+        {ok, #list_pg_data{local_count = LocalCount,
+                           local = Local,
+                           remote_count = RemoteCount,
+                           remote = Remote}} ->
+            pick(LocalCount, Local, RemoteCount, Remote, Name, Exclude)
     end.
 
 get_random_pid(Name, Groups) when is_list(Name) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             {error, {'no_process', Name}};
-        {ok, [{Pid, _}]} ->
-            Pid;
-        {ok, Members} ->
-            {_, _, X} = erlang:now(),
-            {Pid, _} = lists:nth((X rem length(Members)) + 1, Members),
-            Pid
+        {ok, #list_pg_data{local_count = LocalCount,
+                           local = Local,
+                           remote_count = RemoteCount,
+                           remote = Remote}} ->
+            pick(LocalCount + RemoteCount, Local ++ Remote)
     end.
 
 get_random_pid(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
     case trie:find(Name, Groups) of
         error ->
             {error, {'no_such_group', Name}};
-        {ok, []} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             {error, {'no_process', Name}};
-        {ok, [{Exclude, _}]} ->
-            {error, {'no_process', Name}};
-        {ok, [{Pid, _}]} ->
-            Pid;
-        {ok, L} ->
-            Members = lists:filter(fun({P, _}) ->
-                                       P =/= Exclude
-                                   end, L),
-            if
-                Members == [] ->
-                    {error, {'no_process', Name}};
-                true ->
-                    {_, _, X} = erlang:now(),
-                    {Pid, _} = lists:nth((X rem length(Members)) + 1, Members),
-                    Pid
-            end
+        {ok, #list_pg_data{local_count = LocalCount,
+                           local = Local,
+                           remote_count = RemoteCount,
+                           remote = Remote}} ->
+            pick(LocalCount + RemoteCount, Local ++ Remote, Name, Exclude)
     end.
+
+pick(N, L) ->
+    #list_pg_data_pid{pid = Pid} = lists:nth(random(N), L),
+    Pid.
+
+pick(0, [], Name, _) ->
+    {error, {'no_process', Name}};
+pick(N, L, Name, Exclude) ->
+    case lists:nth(random(N), L) of
+        #list_pg_data_pid{pid = Exclude} ->
+            NewL = lists:filter(fun(#list_pg_data_pid{pid = P}) ->
+                P =/= Exclude
+            end, L),
+            pick(erlang:length(NewL), NewL, Name, Exclude);
+        #list_pg_data_pid{pid = Pid} ->
+            Pid
+    end.
+
+pick(0, [], N2, L2, Name, Exclude) ->
+    pick(N2, L2, Name, Exclude);
+pick(N1, L1, N2, L2, Name, Exclude) ->
+    case lists:nth(random(N1), L1) of
+        #list_pg_data_pid{pid = Exclude} ->
+            NewL1 = lists:filter(fun(#list_pg_data_pid{pid = P}) ->
+                P =/= Exclude
+            end, L1),
+            pick(erlang:length(NewL1), NewL1, N2, L2, Name, Exclude);
+        #list_pg_data_pid{pid = Pid} ->
+            Pid
+    end.
+
+random(N) ->
+    random:uniform(N).
+% faster, but possibly not uniform in a busy system?:
+%random(N) ->
+%    {I1, I2} = erlang:statistics(reductions),
+%    ((I1 bxor I2) rem N) + 1.
 
