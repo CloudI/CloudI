@@ -149,7 +149,7 @@ namespace
             if (i < 0)
                 return errno_read();
             total += i;
-            ready = (i == buffer_size);
+            ready = (i == static_cast<signed>(buffer_size));
             if (ready)
             {
                 int const status = data_ready(fd, ready);
