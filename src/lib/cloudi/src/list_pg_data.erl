@@ -88,7 +88,7 @@ get_members(Name, Groups) when is_list(Name) ->
                            remote = Remote}} ->
             lists:foldl(fun(#list_pg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
-            end, [], Local ++ Remote)
+            end, [], Remote ++ Local)
     end.
 
 get_members(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
@@ -107,7 +107,7 @@ get_members(Name, Exclude, Groups) when is_list(Name), is_pid(Exclude) ->
                     true ->
                         L
                 end
-            end, [], Local ++ Remote),
+            end, [], Remote ++ Local),
             if
                 Members == [] ->
                     {error, {'no_process', Name}};

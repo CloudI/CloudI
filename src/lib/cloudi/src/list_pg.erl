@@ -41,6 +41,7 @@
          code_change/3, terminate/2]).
 
 -include("list_pg_data.hrl").
+-include("cloudi_logger.hrl").
 
 %%% monitors are used instead of links.
 
@@ -205,12 +206,9 @@ handle_call({get_random_pid, Name, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, list_pg_data:get_random_pid(Name, Exclude, Groups), State};
 
-handle_call(Request, From, S) ->
-    error_logger:warning_msg("The ~p server received an "
-                             "unexpected message:\n"
-                             "handle_call(~p, ~p, _)\n", 
-                             [?MODULE, Request, From]),
-    {noreply, S}.
+handle_call(Request, _, State) ->
+    ?LOG_WARN("Unknown call \"~p\"", [Request]),
+    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
 
 -type cast() :: {'exchange', node(), #state{}}.
 
@@ -264,9 +262,11 @@ delete_group(Name, #state{groups = Groups,
     case trie:find(Name, Groups) of
         error ->
             State;
-        {ok, #list_pg_data{local_count = 0, remote_count = 0}} ->
+        {ok, #list_pg_data{local_count = 0,
+                           remote_count = 0}} ->
             State#state{groups = trie:erase(Name, Groups)};
-        {ok, #list_pg_data{local = Local, remote_count = Remote}} ->
+        {ok, #list_pg_data{local = Local,
+                           remote = Remote}} ->
             NewPids = lists:foldl(fun(#list_pg_data_pid{pid = Pid,
                                                         monitor = Ref}, P) ->
                 true = erlang:demonitor(Ref, [flush]),
@@ -386,8 +386,10 @@ store(#state{groups = ExternalGroups,
                             V#list_pg_data{local_count = LocalI + I,
                                            local = NewLocal};
                         I < 0 ->
+                            % should never happen
+                            ?LOG_ERROR("Remote node data with local pids "
+                                       "causes removal on local node!", []),
                             % remove
-%XXX strange case
                             {Remove, NewV2Pids} = lists:split(I * -1, V2Pids),
                             lists:foreach(fun(#list_pg_data_pid{monitor = M}) ->
                                 true = erlang:demonitor(M, [flush])
@@ -425,7 +427,9 @@ store(#state{groups = ExternalGroups,
             end
         end, V2, V1AllPids)
     end,
-    NewGroups = trie:fold(fun(Key, V1, T) ->
+    NewGroups = trie:fold(fun(Key, #list_pg_data{local = V1Local,
+                                                 remote = V1Remote} = V1, T) ->
+        % V1 is external
         case trie:is_key(Key, T) of
             true ->
                 trie:update(Key, fun(V2) -> Fgroups(Key, V1, V2) end, T);
@@ -445,14 +449,13 @@ store(#state{groups = ExternalGroups,
                             V#list_pg_data{remote_count = RemoteI + 1,
                                            remote = [NewE | Remote]}
                     end
-                end, #list_pg_data{}, V1),
+                end, #list_pg_data{}, V1Local ++ V1Remote),
                 trie:store(Key, NewV1, T)
         end
     end, Groups, ExternalGroups),
     Fpids = fun(_, V1, V2) -> lists:umerge(V2, V1) end,
     State#state{groups = NewGroups,
                 pids = dict:merge(Fpids, ExternalPids, Pids)}.
-
 
 member_died(Pid, #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of

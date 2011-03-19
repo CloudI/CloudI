@@ -695,13 +695,11 @@ uninstall-am:
 
 
 all-local: rebar 
-	rm -rf rel/cloudi/
 	$(ESCRIPT) rebar compile
 
 clean-local: rebar
 	$(ESCRIPT) rebar clean
 	rm -f api/python/cloudi.pyc api/python/erlang.pyc
-	rm -rf rel/cloudi
 
 clean-configure: config.log
 	rm -f aclocal.m4 config.h config.h.in config.h.in~ config.log \
@@ -727,6 +725,7 @@ dialyze: rebar
 
 run: all
 	$(ERLANG_ROOT_DIR)/bin/erl -config config/sys \
+      -sname cloudi \
       -pz external/epgsql/ebin \
       -pz external/emysql/ebin \
       -pz external/etokyotyrant/ebin \
@@ -760,14 +759,15 @@ install-exec-hook: tests-install \
 	rm -rf $(DESTDIR)$(libdir)
 	rm -rf $(DESTDIR)$(libexecdir)
 	rm -rf $(DESTDIR)$(datarootdir)
-	test ! -d $(top_builddir)/rel/cloudi/ && $(ESCRIPT) rebar generate || exit 0
-	cp -rf $(top_builddir)/rel/cloudi/bin $(DESTDIR)$(bindir)
-	cp -rf $(top_builddir)/rel/cloudi/lib $(DESTDIR)$(libdir)
-	cp -rf $(top_builddir)/rel/cloudi/etc $(DESTDIR)$(sysconfdir)
-	cp -rf $(top_builddir)/rel/cloudi/erts-* $(DESTDIR)$(prefix)
-	cp -rf $(top_builddir)/rel/cloudi/releases $(DESTDIR)$(prefix)
+	$(ESCRIPT) rebar generate || exit 0
+	mv -f $(top_builddir)/rel/cloudi/bin $(DESTDIR)$(bindir)
+	mv -f $(top_builddir)/rel/cloudi/lib $(DESTDIR)$(libdir)
+	mv -f $(top_builddir)/rel/cloudi/etc $(DESTDIR)$(sysconfdir)
+	mv -f $(top_builddir)/rel/cloudi/erts-* $(DESTDIR)$(prefix)
+	mv -f $(top_builddir)/rel/cloudi/releases $(DESTDIR)$(prefix)
 	mkdir $(DESTDIR)$(prefix)/logs
 	cp -f $(top_builddir)/cloudi.conf $(DESTDIR)$(prefix)
+	rm -rf $(top_builddir)/rel/cloudi/
 
 tests-install:
 	mkdir $(DESTDIR)$(prefix)/tests
