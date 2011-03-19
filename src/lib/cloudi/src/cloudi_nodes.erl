@@ -188,7 +188,7 @@ handle_info(reconnect, #state{nodes_dead = NodesDead} = State) ->
                                                              self(),
                                                              reconnect)}};
         true ->
-            {noreply, State}
+            {noreply, State#state{timer_reconnect = undefined}}
     end;
 
 handle_info(Request, State) ->
