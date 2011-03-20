@@ -592,8 +592,10 @@ namespace
                     return exec_EIO;
                 case EISDIR:
                     return exec_EISDIR;
+#ifdef ELIBBAD
                 case ELIBBAD:
                     return exec_ELIBBAD;
+#endif
                 case ELOOP:
                     return exec_ELOOP;
                 case EMFILE:
