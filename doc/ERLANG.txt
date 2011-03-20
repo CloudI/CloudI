@@ -1,0 +1,6 @@
+Installing Erlang From Source
+
+OSX:
+CFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" LDFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" ./configure --enable-darwin-universal --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe --prefix=/Users/truog/install/
+make && make install
+

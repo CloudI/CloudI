@@ -71,7 +71,7 @@ am_hexpi_OBJECTS = hexpi-assert.$(OBJEXT) hexpi-main.$(OBJEXT) \
 	hexpi-piqpr8_gmp_verify.$(OBJEXT)
 hexpi_OBJECTS = $(am_hexpi_OBJECTS)
 am__DEPENDENCIES_1 =
-hexpi_DEPENDENCIES = $(am__DEPENDENCIES_1)
+hexpi_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 hexpi_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(hexpi_LDFLAGS) $(LDFLAGS) -o $@
@@ -232,9 +232,9 @@ top_srcdir = @top_srcdir@
 hexpi_SOURCES = assert.cpp main.cpp timer.cpp \
                 piqpr8_gmp.cpp piqpr8_gmp_verify.cpp
 
-hexpi_CPPFLAGS = -I$(top_builddir)/api/c/
-hexpi_LDFLAGS = -L$(top_builddir)/api/c/
-hexpi_LDADD = -lcloudi -lboost_thread $(am__append_1)
+hexpi_CPPFLAGS = -I$(top_builddir)/api/c/ $(BOOST_CPPFLAGS)
+hexpi_LDFLAGS = -L$(top_builddir)/api/c/ $(BOOST_LDFLAGS)
+hexpi_LDADD = -lcloudi $(BOOST_THREAD_LIB) $(am__append_1)
 all: all-am
 
 .SUFFIXES:
