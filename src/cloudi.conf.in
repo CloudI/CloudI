@@ -66,7 +66,7 @@
         % MaxR (maximum restarts)
         5,
         % MaxT (maximum time)
-        60}, % seconds
+        300}, % seconds
 
     % an external job is an OS process connected
     % with a socket to the loopback device for each thread
@@ -132,7 +132,7 @@
         % MaxR (maximum restarts)
         5,
         % MaxT (maximum time)
-        60}, % seconds
+        300}, % seconds
     % the job below provides a connection to the cloudi_tests PostgreSQL DB
     %{internal,
     %    "/db/pgsql/",
@@ -143,7 +143,7 @@
     %     {port, 5432},
     %     {database, "cloudi_tests"}],
     %    none,
-    %    5000, 5000, 5000, [api], undefined, 1, 5, 60},
+    %    5000, 5000, 5000, [api], undefined, 1, 5, 300},
     % the job below provides a queue for specific database queries
     {internal,
         "/db/pgsql/",
@@ -151,14 +151,14 @@
         [{destination, "/db/pgsql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
         lazy_closest,
-        5000, 5000, 5000, [api], undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 300},
     {internal,
         "/db/mysql/",
         cloudi_job_work_manager,
         [{destination, "/db/mysql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
         lazy_closest,
-        5000, 5000, 5000, [api], undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 300},
     % the job below manages the Hexidecimal PI test
     {internal,
         "/tests/",
@@ -167,7 +167,7 @@
          65536,   % ending index
          4],      % concurrent tasks
         immediate_closest, % recover from failures (process deaths) immediately
-        5000, 5000, 5000, [api], undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 300},
 
     % tests/http/ services
     {internal,
@@ -175,44 +175,44 @@
         cloudi_job_misultin,
         [{compress, true}, {port, 8080}, {output, binary}],
         lazy_closest,
-        5000, 5000, 5000, [api], undefined, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 5, 300},
     {internal,
         "/tests/http/",
         cloudi_job_misultin,
         [{compress, true}, {port, 8081}, {output, list}],
         lazy_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 60},
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300},
     {external,
         "/tests/http/",
         "@PYTHON@",
         "tests/http/service/service.py 4 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
         none, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300},
     {external,
         "/tests/http/",
         "@JAVA@",
         "-jar tests/http/service/jar/service.jar 4 tcp 16384", [],
         none, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300},
     {external,
         "/tests/http/",
         "@RUBY@",
         "tests/http/service/service.rb 1 tcp 16384", [],
         none, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 4, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300},
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "1 tcp 16384",
         [{"LD_LIBRARY_PATH", "api/c/lib/"}],
         none, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 1, 5, 60},
+        5000, 5000, 5000, [api], undefined, 1, 1, 5, 300},
     {internal,
         "/tests/http_req/",
         cloudi_job_filesystem,
         [{directory, "tests/http_req/public_html/"}],
         none,
-        5000, 5000, 5000, [api], undefined, 1, 5, 60}
+        5000, 5000, 5000, [api], undefined, 1, 5, 300}
 ]}.
 {nodes, [
     'cloudi@host1',
