@@ -153,31 +153,36 @@ cloudi_job_terminate(_, #state{}) ->
 
 setup(State, Dispatcher) ->
     TimeoutAsync = cloudi_job:timeout_async(Dispatcher),
-    PidPgsql = case cloudi_job:get_pid(Dispatcher, ?NAME_PGSQL) of
+    PidPgsql = case cloudi_job:get_pid(Dispatcher,
+                                       ?NAME_PGSQL, 200) of
         {ok, Pid1} ->
             Pid1;
         {error, _} ->
             undefined
     end,
-    PidMysql = case cloudi_job:get_pid(Dispatcher, ?NAME_MYSQL) of
+    PidMysql = case cloudi_job:get_pid(Dispatcher,
+                                       ?NAME_MYSQL, 200) of
         {ok, Pid2} ->
             Pid2;
         {error, _} ->
             undefined
     end,
-    PidMemcached = case cloudi_job:get_pid(Dispatcher, ?NAME_MEMCACHED) of
+    PidMemcached = case cloudi_job:get_pid(Dispatcher,
+                                           ?NAME_MEMCACHED, 200) of
         {ok, Pid3} ->
             Pid3;
         {error, _} ->
             undefined
     end,
-    PidTokyotyrant = case cloudi_job:get_pid(Dispatcher, ?NAME_TOKYOTYRANT) of
+    PidTokyotyrant = case cloudi_job:get_pid(Dispatcher,
+                                             ?NAME_TOKYOTYRANT, 200) of
         {ok, Pid4} ->
             Pid4;
         {error, _} ->
             undefined
     end,
-    PidCouchdb = case cloudi_job:get_pid(Dispatcher, ?NAME_COUCHDB) of
+    PidCouchdb = case cloudi_job:get_pid(Dispatcher,
+                                         ?NAME_COUCHDB, 200) of
         {ok, Pid5} ->
             Pid5;
         {error, _} ->
