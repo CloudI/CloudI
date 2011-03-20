@@ -382,7 +382,7 @@ store(#state{groups = ExternalGroups,
                                 Ref = erlang:monitor(process, Pid),
                                 [#list_pg_data_pid{pid = Pid,
                                                    monitor = Ref} | L]
-                            end, V2Pids, lists:seq(1, I)),
+                            end, Local, lists:seq(1, I)),
                             V#list_pg_data{local_count = LocalI + I,
                                            local = NewLocal};
                         I < 0 ->
@@ -410,7 +410,7 @@ store(#state{groups = ExternalGroups,
                                 Ref = erlang:monitor(process, Pid),
                                 [#list_pg_data_pid{pid = Pid,
                                                    monitor = Ref} | L]
-                            end, V2Pids, lists:seq(1, I)),
+                            end, Remote, lists:seq(1, I)),
                             V#list_pg_data{remote_count = RemoteI + I,
                                            remote = NewRemote};
                         I < 0 ->
