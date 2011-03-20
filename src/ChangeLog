@@ -3,6 +3,7 @@
 
 2011-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 0.1.2 (alpha) released
     * list_pg and list_pg_data improvements/bugfixes
     * Node reconnects work properly
 
