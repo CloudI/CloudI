@@ -50,13 +50,18 @@ The changes are summarized below:
 * a normal autotools/rebar build system is used that doesn't attempt to
   install critical dependencies locally (it just requires that they exist)
 * restarting stopped (e.g., SIGSTOP) OS processes is not implemented in 
-  0.1.1 (but may be added back, as necessary)
+  0.1.2 (but may be added back, as necessary)
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct
 (the test can be found in src/tests/hexpi/).  A HTTP test also is in the
 default configuration and uses the command line curl for simple test cases
 (the test can be found in src/tests/http/ with the client script run.sh).
+Another HTTP test is provided that can be used for load tests
+(the test can be found in src/tests/http_req/) and provides a basic
+HTTP server for static files (content is cached and not updated dynamically,
+since it just demonstrates basic cloudi_job_filesystem functionality) that are
+located at src/tests/http_req/public_html/.
 
 CloudI currently supports the following databases:
 
@@ -81,6 +86,7 @@ Build Requirements:
 
 On OSX, to run configure with the OSX ports paths, use:
 CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+(There are currently problems compiling on OSX, these problems will be fixed soon)
 
 See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme) for basic build information
 

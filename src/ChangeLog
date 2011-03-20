@@ -1,10 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
-2011-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * list_pg and list_pg_data improvements/bugfixes
+    * Node reconnects work properly
+
+2011-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_job_api service for dynamic configuration
     * Add cloudi_job_filesystem service for caching static files
+    * Add UDP keepalive mechanism for external processes
     * various bugfixes
 
 2011-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>

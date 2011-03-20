@@ -35,5 +35,6 @@
 -define(NODE_RECONNECT, 60000). % milliseconds
 
 % periodic connection checks to determine if the udp connection is still active
+% must be a short time since this impacts MaxR and MaxT
 -define(KEEPALIVE_UDP, 5000). % milliseconds
 
