@@ -762,7 +762,7 @@ install-exec-hook: tests-install \
                    api-java-install \
                    api-python-install \
                    api-ruby-install
-	rm -f "$(DESTDIR)$(bindir)/cloudi_os_spawn_vsn_*"
+	rm -f "$(DESTDIR)$(bindir)/cloudi_os_spawn_vsn_"*
 	$(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/releases"
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/logs"
