@@ -195,29 +195,46 @@ pick(N, L) ->
     #list_pg_data_pid{pid = Pid} = lists:nth(random(N), L),
     Pid.
 
+pick_i(I, I, Filtered,
+       [#list_pg_data_pid{pid = Exclude} | L],
+       Name, Exclude) ->
+    NewFiltered = lists:foldl(fun(#list_pg_data_pid{pid = P}, F) ->
+        if
+            P =/= Exclude ->
+                [P | F];
+            true ->
+                F
+        end
+    end, Filtered, L),
+    if
+        NewFiltered == [] ->
+            {error, {'no_process', Name}};
+        true ->
+            lists:nth((I rem erlang:length(NewFiltered)) + 1, NewFiltered)
+    end;
+pick_i(I, I, _, [#list_pg_data_pid{pid = Pid} | _], _, _) ->
+    Pid;
+pick_i(I, Random, Filtered,
+       [#list_pg_data_pid{pid = Exclude} | L],
+       Name, Exclude) ->
+    pick_i(I + 1, Random, Filtered, L, Name, Exclude);
+pick_i(I, Random, Filtered,
+       [#list_pg_data_pid{pid = Pid} | L],
+       Name, Exclude) ->
+    pick_i(I + 1, Random, [Pid | Filtered], L, Name, Exclude).
+
 pick(0, [], Name, _) ->
     {error, {'no_process', Name}};
 pick(N, L, Name, Exclude) ->
-    case lists:nth(random(N), L) of
-        #list_pg_data_pid{pid = Exclude} ->
-            NewL = lists:filter(fun(#list_pg_data_pid{pid = P}) ->
-                P =/= Exclude
-            end, L),
-            pick(erlang:length(NewL), NewL, Name, Exclude);
-        #list_pg_data_pid{pid = Pid} ->
-            Pid
-    end.
+    pick_i(1, random(N), [], L, Name, Exclude).
 
 pick(0, [], N2, L2, Name, Exclude) ->
     pick(N2, L2, Name, Exclude);
 pick(N1, L1, N2, L2, Name, Exclude) ->
-    case lists:nth(random(N1), L1) of
-        #list_pg_data_pid{pid = Exclude} ->
-            NewL1 = lists:filter(fun(#list_pg_data_pid{pid = P}) ->
-                P =/= Exclude
-            end, L1),
-            pick(erlang:length(NewL1), NewL1, N2, L2, Name, Exclude);
-        #list_pg_data_pid{pid = Pid} ->
+    case pick(N1, L1, Name, Exclude) of
+        {error, _} ->
+            pick(N2, L2, Name, Exclude);
+        Pid ->
             Pid
     end.
 
