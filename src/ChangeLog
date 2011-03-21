@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix installation problems
+    * CloudI version 0.1.2 (alpha) re-released
+
 2011-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 0.1.2 (alpha) released
