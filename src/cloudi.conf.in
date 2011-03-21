@@ -80,7 +80,8 @@
         % (for all tests the arguments are: thread_count protocol buffer_size)
         "4 tcp 16384",
         % {Key, Value} pairs to specify environment variables
-        [{"LD_LIBRARY_PATH", "api/c/lib/"}],
+        [{"LD_LIBRARY_PATH", "api/c/lib/"},
+         {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
         % destination refresh controls how quickly services propogate
         % any process that sends to long-lived processes can use
         % a 'lazy' prefix destination refresh (otherwise, if sending to
@@ -204,7 +205,8 @@
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "1 tcp 16384",
-        [{"LD_LIBRARY_PATH", "api/c/lib/"}],
+        [{"LD_LIBRARY_PATH", "api/c/lib/"},
+         {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
         none, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300},
     {internal,

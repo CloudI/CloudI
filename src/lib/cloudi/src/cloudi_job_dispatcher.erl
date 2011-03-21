@@ -541,20 +541,32 @@ destination_allowed(_, undefined, undefined) ->
     true;
 
 destination_allowed(Name, undefined, DestAllow) ->
-    Prefix = string2:beforer($/, Name),
-    trie:is_prefix(Prefix, DestAllow);
+    case string2:beforer($/, Name) of
+        [] ->
+            false;
+        Prefix ->
+            trie:is_prefix(Prefix, DestAllow)
+    end;
 
 destination_allowed(Name, DestDeny, undefined) ->
-    Prefix = string2:beforer($/, Name),
-    not trie:is_prefix(Prefix, DestDeny);
+    case string2:beforer($/, Name) of
+        [] ->
+            false;
+        Prefix ->
+            not trie:is_prefix(Prefix, DestDeny)
+    end;
 
 destination_allowed(Name, DestDeny, DestAllow) ->
-    Prefix = string2:beforer($/, Name),
-    case trie:is_prefix(Prefix, DestDeny) of
-        true ->
+    case string2:beforer($/, Name) of
+        [] ->
             false;
-        false ->
-            trie:is_prefix(Prefix, DestAllow)
+        Prefix ->
+            case trie:is_prefix(Prefix, DestDeny) of
+                true ->
+                    false;
+                false ->
+                    trie:is_prefix(Prefix, DestAllow)
+            end
     end.
 
 destination_refresh_first(lazy_closest) ->
