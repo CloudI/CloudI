@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [0.1.1],
+AC_INIT([CloudI], [0.1.2],
         [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
@@ -50,6 +50,7 @@ AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
 AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
                           [AC_MSG_ERROR([Erlang >= R14B01 not found])])
+AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])

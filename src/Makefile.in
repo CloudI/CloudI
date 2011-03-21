@@ -151,6 +151,7 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 ERL = @ERL@
+ERLANG_ERTS_VER = @ERLANG_ERTS_VER@
 ERLANG_LIB_DIR = @ERLANG_LIB_DIR@
 ERLANG_LIB_DIR_erl_interface = @ERLANG_LIB_DIR_erl_interface@
 ERLANG_LIB_DIR_ssl = @ERLANG_LIB_DIR_ssl@
@@ -579,7 +580,6 @@ installdirs-am:
 install: install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
-uninstall: uninstall-recursive
 
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
@@ -745,6 +745,14 @@ distdir:
 
 dist: distdir
 
+uninstall:
+	@echo
+	@echo "**********************************"
+	@echo "* AUTOMAKE UNINSTALL IS NOT USED *"
+	@echo "**********************************"
+	@echo
+	@exit 1
+
 install-exec-hook: tests-install \
                    tests-hexpi-install \
                    tests-http-install \
@@ -754,98 +762,118 @@ install-exec-hook: tests-install \
                    api-java-install \
                    api-python-install \
                    api-ruby-install
-	rm -rf $(DESTDIR)$(bindir)
-	rm -rf $(DESTDIR)$(includedir)
-	rm -rf $(DESTDIR)$(libdir)
-	rm -rf $(DESTDIR)$(libexecdir)
-	rm -rf $(DESTDIR)$(datarootdir)
+	rm -f "$(DESTDIR)$(bindir)/cloudi_os_spawn_vsn_*"
+	$(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/releases"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/logs"
+	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
+                    "$(DESTDIR)$(prefix)"
 	$(ESCRIPT) rebar generate || exit 0
-	mv -f $(top_builddir)/rel/cloudi/bin $(DESTDIR)$(bindir)
-	mv -f $(top_builddir)/rel/cloudi/lib $(DESTDIR)$(libdir)
-	mv -f $(top_builddir)/rel/cloudi/etc $(DESTDIR)$(sysconfdir)
-	mv -f $(top_builddir)/rel/cloudi/erts-* $(DESTDIR)$(prefix)
-	mv -f $(top_builddir)/rel/cloudi/releases $(DESTDIR)$(prefix)
-	mkdir $(DESTDIR)$(prefix)/logs
-	cp -f $(top_builddir)/cloudi.conf $(DESTDIR)$(prefix)
+	test ! -d "$(DESTDIR)$(prefix)/erts-$(ERLANG_ERTS_VER)" && \
+        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
+              "$(DESTDIR)$(prefix)" || exit 0
+	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
+                      "$(DESTDIR)$(bindir)/"
+	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/app.config" \
+                    "$(DESTDIR)$(sysconfdir)"
+	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
+                    "$(DESTDIR)$(sysconfdir)"
+	test ! -d "$(DESTDIR)$(prefix)/releases/1" && \
+        mv -f "$(top_builddir)/rel/cloudi/releases/1" \
+              "$(DESTDIR)$(prefix)/releases/" || exit 0
+	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/releases/start_erl.data" \
+                    "$(DESTDIR)$(prefix)/releases/"
+	list=`ls "$(top_builddir)/rel/cloudi/lib/"`; for subdir in $$list; do \
+        test ! -e "$(DESTDIR)$(prefix)/lib/$$subdir" && \
+        mv -f "$(top_builddir)/rel/cloudi/lib/$$subdir" \
+              "$(DESTDIR)$(prefix)/lib/" || exit 0; \
+    done
 	rm -rf $(top_builddir)/rel/cloudi/
 
 tests-install:
-	mkdir $(DESTDIR)$(prefix)/tests
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests"
 
 tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam
-	mkdir $(DESTDIR)$(prefix)/tests/hexpi
-	mkdir $(DESTDIR)$(prefix)/tests/hexpi/ebin
-	cp -f $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
-          $(DESTDIR)$(prefix)/tests/hexpi/ebin/
-	mkdir $(DESTDIR)$(prefix)/tests/hexpi/priv
-	mv -f $(DESTDIR)$(bindir)/hexpi \
-          $(DESTDIR)$(prefix)/tests/hexpi/priv/
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/hexpi/ebin"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/hexpi/priv"
+	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam" \
+                    "$(DESTDIR)$(prefix)/tests/hexpi/ebin/"
+	$(INSTALL_PROGRAM) "$(DESTDIR)$(bindir)/hexpi" \
+                       "$(DESTDIR)$(prefix)/tests/hexpi/priv/"
+	rm -f "$(DESTDIR)$(bindir)/hexpi"
 
 tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
                     $(top_builddir)/tests/http/service/jar/service.jar
-	mkdir $(DESTDIR)$(prefix)/tests/http
-	cp -f $(top_builddir)/tests/http/run.sh \
-          $(DESTDIR)$(prefix)/tests/http/
-	mkdir $(DESTDIR)$(prefix)/tests/http/service
-	mkdir $(DESTDIR)$(prefix)/tests/http/service/jar
-	cp -f $(top_builddir)/tests/http/service/jar/cloudi.jar \
-          $(DESTDIR)$(prefix)/tests/http/service/jar/
-	cp -f $(top_builddir)/tests/http/service/jar/service.jar \
-          $(DESTDIR)$(prefix)/tests/http/service/jar/
-	cp -f $(top_builddir)/tests/http/service/service.py \
-          $(DESTDIR)$(prefix)/tests/http/service/
-	cp -f $(top_builddir)/tests/http/service/service.rb \
-          $(DESTDIR)$(prefix)/tests/http/service/
-	mkdir $(DESTDIR)$(prefix)/tests/http/input
-	cp -f $(top_builddir)/tests/http/input/* \
-          $(DESTDIR)$(prefix)/tests/http/input/
-	mkdir $(DESTDIR)$(prefix)/tests/http/input.zip
-	cp -f $(top_builddir)/tests/http/input.zip/* \
-          $(DESTDIR)$(prefix)/tests/http/input.zip/
-	mkdir $(DESTDIR)$(prefix)/tests/http/output
-	cp -f $(top_builddir)/tests/http/output/* \
-          $(DESTDIR)$(prefix)/tests/http/output/
-	mkdir $(DESTDIR)$(prefix)/tests/http/tmp
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http/service/jar"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http/input"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http/input.zip"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http/output"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http/tmp"
+	$(INSTALL_SCRIPT) "$(top_builddir)/tests/http/run.sh" \
+                      "$(DESTDIR)$(prefix)/tests/http/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/cloudi.jar" \
+                    "$(DESTDIR)$(prefix)/tests/http/service/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/service.jar" \
+                    "$(DESTDIR)$(prefix)/tests/http/service/jar/"
+	$(INSTALL_SCRIPT) "$(top_builddir)/tests/http/service/service.py" \
+                      "$(DESTDIR)$(prefix)/tests/http/service/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/service.rb" \
+                    "$(DESTDIR)$(prefix)/tests/http/service/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/input/text" \
+                    "$(DESTDIR)$(prefix)/tests/http/input/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/input.zip/text" \
+                    "$(DESTDIR)$(prefix)/tests/http/input.zip/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http/output/text" \
+                    "$(DESTDIR)$(prefix)/tests/http/output/"
+	rm -f "$(DESTDIR)$(libexecdir)/service.jar"
 
 tests-http_req-install:
-	mkdir $(DESTDIR)$(prefix)/tests/http_req
-	mkdir $(DESTDIR)$(prefix)/tests/http_req/priv
-	mv -f $(DESTDIR)$(bindir)/http_req \
-          $(DESTDIR)$(prefix)/tests/http_req/priv/
-	mkdir $(DESTDIR)$(prefix)/tests/http_req/public_html
-	cp -rf $(top_builddir)/tests/http_req/public_html/* \
-           $(DESTDIR)$(prefix)/tests/http_req/public_html/
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http_req/priv"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/http_req/public_html"
+	$(INSTALL_PROGRAM) "$(DESTDIR)$(bindir)/http_req" \
+                       "$(DESTDIR)$(prefix)/tests/http_req/priv/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/public_html/index.html" \
+                    "$(DESTDIR)$(prefix)/tests/http_req/public_html/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/http_req/public_html/800px-Juliadim2.png" \
+        "$(DESTDIR)$(prefix)/tests/http_req/public_html/"
+	rm -f "$(DESTDIR)$(bindir)/http_req"
 
 api-install:
-	mkdir $(DESTDIR)$(prefix)/api
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api"
 
 api-c-install:
-	mkdir $(DESTDIR)$(prefix)/api/c
-	mkdir $(DESTDIR)$(prefix)/api/c/include
-	mkdir $(DESTDIR)$(prefix)/api/c/lib
-	mv -f $(DESTDIR)$(includedir)/cloudi.h \
-          $(DESTDIR)$(prefix)/api/c/include/
-	mv -f $(DESTDIR)$(libdir)/libcloudi.* \
-          $(DESTDIR)$(prefix)/api/c/lib/
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/c/include"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/c/lib"
+	$(INSTALL_DATA) "$(DESTDIR)$(includedir)/cloudi.h" \
+                    "$(DESTDIR)$(prefix)/api/c/include/"
+	list=`ls "$(DESTDIR)$(libdir)/" | grep 'libcloudi'`; for f in $$list; do \
+        $(INSTALL_DATA) "$(DESTDIR)$(libdir)/$$f" \
+                        "$(DESTDIR)$(prefix)/api/c/lib/"; \
+        rm -f "$(DESTDIR)$(libdir)/$$f"; \
+    done
+	rm -f "$(DESTDIR)$(includedir)/cloudi.h"
 
 api-java-install:
-	mkdir $(DESTDIR)$(prefix)/api/java
-	mv -f $(DESTDIR)$(libexecdir)/cloudi.jar \
-          $(DESTDIR)$(prefix)/api/java
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/java"
+	$(INSTALL_DATA) "$(DESTDIR)$(libexecdir)/cloudi.jar" \
+                    "$(DESTDIR)$(prefix)/api/java/"
+	rm -f "$(DESTDIR)$(libexecdir)/cloudi.jar"
+	rmdir "$(DESTDIR)$(datarootdir)/java"
 
 api-python-install:
-	mkdir $(DESTDIR)$(prefix)/api/python
-	cp -f $(top_builddir)/api/python/erlang.py \
-          $(DESTDIR)$(prefix)/api/python/
-	cp -f $(top_builddir)/api/python/cloudi.py \
-          $(DESTDIR)$(prefix)/api/python/
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/python"
+	$(INSTALL_DATA) "$(top_builddir)/api/python/erlang.py" \
+                    "$(DESTDIR)$(prefix)/api/python/"
+	$(INSTALL_DATA) "$(top_builddir)/api/python/cloudi.py" \
+                    "$(DESTDIR)$(prefix)/api/python/"
 
 api-ruby-install:
-	mkdir $(DESTDIR)$(prefix)/api/ruby
-	cp -f $(top_builddir)/api/ruby/cloudi.rb \
-          $(DESTDIR)$(prefix)/api/ruby/
-	cp -f $(top_builddir)/api/ruby/erlang.rb \
-          $(DESTDIR)$(prefix)/api/ruby/
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/ruby"
+	$(INSTALL_DATA) "$(top_builddir)/api/ruby/cloudi.rb" \
+                    "$(DESTDIR)$(prefix)/api/ruby/"
+	$(INSTALL_DATA) "$(top_builddir)/api/ruby/erlang.rb" \
+                    "$(DESTDIR)$(prefix)/api/ruby/"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
