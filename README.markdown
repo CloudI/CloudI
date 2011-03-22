@@ -62,7 +62,7 @@ Another HTTP test is provided that can be used for load tests
 HTTP server for static files (content is cached and not updated dynamically,
 since it just demonstrates basic cloudi_job_filesystem functionality) that are
 located at src/tests/http_req/public_html/ (access at
-http://127.0.0.1:8080/tests/http_req/).
+[http://127.0.0.1:8080/tests/http_req/](http://127.0.0.1:8080/tests/http_req/)).
 
 CloudI currently supports the following databases:
 
@@ -87,7 +87,6 @@ Build Requirements:
 
 On OSX, to run configure with the OSX ports paths, use:
 CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
-(There are currently problems compiling on OSX, these problems will be fixed soon)
 
 See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme) for basic build information
 
