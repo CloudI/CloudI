@@ -129,6 +129,12 @@ get_v1(#uuid_state{node_id = NodeId,
       ClockSeqLow:8,
       NodeId/binary>>.
 
+get_v1_time(#uuid_state{epoch_seconds = Epoch}) ->
+    Now = {_, _, Micro} = erlang:now(),
+    NowUTC = calendar:now_to_universal_time(Now),
+    NowSecs = calendar:datetime_to_gregorian_seconds(NowUTC),
+    (NowSecs - Epoch) * 1000000 + Micro;
+
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<TimeLow:32, TimeMid:16, TimeHigh:12,
