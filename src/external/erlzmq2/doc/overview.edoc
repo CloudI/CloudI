@@ -1,0 +1,74 @@
+@title NIF based Erlang bindings for the ZeroMQ messaging library.
+@copyright 2011 Yurii Rashkovskii and Evax Sofware
+@author Yurii Rashkovskii <yrashk@gmail.com> [http://rashkovskii.com]
+@author Evax Software <contact@evax.fr> [http://www.evax.fr]
+@reference The <a href="http://www.zeromq.org">ZeroMQ</a> messaging library.
+@doc
+
+<ol>
+<li>{@section Overview}</li>
+<li>{@section Downloading}</li>
+<li>{@section Building}</li>
+<li>{@section Architecture}</li>
+<li>{@section License}</li>
+</ol>
+
+== Overview ==
+
+The erlzmq2 application provides high-performance NIF based Erlang bindings
+for the ZeroMQ messaging library.
+
+== Downloading ==
+
+The erlzmq2 source code can be found on [http://github.com/zeromq/erlzmq2 GitHub]
+
+```
+    $ git clone http://github.com/zeromq/erlzmq2.git
+'''
+
+It is also available on [http://erlagner.org/ Agner]:
+
+```
+    $ agner build erlzmq
+'''
+
+In order to build erlzmq2 against a specific version of ZeroMQ (not 'master'), use this:
+
+```
+    $ ZEROMQ_VERSION=v<VERSION> agner build erlzmq
+'''
+
+== Building ==
+
+Build the code
+```
+    $ make
+'''
+
+If you want to build against a specific version of ZeroMQ (not 'master'), use this:
+
+```
+    $ ZEROMQ_VERSION=v<VERSION> make
+'''
+
+Build the docs
+```
+    $ make docs
+'''
+
+Run the test suite
+```
+    $ make test
+'''
+
+Please note that to behave properly on your system ZeroMQ might require [http://www.zeromq.org/docs:tuning-zeromq some tuning].
+
+== Architecture ==
+
+The bindings use Erlang's [http://www.erlang.org/doc/man/erl_nif.html NIF (native implemented functions)] interface to achieve the best performance. One extra OS thread and one pair of inproc sockets by context are used to simulate blocking recv calls without affecting the Erlang virtual machine's responsiveness.
+
+
+== License ==
+
+The project is released under the MIT license.
+

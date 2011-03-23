@@ -9,6 +9,8 @@ clean-local: rebar
 	rm -f api/python/cloudi.pyc api/python/erlang.pyc
 
 clean-configure: config.log
+	(cd external/zeromq && make clean || exit 0)
+	(cd external/erlzmq2 && ../../rebar clean || exit 0)
 	rm -f aclocal.m4 config.h config.h.in config.h.in~ config.log \
           config.status stamp-h1 \
           config/config.guess config/config.sub config/depcomp \

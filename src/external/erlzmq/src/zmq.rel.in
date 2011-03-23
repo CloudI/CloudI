@@ -1,6 +1,0 @@
-% This release file is not used but we are providing it anyway for completeness
-
-{release, {"@PACKAGE@", "@VERSION@"}, {erts, "@ERLANG_ERTS_VER@"},
-  [{kernel, "@ERLANG_LIB_VER_kernel@"},
-   {stdlib, "@ERLANG_LIB_VER_stdlib@"},
-   {@PACKAGE@, "@VERSION@"}]}.
