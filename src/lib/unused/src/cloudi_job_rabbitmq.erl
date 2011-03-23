@@ -158,12 +158,8 @@ cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
                       #amqp_msg{props = Properties,
                                 payload = Request}),
     F = fun(Response) ->
-        try cloudi_job:return(Dispatcher, Type, Name, Response,
-                              Timeout, TransId, Pid)
-        catch
-            throw:return ->
-                ok
-        end
+        cloudi_job:return_nothrow(Dispatcher, Type, Name, Response,
+                                  Timeout, TransId, Pid)
     end,
     {noreply, State#state{replies = dict:store(TransId, F, Replies)}}.
 
