@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job).
@@ -76,7 +76,8 @@
          recv_async/3,
          return/7,
          return_async/6,
-         return_sync/6]).
+         return_sync/6,
+         return_nothrow/7]).
 
 %% behavior callbacks
 -export([behaviour_info/1]).
@@ -329,12 +330,8 @@ recv_async(Dispatcher, Timeout, TransId)
              TransId :: binary(),
              Pid :: pid()) -> none().
 
-return(Dispatcher, 'send_async', Name, Response, Timeout, TransId, Pid) ->
-    return_async(Dispatcher, Name, Response, Timeout, TransId, Pid),
-    erlang:throw(return);
-
-return(Dispatcher, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
-    return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid),
+return(Dispatcher, Type, Name, Response, Timeout, TransId, Pid) ->
+    return_nothrow(Dispatcher, Type, Name, Response, Timeout, TransId, Pid),
     erlang:throw(return).
 
 -spec return_async(Dispatcher :: pid(),
@@ -362,6 +359,24 @@ return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
          is_binary(TransId), is_pid(Pid), Timeout > 0 ->
     Dispatcher ! {'return_sync', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
+
+-spec return_nothrow(Dispatcher :: pid(),
+                     'send_async' | 'send_sync',
+                     Name :: string(),
+                     Request :: any(),
+                     Timeout :: pos_integer(),
+                     TransId :: binary(),
+                     Pid :: pid()) -> 'ok'.
+
+return_nothrow(Dispatcher, 'send_async', Name, Response,
+               Timeout, TransId, Pid) ->
+    Dispatcher ! {'return_async', Name, Response, Timeout, TransId, Pid},
+    ok;
+
+return_nothrow(Dispatcher, 'send_sync', Name, Response,
+               Timeout, TransId, Pid) ->
+    Dispatcher ! {'return_sync', Name, Response, Timeout, TransId, Pid},
+    ok.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
