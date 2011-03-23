@@ -96,19 +96,18 @@ commit 6c3d1952ec3d5de3cdb2
 Sat Feb 12 14:55:04 PST 2011
 BSD
 
-erlzmq
-------
+erlzmq2
+-------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
-http://github.com/zeromq/erlzmq
-commit ab65e4897fcb9b03cbea
-Tue Feb 15 16:24:30 PST 2011
+https://github.com/zeromq/erlzmq2
+commit c4598252d2235f2fc211
+Wed Mar 23 15:44:08 PDT 2011
 BSD
 
 ZeroMQ
 ------
-ZeroMQ master branch
-http://github.com/zeromq/zeromq2
-commit fbe5d859f461b0deaa60
-Tue Feb 15 16:30:41 PST 2011
+ZeroMQ 2.1.3
+http://download.zeromq.org/zeromq-2.1.3.tar.gz
+Wed Mar 23 16:46:10 PDT 2011
 LGPL
 

@@ -1944,6 +1944,98 @@ ifelse([$4], , , [  rm -fr Test*
 ])dnl
 fi
 rm -fr Test*])
+m4trace:m4/ax_zeromq.m4:54: -1- AC_DEFUN([AX_ZEROMQ], [
+    AC_ARG_WITH([zeromq],
+        [AS_HELP_STRING([--with-zeromq@<:@=ARG@:>@],
+            [use ZeroMQ library from a standard location (ARG=yes),
+             from the specified location (ARG=<path>),
+             or disable it (ARG=no)
+             @<:@ARG=no@:>@ ])],
+            [
+            if test "$withval" = "no"; then
+                want_zeromq="no"
+            elif test "$withval" = "yes"; then
+                want_zeromq="yes"
+                ac_zeromq_path=""
+            else
+                want_zeromq="yes"
+                ac_zeromq_path="$withval"
+            fi
+            ],
+            [want_zeromq="no"])
+
+    if test "x$want_zeromq" = "xyes"; then
+        local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq"
+        if test "x$ac_zeromq_path" != "x"; then
+            ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+        elif test -f "$local_zeromq_path/include/zmq.h"; then
+            ac_zeromq_path="$local_zeromq_path"
+            ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+        else
+            AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
+            if test "x$zeromq_path_bin_queue" != "x"; then
+                zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
+                ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
+                ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+            else
+                ZEROMQ_CFLAGS=""
+            fi
+        fi
+        AC_MSG_CHECKING(for ZeroMQ)
+
+        CFLAGS_SAVED="$CFLAGS"
+        CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
+        export CFLAGS
+
+        AC_LANG_PUSH(C)
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+            @%:@include <zmq.h>]], [[
+            #if ZMQ_VERSION_MAJOR >= 2
+            /* ok */
+            #else
+            #error ZeroMQ version is too old
+            #endif
+            ]])],[
+            AC_MSG_RESULT($ac_zeromq_path)
+            build_zeromq="no"],[
+            build_zeromq="yes"])
+        AC_LANG_POP([C])
+        if test "x$build_zeromq" = "xyes"; then
+            AC_CONFIG_COMMANDS([zeromq],
+                [(cd external/zeromq/ && \
+                  ./configure --prefix=$PREFIX --enable-static \
+                              --with-pic && \
+                  make && make install && \
+                  echo "ZeroMQ locally installed" || exit 1)],
+                [PREFIX=$local_zeromq_path])
+
+            ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+            ac_zeromq_path="$local_zeromq_path"
+            AC_MSG_RESULT(building)
+        fi
+        AC_SUBST(ZEROMQ_CFLAGS)
+        CFLAGS="$CFLAGS_SAVED"
+
+        ZEROMQ_ROOT_DIR="$ac_zeromq_path"
+        AC_SUBST(ZEROMQ_ROOT_DIR)
+    fi
+])
+m4trace:m4/ax_zeromq_erlzmq.m4:51: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
+    
+    if test "x$ZEROMQ_ROOT_DIR" = "x"; then
+        dnl ZeroMQ will not be used
+        ZEROMQ_ROOT_DIR=""
+    elif test "x$ERLANG_ROOT_DIR" = "x"; then
+        AC_MSG_ERROR([Erlang location undefined])
+    else
+        AC_CONFIG_COMMANDS([zeromq_erlzmq],
+            [(cd external/erlzmq2/ && \
+              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
+              echo "ZeroMQ erlzmq built" || exit 1)],
+            [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
+             ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR])
+    fi
+])
 m4trace:m4/libtool.m4:67: -1- AC_DEFUN([LT_INIT], [AC_PREREQ([2.58])dnl We use AC_INCLUDES_DEFAULT
 AC_BEFORE([$0], [LT_LANG])dnl
 AC_BEFORE([$0], [LT_OUTPUT])dnl
@@ -3383,13 +3475,18 @@ configure.ac:57: the top level])
 m4trace:configure.ac:57: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
 m4trace:configure.ac:57: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
 m4trace:configure.ac:58: -1- m4_pattern_allow([^ESCRIPT$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:94: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:94: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:94: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:94: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:94: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:94: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:94: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:69: -1- AX_ZEROMQ
+m4trace:configure.ac:69: -1- m4_pattern_allow([^zeromq_path_bin_queue$])
+m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_CFLAGS$])
+m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_ROOT_DIR$])
+m4trace:configure.ac:70: -1- AX_ZEROMQ_ERLZMQ
+m4trace:configure.ac:101: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:101: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:101: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:101: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:101: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:101: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:101: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:101: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:101: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:101: -1- _LT_PROG_LTMAIN

@@ -56,11 +56,18 @@ AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
+
+# rebar dependency
 AC_CONFIG_COMMANDS([rebar],
-                   [(cd external/rebar/; 
-                     $ESCRIPT bootstrap &&
-                     mv ./rebar ../../ || exit 1)],
+                   [(cd external/rebar/ && \
+                     $ESCRIPT bootstrap && \
+                     mv ./rebar ../../ && \
+                     echo "Rebar built" || exit 1)],
                    [ESCRIPT=$ESCRIPT])
+
+# ZeroMQ dependency
+AX_ZEROMQ
+AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([cloudi.conf
                  lib/cloudi/src/cloudi.app.src
