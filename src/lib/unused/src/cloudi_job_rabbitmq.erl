@@ -202,7 +202,7 @@ prefix2queues([$/ | L]) ->
      erlang:iolist_to_binary([RabbitMQ, ".reply"])}.
 
 name2routingkey([$/ | L]) ->
-    list_to_binary(name2rabbitmq(L, "")).
+    erlang:list_to_binary(name2rabbitmq(L, "")).
 
 name2rabbitmq([], Out) ->
     lists:reverse(Out);
