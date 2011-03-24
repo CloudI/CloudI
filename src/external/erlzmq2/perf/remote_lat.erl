@@ -5,7 +5,7 @@ main([ConnectTo,MessageSizeStr,RoundtripCountStr]) ->
     {MessageSize, _} = string:to_integer(MessageSizeStr),
     {RoundtripCount, _} = string:to_integer(RoundtripCountStr),
     {ok, Context} = erlzmq:context(),
-    {ok, Socket} = erlzmq:socket(Context, req),
+    {ok, Socket} = erlzmq:socket(Context, [req, {active, false}]),
     ok = erlzmq:connect(Socket, ConnectTo),
     Msg = list_to_binary(lists:duplicate(MessageSize, 0)),
     Do = fun() ->

@@ -6,7 +6,7 @@ main([BindTo,MessageSizeStr,MessageCountStr]) ->
     {MessageSize, _} = string:to_integer(MessageSizeStr),
     {MessageCount, _} = string:to_integer(MessageCountStr),
     {ok, Context} = erlzmq:context(),
-    {ok, Socket} = erlzmq:socket(Context, sub),
+    {ok, Socket} = erlzmq:socket(Context, [sub, {active, false}]),
     ok = erlzmq:setsockopt(Socket,subscribe, <<>>),
     ok = erlzmq:bind(Socket, BindTo),
     erlzmq:recv(Socket),
