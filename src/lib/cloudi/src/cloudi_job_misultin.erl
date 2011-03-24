@@ -62,6 +62,7 @@
 
 -include("cloudi_logger.hrl").
 
+-define(DEFAULT_INTERFACE,      {0, 0, 0, 0}). % ip address
 -define(DEFAULT_PORT,                   8080).
 -define(DEFAULT_BACKLOG,                 128).
 -define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds
@@ -86,6 +87,7 @@
 
 cloudi_job_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
+        {ip,              ?DEFAULT_INTERFACE},
         {port,            ?DEFAULT_PORT},
         {backlog,         ?DEFAULT_BACKLOG},
         {recv_timeout,    ?DEFAULT_RECV_TIMEOUT},
@@ -94,13 +96,14 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {ws_autoexit,     ?DEFAULT_WS_AUTOEXIT},
         {output,          ?DEFAULT_OUTPUT},
         {content_type,    ?DEFAULT_CONTENT_TYPE}],
-    [Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
+    [Interface, Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
      OutputType, DefaultContentType] =
         proplists2:take_values(Defaults, Args),
     Loop = fun(HttpRequest) ->
         handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher)
     end,
-    case misultin:start_link([{port, Port},
+    case misultin:start_link([{ip, Interface},
+                              {port, Port},
                               {backlog, Backlog},
                               {recv_timeout, RecvTimeout},
                               {ssl, SSL},

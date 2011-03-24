@@ -1,3 +1,26 @@
+%% -*- coding:utf-8;Mode:erlang;tab-width:4;c-basic-offset:4;indent-tabs-mode:nil -*-
+%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%%
+%% Copyright (c) 2011 Yurii Rashkovskii, Michael Truog, and Evax Software
+%% 
+%% Permission is hereby granted, free of charge, to any person obtaining a copy
+%% of this software and associated documentation files (the "Software"), to deal
+%% in the Software without restriction, including without limitation the rights
+%% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+%% copies of the Software, and to permit persons to whom the Software is
+%% furnished to do so, subject to the following conditions:
+%% 
+%% The above copyright notice and this permission notice shall be included in
+%% all copies or substantial portions of the Software.
+%% 
+%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+%% THE SOFTWARE.
+
 -module(erlzmq).
 %% @headerfile "erlzmq.hrl"
 -include_lib("erlzmq.hrl").
@@ -42,11 +65,25 @@ context(Threads) when is_integer(Threads) ->
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_socket">zmq_socket</a>.</i>
 %% @end
-%% @spec socket(erlzmq_context(), erlzmq_socket_type()) -> {ok, erlzmq_socket()} | erlzmq_error()
--spec socket(Context :: erlzmq_context(), Type :: erlzmq_socket_type()) -> {ok, erlzmq_socket()} | erlzmq_error().
+%% @spec socket(erlzmq_context(), erlzmq_socket_type() | list(erlzmq_socket_type() | {active, boolean()})) -> {ok, erlzmq_socket()} | erlzmq_error()
+-spec socket(Context :: erlzmq_context(), Type :: erlzmq_socket_type() | list(erlzmq_socket_type() | {active, boolean()})) -> {ok, erlzmq_socket()} | erlzmq_error().
 
-socket(Context, Type) ->
-    erlzmq_nif:socket(Context, socket_type(Type)).
+socket(Context, Type) when is_atom(Type) ->
+    socket(Context, [Type]);
+socket(Context, [H | _] = L) ->
+    case lists:keytake(active, 1, L) of
+        {value, {active, Active}, [Type]} when Active =:= true ->
+            true = (Type =/= pub) and (Type =/= push) and (Type =/= xpub),
+            erlzmq_nif:socket(Context, socket_type(Type), 1);
+        {value, {active, Active}, [Type]} when Active =:= false ->
+            erlzmq_nif:socket(Context, socket_type(Type), 0);
+        false when H =:= pub; H =:= push; H =:= xpub ->
+            % active is not used for these socket types
+            erlzmq_nif:socket(Context, socket_type(H), 0);
+        false ->
+            % active is true by default, like normal Erlang sockets
+            erlzmq_nif:socket(Context, socket_type(H), 1)
+    end.
 
 %% @doc Accept connections on a socket.
 %% <br />
@@ -91,8 +128,8 @@ send(Socket, Binary, Flags) when is_list(Flags) ->
             receive
                 {Ref, ok} ->
                     ok;
-                {Ref, error, Error} ->
-                    {error, Error}
+                {Ref, {error, _} = Error} ->
+                    Error
             end;
         Result ->
             erlzmq_result(Result)
@@ -275,10 +312,9 @@ option_name(reconnect_ivl_max) ->
 
 
 -spec erlzmq_result(ok) -> ok;
-                 ({ok, Value :: term()}) -> Value :: term();
-                 ({error, Value :: atom()}) -> Value :: atom();
-                 ({error, integer()}) -> {error, erlzmq_error_type()};
-                 ({error, erlzmq, integer()}) -> {error, erlzmq_error_type()}.
+                   ({ok, Value :: term()}) -> Value :: term();
+                   ({error, Value :: atom()}) -> Value :: atom();
+                   ({error, integer()}) -> {error, erlzmq_error_type()}.
 
 erlzmq_result(ok) ->
     ok;
@@ -286,154 +322,5 @@ erlzmq_result({ok, _} = Result) ->
     Result;
 erlzmq_result({error, Code} = Error) when is_atom(Code) ->
     Error;
-erlzmq_result({error, Code}) when is_integer(Code) andalso Code > 156384712 ->
-    erlzmq_result({error, erlzmq, Code - 156384712});
-erlzmq_result({error, erlzmq, 1}) ->
-    {error, enotsup};
-erlzmq_result({error, erlzmq, 2}) ->
-    {error, eprotonosupport};
-erlzmq_result({error, erlzmq, 3}) ->
-    {error, enobufs};
-erlzmq_result({error, erlzmq, 4}) ->
-    {error, enetdown};
-erlzmq_result({error, erlzmq, 5}) ->
-    {error, eaddrinuse};
-erlzmq_result({error, erlzmq, 6}) ->
-    {error, eaddrnotavail};
-erlzmq_result({error, erlzmq, 7}) ->
-    {error, econnrefused};
-erlzmq_result({error, erlzmq, 8}) ->
-    {error, einprogress};
-erlzmq_result({error, erlzmq, 51}) ->
-    {error, efsm};
-erlzmq_result({error, erlzmq, 52}) ->
-    {error, enocompatproto};
-erlzmq_result({error, erlzmq, 53}) ->
-    {error, eterm};
-erlzmq_result({error, erlzmq, 54}) ->
-    {error, emthread};
-
-%% errno
-erlzmq_result({error, 1}) ->
-    {error, eperm};
-erlzmq_result({error, 2}) ->
-    {error, enoent};
-erlzmq_result({error, 3}) ->
-    {error, esrch};
-erlzmq_result({error, 4}) ->
-    {error, eintr};
-erlzmq_result({error, 5}) ->
-    {error, eio};
-erlzmq_result({error, 7}) ->
-    {error, enxio};
-erlzmq_result({error, 8}) ->
-    {error, eperm};
-erlzmq_result({error, 9}) ->
-    {error, ebadf};
-erlzmq_result({error, 10}) ->
-    {error, echild};
-erlzmq_result({error, 11}) ->
-    {error, edeadlk};
-erlzmq_result({error, 12}) ->
-    {error, enomem};
-erlzmq_result({error, 13}) ->
-    {error, eacces};
-erlzmq_result({error, 14}) ->
-    {error, efault};
-erlzmq_result({error, 15}) ->
-    {error, enotblk};
-erlzmq_result({error, 16}) ->
-    {error, ebusy};
-erlzmq_result({error, 17}) ->
-    {error, eexist};
-erlzmq_result({error, 18}) ->
-    {error, exdev};
-erlzmq_result({error, 19}) ->
-    {error, enodev};
-erlzmq_result({error, 20}) ->
-    {error, enotdir};
-erlzmq_result({error, 21}) ->
-    {error, eisdir};
-erlzmq_result({error, 22}) ->
-    {error, einval};
-erlzmq_result({error, 23}) ->
-    {error, enfile};
-erlzmq_result({error, 24}) ->
-    {error, emfile};
-erlzmq_result({error, 25}) ->
-    {error, enotty};
-erlzmq_result({error, 26}) ->
-    {error, etxtbsy};
-erlzmq_result({error, 27}) ->
-    {error, efbig};
-erlzmq_result({error, 28}) ->
-    {error, enospc};
-erlzmq_result({error, 29}) ->
-    {error, espipe};
-erlzmq_result({error, 30}) ->
-    {error, erofs};
-erlzmq_result({error, 31}) ->
-    {error, emlink};
-erlzmq_result({error, 32}) ->
-    {error, epipe};
-erlzmq_result({error, 35}) ->
-    {error, eagain};
-erlzmq_result({error, 36}) ->
-    {error, einprogress};
-erlzmq_result({error, 37}) ->
-    {error, ealready};
-erlzmq_result({error, 38}) ->
-    {error, enotsock};
-erlzmq_result({error, 39}) ->
-    {error, edestaddrreq};
-erlzmq_result({error, 40}) ->
-    {error, emsgsize};
-erlzmq_result({error, 41}) ->
-    {error, eprototype};
-erlzmq_result({error, 42}) ->
-    {error, enoprotoopt};
-erlzmq_result({error, 43}) ->
-    {error, eprotonosupport};
-erlzmq_result({error, 44}) ->
-    {error, esocktnosupport};
-erlzmq_result({error, 45}) ->
-    {error, enotsup};
-erlzmq_result({error, 46}) ->
-    {error, epfnosupport};
-erlzmq_result({error, 47}) ->
-    {error, eafnosupport};
-erlzmq_result({error, 48}) ->
-    {error, eaddrinuse};
-erlzmq_result({error, 49}) ->
-    {error, eaddrnotavail};
-erlzmq_result({error, 50}) ->
-    {error, enetdown};
-erlzmq_result({error, 51}) ->
-    {error, enetunreach};
-erlzmq_result({error, 52}) ->
-    {error, enetreset};
-erlzmq_result({error, 53}) ->
-    {error, econnaborted};
-erlzmq_result({error, 54}) ->
-    {error, econnreset};
-erlzmq_result({error, 55}) ->
-    {error, enobufs};
-erlzmq_result({error, 56}) ->
-    {error, eisconn};
-erlzmq_result({error, 57}) ->
-    {error, enotconn};
-erlzmq_result({error, 58}) ->
-    {error, eshutdown};
-erlzmq_result({error, 59}) ->
-    {error, etoomanyrefs};
-erlzmq_result({error, 60}) ->
-    {error, etimedout};
-erlzmq_result({error, 61}) ->
-    {error, econnrefused};
-erlzmq_result({error, 62}) ->
-    {error, eloop};
-erlzmq_result({error, 63}) ->
-    {error, enametoolong};
-
-erlzmq_result({error, N}) ->
-    {error, {unknown, N}}.
+erlzmq_result({error, Code} = Error) when is_integer(Code) ->
+    Error.

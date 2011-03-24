@@ -1,7 +1,7 @@
 %% @hidden
 -module(erlzmq_nif).
 
--export([context/1, socket/2, bind/2, connect/2, send/3, recv/2, setsockopt/3, getsockopt/2, close/1, term/1]).
+-export([context/1, socket/3, bind/2, connect/2, send/3, recv/2, setsockopt/3, getsockopt/2, close/1, term/1]).
 
 -on_load(init/0).
 
@@ -20,7 +20,7 @@ init() ->
 context(_Threads) ->
     erlang:nif_error(not_loaded).
 
-socket(_Context, _Type) ->
+socket(_Context, _Type, _Active) ->
     erlang:nif_error(not_loaded).
 
 bind(_Socket, _Endpoint) ->

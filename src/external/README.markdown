@@ -99,9 +99,9 @@ BSD
 erlzmq2
 -------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
-https://github.com/zeromq/erlzmq2
-commit c4598252d2235f2fc211
-Wed Mar 23 15:44:08 PDT 2011
+https://github.com/okeuday/erlzmq2
+commit df140b81bcfabb6a0aa4
+Thu Mar 24 11:36:26 PDT 2011
 BSD
 
 ZeroMQ
