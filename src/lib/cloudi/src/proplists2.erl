@@ -44,18 +44,21 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(proplists2).
 -author('mjtruog [at] gmail (dot) com').
 
 -export([take_value/3,
-         take_values/2]).
+         take_values/2,
+         partition/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-type proplist() :: list({atom(), any()}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -65,8 +68,8 @@
 %%-------------------------------------------------------------------------
 
 -spec take_value(Key :: atom(),
-                 List :: list({atom(), any()}),
-                 Default :: any()) -> {any(), list({atom(), any()})}.
+                 List :: proplist(),
+                 Default :: any()) -> {any(), proplist()}.
 
 take_value(Key, List, Default)
     when is_atom(Key), is_list(List) ->
@@ -84,8 +87,8 @@ take_value(Key, List, Default)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec take_values(DefaultList :: list({atom(), any()}),
-                  List :: list({atom(), any()})) -> list().
+-spec take_values(DefaultList :: proplist(),
+                  List :: proplist()) -> list().
 
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
@@ -101,4 +104,17 @@ take_values(Result, [{Key, Default} | DefaultList], List)
         {value, {Key, Value}, RemainingList} ->
             take_values([Value | Result], DefaultList, RemainingList)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Partition the proplist based on a key.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec partition(Key :: atom(),
+                List :: proplist()) -> {proplist(), proplist()}.
+
+partition(Key, List)
+    when is_atom(Key), is_list(List) ->
+    lists:partition(fun({K, _}) -> K == Key end, List).
 

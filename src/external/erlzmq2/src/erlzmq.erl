@@ -93,7 +93,9 @@ socket(Context, [H | _] = L) ->
 %% @spec bind(erlzmq_socket(), erlzmq_endpoint()) -> ok | erlzmq_error()
 -spec bind(Socket :: erlzmq_socket(), Endpoint :: erlzmq_endpoint()) -> ok | erlzmq_error().
 
-bind(Socket, Endpoint) ->
+bind(Socket, Endpoint) when is_list(Endpoint) ->
+    bind(Socket, erlang:list_to_binary(Endpoint));
+bind(Socket, Endpoint) when is_binary(Endpoint) ->
     erlzmq_result(erlzmq_nif:bind(Socket, Endpoint)).
 
 %% @doc Connect a socket.
@@ -104,14 +106,16 @@ bind(Socket, Endpoint) ->
 %% @spec connect(erlzmq_socket(), erlzmq_endpoint()) -> ok | erlzmq_error()
 -spec connect(Socket :: erlzmq_socket(), Endpoint :: erlzmq_endpoint()) -> ok | erlzmq_error().
 
-connect(Socket, Endpoint) ->
+connect(Socket, Endpoint) when is_list(Endpoint) ->
+    connect(Socket, erlang:list_to_binary(Endpoint));
+connect(Socket, Endpoint) when is_binary(Endpoint) ->
     erlzmq_result(erlzmq_nif:connect(Socket, Endpoint)).
 
 %% @equiv send(Socket, Msg, [])
 %% @spec send(erlzmq_socket(), erlzmq_data()) -> ok | erlzmq_error()
 -spec send(Socket :: erlzmq_socket(), Data :: erlzmq_data()) -> ok | erlzmq_error().
 
-send(Socket, Binary) ->
+send(Socket, Binary) when is_binary(Binary) ->
     send(Socket, Binary, []).
 
 %% @doc Send a message on a socket.
@@ -122,7 +126,7 @@ send(Socket, Binary) ->
 %% @spec send(ezma_socket(), erlzmq_data(), erlzmq_send_recv_flags()) -> ok | erlzmq_error()
 -spec send(Socket :: erlzmq_socket(), Data :: erlzmq_data(), Flags :: erlzmq_send_recv_flags()) -> ok | erlzmq_error().
 
-send(Socket, Binary, Flags) when is_list(Flags) ->
+send(Socket, Binary, Flags) when is_binary(Binary), is_list(Flags) ->
     case erlzmq_nif:send(Socket, Binary, sendrecv_flags(Flags)) of
         Ref when is_reference(Ref) ->
             receive
@@ -172,7 +176,9 @@ recv(Socket, Flags) when is_list(Flags) ->
 %% @spec setsockopt(erlzmq_socket(), erlzmq_sockopt(), erlzmq_sockopt_value()) -> ok | erlzmq_error()
 -spec setsockopt(Socket :: erlzmq_socket(), Name :: erlzmq_sockopt(), erlzmq_sockopt_value()) -> ok | erlzmq_error().
 
-setsockopt(Socket, Name, Value) ->
+setsockopt(Socket, Name, Value) when is_list(Value) ->
+    setsockopt(Socket, Name, erlang:list_to_binary(Value));
+setsockopt(Socket, Name, Value) when is_atom(Name) ->
     erlzmq_result(erlzmq_nif:setsockopt(Socket, option_name(Name), Value)).
 
 %% @doc Get an {@link erlzmq_sockopt(). option} associated with a socket.
@@ -183,7 +189,7 @@ setsockopt(Socket, Name, Value) ->
 %% @spec getsockopt(erlzmq_socket(), erlzmq_sockopt()) -> {ok, erlzmq_sockopt_value()} | erlzmq_error()
 -spec getsockopt(Socket :: erlzmq_socket(), Name :: erlzmq_sockopt()) -> {ok, erlzmq_sockopt_value()} | erlzmq_error().
 
-getsockopt(Socket, Name) ->
+getsockopt(Socket, Name) when is_atom(Name) ->
     erlzmq_result(erlzmq_nif:getsockopt(Socket, option_name(Name))).
 
 

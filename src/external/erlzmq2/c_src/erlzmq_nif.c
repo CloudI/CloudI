@@ -596,8 +596,8 @@ static void * polling_thread(void * handle)
 {
   erlzmq_context_t * ctx = (erlzmq_context_t *) handle;
   ErlNifEnv * final_env = enif_alloc_env();
-  ERL_NIF_TERM final_ref;
-  ERL_NIF_TERM final_pid;
+  ERL_NIF_TERM final_ref = enif_make_ref(final_env);
+  ERL_NIF_TERM final_pid = enif_make_ref(final_env);
 
   enif_keep_resource(ctx);
   struct requests_head * requests_queue;

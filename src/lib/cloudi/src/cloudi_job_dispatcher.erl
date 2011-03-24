@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_dispatcher).
@@ -179,6 +179,28 @@ handle_call({'send_async', Name, Request, Timeout, Pid}, _,
     Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
 
+handle_call({'send_async_active', Name, Request}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'send_async_active', Name, Request, TimeoutAsync}, Client,
+                State);
+
+handle_call({'send_async_active', Name, Request, Timeout}, Client,
+            #state{dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            handle_send_async_active(Name, Request, Timeout, Client, State);
+        false ->
+            {reply, {error, timeout}, State}
+    end;
+
+handle_call({'send_async_active', Name, Request, Timeout, Pid}, _,
+            #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+    {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
+                                                           TransId, State)};
+
 handle_call({'send_sync', Name, Request}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'send_sync', Name, Request, TimeoutSync}, Client, State);
@@ -306,6 +328,9 @@ handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
 handle_info({'send_async', Name, Request, Timeout, Client}, State) ->
     handle_send_async(Name, Request, Timeout, Client, State);
 
+handle_info({'send_async_active', Name, Request, Timeout, Client}, State) ->
+    handle_send_async_active(Name, Request, Timeout, Client, State);
+
 handle_info({'send_sync', Name, Request, Timeout, Client}, State) ->
     handle_send_sync(Name, Request, Timeout, Client, State);
 
@@ -399,17 +424,25 @@ handle_info({'recv_async', Timeout, TransId, Client},
             end
     end;
 
-handle_info({'return_async', _Name, Response, Timeout, TransId, Pid},
-            State) ->
+handle_info({'return_async', Name, Response, Timeout, TransId, Pid},
+            #state{job = Job} = State) ->
     true = Pid == self(),
     case send_timeout_check(TransId, State) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
-        {ok, Tref} when Response == <<>> ->
+        {ok, {active, Tref}} when Response == <<>> ->
+            erlang:cancel_timer(Tref),
+            Job ! {'timeout_async_active', TransId},
+            {noreply, send_timeout_end(TransId, State)};
+        {ok, {active, Tref}} ->
+            erlang:cancel_timer(Tref),
+            Job ! {'return_async_active', Name, Response, Timeout, TransId},
+            {noreply, send_timeout_end(TransId, State)};
+        {ok, {passive, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
             {noreply, send_timeout_end(TransId, State)};
-        {ok, Tref} ->
+        {ok, {passive, Tref}} ->
             erlang:cancel_timer(Tref),
             {noreply,
              recv_async_timeout_start(Response, Timeout, TransId,
@@ -422,13 +455,16 @@ handle_info({'return_sync', _Name, _Response, _Timeout, _TransId, _Pid},
     {noreply, State};
 
 handle_info({'send_async_timeout', TransId},
-            State) ->
+            #state{job = Job} = State) ->
     case send_timeout_check(TransId, State) of
         error ->
             % should never happen, timer should have been cancelled
             % if the send_async already returned
             %XXX
             {noreply, State};
+        {ok, {active, _}} ->
+            Job ! {'timeout_async_active', TransId},
+            {noreply, send_timeout_end(TransId, State)};
         {ok, _} ->
             {noreply, send_timeout_end(TransId, State)}
     end;
@@ -469,6 +505,26 @@ handle_send_async(Name, Request, Timeout, {Exclude, _} = Client,
             Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
+    end.
+
+handle_send_async_active(Name, Request, Timeout, {Exclude, _} = Client,
+                         #state{uuid_generator = UUID,
+                                dest_refresh = DestRefresh,
+                                list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Exclude, Groups) of
+        {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
+            erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
+                              {'send_async_active', Name, Request,
+                               Timeout - ?SEND_ASYNC_INTERVAL, Client}),
+            {noreply, State};
+        {error, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        Pid ->
+            TransId = uuid:get_v1(UUID),
+            Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+            gen_server:reply(Client, {ok, TransId}),
+            {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
 
 handle_send_sync(Name, Request, Timeout, {Exclude, _} = Client,
@@ -635,7 +691,13 @@ send_async_timeout_start(Timeout, TransId,
                          #state{send_timeouts = Ids} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     Tref = erlang:send_after(Timeout, self(), {'send_async_timeout', TransId}),
-    State#state{send_timeouts = dict:store(TransId, Tref, Ids)}.
+    State#state{send_timeouts = dict:store(TransId, {passive, Tref}, Ids)}.
+
+send_async_active_timeout_start(Timeout, TransId,
+                                #state{send_timeouts = Ids} = State)
+    when is_integer(Timeout), is_binary(TransId) ->
+    Tref = erlang:send_after(Timeout, self(), {'send_async_timeout', TransId}),
+    State#state{send_timeouts = dict:store(TransId, {active, Tref}, Ids)}.
 
 send_timeout_check(TransId, #state{send_timeouts = Ids})
     when is_binary(TransId) ->

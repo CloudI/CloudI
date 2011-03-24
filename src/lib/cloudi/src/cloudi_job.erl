@@ -65,6 +65,12 @@
          send_async/3,
          send_async/4,
          send_async/5,
+         send_async_active/3,
+         send_async_active/4,
+         send_async_active/5,
+         send_async_passive/3,
+         send_async_passive/4,
+         send_async_passive/5,
          send_sync/3,
          send_sync/4,
          send_sync/5,
@@ -207,6 +213,73 @@ send_async(Dispatcher, Name, Request, Timeout, Pid)
          Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
     gen_server:call(Dispatcher, {'send_async', Name, Request,
                                  Timeout - ?TIMEOUT_DELTA, Pid}, Timeout).
+
+-spec send_async_active(Dispatcher :: pid(),
+                        Name :: string(),
+                        Request :: any()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_active(Dispatcher, Name, Request)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name, Request}, infinity).
+
+-spec send_async_active(Dispatcher :: pid(),
+                        Name :: string(),
+                        Request :: any(),
+                        Timeout :: pos_integer()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_active(Dispatcher, Name, Request, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'send_async_active', Name, Request,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+-spec send_async_active(Dispatcher :: pid(),
+                        Name :: string(),
+                        Request :: any(),
+                        Timeout :: pos_integer(),
+                        Pid :: pid()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_active(Dispatcher, Name, Request, Timeout, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name, Request,
+                                 Timeout - ?TIMEOUT_DELTA, Pid}, Timeout).
+
+-spec send_async_passive(Dispatcher :: pid(),
+                         Name :: string(),
+                         Request :: any()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_passive(Dispatcher, Name, Request) ->
+    send_async(Dispatcher, Name, Request).
+
+-spec send_async_passive(Dispatcher :: pid(),
+                         Name :: string(),
+                         Request :: any(),
+                         Timeout :: pos_integer()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_passive(Dispatcher, Name, Request, Timeout) ->
+    send_async(Dispatcher, Name, Request, Timeout).
+
+-spec send_async_passive(Dispatcher :: pid(),
+                         Name :: string(),
+                         Request :: any(),
+                         Timeout :: pos_integer(),
+                         Pid :: pid()) ->
+    {'ok', binary()} |
+    {'error', atom()}.
+
+send_async_passive(Dispatcher, Name, Request, Timeout, Pid) ->
+    send_async(Dispatcher, Name, Request, Timeout, Pid).
 
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),

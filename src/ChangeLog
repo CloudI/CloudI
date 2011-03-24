@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * ZeroMQ autoconf integration to provide erlzmq2
+    * Add cloudi_job_zeromq service for ZeroMQ bridge
+    * Add send_async_active API calls to Erlang CloudI API
+      (with send_async_passive == send_async) to avoid blocking
+
 2011-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix installation problems
