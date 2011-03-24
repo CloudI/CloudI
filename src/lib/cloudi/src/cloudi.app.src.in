@@ -21,6 +21,7 @@
         cloudi_job_sup,
         cloudi_job_timers,
         cloudi_job_work_manager,
+        cloudi_job_zeromq,
         cloudi_logger,
         cloudi_nodes,
         cloudi_os_spawn,
