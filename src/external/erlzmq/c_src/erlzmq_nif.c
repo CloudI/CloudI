@@ -38,6 +38,7 @@ typedef struct erlzmq_context {
   void * ipc_socket;
   char * ipc_socket_name;
   int running;
+  int64_t socket_index;
   ErlNifCond * cond;
   ErlNifMutex * mutex;
   ErlNifTid polling_tid;
@@ -49,6 +50,7 @@ typedef struct erlzmq_context {
 
 typedef struct erlzmq_socket {
   erlzmq_context_t * context;
+  int64_t socket_index;
   void * socket_zmq;
   int active;
 } erlzmq_socket_t;
@@ -121,6 +123,7 @@ NIF(erlzmq_nif_context)
   zmq_bind(handle->ipc_socket,socket_id);
 
   handle->running = 0;
+  handle->socket_index = 1;
   handle->mutex = enif_mutex_create("erlzmq_context_t_mutex");
   handle->cond = enif_cond_create("erlzmq_context_t_cond");
 
@@ -174,12 +177,15 @@ NIF(erlzmq_nif_socket)
                                                  sizeof(erlzmq_socket_t));
 
   handle->context = ctx;
+  handle->socket_index = ctx->socket_index++;
   handle->socket_zmq = zmq_socket(ctx->context_zmq, socket_type);
   handle->active = active;
 
-  ERL_NIF_TERM result = enif_make_resource(env, handle);
+  ERL_NIF_TERM socket =
+    enif_make_tuple2(env, enif_make_uint64(env, handle->socket_index),
+                     enif_make_resource(env, handle));
 
-  return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), socket);
 }
 
 NIF(erlzmq_nif_bind)
@@ -647,10 +653,14 @@ static void * polling_thread(void * handle)
         zmq_msg_close(&msg);
 
         if (r->socket->active == ERLZMQ_ACTIVE_ON) {
+          ERL_NIF_TERM socket =
+            enif_make_tuple2(r->env,
+                             enif_make_uint64(r->env, r->socket->socket_index),
+                             enif_make_resource(r->env, r->socket));
           enif_send(NULL, &r->pid, r->env,
                     enif_make_tuple3(r->env,
                                      enif_make_atom(r->env, "zmq"),
-                                     enif_make_resource(r->env, r->socket),
+                                     socket,
                                      enif_make_binary(r->env, &binary)));
         }
         else {
