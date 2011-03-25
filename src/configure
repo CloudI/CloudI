@@ -746,6 +746,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+ZEROMQ_ERLZMQ_APPCONF
+ZEROMQ_ERLZMQ_RELTOOL
 ZEROMQ_ROOT_DIR
 ZEROMQ_CFLAGS
 zeromq_path_bin_queue
@@ -5161,13 +5163,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:5164: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:5166: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5167: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:5169: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5170: output\"" >&5)
+  (eval echo "\"\$as_me:5172: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -6373,7 +6375,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6376 "configure"' > conftest.$ac_ext
+  echo '#line 6378 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8430,11 +8432,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8433: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8435: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8437: \$? = $ac_status" >&5
+   echo "$as_me:8439: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8769,11 +8771,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8772: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8774: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8776: \$? = $ac_status" >&5
+   echo "$as_me:8778: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8874,11 +8876,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8877: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8879: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8881: \$? = $ac_status" >&5
+   echo "$as_me:8883: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8929,11 +8931,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8932: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8934: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8936: \$? = $ac_status" >&5
+   echo "$as_me:8938: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -11313,7 +11315,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11316 "configure"
+#line 11318 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11409,7 +11411,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11412 "configure"
+#line 11414 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13365,11 +13367,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13368: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13370: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13372: \$? = $ac_status" >&5
+   echo "$as_me:13374: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -13464,11 +13466,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13467: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13469: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13471: \$? = $ac_status" >&5
+   echo "$as_me:13473: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -13516,11 +13518,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13519: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13521: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13523: \$? = $ac_status" >&5
+   echo "$as_me:13525: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -15474,7 +15476,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 15477 "configure" */
+/* #line 15479 "configure" */
 public class Test {
 }
 EOF
@@ -15732,7 +15734,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 15735 "configure" */
+/* #line 15737 "configure" */
 public class Test {
 }
 EOF
@@ -15766,7 +15768,7 @@ JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 TEST=Test
 cat << \EOF > $JAVA_TEST
-/* [#]line 15769 "configure" */
+/* [#]line 15771 "configure" */
 public class Test {
 public static void main (String args[]) {
         System.exit (0);
@@ -15949,7 +15951,7 @@ else
 
 
 cat << \EOF > Test.java
-/* #line 15952 "configure" */
+/* #line 15954 "configure" */
 import java.nio.ByteBuffer;
 public class Test {
 
@@ -16002,7 +16004,7 @@ else
 
 
 cat << \EOF > Test.java
-/* #line 16005 "configure" */
+/* #line 16007 "configure" */
 import java.lang.reflect.Constructor;
 public class Test {
 
@@ -17140,16 +17142,21 @@ $as_echo "building" >&6; }
 
 
     if test "x$ZEROMQ_ROOT_DIR" = "x"; then
-                ZEROMQ_ROOT_DIR=""
+                ZEROMQ_ERLZMQ_RELTOOL=""
+        ZEROMQ_ERLZMQ_APPCONF=""
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         as_fn_error "Erlang location undefined" "$LINENO" 5
     else
         ac_config_commands="$ac_config_commands zeromq_erlzmq"
 
+        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, [{incl_cond, include}]},"
+        ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi
 
 
-ac_config_files="$ac_config_files cloudi.conf lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile"
+
+
+ac_config_files="$ac_config_files cloudi.conf reltool.config lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -18236,6 +18243,7 @@ do
     "zeromq") CONFIG_COMMANDS="$CONFIG_COMMANDS zeromq" ;;
     "zeromq_erlzmq") CONFIG_COMMANDS="$CONFIG_COMMANDS zeromq_erlzmq" ;;
     "cloudi.conf") CONFIG_FILES="$CONFIG_FILES cloudi.conf" ;;
+    "reltool.config") CONFIG_FILES="$CONFIG_FILES reltool.config" ;;
     "lib/cloudi/src/cloudi.app.src") CONFIG_FILES="$CONFIG_FILES lib/cloudi/src/cloudi.app.src" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "api/Makefile") CONFIG_FILES="$CONFIG_FILES api/Makefile" ;;
@@ -19754,7 +19762,7 @@ _LT_EOF
                               --with-pic && \
                   make && make install && \
                   echo "ZeroMQ locally installed" || exit 1) ;;
-    "zeromq_erlzmq":C) (cd external/erlzmq2/ && \
+    "zeromq_erlzmq":C) (cd external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1) ;;
 

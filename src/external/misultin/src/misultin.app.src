@@ -3,7 +3,7 @@
 	{description, "Lightweight HTTP(s) and Websockets Server Library"},
 	{vsn, "0.6.2"},
 	{modules, [misultin, misultin_req, misultin_socket, misultin_http, misultin_utility, misultin_websocket, misultin_ws]},
-	{registered, [misultin]},
+	{registered, []},
 	{env, []},
 	{applications, [kernel, stdlib]}
 ]}.

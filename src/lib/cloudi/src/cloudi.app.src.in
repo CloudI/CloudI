@@ -57,6 +57,7 @@
         cloudi_socket_sup
         ]},
    {applications, [
+        @ZEROMQ_ERLZMQ_APPCONF@
         ecouchdb,
         ememcached,
         emysql,

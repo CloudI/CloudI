@@ -2020,21 +2020,26 @@ m4trace:m4/ax_zeromq.m4:54: -1- AC_DEFUN([AX_ZEROMQ], [
         AC_SUBST(ZEROMQ_ROOT_DIR)
     fi
 ])
-m4trace:m4/ax_zeromq_erlzmq.m4:51: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
+m4trace:m4/ax_zeromq_erlzmq.m4:56: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
     
     if test "x$ZEROMQ_ROOT_DIR" = "x"; then
         dnl ZeroMQ will not be used
-        ZEROMQ_ROOT_DIR=""
+        ZEROMQ_ERLZMQ_RELTOOL=""
+        ZEROMQ_ERLZMQ_APPCONF=""
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         AC_MSG_ERROR([Erlang location undefined])
     else
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
-            [(cd external/erlzmq2/ && \
+            [(cd external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1)],
             [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR])
+        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
+        ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi
+    AC_SUBST(ZEROMQ_ERLZMQ_RELTOOL)
+    AC_SUBST(ZEROMQ_ERLZMQ_APPCONF)
 ])
 m4trace:m4/libtool.m4:67: -1- AC_DEFUN([LT_INIT], [AC_PREREQ([2.58])dnl We use AC_INCLUDES_DEFAULT
 AC_BEFORE([$0], [LT_LANG])dnl
@@ -3480,13 +3485,15 @@ m4trace:configure.ac:69: -1- m4_pattern_allow([^zeromq_path_bin_queue$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_CFLAGS$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_ROOT_DIR$])
 m4trace:configure.ac:70: -1- AX_ZEROMQ_ERLZMQ
-m4trace:configure.ac:101: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:101: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:101: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:101: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:101: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:101: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:101: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:101: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:101: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:101: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_RELTOOL$])
+m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_APPCONF$])
+m4trace:configure.ac:102: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:102: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:102: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:102: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:102: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:102: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:102: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:102: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:102: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:102: -1- _LT_PROG_LTMAIN
