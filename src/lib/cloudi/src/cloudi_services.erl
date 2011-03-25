@@ -193,7 +193,7 @@ restart_stage2(#service{service_m = M,
                         max_r = 0},
                Services, State) ->
     % no restarts allowed
-    ?LOG_INFO("max restarts (MaxR = 0)~n ~p:~p~p", [M, F, A]),
+    ?LOG_WARN("max restarts (MaxR = 0)~n ~p:~p~p", [M, F, A]),
     State#state{services = Services};
 
 restart_stage2(#service{service_m = M,
@@ -206,6 +206,7 @@ restart_stage2(#service{service_m = M,
     Now = erlang:now(),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
+            ?LOG_WARN("successful restart (R = 1)~n ~p:~p~p", [M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
                                        monitor = erlang:monitor(process, Pid),
@@ -213,6 +214,7 @@ restart_stage2(#service{service_m = M,
                                        restart_times = [Now]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+            ?LOG_WARN("successful restart (R = 1)~n ~p:~p~p", [M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
                            Service#service{pids = Pids,
@@ -221,7 +223,7 @@ restart_stage2(#service{service_m = M,
                                            restart_times = [Now]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_INFO("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
+            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [Now]}},
@@ -250,7 +252,7 @@ restart_stage2(#service{service_m = M,
                                            restart_times = NewRestartTimes},
                            Services, State);
         true ->
-            ?LOG_INFO("max restarts (MaxR = ~p, MaxT = ~p seconds)~n ~p:~p~p",
+            ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds)~n ~p:~p~p",
                       [MaxR, MaxT, M, F, A]),
             State#state{services = Services}
     end;
@@ -263,27 +265,33 @@ restart_stage2(#service{service_m = M,
                Services, State) ->
     % typical restart scenario
     Now = erlang:now(),
+    R = RestartCount + 1,
+    T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
+            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
+                      " ~p:~p~p", [R, T, M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
                                        monitor = erlang:monitor(process, Pid),
-                                       restart_count = RestartCount + 1,
+                                       restart_count = R,
                                        restart_times = [Now | RestartTimes]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
+                      " ~p:~p~p", [R, T, M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
                            Service#service{pids = Pids,
                                            monitor = erlang:monitor(process, P),
-                                           restart_count = RestartCount + 1,
+                                           restart_count = R,
                                            restart_times = [Now |
                                                             RestartTimes]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_INFO("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
+            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
-                      Service#service{restart_count = RestartCount + 1,
+                      Service#service{restart_count = R,
                                       restart_times = [Now | RestartTimes]}},
             Services
     end,

@@ -488,7 +488,11 @@ handle_info({'send_async', Name, Request, Timeout, TransId, Pid},
         throw:return ->
             {noreply, State};
         throw:forward ->
-            {noreply, State}
+            {noreply, State};
+        Type:Error ->
+            Stack = erlang:get_stacktrace(),
+            ?LOG_ERROR("~p ~p~n~p", [Type, Error, Stack]),
+            {stop, {Type, {Error, Stack}}, State}
     end;
 
 handle_info({'send_sync', Name, Request, Timeout, TransId, Pid},
@@ -506,7 +510,11 @@ handle_info({'send_sync', Name, Request, Timeout, TransId, Pid},
         throw:return ->
             {noreply, State};
         throw:forward ->
-            {noreply, State}
+            {noreply, State};
+        Type:Error ->
+            Stack = erlang:get_stacktrace(),
+            ?LOG_ERROR("~p ~p~n~p", [Type, Error, Stack]),
+            {stop, {Type, {Error, Stack}}, State}
     end;
 
 handle_info(Request,
