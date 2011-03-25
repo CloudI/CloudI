@@ -78,7 +78,7 @@ class API(object):
         del self.__callbacks[self.__prefix + name]
         self.__s.send(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
 
-    def send_async(self, name, request):
+    def send_async_(self, name, request):
         return self.send_async(name, request, self.__timeout_async)
 
     def send_async(self, name, request, timeout):
@@ -86,7 +86,7 @@ class API(object):
                                       OtpErlangBinary(request), timeout)))
         return self.poll()
 
-    def send_sync(self, name, request):
+    def send_sync_(self, name, request):
         return self.send_sync(name, request, self.__timeout_sync)
 
     def send_sync(self, name, request, timeout):
@@ -94,7 +94,7 @@ class API(object):
                                       OtpErlangBinary(request), timeout)))
         return self.poll()
 
-    def mcast_async(self, name, request):
+    def mcast_async_(self, name, request):
         return self.mcast_async(name, request, self.__timeout_async)
 
     def mcast_async(self, name, request, timeout):

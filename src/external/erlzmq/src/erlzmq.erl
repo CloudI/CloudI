@@ -94,8 +94,6 @@ socket(Context, [H | _] = L) ->
 -spec bind(Socket :: erlzmq_socket(), Endpoint :: erlzmq_endpoint()) -> ok | erlzmq_error().
 
 bind(Socket, Endpoint) when is_list(Endpoint) ->
-    bind(Socket, erlang:list_to_binary(Endpoint));
-bind(Socket, Endpoint) when is_binary(Endpoint) ->
     erlzmq_result(erlzmq_nif:bind(Socket, Endpoint)).
 
 %% @doc Connect a socket.
@@ -107,8 +105,6 @@ bind(Socket, Endpoint) when is_binary(Endpoint) ->
 -spec connect(Socket :: erlzmq_socket(), Endpoint :: erlzmq_endpoint()) -> ok | erlzmq_error().
 
 connect(Socket, Endpoint) when is_list(Endpoint) ->
-    connect(Socket, erlang:list_to_binary(Endpoint));
-connect(Socket, Endpoint) when is_binary(Endpoint) ->
     erlzmq_result(erlzmq_nif:connect(Socket, Endpoint)).
 
 %% @equiv send(Socket, Msg, [])

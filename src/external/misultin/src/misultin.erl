@@ -266,7 +266,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 % Function: -> false | IpTuple
 % Description: Checks and converts a string Ip to inet repr.
-check_and_convert_string_to_ip(Ip) ->
+check_and_convert_string_to_ip({_, _, _, _} = Ip) ->
+    Ip;
+check_and_convert_string_to_ip(Ip) when is_list(Ip) ->
 	case inet_parse:address(Ip) of
 		{error, _Reason} ->
 			false;

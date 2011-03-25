@@ -723,7 +723,7 @@ clean-configure: config.log
           m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
           m4/ltversion.m4 m4/lt~obsolete.m4 libtool \
           external/rebar/ebin/*.beam \
-          lib/cloudi/src/cloudi.app.src cloudi.conf
+          lib/cloudi/src/cloudi.app.src reltool.config cloudi.conf
 	rm -rf autom4te.cache
 	rm -rf api/c/.deps/ \
            lib/cloudi/cxx_src/.deps/ \
@@ -770,6 +770,7 @@ install-exec-hook: tests-install \
                    tests-hexpi-install \
                    tests-http-install \
                    tests-http_req-install \
+                   tests-zeromq-install \
                    api-install \
                    api-c-install \
                    api-java-install \
@@ -851,6 +852,11 @@ tests-http_req-install:
         "$(top_builddir)/tests/http_req/public_html/800px-Juliadim2.png" \
         "$(DESTDIR)$(prefix)/tests/http_req/public_html/"
 	rm -f "$(DESTDIR)$(bindir)/http_req"
+
+tests-zeromq-install:
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/zeromq"
+	$(INSTALL_SCRIPT) "$(top_builddir)/tests/zeromq/run.py" \
+                      "$(DESTDIR)$(prefix)/tests/zeromq/"
 
 api-install:
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/api"

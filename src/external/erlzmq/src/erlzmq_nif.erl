@@ -1,7 +1,16 @@
 %% @hidden
 -module(erlzmq_nif).
 
--export([context/1, socket/3, bind/2, connect/2, send/3, recv/2, setsockopt/3, getsockopt/2, close/1, term/1]).
+-export([context/1,
+         socket/3,
+         bind/2,
+         connect/2,
+         send/3,
+         recv/2,
+         setsockopt/3,
+         getsockopt/2,
+         close/1,
+         term/1]).
 
 -on_load(init/0).
 
@@ -10,11 +19,18 @@
 -endif.
 
 init() ->
-    case code:which(erlzmq_nif) of
-        Filename when is_list(Filename) ->
-            erlang:load_nif(filename:join([filename:dirname(Filename),"../priv/erlzmq_drv"]), []);
-        Err ->
-            Err
+    case code:priv_dir(erlzmq) of
+        Path when is_list(Path) ->
+            erlang:load_nif(filename:join([Path, "erlzmq_drv"]), []);
+        {error, bad_name} ->
+            case code:which(erlzmq_nif) of
+                Filename when is_list(Filename) ->
+                    erlang:load_nif(filename:join([filename:dirname(Filename),
+                                                   "..","priv",
+                                                   "erlzmq_drv"]), []);
+                Reason when is_atom(Reason) ->
+                    {error, Reason}
+            end
     end.
 
 context(_Threads) ->
