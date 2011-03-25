@@ -70,8 +70,8 @@
         subscribe,   % Socket -> Name
         request,     % Name -> Socket
         reply,       % Socket -> Name
-        request_replies = dict:new(),  % 
-        reply_replies = dict:new()     % 
+        request_replies = dict:new(),  % Socket -> F(Response)
+        reply_replies = dict:new()     % TransId -> Socket
     }).
 
 %%%------------------------------------------------------------------------
