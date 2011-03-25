@@ -188,9 +188,9 @@ init([udp, BufferSize, Timeout, Prefix,
     {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
 
 'CONNECT'('init', #state{protocol = Protocol,
-                       prefix = Prefix,
-                       timeout_async = TimeoutAsync,
-                       timeout_sync = TimeoutSync} = StateData) ->
+                         prefix = Prefix,
+                         timeout_async = TimeoutAsync,
+                         timeout_sync = TimeoutSync} = StateData) ->
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
     if
         Protocol =:= udp ->

@@ -98,7 +98,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:bind(S, Endpoint)
         end, EndpointL),
-        trie:store(Name, S, D)
+        trie:store(Prefix ++ Name, S, D)
     end, trie:new(), PublishL),
     Subscribe = lists:foldl(fun({subscribe,
                                  {[I1 | _] = Name,
@@ -109,7 +109,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
             ok = erlzmq:connect(S, Endpoint)
         end, EndpointL),
         ok = erlzmq:setsockopt(S, subscribe, Prefix ++ Name),
-        dict:store(S, Name, D)
+        dict:store(S, Prefix ++ Name, D)
     end, dict:new(), SubscribeL),
     Request = lists:foldl(fun({outbound,
                                {[I1 | _] = Name,
@@ -118,7 +118,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
         cloudi_job:subscribe(Dispatcher, Name),
         {ok, S} = erlzmq:socket(Context, req),
         ok = erlzmq:bind(S, Endpoint),
-        trie:store(Name, S, D)
+        trie:store(Prefix ++ Name, S, D)
     end, trie:new(), RequestL),
     Reply = lists:foldl(fun({inbound,
                              {[I1 | _] = Name,
@@ -126,7 +126,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
         true = is_integer(I1) and is_integer(I2),
         {ok, S} = erlzmq:socket(Context, rep),
         ok = erlzmq:connect(S, Endpoint),
-        dict:store(S, Name, D)
+        dict:store(S, Prefix ++ Name, D)
     end, dict:new(), ReplyL),
     {ok, #state{context = Context,
                 publish = Publish,
@@ -135,29 +135,29 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                 reply = Reply}}.
 
 cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
-                          #state{publish = Publish,
-                                 request = Request,
-                                 request_replies = RequestReplies} = State,
+                          #state{publish = PublishZMQ,
+                                 request = RequestZMQ,
+                                 request_replies = RequestRepliesZMQ} = State,
                           Dispatcher) ->
     true = is_binary(Request),
-    case trie:find(Name, Publish) of
+    case trie:find(Name, PublishZMQ) of
         {ok, PublishS} ->
             ok = erlzmq:send(PublishS,
                              erlang:iolist_to_binary([Name, Request]));
         error ->
             ok
     end,
-    case trie:find(Name, Request) of
+    case trie:find(Name, RequestZMQ) of
         {ok, RequestS} ->
             ok = erlzmq:send(RequestS, Request),
             F = fun(Response) ->
                 cloudi_job:return_nothrow(Dispatcher, Type, Name, Response,
                                           Timeout, TransId, Pid)
             end,
-            NewRequestReplies = dict:store(RequestS, F, RequestReplies),
+            NewRequestRepliesZMQ = dict:store(RequestS, F, RequestRepliesZMQ),
             % do not enforce a timeout here, rely on the
             % receiving CloudI service timeout
-            {noreply, State#state{request_replies = NewRequestReplies}};
+            {noreply, State#state{request_replies = NewRequestRepliesZMQ}};
         error ->
             % successful publish operations don't need to store a response
             % erroneous synchronous operations will get a timeout
@@ -165,12 +165,12 @@ cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
     end.
 
 cloudi_job_handle_info({zmq, S, Incoming},
-                       #state{subscribe = Subscribe,
-                              reply = Reply,
-                              request_replies = RequestReplies,
-                              reply_replies = ReplyReplies} = State,
+                       #state{subscribe = SubscribeZMQ,
+                              reply = ReplyZMQ,
+                              request_replies = RequestRepliesZMQ,
+                              reply_replies = ReplyRepliesZMQ} = State,
                        Dispatcher) ->
-    {noreply, case dict:find(S, Subscribe) of
+    {noreply, case dict:find(S, SubscribeZMQ) of
         {ok, Name} ->
             NameLength = erlang:length(Name),
             Request = binary:part(Incoming, NameLength,
@@ -178,19 +178,20 @@ cloudi_job_handle_info({zmq, S, Incoming},
             cloudi_job:send_async(Dispatcher, Name, Request),
             State;
         error ->
-            case dict:find(S, RequestReplies) of
+            case dict:find(S, RequestRepliesZMQ) of
                 {ok, F} ->
                     F(Incoming),
-                    NewRequestReplies = dict:erase(S, RequestReplies),
-                    State#state{request_replies = NewRequestReplies};
+                    NewRequestRepliesZMQ = dict:erase(S, RequestRepliesZMQ),
+                    State#state{request_replies = NewRequestRepliesZMQ};
                 error ->
-                    case dict:find(S, Reply) of
+                    case dict:find(S, ReplyZMQ) of
                         {ok, Name} ->
                             case cloudi_job:send_async_active(Dispatcher,
                                                               Name, Incoming) of
                                 {ok, TransId} ->
-                                    State#state{reply_replies = 
-                                        dict:store(TransId, S, ReplyReplies)};
+                                    State#state{reply_replies =
+                                        dict:store(TransId, S,
+                                                   ReplyRepliesZMQ)};
                                 {error, _} ->
                                     ok = erlzmq:send(S, <<>>),
                                     State
@@ -203,27 +204,29 @@ cloudi_job_handle_info({zmq, S, Incoming},
 
 cloudi_job_handle_info({'return_async_active', _Name, Response,
                         _Timeout, TransId},
-                       #state{reply_replies = ReplyReplies} = State,
+                       #state{reply_replies = ReplyRepliesZMQ} = State,
                        _Dispatcher) ->
     true = is_binary(Response),
-    S = dict:fetch(TransId, ReplyReplies),
+    S = dict:fetch(TransId, ReplyRepliesZMQ),
     ok = erlzmq:send(S, Response),
-    {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
+    {noreply, State#state{reply_replies = dict:erase(TransId,
+                                                     ReplyRepliesZMQ)}};
 
 cloudi_job_handle_info({'timeout_async_active', TransId},
-                       #state{reply_replies = ReplyReplies} = State,
+                       #state{reply_replies = ReplyRepliesZMQ} = State,
                        _Dispatcher) ->
-    S = dict:fetch(TransId, ReplyReplies),
+    S = dict:fetch(TransId, ReplyRepliesZMQ),
     ok = erlzmq:send(S, <<>>),
-    {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
+    {noreply, State#state{reply_replies = dict:erase(TransId,
+                                                     ReplyRepliesZMQ)}};
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_job_terminate(_, #state{context = Context,
-                               reply_replies = ReplyReplies}) ->
-    dict:fold(fun(_, S, _) -> erlzmq:send(S, <<>>) end, ok, ReplyReplies),
+cloudi_job_terminate(_, #state{context = Context}) ->%,
+    %                           reply_replies = ReplyReplies}) ->
+    %dict:fold(fun(_, S, _) -> erlzmq:send(S, <<>>) end, ok, ReplyReplies),
     erlzmq:term(Context),
     ok.
 

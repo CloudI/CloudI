@@ -226,7 +226,7 @@
         [{outbound, {"start", "inproc://testme"}},
          {inbound, {"finish", "inproc://testme"}}],
         lazy_closest,
-        5000, 5000, 5000, [api], undefined, 1, 5, 300},
+        5000, 5000, 5000, [api], undefined, 2, 5, 300},
     {external,
         "/tests/zeromq/",
         "@PYTHON@",

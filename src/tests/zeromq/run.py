@@ -61,7 +61,7 @@ class _Task(threading.Thread):
 
     def run(self):
         self.__api.subscribe("finish", self.finish)
-        self.__api.send_async_("start", "magic")
+        self.__api.send_async_("/tests/zeromq/start", "magic")
 
         running = True
         while running:
