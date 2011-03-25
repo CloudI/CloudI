@@ -9,7 +9,12 @@
 #
 #   Build the Erlang ZeroMQ bindings
 #
-#   This macro depends on AC_ERLANG_SUBST_ROOT_DIR and AX_ZEROMQ
+#   Depends on AC_ERLANG_SUBST_ROOT_DIR and AX_ZEROMQ.
+#
+#   This macro sets:
+#
+#     ZEROMQ_ERLZMQ_RELTOOL
+#     ZEROMQ_ERLZMQ_APPCONF
 #
 # BSD LICENSE
 # 
@@ -53,15 +58,20 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
     
     if test "x$ZEROMQ_ROOT_DIR" = "x"; then
         dnl ZeroMQ will not be used
-        ZEROMQ_ROOT_DIR=""
+        ZEROMQ_ERLZMQ_RELTOOL=""
+        ZEROMQ_ERLZMQ_APPCONF=""
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         AC_MSG_ERROR([Erlang location undefined])
     else
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
-            [(cd external/erlzmq2/ && \
+            [(cd external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1)],
             [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR])
+        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
+        ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi
+    AC_SUBST(ZEROMQ_ERLZMQ_RELTOOL)
+    AC_SUBST(ZEROMQ_ERLZMQ_APPCONF)
 ])

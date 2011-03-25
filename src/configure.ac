@@ -70,6 +70,7 @@ AX_ZEROMQ
 AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([cloudi.conf
+                 reltool.config
                  lib/cloudi/src/cloudi.app.src
                  Makefile
                  api/Makefile

@@ -187,7 +187,15 @@ uuid_to_string(Value)
     lists:flatten(io_lib:format("~.16b-~.16b-~.16b-~.16b-~.16b",
                                 [B1, B2, B3, B4, B5])).
 
-% increment the clock sequence counter if the system clock was set backwards
+% The RFC said to increment the clock sequence counter
+% if the system clock was set backwards.  However, erlang:now/0 always
+% provides increasing time values, so this function is not necessary
+% when the system clock changes.  Since the version 1 node id contains the
+% Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
+% bitwise-xor operation, the node id is specific to both the Erlang node
+% and the Erlang node lifetime (the PID Creation is different after a node 
+% crash). Therefore, it is unclear why this function would be necessary
+% within this Erlang implementation of v1 UUID generation.
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
     NewClockSeq = if

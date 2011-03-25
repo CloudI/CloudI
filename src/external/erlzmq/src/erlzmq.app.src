@@ -1,12 +1,12 @@
 {application, erlzmq,
  [
-  {description, ""},
+  {description, "Erlang ZeroMQ Driver"},
   {vsn, "2.0"},
+  {modules, [erlzmq, erlzmq_nif]},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { erlzmq_app, []}},
   {env, []}
  ]}.

@@ -1,7 +1,7 @@
 External Dependencies
 =====================
 
-Rebar
+rebar
 -----
 Erlang OTP-compliant build tool
 https://github.com/basho/rebar
@@ -96,15 +96,15 @@ commit 6c3d1952ec3d5de3cdb2
 Sat Feb 12 14:55:04 PST 2011
 BSD
 
-erlzmq2
--------
+erlzmq
+------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 https://github.com/okeuday/erlzmq2
 commit edbf62383dca6ec44ccc
 Thu Mar 24 17:20:35 PDT 2011
 BSD
 
-ZeroMQ
+zeromq
 ------
 ZeroMQ 2.1.3
 http://download.zeromq.org/zeromq-2.1.3.tar.gz
