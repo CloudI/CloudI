@@ -125,7 +125,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                               [I2 | _] = Endpoint}}, D) ->
         true = is_integer(I1) and is_integer(I2),
         {ok, S} = erlzmq:socket(Context, rep),
-        ok = erlzmq:bind(S, Endpoint),
+        ok = erlzmq:connect(S, Endpoint),
         dict:store(S, Name, D)
     end, dict:new(), ReplyL),
     {ok, #state{context = Context,

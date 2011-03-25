@@ -62,7 +62,7 @@
 
 -include("cloudi_logger.hrl").
 
--define(DEFAULT_INTERFACE,      {0, 0, 0, 0}). % ip address
+-define(DEFAULT_INTERFACE,       {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                   8080).
 -define(DEFAULT_BACKLOG,                 128).
 -define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds

@@ -250,7 +250,7 @@ restart_stage2(#service{service_m = M,
                                            restart_times = NewRestartTimes},
                            Services, State);
         true ->
-            ?LOG_INFO("max restarts (MaxR = ~p, MaxT = ~p)~n ~p:~p~p",
+            ?LOG_INFO("max restarts (MaxR = ~p, MaxT = ~p seconds)~n ~p:~p~p",
                       [MaxR, MaxT, M, F, A]),
             State#state{services = Services}
     end;
