@@ -149,7 +149,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             #state{services = Services} = State) ->
     case dict:find(Pid, Services) of
         {ok, Service} ->
-            {noreply, restart(Service, Services, State)};
+            {noreply, restart(Service, Services, State, Pid)};
         error ->
             % Pids started together as threads for one OS process may
             % have died together.  The first death triggers the restart and
@@ -157,9 +157,9 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             {noreply, State}
     end;
 
-handle_info({restart_stage2, Service},
+handle_info({restart_stage2, Service, OldPid},
             #state{services = Services} = State) ->
-    {noreply, restart_stage2(Service, Services, State)};
+    {noreply, restart_stage2(Service, Services, State, OldPid)};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -175,25 +175,26 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-restart(Service, Services, State) ->
-    restart_stage1(Service, Services, State).
+restart(Service, Services, State, OldPid) ->
+    restart_stage1(Service, Services, State, OldPid).
 
-restart_stage1(#service{pids = Pids} = Service, Services, State) ->
+restart_stage1(#service{pids = Pids} = Service, Services, State, OldPid) ->
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, kill),
         dict:erase(P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
-                                   monitor = undefined}, NewServices, State).
+                                   monitor = undefined},
+                   NewServices, State, OldPid).
 
 restart_stage2(#service{service_m = M,
                         service_f = F,
                         service_a = A,
                         restart_count = 0,
                         max_r = 0},
-               Services, State) ->
+               Services, State, OldPid) ->
     % no restarts allowed
-    ?LOG_WARN("max restarts (MaxR = 0)~n ~p:~p~p", [M, F, A]),
+    ?LOG_WARN("max restarts (MaxR = 0) ~p~n ~p:~p~p", [OldPid, M, F, A]),
     State#state{services = Services};
 
 restart_stage2(#service{service_m = M,
@@ -201,12 +202,13 @@ restart_stage2(#service{service_m = M,
                         service_a = A,
                         restart_count = 0,
                         restart_times = []} = Service,
-               Services, State) ->
+               Services, State, OldPid) ->
     % first restart
     Now = erlang:now(),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = 1)~n ~p:~p~p", [M, F, A]),
+            ?LOG_WARN("successful restart (R = 1) ~p is now ~p~n"
+                      " ~p:~p~p", [OldPid, Pid, M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
                                        monitor = erlang:monitor(process, Pid),
@@ -214,7 +216,8 @@ restart_stage2(#service{service_m = M,
                                        restart_times = [Now]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = 1)~n ~p:~p~p", [M, F, A]),
+            ?LOG_WARN("successful restart (R = 1) ~p is now one of ~p~n"
+                      " ~p:~p~p", [OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
                            Service#service{pids = Pids,
@@ -226,7 +229,8 @@ restart_stage2(#service{service_m = M,
             ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
-                                      restart_times = [Now]}},
+                                      restart_times = [Now]},
+                      OldPid},
             Services
     end,
     State#state{services = NewServices};
@@ -238,7 +242,7 @@ restart_stage2(#service{service_m = M,
                         restart_times = RestartTimes,
                         max_r = MaxR,
                         max_t = MaxT} = Service,
-               Services, State)
+               Services, State, OldPid)
     when MaxR == RestartCount ->
     % last restart?
     Now = erlang:now(),
@@ -250,10 +254,10 @@ restart_stage2(#service{service_m = M,
         NewRestartCount < RestartCount ->
             restart_stage2(Service#service{restart_count = NewRestartCount,
                                            restart_times = NewRestartTimes},
-                           Services, State);
+                           Services, State, OldPid);
         true ->
-            ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds)~n ~p:~p~p",
-                      [MaxR, MaxT, M, F, A]),
+            ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
+                      " ~p:~p~p", [MaxR, MaxT, OldPid, M, F, A]),
             State#state{services = Services}
     end;
 
@@ -262,15 +266,16 @@ restart_stage2(#service{service_m = M,
                         service_a = A,
                         restart_count = RestartCount,
                         restart_times = RestartTimes} = Service,
-               Services, State) ->
+               Services, State, OldPid) ->
     % typical restart scenario
     Now = erlang:now(),
     R = RestartCount + 1,
     T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
-                      " ~p:~p~p", [R, T, M, F, A]),
+            ?LOG_WARN("successful restart "
+                      "(R = ~p, T = ~p elapsed seconds) ~p is now ~p~n"
+                      " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
                                        monitor = erlang:monitor(process, Pid),
@@ -278,8 +283,9 @@ restart_stage2(#service{service_m = M,
                                        restart_times = [Now | RestartTimes]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
-                      " ~p:~p~p", [R, T, M, F, A]),
+            ?LOG_WARN("successful restart "
+                      "(R = ~p, T = ~p elapsed seconds) ~p is now one of ~p~n"
+                      " ~p:~p~p", [R, T, OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
                            Service#service{pids = Pids,

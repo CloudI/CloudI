@@ -417,7 +417,7 @@ return(Dispatcher, Type, Name, Response, Timeout, TransId, Pid) ->
 return_async(Dispatcher, Name, Response, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0 ->
-    Dispatcher ! {'return_async', Name, Response, Timeout, TransId, Pid},
+    Pid ! {'return_async', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
 
 -spec return_sync(Dispatcher :: pid(),
@@ -430,7 +430,7 @@ return_async(Dispatcher, Name, Response, Timeout, TransId, Pid)
 return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0 ->
-    Dispatcher ! {'return_sync', Name, Response, Timeout, TransId, Pid},
+    Pid ! {'return_sync', Name, Response, Timeout, TransId, Pid},
     erlang:throw(return).
 
 -spec return_nothrow(Dispatcher :: pid(),
@@ -441,14 +441,12 @@ return_sync(Dispatcher, Name, Response, Timeout, TransId, Pid)
                      TransId :: binary(),
                      Pid :: pid()) -> 'ok'.
 
-return_nothrow(Dispatcher, 'send_async', Name, Response,
-               Timeout, TransId, Pid) ->
-    Dispatcher ! {'return_async', Name, Response, Timeout, TransId, Pid},
+return_nothrow(_, 'send_async', Name, Response, Timeout, TransId, Pid) ->
+    Pid ! {'return_async', Name, Response, Timeout, TransId, Pid},
     ok;
 
-return_nothrow(Dispatcher, 'send_sync', Name, Response,
-               Timeout, TransId, Pid) ->
-    Dispatcher ! {'return_sync', Name, Response, Timeout, TransId, Pid},
+return_nothrow(_, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
+    Pid ! {'return_sync', Name, Response, Timeout, TransId, Pid},
     ok.
 
 %%%------------------------------------------------------------------------
@@ -458,6 +456,7 @@ return_nothrow(Dispatcher, 'send_sync', Name, Response,
 init([Module, Args, Prefix, Dispatcher]) ->
     case Module:cloudi_job_init(Args, Prefix, Dispatcher) of
         {ok, JobState} ->
+            erlang:process_flag(trap_exit, true),
             {ok, #state{module = Module,
                         dispatcher = Dispatcher,
                         job_state = JobState}};
@@ -516,6 +515,10 @@ handle_info({'send_sync', Name, Request, Timeout, TransId, Pid},
             ?LOG_ERROR("~p ~p~n~p", [Type, Error, Stack]),
             {stop, {Type, {Error, Stack}}, State}
     end;
+
+handle_info({'EXIT', _, Reason}, State) ->
+    % make sure the terminate function is called if the dispatcher dies
+    {stop, Reason, State};
 
 handle_info(Request,
             #state{module = Module,
