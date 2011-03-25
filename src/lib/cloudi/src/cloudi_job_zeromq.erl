@@ -224,9 +224,7 @@ cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_job_terminate(_, #state{context = Context}) ->%,
-    %                           reply_replies = ReplyReplies}) ->
-    %dict:fold(fun(_, S, _) -> erlzmq:send(S, <<>>) end, ok, ReplyReplies),
+cloudi_job_terminate(_, #state{context = Context}) ->
     erlzmq:term(Context),
     ok.
 
