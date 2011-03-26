@@ -218,13 +218,31 @@
     {internal,
         "/tests/zeromq/",
         cloudi_job_zeromq,
-        % configuration arguments:
-        % publish to ZeroMQ endpoints
-        % subscribe to ZeroMQ endpoints
-        % outbound ZeroMQ endpoint
-        % inbound ZeroMQ endpoint
-        [{outbound, {"start", "inproc://testme"}},
-         {inbound, {"finish", "inproc://testme"}}],
+        % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
+        [{outbound, {"start", "ipc:///tmp/clouditest1start"}},
+        % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
+         {inbound, {"step1", "ipc:///tmp/clouditest1start"}},
+         {outbound, {"step1", "inproc://test1step1"}},
+         {inbound, {"step2", "inproc://test1step1"}},
+        % ZeroMQ publish connects a CloudI name to a ZeroMQ (subscribe) name
+        % as {CloudI name (suffix), ZeroMQ name for message prefix}
+        % for any number of endpoints
+         {publish, {[{"step2", "/zeromq/step2"}],
+                    ["inproc://test1step2a",
+                     "ipc:///tmp/clouditest1step2b",
+                     "inproc://test1step2c",
+                     "ipc:///tmp/clouditest1step2d"]}},
+        % ZeroMQ subscribe connects a CloudI name to a ZeroMQ (subscribe) name
+        % as {CloudI name (suffix), ZeroMQ name for subscribe setsocketopt}
+        % for any number of endpoints
+         {subscribe, {[{"step3a", "/zeromq/step2"},
+                       {"step3b", "/zeromq/step2"}],
+                      ["inproc://test1step2a",
+                       "ipc:///tmp/clouditest1step2b",
+                       "inproc://test1step2c",
+                       "ipc:///tmp/clouditest1step2d"]}},
+         {outbound, {"step3a", "inproc://test1step3"}},
+         {inbound, {"finish", "inproc://test1step3"}}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300},
     {external,

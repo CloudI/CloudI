@@ -229,7 +229,7 @@ job_start_internal(Count, Job)
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error starting internal job (~p): ~p",
+            ?LOG_ERROR("error starting internal job (~p):~n ~p",
                        [Job#config_job_internal.module, Reason]),
             ok
     end,
@@ -258,7 +258,7 @@ job_start_external(Count, Job)
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error starting external job (~p): ~p",
+            ?LOG_ERROR("error starting external job (~p):~n ~p",
                        [Job#config_job_external.file_path, Reason]),
             ok
     end,
