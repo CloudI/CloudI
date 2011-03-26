@@ -207,7 +207,8 @@ restart_stage2(#service{service_m = M,
     Now = erlang:now(),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = 1) ~p is now ~p~n"
+            ?LOG_WARN("successful restart (R = 1)~n"
+                      "                   (~p is now ~p)~n"
                       " ~p:~p~p", [OldPid, Pid, M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
@@ -216,7 +217,8 @@ restart_stage2(#service{service_m = M,
                                        restart_times = [Now]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart (R = 1) ~p is now one of ~p~n"
+            ?LOG_WARN("successful restart (R = 1)~n"
+                      "                   (~p is now one of ~p)~n"
                       " ~p:~p~p", [OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
@@ -273,8 +275,8 @@ restart_stage2(#service{service_m = M,
     T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
     NewServices = case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart "
-                      "(R = ~p, T = ~p elapsed seconds) ~p is now ~p~n"
+            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
+                      "                   (~p is now ~p)~n"
                       " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
             dict:store(Pid,
                        Service#service{pids = [Pid],
@@ -283,8 +285,8 @@ restart_stage2(#service{service_m = M,
                                        restart_times = [Now | RestartTimes]},
                        Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN("successful restart "
-                      "(R = ~p, T = ~p elapsed seconds) ~p is now one of ~p~n"
+            ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
+                      "                   (~p is now one of ~p)~n"
                       " ~p:~p~p", [R, T, OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 dict:store(P,
