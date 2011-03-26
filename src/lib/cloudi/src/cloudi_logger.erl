@@ -307,7 +307,7 @@ level_to_string(trace) ->
     "
     -module(cloudi_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
-    -export([fatal/4, error/4, warn/4, info/4, debug/4]).").
+    -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4]).").
 get_interface_module_code(off, _) ->
     ?INTERFACE_MODULE_HEADER
     "

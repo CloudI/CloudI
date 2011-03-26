@@ -203,7 +203,6 @@ cloudi_job_handle_info({zmq, S, Incoming},
                              State#state{reply_replies =
                                          dict:store(TransId, S, ReplyReplies)}};
                         {error, _} ->
-                            ok = erlzmq:send(S, <<>>),
                             {noreply, State}
                     end;
                 error ->
@@ -234,8 +233,6 @@ cloudi_job_handle_info({'timeout_async_active', TransId},
                        #state{reply_replies = ReplyReplies} = State,
                        _Dispatcher) ->
     ?LOG_TRACE("reply recv timeout (~p)", [TransId]),
-    S = dict:fetch(TransId, ReplyReplies),
-    ok = erlzmq:send(S, <<>>),
     {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
 
 cloudi_job_handle_info(Request, State, _) ->
