@@ -84,9 +84,16 @@ Build Requirements:
 * Ruby >= 1.9.0 (ruby1.9 package in Ubuntu, ruby19 package in OSX ports)
 * GNU MP library (libgmp3-dev package in Ubuntu, gmp package in OSX ports)
 * boost >= 1.36.0 
+optional:
+* ZeroMQ > 2.0
 
 On OSX, to run configure with the OSX ports paths, use:
 CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+
+To build with ZeroMQ integration, use the "--with-zeromq" configure flag.
+If ZeroMQ is not installed, it will be installed locally and linked into a
+NIF statically, so it is not a runtime dependency.
+The ZeroMQ NIF requires Erlang >= R14B02.
 
 See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme) for basic build information
 
