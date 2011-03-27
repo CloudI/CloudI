@@ -16,7 +16,10 @@ hwm_test() ->
     ok = hwm_loop(10, S2),
 
     ?assertMatch({ok, <<"test">>}, erlzmq:recv(S1)),
-    ?assertMatch(ok, erlzmq:send(S2, <<"test">>)).
+    ?assertMatch(ok, erlzmq:send(S2, <<"test">>)),
+    ok = erlzmq:close(S1),
+    ok = erlzmq:close(S2),
+    ok = erlzmq:term(C).
 
 hwm_loop(0, _S) ->
     ok;
@@ -75,15 +78,15 @@ shutdown_no_blocking_test() ->
 shutdown_blocking_test() ->
     {ok, C} = erlzmq:context(),
     {ok, _S} = erlzmq:socket(C, [pub, {active, false}]),
-    ?assertMatch({error, timeout, _}, erlzmq:term(C, 500)).
+    ?assertMatch({error, {timeout, _}}, erlzmq:term(C, 0)).
 
 shutdown_blocking_unblocking_test() ->
     {ok, C} = erlzmq:context(),
     {ok, S} = erlzmq:socket(C, [pub, {active, false}]),
-    V = erlzmq:term(C, 500),
-    ?assertMatch({error, timeout, _}, V),
-    {error, timeout, Ref} = V,
     erlzmq:close(S),
+    V = erlzmq:term(C, 0),
+    ?assertMatch({error, {timeout, _}}, V),
+    {error, {timeout, Ref}} = V,
     receive 
         {Ref, ok} ->
             ok
@@ -95,6 +98,9 @@ join_procs(N) ->
     receive
         proc_end ->
             join_procs(N-1)
+    after
+        2000 ->
+            throw(stuck)
     end.
 
 shutdown_stress_worker_loop(0, _) ->
@@ -139,6 +145,22 @@ ping_pong({S1, S2}, Msg, active) ->
         1000 ->
             ?assertMatch({ok, Msg}, timeout)
     end,
+    ok = erlzmq:send(S1, Msg),
+    receive
+        {zmq, S2, Msg} ->
+            ok
+    after
+        1000 ->
+            ?assertMatch({ok, Msg}, timeout)
+    end,
+    ok = erlzmq:send(S2, Msg),
+    receive
+        {zmq, S1, Msg} ->
+            ok
+    after
+        1000 ->
+            ?assertMatch({ok, Msg}, timeout)
+    end,
     ok;
 ping_pong({S1, S2}, Msg, passive) ->
     ok = erlzmq:send(S1, Msg),
@@ -150,5 +172,8 @@ ping_pong({S1, S2}, Msg, passive) ->
 basic_tests(Transport, Type1, Type2, Mode) ->
     {ok, C} = erlzmq:context(1),
     {S1, S2} = create_bound_pair(C, Type1, Type2, Mode, Transport),
-    ping_pong({S1, S2}, <<"XXX">>, Mode).
+    ping_pong({S1, S2}, <<"XXX">>, Mode),
+    ok = erlzmq:close(S1),
+    ok = erlzmq:close(S2),
+    ok = erlzmq:term(C).
 

@@ -100,8 +100,8 @@ erlzmq
 ------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 https://github.com/okeuday/erlzmq2
-commit 9ed06d960158d1ceae5d
-Fri Mar 25 10:10:31 PDT 2011
+commit 3494f6a433975c510498
+Sun Mar 27 11:49:58 PDT 2011
 BSD
 
 zeromq

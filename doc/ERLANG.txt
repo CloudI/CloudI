@@ -2,6 +2,16 @@ Installing Erlang From Source
 
 OSX:
 (see http://www.erlang.org/doc/installation_guide/INSTALL.html#Mac-OS-X-Darwin)
-CFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" LDFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" ./configure --enable-darwin-universal --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe --prefix=/Users/truog/install/
+CFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" LDFLAGS="-isysroot /Developer/SDKs/MacOSX10.6.sdk/" ./configure --enable-darwin-universal --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe --prefix=/Users/user/install/
 make && make install
+
+Ubuntu/Linux:
+./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe --prefix=/home/user/installed
+make && make install
+tar zxvf otp_doc_html_R13B01.tar.gz -C /home/user/installed/lib/erlang/
+tar zxvf otp_doc_man_R13B01.tar.gz -C /home/user/installed/
+
+#add to /etc/manpath.config
+MANDATORY_MANPATH                       /home/user/installed/man
+MANPATH_MAP     /home/user/installed  /home/user/installed/man
 
