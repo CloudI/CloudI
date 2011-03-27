@@ -1,7 +1,7 @@
 %% -*- coding:utf-8;Mode:erlang;tab-width:4;c-basic-offset:4;indent-tabs-mode:nil -*-
 %% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 %%
-%% Copyright (c) 2011 Yurii Rashkovskii, Michael Truog, and Evax Software
+%% Copyright (c) 2011 Yurii Rashkovskii, Evax Software and Michael Truog
 %% 
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
 %% of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,7 @@
          setsockopt/3,
          getsockopt/2,
          close/1,
+         close/2,
          term/1,
          term/2]).
 -export_type([erlzmq_socket/0, erlzmq_context/0]).
@@ -218,16 +219,35 @@ setsockopt({I, Socket}, Name, Value) when is_integer(I), is_atom(Name) ->
 getsockopt({I, Socket}, Name) when is_integer(I), is_atom(Name) ->
     erlzmq_nif:getsockopt(Socket, option_name(Name)).
 
+%% @equiv close(Socket, infinity)
+-spec close(SocketTuple :: {pos_integer(), erlzmq_socket()}) ->
+    ok |
+    erlzmq_error().
+close(SocketTuple) ->
+    close(SocketTuple, infinity).
+
 %% @doc Close the given socket.
 %% <br />
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_close">zmq_close</a>.</i>
 %% @end
--spec close(SocketTuple :: {pos_integer(), erlzmq_socket()}) ->
+-spec close(SocketTuple :: {pos_integer(), erlzmq_socket()},
+            Timeout :: timeout()) ->
     ok |
     erlzmq_error().
-close({I, Socket}) when is_integer(I) ->
-    erlzmq_nif:close(Socket).
+close({I, Socket}, Timeout) when is_integer(I) ->
+    case erlzmq_nif:close(Socket) of
+        Ref when is_reference(Ref) ->
+            receive
+                {Ref, Result} ->
+                    Result
+            after
+                Timeout ->
+                    {error, {timeout, Ref}}
+            end;
+        Result ->
+            Result
+    end.
 
 %% @equiv term(Context, infinity)
 -spec term(Context :: erlzmq_context()) ->
@@ -235,7 +255,6 @@ close({I, Socket}) when is_integer(I) ->
     erlzmq_error().
 term(Context) ->
     term(Context, infinity).
-
 
 %% @doc Terminate the given context waiting up to Timeout ms.
 %% <br />
@@ -257,7 +276,8 @@ term(Context, Timeout) ->
             receive
                 {Ref, Result} ->
                     Result
-            after Timeout ->
+            after
+                Timeout ->
                     {error, {timeout, Ref}}
             end;
         Result ->
