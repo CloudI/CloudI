@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-03-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix erlzmq problems, switch to R14B02 for erlzmq/ZeroMQ testing
+    * Improve cloudi_job_zeromq
+    * Fix Erlang service API (cloudi_job) bugs
+
 2011-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * ZeroMQ autoconf integration to provide erlzmq2
