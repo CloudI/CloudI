@@ -470,18 +470,26 @@ NIF(erlzmq_nif_send)
 
   memcpy(zmq_msg_data(&req.data.send.msg), binary.data, binary.size);
 
-  enif_mutex_lock(socket->mutex);
-  if (zmq_send(socket->socket_zmq, &req.data.send.msg,
-               req.data.send.flags | ZMQ_NOBLOCK)) {
-    enif_mutex_unlock(socket->mutex);
-
-    int const error = zmq_errno();
-    if (error != EAGAIN ||
-        (error == EAGAIN && (req.data.send.flags & ZMQ_NOBLOCK))) {
-      zmq_msg_close(&req.data.send.msg);
-      return return_zmq_errno(env, error);
+  int polling_thread_send = 1;
+  if (! socket->active) {
+    enif_mutex_lock(socket->mutex);
+    if (zmq_send(socket->socket_zmq, &req.data.send.msg,
+                 req.data.send.flags | ZMQ_NOBLOCK)) {
+      enif_mutex_unlock(socket->mutex);
+      int const error = zmq_errno();
+      if (error != EAGAIN ||
+          (error == EAGAIN && (req.data.send.flags & ZMQ_NOBLOCK))) {
+        zmq_msg_close(&req.data.send.msg);
+        return return_zmq_errno(env, error);
+      }
     }
-
+    else {
+      enif_mutex_unlock(socket->mutex);
+      polling_thread_send = 0;
+    }
+  }
+  
+  if (polling_thread_send) {
     req.type = ERLZMQ_THREAD_REQUEST_SEND;
     req.data.send.env = enif_alloc_env();
     req.data.send.ref = enif_make_ref(req.data.send.env);
@@ -497,22 +505,26 @@ NIF(erlzmq_nif_send)
 
     memcpy(zmq_msg_data(&msg), &req, sizeof(erlzmq_thread_request_t));
 
+    enif_mutex_lock(socket->context->mutex);
     if (zmq_send(socket->context->thread_socket, &msg, 0)) {
+      enif_mutex_unlock(socket->context->mutex);
+
       zmq_msg_close(&msg);
       zmq_msg_close(&req.data.send.msg);
       enif_free_env(req.data.send.env);
       return return_zmq_errno(env, zmq_errno());
     }
+    else {
+      enif_mutex_unlock(socket->context->mutex);
 
-    zmq_msg_close(&msg);
-    // each pointer to the socket in a request increments the reference
-    enif_keep_resource(socket);
-
-    return enif_make_copy(env, req.data.send.ref);
+      zmq_msg_close(&msg);
+      // each pointer to the socket in a request increments the reference
+      enif_keep_resource(socket);
+  
+      return enif_make_copy(env, req.data.send.ref);
+    }
   }
   else {
-    enif_mutex_unlock(socket->mutex);
-
     zmq_msg_close(&req.data.send.msg);
 
     return enif_make_atom(env, "ok");
@@ -554,7 +566,6 @@ NIF(erlzmq_nif_recv)
         (error == EAGAIN && (req.data.recv.flags & ZMQ_NOBLOCK))) {
       return return_zmq_errno(env, error);
     }
-
     req.type = ERLZMQ_THREAD_REQUEST_RECV;
     req.data.recv.env = enif_alloc_env();
     req.data.recv.ref = enif_make_ref(req.data.recv.env);
@@ -568,17 +579,23 @@ NIF(erlzmq_nif_recv)
 
     memcpy(zmq_msg_data(&msg), &req, sizeof(erlzmq_thread_request_t));
 
+    enif_mutex_lock(socket->context->mutex);
     if (zmq_send(socket->context->thread_socket, &msg, 0)) {
+      enif_mutex_unlock(socket->context->mutex);
+
       zmq_msg_close(&msg);
       enif_free_env(req.data.recv.env);
       return return_zmq_errno(env, zmq_errno());
     }
+    else {
+      enif_mutex_unlock(socket->context->mutex);
 
-    zmq_msg_close(&msg);
-    // each pointer to the socket in a request increments the reference
-    enif_keep_resource(socket);
-
-    return enif_make_copy(env, req.data.recv.ref);
+      zmq_msg_close(&msg);
+      // each pointer to the socket in a request increments the reference
+      enif_keep_resource(socket);
+  
+      return enif_make_copy(env, req.data.recv.ref);
+    }
   }
   else {
     enif_mutex_unlock(socket->mutex);
@@ -849,7 +866,9 @@ static void * polling_thread(void * handle)
               vector_get(erlzmq_thread_request_t, &requests, i);
             if (r_old->type == ERLZMQ_THREAD_REQUEST_RECV) {
               enif_clear_env(r_old->data.recv.env);
-              // FIXME somehow a send invalidates? causes segfault
+              // FIXME
+              // causes crash on R14B01, works fine on R14B02
+              // (repeated enif_send with active receive broken on R14B01)
               //enif_free_env(r_old->data.recv.env);
               enif_release_resource(r_old->data.recv.socket);
             }
