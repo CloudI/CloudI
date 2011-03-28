@@ -59,9 +59,16 @@ class _Task(threading.Thread):
         print "Got to CloudI finish from ZeroMQ zig-zag:",request
         self.__api.return_(command, name, "done", timeout, transId, pid)
 
+    def chain_inproc_finish(self, command, name, request,
+                            timeout, transId, pid):
+        print "chain_inproc_finish"
+        self.__api.return_(command, name, "done", timeout, transId, pid)
+
     def run(self):
         self.__api.subscribe("zigzag_finish", self.zigzag_finish)
+        self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
         self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
+        self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
 
         running = True
         while running:

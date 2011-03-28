@@ -62,7 +62,7 @@ class API(object):
         self.__s = socket.fromfd(index + 3, socket.AF_INET, protocol)
         self.__size = size
         self.__callbacks = {}
-        self.__s.send(term_to_binary(OtpErlangAtom("init")))
+        self.__s.sendall(term_to_binary(OtpErlangAtom("init")))
         self.__prefix, self.__timeout_async, self.__timeout_sync = self.poll()
 
     def __del__(self):
@@ -72,34 +72,34 @@ class API(object):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
         assert len(args) == 7 # self + arguments, so a non-static method
         self.__callbacks[self.__prefix + name] = Function
-        self.__s.send(term_to_binary((OtpErlangAtom("subscribe"), name)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("subscribe"), name)))
 
     def unsubscribe(self, name):
         del self.__callbacks[self.__prefix + name]
-        self.__s.send(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
 
     def send_async_(self, name, request):
         return self.send_async(name, request, self.__timeout_async)
 
     def send_async(self, name, request, timeout):
-        self.__s.send(term_to_binary((OtpErlangAtom("send_async"), name,
-                                      OtpErlangBinary(request), timeout)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("send_async"), name,
+                                         OtpErlangBinary(request), timeout)))
         return self.poll()
 
     def send_sync_(self, name, request):
         return self.send_sync(name, request, self.__timeout_sync)
 
     def send_sync(self, name, request, timeout):
-        self.__s.send(term_to_binary((OtpErlangAtom("send_sync"), name,
-                                      OtpErlangBinary(request), timeout)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("send_sync"), name,
+                                         OtpErlangBinary(request), timeout)))
         return self.poll()
 
     def mcast_async_(self, name, request):
         return self.mcast_async(name, request, self.__timeout_async)
 
     def mcast_async(self, name, request, timeout):
-        self.__s.send(term_to_binary((OtpErlangAtom("mcast_async"), name,
-                                      OtpErlangBinary(request), timeout)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("mcast_async"), name,
+                                         OtpErlangBinary(request), timeout)))
         return self.poll()
 
     def forward_(self, command, name, request, timeout, transId, pid):
@@ -111,15 +111,15 @@ class API(object):
             assert False
 
     def forward_async(self, name, request, timeout, transId, pid):
-        self.__s.send(term_to_binary((OtpErlangAtom("forward_async"), name,
-                                      OtpErlangBinary(request), timeout,
-                                      OtpErlangBinary(transId), pid)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("forward_async"), name,
+                                         OtpErlangBinary(request), timeout,
+                                         OtpErlangBinary(transId), pid)))
         raise _return_async_exception()
 
     def forward_sync(self, name, request, timeout, transId, pid):
-        self.__s.send(term_to_binary((OtpErlangAtom("forward_sync"), name,
-                                      OtpErlangBinary(request), timeout,
-                                      OtpErlangBinary(transId), pid)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("forward_sync"), name,
+                                         OtpErlangBinary(request), timeout,
+                                         OtpErlangBinary(transId), pid)))
         raise _return_sync_exception()
 
     def return_(self, command, name, response, timeout, transId, pid):
@@ -131,20 +131,20 @@ class API(object):
             assert False
 
     def return_async(self, name, response, timeout, transId, pid):
-        self.__s.send(term_to_binary((OtpErlangAtom("return_async"), name,
-                                      OtpErlangBinary(response), timeout,
-                                      OtpErlangBinary(transId), pid)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("return_async"), name,
+                                         OtpErlangBinary(response), timeout,
+                                         OtpErlangBinary(transId), pid)))
         raise _return_async_exception()
 
     def return_sync(self, name, response, timeout, transId, pid):
-        self.__s.send(term_to_binary((OtpErlangAtom("return_sync"), name,
-                                      OtpErlangBinary(response), timeout,
-                                      OtpErlangBinary(transId), pid)))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("return_sync"), name,
+                                         OtpErlangBinary(response), timeout,
+                                         OtpErlangBinary(transId), pid)))
         raise _return_sync_exception()
 
     def recv_async(self, timeout, transId):
-        self.__s.send(term_to_binary((OtpErlangAtom("recv_async"), timeout,
-                                      OtpErlangBinary(transId))))
+        self.__s.sendall(term_to_binary((OtpErlangAtom("recv_async"), timeout,
+                                         OtpErlangBinary(transId))))
         return self.poll()
 
     def __callback(self, command, name, request, timeout, transId, pid):
@@ -233,7 +233,7 @@ class API(object):
                 i, j = j, j + 16 * transIdCount
                 return struct.unpack("=" + "16s" * transIdCount, data[i:j])
             elif command == _MESSAGE_KEEPALIVE:
-                self.__s.send(term_to_binary(OtpErlangAtom("keepalive")))
+                self.__s.sendall(term_to_binary(OtpErlangAtom("keepalive")))
             else:
                 assert False
 

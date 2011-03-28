@@ -46,6 +46,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
@@ -840,6 +841,14 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             int sockfd = ::socket(AF_INET, type, 0);
             if (sockfd == -1)
                 ::_exit(spawn_status::errno_socket());
+            if (type == SOCK_STREAM)
+            {
+                int tcp_nodelay_flag = 1;
+                // set TCP_NODELAY to turn off Nagle's algorithm
+                if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+                               (char *) &tcp_nodelay_flag, sizeof(int)) == -1)
+                    ::_exit(spawn_status::socket_unknown);
+            }
 
             if (static_cast<size_t>(sockfd) != i + 3)
             {
