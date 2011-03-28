@@ -84,7 +84,9 @@ Build Requirements:
 * Ruby >= 1.9.0 (ruby1.9 package in Ubuntu, ruby19 package in OSX ports)
 * GNU MP library (libgmp3-dev package in Ubuntu, gmp package in OSX ports)
 * boost >= 1.36.0 
-optional:
+
+Optional:
+
 * ZeroMQ > 2.0
 
 On OSX, to run configure with the OSX ports paths, use:

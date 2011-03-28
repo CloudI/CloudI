@@ -2020,7 +2020,7 @@ m4trace:m4/ax_zeromq.m4:54: -1- AC_DEFUN([AX_ZEROMQ], [
         AC_SUBST(ZEROMQ_ROOT_DIR)
     fi
 ])
-m4trace:m4/ax_zeromq_erlzmq.m4:56: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
+m4trace:m4/ax_zeromq_erlzmq.m4:57: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
     
     if test "x$ZEROMQ_ROOT_DIR" = "x"; then
         dnl ZeroMQ will not be used
@@ -2029,6 +2029,8 @@ m4trace:m4/ax_zeromq_erlzmq.m4:56: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         AC_MSG_ERROR([Erlang location undefined])
     else
+        AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
+                                  [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
@@ -3485,6 +3487,11 @@ m4trace:configure.ac:69: -1- m4_pattern_allow([^zeromq_path_bin_queue$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_CFLAGS$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^ZEROMQ_ROOT_DIR$])
 m4trace:configure.ac:70: -1- AX_ZEROMQ_ERLZMQ
+m4trace:configure.ac:70: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B02], [], [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
+m4trace:configure.ac:70: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+m4/ax_erlang_otp_version.m4:41: AX_ERLANG_REQUIRE_OTP_VER is expanded from...
+m4/ax_zeromq_erlzmq.m4:57: AX_ZEROMQ_ERLZMQ is expanded from...
+configure.ac:70: the top level])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_RELTOOL$])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_APPCONF$])
 m4trace:configure.ac:102: -1- m4_pattern_allow([^LIB@&t@OBJS$])

@@ -9,7 +9,8 @@
 #
 #   Build the Erlang ZeroMQ bindings
 #
-#   Depends on AC_ERLANG_SUBST_ROOT_DIR and AX_ZEROMQ.
+#   Depends on AC_ERLANG_SUBST_ROOT_DIR, AX_ERLANG_REQUIRE_OTP_VER, and
+#              AX_ZEROMQ.
 #
 #   This macro sets:
 #
@@ -63,6 +64,8 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         AC_MSG_ERROR([Erlang location undefined])
     else
+        AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
+                                  [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \

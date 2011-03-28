@@ -17147,6 +17147,90 @@ $as_echo "building" >&6; }
     elif test "x$ERLANG_ROOT_DIR" = "x"; then
         as_fn_error "Erlang location undefined" "$LINENO" 5
     else
+        
+    erlang_otp_version_req=R14B02
+    erlang_otp_version_req_major=`expr $erlang_otp_version_req : 'R\([0-9]*\)'`
+    erlang_otp_version_req_type=`expr $erlang_otp_version_req : 'R[0-9]*\([A-Z]*\)'`
+    erlang_otp_version_req_minor=`expr $erlang_otp_version_req : 'R[0-9]*[A-Z]*\([0-9]*\)'`
+    if test $erlang_otp_version_req_type = A; then
+        erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor`
+    elif test $erlang_otp_version_req_type = B; then
+        erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ 100 \+ $erlang_otp_version_req_minor`
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Erlang >= $erlang_otp_version_req" >&5
+$as_echo_n "checking for Erlang >= $erlang_otp_version_req... " >&6; }
+    succeeded=no
+
+    
+    
+    ac_ext=erl
+ac_compile='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&5'
+ac_link='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&5 && echo "#!/bin/sh" > conftest$ac_exeext && $as_echo "\"$ERL\" -run conftest start -run init stop -noshell" >> conftest$ac_exeext && chmod +x conftest$ac_exeext'
+
+    if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "cannot run test program while cross compiling
+See \`config.log' for more details." "$LINENO" 5; }
+else
+  cat > conftest.$ac_ext <<_ACEOF
+-module(conftest).
+-export([start/0]).
+
+start() ->
+
+            [\$R, Maj1, Maj2, T1, Min1, Min2] =
+                erlang:system_info(otp_release),
+            Version = if
+                T1 == \$A ->
+                    list_to_integer([Maj1, Maj2]) * 1000 +
+                    list_to_integer([Min1, Min2]);
+                T1 == \$B ->
+                    list_to_integer([Maj1, Maj2]) * 1000 + 100 +
+                    list_to_integer([Min1, Min2])
+            end,
+            file:write_file("conftest.out", integer_to_list(Version)),
+            ReturnValue = 0,
+            halt(ReturnValue)
+.
+
+_ACEOF
+if ac_fn_erl_try_run "$LINENO"; then :
+  ax_erlang_otp_ver=`cat conftest.out`
+        succeeded=yes
+        rm -f conftest.out
+else
+  rm -f conftest.out
+        { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "test Erlang program execution failed
+See \`config.log' for more details." "$LINENO" 5; }
+    
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+    if test "x$succeeded" = "xyes" && test $ax_erlang_otp_ver -ge $erlang_otp_version_req_int; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        # execute ACTION-IF-FOUND (if present):
+        :
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        # execute ACTION-IF-NOT-FOUND (if present):
+        as_fn_error "Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq" "$LINENO" 5
+    fi
+
         ac_config_commands="$ac_config_commands zeromq_erlzmq"
 
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
