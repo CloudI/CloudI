@@ -1,5 +1,5 @@
 #! /usr/bin/env escript
-%%! -smp enable -pa ebin
+%%! -smp enable -pa ebin -pa perf
 
 main([ConnectTo,MessageSizeStr,RoundtripCountStr]) ->
     {MessageSize, _} = string:to_integer(MessageSizeStr),
@@ -8,14 +8,10 @@ main([ConnectTo,MessageSizeStr,RoundtripCountStr]) ->
     {ok, Socket} = erlzmq:socket(Context, [req, {active, false}]),
     ok = erlzmq:connect(Socket, ConnectTo),
     Msg = list_to_binary(lists:duplicate(MessageSize, 0)),
-    Do = fun() ->
-            erlzmq:send(Socket, Msg),
-            {ok, Msg} = erlzmq:brecv(Socket)
-        end,
 
-    {Elapsed, _} = timer:tc(fun () ->
-                [ Do() || _I <- lists:seq(1,RoundtripCount) ]
-        end,[]),
+    Start = now(),
+    erlzmq_perf:remote_lat_loop(RoundtripCount, Socket, Msg),
+    Elapsed = timer:now_diff(now(), Start),
 
     Latency = Elapsed / (RoundtripCount * 2),
 
@@ -25,3 +21,4 @@ main([ConnectTo,MessageSizeStr,RoundtripCountStr]) ->
               [MessageSize, RoundtripCount, Latency]),
    erlzmq:close(Socket),
    erlzmq:term(Context).
+
