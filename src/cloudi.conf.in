@@ -414,10 +414,10 @@
     {external,
         "/tests/zeromq/",
         "@PYTHON@",
-        "tests/zeromq/run.py 1 tcp 16384",
+        "tests/zeromq/run.py 2 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 1, 5, 300}
+        5000, 5000, 5000, [api], undefined, 1, 2, 5, 300}
 ]}.
 {nodes, [
     'cloudi@host1',
