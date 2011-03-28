@@ -4,6 +4,7 @@ Dependencies:
 
 misultin      Roberto Ostinelli <roberto@ostinelli.net>
 etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
+erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
 epgsql        Will Glozer
 emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
 ememcached    Nick Gerakines <nick@gerakines.net>
