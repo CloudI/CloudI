@@ -183,7 +183,7 @@ cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
             {reply, <<>>, State}
     end.
 
-cloudi_job_handle_info({zmq, S, Incoming} = Foo,
+cloudi_job_handle_info({zmq, S, Incoming},
                        #state{receives = ReceivesZMQ,
                               reply_replies = ReplyReplies} = State,
                        Dispatcher) ->
