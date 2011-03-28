@@ -64,11 +64,18 @@ class _Task(threading.Thread):
         print "chain_inproc_finish"
         self.__api.return_(command, name, "done", timeout, transId, pid)
 
+    def chain_ipc_finish(self, command, name, request,
+                         timeout, transId, pid):
+        print "chain_ipc_finish"
+        self.__api.return_(command, name, "done", timeout, transId, pid)
+
     def run(self):
         self.__api.subscribe("zigzag_finish", self.zigzag_finish)
         self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
+        self.__api.subscribe("chain_ipc_finish", self.chain_ipc_finish)
         self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
         self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
+        self.__api.send_async_("/tests/zeromq/chain_ipc_start", "ipc")
 
         running = True
         while running:
