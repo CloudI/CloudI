@@ -247,7 +247,7 @@
                        "ipc:///tmp/cloudizigzagstep2d"]}},
          {outbound, {"zigzag_step3a", "inproc://zigzagstep3"}},
          {inbound, {"zigzag_finish", "inproc://zigzagstep3"}}],
-        lazy_closest,
+        immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300},
     % Chain inproc test (50 endpoints in a sequential call path)
     {internal,
@@ -353,7 +353,7 @@
          {inbound, {"chain_inproc_step49", "inproc://chainstep49"}},
          {outbound, {"chain_inproc_step49", "inproc://chainstep50"}},
          {inbound, {"chain_inproc_finish", "inproc://chainstep50"}}],
-        lazy_closest,
+        immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300},
     % Chain ipc test (25 endpoints in a sequential call path)
     {internal,
@@ -409,14 +409,14 @@
          {inbound, {"chain_ipc_step24", "ipc:///tmp/cloudichainstep24"}},
          {outbound, {"chain_ipc_step24", "ipc:///tmp/cloudichainstep25"}},
          {inbound, {"chain_ipc_finish", "ipc:///tmp/cloudichainstep25"}}],
-        lazy_closest,
+        immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300},
     {external,
         "/tests/zeromq/",
         "@PYTHON@",
         "tests/zeromq/run.py 4 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
-        lazy_closest, tcp, 16384,
+        immediate_closest, tcp, 16384,
         5000, 5000, 5000, [api], undefined, 1, 4, 5, 300}
 ]}.
 {nodes, [

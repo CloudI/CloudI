@@ -1,4 +1,4 @@
-#[CloudI 0.1.2 (alpha)](http://cloudi.org)
+#[CloudI 0.1.3 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
@@ -50,7 +50,7 @@ The changes are summarized below:
 * a normal autotools/rebar build system is used that doesn't attempt to
   install critical dependencies locally (it just requires that they exist)
 * restarting stopped (e.g., SIGSTOP) OS processes is not implemented in 
-  0.1.2 (but may be added back, as necessary)
+  0.1.3 (but may be added back, as necessary)
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct
