@@ -54,6 +54,7 @@ class _Task(threading.Thread):
     def __init__(self, index, protocol, size):
         threading.Thread.__init__(self)
         self.__api = API(index, protocol, size)
+        self.__index = index
 
     def zigzag_finish(self, command, name, request, timeout, transId, pid):
         print "Got to CloudI finish from ZeroMQ zig-zag:",request
@@ -73,10 +74,10 @@ class _Task(threading.Thread):
         self.__api.subscribe("zigzag_finish", self.zigzag_finish)
         self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
         self.__api.subscribe("chain_ipc_finish", self.chain_ipc_finish)
-        self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
-        self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
-        self.__api.send_async_("/tests/zeromq/chain_ipc_start", "ipc")
-
+        if self.__index == 0:
+            self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
+            self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
+            self.__api.send_async_("/tests/zeromq/chain_ipc_start", "ipc")
         running = True
         while running:
             result = self.__api.poll()

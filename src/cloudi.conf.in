@@ -417,7 +417,7 @@
         "tests/zeromq/run.py 2 tcp 16384",
         [{"PYTHONUNBUFFERED", "true"}],
         lazy_closest, tcp, 16384,
-        5000, 5000, 5000, [api], undefined, 1, 2, 5, 300}
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300}
 ]}.
 {nodes, [
     'cloudi@host1',
