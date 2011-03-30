@@ -71,13 +71,16 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, "done", timeout, transId, pid)
 
     def run(self):
-        self.__api.subscribe("zigzag_finish", self.zigzag_finish)
-        self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
-        self.__api.subscribe("chain_ipc_finish", self.chain_ipc_finish)
+        # sends outside of a callback must occur before the subscriptions
+        # so that the sends going out do not conflict with the
+        # sends coming in to call local callbacks
         if self.__index == 0:
             self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
             self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
             self.__api.send_async_("/tests/zeromq/chain_ipc_start", "ipc")
+        self.__api.subscribe("zigzag_finish", self.zigzag_finish)
+        self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
+        self.__api.subscribe("chain_ipc_finish", self.chain_ipc_finish)
         running = True
         while running:
             result = self.__api.poll()

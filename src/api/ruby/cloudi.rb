@@ -185,33 +185,33 @@ module Cloudi
         end
 
         def poll
-            loop do
-                ready = false
-                while ready == false
-                    result = IO.select([@socket], nil, [@socket])
-                    if result[2].length > 0
-                        return nil
-                    end
-                    if result[0].length > 0
-                        ready = true
-                    end
-                end
-
-                data = ""
-                while ready == true
-                    fragment = @socket.readpartial(@size)
-                    data += fragment
-                    ready = (fragment.bytesize == @size)
-
-                    if ready
-                        ready = IO.select([@socket], nil, nil, 0)[0].length > 0
-                    end
-                end
-
-                if data.bytesize == 0
+            ready = false
+            while ready == false
+                result = IO.select([@socket], nil, [@socket])
+                if result[2].length > 0
                     return nil
                 end
+                if result[0].length > 0
+                    ready = true
+                end
+            end
 
+            data = ""
+            while ready == true
+                fragment = @socket.readpartial(@size)
+                data += fragment
+                ready = (fragment.bytesize == @size)
+
+                if ready
+                    ready = ! IO.select([@socket], nil, nil, 0).nil?
+                end
+            end
+
+            if data.bytesize == 0
+                return nil
+            end
+
+            loop do
                 i = 0; j = 4
                 command = data[i, j].unpack("L")[0]
                 case command
@@ -223,6 +223,8 @@ module Cloudi
                     @prefix = tmp[0]
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
+                    i += j
+                    assert{i == data.length}
                     return
                 when MESSAGE_SEND_ASYNC, MESSAGE_SEND_SYNC
                     i += j; j = 4
@@ -239,23 +241,72 @@ module Cloudi
                     pidSize = tmp[3]
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
+                    i += j
+                    assert{i >= data.length}
                     callback(command, name, request, timeout, transId,
                              binary_to_term(pid))
+                    data.slice!(0, i)
+                    if data.length > 0
+                        if IO.select([@socket], nil, nil, 0).nil?
+                            next
+                        end
+                    end
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     responseSize = data[i, j].unpack("L")[0]
                     i += j; j = responseSize + 16
+                    i += j
+                    assert{i == data.length}
                     return data[i, j].unpack("a#{responseSize}a16")
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
+                    i += j
+                    assert{i == data.length}
                     return data[i, j].unpack("a16")[0]
                 when MESSAGE_RETURNS_ASYNC
                     i += j; j = 4
                     transIdCount = data[i, j].unpack("L")[0]
                     i += j; j = 16 * transIdCount
+                    i += j
+                    assert{i == data.length}
                     return data[i, j].unpack("a16" * transIdCount)
                 when MESSAGE_KEEPALIVE
                     @socket.write(term_to_binary(:keepalive))
+                    i += j
+                    assert{i >= data.length}
+                    data.slice!(0, i)
+                    if data.length > 0
+                        if IO.select([@socket], nil, nil, 0).nil?
+                            next
+                        end
+                    end
+                else
+                    assert{false}
+                end
+
+                ready = false
+                while ready == false
+                    result = IO.select([@socket], nil, [@socket])
+                    if result[2].length > 0
+                        return nil
+                    end
+                    if result[0].length > 0
+                        ready = true
+                    end
+                end
+    
+                while ready == true
+                    fragment = @socket.readpartial(@size)
+                    data += fragment
+                    ready = (fragment.bytesize == @size)
+    
+                    if ready
+                        ready = ! IO.select([@socket], nil, nil, 0).nil?
+                    end
+                end
+    
+                if data.bytesize == 0
+                    return nil
                 end
             end
         end

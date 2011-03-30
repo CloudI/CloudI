@@ -698,24 +698,21 @@ int cloudi_poll(cloudi_instance_t * p,
                 int timeout)
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
+    int count = ::poll(fds, 1, timeout);
+    if (count == 0)
+        return cloudi_timeout;
+    else if (count < 0)
+        return errno_poll();
+
+    int result = read_all(p->fd, buffer,
+                          p->buffer_recv_index,
+                          p->buffer_size);
+    if (result)
+        return result;
+        
     while (true)
     {
-        struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
-        int count = ::poll(fds, 1, timeout);
-        if (count == 0)
-            return cloudi_timeout;
-        else if (count < 0)
-            return errno_poll();
-    
-        another_request_receive:
-
-        int result = read_all(p->fd, buffer, p->buffer_recv_index,
-                              p->buffer_size);
-        if (result)
-            return result;
-        
-        another_request_consume:
-
         fds[0].revents = 0;
         uint32_t index = 0;
         uint32_t command;
@@ -761,10 +758,8 @@ int cloudi_poll(cloudi_instance_t * p,
                     count = ::poll(fds, 1, 0);
                     if (count < 0)
                         return errno_poll();
-                    else if (count == 1)
-                        goto another_request_receive;
-                    else
-                        goto another_request_consume;
+                    else if (count == 0)
+                        continue;
                 }
                 else {
                     p->buffer_recv_index = 0;
@@ -780,16 +775,9 @@ int cloudi_poll(cloudi_instance_t * p,
                 p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
-                if (index > p->buffer_recv_index) {
+                if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
-                }
-                else if (index < p->buffer_recv_index) {
-                    p->buffer_recv_index -= index;
-                    buffer.move(index, p->buffer_recv_index, 0);
-                }
-                else {
-                    p->buffer_recv_index = 0;
-                }
+                p->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_RETURN_ASYNC:
@@ -797,16 +785,9 @@ int cloudi_poll(cloudi_instance_t * p,
                 p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
-                if (index > p->buffer_recv_index) {
+                if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
-                }
-                else if (index < p->buffer_recv_index) {
-                    p->buffer_recv_index -= index;
-                    buffer.move(index, p->buffer_recv_index, 0);
-                }
-                else {
-                    p->buffer_recv_index = 0;
-                }
+                p->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_RETURNS_ASYNC:
@@ -814,16 +795,9 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, p->trans_id_count);
                 p->trans_id = &buffer[index];
                 index += 16 * p->trans_id_count;
-                if (index > p->buffer_recv_index) {
+                if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
-                }
-                else if (index < p->buffer_recv_index) {
-                    p->buffer_recv_index -= index;
-                    buffer.move(index, p->buffer_recv_index, 0);
-                }
-                else {
-                    p->buffer_recv_index = 0;
-                }
+                p->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_KEEPALIVE:
@@ -839,10 +813,8 @@ int cloudi_poll(cloudi_instance_t * p,
                     count = ::poll(fds, 1, 0);
                     if (count < 0)
                         return errno_poll();
-                    else if (count == 1)
-                        goto another_request_receive;
-                    else
-                        goto another_request_consume;
+                    else if (count == 0)
+                        continue;
                 }
                 else {
                     p->buffer_recv_index = 0;
@@ -852,6 +824,19 @@ int cloudi_poll(cloudi_instance_t * p,
             default:
                 ::exit(cloudi_error_read_underflow);
         }
+
+        fds[0].revents = 0;
+        count = ::poll(fds, 1, timeout);
+        if (count == 0)
+            return cloudi_timeout;
+        else if (count < 0)
+            return errno_poll();
+
+        result = read_all(p->fd, buffer,
+                          p->buffer_recv_index,
+                          p->buffer_size);
+        if (result)
+            return result;
     }
 }
 
