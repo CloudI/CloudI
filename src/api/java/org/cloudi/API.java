@@ -441,16 +441,16 @@ public class API
 
     public Object poll()
     {
+        byte[] data = API.recv(null, this.input, this.buffer_size);
+        if (data == null || data.length == 0)
+            return null;
+
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        buffer.order(ByteOrder.nativeOrder());
         while (true)
         {
             try
             {
-                byte[] data = API.recv(this.input, this.buffer_size);
-                if (data == null || data.length == 0)
-                    return null;
-
-                ByteBuffer buffer = ByteBuffer.wrap(data);
-                buffer.order(ByteOrder.nativeOrder());
                 int command;
                 switch (command = buffer.getInt())
                 {
@@ -460,6 +460,7 @@ public class API
                         this.prefix = API.getString(buffer, prefixSize);
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
+                        assert ! buffer.hasRemaining() : "extra data";
                         return null;
                     }
                     case MESSAGE_SEND_ASYNC:
@@ -474,6 +475,9 @@ public class API
                         int pidSize = buffer.getInt();
                         OtpErlangPid pid = API.getPid(buffer, pidSize);
                         callback(command, name, request, timeout, transId, pid);
+                        if (buffer.hasRemaining() &&
+                            this.input.available() == 0)
+                            continue;
                         break;
                     }
                     case MESSAGE_RECV_ASYNC:
@@ -482,11 +486,13 @@ public class API
                         int responseSize = buffer.getInt();
                         byte[] response = API.getBytes(buffer, responseSize);
                         byte[] transId = API.getBytes(buffer, 16);
+                        assert ! buffer.hasRemaining() : "extra data";
                         return new Response(response, transId);
                     }
                     case MESSAGE_RETURN_ASYNC:
                     {
                         byte[] transId = API.getBytes(buffer, 16);
+                        assert ! buffer.hasRemaining() : "extra data";
                         return new TransId(transId);
                     }
                     case MESSAGE_RETURNS_ASYNC:
@@ -498,6 +504,7 @@ public class API
                             byte[] transId = API.getBytes(buffer, 16);
                             transIdList.add(new TransId(transId));
                         }
+                        assert ! buffer.hasRemaining() : "extra data";
                         return transIdList;
                     }
                     case MESSAGE_KEEPALIVE:
@@ -506,11 +513,21 @@ public class API
                         keepalive.write(OtpExternal.versionTag);
                         keepalive.write_any(new OtpErlangAtom("keepalive"));
                         send(keepalive);
+                        if (buffer.hasRemaining() &&
+                            this.input.available() == 0)
+                            continue;
                         break;
                     }
                     default:
                         return null;
                 }
+    
+                data = API.recv(buffer, this.input, this.buffer_size);
+                if (data == null || data.length == 0)
+                    return null;
+        
+                buffer = ByteBuffer.wrap(data);
+                buffer.order(ByteOrder.nativeOrder());
             }
             catch (IOException e)
             {
@@ -533,22 +550,32 @@ public class API
         }
     }
 
-    private static byte[] recv(FileInputStream input,
-                               final int size) throws IOException
+    private static byte[] recv(ByteBuffer buffer,
+                               FileInputStream input,
+                               final int size)
     {
-        byte[] bytes = new byte[size];
+        try
+        {
+            byte[] bytes = new byte[size];
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (buffer != null && buffer.hasRemaining())
+                output.write(buffer.array(), buffer.position(), buffer.limit());
+            int read = 0;
+            while ((read = input.read(bytes, 0, size)) == size &&
+                   input.available() > 0)
+                output.write(bytes, 0, size);
     
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        int read = 0;
-        while ((read = input.read(bytes, 0, size)) == size &&
-               input.available() > 0)
-            output.write(bytes, 0, size);
-
-        if (read == -1)
+            if (read == -1)
+                return null;
+            output.write(bytes, 0, read);
+        
+            return output.toByteArray();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
             return null;
-        output.write(bytes, 0, read);
-    
-        return output.toByteArray();
+        }
     }
 
     private static String getString(ByteBuffer buffer, final int size)
