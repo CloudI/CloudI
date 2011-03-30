@@ -35,6 +35,9 @@
 -define(NODE_RECONNECT, 60000). % milliseconds
 
 % periodic connection checks to determine if the udp connection is still active
-% must be a short time since this impacts MaxR and MaxT
+% must be a short time since this impacts MaxR and MaxT.  However, this time
+% becomes a hard maximum (minus a delta for overhead) for a task time target
+% used in a service/job (i.e., the maximum amount of time spent not responding
+% to incoming API calls).
 -define(KEEPALIVE_UDP, 5000). % milliseconds
 
