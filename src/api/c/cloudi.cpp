@@ -786,13 +786,6 @@ int cloudi_poll(cloudi_instance_t * p,
                 else if (index < p->buffer_recv_index) {
                     p->buffer_recv_index -= index;
                     buffer.move(index, p->buffer_recv_index, 0);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 1)
-                        goto another_request_receive;
-                    else
-                        goto another_request_consume;
                 }
                 else {
                     p->buffer_recv_index = 0;
@@ -810,13 +803,6 @@ int cloudi_poll(cloudi_instance_t * p,
                 else if (index < p->buffer_recv_index) {
                     p->buffer_recv_index -= index;
                     buffer.move(index, p->buffer_recv_index, 0);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 1)
-                        goto another_request_receive;
-                    else
-                        goto another_request_consume;
                 }
                 else {
                     p->buffer_recv_index = 0;
@@ -834,13 +820,6 @@ int cloudi_poll(cloudi_instance_t * p,
                 else if (index < p->buffer_recv_index) {
                     p->buffer_recv_index -= index;
                     buffer.move(index, p->buffer_recv_index, 0);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 1)
-                        goto another_request_receive;
-                    else
-                        goto another_request_consume;
                 }
                 else {
                     p->buffer_recv_index = 0;
