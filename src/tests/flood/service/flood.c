@@ -73,7 +73,7 @@ void process_requests(void * p)
                                    data->protocol,
                                    data->buffer_size);
 
-    result = cloudi_subscribe(&api, "flood/c", &flood);
+    result = cloudi_subscribe(&api, "c", &flood);
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);

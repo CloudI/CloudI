@@ -63,6 +63,7 @@ uninstall:
 	@exit 1
 
 install-exec-hook: tests-install \
+                   tests-flood-install \
                    tests-hexpi-install \
                    tests-http-install \
                    tests-http_req-install \
@@ -102,6 +103,26 @@ install-exec-hook: tests-install \
 
 tests-install:
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests"
+
+tests-flood-install: $(top_builddir)/tests/flood/ebin/cloudi_job_flood.beam \
+                     $(top_builddir)/tests/flood/service/jar/cloudi.jar \
+                     $(top_builddir)/tests/flood/service/jar/flood.jar
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/flood/ebin"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/flood/service"
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/flood/service/jar"
+	$(INSTALL_DATA) "$(top_builddir)/tests/flood/ebin/cloudi_job_flood.beam" \
+                    "$(DESTDIR)$(prefix)/tests/flood/ebin/"
+	$(INSTALL_PROGRAM) "$(DESTDIR)$(bindir)/flood" \
+                       "$(DESTDIR)$(prefix)/tests/flood/service/"
+	rm -f "$(DESTDIR)$(bindir)/flood"
+	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/cloudi.jar" \
+                    "$(DESTDIR)$(prefix)/tests/flood/service/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/flood.jar" \
+                    "$(DESTDIR)$(prefix)/tests/flood/service/jar/"
+	$(INSTALL_SCRIPT) "$(top_builddir)/tests/flood/service/flood.py" \
+                      "$(DESTDIR)$(prefix)/tests/flood/service/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/flood.rb" \
+                    "$(DESTDIR)$(prefix)/tests/flood/service/"
 
 tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/hexpi/ebin"

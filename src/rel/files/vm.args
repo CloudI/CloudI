@@ -22,3 +22,6 @@
 # hexpi tests service module not included in an application
 -pz tests/hexpi/ebin/
 
+# flood tests service module not included in an application
+-pz tests/flood/ebin/
+

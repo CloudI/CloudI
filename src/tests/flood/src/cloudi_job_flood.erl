@@ -53,6 +53,9 @@
 
 -behaviour(cloudi_job).
 
+%% external interface
+-export([flood/5]).
+
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
          cloudi_job_handle_request/8,
@@ -73,10 +76,10 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init(Args, _Prefix, _Dispatcher) ->
-    Rates = lists:foldl(fun({flood, Name, Request, Count} = Info, Lookup) ->
+    Rates = lists:foldl(fun({flood, Name, _Request, Count} = Info, Lookup) ->
         true = is_list(Name) and is_integer(Count),
         erlang:send_after(?INTERVAL, self(), Info),
-        trie:store(Name, (?INTERVAL * 1.0) / Count)
+        trie:store(Name, (?INTERVAL * 1.0) / Count, Lookup)
     end, trie:new(), Args),
     {ok, #state{rates = Rates}}.
 

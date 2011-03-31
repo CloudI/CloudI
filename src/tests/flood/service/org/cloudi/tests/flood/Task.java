@@ -61,7 +61,7 @@ public class Task implements Runnable
  
     public void run()
     {
-        api.subscribe("flood/java", this, "flood");
+        api.subscribe("java", this, "flood");
         boolean running = true;
         while (running)
         {
