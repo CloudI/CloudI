@@ -748,22 +748,11 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, pid_size);
                 char * pid = &buffer[index];
                 index += pid_size;
-                if (index > p->buffer_recv_index)
+                if (index != p->buffer_recv_index)
                     return cloudi_error_read_underflow;
+                p->buffer_recv_index = 0;
                 callback(p, command, name, request, request_size,
                          timeout, trans_id, pid, pid_size);
-                if (index < p->buffer_recv_index) {
-                    p->buffer_recv_index -= index;
-                    buffer.move(index, p->buffer_recv_index, 0);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 0)
-                        continue;
-                }
-                else {
-                    p->buffer_recv_index = 0;
-                }
                 break;
             }
             case MESSAGE_RECV_ASYNC:

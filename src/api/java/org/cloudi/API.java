@@ -474,10 +474,8 @@ public class API
                         byte[] transId = API.getBytes(buffer, 16);
                         int pidSize = buffer.getInt();
                         OtpErlangPid pid = API.getPid(buffer, pidSize);
+                        assert ! buffer.hasRemaining() : "extra data";
                         callback(command, name, request, timeout, transId, pid);
-                        if (buffer.hasRemaining() &&
-                            this.input.available() == 0)
-                            continue;
                         break;
                     }
                     case MESSAGE_RECV_ASYNC:

@@ -217,14 +217,10 @@ class API(object):
                  pidSize) = struct.unpack("=%dsI16sI" % requestSize, data[i:j])
                 i, j = j, j + pidSize
                 pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
-                assert j >= len(data)
+                assert j == len(data)
+                data = ''
                 self.__callback(command, name, request, timeout, transId,
                                 binary_to_term(pid))
-                data = data[j:]
-                if len(data) > 0:
-                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                    if len(IN) == 0:
-                        continue
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4

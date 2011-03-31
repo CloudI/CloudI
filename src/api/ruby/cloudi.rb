@@ -242,15 +242,10 @@ module Cloudi
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     i += j
-                    assert{i >= data.length}
+                    assert{i == data.length}
+                    data.clear()
                     callback(command, name, request, timeout, transId,
                              binary_to_term(pid))
-                    data.slice!(0, i)
-                    if data.length > 0
-                        if IO.select([@socket], nil, nil, 0).nil?
-                            next
-                        end
-                    end
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     responseSize = data[i, j].unpack("L")[0]
