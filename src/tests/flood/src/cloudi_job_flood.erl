@@ -64,7 +64,8 @@
 
 -include("cloudi_logger.hrl").
 
--define(INTERVAL, 1000). % ms
+-define(FLOOD_INTERVAL,    1000). % ms, interval for creating load
+-define(STATUS_INTERVAL,  10000). % ms, report status
 
 -record(state,
     {
@@ -78,9 +79,10 @@
 cloudi_job_init(Args, _Prefix, _Dispatcher) ->
     Rates = lists:foldl(fun({flood, Name, _Request, Count} = Info, Lookup) ->
         true = is_list(Name) and is_integer(Count),
-        erlang:send_after(?INTERVAL, self(), Info),
-        trie:store(Name, (?INTERVAL * 1.0) / Count, Lookup)
+        erlang:send_after(?FLOOD_INTERVAL, self(), Info),
+        trie:store(Name, (?FLOOD_INTERVAL * 1.0) / Count, Lookup)
     end, trie:new(), Args),
+    erlang:send_after(?STATUS_INTERVAL, self(), status),
     {ok, #state{rates = Rates}}.
 
 cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
@@ -90,13 +92,22 @@ cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
 cloudi_job_handle_info({flood, Name, Request, Count} = Info,
                        #state{rates = Rates} = State,
                        Dispatcher) ->
-    erlang:send_after(?INTERVAL, self(), Info),
+    erlang:send_after(?FLOOD_INTERVAL, self(), Info),
     Delay = trie:fetch(Name, Rates),
     {Time, _} = timer:tc(cloudi_job_flood, flood,
                          [Count, erlang:round(Delay),
                           Dispatcher, Name, Request]),
-    NewRates = trie:store(Name, (?INTERVAL / (Time * 0.001)) * Delay, Rates),
+    NewRates = trie:store(Name, (?FLOOD_INTERVAL /
+                                 (Time * 0.001)) * Delay, Rates),
     {noreply, State#state{rates = NewRates}};
+
+cloudi_job_handle_info(status, #state{rates = Rates} = State, _) ->
+    Output = lists:flatten(trie:foldl(fun(Name, Delay, L) ->
+        [io_lib:format("~10w req/s ~s~n", [Delay * 1000.0, Name]) | L]
+    end, [], Rates)),
+    ?LOG_INFO("~s", [Output]),
+    erlang:send_after(?STATUS_INTERVAL, self(), status),
+    {noreply, State};
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -116,11 +127,11 @@ flood(N, N, _, _, _, _) ->
     ok;
 
 flood(I, N, 0, Dispatcher, Name, Request) ->
-    cloudi_job:send_async(Dispatcher, Name, Request, ?INTERVAL),
+    cloudi_job:send_async(Dispatcher, Name, Request, ?FLOOD_INTERVAL),
     flood(I + 1, N, 0, Dispatcher, Name, Request);
 
 flood(I, N, Delay, Dispatcher, Name, Request) ->
-    cloudi_job:send_async(Dispatcher, Name, Request, ?INTERVAL),
+    cloudi_job:send_async(Dispatcher, Name, Request, ?FLOOD_INTERVAL),
     receive after Delay -> ok end,
     flood(I + 1, N, Delay, Dispatcher, Name, Request).
 
