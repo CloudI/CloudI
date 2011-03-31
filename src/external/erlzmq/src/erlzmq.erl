@@ -75,7 +75,13 @@ context(Threads) when is_integer(Threads) ->
 %% <br />
 %% If the socket can be created an 'ok' tuple containing a
 %% {@type erlzmq_socket()} handle to the created socket is returned;
-%% if not, it returns an {@type erlzmq_error()} describing the error.<br />
+%% if not, it returns an {@type erlzmq_error()} describing the error.
+%% <br />
+%% In line with Erlang's socket paradigm,  a socket can be either active or
+%% passive. Passive sockets tend to have lower latency and have a higher
+%% throughput for small message sizes. Active sockets on the contrary give
+%% the highest throughput for messages above 32k. A benchmarking tool is
+%% included in the source distribution.
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_socket">zmq_socket</a>.</i>
 %% @end
@@ -98,8 +104,9 @@ socket(Context, [H | _] = L) ->
             % active is not used for these socket types
             erlzmq_nif:socket(Context, socket_type(H), 0);
         false ->
-            % active is true by default, like normal Erlang sockets
-            erlzmq_nif:socket(Context, socket_type(H), 1)
+            % active is false by default
+            % (to avoid latency on small messages (messages < 32KB))
+            erlzmq_nif:socket(Context, socket_type(H), 0)
     end.
 
 %% @doc Accept connections on a socket.

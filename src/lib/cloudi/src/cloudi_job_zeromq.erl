@@ -96,7 +96,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                                {[{[I1a | _], [I1b | _]} | _] = NamePairL,
                                 [[I2 | _] | _] = EndpointL}}, D) ->
         true = is_integer(I1a) and is_integer(I1b) and is_integer(I2),
-        {ok, S} = erlzmq:socket(Context, pub),
+        {ok, S} = erlzmq:socket(Context, [pub]),
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:bind(S, Endpoint)
         end, EndpointL),
@@ -110,7 +110,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                                    {[{[I1a | _], [I1b | _]} | _] = NamePairL,
                                     [[I2 | _] | _] = EndpointL}}, D) ->
         true = is_integer(I1a) and is_integer(I1b) and is_integer(I2),
-        {ok, S} = erlzmq:socket(Context, sub),
+        {ok, S} = erlzmq:socket(Context, [sub, {active, true}]),
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:connect(S, Endpoint)
         end, EndpointL),
@@ -132,15 +132,15 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                                 [I2 | _] = Endpoint}}, D) ->
         true = is_integer(I1) and is_integer(I2),
         cloudi_job:subscribe(Dispatcher, Name),
-        {ok, S} = erlzmq:socket(Context, req),
+        {ok, S} = erlzmq:socket(Context, [req, {active, true}]),
         ok = erlzmq:bind(S, Endpoint),
         trie:store(Prefix ++ Name, S, D)
     end, trie:new(), RequestL),
     ReceivesZMQ3 = lists:foldl(fun({inbound,
-                             {[I1 | _] = Name,
-                              [I2 | _] = Endpoint}}, D) ->
+                                    {[I1 | _] = Name,
+                                     [I2 | _] = Endpoint}}, D) ->
         true = is_integer(I1) and is_integer(I2),
-        {ok, S} = erlzmq:socket(Context, rep),
+        {ok, S} = erlzmq:socket(Context, [rep, {active, true}]),
         ok = erlzmq:connect(S, Endpoint),
         dict:store(S, {reply, Prefix ++ Name}, D)
     end, ReceivesZMQ2, ReplyL),

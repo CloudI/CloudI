@@ -34,3 +34,10 @@ test: compile
 
 docs:
 	@./rebar doc
+
+bench: perf
+	@echo 'Running benchmarks, this could take some time...'
+	@mkdir -p graphs
+	@./perf/perfgraphs.py
+	@mv -f *.png graphs/
+

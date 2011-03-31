@@ -62,6 +62,12 @@ Run the test suite
     $ make test
 '''
 
+Run the benchmarks (requires [http://www.python.org python] and [http://matplotlib.sourceforge.net matplotlib])
+```
+    $ make bench
+'''
+This will run performance tests and output png graphs in the graphs directory.
+
 Please note that to behave properly on your system ZeroMQ might require [http://www.zeromq.org/docs:tuning-zeromq some tuning].
 
 == Architecture ==
