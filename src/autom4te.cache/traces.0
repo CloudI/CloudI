@@ -3494,13 +3494,13 @@ m4/ax_zeromq_erlzmq.m4:57: AX_ZEROMQ_ERLZMQ is expanded from...
 configure.ac:70: the top level])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_RELTOOL$])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_APPCONF$])
-m4trace:configure.ac:102: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:102: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:102: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:102: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:102: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:102: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:102: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:102: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:102: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:102: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:110: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:110: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:110: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:110: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:110: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:110: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:110: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:110: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:110: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:110: -1- _LT_PROG_LTMAIN

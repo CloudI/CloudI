@@ -1,0 +1,3 @@
+Main-Class: org.cloudi.tests.flood.Main
+Class-Path: cloudi.jar
+

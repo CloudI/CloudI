@@ -1,7 +1,7 @@
 beamdir = ../ebin
-beam_DATA = cloudi_job_hexpi.beam
+beam_DATA = cloudi_job_flood.beam
 CLEANFILES = $(beam_DATA) \
-             $(beamdir)/cloudi_job_hexpi.beam
+             $(beamdir)/cloudi_job_flood.beam
 
 all-local: $(beam_DATA)
 	cp -f $(beam_DATA) $(beamdir)
