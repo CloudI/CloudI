@@ -76,7 +76,7 @@ if __FILE__ == $PROGRAM_NAME
         end
         object = Task.new(api)
 
-        api.subscribe("flood/ruby", object.method(:flood))
+        api.subscribe("ruby", object.method(:flood))
         api.poll
     }}
     threads.each{ |t| t.join}

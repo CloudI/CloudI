@@ -59,7 +59,7 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, "python", timeout, transId, pid)
 
     def run(self):
-        self.__api.subscribe("flood/python", self.flood)
+        self.__api.subscribe("python", self.flood)
 
         running = True
         while running:
