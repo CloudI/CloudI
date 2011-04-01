@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_memcached).
@@ -710,76 +710,59 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Process, Timeout) ->
     try (case string_extensions:binary_to_term(Query) of
-            {'get', Key} ->
-                ememcached:get(Process,
-                   Key, Timeout);
-            {'get_many', Keys} when is_list(Keys) ->
-                ememcached:get_many(Process,
-                    Keys, Timeout);
-            {'add', Key, Value}
-                when is_binary(Value) ->
-                ememcached:add(Process,
-                    Key, Value, Timeout);
-            {'add', Key, Value, Expiration}
-                when is_binary(Value), is_integer(Expiration) ->
-                ememcached:add_exp(Process,
-                    Key, Value, Expiration, Timeout);
-            {'set', Key, Value}
-                when is_binary(Value) ->
-                ememcached:set(Process,
-                    Key, Value, Timeout);
-            {'set', Key, Value, Expiration}
-                when is_binary(Value), is_integer(Expiration) ->
-                ememcached:set_exp(Process,
-                    Key, Value, Expiration, Timeout);
-            {'replace', Key, Value}
-                when is_binary(Value) ->
-                ememcached:replace(Process,
-                    Key, Value, Timeout);
-            {'replace', Key, Value, Expiration}
-                when is_binary(Value), is_integer(Expiration) ->
-                ememcached:replace_exp(Process,
-                    Key, Value, Expiration, Timeout);
-            {'delete', Key} ->
-                ememcached:delete(Process,
-                    Key, Timeout);
-            {'increment', Key, Value, Initial, Expiration}
-                when is_binary(Value), is_binary(Initial),
-                     is_integer(Expiration) ->
-                ememcached:increment_exp(Process,
-                    Key, Value, Initial, Expiration, Timeout);
-            {'decrement', Key, Value, Initial, Expiration}
-                when is_binary(Value), is_binary(Initial),
-                     is_integer(Expiration) ->
-                ememcached:decrement_exp(Process,
-                    Key, Value, Initial, Expiration, Timeout);
-            {'append', Key, Value}
-                when is_binary(Value) ->
-                ememcached:append(Process,
-                    Key, Value, Timeout);
-            {'prepend', Key, Value}
-                when is_binary(Value) ->
-                ememcached:prepend(Process,
-                    Key, Value, Timeout);
-            'stats' ->
-                ememcached:stats(Process,
-                    Timeout);
-            'flush' ->
-                ememcached:flush(Process,
-                    Timeout);
-            {'flush', Expiration}
-                when is_integer(Expiration) ->
-                ememcached:flush_exp(Process,
-                    Expiration, Timeout);
-            'quit' ->
-                ememcached:quit(Process,
-                    Timeout);
-            'version' ->
-                ememcached:version(Process,
-                    Timeout);
-            _ ->
-                {error, invalid_call}
-    
+        {'get', Key} ->
+            ememcached:get(Process, Key, Timeout);
+        {'get_many', Keys} when is_list(Keys) ->
+            ememcached:get_many(Process, Keys, Timeout);
+        {'add', Key, Value}
+            when is_binary(Value) ->
+            ememcached:add(Process, Key, Value, Timeout);
+        {'add', Key, Value, Expiration}
+            when is_binary(Value), is_integer(Expiration) ->
+            ememcached:add_exp(Process, Key, Value, Expiration, Timeout);
+        {'set', Key, Value}
+            when is_binary(Value) ->
+            ememcached:set(Process, Key, Value, Timeout);
+        {'set', Key, Value, Expiration}
+            when is_binary(Value), is_integer(Expiration) ->
+            ememcached:set_exp(Process, Key, Value, Expiration, Timeout);
+        {'replace', Key, Value}
+            when is_binary(Value) ->
+            ememcached:replace(Process, Key, Value, Timeout);
+        {'replace', Key, Value, Expiration}
+            when is_binary(Value), is_integer(Expiration) ->
+            ememcached:replace_exp(Process, Key, Value, Expiration, Timeout);
+        {'delete', Key} ->
+            ememcached:delete(Process, Key, Timeout);
+        {'increment', Key, Value, Initial, Expiration}
+            when is_binary(Value), is_binary(Initial),
+                 is_integer(Expiration) ->
+            ememcached:increment_exp(Process, Key, Value, Initial,
+                                     Expiration, Timeout);
+        {'decrement', Key, Value, Initial, Expiration}
+            when is_binary(Value), is_binary(Initial),
+                 is_integer(Expiration) ->
+            ememcached:decrement_exp(Process, Key, Value, Initial,
+                                     Expiration, Timeout);
+        {'append', Key, Value}
+            when is_binary(Value) ->
+            ememcached:append(Process, Key, Value, Timeout);
+        {'prepend', Key, Value}
+            when is_binary(Value) ->
+            ememcached:prepend(Process, Key, Value, Timeout);
+        'stats' ->
+            ememcached:stats(Process, Timeout);
+        'flush' ->
+            ememcached:flush(Process, Timeout);
+        {'flush', Expiration}
+            when is_integer(Expiration) ->
+            ememcached:flush_exp(Process, Expiration, Timeout);
+        'quit' ->
+            ememcached:quit(Process, Timeout);
+        'version' ->
+            ememcached:version(Process, Timeout);
+        _ ->
+            {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_DEBUG("Invalid memcached command tuple ~p",

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_couchdb).
@@ -87,10 +87,10 @@
 
 -include("cloudi_logger.hrl").
 
--define(DEFAULT_HOST_NAME, "127.0.0.1").
--define(DEFAULT_PORT,      5984).
--define(DEFAULT_TIMEOUT,   20000). % 20 seconds
--define(DEFAULT_DATABASE,  "default"). % if the configuration does not specify
+-define(DEFAULT_HOST_NAME,       "127.0.0.1").
+-define(DEFAULT_PORT,                   5984).
+-define(DEFAULT_TIMEOUT,               20000). % ms
+-define(DEFAULT_DATABASE,          "default").
 
 -record(state,
     {
@@ -878,111 +878,135 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
     case Request of
         Command when is_binary(Command) ->
             reply_external(do_query(Command, Connection, HostName,
-                                    Port, Database, Timeout), State);
+                                    Port, Database, Timeout),
+                           Request, State);
         'create_database' ->
             reply_internal(ecouchdb:create_database_c(Connection, HostName,
                                                       Port, Database,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         'delete_database' ->
             reply_internal(ecouchdb:delete_database_c(Connection, HostName,
                                                       Port, Database,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         'database_info' ->
             reply_internal(ecouchdb:database_info_c(Connection, HostName,
                                                     Port, Database,
-                                                    Timeout), State);
+                                                    Timeout),
+                           Request, State);
         'server_info' ->
             reply_internal(ecouchdb:server_info_c(Connection, HostName, Port,
-                                                  Timeout), State);
+                                                  Timeout),
+                           Request, State);
         'retrieve_all_dbs' ->
             reply_internal(ecouchdb:retrieve_all_dbs_c(Connection, HostName,
-                                                       Port, Timeout), State);
+                                                       Port, Timeout),
+                           Request, State);
         {'create_attachment', DocumentID, File, ContentType} ->
             reply_internal(ecouchdb:create_attachment_c(Connection, HostName,
                                                         Port, Database,
                                                         DocumentID, File,
                                                         ContentType,
-                                                        Timeout), State);
+                                                        Timeout),
+                           Request, State);
         {'create_document', Doc} ->
             reply_internal(ecouchdb:create_document_c(Connection, HostName,
                                                       Port, Database, Doc,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'create_document', DocumentID, Doc} ->
             reply_internal(ecouchdb:create_document_c(Connection, HostName,
                                                       Port, Database,
                                                       DocumentID, Doc,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'create_documents', Documents} ->
             reply_internal(ecouchdb:create_documents_c(Connection, HostName,
                                                        Port, Database,
                                                        Documents,
-                                                       Timeout), State);
+                                                       Timeout),
+                           Request, State);
         {'document_revision', DocumentID} ->
             reply_internal(ecouchdb:document_revision_c(Connection, HostName,
                                                         Port, Database,
                                                         DocumentID,
-                                                        Timeout), State);
+                                                        Timeout),
+                           Request, State);
         {'retrieve_document', DocumentID} ->
             reply_internal(ecouchdb:retrieve_document_c(Connection, HostName,
                                                         Port, Database,
                                                         DocumentID,
-                                                        Timeout), State);
+                                                        Timeout),
+                           Request, State);
         {'update_document', DocumentID, Doc} ->
             reply_internal(ecouchdb:update_document_c(Connection, HostName,
                                                       Port, Database,
                                                       DocumentID, Doc,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'update_document', DocumentID, Rev, Doc} ->
             reply_internal(ecouchdb:update_document_c(Connection, HostName,
                                                       Port, Database,
                                                       DocumentID, Rev, Doc,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'replace_document', DocumentID, Doc} ->
             reply_internal(ecouchdb:replace_document_c(Connection, HostName,
                                                        Port, Database,
                                                        DocumentID, Doc,
-                                                       Timeout), State);
+                                                       Timeout),
+                           Request, State);
         {'replace_document', DocumentID, Rev, Doc} ->
             reply_internal(ecouchdb:replace_document_c(Connection, HostName,
                                                        Port, Database,
                                                        DocumentID, Rev, Doc,
-                                                       Timeout), State);
+                                                       Timeout),
+                           Request, State);
         {'delete_document', DocumentID} ->
             reply_internal(ecouchdb:delete_document_c(Connection, HostName,
                                                       Port, Database,
                                                       DocumentID,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'delete_document', DocumentID, Rev} ->
             reply_internal(ecouchdb:delete_document_c(Connection, HostName,
                                                       Port, Database,
                                                       DocumentID, Rev,
-                                                      Timeout), State);
+                                                      Timeout),
+                           Request, State);
         {'delete_documents', Documents} ->
             reply_internal(ecouchdb:delete_documents_c(Connection, HostName,
                                                        Port, Database,
                                                        Documents,
-                                                       Timeout), State);
+                                                       Timeout),
+                           Request, State);
         {'create_view', DocName, ViewList} ->
             reply_internal(ecouchdb:create_view_c(Connection, HostName, Port,
                                                   Database, DocName, ViewList,
-                                                  Timeout), State);
+                                                  Timeout),
+                           Request, State);
         {'create_view', DocName, ViewName, Data} ->
             reply_internal(ecouchdb:create_view_c(Connection, HostName, Port,
                                                   Database, DocName, ViewName,
-                                                  Data, Timeout), State);
+                                                  Data, Timeout),
+                           Request, State);
         {'create_view', DocName, Type, ViewName, Data} ->
             reply_internal(ecouchdb:create_view_c(Connection, HostName, Port,
                                                   Database, DocName, Type,
                                                   ViewName, Data,
-                                                  Timeout), State);
+                                                  Timeout),
+                           Request, State);
         {'invoke_view', DocName, ViewName} ->
             reply_internal(ecouchdb:invoke_view_c(Connection, HostName, Port,
                                                   Database, DocName, ViewName,
-                                                  Timeout), State);
+                                                  Timeout),
+                           Request, State);
         {'invoke_view', DocName, ViewName, Keys} ->
             reply_internal(ecouchdb:invoke_view_c(Connection, HostName, Port,
                                                   Database, DocName, ViewName,
-                                                  Keys, Timeout), State)
+                                                  Keys, Timeout),
+                           Request, State)
     end.
 
 cloudi_job_handle_info(Request, State, _) ->
@@ -997,114 +1021,114 @@ cloudi_job_terminate(_, #state{connection = Connection}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-reply_internal({Result, Result, NewConnection}, State) ->
-    {reply, Result, State#state{connection = NewConnection}};
-reply_internal({ResultState, ResultData, NewConnection}, State) ->
-    {reply, {ResultState, ResultData}, State#state{connection = NewConnection}};
-reply_internal({Result, Result}, State) ->
-    {reply, Result, State};
-reply_internal({ResultState, ResultData}, State) ->
-    {reply, {ResultState, ResultData}, State}.
+reply_internal({Output, Output, NewConnection}, _, State) ->
+    {reply, Output, State#state{connection = NewConnection}};
+reply_internal({OutputState, OutputData, NewConnection}, _, State) ->
+    {reply, {OutputState, OutputData}, State#state{connection = NewConnection}};
+reply_internal({Output, Output}, _, State) ->
+    {reply, Output, State};
+reply_internal({OutputState, OutputData}, _, State) ->
+    {reply, {OutputState, OutputData}, State}.
 
-% XXX change the response format for external/binary
+reply_external({Output, Output, NewConnection}, Input, State) ->
+    reply_binary(string2:term_to_binary(Output),
+                 Input, State#state{connection = NewConnection});
+reply_external({OutputState, OutputData, NewConnection}, Input, State) ->
+    reply_binary(string2:term_to_binary({OutputState, OutputData}),
+                 Input, State#state{connection = NewConnection});
+reply_external({Output, Output}, Input, State) ->
+    reply_binary(string2:term_to_binary(Output), Input, State);
+reply_external({OutputState, OutputData}, Input, State) ->
+    reply_binary(string2:term_to_binary({OutputState, OutputData}),
+                 Input, State);
+reply_external(Output, Input, State) when is_binary(Output) ->
+    reply_binary(Output, Input, State).
 
-reply_external({Result, Result, NewConnection}, State) ->
-    {reply, string2:term_to_binary(Result),
-     State#state{connection = NewConnection}};
-reply_external({ResultState, ResultData, NewConnection}, State) ->
-    {reply, string2:term_to_binary({ResultState, ResultData}),
-     State#state{connection = NewConnection}};
-reply_external({Result, Result}, State) ->
-    {reply, string2:term_to_binary(Result), State};
-reply_external({ResultState, ResultData}, State) ->
-    {reply, string2:term_to_binary({ResultState, ResultData}), State};
-reply_external(Result, State)
-    when is_binary(Result) ->
-    {reply, Result, State}.
+reply_binary(Output, Input, State) ->
+    {reply, cloudi_response:new(Input, Output), State}.
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Connection, HostName, Port, Database, Timeout) ->
     try (case string2:binary_to_term(Query) of
-            'create_database' ->
-                ecouchdb:create_database_c(Connection, HostName, Port,
-                                           Database, Timeout);
-            'delete_database' ->
-                ecouchdb:delete_database_c(Connection, HostName, Port,
-                                           Database, Timeout);
-            % database_info
-            % server_info
-            % retrieve_all_dbs
-            {'create_attachment', DocumentID, File, ContentType}
-                when is_list(DocumentID), is_list(File),
-                     is_list(ContentType) ->
-                ecouchdb:create_attachment_c(Connection, HostName, Port,
-                                             Database, DocumentID, File,
-                                             ContentType, Timeout);
-            {'create_document', DocumentID, Doc}
-                when is_list(DocumentID), is_list(Doc) ->
-                ecouchdb:create_document_c(Connection, HostName, Port,
-                                           Database, DocumentID, Doc, Timeout);
-            % create_documents
-            % document_revision
-            % retrieve_document
-            {'update_document', DocumentID, Doc}
-                when is_list(DocumentID), is_list(Doc) ->
-                ecouchdb:update_document_c(Connection, HostName, Port,
-                                           Database, DocumentID, Doc, Timeout);
-            {'update_document', DocumentID, Rev, Doc}
-                when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-                ecouchdb:update_document_c(Connection, HostName, Port,
-                                           Database, DocumentID, Rev,
-                                           Doc, Timeout);
-            {'replace_document', DocumentID, Doc}
-                when is_list(DocumentID), is_list(Doc) ->
-                ecouchdb:replace_document_c(Connection, HostName, Port,
-                                            Database, DocumentID,
-                                            Doc, Timeout);
-            {'replace_document', DocumentID, Rev, Doc}
-                when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-                ecouchdb:replace_document_c(Connection, HostName, Port,
-                                            Database, DocumentID, Rev,
-                                            Doc, Timeout);
-            {'delete_document', DocumentID}
-                when is_list(DocumentID) ->
-                ecouchdb:delete_document_c(Connection, HostName, Port,
-                                           Database, DocumentID, Timeout);
-            {'delete_document', DocumentID, Rev}
-                when is_list(DocumentID), is_list(Rev) ->
-                ecouchdb:delete_document_c(Connection, HostName, Port,
-                                           Database, DocumentID, Rev, Timeout);
-            % delete_documents
-            {'create_view', DocName, ViewList}
-                when is_list(DocName), is_list(ViewList) ->
-                ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                       DocName, ViewList, Timeout);
-            {'create_view', DocName, ViewName, Data}
-                when is_list(DocName), is_list(ViewName), is_list(Data) ->
-                ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                       DocName, ViewName, Data, Timeout);
-            {'create_view', DocName, Type, ViewName, Data}
-                when is_list(DocName), is_list(Type),
-                     is_list(ViewName), is_list(Data) ->
-                ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                       DocName, Type, ViewName, Data, Timeout);
-            {'invoke_view', DocName, ViewName}
-                when is_list(DocName), is_list(ViewName) ->
-                ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
-                                       DocName, ViewName, Timeout);
-            {'invoke_view', DocName,   ViewName, Keys}
-                when is_list(DocName), is_list(ViewName), is_list(Keys) ->
-                ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
-                                       DocName, ViewName, Keys, Timeout);
-            _ ->
-                {error, invalid_call}
-    
+        'create_database' ->
+            ecouchdb:create_database_c(Connection, HostName, Port,
+                                       Database, Timeout);
+        'delete_database' ->
+            ecouchdb:delete_database_c(Connection, HostName, Port,
+                                       Database, Timeout);
+        % database_info
+        % server_info
+        % retrieve_all_dbs
+        {'create_attachment', DocumentID, File, ContentType}
+            when is_list(DocumentID), is_list(File),
+                 is_list(ContentType) ->
+            ecouchdb:create_attachment_c(Connection, HostName, Port,
+                                         Database, DocumentID, File,
+                                         ContentType, Timeout);
+        {'create_document', DocumentID, Doc}
+            when is_list(DocumentID), is_list(Doc) ->
+            ecouchdb:create_document_c(Connection, HostName, Port,
+                                       Database, DocumentID, Doc, Timeout);
+        % create_documents
+        % document_revision
+        % retrieve_document
+        {'update_document', DocumentID, Doc}
+            when is_list(DocumentID), is_list(Doc) ->
+            ecouchdb:update_document_c(Connection, HostName, Port,
+                                       Database, DocumentID, Doc, Timeout);
+        {'update_document', DocumentID, Rev, Doc}
+            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+            ecouchdb:update_document_c(Connection, HostName, Port,
+                                       Database, DocumentID, Rev,
+                                       Doc, Timeout);
+        {'replace_document', DocumentID, Doc}
+            when is_list(DocumentID), is_list(Doc) ->
+            ecouchdb:replace_document_c(Connection, HostName, Port,
+                                        Database, DocumentID,
+                                        Doc, Timeout);
+        {'replace_document', DocumentID, Rev, Doc}
+            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+            ecouchdb:replace_document_c(Connection, HostName, Port,
+                                        Database, DocumentID, Rev,
+                                        Doc, Timeout);
+        {'delete_document', DocumentID}
+            when is_list(DocumentID) ->
+            ecouchdb:delete_document_c(Connection, HostName, Port,
+                                       Database, DocumentID, Timeout);
+        {'delete_document', DocumentID, Rev}
+            when is_list(DocumentID), is_list(Rev) ->
+            ecouchdb:delete_document_c(Connection, HostName, Port,
+                                       Database, DocumentID, Rev, Timeout);
+        % delete_documents
+        {'create_view', DocName, ViewList}
+            when is_list(DocName), is_list(ViewList) ->
+            ecouchdb:create_view_c(Connection, HostName, Port, Database,
+                                   DocName, ViewList, Timeout);
+        {'create_view', DocName, ViewName, Data}
+            when is_list(DocName), is_list(ViewName), is_list(Data) ->
+            ecouchdb:create_view_c(Connection, HostName, Port, Database,
+                                   DocName, ViewName, Data, Timeout);
+        {'create_view', DocName, Type, ViewName, Data}
+            when is_list(DocName), is_list(Type),
+                 is_list(ViewName), is_list(Data) ->
+            ecouchdb:create_view_c(Connection, HostName, Port, Database,
+                                   DocName, Type, ViewName, Data, Timeout);
+        {'invoke_view', DocName, ViewName}
+            when is_list(DocName), is_list(ViewName) ->
+            ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
+                                   DocName, ViewName, Timeout);
+        {'invoke_view', DocName,   ViewName, Keys}
+            when is_list(DocName), is_list(ViewName), is_list(Keys) ->
+            ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
+                                   DocName, ViewName, Keys, Timeout);
+        _ ->
+            {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_DEBUG("Invalid couchdb command tuple ~p",
                        [binary_to_list(Query)]),
             <<>>;
-        Result ->
+        Result when is_binary(Result) ->
             Result
     catch
         _:Reason ->

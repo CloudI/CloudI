@@ -151,44 +151,44 @@ cloudi_job_handle_request(_Type, _Name, Request, _Timeout, TransId, _Pid,
         {String, Parameters} when is_list(String), is_list(Parameters) ->
             case pgsql:equery(Connection, String, Parameters) of
                 {ok, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {ok, _, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {ok, _, _, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {error, _} = Response ->
-                    {reply, response_internal(Response), State}
+                    {reply, response_internal(Response, Request), State}
             end;
         [String | _] = QueryList when is_list(String) ->
             case do_queries_in_transaction(QueryList, Connection) of
                 ok ->
-                    {reply, ok, State};
+                    {reply, response_internal(ok, Request), State};
                 {error, _} = Error ->
-                    {reply, Error, State}
+                    {reply, response_internal(Error, Request), State}
             end;
         String when is_binary(String) ->
             case pgsql:squery(Connection, String) of
                 {ok, _} = Response ->
-                    {reply, response_external(Response), State};
+                    {reply, response_external(Response, Request), State};
                 {ok, _, _} = Response ->
-                    {reply, response_external(Response), State};
+                    {reply, response_external(Response, Request), State};
                 {ok, _, _, _} = Response ->
-                    {reply, response_external(Response), State};
+                    {reply, response_external(Response, Request), State};
                 {error, Reason} = Response ->
                     ?LOG_ERROR("request ~p error ~p",
                                [TransId, Reason#error.message]),
-                    {reply, response_external(Response), State}
+                    {reply, response_external(Response, Request), State}
             end;
         String when is_list(String) ->
             case pgsql:squery(Connection, String) of
                 {ok, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {ok, _, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {ok, _, _, _} = Response ->
-                    {reply, response_internal(Response), State};
+                    {reply, response_internal(Response, Request), State};
                 {error, _} = Response ->
-                    {reply, response_internal(Response), State}
+                    {reply, response_internal(Response, Request), State}
             end
     end.
 
@@ -204,28 +204,32 @@ cloudi_job_terminate(_, #state{connection = Connection}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-response_internal({ok, _I} = Response) ->
+response_internal({ok, _I} = Response, _) ->
     Response;
-response_internal({ok, _Columns, _Data} = Response) ->
+response_internal({ok, _Columns, _Data} = Response, _) ->
     Response;
-response_internal({ok, _I, _Columns, _Data} = Response) ->
+response_internal({ok, _I, _Columns, _Data} = Response, _) ->
     Response;
-response_internal({error, Reason}) ->
+response_internal({error, Reason}, _) ->
     {error, Reason#error.message}.
 
-% XXX change the response format for external/binary
-
-response_external({ok, I}) ->
+response_external({ok, I}, Input) ->
     % SQL UPDATE
-    <<I:32/unsigned-integer-native>>;
-response_external({ok, _Columns, _Data}) ->
+    cloudi_response:new(Input, <<I:32/unsigned-integer-native>>);
+response_external({ok, _Columns, Rows}, Input) ->
     % SQL SELECT
-    <<0:32>>;
-response_external({ok, I, _Columns, _Data}) ->
+    I = erlang:length(Rows),
+    Output = erlang:iolist_to_binary([<<I:32/unsigned-integer-native>> |
+    lists:map(fun(T) ->
+        cloudi_response:new(Input,
+                            string2:term_to_list(erlang:tuple_to_list(T)))
+    end, Rows)]),
+    cloudi_response:new(Input, Output);
+response_external({ok, I, _Columns, _Rows}, Input) ->
     % SQL INSERT
-    <<I:32/unsigned-integer-native>>;
-response_external({error, _}) ->
-    <<>>.
+    cloudi_response:new(Input, <<I:32/unsigned-integer-native>>);
+response_external({error, _} = Error, Input) ->
+    cloudi_response:new(Input, Error).
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Connection) when is_list(Query) ->
