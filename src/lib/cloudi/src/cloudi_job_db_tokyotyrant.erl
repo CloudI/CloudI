@@ -1219,7 +1219,8 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
                           _Dispatcher) ->
     case Request of
         Command when is_binary(Command) ->
-            {reply, do_query(Command, Timeout, Connection), State};
+            Output = do_query(Command, Timeout, Connection),
+            {reply, cloudi_response:new(Request, Output), State};
         {'addint', Key, Integer} ->
             {reply, medici:addint(Connection, Key, Integer, Timeout), State};
         {'adddouble', Key, Double} ->
@@ -1313,164 +1314,163 @@ cloudi_job_terminate(_, #state{connection = Connection}) ->
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Timeout, Connection) ->
     try (case string2:binary_to_term(Query) of
-            % basic medici API
-            {'addint', Key, Integer}
-                when is_list(Key), is_integer(Integer);
-                     is_binary(Key), is_integer(Integer) ->
-                medici:addint(Connection, Key, Integer, Timeout);
-            {'adddouble', Key, Double}
-                when is_list(Key), is_float(Double);
-                     is_binary(Key), is_float(Double) ->
-                medici:adddouble(Connection, Key, Double, Timeout);
-            {'adddouble_parts', Key, IntegerPart, FractionalPart}
-                when is_list(Key), is_integer(IntegerPart),
-                                   is_integer(FractionalPart);
-                     is_binary(Key), is_integer(IntegerPart),
-                                     is_integer(FractionalPart) ->
-                medici:adddouble_parts(Connection, Key,
-                                       IntegerPart, FractionalPart, Timeout);
-            {'copy', PathName}
-                when is_list(PathName); is_binary(PathName) ->
-                medici:copy(Connection, PathName, Timeout);
-            {'fwmkeys', Prefix, MaxKeys}
-                when is_list(Prefix), is_integer(MaxKeys);
-                     is_binary(Prefix), is_integer(MaxKeys) ->
-                medici:fwmkeys(Connection, Prefix, MaxKeys, Timeout);
-            {'get', Key}
-                when is_list(Key); is_binary(Key)  ->
-                medici:get(Connection, Key, Timeout);
-            'iterinit' ->
-                medici:iterinit(Connection, Timeout);
-            'iternext' ->
-                medici:iternext(Connection, Timeout);
-            {'mget', KeyList}
-                when is_list(KeyList) ->
-                medici:mget(Connection, KeyList, Timeout);
-            {'optimize', TuningOptions}
-                when is_list(TuningOptions); is_binary(TuningOptions) ->
-                medici:optimize(Connection, TuningOptions, Timeout);
-            {'out', Key}
-                when is_list(Key); is_binary(Key) ->
-                medici:out(Connection, Key, Timeout);
-            {'put', Key, Value}
-                when is_list(Key), is_integer(Value);
-                     is_list(Key), is_float(Value);
-                     is_list(Key), is_list(Value);
-                     is_list(Key), is_binary(Value);
-                     is_binary(Key), is_integer(Value);
-                     is_binary(Key), is_float(Value);
-                     is_binary(Key), is_list(Value);
-                     is_binary(Key), is_binary(Value) ->
-                medici:put(Connection, Key, Value, Timeout);
-            {'putcat', Key, Value}
-                when is_list(Key), is_integer(Value);
-                     is_list(Key), is_float(Value);
-                     is_list(Key), is_list(Value);
-                     is_list(Key), is_binary(Value);
-                     is_binary(Key), is_integer(Value);
-                     is_binary(Key), is_float(Value);
-                     is_binary(Key), is_list(Value);
-                     is_binary(Key), is_binary(Value) ->
-                medici:putcat(Connection, Key, Value, Timeout);
-            {'putkeep', Key, Value}
-                when is_list(Key), is_integer(Value);
-                     is_list(Key), is_float(Value);
-                     is_list(Key), is_list(Value);
-                     is_list(Key), is_binary(Value);
-                     is_binary(Key), is_integer(Value);
-                     is_binary(Key), is_float(Value);
-                     is_binary(Key), is_list(Value);
-                     is_binary(Key), is_binary(Value) ->
-                medici:putkeep(Connection, Key, Value, Timeout);
-            {'putnr', Key, Value}
-                when is_list(Key), is_integer(Value);
-                     is_list(Key), is_float(Value);
-                     is_list(Key), is_list(Value);
-                     is_list(Key), is_binary(Value);
-                     is_binary(Key), is_integer(Value);
-                     is_binary(Key), is_float(Value);
-                     is_binary(Key), is_list(Value);
-                     is_binary(Key), is_binary(Value) ->
-                medici:putnr(Connection, Key, Value, Timeout);
-            {'putshl', Key, Value, Width}
-                when is_list(Key), is_integer(Value), is_integer(Width);
-                     is_list(Key), is_float(Value), is_integer(Width);
-                     is_list(Key), is_list(Value), is_integer(Width);
-                     is_list(Key), is_binary(Value), is_integer(Width);
-                     is_binary(Key), is_integer(Value), is_integer(Width);
-                     is_binary(Key), is_float(Value), is_integer(Width);
-                     is_binary(Key), is_list(Value), is_integer(Width);
-                     is_binary(Key), is_binary(Value), is_integer(Width) ->
-                medici:putshl(Connection, Key, Value, Timeout);
-            {'restore', PathName, TimeStamp}
-                when is_list(PathName), is_integer(TimeStamp);
-                     is_binary(PathName), is_integer(TimeStamp) ->
-                medici:restore(Connection, PathName, TimeStamp, Timeout);
-            'rnum' ->
-                medici:rnum(Connection, Timeout);
-            {'setmst', HostName, Port}
-                when is_list(HostName), is_integer(Port);
-                     is_binary(HostName), is_integer(Port) ->
-                medici:setmst(Connection, HostName, Port, Timeout);
-            'size' ->
-                medici:size(Connection, Timeout);
-            'stat' ->
-                medici:stat(Connection, Timeout);
-            'sync' ->
-                medici:sync(Connection, Timeout);
-            'vanish' ->
-                medici:vanish(Connection, Timeout);
-            {'vsiz', Key}
-                when is_list(Key); is_binary(Key) ->
-                medici:vsiz(Connection, Key, Timeout);
+        % basic medici API
+        {'addint', Key, Integer}
+            when is_list(Key), is_integer(Integer);
+                 is_binary(Key), is_integer(Integer) ->
+            medici:addint(Connection, Key, Integer, Timeout);
+        {'adddouble', Key, Double}
+            when is_list(Key), is_float(Double);
+                 is_binary(Key), is_float(Double) ->
+            medici:adddouble(Connection, Key, Double, Timeout);
+        {'adddouble_parts', Key, IntegerPart, FractionalPart}
+            when is_list(Key), is_integer(IntegerPart),
+                               is_integer(FractionalPart);
+                 is_binary(Key), is_integer(IntegerPart),
+                                 is_integer(FractionalPart) ->
+            medici:adddouble_parts(Connection, Key,
+                                   IntegerPart, FractionalPart, Timeout);
+        {'copy', PathName}
+            when is_list(PathName); is_binary(PathName) ->
+            medici:copy(Connection, PathName, Timeout);
+        {'fwmkeys', Prefix, MaxKeys}
+            when is_list(Prefix), is_integer(MaxKeys);
+                 is_binary(Prefix), is_integer(MaxKeys) ->
+            medici:fwmkeys(Connection, Prefix, MaxKeys, Timeout);
+        {'get', Key}
+            when is_list(Key); is_binary(Key)  ->
+            medici:get(Connection, Key, Timeout);
+        'iterinit' ->
+            medici:iterinit(Connection, Timeout);
+        'iternext' ->
+            medici:iternext(Connection, Timeout);
+        {'mget', KeyList}
+            when is_list(KeyList) ->
+            medici:mget(Connection, KeyList, Timeout);
+        {'optimize', TuningOptions}
+            when is_list(TuningOptions); is_binary(TuningOptions) ->
+            medici:optimize(Connection, TuningOptions, Timeout);
+        {'out', Key}
+            when is_list(Key); is_binary(Key) ->
+            medici:out(Connection, Key, Timeout);
+        {'put', Key, Value}
+            when is_list(Key), is_integer(Value);
+                 is_list(Key), is_float(Value);
+                 is_list(Key), is_list(Value);
+                 is_list(Key), is_binary(Value);
+                 is_binary(Key), is_integer(Value);
+                 is_binary(Key), is_float(Value);
+                 is_binary(Key), is_list(Value);
+                 is_binary(Key), is_binary(Value) ->
+            medici:put(Connection, Key, Value, Timeout);
+        {'putcat', Key, Value}
+            when is_list(Key), is_integer(Value);
+                 is_list(Key), is_float(Value);
+                 is_list(Key), is_list(Value);
+                 is_list(Key), is_binary(Value);
+                 is_binary(Key), is_integer(Value);
+                 is_binary(Key), is_float(Value);
+                 is_binary(Key), is_list(Value);
+                 is_binary(Key), is_binary(Value) ->
+            medici:putcat(Connection, Key, Value, Timeout);
+        {'putkeep', Key, Value}
+            when is_list(Key), is_integer(Value);
+                 is_list(Key), is_float(Value);
+                 is_list(Key), is_list(Value);
+                 is_list(Key), is_binary(Value);
+                 is_binary(Key), is_integer(Value);
+                 is_binary(Key), is_float(Value);
+                 is_binary(Key), is_list(Value);
+                 is_binary(Key), is_binary(Value) ->
+            medici:putkeep(Connection, Key, Value, Timeout);
+        {'putnr', Key, Value}
+            when is_list(Key), is_integer(Value);
+                 is_list(Key), is_float(Value);
+                 is_list(Key), is_list(Value);
+                 is_list(Key), is_binary(Value);
+                 is_binary(Key), is_integer(Value);
+                 is_binary(Key), is_float(Value);
+                 is_binary(Key), is_list(Value);
+                 is_binary(Key), is_binary(Value) ->
+            medici:putnr(Connection, Key, Value, Timeout);
+        {'putshl', Key, Value, Width}
+            when is_list(Key), is_integer(Value), is_integer(Width);
+                 is_list(Key), is_float(Value), is_integer(Width);
+                 is_list(Key), is_list(Value), is_integer(Width);
+                 is_list(Key), is_binary(Value), is_integer(Width);
+                 is_binary(Key), is_integer(Value), is_integer(Width);
+                 is_binary(Key), is_float(Value), is_integer(Width);
+                 is_binary(Key), is_list(Value), is_integer(Width);
+                 is_binary(Key), is_binary(Value), is_integer(Width) ->
+            medici:putshl(Connection, Key, Value, Timeout);
+        {'restore', PathName, TimeStamp}
+            when is_list(PathName), is_integer(TimeStamp);
+                 is_binary(PathName), is_integer(TimeStamp) ->
+            medici:restore(Connection, PathName, TimeStamp, Timeout);
+        'rnum' ->
+            medici:rnum(Connection, Timeout);
+        {'setmst', HostName, Port}
+            when is_list(HostName), is_integer(Port);
+                 is_binary(HostName), is_integer(Port) ->
+            medici:setmst(Connection, HostName, Port, Timeout);
+        'size' ->
+            medici:size(Connection, Timeout);
+        'stat' ->
+            medici:stat(Connection, Timeout);
+        'sync' ->
+            medici:sync(Connection, Timeout);
+        'vanish' ->
+            medici:vanish(Connection, Timeout);
+        {'vsiz', Key}
+            when is_list(Key); is_binary(Key) ->
+            medici:vsiz(Connection, Key, Timeout);
 
-            % table medici API
-            'genuid' ->
-                medici:genuid(Connection, Timeout);
-            {'query_add_condition', OldQuery, Column, Op, ExprList}
-                when is_list(OldQuery), is_list(Column),
-                     is_atom(Op), is_list(ExprList);
-                     is_list(OldQuery), is_binary(Column),
-                     is_atom(Op), is_list(ExprList);
-                     is_list(OldQuery), is_list(Column),
-                     is_tuple(Op), is_list(ExprList);
-                     is_list(OldQuery), is_binary(Column),
-                     is_tuple(Op), is_list(ExprList) ->
-                medici:query_add_condition(
-                    Connection, OldQuery, Column, Op, ExprList, Timeout);
-            {'query_limit', OldQuery, Max}
-                when is_list(OldQuery), is_integer(Max) ->
-                medici:query_limit(Connection, OldQuery, Max, Timeout);
-            {'query_limit_skip', OldQuery, Max, Skip}
-                when is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
-                medici:query_limit_skip(
-                    Connection, OldQuery, Max, Skip, Timeout);
-            {'query_order', OldQuery, Column, Type}
-                when is_list(OldQuery), Column == primary, is_atom(Type);
-                     is_list(OldQuery), is_list(Column), is_atom(Type);
-                     is_list(OldQuery), is_binary(Column), is_atom(Type) ->
-                medici:query_order(Connection, OldQuery, Column, Type, Timeout);
-            {'search', SearchQuery}
-                when is_list(SearchQuery) ->
-                medici:search(Connection, SearchQuery, Timeout);
-            {'searchcount', SearchQuery}
-                when is_list(SearchQuery) ->
-                medici:searchcount(Connection, SearchQuery, Timeout);
-            {'searchout', SearchQuery}
-                when is_list(SearchQuery) ->
-                medici:searchout(Connection, SearchQuery, Timeout);
-            {'setindex', Column, Type}
-                when Column == primary, is_atom(Type);
-                     is_list(Column), is_atom(Type);
-                     is_binary(Column), is_atom(Type) ->
-                medici:setindex(Connection, Column, Type, Timeout);
-            {'update', Key, NewCols}
-                when is_list(Key), is_list(NewCols);
-                     is_binary(Key), is_list(NewCols) ->
-                medici:update(Connection, Key, NewCols, Timeout);
-            _ ->
-                {error, invalid_call}
-    
+        % table medici API
+        'genuid' ->
+            medici:genuid(Connection, Timeout);
+        {'query_add_condition', OldQuery, Column, Op, ExprList}
+            when is_list(OldQuery), is_list(Column),
+                 is_atom(Op), is_list(ExprList);
+                 is_list(OldQuery), is_binary(Column),
+                 is_atom(Op), is_list(ExprList);
+                 is_list(OldQuery), is_list(Column),
+                 is_tuple(Op), is_list(ExprList);
+                 is_list(OldQuery), is_binary(Column),
+                 is_tuple(Op), is_list(ExprList) ->
+            medici:query_add_condition(
+                Connection, OldQuery, Column, Op, ExprList, Timeout);
+        {'query_limit', OldQuery, Max}
+            when is_list(OldQuery), is_integer(Max) ->
+            medici:query_limit(Connection, OldQuery, Max, Timeout);
+        {'query_limit_skip', OldQuery, Max, Skip}
+            when is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
+            medici:query_limit_skip(
+                Connection, OldQuery, Max, Skip, Timeout);
+        {'query_order', OldQuery, Column, Type}
+            when is_list(OldQuery), Column == primary, is_atom(Type);
+                 is_list(OldQuery), is_list(Column), is_atom(Type);
+                 is_list(OldQuery), is_binary(Column), is_atom(Type) ->
+            medici:query_order(Connection, OldQuery, Column, Type, Timeout);
+        {'search', SearchQuery}
+            when is_list(SearchQuery) ->
+            medici:search(Connection, SearchQuery, Timeout);
+        {'searchcount', SearchQuery}
+            when is_list(SearchQuery) ->
+            medici:searchcount(Connection, SearchQuery, Timeout);
+        {'searchout', SearchQuery}
+            when is_list(SearchQuery) ->
+            medici:searchout(Connection, SearchQuery, Timeout);
+        {'setindex', Column, Type}
+            when Column == primary, is_atom(Type);
+                 is_list(Column), is_atom(Type);
+                 is_binary(Column), is_atom(Type) ->
+            medici:setindex(Connection, Column, Type, Timeout);
+        {'update', Key, NewCols}
+            when is_list(Key), is_list(NewCols);
+                 is_binary(Key), is_list(NewCols) ->
+            medici:update(Connection, Key, NewCols, Timeout);
+        _ ->
+            {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_ERROR("Invalid tokyotyrant command tuple ~p",
@@ -1481,8 +1481,7 @@ do_query(Query, Timeout, Connection) ->
         Result when is_binary(Result) ->
             Result;
         Result when is_list(Result) ->
-            %XXX a strange format for the receiving code, change this XXX
-            string2:term_to_binary(Result)
+            string2:term_to_list(Result)
             
     catch
         _:Reason ->

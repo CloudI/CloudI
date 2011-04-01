@@ -63,12 +63,12 @@
 
 -include("cloudi_logger.hrl").
 
--define(DEFAULT_HOST_NAME, "127.0.0.1").
--define(DEFAULT_USER_NAME, "cloudi").
--define(DEFAULT_PASSWORD,  "").
--define(DEFAULT_PORT,      3306).
--define(DEFAULT_ENCODING,  utf8).
--define(DEFAULT_TIMEOUT,   20000). % 20 seconds
+-define(DEFAULT_HOST_NAME,       "127.0.0.1").
+-define(DEFAULT_USER_NAME,          "cloudi").
+-define(DEFAULT_PASSWORD,                 "").
+-define(DEFAULT_PORT,                   3306).
+-define(DEFAULT_ENCODING,               utf8).
+-define(DEFAULT_TIMEOUT,               20000). % ms
 
 -record(state,
     {
@@ -194,7 +194,7 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
         {equery, String, Parameters} ->
             Result = mysql_conn:execute(Process, none, 1, Parameters, self(),
                                         list_to_binary(String), Timeout),
-            {reply, response_internal(Result), State};
+            {reply, response_internal(Result, Request), State};
         {prepare, Identifier, String} ->
             {reply, ok,
              State#state{prepared_queries = rbdict:update(Identifier,
@@ -210,22 +210,22 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
                                                 Arguments, self(),
                                                 list_to_binary(String),
                                                 Timeout),
-                    {reply, response_internal(Result), State}
+                    {reply, response_internal(Result, Request), State}
             end;
         {squery, String} ->
             Result = mysql_conn:fetch(Process, list_to_binary(String),
                                       self(), Timeout),
-            {reply, response_internal(Result), State};
+            {reply, response_internal(Result, Request), State};
         [String | _] = QueryList when is_list(String) ->
             {reply, do_queries_in_transaction(QueryList, Timeout,
                                               Process), State};
         String when is_list(String) ->
             Result = mysql_conn:fetch(Process, list_to_binary(String),
                                       self(), Timeout),
-            {reply, response_internal(Result), State};
+            {reply, response_internal(Result, Request), State};
         String when is_binary(String) ->
             Result = mysql_conn:fetch(Process, String, self(), Timeout),
-            {reply, response_external(Result), State}
+            {reply, response_external(Result, Request), State}
     end.
 
 cloudi_job_handle_info(Request, State, _) ->
@@ -240,21 +240,19 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-response_internal({data, Result}) ->
+response_internal({data, Result}, _) ->
     {ok, Result};
-response_internal({update, Result}) ->
+response_internal({update, Result}, _) ->
     {ok, Result};
-response_internal({error, _} = Error) ->
+response_internal({error, _} = Error, _) ->
     Error.
 
-% XXX change the response format for external/binary
-
-response_external({data, Result}) ->
-    string2:term_to_binary(Result);
-response_external({update, Result}) ->
-    string2:term_to_binary(Result);
-response_external({error, _}) ->
-    <<>>.
+response_external({data, Result}, Input) ->
+    cloudi_response:new(Input, string2:term_to_binary(Result));
+response_external({update, Result}, Input) ->
+    cloudi_response:new(Input, string2:term_to_binary(Result));
+response_external({error, _} = Error, Input) ->
+    cloudi_response:new(Input, Error).
 
 %% wrap the mysql string query interface
 mysql_complete_query(Pid, Queries, From, Timeout) ->
