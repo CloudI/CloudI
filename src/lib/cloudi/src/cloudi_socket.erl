@@ -202,7 +202,7 @@ init([udp, BufferSize, Timeout, Prefix,
     {next_state, 'HANDLE', StateData};
 
 'CONNECT'(timeout, StateData) ->
-    {stop, normal, StateData};
+    {stop, timeout, StateData};
 
 'CONNECT'(Request, StateData) ->
     {stop, {'CONNECT', undefined_message, Request}, StateData}.
