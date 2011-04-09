@@ -87,7 +87,9 @@
 new(Pid) when is_pid(Pid) ->
     {ok, Ifs} = inet:getiflist(),
     % at least one unique network interface must exist
-    If = [_ | _] = lists:last(lists:delete("lo", Ifs)),
+    If = [_ | _] = lists:last(lists:filter(fun(I) ->
+        not lists:prefix("lo", I)
+    end, Ifs)),
     % 48 bits for MAC address
     {ok,[{hwaddr,[OUI1,OUI2,OUI3,NIC1,NIC2,NIC3]}]} = inet:ifget(If, [hwaddr]),
     % reduce the MAC address to 16 bits
