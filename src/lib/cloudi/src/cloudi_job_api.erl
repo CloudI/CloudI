@@ -66,29 +66,27 @@
 -record(state,
     {
         functions = trie:new([{"acl_add",
-                               fun cloudi_configurator:acl_add/2},
+                               {fun cloudi_configurator:acl_add/2, 2}},
                               {"acl_remove",
-                               fun cloudi_configurator:acl_remove/2},
+                               {fun cloudi_configurator:acl_remove/2, 2}},
                               {"jobs_add",
-                               fun cloudi_configurator:jobs_add/2},
+                               {fun cloudi_configurator:jobs_add/2, 2}},
                               {"jobs_remove",
-                               fun cloudi_configurator:jobs_remove/2},
+                               {fun cloudi_configurator:jobs_remove/2, 2}},
                               {"nodes_add",
-                               fun cloudi_configurator:nodes_add/2},
+                               {fun cloudi_configurator:nodes_add/2, 2}},
                               {"nodes_remove",
-                               fun cloudi_configurator:nodes_remove/2},
+                               {fun cloudi_configurator:nodes_remove/2, 2}},
                               {"nodes_alive",
-                               fun cloudi_nodes:alive/1},
+                               {fun cloudi_nodes:alive/1, 1}},
                               {"nodes_dead",
-                               fun cloudi_nodes:dead/1},
+                               {fun cloudi_nodes:dead/1, 1}},
                               {"nodes",
-                               fun cloudi_nodes:nodes/1}]),
-        formats = trie:new([{"erlang",
-                             {fun erlang_to_term/1, fun term_to_erlang/2}},
-                            {"json-rpc",
-                             {fun json_rpc_to_term/1, fun term_to_json_rpc/2}}])
+                               {fun cloudi_nodes:nodes/1, 1}}]),
+        formats = trie:new([{"erlang", fun format_erlang/4},
+                            {"json-rpc", fun format_json_rpc/4}])
     }).
-
+ 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -98,37 +96,32 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init(_Args, _Prefix, Dispatcher) ->
-    % names are [prefix]function/format (i.e., request format)
-    cloudi_job:subscribe(Dispatcher, "acl_add/erlang"),
-    cloudi_job:subscribe(Dispatcher, "acl_remove/erlang"),
-    cloudi_job:subscribe(Dispatcher, "jobs_add/erlang"),
-    cloudi_job:subscribe(Dispatcher, "jobs_remove/erlang"),
-    cloudi_job:subscribe(Dispatcher, "nodes_add/erlang"),
-    cloudi_job:subscribe(Dispatcher, "nodes_remove/erlang"),
-    cloudi_job:subscribe(Dispatcher, "acl_add/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "acl_remove/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "jobs_add/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "jobs_remove/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "nodes_add/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "nodes_remove/json-rpc"),
-    cloudi_job:subscribe(Dispatcher, "nodes_alive/"),
-    cloudi_job:subscribe(Dispatcher, "nodes_dead/"),
-    cloudi_job:subscribe(Dispatcher, "nodes/"),
+    % names are [prefix]format/[method] (i.e., request format)
+    cloudi_job:subscribe(Dispatcher, "erlang/acl_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/acl_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_alive"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes"),
+    cloudi_job:subscribe(Dispatcher, "json_rpc/"),
     {ok, #state{}}.
 
 cloudi_job_handle_request(_Type, Name, Request, Timeout, _TransId, _Pid,
                           #state{functions = Functions,
                                  formats = Formats} = State, _Dispatcher) ->
-    {Path1, Format} = string2:splitr($/, Name),
-    {_, Function} = string2:splitr($/, Path1),
-    FunctionF = trie:fetch(Function, Functions),
-    Response = if
-        Format == [] ->
-            FunctionF(Timeout);
+    {Path1, Method} = string2:splitr($/, Name),
+    {_, Format} = string2:splitr($/, Path1),
+    FunctionArity = if
+        Method == [] ->
+            undefined;
         true ->
-            {FormatInF, FormatOutF} = trie:fetch(Format, Formats),
-            FormatOutF(Request, FunctionF(FormatInF(Request), Timeout))
+            trie:fetch(Method, Functions)
     end,
+    FormatF = trie:fetch(Format, Formats),
+    Response = FormatF(FunctionArity, Request, Timeout, Functions),
     {reply, cloudi_response:new(Request, Response), State}.
 
 cloudi_job_handle_info(Request, State, _) ->
@@ -142,29 +135,36 @@ cloudi_job_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-erlang_to_term(Input)
-    when is_binary(Input) ->
-    string2:binary_to_term(Input);
-erlang_to_term(Input)
-    when is_list(Input) ->
-    string2:list_to_term(Input);
-erlang_to_term(Input) ->
-    Input.
+format_erlang({F, 2}, Input, Timeout, _) ->
+    if
+        is_binary(Input) ->
+            string2:term_to_binary(F(string2:binary_to_term(Input), Timeout));
+        is_list(Input) ->
+            string2:term_to_list(F(string2:list_to_term(Input), Timeout))
+    end;
 
-term_to_erlang(Input, Output)
-    when is_binary(Input) ->
-    string2:term_to_binary(Output);
-term_to_erlang(Input, Output)
-    when is_list(Input) ->
-    string2:term_to_list(Output);
-term_to_erlang(_, Output) ->
-    Output.
+format_erlang({F, 1}, Input, Timeout, _) ->
+    if
+        is_binary(Input) ->
+            string2:term_to_binary(F(Timeout));
+        is_list(Input) ->
+            string2:term_to_list(F(Timeout))
+    end.
 
-json_rpc_to_term(Input) ->
-    %jsx:json_to_term(Input)
-    Input.
-
-term_to_json_rpc(_Input, Output) ->
-    %jsx:term_to_json(Output)
-    Output.
+format_json_rpc(undefined, Input, Timeout, Functions) ->
+    {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
+    try (case trie:fetch(erlang:binary_to_list(Method), Functions) of
+        {F, 1} when Params == [] ->
+            string2:term_to_binary(F(Timeout));
+        {F, 2} when length(Params) == 1 ->
+            string2:term_to_binary(F(string2:binary_to_term(erlang:hd(Params)),
+                                     Timeout))
+        end) of
+        Result ->
+            cloudi_json_rpc:response_to_json(Result, Id)
+    catch
+        _:Error ->
+            cloudi_json_rpc:response_to_json(null,
+                                             string2:term_to_binary(Error), Id)
+    end.
 

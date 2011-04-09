@@ -387,7 +387,6 @@ get_option({OptionName, DefaultValue, CheckAndConvertFun, FailTypeError}, Option
 					{OptionName, Value}
 			end;
 		Value ->
-io:format("~p == ~p~n",[OptionName, Value]),
 			case CheckAndConvertFun(Value) of
 				false ->
 					{error, {FailTypeError, Value}};
