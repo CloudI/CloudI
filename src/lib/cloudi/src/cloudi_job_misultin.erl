@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_misultin).
@@ -109,7 +109,8 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
                               {ssl, SSL},
                               {compress, Compress},
                               {ws_autoexit, WsAutoExit},
-                              {loop, Loop}]) of
+                              {loop, Loop},
+                              {name, false}]) of
         {ok, Process} ->
             {ok, #state{process = Process}};
         {error, Reason} ->

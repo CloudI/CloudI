@@ -75,6 +75,15 @@ new(Input, Output)
             <<16#ffffffff:32>>
     end;
 
+new(Input, Output)
+    when is_list(Input), is_integer(hd(Input)) ->
+    if
+        is_list(Output), is_integer(hd(Output)) ->
+            Output;
+        true ->
+            string2:term_to_list(Output)
+    end;
+
 new(_, Output) ->
     Output.
 

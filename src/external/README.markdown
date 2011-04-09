@@ -92,16 +92,16 @@ misultin
 --------
 Fast Erlang HTTP Server
 http://github.com/ostinelli/misultin
-commit 6c3d1952ec3d5de3cdb2
-Sat Feb 12 14:55:04 PST 2011
+commit d2e99f7b14cbe17ed89b
+Fri Apr  8 19:28:47 PDT 2011
 BSD
 
 erlzmq
 ------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 https://github.com/okeuday/erlzmq2
-commit dad60babcb262405d2e1
-Wed Mar 30 21:01:38 PDT 2011
+commit 006d8c47d4616d7ba283
+Fri Apr  8 19:26:21 PDT 2011
 BSD
 
 zeromq
@@ -110,4 +110,12 @@ ZeroMQ 2.1.3
 http://download.zeromq.org/zeromq-2.1.3.tar.gz
 Wed Mar 23 16:46:10 PDT 2011
 LGPL
+
+jsx
+---
+Erlang JSON Parsing
+https://github.com/talentdeficit/jsx
+commit cbade4f88b07ffbb5442
+Sat Apr  2 23:11:56 PDT 2011
+MIT
 

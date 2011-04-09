@@ -40,9 +40,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#ifndef size_t
-typedef unsigned long size_t;
-#endif
+#include <stddef.h>
 
 typedef struct {
 

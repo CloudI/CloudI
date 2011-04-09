@@ -24,6 +24,7 @@
   {excl_sys_filters, ["^bin/.*",
                       "^erts.*/bin/(dialyzer|typer)"]},
   @ZEROMQ_ERLZMQ_RELTOOL@
+  {app, jsx, [{incl_cond, include}]},
   {app, misultin, [{incl_cond, include}]},
   {app, etokyotyrant, [{incl_cond, include}]},
   {app, ememcached, [{incl_cond, include}]},
