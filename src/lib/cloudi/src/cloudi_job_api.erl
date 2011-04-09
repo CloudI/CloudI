@@ -84,7 +84,7 @@
                               {"nodes",
                                {fun cloudi_nodes:nodes/1, 1}}]),
         formats = trie:new([{"erlang", fun format_erlang/4},
-                            {"json-rpc", fun format_json_rpc/4}])
+                            {"json_rpc", fun format_json_rpc/4}])
     }).
  
 %%%------------------------------------------------------------------------
