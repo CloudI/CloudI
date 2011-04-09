@@ -76,8 +76,7 @@
         node_id,
         clock_seq,
         clock_seq_high,
-        clock_seq_low,
-        epoch_seconds
+        clock_seq_low
     }).
 
 %%%------------------------------------------------------------------------
@@ -108,23 +107,18 @@ new(Pid) when is_pid(Pid) ->
     PidByte4 = (ID4 bxor SR1) bxor CR1,
     ClockSeq = random:uniform(16384) - 1,
     <<ClockSeqHigh:6, ClockSeqLow:8>> = <<ClockSeq:14>>,
-    Epoch = calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}}),
     #uuid_state{node_id = <<IfByte1:8, IfByte2:8,
                             PidByte1:8, PidByte2:8,
                             PidByte3:8, PidByte4:8>>,
                 clock_seq = ClockSeq,
                 clock_seq_high = ClockSeqHigh,
-                clock_seq_low = ClockSeqLow,
-                epoch_seconds = Epoch}.
+                clock_seq_low = ClockSeqLow}.
 
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq_high = ClockSeqHigh,
-                   clock_seq_low = ClockSeqLow,
-                   epoch_seconds = Epoch}) ->
-    Now = {_, _, Micro} = erlang:now(),
-    NowUTC = calendar:now_to_universal_time(Now),
-    NowSecs = calendar:datetime_to_gregorian_seconds(NowUTC),
-    Time = (NowSecs - Epoch) * 1000000 + Micro,
+                   clock_seq_low = ClockSeqLow}) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    Time = (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds,
     <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>> = <<Time:60>>,
     <<TimeLow:32, TimeMid:16, TimeHigh:12,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
@@ -133,11 +127,9 @@ get_v1(#uuid_state{node_id = NodeId,
       ClockSeqLow:8,
       NodeId/binary>>.
 
-get_v1_time(#uuid_state{epoch_seconds = Epoch}) ->
-    Now = {_, _, Micro} = erlang:now(),
-    NowUTC = calendar:now_to_universal_time(Now),
-    NowSecs = calendar:datetime_to_gregorian_seconds(NowUTC),
-    (NowSecs - Epoch) * 1000000 + Micro;
+get_v1_time(#uuid_state{}) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
@@ -166,17 +158,19 @@ get_v4() ->
 % (see B.A. Wichmann and I.D.Hill, in 
 %  'An efficient and portable pseudo-random number generator',
 %  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
+% a single random:uniform/1 call can provide a maximum of 44 bits
+% (currently this is not significantly faster
+%  because multiple function calls are necessary)
 get_v4_fast() ->
-    Rand1 = random:uniform(1073741824) - 1, % random 30 bits
-    Rand2 = random:uniform(1073741824) - 1, % random 30 bits
-    Rand3 = random:uniform(1073741824) - 1, % random 30 bits
-    <<Rand3Part1:6, Rand3Part2:24>> = <<Rand3:30>>,
-    Rand4 = random:uniform(4294967296) - 1, % random 32 bits
-    <<Rand1:30, Rand2:30,
+    Rand1 = random:uniform(17592186044416) - 1, % random 44 bits
+    Rand2 = random:uniform(17592186044416) - 1, % random 44 bits
+    Rand3 = random:uniform(17179869184) - 1, % random 34 bits
+    <<Rand2a:16, Rand2b:6, Rand2c:22>> = <<Rand2:44>>,
+    <<Rand1:44, Rand2a:16,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      Rand3Part1:6,
+      Rand2b:6,
       0:1, 1:1,            % reserved bits
-      Rand3Part2:24, Rand4:32>>.
+      Rand2c:22, Rand3:34>>.
 
 % crypto:rand_bytes/1 repeats in the same way as
 % RAND_pseudo_bytes within OpenSSL.
