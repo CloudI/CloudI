@@ -53,7 +53,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -65,8 +65,6 @@
          get_v1_time/1,
          get_v3/1,
          get_v4/0,
-         get_v4_fast/0,
-         get_v4_safe/0,
          get_v5/1,
          uuid_to_string/1,
          increment/1]).
@@ -151,27 +149,6 @@ get_v3([I | _] = Name)
       0:1, 1:1,            % reserved bits
       B3:56>>.
 
-get_v4() ->
-    get_v4_safe().
-
-% random:uniform/1 repeats every 2.78e13
-% (see B.A. Wichmann and I.D.Hill, in 
-%  'An efficient and portable pseudo-random number generator',
-%  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
-% a single random:uniform/1 call can provide a maximum of 44 bits
-% (currently this is not significantly faster
-%  because multiple function calls are necessary)
-get_v4_fast() ->
-    Rand1 = random:uniform(17592186044416) - 1, % random 44 bits
-    Rand2 = random:uniform(17592186044416) - 1, % random 44 bits
-    Rand3 = random:uniform(17179869184) - 1, % random 34 bits
-    <<Rand2a:16, Rand2b:6, Rand2c:22>> = <<Rand2:44>>,
-    <<Rand1:44, Rand2a:16,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      Rand2b:6,
-      0:1, 1:1,            % reserved bits
-      Rand2c:22, Rand3:34>>.
-
 % crypto:rand_bytes/1 repeats in the same way as
 % RAND_pseudo_bytes within OpenSSL.
 % if OpenSSL is configured to use the MD PRNG (default) with SHA1
@@ -182,7 +159,7 @@ get_v4_fast() ->
 % if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
 % and would have collisions based on 3DES (which is a black-box algorithm,
 % i.e., the DES S-boxes used within the cipher were never published).
-get_v4_safe() ->
+get_v4() ->
     <<Rand1:60, _:4, Rand2:6, _:2, Rand3:56>> = crypto:rand_bytes(16),
     <<Rand1:60,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
