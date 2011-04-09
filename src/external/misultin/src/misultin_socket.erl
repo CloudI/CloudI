@@ -3,7 +3,7 @@
 %
 % >-|-|-(°>
 % 
-% Copyright (C) 2010, Roberto Ostinelli <roberto@ostinelli.net>, Sean Hinde.
+% Copyright (C) 2011, Roberto Ostinelli <roberto@ostinelli.net>, Sean Hinde.
 % All rights reserved.
 %
 % Code portions from Sean Hinde have been originally taken under BSD license from Trapexit at the address:
@@ -31,13 +31,13 @@
 % POSSIBILITY OF SUCH DAMAGE.
 % ==========================================================================================================
 -module(misultin_socket).
--vsn("0.6.2").
+-vsn("0.7-dev").
 
 % API
--export([start_link/5]).
+-export([start_link/7]).
 
 % callbacks
--export([listener/5]).
+-export([listener/7]).
 
 % internal
 -export([listen/3, setopts/3, recv/4, send/3, close/2]).
@@ -50,19 +50,26 @@
 
 % Function: {ok,Pid} | ignore | {error, Error}
 % Description: Starts the socket.
-start_link(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
-	proc_lib:spawn_link(?MODULE, listener, [ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts]).
+start_link(ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts) ->
+	proc_lib:spawn_link(?MODULE, listener, [ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts]).
 
 % Function: {ok,Pid} | ignore | {error, Error}
 % Description: Starts the socket.
-listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
+listener(ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts) ->
 	case catch accept(ListenSocket, SocketMode) of
-		{ok, {sslsocket, _, _} = Sock} ->
-			% received a SSL socket -> spawn a ssl_accept process to avoid locking the main listener
+		{ok, Sock} when SocketMode =:= http ->
+			% received a HTTP socket, check connections
+			manage_open_connection_count(ServerRef, Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts, MaxConnections),							
+			% get back to accept loop
+			listener(ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts);
+		{ok, Sock} ->
+			% spawn a ssl_accept process to avoid locking the main listener
 			spawn(fun() ->
 				case ssl:ssl_accept(Sock, 60000) of
 					ok ->
-						create_socket_pid(Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts);
+						manage_open_connection_count(ServerRef, Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts, MaxConnections);
+					{ok, NewSock} ->
+						manage_open_connection_count(ServerRef, NewSock, ListenPort, RecvTimeout, SocketMode, CustomOpts, MaxConnections);
 					{error, _Reason} ->
 						% could not negotiate a SSL transaction, leave process
 						?LOG_WARNING("could not negotiate a SSL transaction: ~p", [_Reason]),
@@ -70,16 +77,11 @@ listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
 				end
 			end),
 			% get back to accept loop
-			listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts);
-		{ok, Sock} ->
-			% received a HTTP socket
-			create_socket_pid(Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts),
-			% get back to accept loop
-			listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts);
+			listener(ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts);
 		{error, _Error} ->
 			?LOG_WARNING("accept failed with error: ~p", [_Error]),
 			% get back to accept loop
-			listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts);
+			listener(ServerRef, ListenSocket, ListenPort, RecvTimeout, MaxConnections, SocketMode, CustomOpts);
 		{'EXIT', Error} ->
 			?LOG_ERROR("accept exited with error: ~p, quitting process", [Error]),
 			exit({error, {accept_failed, Error}})
@@ -90,8 +92,22 @@ listener(ListenSocket, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
 
 % ============================ \/ INTERNAL FUNCTIONS =======================================================
 
+% upgrade to SSL
+manage_open_connection_count(ServerRef, Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts, MaxConnections) ->
+	case misultin:get_open_connections_count(ServerRef) >= MaxConnections of
+		false ->
+			create_socket_pid(ServerRef, Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts);
+		true ->
+			% too many open connections, send error and close [spawn to avoid locking]
+			spawn(fun() ->
+				?LOG_WARNING("too many open connections, refusing new request",[]),
+				send(Sock, [misultin_utility:get_http_status_code(503), <<"Connection: Close\r\n\r\n">>], SocketMode),
+				close(Sock, SocketMode)
+			end)
+	end.
+
 % start socket Pid
-create_socket_pid(Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
+create_socket_pid(ServerRef, Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
 	?LOG_DEBUG("accepted an incoming TCP connection in ~p mode on socket ~p, spawning controlling process", [SocketMode, Sock]),
 	Pid = spawn(fun() ->
 		receive
@@ -103,7 +119,7 @@ create_socket_pid(Sock, ListenPort, RecvTimeout, SocketMode, CustomOpts) ->
 				PeerCert = peercert(Sock, SocketMode),
 				% jump to external callback
 				?LOG_DEBUG("jump to connection logic", []),
-				misultin_http:handle_data(Sock, SocketMode, ListenPort, PeerAddr, PeerPort, PeerCert, RecvTimeout, CustomOpts)
+				misultin_http:handle_data(ServerRef, Sock, SocketMode, ListenPort, PeerAddr, PeerPort, PeerCert, RecvTimeout, CustomOpts)
 		after 60000 ->
 			?LOG_ERROR("timeout waiting for set in controlling process, closing socket", []),
 			catch close(Sock, SocketMode)

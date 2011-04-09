@@ -3,7 +3,7 @@
 %
 % >-|-|-(°>
 % 
-% Copyright (C) 2010, Roberto Ostinelli <roberto@ostinelli.net>
+% Copyright (C) 2011, Roberto Ostinelli <roberto@ostinelli.net>
 % All rights reserved.
 %
 % BSD License
@@ -56,7 +56,7 @@ handle_http(Req, Port) ->
 				function ready(){
 					if (\"WebSocket\" in window) {
 						// browser supports websockets
-						var ws = new WebSocket(\"ws://localhost:", integer_to_list(Port) ,"/service\");
+						var ws = new WebSocket(\"ws://localhost:", erlang:integer_to_list(Port) ,"/service\");
 						ws.onopen = function() {
 							// websocket is connected
 							addStatus(\"websocket connected!\");
@@ -93,8 +93,7 @@ handle_websocket(Ws) ->
 		closed ->
 			% IMPORTANT: since we specified the {ws_autoexit, false} option, we need to manually ensure that this process exits
 			% [otherwise it will become a zombie]
-			io:format("The WebSocket was CLOSED!~n"),
-			closed;
+			io:format("The WebSocket was CLOSED!~n");
 		_Ignore ->
 			handle_websocket(Ws)
 	after 5000 ->

@@ -1,7 +1,7 @@
 % ==========================================================================================================
 % MISULTIN - Include file
 % 
-% Copyright (C) 2009, Sean Hinde, Roberto Ostinelli <roberto@ostinelli.net>
+% Copyright (C) 2011, Sean Hinde, Roberto Ostinelli <roberto@ostinelli.net>
 % All rights reserved.
 %
 % BSD License
@@ -25,7 +25,6 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 % POSSIBILITY OF SUCH DAMAGE.
 % ==========================================================================================================
-%-define(log_debug, true).
 
 % define debug
 -ifdef(log_debug).
@@ -56,9 +55,12 @@
 
 % misultin server Options
 -record(custom_opts, {
+	post_max_size,				% maximum post size in bytes, defaults to 4 MB
+	get_url_max_size,			% maximum GET url size in bytes, defaults to 2000
 	compress,					% send compressed output if supported by browser
 	stream_support,				% stream support option
 	loop,						% the fun handling requests
+	autoexit,					% true | false
 	ws_loop,					% the loop handling websockets
 	ws_autoexit					% true | false
 }).
@@ -70,7 +72,7 @@
 	peer_addr,					% peer IP | undefined
 	peer_port,					% peer port | undefined
 	peer_cert,					% undefined | the DER encoded peer certificate that can be decoded with public_key:pkix_decode_cert/2
-	connection = keep_alive,	% keep_alive | close
+	connection = close,			% keep_alive | close
 	content_length,				% Integer
 	vsn,						% {Maj,Min}
 	method,						% 'GET'|'POST'

@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_api).
@@ -84,7 +84,9 @@
                               {"nodes",
                                fun cloudi_nodes:nodes/1}]),
         formats = trie:new([{"erlang",
-                             fun erlang_to_term/1}])
+                             {fun erlang_to_term/1, fun term_to_erlang/2}},
+                            {"json-rpc",
+                             {fun json_rpc_to_term/1, fun term_to_json_rpc/2}}])
     }).
 
 %%%------------------------------------------------------------------------
@@ -103,6 +105,12 @@ cloudi_job_init(_Args, _Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "jobs_remove/erlang"),
     cloudi_job:subscribe(Dispatcher, "nodes_add/erlang"),
     cloudi_job:subscribe(Dispatcher, "nodes_remove/erlang"),
+    cloudi_job:subscribe(Dispatcher, "acl_add/json-rpc"),
+    cloudi_job:subscribe(Dispatcher, "acl_remove/json-rpc"),
+    cloudi_job:subscribe(Dispatcher, "jobs_add/json-rpc"),
+    cloudi_job:subscribe(Dispatcher, "jobs_remove/json-rpc"),
+    cloudi_job:subscribe(Dispatcher, "nodes_add/json-rpc"),
+    cloudi_job:subscribe(Dispatcher, "nodes_remove/json-rpc"),
     cloudi_job:subscribe(Dispatcher, "nodes_alive/"),
     cloudi_job:subscribe(Dispatcher, "nodes_dead/"),
     cloudi_job:subscribe(Dispatcher, "nodes/"),
@@ -118,8 +126,8 @@ cloudi_job_handle_request(_Type, Name, Request, Timeout, _TransId, _Pid,
         Format == [] ->
             FunctionF(Timeout);
         true ->
-            FormatF = trie:fetch(Format, Formats),
-            FunctionF(FormatF(Request), Timeout)
+            {FormatInF, FormatOutF} = trie:fetch(Format, Formats),
+            FormatOutF(Request, FunctionF(FormatInF(Request), Timeout))
     end,
     {reply, cloudi_response:new(Request, Response), State}.
 
@@ -139,5 +147,24 @@ erlang_to_term(Input)
     string2:binary_to_term(Input);
 erlang_to_term(Input)
     when is_list(Input) ->
-    string2:list_to_term(Input).
+    string2:list_to_term(Input);
+erlang_to_term(Input) ->
+    Input.
+
+term_to_erlang(Input, Output)
+    when is_binary(Input) ->
+    string2:term_to_binary(Output);
+term_to_erlang(Input, Output)
+    when is_list(Input) ->
+    string2:term_to_list(Output);
+term_to_erlang(_, Output) ->
+    Output.
+
+json_rpc_to_term(Input) ->
+    %jsx:json_to_term(Input)
+    Input.
+
+term_to_json_rpc(_Input, Output) ->
+    %jsx:term_to_json(Output)
+    Output.
 
