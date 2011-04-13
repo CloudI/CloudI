@@ -18,15 +18,15 @@ as a service subscribing to:
 
 * "/cloudi/api/json_rpc/"
 * "/cloudi/api/erlang/*" (see below)
-** "/cloudi/api/erlang/acl_add"
-** "/cloudi/api/erlang/acl_remove"
-** "/cloudi/api/erlang/jobs_add"
-** "/cloudi/api/erlang/jobs_remove"
-** "/cloudi/api/erlang/nodes_add"
-** "/cloudi/api/erlang/nodes_remove"
-** "/cloudi/api/erlang/nodes_alive"
-** "/cloudi/api/erlang/nodes_dead"
-** "/cloudi/api/erlang/nodes"
+  * "/cloudi/api/erlang/acl_add"
+  * "/cloudi/api/erlang/acl_remove"
+  * "/cloudi/api/erlang/jobs_add"
+  * "/cloudi/api/erlang/jobs_remove"
+  * "/cloudi/api/erlang/nodes_add"
+  * "/cloudi/api/erlang/nodes_remove"
+  * "/cloudi/api/erlang/nodes_alive"
+  * "/cloudi/api/erlang/nodes_dead"
+  * "/cloudi/api/erlang/nodes"
 
 The [default configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
 expects HTTP requests to port 8081 with the proper service path and format
