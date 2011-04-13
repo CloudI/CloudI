@@ -105,6 +105,22 @@ See [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloud
 
 See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme)
 
+## USING
+
+Integration points:
+
+* CloudI API (See [src/api/README](https://github.com/okeuday/CloudI/tree/master/src/api#readme)
+* ZeroMQ with [cloudi_job_zeromq](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_zeromq.erl) [configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
+* HTTP with [cloudi_job_misultin](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_misultin.erl) [configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
+* Supported databases
+  * CouchDB with [cloudi_job_db_couchdb](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_couchdb.erl)
+  * memcached with [cloudi_job_db_memcached](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_memcached.erl)
+  * MySQL with [cloudi_job_db_mysql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_mysql.erl)
+  * PostgreSQL with [cloudi_job_db_pgsql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_pgsql.erl)
+  * Tokyo Tyrant with [cloudi_job_db_tokyotyrant](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_tokyotyrant.erl)
+
+Dynamic configuration uses the job API (See [src/job_api/README](https://github.com/okeuday/CloudI/tree/master/src/job_api#readme)
+
 ## LICENSE
 
 [BSD License](https://github.com/okeuday/CloudI/blob/master/src/LICENSE)
