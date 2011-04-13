@@ -147,7 +147,7 @@ content_type(Headers) ->
     end.
 
 handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
-    Name = HttpRequest:get(str_uri),
+    Name = HttpRequest:get(uri_unquoted),
     RequestBinary = case HttpRequest:get(method) of
         'GET' ->
             erlang:list_to_binary(HttpRequest:get(args));
