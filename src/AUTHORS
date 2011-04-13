@@ -2,10 +2,15 @@ CloudI        Michael Truog <mjtruog at gmail dot com>
 
 Dependencies:
 
-misultin      Roberto Ostinelli <roberto@ostinelli.net>
-etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
-erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
-epgsql        Will Glozer
-emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
-ememcached    Nick Gerakines <nick@gerakines.net>
 ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
+ememcached    Nick Gerakines <nick@gerakines.net>
+emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
+epgsql        Will Glozer
+erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
+etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
+jsonlib       Josh Marshall
+jsx           Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+misultin      Roberto Ostinelli <roberto@ostinelli.net>
+rebar         Dave Smith <dizzyd@dizzyd.com>
+zeromq        Martin Sustrik <sustrik@250bpm.com>
+

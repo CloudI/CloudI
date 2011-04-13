@@ -80,7 +80,7 @@ get(method) ->
 	Req#req.method;
 get(uri) ->
 	Req#req.uri;
-get(str_uri) ->
+get(uri_unquoted) ->
     {_UriType, RawUri} = Req#req.uri,
     unquote(RawUri);
 get(args) ->
