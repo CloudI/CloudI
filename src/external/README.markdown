@@ -88,6 +88,13 @@ commit d4eafd6dd402d0c3bc42
 October 14, 2009
 Erlang Public License
 
+jinterface
+----------
+Binary Erlang Term Encoding Java Source Code
+http://www.erlang.org/download/otp_src_R14B01.tar.gz
+Wed Feb  9 12:31:54 PST 2011
+Erlang Public License
+
 jsonrpclib
 ----------
 Python JSON-RPC library

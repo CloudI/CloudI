@@ -736,17 +736,13 @@ clean-configure: config.log
 dialyze: rebar
 	$(ESCRIPT) rebar dialyze
 
-run: all
-	$(ERLANG_ROOT_DIR)/bin/erl -config config/sys \
-      -sname cloudi \
-      -pz external/epgsql/ebin \
-      -pz external/emysql/ebin \
-      -pz external/etokyotyrant/ebin \
-      -pz external/ememcached/ebin \
-      -pz external/ecouchdb/ebin \
-      -pz external/misultin/ebin \
-      -pz tests/hexpi/ebin \
-      `find lib/ -name "ebin" | sed 's/^/-pz /'`
+run:
+	@echo
+	@echo "********************"
+	@echo "* USE make install *"
+	@echo "********************"
+	@echo
+	@exit 1
 
 distdir:
 	@echo
@@ -771,12 +767,15 @@ install-exec-hook: tests-install \
                    tests-hexpi-install \
                    tests-http-install \
                    tests-http_req-install \
+                   tests-job_api-install \
                    tests-zeromq-install \
                    api-install \
                    api-c-install \
                    api-java-install \
                    api-python-install \
-                   api-ruby-install
+                   api-ruby-install \
+                   job_api-install \
+                   job_api-python-install
 	rm -f "$(DESTDIR)$(bindir)/cloudi_os_spawn_vsn_"*
 	$(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/releases"
@@ -874,6 +873,11 @@ tests-http_req-install:
         "$(DESTDIR)$(prefix)/tests/http_req/public_html/"
 	rm -f "$(DESTDIR)$(bindir)/http_req"
 
+tests-job_api-install:
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/job_api"
+	$(INSTALL_SCRIPT) "$(top_builddir)/tests/job_api/run.py" \
+                      "$(DESTDIR)$(prefix)/tests/job_api/"
+
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/tests/zeromq"
 	$(INSTALL_SCRIPT) "$(top_builddir)/tests/zeromq/run.py" \
@@ -914,6 +918,33 @@ api-ruby-install:
                     "$(DESTDIR)$(prefix)/api/ruby/"
 	$(INSTALL_DATA) "$(top_builddir)/api/ruby/erlang.rb" \
                     "$(DESTDIR)$(prefix)/api/ruby/"
+
+job_api-install:
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/job_api"
+
+job_api-python-install:
+	$(MKDIR_P) "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib"
+	$(INSTALL_DATA) "$(top_builddir)/job_api/python/cloudi_job_api.py" \
+                    "$(DESTDIR)$(prefix)/job_api/python/"
+	$(INSTALL_DATA) "$(top_builddir)/job_api/python/jsonrpclib/LICENSE.txt" \
+                    "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/"
+	$(INSTALL_DATA) "$(top_builddir)/job_api/python/jsonrpclib/README.md" \
+                    "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/__init__.py" \
+        "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
+        "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/config.py" \
+        "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/history.py" \
+        "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
+        "$(DESTDIR)$(prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

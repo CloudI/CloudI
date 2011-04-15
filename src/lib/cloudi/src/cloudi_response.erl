@@ -80,6 +80,8 @@ new(Input, Output)
     if
         is_list(Output), is_integer(hd(Output)) ->
             Output;
+        is_binary(Output) ->
+            erlang:binary_to_list(Output);
         true ->
             string2:term_to_list(Output)
     end;
