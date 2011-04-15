@@ -143,7 +143,26 @@ handle_cast(Request, State) ->
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
-    {noreply, State#state{services = dict:erase(Pid, Services)}};
+    case dict:find(Pid, Services) of
+        {ok, #service{service_m = M,
+                      service_f = F,
+                      service_a = A,
+                      pids = Pids}} ->
+            ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, A]),
+            NewServices = lists:foldl(fun(P, D) ->
+                if
+                    P =/= Pid ->
+                        erlang:exit(Pid, kill);
+                    true ->
+                        ok
+                end,
+                dict:erase(P, D)
+            end, Services, Pids),
+            {noreply, State#state{services = NewServices}};
+        error ->
+            ?LOG_INFO("Service pid ~p does not exist for shutdown", [Pid]),
+            {noreply, State}
+    end;
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             #state{services = Services} = State) ->

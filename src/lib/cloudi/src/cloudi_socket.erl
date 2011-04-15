@@ -587,6 +587,9 @@ handle_info({'send_sync_timeout', TransId}, StateName, StateData) ->
 handle_info({'recv_async_timeout', TransId}, StateName, StateData) ->
     {next_state, StateName, recv_async_timeout_end(TransId, StateData)};
 
+handle_info({'EXIT', _, Reason}, _, StateData) ->
+    {stop, Reason, StateData};
+
 handle_info(Request, StateName, StateData) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {next_state, StateName, StateData}.

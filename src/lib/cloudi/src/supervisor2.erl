@@ -77,7 +77,7 @@ delete_child_simple(0, _, _) ->
     ok;
 
 delete_child_simple(I, [{undefined, Pid, _, _} | L], SupRef) ->
-    erlang:exit(Pid, kill),
+    erlang:exit(Pid, shutdown),
     delete_child_simple(I - 1, L, SupRef).
 
 delete_child(0, _, _) ->
