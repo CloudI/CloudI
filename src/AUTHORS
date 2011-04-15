@@ -8,6 +8,7 @@ emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
 epgsql        Will Glozer
 erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
 etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
+jinterface    Ericsson's OTP Team
 jsonlib       Josh Marshall
 jsx           Alisdair Sullivan <alisdairsullivan@yahoo.ca>
 misultin      Roberto Ostinelli <roberto@ostinelli.net>

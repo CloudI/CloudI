@@ -140,8 +140,7 @@ open(Path) when is_list(Path) ->
 
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
-    Config#config{acl = dict:merge(fun(_, L, _) -> L end,
-                                   acl_lookup(Value), ACL)}.
+    Config#config{acl = acl_lookup_add(Value, ACL)}.
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
@@ -153,7 +152,7 @@ jobs_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
     when is_record(T, internal); is_record(T, external) ->
     NewJobs = jobs_acl_update([], jobs_validate([], Value), ACL),
     lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
-    Config#config{jobs = NewJobs ++ Jobs}.
+    Config#config{jobs = Jobs ++ NewJobs}.
 
 jobs_remove([I | _] = Value, #config{jobs = Jobs} = Config)
     when is_integer(I) ->
@@ -205,7 +204,7 @@ new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
     when is_atom(A) ->
-    new(Terms, Config#config{acl = acl_lookup(Value)});
+    new(Terms, Config#config{acl = acl_lookup_new(Value)});
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'nodes', [A | _] = Value} | Terms], Config)
@@ -354,8 +353,11 @@ jobs_validate(Output, [Job | L])
                              max_t = Job#external.max_t},
     jobs_validate([C | Output], L).
 
-acl_lookup(L) ->
-    acl_expand(L, dict:new(), acl_store(L, dict:new())).
+acl_lookup_new(L) ->
+    acl_lookup_add(L, dict:new()).
+
+acl_lookup_add(L, OldLookup) ->
+    acl_expand(L, OldLookup, acl_store(L, OldLookup)).
 
 acl_store([], Lookup) ->
     Lookup;
