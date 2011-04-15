@@ -71,11 +71,10 @@ request_to_term(Data) ->
     RPC0 = jsx:json_to_term(DataBin),
     {value, {_, MethodBin}, RPC1} = lists:keytake(<<"method">>, 1, RPC0),
     {value, {_, ParamsBin}, RPC2} = lists:keytake(<<"params">>, 1, RPC1),
-    {value, {_, Id}, []} = lists:keytake(<<"id">>, 1, RPC2),
+    {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
     {MethodBin, ParamsBin, Id}.
 
-request_to_json(Method, Params, Id)
-    when is_integer(Id) ->
+request_to_json(Method, Params, Id) ->
     MethodBin = if
         is_atom(Method) ->
             erlang:list_to_binary(erlang:atom_to_list(Method));
@@ -87,7 +86,8 @@ request_to_json(Method, Params, Id)
     ParamsBin = lists:map(fun(E) -> string2:term_to_binary(E) end, Params),
     jsx:term_to_json([{<<"method">>, MethodBin},
                       {<<"params">>, ParamsBin},
-                      {<<"id">>, Id}]).
+                      {<<"id">>, Id},
+                      {<<"jsonrpc">>, <<"2.0">>}]).
 
 response_to_term(Data) ->
     DataBin = if
@@ -99,17 +99,17 @@ response_to_term(Data) ->
     RPC0 = jsx:json_to_term(DataBin),
     {value, {_, Result}, RPC1} = lists:keytake(<<"result">>, 1, RPC0),
     {value, {_, Error}, RPC2} = lists:keytake(<<"error">>, 1, RPC1),
-    {value, {_, Id}, []} = lists:keytake(<<"id">>, 1, RPC2),
+    {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
     {Result, Error, Id}.
 
 response_to_json(Result, Id) ->
     response_to_json(Result, null, Id).
 
-response_to_json(Result, Error, Id)
-    when is_integer(Id) ->
+response_to_json(Result, Error, Id) ->
     jsx:term_to_json([{<<"result">>, Result}, % string result is binary
                       {<<"error">>, Error},
-                      {<<"id">>, Id}]).
+                      {<<"id">>, Id},
+                      {<<"jsonrpc">>, <<"2.0">>}]).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

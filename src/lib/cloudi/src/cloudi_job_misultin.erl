@@ -176,7 +176,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
         {ok, Response} ->
             ResponseBinary = if
                 OutputType =:= list ->
-                    string2:term_to_binary(Response);
+                    erlang:list_to_binary(Response);
                 OutputType =:= binary ->
                     Response
             end,
