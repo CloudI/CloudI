@@ -1,13 +1,43 @@
-February 2011
-Version 0.1.0 (alpha) rewrite is now available, see README
+April 15, 2011
+  Version 0.1.4 (alpha) released.
+  The release includes many changes to make the 0.1.x source code robust.
+  The Job API now exists with a JSON-RPC interface over HTTP
+  (in version 0.0.10 this was the API).  The Job API facilitates dynamic
+  configuration of all CloudI functionality.
+
+February 23, 2011
+  Version 0.1.0 (alpha) rewrite is now available and
+  many changes occurred between the CloudI version 0.0.10 and version 0.1.0.
+  The changes are summarized below:
+  
+  * CloudI is now a naturally master-less distributed system
+    (i.e., requires no special configuration or redundancy)
+  * messaging can occur between services (i.e., jobs) which
+    may exist on other CloudI nodes
+  * all service (i.e., job) names rely on strings rather than dynamic atoms,
+    lookups use the trie data structure for efficiency close to the performance
+    of the process dictionary (the fastest Erlang data structure)
+  * cnodes are no longer used for external service (i.e., job) communication,
+    instead sockets are used for each thread (either UDP or TCP can be used)
+  * external services (i.e., jobs) are no longer implemented in dynamic
+    libraries but are instead implemented in executables.  this change makes
+    running various VMs or interpreters easy and avoids dynamic library link
+    dependency problems with various version dependencies
+    (i.e., helps support Java, Python, etc.)
+  * HTTP can be used to call services, but JSON-RPC is not supported like it
+    was in 0.0.10 (support for JSON-RPC will be added again soon)
+  * a normal autotools/rebar build system is used that doesn't attempt to
+    install critical dependencies locally (it just requires that they exist)
+  * restarting stopped (e.g., SIGSTOP) OS processes is not implemented in
+    0.1.0 (but may be added back, as necessary)
 
 March 26, 2010
-"CloudI: A Cloud as an Interface (EXPANDED)"
-Presentation at the Erlang Factory, San Francisco Bay Area, California, USA
-Version 0.0.9 (alpha)
+  "CloudI: A Cloud as an Interface (EXPANDED)"
+  Presentation at the Erlang Factory, San Francisco Bay Area, California, USA
+  Version 0.0.9 (alpha)
 
 November 12, 2009
-"CloudI: A Cloud as an Interface"
-Presentation at the Erlang User Conference, Stockholm, Sweden
-Version 0.0.8 (alpha)
+  "CloudI: A Cloud as an Interface"
+  Presentation at the Erlang User Conference, Stockholm, Sweden
+  Version 0.0.8 (alpha)
 
