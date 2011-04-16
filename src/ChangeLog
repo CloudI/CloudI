@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-04-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 0.1.4 (alpha) released
+    * Job API tested with JSON-RPC and Erlang formats over HTTP
+    * Add python Job API JSON-RPC source code
+    * Add python test of the Job API
+
 2011-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add jsx

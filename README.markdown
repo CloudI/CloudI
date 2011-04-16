@@ -1,4 +1,4 @@
-#[CloudI 0.1.3 (alpha)](http://cloudi.org)
+#[CloudI 0.1.4 (alpha)](http://cloudi.org)
 
 ## ABOUT
 
@@ -28,29 +28,6 @@ cloudi_job_db_pgsql which creates the service name "cloudi_tests"
 "/db/pgsql/cloudi_tests" and ACLs can allow or deny prefixes like "/db/pgsql/").
 More features are currently explained in the configuration file
 (src/cloudi.conf), but proper documentation will be added soon.
-
-Many changes occurred between the CloudI version 0.0.10 and version 0.1.0.
-The changes are summarized below:
-
-* CloudI is now a naturally master-less distributed system
-  (i.e., requires no special configuration or redundancy)
-* messaging can occur between services (i.e., jobs) which
-  may exist on other CloudI nodes
-* all service (i.e., job) names rely on strings rather than dynamic atoms,
-  lookups use the trie data structure for efficiency close to the performance
-  of the process dictionary (the fastest Erlang data structure)
-* cnodes are no longer used for external service (i.e., job) communication,
-  instead sockets are used for each thread (either UDP or TCP can be used)
-* external services (i.e., jobs) are no longer implemented in dynamic libraries
-  but are instead implemented in executables.  this change makes running various
-  VMs or interpreters easy and avoids dynamic library link dependency problems
-  with various version dependencies (i.e., helps support Java, Python, etc.)
-* HTTP can be used to call services, but JSON-RPC is not supported like it was
-  in 0.0.10 (support for JSON-RPC will be added again soon)
-* a normal autotools/rebar build system is used that doesn't attempt to
-  install critical dependencies locally (it just requires that they exist)
-* restarting stopped (e.g., SIGSTOP) OS processes is not implemented in 
-  0.1.3 (but may be added back, as necessary)
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct

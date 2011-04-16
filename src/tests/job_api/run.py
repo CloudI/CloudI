@@ -48,6 +48,8 @@ sys.path.append(
     )
 )
 
+import time
+
 if __name__ == '__main__':
     from cloudi_job_api import CloudI
     obj = CloudI()
@@ -60,8 +62,28 @@ if __name__ == '__main__':
     assert obj.acl_remove('[all]') == 'ok'
     assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
 
-    # remove the hexpi external job
-    # (errors need to be fixed before this works properly)
-    #assert obj.jobs_remove('[2]') == 'ok'
+    # remove the hexpi jobs
+    assert obj.jobs_remove('[2, 5]') == 'ok'
 
+    # start the C flood test
+    assert obj.jobs_add("""\
+[{external,
+    "/tests/flood/",
+    "tests/flood/service/flood", "1 tcp 16384",
+    [{"LD_LIBRARY_PATH", "api/c/lib/"},
+    {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
+    none, tcp, 16384,
+    5000, 5000, 5000, [api], undefined, 1, 1, 5, 300},
+ {internal,
+     "/tests/flood/",
+     cloudi_job_flood,
+     [{flood, "/tests/flood/c", <<"DATA">>, 1000}],
+     lazy_closest,
+     5000, 5000, 5000, [api], undefined, 2, 5, 300}]""") == 'ok'
+
+    print 'waiting 20 seconds...'
+    time.sleep(20)
+
+    # stop the C flood test
+    assert obj.jobs_remove('[15, 16]') == 'ok'
 
