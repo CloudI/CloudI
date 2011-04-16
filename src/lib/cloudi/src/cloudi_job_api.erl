@@ -140,17 +140,37 @@ cloudi_job_terminate(_, #state{}) ->
 format_erlang({F, 2}, Input, Timeout, _) ->
     if
         is_binary(Input) ->
-            string2:term_to_binary(F(string2:binary_to_term(Input), Timeout));
+            case F(string2:binary_to_term(Input), Timeout) of
+                Result when is_binary(Result) ->
+                    Result;
+                Result ->
+                    string2:term_to_binary(Result)
+            end;
         is_list(Input) ->
-            string2:term_to_list(F(string2:list_to_term(Input), Timeout))
+            case F(string2:list_to_term(Input), Timeout) of
+                Result when is_binary(Result) ->
+                    erlang:binary_to_list(Result);
+                Result ->
+                    string2:term_to_list(Result)
+            end
     end;
 
 format_erlang({F, 1}, Input, Timeout, _) ->
     if
         is_binary(Input) ->
-            string2:term_to_binary(F(Timeout));
+            case F(Timeout) of
+                Result when is_binary(Result) ->
+                    Result;
+                Result ->
+                    string2:term_to_binary(Result)
+            end;
         is_list(Input) ->
-            string2:term_to_list(F(Timeout))
+            case F(Timeout) of
+                Result when is_binary(Result) ->
+                    erlang:binary_to_list(Result);
+                Result ->
+                    string2:term_to_list(Result)
+            end
     end.
 
 format_json_rpc(undefined, Input, Timeout, Functions) ->
