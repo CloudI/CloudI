@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_socket_sup).
@@ -54,8 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_socket/9,
-         delete_sockets/2]).
+         create_socket/9]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -97,14 +96,6 @@ create_socket(Protocol, BufferSize, Timeout, Prefix,
         {error, _} = Error ->
             Error
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-delete_sockets(Index, Count) ->
-    supervisor2:delete_children(?MODULE, simple_one_for_one, Index, Count).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor

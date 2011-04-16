@@ -56,10 +56,10 @@
 %% external interface
 -export([start_link/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2,
+         jobs_add/2, jobs_remove/2, jobs/1,
          nodes_add/2, nodes_remove/2,
          job_start/1,
-         job_stop/2]).
+         job_stop/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -99,6 +99,10 @@ jobs_remove(L, Timeout) ->
     gen_server:call(?MODULE, {jobs_remove, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
+jobs(Timeout) ->
+    gen_server:call(?MODULE, {jobs,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
 nodes_add(L, Timeout) ->
     Nodes = [node() | nodes()],
     global:trans({{?MODULE, L}, self()},
@@ -133,13 +137,13 @@ job_start(Job)
     when is_record(Job, config_job_external) ->
     job_start_external(Job#config_job_external.count_process, Job).
 
-job_stop(I, Job)
+job_stop(Job)
     when is_record(Job, config_job_internal) ->
-    job_stop_internal(I, Job);
+    job_stop_internal(Job);
 
-job_stop(I, Job)
+job_stop(Job)
     when is_record(Job, config_job_external) ->
-    job_stop_external(I, Job).
+    job_stop_external(Job).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -168,6 +172,10 @@ handle_call({jobs_remove, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:jobs_remove(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
+
+handle_call({jobs, _}, _,
+            #state{configuration = Config} = State) ->
+    {reply, cloudi_configuration:jobs(Config), State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
@@ -225,7 +233,8 @@ job_start_internal(Count, Job)
                                   Job#config_job_internal.dest_list_deny,
                                   Job#config_job_internal.dest_list_allow],
                                  Job#config_job_internal.max_r,
-                                 Job#config_job_internal.max_t) of
+                                 Job#config_job_internal.max_t,
+                                 Job#config_job_internal.uuid) of
         ok ->
             ok;
         {error, Reason} ->
@@ -254,7 +263,8 @@ job_start_external(Count, Job)
                                   Job#config_job_external.dest_list_deny,
                                   Job#config_job_external.dest_list_allow],
                                  Job#config_job_external.max_r,
-                                 Job#config_job_external.max_t) of
+                                 Job#config_job_external.max_t,
+                                 Job#config_job_external.uuid) of
         ok ->
             ok;
         {error, Reason} ->
@@ -264,9 +274,25 @@ job_start_external(Count, Job)
     end,
     job_start_external(Count - 1, Job).
 
-job_stop_internal(I, Job) ->
-    cloudi_job_sup:delete_jobs(I, Job#config_job_internal.count_process).
+job_stop_internal(Job)
+    when is_record(Job, config_job_internal) ->
+    case cloudi_services:shutdown(Job#config_job_internal.uuid) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("error stopping internal job (~p):~n ~p",
+                       [Job#config_job_internal.module, Reason]),
+            ok
+    end.
 
-job_stop_external(I, Job) ->
-    cloudi_socket_sup:delete_sockets(I, Job#config_job_external.count_process).
+job_stop_external(Job)
+    when is_record(Job, config_job_external) ->
+    case cloudi_services:shutdown(Job#config_job_external.uuid) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("error stopping external job (~p):~n ~p",
+                       [Job#config_job_external.file_path, Reason]),
+            ok
+    end.
 

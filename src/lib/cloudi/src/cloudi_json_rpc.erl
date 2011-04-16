@@ -52,6 +52,7 @@
 
 %% external interface
 -export([request_to_term/1,
+         request_to_json/2,
          request_to_json/3,
          response_to_term/1,
          response_to_json/2,
@@ -70,9 +71,16 @@ request_to_term(Data) ->
     end,
     RPC0 = jsx:json_to_term(DataBin),
     {value, {_, MethodBin}, RPC1} = lists:keytake(<<"method">>, 1, RPC0),
-    {value, {_, ParamsBin}, RPC2} = lists:keytake(<<"params">>, 1, RPC1),
-    {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
-    {MethodBin, ParamsBin, Id}.
+    {value, {_, Id}, RPC2} = lists:keytake(<<"id">>, 1, RPC1),
+    case lists:keytake(<<"params">>, 1, RPC2) of
+        {value, {_, ParamsBin}, _} ->
+            {MethodBin, ParamsBin, Id};
+        false ->
+            {MethodBin, [], Id}
+    end.
+
+request_to_json(Method, Id) ->
+    request_to_json(Method, [], Id).
 
 request_to_json(Method, Params, Id) ->
     MethodBin = if
@@ -83,11 +91,20 @@ request_to_json(Method, Params, Id) ->
         is_binary(Method) ->
             Method
     end,
-    ParamsBin = lists:map(fun(E) -> string2:term_to_binary(E) end, Params),
-    jsx:term_to_json([{<<"method">>, MethodBin},
-                      {<<"params">>, ParamsBin},
-                      {<<"id">>, Id},
-                      {<<"jsonrpc">>, <<"2.0">>}]).
+    if
+        Params == [] ->
+            jsx:term_to_json([{<<"method">>, MethodBin},
+                              {<<"id">>, Id},
+                              {<<"jsonrpc">>, <<"2.0">>}]);
+        true ->
+            ParamsBin = lists:map(fun(E) ->
+                string2:term_to_binary(E)
+            end, Params),
+            jsx:term_to_json([{<<"method">>, MethodBin},
+                              {<<"params">>, ParamsBin},
+                              {<<"id">>, Id},
+                              {<<"jsonrpc">>, <<"2.0">>}])
+    end.
 
 response_to_term(Data) ->
     DataBin = if

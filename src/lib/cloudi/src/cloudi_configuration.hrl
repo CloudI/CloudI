@@ -61,7 +61,8 @@
         dest_list_allow,
         count_process,
         max_r,
-        max_t
+        max_t,
+        uuid
     }).
 
 % external job parameters
@@ -82,11 +83,13 @@
         count_process,
         count_thread,
         max_r,
-        max_t
+        max_t,
+        uuid
     }).
 
 -record(config,
     {
+        uuid_generator,
         logging = #config_logging{},
         acl = dict:new(),
         jobs = [],

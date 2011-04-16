@@ -73,6 +73,8 @@
                                {fun cloudi_configurator:jobs_add/2, 2}},
                               {"jobs_remove",
                                {fun cloudi_configurator:jobs_remove/2, 2}},
+                              {"jobs",
+                               {fun cloudi_configurator:jobs/1, 1}},
                               {"nodes_add",
                                {fun cloudi_configurator:nodes_add/2, 2}},
                               {"nodes_remove",
@@ -155,13 +157,14 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
     {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
     try (case trie:fetch(erlang:binary_to_list(Method), Functions) of
         {F, 1} when Params == [] ->
-            string2:term_to_binary(F(Timeout));
+            F(Timeout);
         {F, 2} when length(Params) == 1 ->
-            string2:term_to_binary(F(string2:binary_to_term(erlang:hd(Params)),
-                                     Timeout))
-        end) of
+            F(string2:binary_to_term(erlang:hd(Params)), Timeout)
+         end) of
+        Result when is_binary(Result) ->
+            cloudi_json_rpc:response_to_json(Result, Id);
         Result ->
-            cloudi_json_rpc:response_to_json(Result, Id)
+            cloudi_json_rpc:response_to_json(string2:term_to_binary(Result), Id)
     catch
         _:Error ->
             cloudi_json_rpc:response_to_json(null,
