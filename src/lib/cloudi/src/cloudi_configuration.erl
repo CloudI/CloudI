@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2,
+         jobs_add/2, jobs_remove/2, jobs/1,
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
@@ -130,13 +130,13 @@
 
 open() ->
     {ok, Terms} = file:consult(?CONFIGURATION_FILE_NAME),
-    new(Terms, #config{}).
+    new(Terms, #config{uuid_generator = uuid:new(self())}).
 
 -spec open(Path :: string()) -> #config{}.
 
 open(Path) when is_list(Path) ->
     {ok, Terms} = file:consult(Path),
-    new(Terms, #config{}).
+    new(Terms, #config{uuid_generator = uuid:new(self())}).
 
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
@@ -148,9 +148,11 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
                                         dict:erase(E, D)
                                     end, ACL, Value)}.
 
-jobs_add([T | _] = Value, #config{jobs = Jobs, acl = ACL} = Config)
+jobs_add([T | _] = Value, #config{uuid_generator = UUID,
+                                  jobs = Jobs,
+                                  acl = ACL} = Config)
     when is_record(T, internal); is_record(T, external) ->
-    NewJobs = jobs_acl_update([], jobs_validate([], Value), ACL),
+    NewJobs = jobs_acl_update([], jobs_validate([], Value, UUID), ACL),
     lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
     Config#config{jobs = Jobs ++ NewJobs}.
 
@@ -158,24 +160,50 @@ jobs_remove([I | _] = Value, #config{jobs = Jobs} = Config)
     when is_integer(I) ->
     NewJobs = lists:foldl(fun(Index, L) ->
         {NewL1, [Job | NewL2]} = lists:split(Index - 1, L),
-        Type = erlang:element(1, Job),
-        SupervisorIndex = lists:foldl(fun(J, C) ->
-            if
-                erlang:element(1, J) == Type ->
-                    if
-                        config_job_internal == Type ->
-                            C + Job#config_job_internal.count_process;
-                        config_job_external == Type ->
-                            C + Job#config_job_external.count_process
-                    end;
-                true ->
-                    C
-            end
-        end, 1, NewL1),
-        cloudi_configurator:job_stop(SupervisorIndex, Job),
+        cloudi_configurator:job_stop(Job),
         NewL1 ++ NewL2
     end, Jobs, lists2:rsort(Value)),
     Config#config{jobs = NewJobs}.
+
+jobs(#config{jobs = Jobs}) ->
+    erlang:list_to_binary(string2:format("~p", [lists:map(fun(Job) ->
+        if
+            is_record(Job, config_job_internal) ->
+                #internal{prefix = Job#config_job_internal.prefix,
+                          module = Job#config_job_internal.module,
+                          args = Job#config_job_internal.args,
+                          dest_refresh = Job#config_job_internal.dest_refresh,
+                          timeout_init = Job#config_job_internal.timeout_init,
+                          timeout_async = Job#config_job_internal.timeout_async,
+                          timeout_sync = Job#config_job_internal.timeout_sync,
+                          dest_list_deny =
+                              Job#config_job_internal.dest_list_deny,
+                          dest_list_allow =
+                              Job#config_job_internal.dest_list_allow,
+                          count_process = Job#config_job_internal.count_process,
+                          max_r = Job#config_job_internal.max_r,
+                          max_t = Job#config_job_internal.max_t};
+            is_record(Job, config_job_external) ->
+                #external{prefix = Job#config_job_external.prefix,
+                          file_path = Job#config_job_external.file_path,
+                          args = Job#config_job_external.args,
+                          env = Job#config_job_external.env,
+                          dest_refresh = Job#config_job_external.dest_refresh,
+                          protocol = Job#config_job_external.protocol,
+                          buffer_size = Job#config_job_external.buffer_size,
+                          timeout_init = Job#config_job_external.timeout_init,
+                          timeout_async = Job#config_job_external.timeout_async,
+                          timeout_sync = Job#config_job_external.timeout_sync,
+                          dest_list_deny =
+                              Job#config_job_external.dest_list_deny,
+                          dest_list_allow =
+                              Job#config_job_external.dest_list_allow,
+                          count_process = Job#config_job_external.count_process,
+                          count_thread = Job#config_job_external.count_thread,
+                          max_r = Job#config_job_external.max_r,
+                          max_t = Job#config_job_external.max_t}
+        end
+    end, Jobs)])).
 
 nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
     when is_atom(A) ->
@@ -197,9 +225,10 @@ new([], #config{jobs = Jobs, acl = ACL} = Config) ->
 
 new([{'jobs', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'jobs', [T | _] = Value} | Terms], Config)
+new([{'jobs', [T | _] = Value} | Terms],
+    #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external) ->
-    new(Terms, Config#config{jobs = jobs_validate([], Value)});
+    new(Terms, Config#config{jobs = jobs_validate([], Value, UUID)});
 new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
@@ -253,9 +282,9 @@ jobs_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
     jobs_acl_update_list([E | Output], L, Lookup).
 
-jobs_validate(Output, []) ->
+jobs_validate(Output, [], _) ->
     lists:reverse(Output);
-jobs_validate(Output, [Job | L])
+jobs_validate(Output, [Job | L], UUID)
     when is_record(Job, internal),
          is_list(Job#internal.prefix),
          is_atom(Job#internal.module),
@@ -293,9 +322,10 @@ jobs_validate(Output, [Job | L])
                              dest_list_allow = Job#internal.dest_list_allow,
                              count_process = Job#internal.count_process,
                              max_r = Job#internal.max_r,
-                             max_t = Job#internal.max_t},
-    jobs_validate([C | Output], L);
-jobs_validate(Output, [Job | L])
+                             max_t = Job#internal.max_t,
+                             uuid = uuid:get_v1(UUID)},
+    jobs_validate([C | Output], L, UUID);
+jobs_validate(Output, [Job | L], UUID)
     when is_record(Job, external),
          is_list(Job#external.prefix),
          is_integer(erlang:hd(Job#external.file_path)),
@@ -350,8 +380,9 @@ jobs_validate(Output, [Job | L])
                              count_process = Job#external.count_process,
                              count_thread = Job#external.count_thread,
                              max_r = Job#external.max_r,
-                             max_t = Job#external.max_t},
-    jobs_validate([C | Output], L).
+                             max_t = Job#external.max_t,
+                             uuid = uuid:get_v1(UUID)},
+    jobs_validate([C | Output], L, UUID).
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).

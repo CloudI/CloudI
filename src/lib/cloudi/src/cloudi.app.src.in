@@ -34,6 +34,7 @@
         cloudi_sup,
         cloudi_task_size,
         dynamic_compile,
+        key2value,
         list_pg_data,
         list_pg,
         lists2,
@@ -42,7 +43,6 @@
         pool2_sup,
         proplists2,
         string2,
-        supervisor2,
         trie,
         tuple2,
         uuid
