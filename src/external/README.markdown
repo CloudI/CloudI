@@ -10,10 +10,8 @@ autoconf m4 macros for boost detection
 - Thu Feb 17 18:34:44 PST 2011
 - BSD-like
 
-ax_check_class.m4, ax_check_rqrd_class.m4, ax_prog_jar.m4,
-ax_prog_javac.m4, ax_prog_javac_works.m4, ax_prog_java.m4,
-ax_prog_java_works.m4, ax_try_compile_java.m4
-----------------------------------------------------------
+ax_check_class.m4, ax_check_rqrd_class.m4, ax_prog_jar.m4, ax_prog_javac.m4, ax_prog_javac_works.m4, ax_prog_java.m4, ax_prog_java_works.m4, ax_try_compile_java.m4
+--------------------------------------------------------------------------------
 autoconf m4 macros for java detection
 
 - http://www.gnu.org/software/autoconf-archive/ax_check_class.html
