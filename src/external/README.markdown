@@ -23,7 +23,7 @@ autoconf m4 macros for java detection
 - http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html
 - http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html
 - Fri Mar  4 00:01:29 PST 2011
-- BSD-like
+- GPL
 
 ax_prog_python_version.m4
 -------------------------
