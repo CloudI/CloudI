@@ -83,15 +83,43 @@
 
 new(Pid) when is_pid(Pid) ->
     {ok, Ifs} = inet:getiflist(),
-    % at least one unique network interface must exist
-    If = [_ | _] = lists:last(lists:filter(fun(I) ->
+    If = lists:last(lists:filter(fun(I) ->
         not lists:prefix("lo", I)
     end, Ifs)),
-    % 48 bits for MAC address
-    {ok,[{hwaddr,[OUI1,OUI2,OUI3,NIC1,NIC2,NIC3]}]} = inet:ifget(If, [hwaddr]),
-    % reduce the MAC address to 16 bits
-    IfByte1 = ((OUI1 bxor OUI2) bxor OUI3) bxor NIC1,
-    IfByte2 = NIC2 bxor NIC3,
+    NodeData = if
+        If =:= [] ->
+            % include the distributed Erlang node name to be node specific
+            erlang:list_to_binary(erlang:atom_to_list(node()));
+        true ->
+            % 48 bits for MAC address
+            {ok,[{hwaddr, MAC}]} = inet:ifget(If, [hwaddr]),
+            % include the distributed Erlang node name to be node specific
+            erlang:list_to_binary(MAC ++ erlang:atom_to_list(node()))
+    end,
+    <<NODE01, NODE02, NODE03, NODE04, NODE05,
+      NODE06, NODE07, NODE08, NODE09, NODE10,
+      NODE11, NODE12, NODE13, NODE14, NODE15,
+      NODE16, NODE17, NODE18, NODE19, NODE20>> = crypto:sha(NodeData),
+    % reduce the 160 bit checksum to 16 bits
+    NodeByte1 = ((((((((NODE01 bxor NODE02)
+                       bxor NODE03)
+                      bxor NODE04)
+                     bxor NODE05)
+                    bxor NODE06)
+                   bxor NODE07)
+                  bxor NODE08)
+                 bxor NODE09)
+                bxor NODE10,
+    NodeByte2 = ((((((((NODE11 bxor NODE12)
+                       bxor NODE13)
+                      bxor NODE14)
+                     bxor NODE15)
+                    bxor NODE16)
+                   bxor NODE17)
+                  bxor NODE18)
+                 bxor NODE19)
+                bxor NODE20,
+    % make the version 1 UUID both node and pid specific
     PidBin = erlang:term_to_binary(Pid),
     % 72 bits for the Erlang pid
     <<ID1:8, ID2:8, ID3:8, ID4:8, % ID (Node index)
@@ -105,7 +133,7 @@ new(Pid) when is_pid(Pid) ->
     PidByte4 = (ID4 bxor SR1) bxor CR1,
     ClockSeq = random:uniform(16384) - 1,
     <<ClockSeqHigh:6, ClockSeqLow:8>> = <<ClockSeq:14>>,
-    #uuid_state{node_id = <<IfByte1:8, IfByte2:8,
+    #uuid_state{node_id = <<NodeByte1:8, NodeByte2:8,
                             PidByte1:8, PidByte2:8,
                             PidByte3:8, PidByte4:8>>,
                 clock_seq = ClockSeq,

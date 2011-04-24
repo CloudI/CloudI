@@ -20,5 +20,13 @@ class CloudI(object):
         self.__server = jsonrpclib.Server(address)
 
     def __getattr__(self, name):
+        if name == 'jobs':
+            return self.__jobs
         return self.__server.__getattr__(name)
 
+    def __jobs(self):
+        raw = self.__server.jobs()
+        def split_tuple(s):
+            entry = s.split('>>,\n  ')
+            return ('<<' + entry[0] + '>>', entry[1])
+        return map(split_tuple, raw[1:-1].split(',\n {<<'))
