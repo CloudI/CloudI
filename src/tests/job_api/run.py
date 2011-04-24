@@ -63,7 +63,8 @@ if __name__ == '__main__':
     assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
 
     # remove the hexpi jobs
-    assert obj.jobs_remove('[2, 5]') == 'ok'
+    jobs = obj.jobs()
+    assert obj.jobs_remove('[' + jobs[1][0] + ', ' + jobs[4][0] + ']') == 'ok'
 
     # start the C flood test
     assert obj.jobs_add("""\
@@ -85,5 +86,6 @@ if __name__ == '__main__':
     time.sleep(20)
 
     # stop the C flood test
-    assert obj.jobs_remove('[15, 16]') == 'ok'
+    jobs = obj.jobs()
+    assert obj.jobs_remove('[' + jobs[14][0] + ', ' + jobs[15][0] + ']') == 'ok'
 

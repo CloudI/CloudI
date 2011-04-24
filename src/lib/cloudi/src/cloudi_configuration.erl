@@ -156,12 +156,23 @@ jobs_add([T | _] = Value, #config{uuid_generator = UUID,
     lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
     Config#config{jobs = Jobs ++ NewJobs}.
 
-jobs_remove([I | _] = Value, #config{jobs = Jobs} = Config)
-    when is_integer(I) ->
-    NewJobs = lists:foldl(fun(Index, L) ->
-        {NewL1, [Job | NewL2]} = lists:split(Index - 1, L),
+jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
+    when is_binary(UUID), byte_size(UUID) == 16 ->
+    NewJobs = lists:foldl(fun(ID, L) ->
+        {[Job], NewL} = lists:partition(fun(J) ->
+            if
+                is_record(J, config_job_internal),
+                J#config_job_internal.uuid == ID ->
+                    true;
+                is_record(J, config_job_external),
+                J#config_job_external.uuid == ID ->
+                    true;
+                true ->
+                    false
+            end
+        end, L),
         cloudi_configurator:job_stop(Job),
-        NewL1 ++ NewL2
+        NewL
     end, Jobs, lists2:rsort(Value)),
     Config#config{jobs = NewJobs}.
 
@@ -169,39 +180,47 @@ jobs(#config{jobs = Jobs}) ->
     erlang:list_to_binary(string2:format("~p", [lists:map(fun(Job) ->
         if
             is_record(Job, config_job_internal) ->
-                #internal{prefix = Job#config_job_internal.prefix,
-                          module = Job#config_job_internal.module,
-                          args = Job#config_job_internal.args,
-                          dest_refresh = Job#config_job_internal.dest_refresh,
-                          timeout_init = Job#config_job_internal.timeout_init,
-                          timeout_async = Job#config_job_internal.timeout_async,
-                          timeout_sync = Job#config_job_internal.timeout_sync,
-                          dest_list_deny =
-                              Job#config_job_internal.dest_list_deny,
-                          dest_list_allow =
-                              Job#config_job_internal.dest_list_allow,
-                          count_process = Job#config_job_internal.count_process,
-                          max_r = Job#config_job_internal.max_r,
-                          max_t = Job#config_job_internal.max_t};
+                {Job#config_job_internal.uuid,
+                 #internal{prefix = Job#config_job_internal.prefix,
+                           module = Job#config_job_internal.module,
+                           args = Job#config_job_internal.args,
+                           dest_refresh = Job#config_job_internal.dest_refresh,
+                           timeout_init = Job#config_job_internal.timeout_init,
+                           timeout_async =
+                               Job#config_job_internal.timeout_async,
+                           timeout_sync =
+                               Job#config_job_internal.timeout_sync,
+                           dest_list_deny =
+                               Job#config_job_internal.dest_list_deny,
+                           dest_list_allow =
+                               Job#config_job_internal.dest_list_allow,
+                           count_process =
+                               Job#config_job_internal.count_process,
+                           max_r = Job#config_job_internal.max_r,
+                           max_t = Job#config_job_internal.max_t}};
             is_record(Job, config_job_external) ->
-                #external{prefix = Job#config_job_external.prefix,
-                          file_path = Job#config_job_external.file_path,
-                          args = Job#config_job_external.args,
-                          env = Job#config_job_external.env,
-                          dest_refresh = Job#config_job_external.dest_refresh,
-                          protocol = Job#config_job_external.protocol,
-                          buffer_size = Job#config_job_external.buffer_size,
-                          timeout_init = Job#config_job_external.timeout_init,
-                          timeout_async = Job#config_job_external.timeout_async,
-                          timeout_sync = Job#config_job_external.timeout_sync,
-                          dest_list_deny =
-                              Job#config_job_external.dest_list_deny,
-                          dest_list_allow =
-                              Job#config_job_external.dest_list_allow,
-                          count_process = Job#config_job_external.count_process,
-                          count_thread = Job#config_job_external.count_thread,
-                          max_r = Job#config_job_external.max_r,
-                          max_t = Job#config_job_external.max_t}
+                {Job#config_job_external.uuid,
+                 #external{prefix = Job#config_job_external.prefix,
+                           file_path = Job#config_job_external.file_path,
+                           args = Job#config_job_external.args,
+                           env = Job#config_job_external.env,
+                           dest_refresh = Job#config_job_external.dest_refresh,
+                           protocol = Job#config_job_external.protocol,
+                           buffer_size = Job#config_job_external.buffer_size,
+                           timeout_init = Job#config_job_external.timeout_init,
+                           timeout_async =
+                               Job#config_job_external.timeout_async,
+                           timeout_sync =
+                               Job#config_job_external.timeout_sync,
+                           dest_list_deny =
+                               Job#config_job_external.dest_list_deny,
+                           dest_list_allow =
+                               Job#config_job_external.dest_list_allow,
+                           count_process =
+                               Job#config_job_external.count_process,
+                           count_thread = Job#config_job_external.count_thread,
+                           max_r = Job#config_job_external.max_r,
+                           max_t = Job#config_job_external.max_t}}
         end
     end, Jobs)])).
 
