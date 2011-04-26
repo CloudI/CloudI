@@ -15,7 +15,7 @@ import jsonrpclib
 class CloudI(object):
 
     # initialize with configuration file defaults
-    def __init__(self, host = 'localhost', port = 8081):
+    def __init__(self, host = 'localhost', port = 6465):
         address = 'http://%s:%d/cloudi/api/json_rpc/' % (host, port)
         self.__server = jsonrpclib.Server(address)
 

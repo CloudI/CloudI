@@ -76,9 +76,11 @@ AC_DEFUN([AX_ZEROMQ],
         local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq"
         if test "x$ac_zeromq_path" != "x"; then
             ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+            ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
         elif test -f "$local_zeromq_path/include/zmq.h"; then
             ac_zeromq_path="$local_zeromq_path"
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+            ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
         else
             AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
             if test "x$zeromq_path_bin_queue" != "x"; then
@@ -95,6 +97,7 @@ AC_DEFUN([AX_ZEROMQ],
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
         export CFLAGS
 
+        # check ZeroMQ installation
         AC_LANG_PUSH(C)
         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
             @%:@include <zmq.h>]], [[
@@ -108,6 +111,19 @@ AC_DEFUN([AX_ZEROMQ],
             build_zeromq="no"],[
             build_zeromq="yes"])
         AC_LANG_POP([C])
+        if test "x$build_zeromq" = "xno"; then
+          LDFLAGS_SAVED="$LDFLAGS"
+          LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
+          export LDFLAGS
+          AC_CHECK_LIB(zmq, zmq_init, , [build_zeromq="yes"])
+          LDFLAGS="$LDFLAGS_SAVED"
+          export LDFLAGS
+        fi
+        AC_SUBST(ZEROMQ_LDFLAGS)
+        AC_SUBST(ZEROMQ_CFLAGS)
+        CFLAGS="$CFLAGS_SAVED"
+        export CFLAGS
+
         if test "x$build_zeromq" = "xyes"; then
             AC_CONFIG_COMMANDS([zeromq],
                 [(cd external/zeromq/ && \
@@ -121,8 +137,6 @@ AC_DEFUN([AX_ZEROMQ],
             ac_zeromq_path="$local_zeromq_path"
             AC_MSG_RESULT(building)
         fi
-        AC_SUBST(ZEROMQ_CFLAGS)
-        CFLAGS="$CFLAGS_SAVED"
 
         ZEROMQ_ROOT_DIR="$ac_zeromq_path"
         AC_SUBST(ZEROMQ_ROOT_DIR)

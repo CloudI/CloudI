@@ -127,7 +127,7 @@
         1,
         % specify how many threads should be created with this configuration
         % (i.e., how many sockets should be opened to each OS process)
-        4,
+        2,
         % If more than MaxR restarts occur within MaxT seconds,
         % CloudI terminates the process
         % MaxR (maximum restarts)
@@ -174,13 +174,13 @@
     {internal,
         "/tests/http/",
         cloudi_job_misultin,
-        [{compress, true}, {port, 8080}, {output, binary}],
+        [{compress, true}, {port, 6464}, {output, binary}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300},
     {internal,
         "/tests/http/",
         cloudi_job_misultin,
-        [{compress, true}, {port, 8081}, {output, list}],
+        [{compress, true}, {port, 6465}, {output, list}],
         lazy_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300},
     {external,

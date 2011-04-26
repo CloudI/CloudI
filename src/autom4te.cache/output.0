@@ -750,6 +750,7 @@ ZEROMQ_ERLZMQ_APPCONF
 ZEROMQ_ERLZMQ_RELTOOL
 ZEROMQ_ROOT_DIR
 ZEROMQ_CFLAGS
+ZEROMQ_LDFLAGS
 zeromq_path_bin_queue
 ESCRIPT
 ERLANG_LIB_VER_ssl
@@ -772,6 +773,8 @@ JAVAC
 BOOST_THREAD_LIB
 BOOST_LDFLAGS
 BOOST_CPPFLAGS
+abs_top_builddir
+abs_top_srcdir
 HAVE_CLOCK_GETTIME_RT_FALSE
 HAVE_CLOCK_GETTIME_RT_TRUE
 CXXCPP
@@ -914,6 +917,11 @@ CXXFLAGS
 CCC
 CPP
 CXXCPP
+JAVAC
+JAVA
+JAR
+PYTHON
+RUBY
 ERLC
 ERLCFLAGS
 ERL'
@@ -1579,6 +1587,11 @@ Some influential environment variables:
   CXXFLAGS    C++ compiler flags
   CPP         C preprocessor
   CXXCPP      C++ preprocessor
+  JAVAC       javac executable
+  JAVA        java executable
+  JAR         jar executable
+  PYTHON      python executable
+  RUBY        ruby executable
   ERLC        Erlang/OTP compiler command @<:@autodetected@:>@
   ERLCFLAGS   Erlang/OTP compiler flags @<:@none@:>@
   ERL         Erlang/OTP interpreter command @<:@autodetected@:>@
@@ -14747,6 +14760,11 @@ rm -f conftest.err conftest.$ac_ext
     fi
 
 
+abs_top_srcdir=`cd $srcdir; pwd`
+
+abs_top_builddir=`pwd`
+
+
 # c++ boost checks
 
 
@@ -15336,6 +15354,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # java checks
+
+
+
 # Extract the first word of "javac", so it can be a program name with args.
 set dummy javac; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -16046,6 +16067,7 @@ fi
 
 
 # python check
+
 # Extract the first word of "python", so it can be a program name with args.
 set dummy python; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -16158,8 +16180,11 @@ fi
 
 
 # ruby checks
-# Extract the first word of "ruby", so it can be a program name with args.
-set dummy ruby; ac_word=$2
+
+for ac_prog in ruby1.9 ruby
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if test "${ac_cv_path_RUBY+set}" = set; then :
@@ -16197,6 +16222,9 @@ else
 $as_echo "no" >&6; }
 fi
 
+
+  test -n "$RUBY" && break
+done
 
 
     
@@ -16980,9 +17008,11 @@ fi
         local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq"
         if test "x$ac_zeromq_path" != "x"; then
             ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+            ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
         elif test -f "$local_zeromq_path/include/zmq.h"; then
             ac_zeromq_path="$local_zeromq_path"
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+            ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
         else
             # Extract the first word of "zmq_queue", so it can be a program name with args.
 set dummy zmq_queue; ac_word=$2
@@ -17083,6 +17113,7 @@ $as_echo_n "checking for ZeroMQ... " >&6; }
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
         export CFLAGS
 
+        # check ZeroMQ installation
         ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -17123,6 +17154,65 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+        if test "x$build_zeromq" = "xno"; then
+          LDFLAGS_SAVED="$LDFLAGS"
+          LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
+          export LDFLAGS
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for zmq_init in -lzmq" >&5
+$as_echo_n "checking for zmq_init in -lzmq... " >&6; }
+if test "${ac_cv_lib_zmq_zmq_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lzmq  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char zmq_init ();
+int
+main ()
+{
+return zmq_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_zmq_zmq_init=yes
+else
+  ac_cv_lib_zmq_zmq_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_zmq_zmq_init" >&5
+$as_echo "$ac_cv_lib_zmq_zmq_init" >&6; }
+if test "x$ac_cv_lib_zmq_zmq_init" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+@%:@define HAVE_LIBZMQ 1
+_ACEOF
+
+  LIBS="-lzmq $LIBS"
+
+else
+  build_zeromq="yes"
+fi
+
+          LDFLAGS="$LDFLAGS_SAVED"
+          export LDFLAGS
+        fi
+        
+        
+        CFLAGS="$CFLAGS_SAVED"
+        export CFLAGS
+
         if test "x$build_zeromq" = "xyes"; then
             ac_config_commands="$ac_config_commands zeromq"
 
@@ -17132,8 +17222,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: building" >&5
 $as_echo "building" >&6; }
         fi
-        
-        CFLAGS="$CFLAGS_SAVED"
 
         ZEROMQ_ROOT_DIR="$ac_zeromq_path"
         
@@ -18308,6 +18396,7 @@ fi
 
 
 ESCRIPT=$ESCRIPT
+                    SRCDIR=$abs_top_srcdir
 PREFIX=$local_zeromq_path
 ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
@@ -19845,7 +19934,7 @@ compiler_lib_search_path=$lt_compiler_lib_search_path_CXX
 _LT_EOF
 
  ;;
-    "rebar":C) (cd external/rebar/ && \
+    "rebar":C) (cd $SRCDIR/external/rebar/ && \
                      $ESCRIPT bootstrap && \
                      mv ./rebar ../../ && \
                      echo "Rebar built" || exit 1) ;;

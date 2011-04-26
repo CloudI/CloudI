@@ -199,7 +199,7 @@ api-java-install:
 	$(INSTALL_DATA) "$(DESTDIR)$(libexecdir)/cloudi.jar" \
                     "$(DESTDIR)$(prefix)/api/java/"
 	rm -f "$(DESTDIR)$(libexecdir)/cloudi.jar"
-	rmdir "$(DESTDIR)$(datarootdir)/java"
+	rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0
 
 api-python-install:
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/python"

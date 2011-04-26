@@ -39,7 +39,7 @@ Another HTTP test is provided that can be used for load tests
 HTTP server for static files (content is cached and not updated dynamically,
 since it just demonstrates basic cloudi_job_filesystem functionality) that are
 located at src/tests/http_req/public_html/ (access at
-[http://127.0.0.1:8080/tests/http_req/](http://127.0.0.1:8080/tests/http_req/)).
+[http://127.0.0.1:6464/tests/http_req/](http://127.0.0.1:6464/tests/http_req/)).
 
 CloudI currently supports the following databases:
 
