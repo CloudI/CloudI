@@ -78,7 +78,7 @@
         "tests/hexpi/priv/hexpi",
         % command line arguments for the executable
         % (for all tests the arguments are: thread_count protocol buffer_size)
-        "4 tcp 16384",
+        "2 tcp 16384",
         % {Key, Value} pairs to specify environment variables
         [{"LD_LIBRARY_PATH", "api/c/lib/"},
          {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
@@ -166,7 +166,7 @@
         cloudi_job_hexpi,
         [1,       % starting index
          65536,   % ending index
-         4],      % concurrent tasks
+         2],      % concurrent tasks
         immediate_closest, % recover from failures (process deaths) immediately
         5000, 5000, 5000, [api], undefined, 1, 5, 300},
 
