@@ -87,8 +87,10 @@ AC_DEFUN([AX_ZEROMQ],
                 zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
                 ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
                 ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+                ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
             else
                 ZEROMQ_CFLAGS=""
+                ZEROMQ_LDFLAGS=""
             fi
         fi
         AC_MSG_CHECKING(for ZeroMQ)
@@ -115,7 +117,7 @@ AC_DEFUN([AX_ZEROMQ],
           LDFLAGS_SAVED="$LDFLAGS"
           LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
           export LDFLAGS
-          AC_CHECK_LIB(zmq, zmq_init, , [build_zeromq="yes"])
+          AX_CHECK_PRIVATE_LIB(zmq, zmq_init, , [build_zeromq="yes"])
           LDFLAGS="$LDFLAGS_SAVED"
           export LDFLAGS
         fi

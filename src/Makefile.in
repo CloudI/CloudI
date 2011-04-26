@@ -39,13 +39,14 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/config.h.in $(srcdir)/reltool.config.in \
 	$(top_srcdir)/configure \
 	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in AUTHORS COPYING \
-	ChangeLog INSTALL NEWS config/compile config/config.guess \
+	ChangeLog INSTALL NEWS TODO config/compile config/config.guess \
 	config/config.sub config/depcomp config/install-sh \
 	config/ltmain.sh config/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_boost_base.m4 \
 	$(top_srcdir)/m4/ax_boost_thread.m4 \
 	$(top_srcdir)/m4/ax_check_class.m4 \
+	$(top_srcdir)/m4/ax_check_private_lib.m4 \
 	$(top_srcdir)/m4/ax_check_rqrd_class.m4 \
 	$(top_srcdir)/m4/ax_clock_gettime.m4 \
 	$(top_srcdir)/m4/ax_compare_version.m4 \

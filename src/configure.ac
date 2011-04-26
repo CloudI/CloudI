@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [0.1.3],
+AC_INIT([CloudI], [0.1.5],
         [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
@@ -10,8 +10,8 @@ AC_PROG_CXX
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
-AC_CHECK_LIB(gmp, __gmpz_init, ,
-             [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
+AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
+                     [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
 AX_CLOCK_GETTIME
 
 abs_top_srcdir=`cd $srcdir; pwd`

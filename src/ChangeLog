@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-04-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 0.1.5 (alpha) released
+    * build system fixes
+
 2011-04-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Job API jobs_remove() now takes UUIDs and
