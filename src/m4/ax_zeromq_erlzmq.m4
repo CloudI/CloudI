@@ -66,12 +66,14 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
     else
         AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
                                   [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
+        abs_top_srcdir=`cd $srcdir; pwd`
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
-            [(cd external/erlzmq/ && \
+            [(cd $SRCDIR/external/erlzmq/ && \
               ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1)],
             [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
-             ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR])
+             ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
+             SRCDIR=$abs_top_srcdir])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi

@@ -97,7 +97,7 @@ AC_DEFUN([AX_ZEROMQ],
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
         export CFLAGS
 
-        # check ZeroMQ installation
+        dnl check ZeroMQ installation
         AC_LANG_PUSH(C)
         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
             @%:@include <zmq.h>]], [[
@@ -125,13 +125,15 @@ AC_DEFUN([AX_ZEROMQ],
         export CFLAGS
 
         if test "x$build_zeromq" = "xyes"; then
+            abs_top_srcdir=`cd $srcdir; pwd`
             AC_CONFIG_COMMANDS([zeromq],
-                [(cd external/zeromq/ && \
+                [(cd $SRCDIR/external/zeromq/ && \
                   ./configure --prefix=$PREFIX --enable-static \
                               --with-pic && \
                   make && make install && \
                   echo "ZeroMQ locally installed" || exit 1)],
-                [PREFIX=$local_zeromq_path])
+                [PREFIX=$local_zeromq_path
+                 SRCDIR=$abs_top_srcdir])
 
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
             ac_zeromq_path="$local_zeromq_path"
