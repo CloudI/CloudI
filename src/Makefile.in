@@ -213,6 +213,7 @@ VERSION = @VERSION@
 ZEROMQ_CFLAGS = @ZEROMQ_CFLAGS@
 ZEROMQ_ERLZMQ_APPCONF = @ZEROMQ_ERLZMQ_APPCONF@
 ZEROMQ_ERLZMQ_RELTOOL = @ZEROMQ_ERLZMQ_RELTOOL@
+ZEROMQ_LDFLAGS = @ZEROMQ_LDFLAGS@
 ZEROMQ_ROOT_DIR = @ZEROMQ_ROOT_DIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -903,7 +904,7 @@ api-java-install:
 	$(INSTALL_DATA) "$(DESTDIR)$(libexecdir)/cloudi.jar" \
                     "$(DESTDIR)$(prefix)/api/java/"
 	rm -f "$(DESTDIR)$(libexecdir)/cloudi.jar"
-	rmdir "$(DESTDIR)$(datarootdir)/java"
+	rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0
 
 api-python-install:
 	$(MKDIR_P) "$(DESTDIR)$(prefix)/api/python"

@@ -14,6 +14,11 @@ AC_CHECK_LIB(gmp, __gmpz_init, ,
              [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
 AX_CLOCK_GETTIME
 
+abs_top_srcdir=`cd $srcdir; pwd`
+AC_SUBST(abs_top_srcdir)
+abs_top_builddir=`pwd`
+AC_SUBST(abs_top_builddir)
+
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
               [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
@@ -24,6 +29,9 @@ AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
                     [AC_MSG_ERROR([boost::unordered_map not found])], )
 
 # java checks
+AC_ARG_VAR([JAVAC],[javac executable])
+AC_ARG_VAR([JAVA],[java executable])
+AC_ARG_VAR([JAR],[jar executable])
 AC_PATH_PROG([JAVAC],[javac])
 AX_PROG_JAVAC
 AC_PATH_PROG([JAVA],[java])
@@ -36,12 +44,14 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
                     [AC_MSG_ERROR([java reflection not found])])
 
 # python check
+AC_ARG_VAR([PYTHON],[python executable])
 AC_PATH_PROG([PYTHON],[python])
 AX_PROG_PYTHON_VERSION([2.5.0], ,
                        [AC_MSG_ERROR([Python >= 2.5.0 not found])])
 
 # ruby checks
-AC_PATH_PROG([RUBY],[ruby])
+AC_ARG_VAR([RUBY],[ruby executable])
+AC_PATH_PROGS([RUBY],[ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
                      [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 
@@ -59,11 +69,12 @@ AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 
 # rebar dependency
 AC_CONFIG_COMMANDS([rebar],
-                   [(cd external/rebar/ && \
+                   [(cd $SRCDIR/external/rebar/ && \
                      $ESCRIPT bootstrap && \
                      mv ./rebar ../../ && \
                      echo "Rebar built" || exit 1)],
-                   [ESCRIPT=$ESCRIPT])
+                   [ESCRIPT=$ESCRIPT
+                    SRCDIR=$abs_top_srcdir])
 
 # ZeroMQ dependency
 AX_ZEROMQ
