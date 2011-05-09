@@ -1,3 +1,6 @@
+% Reasonable constants that are unlikely to need modification.
+% Possibly, in different environments, tuning may be beneficial, though
+% it has not yet been necessary to modify these settings during testing.
 
 % interval at which asynchronous messages are checked
 -define(RECV_ASYNC_INTERVAL, 500). % milliseconds
