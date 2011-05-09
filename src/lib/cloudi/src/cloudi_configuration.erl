@@ -62,7 +62,9 @@
 
 -define(CONFIGURATION_FILE_NAME, "cloudi.conf").
 
-% internal job parameters (same as config_job_internal)
+% internal job parameters
+% (same as the config_job_internal record, but the order is significant
+%  since it is used within all configuration data)
 -record(internal,
     {
         prefix,
@@ -79,7 +81,9 @@
         max_t
     }).
     
-% external job parameters (same as config_job_external)
+% external job parameters
+% (same as the config_job_external record, but the order is significant
+%  since it is used within all configuration data)
 -record(external,
     {
         prefix,
@@ -100,7 +104,6 @@
         max_t
     }).
 
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -109,19 +112,63 @@
 %% @doc
 %% ===Parse the CloudI configuration file.===
 %% ====logging:====
-%%   `{logging, "path/to/log/file", Level}'
+%%   `{logging, [{file, "path/to/log/file"}, {level, Level}]}'
 %%
 %%   Level is either one of the atoms:
 %%
-%%   `fatal, error, warn, info, debug, trace'
+%%   `off, fatal, error, warn, info, debug, trace'
 %%
 %% ====jobs:====
-%%   `{jobs, [{"cloud_job_uniquename.tag", [Argument1, Argument2, ...], Tasks, UseThreads}]}'
+%%   `{jobs, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT}]}'
+%%
+%%   Job configuration defines all the necessary information for the lifetime
+%%   of running the job, which may be a service or a short-lived task.
+%%   Every job defines a service name prefix which provides scope for the job
+%%   (ServiceNamePrefix) and typically uses the forward slash ('/')
+%%   character as a path delimiter (though this convention is not required
+%%   for service functionality). An internal job is an Erlang module that
+%%   exists in the code search path and is started with a list of
+%%   initialization arguments (ErlangModuleName and ModuleInitializationList).
+%%   An external job is an executable that has integrated with the CloudI API
+%%   and is provided as the executable file path (ExecutableFilePath).
+%%   An external job also specifies the command line arguments and the
+%%   environmental variables (ExecutableCommandLineArguments and
+%%   ExecutableEnvironmentalVariables) that are used when executing the job.
+%%   Currently, the ThreadCount, Protocol, and ProtocolBufferSize are 
+%%   typically provided as command line arguments to the executable, though
+%%   they could be provided as environmental variables or be hard-coded
+%%   within the job (least desirable choice).
+%%
+%%   Each job configuration then defines the destination refresh method
+%%   (DestinationRefreshMethod) which may be set to: lazy_closest, lazy_random,
+%%   immediate_closest, immediate_random, or none. A "lazy" destination refresh
+%%   method prefix is used by services that send messages to only
+%%   long-lived services and will avoid contention for doing service name
+%%   lookups (i.e., the most scalable choice).  An "immediate" destination
+%%   refresh method prefix is used by services that send messages to
+%%   short-lived services.  A "closest" destination refresh method suffix
+%%   always prefers to send to a service (with the same service name) on the
+%%   local machine rather than send to a remote machine.  A "random"
+%%   destination refresh method suffix always selects a service randomly,
+%%   so the service message is uniformly distributed among all services that
+%%   have subscribed to the same service name.
+%%
+%% ====Access Control List (ACL):====
+%%
+%%   `{acl, [{alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]}]}'
+%%
+%%   The DestinationDenyList and DestinationAllowList are both lists that
+%%   explicitly deny or allow sending messages from a service (respectively).
+%%   The ACL configuration provides a simple way to condense service
+%%   configuration based on common service name prefixes.  The ACL atoms
+%%   provide short aliases for the literal service name prefixes and may be
+%%   used to define other ACLs (in a way that is both acyclic and unordered).
 %%
 %% ====nodes:====
-%%   `{nodes, [node1@hostname]}'
+%%   `{nodes, [cloudi@hostname1, cloudi@hostname2]}'
 %%
-%%   Blah
+%%   Remote CloudI nodes that are started separately
+%%   (CloudI operates as a master-less system).
 %%
 %% @end
 %%-------------------------------------------------------------------------
