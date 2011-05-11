@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_couchdb).
@@ -855,6 +855,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},
+        {timeout, ?DEFAULT_TIMEOUT},
         {database, ?DEFAULT_DATABASE}],
     [HostName, Port, Timeout, DatabaseName] =
         proplists2:take_values(Defaults, Args),
