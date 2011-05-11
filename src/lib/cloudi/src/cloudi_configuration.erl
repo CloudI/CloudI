@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -114,7 +114,7 @@
 %% ====logging:====
 %%   `{logging, [{file, "path/to/log/file"}, {level, Level}]}'
 %%
-%%   Level is either one of the atoms:
+%%   The logging level is specified as an atom:
 %%
 %%   `off, fatal, error, warn, info, debug, trace'
 %%
@@ -153,6 +153,29 @@
 %%   so the service message is uniformly distributed among all services that
 %%   have subscribed to the same service name.
 %%
+%%   The InitializationTimeout timeout specifies how long an internal service
+%%   can spend in its cloudi_job_init/3 function or how long an external
+%%   service may take to instantiate the CloudI API data structure (for all
+%%   of the configured threads). The DefaultAsynchronousTimeout and the
+%%   DefaultSynchronousTimeout provide timeouts for any service function calls
+%%   that do not specify a timeout.  The DestinationDenyList and the
+%%   DestinationAllowList both accept an Access Control List (ACL) which
+%%   explicitly denies or allows sending service messages to destinations
+%%   that match based on the service name prefix.  Both parameters may be
+%%   either "undefined" or a list of service name prefixes (the service name
+%%   prefixes may also be supplied as aliases defined in the ACL configuration).
+%%
+%%   The ProcessCount for an internal service determines how many services with
+%%   the configuration will run as Erlang processes. The ProcessCount for an
+%%   external service determines how many Operating System processes will be
+%%   created with the configuration information. The ThreadCount determines
+%%   how many external service threads will be expected to create CloudI API
+%%   objects (i.e., to become initialized). The MaxR and MaxT are parameters
+%%   to manage the fault-tolerance of the service in the same way as an
+%%   Erlang OTP Supervisor manages Erlang processes. The MaxR parameters is the
+%%   number of restarts.  The MaxT parameter is the amount of time in seconds
+%%   the restarts must occur in, for the service to be considered failed.
+%%
 %% ====Access Control List (ACL):====
 %%
 %%   `{acl, [{alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]}]}'
@@ -185,16 +208,31 @@ open(Path) when is_list(Path) ->
     {ok, Terms} = file:consult(Path),
     new(Terms, #config{uuid_generator = uuid:new(self())}).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add Access Control List (ACL) aliases (atom -> service name prefixes).===
+%% @end
+%%-------------------------------------------------------------------------
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
     Config#config{acl = acl_lookup_add(Value, ACL)}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove Access Control List (ACL) aliases.===
+%% @end
+%%-------------------------------------------------------------------------
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
     Config#config{acl = lists:foldl(fun(E, D) ->
                                         dict:erase(E, D)
                                     end, ACL, Value)}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add jobs (services) based on the configuration format.===
+%% @end
+%%-------------------------------------------------------------------------
 jobs_add([T | _] = Value, #config{uuid_generator = UUID,
                                   jobs = Jobs,
                                   acl = ACL} = Config)
@@ -203,6 +241,11 @@ jobs_add([T | _] = Value, #config{uuid_generator = UUID,
     lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
     Config#config{jobs = Jobs ++ NewJobs}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove jobs (services) based on their UUID.===
+%% @end
+%%-------------------------------------------------------------------------
 jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     NewJobs = lists:foldl(fun(ID, L) ->
@@ -223,6 +266,11 @@ jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
     end, Jobs, lists2:rsort(Value)),
     Config#config{jobs = NewJobs}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Display the currently running jobs (services) (including their UUID).===
+%% @end
+%%-------------------------------------------------------------------------
 jobs(#config{jobs = Jobs}) ->
     erlang:list_to_binary(string2:format("~p", [lists:map(fun(Job) ->
         if
@@ -271,10 +319,20 @@ jobs(#config{jobs = Jobs}) ->
         end
     end, Jobs)])).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add CloudI nodes.===
+%% @end
+%%-------------------------------------------------------------------------
 nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
     when is_atom(A) ->
     Config#config{nodes = Nodes ++ Value}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove CloudI nodes.===
+%% @end
+%%-------------------------------------------------------------------------
 nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
     when is_atom(A) ->
     NewNodes = lists:foldl(fun(N, L) ->
