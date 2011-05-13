@@ -1,0 +1,1359 @@
+<html>
+<head>
+  <title>CloudI: A Cloud as an Interface - Frequently Asked Questions</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
+  <meta content="cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
+  <meta content="global" name="distribution" />
+  <meta content="This document copyright 2009-2011 by Michael Truog" name="copyright" />
+  <link href="style.css" type="text/css" rel="stylesheet" />
+  <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
+</head>
+<body>
+
+<div id="header">
+<a href="index.html">
+Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="images/cloud.png" />
+</a>
+</div>
+<br />
+<div id="navigation">
+  <ul>
+    <li><a href="http://cloudi.org/faq.html" class="active">FAQ</a></li>
+    <li><a href="https://sourceforge.net/projects/cloudi/files/0.1.5a/cloudi-0.1.5.tar.gz/download" target="_blank">Download</a></li>
+    <li><a href="http://github.com/okeuday/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="http://cloudi.org/support.html">Support</a></li>
+  </ul>
+</div>
+
+<div id="content">
+  <h1>Frequently Asked Questions</h1>
+
+  <a name="1_contents"></a>
+  <h2>1 - Introduction to CloudI</h2>
+  <ul class="faq">
+    <li><a href="#1_Name"         >1.1 - Why is it named "Cloud<font style="font-family: serif">I</font>"?</a></li>
+    <li><a href="#1_WhatIs"       >1.2 - What is CloudI?</a></li>
+    <li><a href="#1_OS"           >1.3 - On what Operating Systems does CloudI run?</a></li>
+    <li><a href="#1_Commercial"   >1.4 - Is Commercial support available for CloudI?</a></li>
+    <li><a href="#1_ReallyFree"   >1.5 - Is CloudI really free?</a></li>
+    <li><a href="#1_WhoDevelops"  >1.6 - Who develops CloudI?</a></li>
+    <li><a href="#1_PrivateCloud" >1.7 - Can I use CloudI as a Private Cloud?</a></li>
+    <li><a href="#1_OnlineService">1.8 - Can I use CloudI as an Online Service?</a></li>
+    <li><a href="#1_REST"         >1.9 - Does CloudI support REST?</a></li>
+    <li><a href="#1_PaaS"         >1.10 - Is CloudI a Platform as a Service (PaaS)?</a></li>
+    <li><a href="#1_HowAbout"     >1.11 - Why doesn't CloudI integrate with ProductX?</a></li>
+  </ul>
+  <a name="2_contents"></a>
+  <h2>2 - Learning about CloudI</h2>
+  <ul class="faq">
+    <li><a href="#2_WebPages"      >2.1 - Web Pages</a></li>
+    <li><a href="#2_MailingList"   >2.2 - Mailing List</a></li>
+    <li><a href="#2_IRC"           >2.3 - Internet Relay Chat (IRC)</a></li>
+    <li><a href="#2_RSS"           >2.4 - RSS Feeds</a></li>
+    <li><a href="#2_Presentations" >2.5 - Presentations</a></li>
+    <li><a href="#2_Reporting Bugs">2.6 - Reporting Bugs</a></li>
+  </ul>
+  <a name="3_contents"></a>
+  <h2>3 - CloudI Installation Guide</h2>
+  <ul class="faq">
+    <li><a href="#3_Overview"    >3.1 - Overview</a></li>
+    <li><a href="#3_Options"     >3.2 - Installation Options</a></li>
+    <li><a href="#3_OSX"         >3.3 - OS X Installation</a></li>
+    <li><a href="#3_Running"     >3.4 - Running CloudI</a></li>
+  </ul>
+  <a name="4_contents"></a>
+  <h2>4 - General Questions</h2>
+  <ul class="faq">
+    <li><a href="#4_API"        >4.1 - How do I integrate external software with CloudI?</a></li>
+    <li><a href="#4_JobAPI"     >4.2 - How do I control CloudI dynamically?</a></li>
+    <li><a href="#4_PubSub"     >4.3 - How do I use Publisher/Subscriber messaging?</a></li>
+    <li><a href="#4_RPC"        >4.4 - How do I use Remote Procedure Calls (RPC)?</a></li>
+    <li><a href="#4_WebServices">4.5 - How do I create Web Services?</a></li>
+    <li><a href="#4_ACLs"       >4.6 - How do I use Access Control Lists (ACLs)?</a></li>
+    <li><a href="#4_ServiceFail">4.7 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
+  </ul>
+  <a name="5_contents"></a>
+  <h2>5 - Migrating to CloudI</h2>
+  <ul class="faq">
+    <li><a href="#5_Performance">5.1 - Performance Considerations</a></li>
+    <li><a href="#5_Scalability">5.2 - Scalability Considerations</a></li>
+    <li><a href="#5_Stability"  >5.3 - Stability Considerations</a></li>
+    <li><a href="#5_Integration">5.4 - Integration Considerations</a></li>
+  </ul>
+  <a name="6_contents"></a>
+  <h2>6 - Services</h2>
+  <ul class="faq">
+    <li><a href="#6_C"       >6.1 - C/C++ Service Implementation</a></li>
+    <li><a href="#6_Erlang"  >6.2 - Erlang Service Implementation</a></li>
+    <li><a href="#6_Java"    >6.3 - Java Service Implementation</a></li>
+    <li><a href="#6_Python"  >6.4 - Python Service Implementation</a></li>
+    <li><a href="#6_Ruby"    >6.5 - Ruby Service Implementation</a></li>
+    <li><a href="#6_HTTP"    >6.6 - HTTP Integration</a></li>
+    <li><a href="#6_ZeroMQ"  >6.7 - ZeroMQ Integration</a></li>
+  </ul>
+  <a name="7_contents"></a>
+  <h2>7 - Databases</h2>
+  <ul class="faq">
+    <li><a href="#7_CouchDB"    >7.1 - CouchDB Integration</a></li>
+    <li><a href="#7_memcached"  >7.2 - memcached Integration</a></li>
+    <li><a href="#7_PostgreSQL" >7.3 - PostgreSQL Integration</a></li>
+    <li><a href="#7_MySQL"      >7.4 - MySQL Integration</a></li>
+    <li><a href="#7_TokyoTyrant">7.5 - Tokyo Tyrant Integration</a></li>
+    <li><a href="#7_Other"      >7.6 - Other Database Integration</a></li>
+  </ul>
+
+  <hr \>
+  <h2>1 - Introduction to CloudI</h2>
+
+  <a name="1_Name"></a>
+  <h3>1.1 - Why is it named "Cloud<font style="font-family: serif">I</font>"?</h3>
+  <p class="paragraph">
+    A <strong>Cloud</strong> is more dynamic than a 3 dimensional
+    <strong>Grid</strong> and is more ubiquitous than the legend of 
+    <strong>Beowulf</strong>, so it is easy to understand why computing Clouds 
+    are the next generation distributed systems.  The relevant connotations the 
+    word Cloud contains are: dynamic, supervision, intermingle, and points 
+    (i.e., point clouds).  Any computing Cloud should offer dynamic
+    configuration, should supervise processes in a fault-tolerant way,
+    offer easy integration and should support an arbitrarily large number
+    of processes (respectively).  This project offers Cloud functionality
+    facilitated by the <a href="http://en.wikipedia.org/wiki/Erlang_%28programming_language%29" target="_blank">Erlang programming language</a>
+    and its implementation of the <a href="http://en.wikipedia.org/wiki/Actor_model" target="_blank">Actor Model</a>.
+  </p>
+  <p class="paragraph">
+    CloudI has an "<font style="font-family: serif">I</font>" suffix for
+    several connotations: cloudy, one, singularity, interface, and
+    independence.  CloudI is referred to as "A Cloud as an Interface" because
+    a light-weight interface facilitates Cloud functionality.
+    The interface supports multiple programming languages and is called the
+    CloudI API.  CloudI supports private cloud development and deployment,
+    so only one Cloud is necessary for Cloud functionality with implicit
+    security.  CloudI is also able to facilitate online services and offers
+    extreme connection scalability.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_WhatIs"></a>
+  <h3>1.2 - What is CloudI?</h3>
+  <h4>Short Answer</h4>
+  <p class="paragraph">
+    An application server that efficiently integrates with many languages,
+    many databases, and many messaging buses in a way that is both scalable
+    and fault-tolerant.
+  </p>
+  <h4>Long Answer</h4>
+  <p class="paragraph">
+    CloudI is an implementation of <a href="#1_Name">Cloud functionality</a>
+    that can be developed and deployed publicly or privately.  CloudI provides
+    a simple server back-end that can be used for infrastructure development
+    of data processing systems, event processing systems, web services, and
+    combinations thereof.  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>
+    and provides a <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a>.
+    CloudI services communicate with messaging that can be controlled by simple
+    Access Control List (ACL) entries (to provide service communication
+    isolation).
+  </p>
+  <p class="paragraph">
+    CloudI was architected to easily integrate with other services, software,
+    and frameworks.  The CloudI API provides a light-weight interface for
+    creating services in C/C++, Erlang, Java, Python, and Ruby.  By using
+    CloudI, external software can become more scalable and fault-tolerant
+    by utilizing CloudI's load balancing of internal messaging.  CloudI
+    messaging enforces realtime constraints using timeouts, so that message
+    failures can be handled locally within the service where they are most
+    relevant.  ACL entries explicitly allow or deny communication between
+    services and are a simple method of isolating critical services from
+    potentially volatile services.  All CloudI API usage in languages other
+    than Erlang receives the isolation of Operating Systems processes
+    and is called an external service.  External services can utilize the
+    CloudI API with any threading library to achieve greater scalability and
+    reduce internal latency.  CloudI API usage in Erlang creates
+    an internal service which utilizes light-weight Erlang processes.
+    <a href="#6_contents">Examples of using the CloudI API</a>
+    are provided as integration tests or internal services.
+  </p>
+  <p class="paragraph">
+    The Job API provides dynamic configuration which is accessible from any
+    allowed CloudI service (i.e., allowed based on the ACL entries).  The
+    Job API is accessible remotely by using Erlang terms or JSON-RPC over HTTP.
+    <a href="https://github.com/okeuday/CloudI/tree/master/src/job_api#readme" target="_blank">Examples of using the Job API</a>
+    are provided as separate integration tests.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_OS"></a>
+  <h3>1.3 - On what Operating Systems does CloudI run?</h3>
+  <p class="paragraph">
+    CloudI runs on UNIX-based operating systems like Linux (<a href="http://www.ubuntu.com/" target="_blank">Ubuntu</a>, etc.)
+    and BSDs (<a href="http://www.freebsd.org/" target="_blank">FreeBSD</a>, <a href="http://www.openbsd.org/" target="_blank">OpenBSD</a>, <a href="http://www.netbsd.org/" target="_blank">NetBSD</a>, <a href="http://www.apple.com/macosx/" target="_blank">OSX</a>, etc.).
+    CloudI development has primarily taken place on Ubuntu and other
+    Operating Systems may not be completely tested yet.  Windows may work
+    by using <a href="http://www.cygwin.com/" target="_blank">Cygwin</a>
+    for dependencies.
+  </p>
+  <p class="paragraph">
+    <a href="http://www.erlang.org/doc/installation_guide/INSTALL.html" target="_blank">Erlang</a>
+    must be able to run on the system for CloudI to function properly.
+    So, checking Erlang support would be a good place to start if you are
+    experimenting with a different Operating System.  The information here
+    will be updated as more Operating Systems are tested.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_Commercial"></a>
+  <h3>1.4 - Is Commercial support available for CloudI?</h3>
+  <p>
+    <ul>
+      <li>Integration Development</li>
+      <li>Operations Maintenance</li>
+      <li>Software License Agreements</li>
+    </ul>
+    Contact <a href="mailto:mjtruog@gmail.com">Michael Truog</a>
+    if you are interested in commercial CloudI support.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_ReallyFree"></a>
+  <h3>1.5 - Is CloudI really free?</h3>
+  <p class="paragraph">
+    CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
+    which permits reuse for personal or commercial purposes.  Small amounts of
+    source code is included that is under the <a href="http://www.erlang.org/EPLICENSE" target="_blank">Erlang Public License</a>
+    (e.g., part of the <a href="https://github.com/okeuday/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/list_pg.erl" target="_blank">list_pg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
+    itself.  All external source code dependencies are also under a
+    BSD license.  Some conditional external source code dependencies
+    (not included by default) are under other licenses
+    (e.g., <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
+    is under the LGPL license).  For a more detailed look at the
+    licenses of external dependencies, please check the <a href="https://github.com/okeuday/CloudI/blob/master/src/external/README.markdown#readme" target="_blank">src/external/README</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_WhoDevelops"></a>
+  <h3>1.6 - Who develops CloudI?</h3>
+  <p class="paragraph">
+    <a href="mailto:mjtruog@gmail.com">Michael Truog</a>
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_PrivateCloud" ></a>
+  <h3>1.7 - Can I use CloudI as a Private Cloud?</h3>
+  <p class="paragraph">
+    Yes!  CloudI provides everything for running a Cloud in isolation
+    (i.e., without a connection to the Internet).  For more details,
+    please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_OnlineService"></a>
+  <h3>1.8 - Can I use CloudI as an Online Service?</h3>
+  <p class="paragraph">
+    Yes!  CloudI accepts incoming HTTP traffic and can be easily extended
+    to handle other incoming protocols.  For more details,
+    please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_REST"></a>
+  <h3>1.9 - Does CloudI support REST?</h3>
+  <p class="paragraph">
+    Yes!  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>.
+    For more details please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_PaaS"></a>
+  <h3>1.10 - Is CloudI a Platform as a Service (PaaS)?</h3>
+  <p class="paragraph">
+    Yes!  CloudI can be used as a <a href="http://en.wikipedia.org/wiki/Platform_as_a_service" target="_blank">Platform as a Service (PaaS)</a>
+    and is the first PaaS open source project (not <a href="http://www.cloudfoundry.com/" target="_blank">CloudFoundry</a>).
+    However, CloudI is not limited to the development of web services and has
+    a broader focus.  CloudI also does not enforce particular development
+    libraries on the programmer, so it is a much more flexible framework.
+    For more details please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_HowAbout"></a>
+  <h3>1.11 - Why doesn't CloudI integrate with ProductX?</h3>
+  <p class="paragraph">
+    There are many possibilities for CloudI integration.  If you know of a
+    public product that you think should be integrated or if you need
+    commercial support for a private product, contact
+    <a href="mailto:mjtruog@gmail.com">Michael Truog</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <hr \>
+  <h2>2 - Learning about CloudI</h2>
+
+  <a name="2_WebPages"></a>
+  <h3>2.1 - Web Pages</h3>
+  <table><tr><td>
+  Main Web Site:
+  </td><td>
+  <a href="http://cloudi.org">http://cloudi.org</a>
+  </td></tr><tr><td>
+  Source Code:
+  </td><td>
+  <a href="https://github.com/okeuday/CloudI#readme" target="_blank">http://github.com/okeuday/CloudI</a>
+  </td></tr><tr><td>
+  Releases:
+  </td><td>
+  <a href="http://sourceforge.net/projects/cloudi/files/" target="_blank">http://sourceforge.net/projects/cloudi/files/</a>
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_MailingList"></a>
+  <h3>2.2 - Mailing List</h3>
+  <table><tr><td>
+  Email Address:
+  </td><td>
+  <a href="mailto:cloudi-questions@googlegroups.com" target="_blank">cloudi-questions@googlegroups.com</a>
+  </td></tr><tr><td>
+  Subscribe:
+  </td><td>
+  <a href="http://groups.google.com/group/cloudi-questions/subscribe" target="_blank">http://groups.google.com/group/cloudi-questions/subscribe</a>
+  </td></tr><tr><td>
+  Archive:
+  </td><td>
+  <a href="http://groups.google.com/group/cloudi-questions" target="_blank">http://groups.google.com/group/cloudi-questions</a>
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_IRC"></a>
+  <h3>2.3 - Internet Relay Chat (IRC)</h3>
+  <table><tr><td>
+  IRC Server:
+  </td><td>
+  <a href="http://freenode.net/irc_servers.shtml" target="_blank">irc.freenode.net</a>
+  </td></tr><tr><td>
+  Chat Room:
+  </td><td>
+  #cloudi (#erlang can offer additional help, if necessary)
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_RSS"></a>
+  <h3>2.4 - RSS Feeds</h3>
+  <table><tr><td>
+  Development:
+  </td><td>
+  <a href="https://github.com/feeds/okeuday/commits/CloudI/master" target="_blank">https://github.com/feeds/okeuday/commits/CloudI/master</a>
+  </td></tr><tr><td>
+  Releases:
+  </td><td>
+  <a href="http://sourceforge.net/api/file/index/project-id/281423/mtime/desc/limit/20/rss" target="_blank">http://sourceforge.net/api/file/index/project-id/281423/mtime/desc/limit/20/rss</a>
+  </td></tr><tr><td>
+  Private Cloud Computing News:
+  </td><td>
+  <a href="http://www.google.com/reader/shared/cloudi.news" target="_blank">http://www.google.com/reader/shared/cloudi.news</a>
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_Presentations"></a>
+  <h3>2.5 - Presentations</h3>
+  <table><tr><td>
+  Version 0.1.5
+  </td><td>
+  <a href="docs/cloudi_erlounge_sfbay2011.pdf" target="_blank">2011 ErLounge Meetup SF Bay Area (slides)</a>
+  </td></tr><tr><td>
+  Version 0.0.9
+  </td><td>
+  <a href="docs/cloudi_ef_sfbay2010.pdf" target="_blank">2010 Erlang Factory SF Bay Area (slides)</a> <a href="docs/cloudi_ef_sfbay2010.txt" target="_blank">(demo text)</a>
+  </td></tr><tr><td>
+  Version 0.0.8
+  </td><td>
+  <a href="http://vimeo.com/8192137" target="_blank">2009 Erlang User Conference (video)</a> <a href="docs/cloudi_euc2009.pdf" target="_blank">(slides)</a>
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_Reporting Bugs"></a>
+  <h3>2.6 - Reporting Bugs</h3>
+  <table><tr><td>
+  Bug Reports:
+  </td><td>
+  <a href="https://github.com/okeuday/CloudI/issues/new" target="_blank">https://github.com/okeuday/CloudI/issues/new</a>
+  </td></tr><tr><td>
+  <a href="#2_MailingList">Mailing List:</a>
+  </td><td>
+  <a href="mailto:cloudi-questions@googlegroups.com" target="_blank">cloudi-questions@googlegroups.com</a>
+  </td></tr></table>
+  <p class="paragraph">
+    If you are unsure whether you have found a bug, please send an email to the
+    mailing list.  Otherwise, you can easily enter a bug report for the problem
+    by using the online form.
+  </p>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <hr \>
+  <h2>3 - CloudI Installation Guide</h2>
+
+  <a name="3_Overview"></a>
+  <h3>3.1 - Overview</h3>
+  <p>
+    Installation of CloudI from source (within the archive's "src" directory)
+    uses the typical open source command sequence of:
+    <ol style="font-family: monospace">
+      <li>./configure</li>
+      <li>make</li>
+      <li>make install</li>
+    </ol>
+    Currently, it is best to install into a local directory with a command like:
+    <pre>
+./configure --prefix=`pwd`/../cloudi_install
+    </pre>
+    More work will be occurring on the build system (autoconf/automake/rebar)
+    to make sure the deployment is more typical for UNIX systems
+    (i.e., all configuration in "etc" and all logs in "/var/logs")
+    but this work is not yet complete.
+  </p>
+  <p class="paragraph">
+    All the supported languages
+    are currently required for the configuration, so that the generated
+    configuration uses valid paths and the integration tests can be run.
+    So, that means that the configuration will expect a C compiler,
+    a C++ compiler, Java Development Kit (JDK), Python, Ruby (&ge; 1.9), and
+    Erlang (&ge; R14B01).  It is likely that Erlang will need to be compiled
+    from source, since <a href="http://www.erlang.org/download.html" target="_blank">R14B01 (and preferably R14B02)</a>
+    are new enough that they have not yet been added to package managers.
+    Dependencies as they are packaged for different operating systems are
+    listed below:
+    <table><tr><th>
+    Operating System
+    </th><th>
+    Packages
+    </th></tr><tr><td>
+    Ubuntu<br />(apt-get install &lt;package(s)&gt;)
+    </td><td>
+    <ul>
+      <li>g++</li>
+      <li>libboost-thread-dev</li>
+      <li>libboost-dev</li>
+      <li>default-jdk</li>
+      <li>python</li>
+      <li>ruby1.9</li>
+      <li>libgmp3-dev</li>
+    </ul>
+    </td></tr></table>
+  </p>
+  <div class="top"><a href="#3_contents">Top</a></div>
+
+  <a name="3_Options"></a>
+  <h3>3.2 - Installation Options</h3>
+  <p>
+    Common CloudI installation configuration options
+    ("./configure" command line arguments) are:
+    <table><tr><td>
+    --prefix="/path/to/install/"
+    </td><td>
+    Specify an Installation Path
+    </td></tr><tr><td>
+    --with-zeromq
+    </td><td>
+    Include <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a> support
+    </td></tr></table>
+  </p>
+  <p class="paragraph">
+    For more installation configuration option details, please refer to
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>.
+  </p>
+  <div class="top"><a href="#3_contents">Top</a></div>
+
+  <a name="3_OSX"></a>
+  <h3>3.3 - OS X Installation</h3>
+  <p class="paragraph">
+    To install CloudI dependencies on OSX you either need <a href="http://www.macports.org/" target="_blank">macports</a> or
+    <a href="http://mxcl.github.com/homebrew/" target="_blank">homebrew</a>.
+    With macports, CloudI configuration can be executed with:
+  </p>
+  <p style="font-family: monospace">
+    CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+  </p>
+  <div class="top"><a href="#3_contents">Top</a></div>
+
+  <a name="3_Running"></a>
+  <h3>3.4 - Running CloudI</h3>
+  <p>
+    If CloudI is installed in PREFIX (set with the configure script --prefix=
+    command line argument), then CloudI can be started with:
+<pre>
+PREFIX/bin/cloudi start
+</pre>
+    To stop the running CloudI node, execute:
+<pre>
+PREFIX/bin/cloudi stop
+</pre>
+  </p>
+  <p class="paragraph">
+    When CloudI is running, CloudI logging output will be appended to
+    PREFIX/logs/cloudi.log (the installation will change in the future to
+    put the log into /var/log/cloudi.log if CloudI is installed with sufficient
+    permissions).
+  </p>
+  <div class="top"><a href="#3_contents">Top</a></div>
+
+  <hr \>
+  <h2>4 - General Questions</h2>
+
+  <a name="4_API"></a>
+  <h3>4.1 - How do I integrate external software with CloudI?</h3>
+  <p class="paragraph">
+    There are many integration points for external software to become CloudI
+    services or utilize CloudI services.  The current integration points are:
+    <ul>
+      <li>CloudI API</li>
+      <li>ZeroMQ</li>
+      <li>HTTP</li>
+      <li>Supported databases
+      <ul>
+        <li>CouchDB</li>
+        <li>memcached</li>
+        <li>MySQL</li>
+        <li>PostgreSQL</li>
+        <li>Tokyo Tyrant</li>
+      </ul>
+      </li>
+    </ul>
+  </p>
+  <h4>CloudI API</h4>
+  <p class="paragraph">
+    The CloudI API provides a light-weight interface for creating services
+    in C/C++, Erlang, Java, Python, and Ruby.  Services subscribe to receive
+    messages from other services using the CloudI API "subscribe" function
+    call.  The subscribe function call takes a suffix string that is expected to
+    contain a path using a forward slash '/' (e.g., /cloudi/api/json_rpc/).
+    However, the service configuration provides the prefix for the subscription
+    function call, so "/cloudi/api/" is provided as a configuration prefix
+    (for the Job API service) but the subscribe function call only needs to
+    be called with the string "json_rpc/" so that a subscription takes place
+    for any services sending messages to "/cloudi/api/json_rpc/",
+    which is called a "name".
+  </p>
+  <p class="paragraph">
+    The messages are load balanced across all the services that have subscribed
+    to the same name during the lookup to find the message destination.
+    There is a service configuration parameter called the "destination refresh"
+    that determines how the internal CloudI load balancing occurs when a
+    message is sent from that service.  The possible destination refresh
+    values are: 
+    <ul>
+      <li>lazy_closest</li>
+      <li>lazy_random</li>
+      <li>immediate_closest</li>
+      <li>immediate_random</li>
+      <li>none</li>
+    </ul>
+    The "none" destination refresh is used for services that never send
+    messages (i.e., only receives messages and returns a result) and creates
+    an error that kills the service if the service does send a message.
+    The "lazy" prefix destination refresh methods use an older cached value
+    for determining service destinations, so services that communicate
+    primarily with long-lived services can use a "lazy" prefix destination
+    refresh for more scalable communication.  The "immediate" prefix
+    destination refresh methods always use current information for
+    determining service destinations, so services that communicate primarily
+    with short-lived services can always send to relevant destinations.
+    The "closest" suffix destination refresh methods always prefer
+    services that exist on the local CloudI node, over remote CloudI nodes.
+    The "random" suffix destination refresh methods load balances evenly
+    across all services on all CloudI nodes.
+  </p>
+  <p class="paragraph">
+    The following functions exist in the CloudI API for sending a message:
+    <ul>
+      <li>send_async</li>
+      <li>send_sync</li>
+      <li>mcast_async</li>
+    </ul>
+    The "send" prefix functions send a binary message (uninterpreted raw data)
+    to a single service name (which is then load balanced among the available
+    services).  If the service name does not exist, the message will be retried
+    until the message timeout elapses and no binary data will be returned
+    (i.e., returning no data is equivalent to a timeout).  The "mcast" prefix
+    function provides publish functionality, so a binary message is published
+    to all services that have subscribed to a single service name.  However,
+    the "mcast" prefix function is slightly different from other publish
+    functionality because it returns all the transaction ids (UUIDs used
+    to uniquely identify a message among all CloudI nodes) so that responses
+    (if any are returned) may be retrieved.  A service can utilize publish
+    behavior that doesn't return data by simply returning no data
+    (since returning no data is equivalent to a timeout).  The "async" suffix
+    functions (i.e., asynchronous) only return the transaction id of the
+    sent message(s) so that the message response may be queried with the
+    "recv_async" function.  If no services are available for the name of
+    the destination, the "async" suffix function will block until the
+    destination is found to send the message by retrying the send until
+    the timeout elapses (i.e., the asynchronous sends are asynchronous after
+    the send takes place).  The "sync" suffix function will block until
+    a response is returned or the timeout elapses.  If a response is returned
+    with no data, a timeout will be returned instead.  If the message
+    destination name is blocked by an Access Control List (ACL) entry, a
+    timeout will be returned immediately from the send function.
+  </p>
+  <p class="paragraph">
+    When a service receives a message, it is passed as a parameter to the
+    callback function.  The callback function was specified as an argument
+    to the "subscribe" function.  However, in Erlang all messages use the
+    same callback function which is cloudi_job_handle_request/8.
+    Within the callback function any send or receive operations can take place.
+    When the callback function wants to terminate it can either return a result
+    or forward the request to another service name by using the "return"
+    function or the "forward" function, respectively.  If the service does not
+    want to return a response, the service can simply call "return" with
+    an empty binary response value and it will be interpreted as if the
+    message timeout elapsed.
+  </p>
+  <p class="paragraph">
+    The Access Control List (ACL) is simply a list of strings that define
+    prefixes that must be explicitly allowed or denied when determining if a
+    service can send to the service name.  If a prefix is both allowed and
+    denied, the prefix is denied (deny takes precedence).  When defining ACLs,
+    it is possible to use Erlang atoms to represent lists of string prefixes
+    so that logical groupings are created.  The ACL atoms are then able to
+    be specified anywhere a normal ACL string might be present.  So, it is
+    best to group ACL string prefixes based on context to simplify the
+    configuration specification.
+  </p>
+  <a name="4_API_ZeroMQ"></a>
+  <h4>ZeroMQ</h4>
+  <p class="paragraph">
+    ZeroMQ integration provides a way of connecting to external <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
+    messaging or other CloudI nodes by using ZeroMQ as the messaging bus.
+    The cloudi_job_zeromq service is an Erlang service that provides
+    ZeroMQ integration by defining a set of mappings between service names
+    and the ZeroMQ destinations.  To use ZeroMQ with CloudI, you need to make
+    sure and enable ZeroMQ with the configuration script (with
+    "./configure --with-zeromq").  The cloudi_job_zeromq configuration
+    (in the cloudi.conf file or through the Job API jobs_add/1 function)
+    allows key/value tuples with the following key atoms: outbound, inbound,
+    publish, subscribe, push, and pull, which are the following ZeroMQ
+    equivalents: ZMQ_REQ, ZMQ_REP, ZMQ_PUB, ZMQ_SUB, ZMQ_PUSH, and ZMQ_PULL,
+    respectively.  The value is a tuple that contains a mapping key/value
+    where the key is the service name suffix and the value is the list of
+    ZeroMQ endpoints.  However, the publish and subscribe ZeroMQ configuration
+    is slightly more complex because instead of a service name, it contains
+    a list of key/value ZeroMQ subscription mapping where the key is the
+    service name suffix and the value is the ZeroMQ subscription string.
+    The example configuration file entry below should illustrate the ZeroMQ
+    service configuration:
+    <pre>
+% an entry in the cloudi.conf configuration file
+% that uses the ZeroMQ service
+{internal,
+    "/tests/zeromq/",
+    % inbound/outbound message paths much be acyclic
+    % (if they are not, you will receive a erlzmq EFSM error
+    %  because the ZeroMQ REQ has received 2 zmq_send calls)
+    cloudi_job_zeromq,
+    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
+    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstart"]}},
+    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
+     {inbound, {"zigzag_step1", ["ipc:///tmp/cloudizigzagstart"]}},
+     {outbound, {"zigzag_step1", ["inproc://zigzagstep1"]}},
+     {inbound, {"zigzag_step2", ["inproc://zigzagstep1"]}},
+    % ZeroMQ publish connects a CloudI name to a ZeroMQ (subscribe) name
+    % as {CloudI name (suffix), ZeroMQ name for message prefix}
+    % for any number of endpoints
+     {publish, {[{"zigzag_step2", "/zeromq/step2"}],
+                ["inproc://zigzagstep2a",
+                 "ipc:///tmp/cloudizigzagstep2b",
+                 "inproc://zigzagstep2c",
+                 "ipc:///tmp/cloudizigzagstep2d"]}},
+    % ZeroMQ subscribe connects a CloudI name to a ZeroMQ (subscribe) name
+    % as {CloudI name (suffix), ZeroMQ name for subscribe setsocketopt}
+    % for any number of endpoints
+     {subscribe, {[{"zigzag_step3a", "/zeromq/step2"},
+                   {"zigzag_step3b", "/zeromq/step2"}],
+                  ["inproc://zigzagstep2a",
+                   "ipc:///tmp/cloudizigzagstep2b",
+                   "inproc://zigzagstep2c",
+                   "ipc:///tmp/cloudizigzagstep2d"]}},
+     {outbound, {"zigzag_step3a", ["inproc://zigzagstep3"]}},
+     {inbound, {"zigzag_finish", ["inproc://zigzagstep3"]}}],
+    immediate_closest,
+    5000, 5000, 5000, [api], undefined, 2, 5, 300}
+    </pre>
+  </p>
+  <a name="4_API_HTTP"></a>
+  <h4>HTTP</h4>
+  <p class="paragraph">
+    The Erlang service cloudi_job_misultin accepts HTTP traffic and
+    makes the HTTP requests CloudI requests where the HTTP path in the URL
+    is used as the service name.  So, when an HTTP request is received
+    the corresponding service name will be called with the request contents
+    (uncompressed, if the request was compressed).  The headers are not passed
+    with the request.  However, cloudi_job_misultin configuration can
+    change how the HTTP headers are interpreted.  The content type of the
+    response is either forced by the configuration (with "content_type") or
+    it is determined by the file extension on the service name.
+  </p>
+  <h4>Supported Databases</h4>
+  <p class="paragraph">
+    All the supported databases can be accessed by CloudI services.
+    The CloudI Erlang service that provides database support
+    (e.g., cloudi_job_db_pgsql, cloudi_job_db_mysql, etc.) uses
+    the database name as the service name suffix.  Services can send messages
+    to the database service name in the appropriate format to
+    interact with the database.  The format to send is either SQL for an
+    SQL database or a command tuple if it is a NoSQL database
+    (e.g., {'set', "key", "value"}).
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_JobAPI"></a>
+  <h3>4.2 - How do I control CloudI dynamically?</h3>
+  <p class="paragraph">
+    CloudI's configuration can be changed dynamically while it is running
+    by using the Job API.  The Job API can be used by any CloudI services.
+    However, typical usage of the Job API would use raw HTTP requests or
+    JSON-RPC over HTTP.  An example of using the Job API through JSON-RPC
+    over HTTP can be found in <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/job_api/run.py" target="_blank">src/tests/job_api/run.py</a>.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_PubSub"></a>
+  <h3>4.3 - How do I use Publisher/Subscriber messaging?</h3>
+  <p class="paragraph">
+    The simplest way to use publisher/subscriber functionality is to use the
+    CloudI API functions "mcast_async" for publishing and "subscribe" for
+    subscribing.  For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_RPC"></a>
+  <h3>4.4 - How do I use Remote Procedure Calls (RPC)?</h3>
+  <p class="paragraph">
+    Remote procedure calls can easily be used within CloudI services by
+    using the procedure name as a service name suffix and putting the RPC
+    parameters into the request body.  The request body is simply uninterpreted
+    binary data, so no format is imposed on the user of the CloudI API.
+    For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_WebServices"></a>
+  <h3>4.5 - How do I create Web Services?</h3>
+  <p class="paragraph">
+    Web Services are simply CloudI services that accept incoming HTTP traffic
+    coming from the cloudi_job_misultin service.  The request body is either
+    the body of the uncompressed POST request or the GET query string.
+    The headers are not passed to the CloudI service because all HTTP header
+    interpretation is handled within the cloudi_job_misultin service.
+    For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_ACLs"></a>
+  <h3>4.6 - How do I use Access Control Lists (ACLs)?</h3>
+  <p class="paragraph">
+    Access Control Lists (ACLs) are used to explicitly allow or deny messages
+    from being sent to service name prefixes.  Two separate ACL parameters are
+    specified for each service configuration to allow or deny destinations.
+    If an ACL is not provided, the atom 'undefined' is used instead.  An ACL is
+    provided as a list of strings that are service name prefixes.  Instead of a
+    string, an atom alias may be provided that was defined in the 'acl'
+    configuration so that the service configuration is simpler and more
+    consistent (i.e., without strings that are replicated among the service
+    configuration entries).  A fake sample from a configuration file can
+    provide display how this works:
+<pre>
+{acl, [
+    {alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]},
+    {alias2, ["/subsystem1/prefix1", "/subsystem2/prefix1"]}
+]}.
+{jobs, [
+    {internal,
+     (ServiceNamePrefix),
+     (ErlangModuleName),
+     (ModuleInitializationList),
+     (DestinationRefreshMethod),
+     (InitializationTimeout),
+     (DefaultAsynchronousTimeout),
+     (DefaultSynchronousTimeout),
+
+     % ACL DENY LIST (e.g, valid values could be: [alias1] or undefined)
+     (DestinationDenyList),
+     
+     % ACL ALLOW LIST (e.g, valid values could be: [alias1] or undefined)
+     (DestinationAllowList),
+
+     (ProcessCount),
+     (MaxR),
+     (MaxT}),
+    {external,
+     (ServiceNamePrefix),
+     (ExecutableFilePath),
+     (ExecutableCommandLineArguments),
+     (ExecutableEnvironmentalVariables),
+     (DestinationRefreshMethod),
+     (Protocol),
+     (ProtocolBufferSize),
+     (InitializationTimeout),
+     (DefaultAsynchronousTimeout),
+     (DefaultSynchronousTimeout),
+
+     % ACL DENY LIST (e.g, valid values could be: [alias1] or undefined)
+     (DestinationDenyList),
+
+     % ACL ALLOW LIST (e.g, valid values could be: [alias1] or undefined)
+     (DestinationAllowList),
+
+     (ProcessCount),
+     (ThreadCount),
+     (MaxR),
+     (MaxT)}
+]}.
+...
+</pre>
+  </p>
+  <p class="paragraph">
+    The Job API supports dynamically starting services by supplying a 'jobs'
+    list in the same format as the configuration file.  The Job API also
+    supports defining multiple 'acl' aliases that may be referenced from
+    dynamically configured services.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_ServiceFail"></a>
+  <h3>4.7 - How do I Migrate a Service from a Failed or Failing Node?</h3>
+  <p class="paragraph">
+    A migration would imply that there is unavoidable latency during a
+    switchover from a failed node to a healthy node.  To avoid failover latency
+    and improve scalability, services are replicated on all nodes.  Proper
+    service implementation dictates that services will only cache data.
+    All dynamic state a service uses should be accessed and/or stored by a
+    database.  To communicate with a database, a service should use the
+    CloudI API to send messages to a configured CloudI database integration
+    service.  The implementation of services that avoids state-keeping within
+    the service's data structures is required to make sure a service is
+    fault-tolerant and can recover from a failure without losing a significant
+    amount of data.
+  </p>
+  <p class="paragraph">
+    So, a service should not need to be migrated from a node.  If a node has
+    failed there are many possible courses of action:
+    <ul>
+      <li>Shutdown CloudI on the Failed Node</li>
+      <li>Stop the Service on the Failed Node by using the Job API</li>
+      <li>Disconnect the Failed Node from the Network to Diagnose in Isolation</li>
+    </ul>
+    Since services are replicated on other nodes the system is fault-tolerant
+    and can operate without a failed node.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <hr \>
+  <h2>5 - Migrating to CloudI</h2>
+
+  <a name="5_Performance"></a>
+  <h3>5.1 - Performance Considerations</h3>
+  <p class="paragraph">
+    There is a latency penalty for communicating with a non-Erlang CloudI
+    service because of the extra binary encoding and decoding when using
+    the socket that connects the CloudI Erlang VM to the non-Erlang CloudI
+    service Operating System (OS) process' thread.  The preemption of
+    an Erlang VM scheduler thread by a CloudI service OS thread may
+    degrade Erlang VM performance because of a mismatch between the
+    kernel scheduler and the Erlang VM scheduler.  The kernel scheduler only
+    knows when data is available to a process while the Erlang VM is able to
+    schedule based on message queue size.  So, the Erlang VM scheduling
+    is able to intelligently schedule CloudI services more so than the
+    kernel scheduling.  However, the problem is unavoidable with current
+    OSes and can be minimized by having a sufficiently large number of
+    non-Erlang CloudI service threads and/or processes created.
+  </p>
+  <div class="top"><a href="#5_contents">Top</a></div>
+
+  <a name="5_Scalability"></a>
+  <h3>5.2 - Scalability Considerations</h3>
+  <p class="paragraph">
+    CloudI uses distributed Erlang for communicating between CloudI
+    nodes (i.e., machines).  Distributed Erlang creates a fully-connected
+    network topology which makes the cluster size of CloudI nodes limited
+    to about 50 to 100 nodes (not yet tested).  The node count limitation
+    could easily be surpassed by using ZeroMQ to bridge CloudI clusters.
+    However, it was anticipated that with multi-core technology
+    advancements, the need for very large CloudI clusters would be
+    diminished in the immediate future.  The databases that CloudI uses
+    are much more likely to need large node counts to facilitate
+    large amounts of data which can be accessed as key/value pairs or
+    with Map/Reduce.
+  </p>
+  <div class="top"><a href="#5_contents">Top</a></div>
+
+  <a name="5_Stability"></a>
+  <h3>5.3 - Stability Considerations</h3>
+  <p class="paragraph">
+    The non-Erlang CloudI services receive their own Operating System (OS)
+    process, so they are well isolated from the Erlang VM's memory.  However,
+    Erlang CloudI services could be written with malevolent intentions which
+    would make CloudI unstable or erroneous.  This means that Erlang CloudI
+    service code must have a greater amount of implicit trust that the
+    programmer is not trying to cause problems.  With non-Erlang CloudI
+    services there isn't as much concern about whether there are problems
+    within the software, since the errors receive isolation within the
+    CloudI framework.
+  </p>
+  <div class="top"><a href="#5_contents">Top</a></div>
+
+  <a name="5_Integration"></a>
+  <h3>5.4 - Integration Considerations</h3>
+  <p class="paragraph">
+    The stdout and stderr of any non-Erlang CloudI service is captured and
+    sent separately to be logged by CloudI with the associated Operating System
+    (OS) process id.
+  </p>
+  <div class="top"><a href="#5_contents">Top</a></div>
+
+  <hr \>
+  <h2>6 - Services</h2>
+
+  <a name="6_C"></a>
+  <h3>6.1 - C/C++ Service Implementation</h3>
+  <p class="paragraph">
+    The C CloudI API provides an interface for both C or C++.  The integration
+    tests that provide example usage of the C CloudI API are:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++ example with threads)</a>
+          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/" target="_blank">Hexadecimal PI Test</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C example without threads)</a>
+          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/" target="_blank">HTTP Request Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_Erlang"></a>
+  <h3>6.2 - Erlang Service Implementation</h3>
+  <p class="paragraph">
+    Erlang CloudI services use the cloudi_job behavior to create an "internal"
+    service (all non-Erlang CloudI services are "external").  The cloudi_job
+    behavior requires that the service implement the following functions:
+    <ul>
+      <li>cloudi_job_init/3</li>
+      <li>cloudi_job_handle_request/8</li>
+      <li>cloudi_job_handle_info/3</li>
+      <li>cloudi_job_terminate/2</li>
+    </ul>
+  </p>
+  <p class="paragraph">
+    Many examples of Erlang CloudI services exist within the CloudI source code
+    because the Erlang CloudI services provide integration with external
+    systems like the supported databases (CouchDB, PostgreSQL, etc.),
+    the supported messaging (HTTP, ZeroMQ, etc.), and the Job API
+    functionality.  Some example usage of the Erlang CloudI API includes:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem Service for Caching Static File Data</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_work_manager.erl" target="_blank">cloudi_job_work_manager Service For Caching Database Updates</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_timers.erl" target="_blank">cloudi_job_timers service for Sending Service Messages On Timers</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/src/cloudi_job_hexpi.erl" target="_blank">Hexadecimal PI Test Load Balancer</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_Java"></a>
+  <h3>6.3 - Java Service Implementation</h3>
+  <p class="paragraph">
+    The Java CloudI API simply uses blocking IO on file descriptors for
+    an efficient light-weight interface.  The integration tests that provide
+    example usage of the Java CloudI API are:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">src/tests/http</a>
+          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/" target="_blank">HTTP Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_Python"></a>
+  <h3>6.4 - Python Service Implementation</h3>
+  <p class="paragraph">
+    The Python CloudI API provides a simple interface for making Python
+    CloudI services.  The integration tests that provide example usage of the
+    Python CloudI API are:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">src/tests/http</a>
+          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">src/tests/zeromq</a>
+          ZeroMQ Test</li>
+    </ul>
+    To keep the stdout stream of the Python service flushed to the CloudI log,
+    add {"PYTHONUNBUFFERED", "true"} to the configuration's list of
+    environment variables.  An example configuration (from the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>)
+    is provided below:
+    <pre>
+{external,
+    "/tests/http/",
+    "@PYTHON@",
+    "tests/http/service/service.py 4 tcp 16384",
+    [{"PYTHONUNBUFFERED", "true"}],
+    none, tcp, 16384,
+    5000, 5000, 5000, [api], undefined, 1, 4, 5, 300}
+    </pre>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_Ruby"></a>
+  <h3>6.5 - Ruby Service Implementation</h3>
+  <p class="paragraph">
+    The Ruby CloudI API provides a simple interface for making Ruby
+    CloudI services.  The integration tests that provide example usage of the
+    Ruby CloudI API are:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">src/tests/http</a>
+          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_HTTP"></a>
+  <h3>6.6 - HTTP Integration</h3>
+  <p class="paragraph">
+    HTTP integration with CloudI services uses service names that have a prefix
+    that matches the Uniform Resource Locator (URL) path.  A simple example
+    caches static filesystem files recursively so that the file path is
+    the service name suffix.  The example can be found in the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
+    usage of the <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem</a> which is shown below:
+    <pre>
+{internal,
+    "/tests/http_req/",
+    cloudi_job_filesystem,
+    [{directory, "tests/http_req/public_html/"}],
+    none,
+    5000, 5000, 5000, [api], undefined, 1, 5, 300}
+    </pre>
+    When CloudI is running with this service configuration, the files
+    in the path tests/http_req/public_html/ are browsable at <a href="http://127.0.0.1:6464/tests/http_req/" target="_blank">http://127.0.0.1:6464/tests/http_req/</a>
+  </p>
+  <p class="paragraph">
+    The incoming HTTP traffic goes through the cloudi_job_misultin Erlang
+    CloudI service and simply uses the URL path to send a message to
+    the subscribing CloudI service, where the prefix of the service name
+    was set in the service configuration but the suffix of the service name
+    was declared programmatically by calling the CloudI API subscribe function.
+  </p>
+  <p class="paragraph">
+    Other simple HTTP integration examples can be found among the integration
+    tests:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">src/tests/http HTTP Test</a>
+          (with <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/run.sh" target="_blank">curl file-based test requests</a>
+           and <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">Python</a>/<a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">Ruby</a>/<a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">Java</a> services)</li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/" target="_blank">src/tests/http_req HTTP Request Test</a>
+          (with a <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">C service</a>)</li>
+    </ul>
+  </p>
+  <p class="paragraph">
+    To prevent HTTP requests from going to internal services, Access Control
+    List (ACL) entries can be added that prevent the cloudi_job_misultin Erlang
+    CloudI service from sending to the internal services.  The ACL entries
+    would be service name prefixes that include the internal services in a
+    list that is referenced directly (i.e., literally as a list of string) or
+    indirectly by an atom that represents the list of strings.  The ACL
+    entries would be specified for the cloudi_job_misultin service
+    configuration's deny list.  If service names are named consistently so that
+    the service name represents a path which is a destination in a tree or
+    hierarchy, then there should be no problems when adding or removing
+    services dynamically (since the ACL entries will remain valid for the
+    consistent service name prefix usage).
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API_HTTP">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_ZeroMQ"></a>
+  <h3>6.7 - ZeroMQ Integration</h3>
+  <p class="paragraph">
+    <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
+    integration is provided by the cloudi_job_zeromq Erlang CloudI service.
+    The CloudI configuration uses the cloudi_job_zeromq service to create
+    service names that represent ZeroMQ messaging endpoints.  There are three
+    ZeroMQ configuration examples in the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
+    which are (partially) shown below:
+    <pre>
+% Zig-Zag test
+{internal,
+    "/tests/zeromq/",
+    % inbound/outbound message paths much be acyclic
+    % (if they are not, you will receive a erlzmq EFSM error
+    %  because the ZeroMQ REQ has received 2 zmq_send calls)
+    cloudi_job_zeromq,
+    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
+    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstart"]}},
+    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
+     {inbound, {"zigzag_step1", ["ipc:///tmp/cloudizigzagstart"]}},
+     {outbound, {"zigzag_step1", ["inproc://zigzagstep1"]}},
+     {inbound, {"zigzag_step2", ["inproc://zigzagstep1"]}},
+    % ZeroMQ publish connects a CloudI name to a ZeroMQ (subscribe) name
+    % as {CloudI name (suffix), ZeroMQ name for message prefix}
+    % for any number of endpoints
+     {publish, {[{"zigzag_step2", "/zeromq/step2"}],
+                ["inproc://zigzagstep2a",
+                 "ipc:///tmp/cloudizigzagstep2b",
+                 "inproc://zigzagstep2c",
+                 "ipc:///tmp/cloudizigzagstep2d"]}},
+    % ZeroMQ subscribe connects a CloudI name to a ZeroMQ (subscribe) name
+    % as {CloudI name (suffix), ZeroMQ name for subscribe setsocketopt}
+    % for any number of endpoints
+     {subscribe, {[{"zigzag_step3a", "/zeromq/step2"},
+                   {"zigzag_step3b", "/zeromq/step2"}],
+                  ["inproc://zigzagstep2a",
+                   "ipc:///tmp/cloudizigzagstep2b",
+                   "inproc://zigzagstep2c",
+                   "ipc:///tmp/cloudizigzagstep2d"]}},
+     {outbound, {"zigzag_step3a", ["inproc://zigzagstep3"]}},
+     {inbound, {"zigzag_finish", ["inproc://zigzagstep3"]}}],
+    immediate_closest,
+    5000, 5000, 5000, [api], undefined, 2, 5, 300},
+% Chain inproc test (50 endpoints in a sequential call path)
+{internal,
+    "/tests/zeromq/",
+    cloudi_job_zeromq,
+    [{outbound, {"chain_inproc_start", ["inproc://chainstep1"]}},
+     {inbound, {"chain_inproc_step1", ["inproc://chainstep1"]}},
+     {outbound, {"chain_inproc_step1", ["inproc://chainstep2"]}},
+     {inbound, {"chain_inproc_step2", ["inproc://chainstep2"]}},
+...
+     {outbound, {"chain_inproc_step48", ["inproc://chainstep49"]}},
+     {inbound, {"chain_inproc_step49", ["inproc://chainstep49"]}},
+     {outbound, {"chain_inproc_step49", ["inproc://chainstep50"]}},
+     {inbound, {"chain_inproc_finish", ["inproc://chainstep50"]}}],
+    immediate_closest,
+    5000, 5000, 5000, [api], undefined, 2, 5, 300},
+% Chain ipc test (25 endpoints in a sequential call path)
+{internal,
+    "/tests/zeromq/",
+    cloudi_job_zeromq,
+    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1"]}},
+     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1"]}},
+     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2"]}},
+     {inbound, {"chain_ipc_step2", ["ipc:///tmp/cloudichainstep2"]}},
+...
+     {outbound, {"chain_ipc_step23", ["ipc:///tmp/cloudichainstep24"]}},
+     {inbound, {"chain_ipc_step24", ["ipc:///tmp/cloudichainstep24"]}},
+     {outbound, {"chain_ipc_step24", ["ipc:///tmp/cloudichainstep25"]}},
+     {inbound, {"chain_ipc_finish", ["ipc:///tmp/cloudichainstep25"]}}],
+    immediate_closest,
+    5000, 5000, 5000, [api], undefined, 2, 5, 300}
+    </pre>
+  </p>
+  <p class="paragraph">
+  The three cloudi_job_zeromq Erlang CloudI services are used by the
+  <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">ZeroMQ integration test</a>
+  to test the ZeroMQ messaging when the integration test service starts.
+  ZeroMQ configuration within CloudI is dynamic through usage of the Job
+  API.  For more information, please refer to <a href="#4_API_ZeroMQ">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <hr \>
+  <h2>7 - Databases</h2>
+
+  <a name="7_CouchDB"></a>
+  <h3>7.1 - CouchDB Integration</h3>
+  <p class="paragraph">
+    The cloudi_job_db_couchdb internal service accepts messages from other
+    CloudI services.  The service expects database commands supplied as
+    Erlang tuples or atoms.  When the service receives data from an external
+    service the data received is binary and should be a string that contains
+    Erlang terms that is the database command.  The command result is
+    returned as binary to an external service.  An internal service can
+    send the command as Erlang terms and will receive Erlang terms for the
+    result.  The service name used to communicate with the database is the
+    configured database service name prefix with the database name appended
+    (i.e., "/db/couchdb/cloudi_tests" in the example below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/couchdb/",
+        cloudi_job_db_couchdb,
+        [{database, "cloudi_tests"},
+         {timeout, 20000}, % ms
+         {hostname, "127.0.0.1"},
+         {port, 5984}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+</pre>
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_memcached"></a>
+  <h3>7.2 - memcached Integration</h3>
+  <p class="paragraph">
+    The cloudi_job_db_memcached internal service accepts messages from other
+    CloudI services.  The service expects database commands supplied as
+    Erlang tuples or atoms.  When the service receives data from an external
+    service the data received is binary and should be a string that contains
+    Erlang terms that is the database command.  The command result is
+    returned as binary to an external service.  An internal service can
+    send the command as Erlang terms and will receive Erlang terms for the
+    result.  The service name used to communicate with the database is the
+    configured database service name prefix with the database name appended
+    (i.e., "/db/memcached/cloudi_tests" in the example below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/memcached/",
+        cloudi_job_db_memcached,
+        [{database, "cloudi_tests",
+          [{"127.0.0.1", 11211, 1}]}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+</pre>
+    The list of host-port-connection_count tuples is used for providing
+    <a href="http://amarok.kde.org/blog/archives/363-libketama-a-consistent-hashing-algo-for-memcache-clients.html" target="_blank">continuum hashing</a>
+    of database keys.  Using continuum hashing avoids rehashing all the keys
+    (i.e., cached-misses) when a memcached node fails.
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_PostgreSQL"></a>
+  <h3>7.3 - PostgreSQL Integration</h3>
+  <p class="paragraph">
+    The cloudi_job_db_pgsql internal service accepts messages from other
+    CloudI services.  The service expects SQL input and provides the query
+    result either as an Erlang tuple or as binary encoded data based on whether
+    the input was binary or a list.  All data coming from external services
+    is received as binary and is returned as binary that can be used to
+    determine the result of a query.  Internal services are able to send SQL
+    as an Erlang list and will then receive a tuple from the database driver
+    that is the result of the query.  The service name used to communicate
+    with the database is the configured database service name prefix with
+    the database name appended (i.e., "/db/pgsql/cloudi_tests" in the example
+    below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/pgsql/",
+        cloudi_job_db_pgsql,
+        [{database, "cloudi_tests"},
+         {timeout, 20000}, % ms
+         {hostname, "127.0.0.1"},
+         {username, "cloudi"},
+         {password, "XXXXXXXXX"},
+         {port, 5432}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+</pre>
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_MySQL"></a>
+  <h3>7.4 - MySQL Integration</h3>
+  <p class="paragraph">
+    The cloudi_job_db_mysql internal service accepts messages from other
+    CloudI services.  The service expects SQL input and provides the query
+    result either as an Erlang tuple or as binary encoded data based on whether
+    the input was binary or a list.  All data coming from external services
+    is received as binary and is returned as binary that can be used to
+    determine the result of a query.  Internal services are able to send SQL
+    as an Erlang list and will then receive a tuple from the database driver
+    that is the result of the query.  The service name used to communicate
+    with the database is the configured database service name prefix with
+    the database name appended (i.e., "/db/mysql/cloudi_tests" in the example
+    below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/mysql/",
+        cloudi_job_db_mysql,
+        [{database, "cloudi_tests"},
+         {timeout, 20000}, % ms
+         {encoding, utf8},
+         {hostname, "127.0.0.1"},
+         {username, "cloudi"},
+         {password, "XXXXXXXXX"},
+         {port, 3306}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+</pre>
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_TokyoTyrant"></a>
+  <h3>7.5 - Tokyo Tyrant Integration</h3>
+  <p class="paragraph">
+    The cloudi_job_db_tokyotyrant internal service accepts messages from other
+    CloudI services.  The service expects database commands supplied as
+    Erlang tuples or atoms.  When the service receives data from an external
+    service the data received is binary and should be a string that contains
+    Erlang terms that is the database command.  The command result is
+    returned as binary to an external service.  An internal service can
+    send the command as Erlang terms and will receive Erlang terms for the
+    result.  The service name used to communicate with the database is the
+    configured database service name prefix with the database name appended
+    (i.e., "/db/tokyotyrant/cloudi_tests" in the example below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/tokyotyrant/",
+        cloudi_job_db_tokyotyrant,
+        [{database, "cloudi_tests"},
+         {timeout, 20000}, % ms
+         {hostname, "127.0.0.1"},
+         {port, 1978}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+</pre>
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_Other"></a>
+  <h3>7.6 - Other Database Integration</h3>
+  <p class="paragraph">
+    Other databases can easily be integrated with CloudI.  The best database
+    integration uses a database driver implemented completely in Erlang and
+    uses a cloudi_job_db_name module to implement CloudI service integration
+    with the cloudi_job behavior.  By using a database driver written in Erlang
+    the source code is naturally more scalable and fault-tolerant.  If the
+    database driver used an Erlang NIF or an Erlang port driver instead,
+    the driver would not be isolated from the Erlang VM (though the
+    implementation might be more efficient).  The database driver would
+    typically communicate with the database by using a socket with TCP.
+  </p>
+  <p class="paragraph">
+    Database integration can be done in other complex ways if required,
+    but the integration previously mentioned is a typical approach used within
+    CloudI.
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+</div>
+
+<div id="footer">
+Copyright &#169; 2009-2011 Michael Truog
+</div>
+
+</body>
+</html>
