@@ -10,7 +10,7 @@ do
   /usr/bin/env curl -H "Content-Type: text/plain" -s \
                     --data-ascii @input/$FILE -o tmp/$FILE \
                     --compressed \
-                    http://localhost:8080/tests/http/$FILE
+                    http://localhost:6464/tests/http/$FILE
 
   if [ ! -f output/$FILE ]; then
     echo "output/$FILE missing"
@@ -27,7 +27,7 @@ do
     /usr/bin/env curl -H "Content-Type: application/zip" -s \
                       --data-binary @input.zip/$FILE -o tmp/$FILE \
                       --compressed \
-                      http://localhost:8080/tests/http/$FILE
+                      http://localhost:6464/tests/http/$FILE
 
     test -f tmp/$FILE && cmp -s tmp/$FILE output/$FILE
     if [ $? -ne 0 ]; then

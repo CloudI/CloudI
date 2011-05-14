@@ -1,5 +1,5 @@
 
-nodist_libexec_SCRIPTS = cloudi.jar
+nodist_noinst_SCRIPTS = cloudi.jar
 
 CLEANFILES = $(nodist_libexec_SCRIPTS)
 

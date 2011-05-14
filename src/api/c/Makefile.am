@@ -1,7 +1,7 @@
 noinst_LIBRARIES = libcloudi.a
 noinst_LTLIBRARIES = libcloudi.la
 
-nodist_include_HEADERS = cloudi.h
+nodist_noinst_HEADERS = cloudi.h
 
 cloudi_libtool.cpp: cloudi.cpp
 	cp -f cloudi.cpp cloudi_libtool.cpp

@@ -42,6 +42,6 @@
   {copy, "rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
   {copy, "rel/files/cloudi", "bin/cloudi"},
-  {copy, "config/sys.config", "etc/app.config"},
+  {copy, "rel/files/app.config", "etc/app.config"},
   {copy, "rel/files/vm.args", "etc/vm.args"}
  ]}.
