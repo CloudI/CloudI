@@ -51,6 +51,15 @@ execute_post_script(Config, Key) ->
         undefined ->
             ok;
         Script ->
+            deprecated(Key),
             {ok, _} = rebar_utils:sh(Script, []),
             ok
     end.
+
+
+deprecated(Key=compile_post_script) ->
+    ?DEPRECATED(Key, {post_hooks, [{compile, "script"}]},
+                "in a future build of rebar");
+deprecated(Key=clean_post_script) ->
+    ?DEPRECATED(Key, {post_hooks, [{clean, "script"}]},
+                "in a future build of rebar").

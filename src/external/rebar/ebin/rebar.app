@@ -1,8 +1,12 @@
+%% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% ex: ts=4 sw=4 ft=erlang et
+
 {application, rebar,
  [{description, "Rebar: Erlang Build Tool"},
   {vsn, "2"},
   {modules, [ rebar,
               rebar_abnfc_compiler,
+              rebar_appups,
               rebar_app_utils,
               rebar_base_compiler,
               rebar_config,
@@ -80,9 +84,10 @@
                               ]},
 
                     {rel_dir, [
+                               rebar_appups,
                                rebar_reltool,
                                rebar_upgrade
                               ]}
                    ]}
         ]}
-]}.
+ ]}.
