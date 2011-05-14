@@ -1,7 +1,7 @@
 INTERFACE_HEADER=../src/cloudi_os_spawn.hrl
 CURRENT_VERSION=vsn_1
 
-bin_PROGRAMS = cloudi_os_spawn_vsn_1
+noinst_PROGRAMS = cloudi_os_spawn_vsn_1
 
 BUILT_SOURCES = $(INTERFACE_HEADER)
 CLEANFILES = $(INTERFACE_HEADER) \
@@ -9,7 +9,7 @@ CLEANFILES = $(INTERFACE_HEADER) \
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn.h \
-                     $(bin_PROGRAMS)
+                     $(noinst_PROGRAMS)
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) -include cloudi_os_spawn.h \
          $(BOOST_CPPFLAGS) -E -P cloudi_os_spawn_hrl.h > $@
 	cp cloudi_os_spawn_$(CURRENT_VERSION) ../priv

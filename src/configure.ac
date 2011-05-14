@@ -14,10 +14,13 @@ AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
                      [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
 AX_CLOCK_GETTIME
 
-abs_top_srcdir=`cd $srcdir; pwd`
-AC_SUBST(abs_top_srcdir)
-abs_top_builddir=`pwd`
-AC_SUBST(abs_top_builddir)
+AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
+AC_SUBST(abs_top_builddir, [`pwd`])
+
+AC_SUBST(cloudi_prefix, ["$prefix/lib/cloudi-$VERSION"])
+AC_SUBST(cloudi_logdir, ["$prefix/var/log/cloudi"])
+AC_SUBST(cloudi_confdir, ["$prefix/etc/cloudi"])
+AC_SUBST(cloudi_bindir, ["$prefix/lib/cloudi-$VERSION/bin"])
 
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
@@ -82,6 +85,7 @@ AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([cloudi.conf
                  reltool.config
+                 config/sys.config
                  lib/cloudi/src/cloudi.app.src
                  Makefile
                  api/Makefile

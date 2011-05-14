@@ -35,8 +35,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = tests/http/service/jar
-DIST_COMMON = $(dist_libexec_SCRIPTS) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in
+DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_boost_base.m4 \
 	$(top_srcdir)/m4/ax_boost_thread.m4 \
@@ -88,7 +87,7 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(libexecdir)"
-SCRIPTS = $(dist_libexec_SCRIPTS)
+SCRIPTS = $(nodist_libexec_SCRIPTS)
 SOURCES =
 DIST_SOURCES =
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -200,6 +199,10 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+cloudi_bindir = @cloudi_bindir@
+cloudi_confdir = @cloudi_confdir@
+cloudi_logdir = @cloudi_logdir@
+cloudi_prefix = @cloudi_prefix@
 datadir = @datadir@
 datarootdir = @datarootdir@
 docdir = @docdir@
@@ -235,8 +238,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 zeromq_path_bin_queue = @zeromq_path_bin_queue@
-dist_libexec_SCRIPTS = service.jar
-CLEANFILES = $(dist_libexec_SCRIPTS)
+nodist_libexec_SCRIPTS = service.jar
+CLEANFILES = $(nodist_libexec_SCRIPTS)
 all: all-am
 
 .SUFFIXES:
@@ -270,10 +273,10 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-install-dist_libexecSCRIPTS: $(dist_libexec_SCRIPTS)
+install-nodist_libexecSCRIPTS: $(nodist_libexec_SCRIPTS)
 	@$(NORMAL_INSTALL)
 	test -z "$(libexecdir)" || $(MKDIR_P) "$(DESTDIR)$(libexecdir)"
-	@list='$(dist_libexec_SCRIPTS)'; test -n "$(libexecdir)" || list=; \
+	@list='$(nodist_libexec_SCRIPTS)'; test -n "$(libexecdir)" || list=; \
 	for p in $$list; do \
 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
 	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
@@ -296,9 +299,9 @@ install-dist_libexecSCRIPTS: $(dist_libexec_SCRIPTS)
 	     } \
 	; done
 
-uninstall-dist_libexecSCRIPTS:
+uninstall-nodist_libexecSCRIPTS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(dist_libexec_SCRIPTS)'; test -n "$(libexecdir)" || exit 0; \
+	@list='$(nodist_libexec_SCRIPTS)'; test -n "$(libexecdir)" || exit 0; \
 	files=`for p in $$list; do echo "$$p"; done | \
 	       sed -e 's,.*/,,;$(transform)'`; \
 	test -n "$$list" || exit 0; \
@@ -406,7 +409,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-dist_libexecSCRIPTS
+install-exec-am: install-nodist_libexecSCRIPTS
 
 install-html: install-html-am
 
@@ -444,22 +447,22 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-dist_libexecSCRIPTS
+uninstall-am: uninstall-nodist_libexecSCRIPTS
 
 .MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	clean-local distclean distclean-generic distclean-libtool \
 	distdir dvi dvi-am html html-am info info-am install \
-	install-am install-data install-data-am \
-	install-dist_libexecSCRIPTS install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-nodist_libexecSCRIPTS install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-dist_libexecSCRIPTS
+	uninstall-nodist_libexecSCRIPTS
 
 
 service.jar: manifest.txt \

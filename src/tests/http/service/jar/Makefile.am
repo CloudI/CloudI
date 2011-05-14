@@ -1,7 +1,7 @@
 
-dist_libexec_SCRIPTS = service.jar
+nodist_libexec_SCRIPTS = service.jar
 
-CLEANFILES = $(dist_libexec_SCRIPTS)
+CLEANFILES = $(nodist_libexec_SCRIPTS)
 
 service.jar: manifest.txt \
              org/cloudi/tests/http/*.class \
