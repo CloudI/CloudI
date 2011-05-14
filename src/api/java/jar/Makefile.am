@@ -1,7 +1,7 @@
 
 nodist_noinst_SCRIPTS = cloudi.jar
 
-CLEANFILES = $(nodist_libexec_SCRIPTS)
+CLEANFILES = $(nodist_noinst_SCRIPTS)
 
 cloudi.jar: org/cloudi/*.class \
             com/ericsson/otp/erlang/*.class
