@@ -1,5 +1,5 @@
 
-nodist_libexec_SCRIPTS = service.jar
+nodist_noinst_SCRIPTS = service.jar
 
 CLEANFILES = $(nodist_libexec_SCRIPTS)
 

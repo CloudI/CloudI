@@ -37,8 +37,9 @@ subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/cloudi.conf.in \
 	$(srcdir)/config.h.in $(srcdir)/reltool.config.in \
-	$(top_srcdir)/config/sys.config.in $(top_srcdir)/configure \
-	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in AUTHORS COPYING \
+	$(top_srcdir)/configure \
+	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in \
+	$(top_srcdir)/rel/files/app.config.in AUTHORS COPYING \
 	ChangeLog INSTALL NEWS TODO config/compile config/config.guess \
 	config/config.sub config/depcomp config/install-sh \
 	config/ltmain.sh config/missing
@@ -71,7 +72,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = cloudi.conf reltool.config config/sys.config \
+CONFIG_CLEAN_FILES = cloudi.conf reltool.config rel/files/app.config \
 	lib/cloudi/src/cloudi.app.src
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
@@ -336,7 +337,7 @@ cloudi.conf: $(top_builddir)/config.status $(srcdir)/cloudi.conf.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 reltool.config: $(top_builddir)/config.status $(srcdir)/reltool.config.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
-config/sys.config: $(top_builddir)/config.status $(top_srcdir)/config/sys.config.in
+rel/files/app.config: $(top_builddir)/config.status $(top_srcdir)/rel/files/app.config.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 lib/cloudi/src/cloudi.app.src: $(top_builddir)/config.status $(top_srcdir)/lib/cloudi/src/cloudi.app.src.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@

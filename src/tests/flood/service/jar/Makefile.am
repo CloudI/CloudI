@@ -1,5 +1,5 @@
 
-nodist_libexec_SCRIPTS = flood.jar
+nodist_noinst_SCRIPTS = flood.jar
 
 CLEANFILES = $(nodist_libexec_SCRIPTS)
 
