@@ -1,8 +1,8 @@
 SUBDIRS = org jar
 
-bin_PROGRAMS = flood
+noinst_PROGRAMS = flood
 flood_SOURCES = flood.c
 flood_CFLAGS = -I$(top_builddir)/api/c/
 flood_LDFLAGS = -L$(top_builddir)/api/c/
-flood_LDADD = -lcloudi
+flood_LDADD = -lcloudi -lstdc++
 

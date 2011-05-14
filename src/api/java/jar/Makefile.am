@@ -1,7 +1,7 @@
 
-dist_libexec_SCRIPTS = cloudi.jar
+nodist_libexec_SCRIPTS = cloudi.jar
 
-CLEANFILES = $(dist_libexec_SCRIPTS)
+CLEANFILES = $(nodist_libexec_SCRIPTS)
 
 cloudi.jar: org/cloudi/*.class \
             com/ericsson/otp/erlang/*.class

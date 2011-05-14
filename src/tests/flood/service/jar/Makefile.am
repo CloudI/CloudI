@@ -1,7 +1,7 @@
 
-dist_libexec_SCRIPTS = flood.jar
+nodist_libexec_SCRIPTS = flood.jar
 
-CLEANFILES = $(dist_libexec_SCRIPTS)
+CLEANFILES = $(nodist_libexec_SCRIPTS)
 
 flood.jar: manifest.txt \
            org/cloudi/tests/flood/*.class \

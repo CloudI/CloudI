@@ -1,4 +1,4 @@
-bin_PROGRAMS = hexpi
+noinst_PROGRAMS = hexpi
 hexpi_SOURCES = assert.cpp main.cpp timer.cpp \
                 piqpr8_gmp.cpp piqpr8_gmp_verify.cpp
 hexpi_CPPFLAGS = -I$(top_builddir)/api/c/ $(BOOST_CPPFLAGS)

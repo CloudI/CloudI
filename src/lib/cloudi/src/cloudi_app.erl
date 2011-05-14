@@ -67,7 +67,8 @@
 %% @end
 %%-------------------------------------------------------------------------
 start(_, _) ->
-    case cloudi_sup:start_link(cloudi_configuration:open()) of
+    {ok, Path} = application:get_env(configuration),
+    case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
         {ok, Pid} ->
             {ok, Pid};
         {error, _} = Error ->
