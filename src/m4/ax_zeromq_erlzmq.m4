@@ -69,11 +69,12 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
         abs_top_srcdir=`cd $srcdir; pwd`
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/erlzmq/ && \
-              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
+              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR $BUILDDIR/rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1)],
             [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
-             SRCDIR=$abs_top_srcdir])
+             SRCDIR=$abs_top_srcdir
+             BUILDDIR=$abs_top_builddir])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi

@@ -74,16 +74,18 @@ AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_CONFIG_COMMANDS([rebar],
                    [(cd $SRCDIR/external/rebar/ && \
                      $ESCRIPT bootstrap && \
-                     mv ./rebar ../../ && \
+                     mv ./rebar $BUILDDIR && \
                      echo "Rebar built" || exit 1)],
                    [ESCRIPT=$ESCRIPT
-                    SRCDIR=$abs_top_srcdir])
+                    SRCDIR=$abs_top_srcdir
+                    BUILDDIR=$abs_top_builddir])
 
 # ZeroMQ dependency
 AX_ZEROMQ
 AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([cloudi.conf
+                 rebar.config
                  reltool.config
                  rel/files/app.config
                  lib/cloudi/src/cloudi.app.src
