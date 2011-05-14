@@ -761,6 +761,7 @@ clean-configure: config.log
           $(top_srcdir)/external/rebar/ebin/*.beam \
           $(top_builddir)/lib/cloudi/src/cloudi.app.src \
           $(top_builddir)/rel/files/app.config \
+          $(top_builddir)/rebar.config \
           $(top_builddir)/reltool.config \
           $(top_builddir)/cloudi.conf
 	rm -rf $(top_srcdir)/autom4te.cache
