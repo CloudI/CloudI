@@ -1,8 +1,3 @@
--record(config, { dir,
-                  opts }).
-
--record(global_state, { working_dir }).
-
 -define(FAIL, throw({error, failed})).
 
 -define(ABORT(Str, Args), rebar_utils:abort(Str, Args)).
@@ -16,3 +11,8 @@
 
 -define(FMT(Str, Args), lists:flatten(io_lib:format(Str, Args))).
 
+-define(DEPRECATED(Old, New, Opts, When),
+        rebar_utils:deprecated(Old, New, Opts, When)).
+
+-define(DEPRECATED(Old, New, When),
+        rebar_utils:deprecated(Old, New, When)).

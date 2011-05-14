@@ -39,8 +39,7 @@
 
 %% @doc Remove files and directories.
 %% Target is a single filename, directoryname or wildcard expression.
-%% @spec rm_rf(string()) -> ok
--spec rm_rf(Target::string()) -> ok.
+-spec rm_rf(Target::file:filename()) -> ok.
 rm_rf(Target) ->
     case os:type() of
         {unix, _} ->
@@ -56,7 +55,7 @@ rm_rf(Target) ->
             ok
     end.
 
--spec cp_r(Sources::list(string()), Dest::string()) -> ok.
+-spec cp_r(Sources::list(string()), Dest::file:filename()) -> ok.
 cp_r(Sources, Dest) ->
     case os:type() of
         {unix, _} ->
@@ -69,7 +68,7 @@ cp_r(Sources, Dest) ->
             ok
     end.
 
--spec mv(Source::string(), Dest::string()) -> ok.
+-spec mv(Source::string(), Dest::file:filename()) -> ok.
 mv(Source, Dest) ->
     case os:type() of
         {unix, _} ->
@@ -132,7 +131,7 @@ xcopy_win32(Source,Dest)->
     end.
 
 cp_r_win32({true, SourceDir}, {true, DestDir}) ->
-    % from directory to directory
+    %% from directory to directory
     SourceBase = filename:basename(SourceDir),
     ok = case file:make_dir(filename:join(DestDir, SourceBase)) of
              {error, eexist} -> ok;
@@ -140,10 +139,10 @@ cp_r_win32({true, SourceDir}, {true, DestDir}) ->
          end,
     ok = xcopy_win32(SourceDir, filename:join(DestDir, SourceBase));
 cp_r_win32({false, Source} = S,{true, DestDir}) ->
-    % from file to directory
+    %% from file to directory
     cp_r_win32(S, {false, filename:join(DestDir, filename:basename(Source))});
 cp_r_win32({false, Source},{false, Dest}) ->
-    % from file to file
+    %% from file to file
     {ok,_} = file:copy(Source, Dest),
     ok;
 cp_r_win32(Source,Dest) ->

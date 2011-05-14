@@ -136,8 +136,8 @@ rebar
 Erlang OTP-compliant build tool
 
 - https://github.com/basho/rebar
-- commit 7710ab0d9f5be0833179
-- Wed Feb  9 12:31:54 PST 2011
+- commit 096e56d61c4841afad0c
+- Sat May 14 03:35:34 PDT 2011
 - Apache License
 
 zeromq

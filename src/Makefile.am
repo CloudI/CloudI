@@ -2,6 +2,53 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
 all-local: rebar 
+	$(MKDIR_P) external || exit 0
+	(cd $(top_builddir)/external; \
+     test ! -L erlzmq && \
+     $(LN_S) $(abs_top_srcdir)/external/erlzmq || exit 0)
+	(cd $(top_srcdir)/lib/cloudi/src; \
+     test ! -e cloudi.app.src && \
+     $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
+	(test ! -d $(abs_top_builddir)/lib/cloudi/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/epgsql/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
+	(cd $(top_srcdir)/external/epgsql; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/etokyotyrant/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
+	(cd $(top_srcdir)/external/etokyotyrant; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/ememcached/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
+	(cd $(top_srcdir)/external/ememcached; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/ecouchdb/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
+	(cd $(top_srcdir)/external/ecouchdb; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/emysql/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/emysql/ebin || exit 0)
+	(cd $(top_srcdir)/external/emysql; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/misultin/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/misultin/ebin || exit 0)
+	(cd $(top_srcdir)/external/misultin; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/misultin/ebin || exit 0)
+	(test ! -d $(abs_top_builddir)/external/jsx/ebin && \
+     $(MKDIR_P) $(abs_top_builddir)/external/jsx/ebin || exit 0)
+	(cd $(top_srcdir)/external/jsx; \
+     test ! -L ebin && \
+     $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config compile || \
@@ -12,8 +59,23 @@ clean-local: rebar
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
-	rm -f api/python/cloudi.pyc \
-          api/python/erlang.pyc
+	rmdir $(top_builddir)/lib/cloudi/ebin \
+          $(top_builddir)/external/epgsql/ebin \
+          $(top_builddir)/external/etokyotyrant/ebin \
+          $(top_builddir)/external/ememcached/ebin \
+          $(top_builddir)/external/ecouchdb/ebin \
+          $(top_builddir)/external/emysql/ebin \
+          $(top_builddir)/external/misultin/ebin \
+          $(top_builddir)/external/jsx/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi/src/cloudi.app.src \
+          $(top_srcdir)/lib/cloudi/ebin \
+          $(top_srcdir)/external/epgsql/ebin \
+          $(top_srcdir)/external/etokyotyrant/ebin \
+          $(top_srcdir)/external/ememcached/ebin \
+          $(top_srcdir)/external/ecouchdb/ebin \
+          $(top_srcdir)/external/emysql/ebin \
+          $(top_srcdir)/external/misultin/ebin \
+          $(top_srcdir)/external/jsx/ebin
 
 clean-configure: config.log
 	(cd $(top_srcdir)/external/zeromq && make clean || exit 0)
@@ -63,10 +125,7 @@ clean-configure: config.log
          -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 
 dialyze: rebar
-	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(abs_top_builddir)/rebar \
-                -C $(abs_top_builddir)/rebar.config dialyze || \
-     exit 0)
+	$(ESCRIPT) rebar dialyze || exit 0
 
 run:
 	@echo
@@ -119,10 +178,7 @@ install-exec-hook: cloudi-prefix-install \
      test ! -e logs && $(LN_S) "$(cloudi_logdir)" logs || exit 0)
 	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
                     "$(DESTDIR)$(cloudi_confdir)"
-	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(abs_top_builddir)/rebar \
-                -C $(abs_top_builddir)/rebar.config generate || \
-     exit 0)
+	$(ESCRIPT) rebar generate || exit 0
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
         mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
               "$(DESTDIR)$(cloudi_prefix)" || exit 0

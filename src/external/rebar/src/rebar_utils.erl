@@ -37,7 +37,10 @@
          erl_to_mod/1,
          abort/2,
          escript_foldl/3,
-         find_executable/1]).
+         find_executable/1,
+         prop_check/3,
+         expand_code_path/0,
+         deprecated/3, deprecated/4]).
 
 -include("rebar.hrl").
 
@@ -72,7 +75,7 @@ get_arch() ->
 %% Val = string() | false
 %%
 sh(Command0, Options0) ->
-    ?INFO("sh: ~s\n~p\n", [Command0, Options0]),
+    ?INFO("sh info:\n\tcwd: ~p\n\tcmd: ~s\n\topts: ~p\n", [get_cwd(), Command0, Options0]),
 
     DefaultOptions = [use_stdout, abort_on_error],
     Options = [expand_sh_flag(V)
@@ -113,7 +116,7 @@ find_files(Dir, Regex) ->
 now_str() ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:local_time(),
     lists:flatten(io_lib:format("~4b/~2..0b/~2..0b ~2..0b:~2..0b:~2..0b",
-				[Year, Month, Day, Hour, Minute, Second])).
+                                [Year, Month, Day, Hour, Minute, Second])).
 
 %% TODO: filelib:ensure_dir/1 corrected in R13B04. Remove when we drop
 %% support for OTP releases older than R13B04.
@@ -150,6 +153,18 @@ find_executable(Name) ->
         Path ->
             "\"" ++ filename:nativename(Path) ++ "\""
     end.
+
+%% Helper function for checking values and aborting when needed
+prop_check(true, _, _) -> true;
+prop_check(false, Msg, Args) -> ?ABORT(Msg, Args).
+
+%% Convert all the entries in the code path to absolute paths.
+expand_code_path() ->
+    CodePath = lists:foldl(fun (Path, Acc) ->
+                                   [filename:absname(Path) | Acc]
+                           end, [], code:get_path()),
+    code:set_path(lists:reverse(CodePath)).
+
 
 %% ====================================================================
 %% Internal functions
@@ -235,3 +250,20 @@ emulate_escript_foldl(Fun, Acc, File) ->
         {error, _} = Error ->
             Error
     end.
+
+deprecated(Old, New, Opts, When) ->
+    case lists:member(Old, Opts) of
+        true ->
+            deprecated(Old, New, When);
+        false ->
+            ok
+    end.
+
+deprecated(Old, New, When) ->
+    io:format(
+      <<
+        "WARNING: option deprecated~n"
+        "Config option '~p' has been deprecated~n"
+        "in favor of '~p'.~n"
+        "'~p' will be removed ~s.~n~n"
+      >>, [Old, New, Old, When]).

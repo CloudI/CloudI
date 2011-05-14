@@ -34,7 +34,8 @@
          'check-deps'/2,
          'get-deps'/2,
          'update-deps'/2,
-         'delete-deps'/2]).
+         'delete-deps'/2,
+         'list-deps'/2]).
 
 
 -record(dep, { dir,
@@ -47,9 +48,9 @@
 %% ===================================================================
 
 preprocess(Config, _) ->
-    %% Side effect to set deps_dir globally for all dependencies from top level down.
-    %% Means the root deps_dir is honoured or the default used globally
-    %% since it will be set on the first time through here
+    %% Side effect to set deps_dir globally for all dependencies from
+    %% top level down. Means the root deps_dir is honoured or the default
+    %% used globally since it will be set on the first time through here
     set_global_deps_dir(Config, rebar_config:get_global(deps_dir, [])),
 
     %% Get the list of deps for the current working directory and identify those
@@ -69,8 +70,8 @@ preprocess(Config, _) ->
     case rebar_config:get_global(skip_deps, false) of
         "true" ->
             lists:foreach(fun (#dep{dir = Dir}) ->
-				  rebar_core:skip_dir(Dir)
-			  end, AvailableDeps);
+                                  rebar_core:skip_dir(Dir)
+                          end, AvailableDeps);
         _ ->
             ok
     end,
@@ -100,9 +101,9 @@ compile(Config, AppFile) ->
             ok;
         {_, MissingDeps} ->
             lists:foreach(fun (#dep{app=App, vsn_regex=Vsn, source=Src}) ->
-			    ?CONSOLE("Dependency not available: ~p-~s (~p)\n",
-				     [App, Vsn, Src])
-			  end, MissingDeps),
+                                  ?CONSOLE("Dependency not available: "
+                                           "~p-~s (~p)\n", [App, Vsn, Src])
+                          end, MissingDeps),
             ?FAIL
     end.
 
@@ -131,13 +132,25 @@ compile(Config, AppFile) ->
 
 'delete-deps'(Config, _) ->
     %% Delete all the available deps in our deps/ directory, if any
-    DepsDir = get_deps_dir(),
+    {true, DepsDir} = get_deps_dir(),
     Deps = rebar_config:get_local(Config, deps, []),
     {AvailableDeps, _} = find_deps(find, Deps),
     _ = [delete_dep(D)
          || D <- AvailableDeps,
             lists:prefix(DepsDir, D#dep.dir)],
     ok.
+
+'list-deps'(Config, _) ->
+    Deps = rebar_config:get_local(Config, deps, []),
+    case find_deps(find, Deps) of
+        {AvailDeps, []} ->
+            lists:foreach(fun(Dep) ->
+                                  ?CONSOLE("~s\n", [print_source(Dep#dep.source)])
+                          end, AvailDeps),
+            ok;
+        {_, MissingDeps} ->
+            ?ABORT("Missing dependencies: ~p\n", [MissingDeps])
+    end.
 
 
 %% ===================================================================
@@ -148,14 +161,27 @@ compile(Config, AppFile) ->
 %% need all deps in same dir and should be the one set by the root rebar.config
 %% Sets a default if root config has no deps_dir set
 set_global_deps_dir(Config, []) ->
-    rebar_config:set_global(deps_dir, rebar_config:get_local(Config, deps_dir, "deps"));
+    rebar_config:set_global(deps_dir,
+                            rebar_config:get_local(Config, deps_dir, "deps"));
 set_global_deps_dir(_Config, _DepsDir) ->
     ok.
 
 get_deps_dir() ->
+    get_deps_dir("").
+
+get_deps_dir(App) ->
     BaseDir = rebar_config:get_global(base_dir, []),
     DepsDir = rebar_config:get_global(deps_dir, "deps"),
-    filename:join(BaseDir, DepsDir).
+    {true, filename:join([BaseDir, DepsDir, App])}.
+
+get_lib_dir(App) ->
+    %% Find App amongst the reachable lib directories
+    %% Returns either the found path or a tagged tuple with a boolean
+    %% to match get_deps_dir's return type
+    case code:lib_dir(App) of
+        {error, bad_name} -> {false, bad_name};
+        Path -> {true, Path}
+    end.
 
 update_deps_code_path([]) ->
     ok;
@@ -188,23 +214,41 @@ find_deps(Mode, [{App, VsnRegex, Source} | Rest], Acc) ->
     Dep = #dep { app = App,
                  vsn_regex = VsnRegex,
                  source = Source },
-    case is_app_available(App, VsnRegex) of
-        {true, AppDir} ->
-            find_deps(Mode, Rest, acc_deps(Mode, avail, Dep, AppDir, Acc));
-        {false, _} ->
-            AppDir = filename:join(get_deps_dir(), Dep#dep.app),
-            case is_app_available(App, VsnRegex, AppDir) of
-                {true, AppDir} ->
-                    find_deps(Mode, Rest,
-                              acc_deps(Mode, avail, Dep, AppDir, Acc));
-                {false, _} ->
-                    find_deps(Mode, Rest,
-                              acc_deps(Mode, missing, Dep, AppDir, Acc))
-            end
-    end;
+    {Availability, FoundDir} = find_dep(Dep),
+    find_deps(Mode, Rest, acc_deps(Mode, Availability, Dep, FoundDir, Acc));
 find_deps(_Mode, [Other | _Rest], _Acc) ->
     ?ABORT("Invalid dependency specification ~p in ~s\n",
            [Other, rebar_utils:get_cwd()]).
+
+find_dep(Dep) ->
+    %% Find a dep based on its source,
+    %% e.g. {git, "https://github.com/mochi/mochiweb.git", "HEAD"}
+    %% Deps with a source must be found (or fetched) locally.
+    %% Those without a source may be satisfied from lib dir (get_lib_dir).
+    find_dep(Dep, Dep#dep.source).
+
+find_dep(Dep, undefined) ->
+    %% 'source' is undefined.  If Dep is not satisfied locally,
+    %% go ahead and find it amongst the lib_dir's.
+    case find_dep_in_dir(Dep, get_deps_dir(Dep#dep.app)) of
+        {avail, _Dir} = Avail -> Avail;
+        {missing, _} -> find_dep_in_dir(Dep, get_lib_dir(Dep#dep.app))
+    end;
+find_dep(Dep, _Source) ->
+    %% _Source is defined.  Regardless of what it is, we must find it
+    %% locally satisfied or fetch it from the original source
+    %% into the project's deps
+    find_dep_in_dir(Dep, get_deps_dir(Dep#dep.app)).
+
+find_dep_in_dir(_Dep, {false, Dir}) ->
+    {missing, Dir};
+find_dep_in_dir(Dep, {true, Dir}) ->
+    App = Dep#dep.app,
+    VsnRegex = Dep#dep.vsn_regex,
+    case is_app_available(App, VsnRegex, Dir) of
+        {true, _AppFile} -> {avail, Dir};
+        {false, _}       -> {missing, Dir}
+    end.
 
 acc_deps(find, avail, Dep, AppDir, {Avail, Missing}) ->
     {[Dep#dep { dir = AppDir } | Avail], Missing};
@@ -226,15 +270,8 @@ require_source_engine(Source) ->
     true = source_engine_avail(Source),
     ok.
 
-is_app_available(App, VsnRegex) ->
-    case code:lib_dir(App) of
-        {error, bad_name} ->
-            {false, bad_name};
-        Path ->
-            is_app_available(App, VsnRegex, Path)
-    end.
-
 is_app_available(App, VsnRegex, Path) ->
+    ?DEBUG("is_app_available, looking for App ~p  with Path ~p~n", [App, Path]),
     case rebar_app_utils:is_app_dir(Path) of
         {true, AppFile} ->
             case rebar_app_utils:app_name(AppFile) of
@@ -253,13 +290,14 @@ is_app_available(App, VsnRegex, Path) ->
                                       {expected, VsnRegex}, {has, Vsn}}}}
                     end;
                 OtherApp ->
-                    ?WARN("~s has application id ~p; expected ~p\n", [AppFile, OtherApp, App]),
+                    ?WARN("~s has application id ~p; expected ~p\n",
+                          [AppFile, OtherApp, App]),
                     {false, {name_mismatch,
                              {AppFile, {expected, App}, {has, OtherApp}}}}
             end;
         false ->
-            ?WARN("Expected ~s to be an app dir (containing ebin/*.app), but no .app found.\n",
-                  [Path]),
+            ?WARN("Expected ~s to be an app dir (containing ebin/*.app), "
+                  "but no .app found.\n", [Path]),
             {false, {missing_app_file, Path}}
     end.
 
@@ -267,12 +305,14 @@ use_source(Dep) ->
     use_source(Dep, 3).
 
 use_source(Dep, 0) ->
-    ?ABORT("Failed to acquire source from ~p after 3 tries.\n", [Dep#dep.source]);
+    ?ABORT("Failed to acquire source from ~p after 3 tries.\n",
+           [Dep#dep.source]);
 use_source(Dep, Count) ->
     case filelib:is_dir(Dep#dep.dir) of
         true ->
-            %% Already downloaded -- verify the versioning matches up with our regex
-            case is_app_available(Dep#dep.app, Dep#dep.vsn_regex, Dep#dep.dir) of
+            %% Already downloaded -- verify the versioning matches the regex
+            case is_app_available(Dep#dep.app,
+                                  Dep#dep.vsn_regex, Dep#dep.dir) of
                 {true, _} ->
                     Dir = filename:join(Dep#dep.dir, "ebin"),
                     ok = filelib:ensure_dir(filename:join(Dir, "dummy")),
@@ -284,12 +324,12 @@ use_source(Dep, Count) ->
                     %% The app that was downloaded doesn't match up (or had
                     %% errors or something). For the time being, abort.
                     ?ABORT("Dependency dir ~s failed application validation "
-                        "with reason:~n~p.\n", [Dep#dep.dir, Reason])
+                           "with reason:~n~p.\n", [Dep#dep.dir, Reason])
             end;
         false ->
             ?CONSOLE("Pulling ~p from ~p\n", [Dep#dep.app, Dep#dep.source]),
             require_source_engine(Dep#dep.source),
-            TargetDir = filename:join(get_deps_dir(), Dep#dep.app),
+            {true, TargetDir} = get_deps_dir(Dep#dep.app),
             download_source(TargetDir, Dep#dep.source),
             use_source(Dep#dep { dir = TargetDir }, Count-1)
     end.
@@ -299,6 +339,10 @@ download_source(AppDir, {hg, Url, Rev}) ->
     rebar_utils:sh(?FMT("hg clone -U ~s ~s", [Url, filename:basename(AppDir)]),
                    [{cd, filename:dirname(AppDir)}]),
     rebar_utils:sh(?FMT("hg update ~s", [Rev]), [{cd, AppDir}]);
+download_source(AppDir, {git, Url}) ->
+    download_source(AppDir, {git, Url, "HEAD"});
+download_source(AppDir, {git, Url, ""}) ->
+    download_source(AppDir, {git, Url, "HEAD"});
 download_source(AppDir, {git, Url, {branch, Branch}}) ->
     ok = filelib:ensure_dir(AppDir),
     rebar_utils:sh(?FMT("git clone -n ~s ~s", [Url, filename:basename(AppDir)]),
@@ -327,7 +371,7 @@ update_source(Dep) ->
     %% VCS directory, such as when a source archive is built of a project, with
     %% all deps already downloaded/included. So, verify that the necessary VCS
     %% directory exists before attempting to do the update.
-    AppDir = filename:join(get_deps_dir(), Dep#dep.app),
+    {true, AppDir} = get_deps_dir(Dep#dep.app),
     case has_vcs_dir(element(1, Dep#dep.source), AppDir) of
         true ->
             ?CONSOLE("Updating ~p from ~p\n", [Dep#dep.app, Dep#dep.source]),
@@ -335,10 +379,15 @@ update_source(Dep) ->
             update_source(AppDir, Dep#dep.source),
             Dep;
         false ->
-            ?WARN("Skipping update for ~p: no VCS directory available!\n", [Dep]),
+            ?WARN("Skipping update for ~p: "
+                  "no VCS directory available!\n", [Dep]),
             Dep
     end.
 
+update_source(AppDir, {git, Url}) ->
+    update_source(AppDir, {git, Url, "HEAD"});
+update_source(AppDir, {git, Url, ""}) ->
+    update_source(AppDir, {git, Url, "HEAD"});
 update_source(AppDir, {git, _Url, {branch, Branch}}) ->
     ShOpts = [{cd, AppDir}],
     rebar_utils:sh("git fetch origin", ShOpts),
@@ -390,13 +439,17 @@ required_scm_client_vsn(bzr) -> {2, 0};
 required_scm_client_vsn(svn) -> {1, 6}.
 
 scm_client_vsn(hg) ->
-    scm_client_vsn(rebar_utils:find_executable("hg"), " --version", "version (\\d+).(\\d+)");
+    scm_client_vsn(rebar_utils:find_executable("hg"), " --version",
+                   "version (\\d+).(\\d+)");
 scm_client_vsn(git) ->
-    scm_client_vsn(rebar_utils:find_executable("git"), " --version", "git version (\\d+).(\\d+)");
+    scm_client_vsn(rebar_utils:find_executable("git"), " --version",
+                   "git version (\\d+).(\\d+)");
 scm_client_vsn(bzr) ->
-    scm_client_vsn(rebar_utils:find_executable("bzr"), " --version", "Bazaar \\(bzr\\) (\\d+).(\\d+)");
+    scm_client_vsn(rebar_utils:find_executable("bzr"), " --version",
+                   "Bazaar \\(bzr\\) (\\d+).(\\d+)");
 scm_client_vsn(svn) ->
-    scm_client_vsn(rebar_utils:find_executable("svn"), " --version", "svn, version (\\d+).(\\d+)").
+    scm_client_vsn(rebar_utils:find_executable("svn"), " --version",
+                   "svn, version (\\d+).(\\d+)").
 
 has_vcs_dir(git, Dir) ->
     filelib:is_dir(filename:join(Dir, ".git"));
@@ -409,3 +462,10 @@ has_vcs_dir(svn, Dir) ->
         orelse filelib:is_dir(filename:join(Dir, "_svn"));
 has_vcs_dir(_, _) ->
     true.
+
+print_source({git, Url})                   -> ?FMT("BRANCH ~s ~s", ["HEAD", Url]);
+print_source({git, Url, ""})               -> ?FMT("BRANCH ~s ~s", ["HEAD", Url]);
+print_source({git, Url, {branch, Branch}}) -> ?FMT("BRANCH ~s ~s", [Branch, Url]);
+print_source({git, Url, {tag, Tag}})       -> ?FMT("TAG ~s ~s", [Tag, Url]);
+print_source({_, Url, Rev})                -> ?FMT("REV ~s ~s", [Rev, Url]).
+

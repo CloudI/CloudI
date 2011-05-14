@@ -51,6 +51,14 @@ execute_pre_script(Config, Key) ->
         undefined ->
             ok;
         Script ->
+            deprecated(Key),
             {ok, _} = rebar_utils:sh(Script, []),
             ok
     end.
+
+deprecated(Key=compile_pre_script) ->
+    ?DEPRECATED(Key, {pre_hooks, [{compile, "script"}]},
+                "in a future build of rebar");
+deprecated(Key=clean_pre_script) ->
+    ?DEPRECATED(Key, {pre_hooks, [{clean, "script"}]},
+                "in a future build of rebar").

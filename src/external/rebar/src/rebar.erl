@@ -52,7 +52,8 @@ main(Args) ->
         {error, failed} ->
             halt(1);
         Error ->
-            %% Nothing should percolate up from rebar_core; dump this error to console
+            %% Nothing should percolate up from rebar_core;
+            %% Dump this error to console
             io:format("Uncaught error in rebar_core: ~p\n", [Error]),
             halt(1)
     end.
@@ -88,7 +89,8 @@ run_aux(Commands) ->
     %% Determine the location of the rebar executable; important for pulling
     %% resources out of the escript
     rebar_config:set_global(escript, filename:absname(escript:script_name())),
-    ?DEBUG("Rebar location: ~p\n", [rebar_config:get_global(escript, undefined)]),
+    ?DEBUG("Rebar location: ~p\n",
+           [rebar_config:get_global(escript, undefined)]),
 
     %% Note the top-level directory for reference
     rebar_config:set_global(base_dir, filename:absname(rebar_utils:get_cwd())),
@@ -153,7 +155,8 @@ parse_args(Args) ->
 %%
 version() ->
     {ok, Vsn} = application:get_key(rebar, vsn),
-    ?CONSOLE("rebar version: ~s date: ~s vcs: ~s\n", [Vsn, ?BUILD_TIME, ?VCS_INFO]).
+    ?CONSOLE("rebar version: ~s date: ~s vcs: ~s\n",
+             [Vsn, ?BUILD_TIME, ?VCS_INFO]).
 
 
 %%
@@ -188,7 +191,9 @@ show_info_maybe_halt(O, Opts, F) ->
     case proplists:get_bool(O, Opts) of
         true ->
             F(),
-            halt(0);
+            halt(0),
+            %% workaround to delay exit until all output is written
+            receive after infinity -> ok end;
         false ->
             false
     end.
@@ -221,6 +226,8 @@ generate    [dump_spec=0/1]          Build release with reltool
 
 generate-upgrade  previous_release=path  Build an upgrade package
 
+generate-appups   previous_release=path Generate appup files
+
 eunit       [suite=foo]              Run eunit [test/foo_tests.erl] tests
 ct          [suite=] [case=]         Run common_test suites in ./test
 
@@ -229,9 +236,7 @@ xref                                 Run cross reference analysis
 help                                 Show the program options
 version                              Show version information
 ">>,
-    io:put_chars(S),
-    %% workaround to delay exit until all output is written
-    timer:sleep(300).
+    io:put_chars(S).
 
 %%
 %% options accepted via getopt
@@ -239,17 +244,17 @@ version                              Show version information
 option_spec_list() ->
     Jobs = rebar_config:get_jobs(),
     JobsHelp = io_lib:format(
-        "Number of concurrent workers a command may use. Default: ~B",
-        [Jobs]),
+          "Number of concurrent workers a command may use. Default: ~B",
+          [Jobs]),
     [
      %% {Name, ShortOpt, LongOpt, ArgSpec, HelpMsg}
-     {help,     $h, "help",       undefined, "Show the program options"},
-     {commands, $c, "commands",   undefined, "Show available commands"},
-     {verbose,  $v, "verbose",    undefined, "Be verbose about what gets done"},
-     {version,  $V, "version",    undefined, "Show version information"},
-     {force,    $f, "force",      undefined, "Force"},
-     {jobs,     $j, "jobs",       integer,   JobsHelp},
-     {config,   $C, "config",     string,    "Rebar config file to use"}
+     {help,     $h, "help",     undefined, "Show the program options"},
+     {commands, $c, "commands", undefined, "Show available commands"},
+     {verbose,  $v, "verbose",  undefined, "Be verbose about what gets done"},
+     {version,  $V, "version",  undefined, "Show version information"},
+     {force,    $f, "force",    undefined, "Force"},
+     {jobs,     $j, "jobs",     integer,   JobsHelp},
+     {config,   $C, "config",   string,    "Rebar config file to use"}
     ].
 
 %%
@@ -274,8 +279,8 @@ filter_flags([Item | Rest], Commands) ->
 command_names() ->
     ["build-plt", "check-deps", "check-plt", "clean", "compile", "create",
      "create-app", "create-node", "ct", "delete-deps", "dialyze", "doc",
-     "eunit", "generate", "generate-upgrade", "get-deps", "help",
-     "list-templates", "update-deps", "version", "xref"].
+     "eunit", "generate", "generate-appups", "generate-upgrade", "get-deps",
+     "help", "list-templates", "update-deps", "version", "xref"].
 
 unabbreviate_command_names([]) ->
     [];
@@ -303,7 +308,7 @@ get_command_name_candidates(Command) ->
     %% * "create-a" matches create-app
     %% * "c-app"    matches create-app
     Candidates = [Candidate || Candidate <- command_names(),
-                                 is_command_name_candidate(Command, Candidate)],
+                               is_command_name_candidate(Command, Candidate)],
     %% Is there a complete match?  If so return only that, return a
     %% list of candidates otherwise
     case lists:member(Command, Candidates) of

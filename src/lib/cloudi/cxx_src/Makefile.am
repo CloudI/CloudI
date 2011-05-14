@@ -5,7 +5,7 @@ noinst_PROGRAMS = cloudi_os_spawn_vsn_1
 
 BUILT_SOURCES = $(INTERFACE_HEADER)
 CLEANFILES = $(INTERFACE_HEADER) \
-             $(srcdir)/../priv/cloudi_os_spawn_$(CURRENT_VERSION)
+             $(builddir)/../priv/cloudi_os_spawn_$(CURRENT_VERSION)
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn.h \
@@ -13,7 +13,8 @@ $(INTERFACE_HEADER): Makefile \
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) \
          -include $(srcdir)/cloudi_os_spawn.h \
          $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_spawn_hrl.h > $@
-	cp cloudi_os_spawn_$(CURRENT_VERSION) $(srcdir)/../priv
+	test ! -d $(builddir)/../priv && $(MKDIR_P) $(builddir)/../priv || exit 0
+	cp cloudi_os_spawn_$(CURRENT_VERSION) $(builddir)/../priv
 
 cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp assert.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \
