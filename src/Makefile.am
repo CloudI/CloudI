@@ -1,38 +1,72 @@
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
-CLOUDI_SCRIPT=$(DESTDIR)$(bindir)/cloudi
 
 all-local: rebar 
-	$(ESCRIPT) rebar compile
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(abs_top_builddir)/rebar \
+                -C $(abs_top_builddir)/rebar.config compile || \
+     exit 0)
 
 clean-local: rebar
-	$(ESCRIPT) rebar clean
-	rm -f api/python/cloudi.pyc api/python/erlang.pyc
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(abs_top_builddir)/rebar \
+                -C $(abs_top_builddir)/rebar.config clean || \
+     exit 0)
+	rm -f api/python/cloudi.pyc \
+          api/python/erlang.pyc
 
 clean-configure: config.log
-	(cd external/zeromq && make clean || exit 0)
-	(cd external/erlzmq2 && ../../rebar clean || exit 0)
-	rm -f aclocal.m4 config.h config.h.in config.h.in~ config.log \
-          config.status stamp-h1 \
-          config/config.guess config/config.sub config/depcomp \
-          config/install-sh config/ltmain.sh config/missing \
-          rebar Makefile Makefile.in configure \
-          m4/libtool.m4 m4/ltoptions.m4 m4/ltsugar.m4 \
-          m4/ltversion.m4 m4/lt~obsolete.m4 libtool \
-          external/rebar/ebin/*.beam \
-          lib/cloudi/src/cloudi.app.src rel/files/app.config \
-          reltool.config cloudi.conf
-	rm -rf autom4te.cache
-	rm -rf api/c/.deps/ \
-           lib/cloudi/cxx_src/.deps/ \
-           tests/hexpi/cxx_src/.deps/ \
-           tests/http_req/c_src/.deps/
-	find api -name "Makefile.in" -o -name "Makefile" | xargs rm -f
-	find lib -name "Makefile.in" -o -name "Makefile" | xargs rm -f
-	find tests -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+	(cd $(top_srcdir)/external/zeromq && make clean || exit 0)
+	(cd $(top_srcdir)/external/erlzmq && \
+     $(abs_top_builddir)/rebar -C $(abs_top_builddir)/rebar.config clean || \
+     exit 0)
+	rm -f $(top_srcdir)/aclocal.m4 \
+          $(top_srcdir)/config.h.in \
+          $(top_srcdir)/config.h.in~ \
+          $(top_builddir)/config.h \
+          $(top_builddir)/config.log \
+          $(top_builddir)/config.status \
+          $(top_builddir)/stamp-h1 \
+          $(top_srcdir)/config/config.guess \
+          $(top_srcdir)/config/config.sub \
+          $(top_srcdir)/config/depcomp \
+          $(top_srcdir)/config/install-sh \
+          $(top_srcdir)/config/ltmain.sh \
+          $(top_srcdir)/config/missing \
+          $(top_builddir)/libtool \
+          $(top_builddir)/rebar \
+          $(top_builddir)/Makefile \
+          $(top_builddir)/Makefile.in \
+          $(top_srcdir)/configure \
+          $(top_srcdir)/m4/libtool.m4 \
+          $(top_srcdir)/m4/ltoptions.m4 \
+          $(top_srcdir)/m4/ltsugar.m4 \
+          $(top_srcdir)/m4/ltversion.m4 \
+          $(top_srcdir)/m4/lt~obsolete.m4 \
+          $(top_srcdir)/external/rebar/ebin/*.beam \
+          $(top_builddir)/lib/cloudi/src/cloudi.app.src \
+          $(top_builddir)/rel/files/app.config \
+          $(top_builddir)/rebar.config \
+          $(top_builddir)/reltool.config \
+          $(top_builddir)/cloudi.conf
+	rm -rf $(top_srcdir)/autom4te.cache
+	rm -rf $(top_builddir)/api/c/.deps/ \
+           $(top_builddir)/lib/cloudi/cxx_src/.deps/ \
+           $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
+           $(top_builddir)/tests/http_req/c_src/.deps/ \
+           $(top_builddir)/tests/flood/service/.deps/
+	find $(top_builddir)/api \
+         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+	find $(top_builddir)/lib \
+         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+	find $(top_builddir)/tests \
+         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 
 dialyze: rebar
-	$(ESCRIPT) rebar dialyze
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(abs_top_builddir)/rebar \
+                -C $(abs_top_builddir)/rebar.config dialyze || \
+     exit 0)
 
 run:
 	@echo
@@ -85,7 +119,10 @@ install-exec-hook: cloudi-prefix-install \
      test ! -e logs && $(LN_S) "$(cloudi_logdir)" logs || exit 0)
 	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
                     "$(DESTDIR)$(cloudi_confdir)"
-	$(ESCRIPT) rebar generate || exit 0
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(abs_top_builddir)/rebar \
+                -C $(abs_top_builddir)/rebar.config generate || \
+     exit 0)
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
         mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
               "$(DESTDIR)$(cloudi_prefix)" || exit 0
@@ -133,9 +170,9 @@ tests-flood-install: $(top_builddir)/tests/flood/service/flood \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/flood.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar/"
-	$(INSTALL_SCRIPT) "$(top_builddir)/tests/flood/service/flood.py" \
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/flood/service/flood.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/flood.rb" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/flood/service/flood.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
 
 tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
@@ -154,21 +191,21 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/input.zip"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/output"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/tmp"
-	$(INSTALL_SCRIPT) "$(top_builddir)/tests/http/run.sh" \
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http/run.sh" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/service/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/service.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/service/jar/"
-	$(INSTALL_SCRIPT) "$(top_builddir)/tests/http/service/service.py" \
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http/service/service.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http/service/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/service.rb" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http/service/service.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/service/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/input/text" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http/input/text" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/input/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/input.zip/text" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http/input.zip/text" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/input.zip/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/output/text" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http/output/text" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/output/"
 
 tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
@@ -176,29 +213,29 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/http_req/c_src/http_req" \
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/public_html/index.html" \
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/http_req/public_html/800px-Juliadim2.png" \
+        "$(top_srcdir)/tests/http_req/public_html/800px-Juliadim2.png" \
         "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 
 tests-job_api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/job_api"
-	$(INSTALL_SCRIPT) "$(top_builddir)/tests/job_api/run.py" \
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/run.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"
-	$(INSTALL_SCRIPT) "$(top_builddir)/tests/zeromq/run.py" \
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/zeromq/run.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/zeromq/"
 
 api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api"
 
-api-c-install: $(top_builddir)/api/c/cloudi.h
+api-c-install: $(top_srcdir)/api/c/cloudi.h
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c/include"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c/lib"
-	$(INSTALL_DATA) "$(top_builddir)/api/c/cloudi.h" \
+	$(INSTALL_DATA) "$(top_srcdir)/api/c/cloudi.h" \
                     "$(DESTDIR)$(cloudi_prefix)/api/c/include/"
 	list=`ls "$(top_builddir)/api/c/" | grep '^libcloudi'`; \
     for f in $$list; do \
@@ -206,24 +243,24 @@ api-c-install: $(top_builddir)/api/c/cloudi.h
                         "$(DESTDIR)$(cloudi_prefix)/api/c/lib/"; \
     done
 
-#rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0
 api-java-install: $(top_builddir)/api/java/jar/cloudi.jar
+	rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/java"
 	$(INSTALL_DATA) "$(top_builddir)/api/java/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/api/java/"
 
 api-python-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/python"
-	$(INSTALL_DATA) "$(top_builddir)/api/python/erlang.py" \
+	$(INSTALL_DATA) "$(top_srcdir)/api/python/erlang.py" \
                     "$(DESTDIR)$(cloudi_prefix)/api/python/"
-	$(INSTALL_DATA) "$(top_builddir)/api/python/cloudi.py" \
+	$(INSTALL_DATA) "$(top_srcdir)/api/python/cloudi.py" \
                     "$(DESTDIR)$(cloudi_prefix)/api/python/"
 
 api-ruby-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/ruby"
-	$(INSTALL_DATA) "$(top_builddir)/api/ruby/cloudi.rb" \
+	$(INSTALL_DATA) "$(top_srcdir)/api/ruby/cloudi.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/api/ruby/"
-	$(INSTALL_DATA) "$(top_builddir)/api/ruby/erlang.rb" \
+	$(INSTALL_DATA) "$(top_srcdir)/api/ruby/erlang.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/api/ruby/"
 
 job_api-install:
@@ -231,25 +268,25 @@ job_api-install:
 
 job_api-python-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib"
-	$(INSTALL_DATA) "$(top_builddir)/job_api/python/cloudi_job_api.py" \
+	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/cloudi_job_api.py" \
                     "$(DESTDIR)$(cloudi_prefix)/job_api/python/"
-	$(INSTALL_DATA) "$(top_builddir)/job_api/python/jsonrpclib/LICENSE.txt" \
+	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/jsonrpclib/LICENSE.txt" \
                     "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/"
-	$(INSTALL_DATA) "$(top_builddir)/job_api/python/jsonrpclib/README.md" \
+	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/jsonrpclib/README.md" \
                     "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/__init__.py" \
+        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/__init__.py" \
         "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
+        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
         "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/config.py" \
+        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/config.py" \
         "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/history.py" \
+        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/history.py" \
         "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/job_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
+        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
         "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
 

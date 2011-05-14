@@ -2069,11 +2069,12 @@ m4trace:m4/ax_zeromq_erlzmq.m4:57: -1- AC_DEFUN([AX_ZEROMQ_ERLZMQ], [
         abs_top_srcdir=`cd $srcdir; pwd`
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/erlzmq/ && \
-              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR ../../rebar compile && \
+              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR $BUILDDIR/rebar compile && \
               echo "ZeroMQ erlzmq built" || exit 1)],
             [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
-             SRCDIR=$abs_top_srcdir])
+             SRCDIR=$abs_top_srcdir
+             BUILDDIR=$abs_top_builddir])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
     fi
@@ -3531,28 +3532,28 @@ configure.ac:70: the top level])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ERLANG_LIB_DIR_ssl$])
 m4trace:configure.ac:70: -1- m4_pattern_allow([^ERLANG_LIB_VER_ssl$])
 m4trace:configure.ac:71: -1- m4_pattern_allow([^ESCRIPT$])
-m4trace:configure.ac:83: -1- AX_ZEROMQ
-m4trace:configure.ac:83: -1- m4_pattern_allow([^zeromq_path_bin_queue$])
-m4trace:configure.ac:83: -1- AX_CHECK_PRIVATE_LIB([zmq], [zmq_init], [], [build_zeromq="yes"])
-m4trace:configure.ac:83: -1- m4_pattern_allow([^HAVE_LIBZMQ$])
-m4trace:configure.ac:83: -1- m4_pattern_allow([^ZEROMQ_LDFLAGS$])
-m4trace:configure.ac:83: -1- m4_pattern_allow([^ZEROMQ_CFLAGS$])
-m4trace:configure.ac:83: -1- m4_pattern_allow([^ZEROMQ_ROOT_DIR$])
-m4trace:configure.ac:84: -1- AX_ZEROMQ_ERLZMQ
-m4trace:configure.ac:84: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B02], [], [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
-m4trace:configure.ac:84: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
+m4trace:configure.ac:84: -1- AX_ZEROMQ
+m4trace:configure.ac:84: -1- m4_pattern_allow([^zeromq_path_bin_queue$])
+m4trace:configure.ac:84: -1- AX_CHECK_PRIVATE_LIB([zmq], [zmq_init], [], [build_zeromq="yes"])
+m4trace:configure.ac:84: -1- m4_pattern_allow([^HAVE_LIBZMQ$])
+m4trace:configure.ac:84: -1- m4_pattern_allow([^ZEROMQ_LDFLAGS$])
+m4trace:configure.ac:84: -1- m4_pattern_allow([^ZEROMQ_CFLAGS$])
+m4trace:configure.ac:84: -1- m4_pattern_allow([^ZEROMQ_ROOT_DIR$])
+m4trace:configure.ac:85: -1- AX_ZEROMQ_ERLZMQ
+m4trace:configure.ac:85: -1- AX_ERLANG_REQUIRE_OTP_VER([R14B02], [], [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
+m4trace:configure.ac:85: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [../../lib/autoconf/general.m4:2715: AC_RUN_IFELSE is expanded from...
 m4/ax_erlang_otp_version.m4:41: AX_ERLANG_REQUIRE_OTP_VER is expanded from...
 m4/ax_zeromq_erlzmq.m4:57: AX_ZEROMQ_ERLZMQ is expanded from...
-configure.ac:84: the top level])
-m4trace:configure.ac:84: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_RELTOOL$])
-m4trace:configure.ac:84: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_APPCONF$])
-m4trace:configure.ac:125: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:125: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:125: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:125: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:125: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:125: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:125: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:125: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:125: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:125: -1- _LT_PROG_LTMAIN
+configure.ac:85: the top level])
+m4trace:configure.ac:85: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_RELTOOL$])
+m4trace:configure.ac:85: -1- m4_pattern_allow([^ZEROMQ_ERLZMQ_APPCONF$])
+m4trace:configure.ac:127: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:127: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:127: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:127: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:127: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:127: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:127: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:127: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:127: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:127: -1- _LT_PROG_LTMAIN

@@ -4,10 +4,11 @@ noinst_LTLIBRARIES = libcloudi.la
 nodist_noinst_HEADERS = cloudi.h
 
 cloudi_libtool.cpp: cloudi.cpp
-	cp -f cloudi.cpp cloudi_libtool.cpp
+	cp -f $(srcdir)/cloudi.cpp $(srcdir)/cloudi_libtool.cpp
 assert_libtool.cpp: assert.cpp
-	cp -f assert.cpp assert_libtool.cpp
-CLEANFILES = cloudi_libtool.cpp assert_libtool.cpp
+	cp -f $(srcdir)/assert.cpp $(srcdir)/assert_libtool.cpp
+CLEANFILES = $(srcdir)/cloudi_libtool.cpp \
+             $(srcdir)/assert_libtool.cpp
 
 libcloudi_la_SOURCES = cloudi_libtool.cpp assert_libtool.cpp
 libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/ \

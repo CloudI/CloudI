@@ -278,7 +278,7 @@ top_srcdir = @top_srcdir@
 zeromq_path_bin_queue = @zeromq_path_bin_queue@
 SUBDIRS = org jar
 flood_SOURCES = flood.c
-flood_CFLAGS = -I$(top_builddir)/api/c/
+flood_CFLAGS = -I$(top_srcdir)/api/c/
 flood_LDFLAGS = -L$(top_builddir)/api/c/
 flood_LDADD = -lcloudi -lstdc++
 all: all-recursive

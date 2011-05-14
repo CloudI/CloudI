@@ -251,7 +251,9 @@ zeromq_path_bin_queue = @zeromq_path_bin_queue@
 noinst_LIBRARIES = libcloudi.a
 noinst_LTLIBRARIES = libcloudi.la
 nodist_noinst_HEADERS = cloudi.h
-CLEANFILES = cloudi_libtool.cpp assert_libtool.cpp
+CLEANFILES = $(srcdir)/cloudi_libtool.cpp \
+             $(srcdir)/assert_libtool.cpp
+
 libcloudi_la_SOURCES = cloudi_libtool.cpp assert_libtool.cpp
 libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
                         $(CXXFLAGS)
@@ -596,9 +598,9 @@ uninstall-am:
 
 
 cloudi_libtool.cpp: cloudi.cpp
-	cp -f cloudi.cpp cloudi_libtool.cpp
+	cp -f $(srcdir)/cloudi.cpp $(srcdir)/cloudi_libtool.cpp
 assert_libtool.cpp: assert.cpp
-	cp -f assert.cpp assert_libtool.cpp
+	cp -f $(srcdir)/assert.cpp $(srcdir)/assert_libtool.cpp
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
