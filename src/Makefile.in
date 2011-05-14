@@ -719,7 +719,7 @@ uninstall-am:
 all-local: rebar 
 	$(MKDIR_P) external || exit 0
 	(cd $(top_builddir)/external; \
-     test ! -L erlzmq && \
+     test ! -e erlzmq && \
      $(LN_S) $(abs_top_srcdir)/external/erlzmq || exit 0)
 	(cd $(top_srcdir)/lib/cloudi/src; \
      test ! -e cloudi.app.src && \
@@ -727,42 +727,42 @@ all-local: rebar
 	(test ! -d $(abs_top_builddir)/lib/cloudi/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/epgsql/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
 	(cd $(top_srcdir)/external/epgsql; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/etokyotyrant/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
 	(cd $(top_srcdir)/external/etokyotyrant; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/ememcached/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
 	(cd $(top_srcdir)/external/ememcached; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/ecouchdb/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
 	(cd $(top_srcdir)/external/ecouchdb; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/emysql/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/emysql/ebin || exit 0)
 	(cd $(top_srcdir)/external/emysql; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/misultin/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/misultin/ebin || exit 0)
 	(cd $(top_srcdir)/external/misultin; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/misultin/ebin || exit 0)
 	(test ! -d $(abs_top_builddir)/external/jsx/ebin && \
      $(MKDIR_P) $(abs_top_builddir)/external/jsx/ebin || exit 0)
 	(cd $(top_srcdir)/external/jsx; \
-     test ! -L ebin && \
+     test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
