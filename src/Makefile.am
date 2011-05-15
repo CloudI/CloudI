@@ -1,51 +1,52 @@
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
-all-local: rebar 
-	$(MKDIR_P) external || exit 0
+# automake expand all nested variables
+rel/files/app.config: rel/files/app.config.in
+	$(MKDIR_P) rel/files
+	$(SED) -e "s![@]cloudi_confdir[@]!$(cloudi_confdir)!g" \
+           -e "s![@]cloudi_logdir[@]!$(cloudi_logdir)!g" \
+           $(top_srcdir)/rel/files/app.config.in > \
+           $(top_builddir)/$@
+
+all-local: rebar \
+           rel/files/app.config
+	$(MKDIR_P) external
+	$(MKDIR_P) lib/cloudi/ebin
+	$(MKDIR_P) external/epgsql/ebin
+	$(MKDIR_P) external/etokyotyrant/ebin
+	$(MKDIR_P) external/ememcached/ebin
+	$(MKDIR_P) external/emysql/ebin
+	$(MKDIR_P) external/ecouchdb/ebin
+	$(MKDIR_P) external/misultin/ebin
+	$(MKDIR_P) external/jsx/ebin
 	(cd $(top_builddir)/external; \
      test ! -e erlzmq && \
      $(LN_S) $(abs_top_srcdir)/external/erlzmq || exit 0)
 	(cd $(top_srcdir)/lib/cloudi/src; \
      test ! -e cloudi.app.src && \
      $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
-	(test ! -d $(abs_top_builddir)/lib/cloudi/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/epgsql/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
 	(cd $(top_srcdir)/external/epgsql; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/etokyotyrant/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
 	(cd $(top_srcdir)/external/etokyotyrant; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/ememcached/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
 	(cd $(top_srcdir)/external/ememcached; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/ecouchdb/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
 	(cd $(top_srcdir)/external/ecouchdb; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/emysql/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/emysql/ebin || exit 0)
 	(cd $(top_srcdir)/external/emysql; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/misultin/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/misultin/ebin || exit 0)
 	(cd $(top_srcdir)/external/misultin; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/misultin/ebin || exit 0)
-	(test ! -d $(abs_top_builddir)/external/jsx/ebin && \
-     $(MKDIR_P) $(abs_top_builddir)/external/jsx/ebin || exit 0)
 	(cd $(top_srcdir)/external/jsx; \
      test ! -e ebin && \
      $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)

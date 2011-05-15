@@ -7,6 +7,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.10 no-define])
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_SED
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
@@ -17,10 +18,10 @@ AX_CLOCK_GETTIME
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
 
-AC_SUBST(cloudi_prefix, ["$prefix/lib/cloudi-$VERSION"])
-AC_SUBST(cloudi_logdir, ["$prefix/var/log/cloudi"])
-AC_SUBST(cloudi_confdir, ["$prefix/etc/cloudi"])
-AC_SUBST(cloudi_bindir, ["$prefix/lib/cloudi-$VERSION/bin"])
+AC_SUBST(cloudi_prefix, ["$libdir/cloudi-$VERSION"])
+AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
+AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
+AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
@@ -87,7 +88,6 @@ AX_ZEROMQ_ERLZMQ
 AC_CONFIG_FILES([cloudi.conf
                  rebar.config
                  reltool.config
-                 rel/files/app.config
                  lib/cloudi/src/cloudi.app.src
                  Makefile
                  api/Makefile

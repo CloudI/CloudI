@@ -799,7 +799,6 @@ LD
 FGREP
 EGREP
 GREP
-SED
 host_os
 host_vendor
 host_cpu
@@ -810,6 +809,7 @@ build_cpu
 build
 LIBTOOL
 RANLIB
+SED
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
 CXXDEPMODE
@@ -4408,6 +4408,75 @@ else
 fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for a sed that does not truncate output" >&5
+$as_echo_n "checking for a sed that does not truncate output... " >&6; }
+if test "${ac_cv_path_SED+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+            ac_script=s/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/
+     for ac_i in 1 2 3 4 5 6 7; do
+       ac_script="$ac_script$as_nl$ac_script"
+     done
+     echo "$ac_script" 2>/dev/null | sed 99q >conftest.sed
+     { ac_script=; unset ac_script;}
+     if test -z "$SED"; then
+  ac_path_SED_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in sed gsed; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_SED="$as_dir/$ac_prog$ac_exec_ext"
+      { test -f "$ac_path_SED" && $as_test_x "$ac_path_SED"; } || continue
+# Check for GNU ac_path_SED and select it if it is found.
+  # Check for GNU $ac_path_SED
+case `"$ac_path_SED" --version 2>&1` in
+*GNU*)
+  ac_cv_path_SED="$ac_path_SED" ac_path_SED_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo '' >> "conftest.nl"
+    "$ac_path_SED" -f conftest.sed < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_SED_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_SED="$ac_path_SED"
+      ac_path_SED_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_SED_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_SED"; then
+    as_fn_error "no acceptable sed could be found in \$PATH" "$LINENO" 5
+  fi
+else
+  ac_cv_path_SED=$SED
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_SED" >&5
+$as_echo "$ac_cv_path_SED" >&6; }
+ SED="$ac_cv_path_SED"
+  rm -f conftest.sed
+
 if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}ranlib", so it can be a program name with args.
 set dummy ${ac_tool_prefix}ranlib; ac_word=$2
@@ -5180,13 +5249,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:5183: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:5252: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5186: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:5255: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5189: output\"" >&5)
+  (eval echo "\"\$as_me:5258: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -6392,7 +6461,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6395 "configure"' > conftest.$ac_ext
+  echo '#line 6464 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8449,11 +8518,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8452: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8521: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8456: \$? = $ac_status" >&5
+   echo "$as_me:8525: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8788,11 +8857,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8791: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8860: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8795: \$? = $ac_status" >&5
+   echo "$as_me:8864: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8893,11 +8962,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8896: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8965: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8900: \$? = $ac_status" >&5
+   echo "$as_me:8969: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8948,11 +9017,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8951: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:9020: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8955: \$? = $ac_status" >&5
+   echo "$as_me:9024: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -11332,7 +11401,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11335 "configure"
+#line 11404 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11428,7 +11497,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11431 "configure"
+#line 11500 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13384,11 +13453,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13387: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13456: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13391: \$? = $ac_status" >&5
+   echo "$as_me:13460: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -13483,11 +13552,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13486: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13555: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13490: \$? = $ac_status" >&5
+   echo "$as_me:13559: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -13535,11 +13604,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13538: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13607: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13542: \$? = $ac_status" >&5
+   echo "$as_me:13611: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14771,13 +14840,13 @@ abs_top_srcdir=`cd $srcdir; pwd`
 abs_top_builddir=`pwd`
 
 
-cloudi_prefix="$prefix/lib/cloudi-$VERSION"
+cloudi_prefix="$libdir/cloudi-$VERSION"
 
-cloudi_logdir="$prefix/var/log/cloudi"
+cloudi_logdir="$localstatedir/log/cloudi"
 
-cloudi_confdir="$prefix/etc/cloudi"
+cloudi_confdir="$sysconfdir/cloudi"
 
-cloudi_bindir="$prefix/lib/cloudi-$VERSION/bin"
+cloudi_bindir="$cloudi_prefix/bin"
 
 
 # c++ boost checks
@@ -15512,7 +15581,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 15515 "configure" */
+/* #line 15584 "configure" */
 public class Test {
 }
 EOF
@@ -15770,7 +15839,7 @@ else
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 cat << \EOF > $JAVA_TEST
-/* #line 15773 "configure" */
+/* #line 15842 "configure" */
 public class Test {
 }
 EOF
@@ -15804,7 +15873,7 @@ JAVA_TEST=Test.java
 CLASS_TEST=Test.class
 TEST=Test
 cat << \EOF > $JAVA_TEST
-/* [#]line 15807 "configure" */
+/* [#]line 15876 "configure" */
 public class Test {
 public static void main (String args[]) {
         System.exit (0);
@@ -15987,7 +16056,7 @@ else
 
 
 cat << \EOF > Test.java
-/* #line 15990 "configure" */
+/* #line 16059 "configure" */
 import java.nio.ByteBuffer;
 public class Test {
 
@@ -16040,7 +16109,7 @@ else
 
 
 cat << \EOF > Test.java
-/* #line 16043 "configure" */
+/* #line 16112 "configure" */
 import java.lang.reflect.Constructor;
 public class Test {
 
@@ -17348,7 +17417,7 @@ $as_echo "no" >&6; }
 
 
 
-ac_config_files="$ac_config_files cloudi.conf rebar.config reltool.config rel/files/app.config lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile tests/flood/Makefile tests/flood/src/Makefile tests/flood/service/Makefile tests/flood/service/jar/Makefile tests/flood/service/org/Makefile tests/flood/service/org/cloudi/Makefile tests/flood/service/org/cloudi/tests/Makefile tests/flood/service/org/cloudi/tests/flood/Makefile"
+ac_config_files="$ac_config_files cloudi.conf rebar.config reltool.config lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile tests/flood/Makefile tests/flood/src/Makefile tests/flood/service/Makefile tests/flood/service/jar/Makefile tests/flood/service/org/Makefile tests/flood/service/org/cloudi/Makefile tests/flood/service/org/cloudi/tests/Makefile tests/flood/service/org/cloudi/tests/flood/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -18442,7 +18511,6 @@ do
     "cloudi.conf") CONFIG_FILES="$CONFIG_FILES cloudi.conf" ;;
     "rebar.config") CONFIG_FILES="$CONFIG_FILES rebar.config" ;;
     "reltool.config") CONFIG_FILES="$CONFIG_FILES reltool.config" ;;
-    "rel/files/app.config") CONFIG_FILES="$CONFIG_FILES rel/files/app.config" ;;
     "lib/cloudi/src/cloudi.app.src") CONFIG_FILES="$CONFIG_FILES lib/cloudi/src/cloudi.app.src" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "api/Makefile") CONFIG_FILES="$CONFIG_FILES api/Makefile" ;;
