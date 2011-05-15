@@ -3,6 +3,7 @@
 
 2011-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 0.1.6 (alpha) released
     * autoconf/automake/rebar build system fixed in many ways
     * Add FAQ documentation and more source code comments
 

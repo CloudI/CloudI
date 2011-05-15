@@ -1,3 +1,12 @@
+May 14, 2011
+  Version 0.1.6 (alpha) released.
+  Many build system improvements.
+
+April 25, 2011
+  Version 0.1.5 (alpha) released.
+  The Job API is finalize with using UUIDs for jobs_remove() and the addition
+  of the jobs() request.
+
 April 15, 2011
   Version 0.1.4 (alpha) released.
   The release includes many changes to make the 0.1.x source code robust.
