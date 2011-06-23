@@ -19,10 +19,26 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <br />
 <div id="navigation">
   <ul>
-    <li><a href="http://cloudi.org/faq.html" class="active">FAQ</a></li>
+    <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="https://sourceforge.net/projects/cloudi/files/0.1.6a/cloudi-0.1.6.tar.gz/download" target="_blank">Download</a></li>
     <li><a href="http://github.com/okeuday/CloudI/tree/master#readme">Source</a></li>
-    <li><a href="http://cloudi.org/support.html">Support</a></li>
+    <li><a href="support.html">Support</a></li>
+    <li>
+      <!-- AddThis Button BEGIN -->
+      <div class="addthis_toolbox addthis_default_style ">
+        <a class="addthis_button_preferred_1"></a>
+        <a class="addthis_button_preferred_2"></a>
+        <a class="addthis_button_preferred_3"></a>
+        <a class="addthis_button_preferred_4"></a>
+        <a class="addthis_button_compact"></a>
+        <a class="addthis_counter addthis_bubble_style"></a>
+      </div>
+      <script type="text/javascript">
+      var addthis_config = {"data_track_clickback":true};
+      </script>
+      <script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid=ra-4dae3b45563ec17d"></script>
+      <!-- AddThis Button END -->
+    </li>
   </ul>
 </div>
 
@@ -33,16 +49,17 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <h2>1 - Introduction to CloudI</h2>
   <ul class="faq">
     <li><a href="#1_Name"         >1.1 - Why is it named "Cloud<font style="font-family: serif">I</font>"?</a></li>
-    <li><a href="#1_WhatIs"       >1.2 - What is CloudI?</a></li>
-    <li><a href="#1_OS"           >1.3 - On what Operating Systems does CloudI run?</a></li>
-    <li><a href="#1_Commercial"   >1.4 - Is Commercial support available for CloudI?</a></li>
-    <li><a href="#1_ReallyFree"   >1.5 - Is CloudI really free?</a></li>
-    <li><a href="#1_WhoDevelops"  >1.6 - Who develops CloudI?</a></li>
-    <li><a href="#1_PrivateCloud" >1.7 - Can I use CloudI as a Private Cloud?</a></li>
-    <li><a href="#1_OnlineService">1.8 - Can I use CloudI as an Online Service?</a></li>
-    <li><a href="#1_REST"         >1.9 - Does CloudI support REST?</a></li>
-    <li><a href="#1_PaaS"         >1.10 - Is CloudI a Platform as a Service (PaaS)?</a></li>
-    <li><a href="#1_HowAbout"     >1.11 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_Clouds"       >1.2 - How does CloudI compare to other "Clouds"?</a></li>
+    <li><a href="#1_WhatIs"       >1.3 - What is CloudI?</a></li>
+    <li><a href="#1_OS"           >1.4 - On what Operating Systems does CloudI run?</a></li>
+    <li><a href="#1_Commercial"   >1.5 - Is Commercial support available for CloudI?</a></li>
+    <li><a href="#1_ReallyFree"   >1.6 - Is CloudI really free?</a></li>
+    <li><a href="#1_WhoDevelops"  >1.7 - Who develops CloudI?</a></li>
+    <li><a href="#1_PrivateCloud" >1.8 - Can I use CloudI as a Private Cloud?</a></li>
+    <li><a href="#1_OnlineService">1.9 - Can I use CloudI as an Online Service?</a></li>
+    <li><a href="#1_REST"         >1.10 - Does CloudI support REST?</a></li>
+    <li><a href="#1_PaaS"         >1.11 - Is CloudI a Platform as a Service (PaaS)?</a></li>
+    <li><a href="#1_HowAbout"     >1.12 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -72,6 +89,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_WebServices">4.5 - How do I create Web Services?</a></li>
     <li><a href="#4_ACLs"       >4.6 - How do I use Access Control Lists (ACLs)?</a></li>
     <li><a href="#4_ServiceFail">4.7 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
+    <li><a href="#4_URLregex"   >4.8 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -134,8 +152,78 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
+  <a name="1_Clouds"></a>
+  <h3>1.2 - How does CloudI compare to other "Clouds"?</h3>
+  <p class="block">
+    Currently, "Clouds" generally fall into two categories:
+    <table><tr><td>
+    &#149;</td><td>Infrastructure as a Service (IaaS)
+    </td><td>- Hypervisor "Clouds"
+    </td></tr><tr><td>
+    &#149;</td><td>Platform as a Service (PaaS)
+    </td><td>- Integration "Clouds"
+    </td></tr></table>
+  </p>
+  <h4>Hypervisor "Clouds"</h4>
+  <p class="paragraph">
+    Hypervisor "Clouds" are the most popular type of Cloud because of the
+    amount of revenue they can generate as a service.
+    Popular examples include:
+    <a href="http://en.wikipedia.org/wiki/Amazon_EC2" target="_blank">Amazon Web Services (AWS)</a>,
+    <a href="http://en.wikipedia.org/wiki/OpenStack" target="_blank">OpenStack</a>,
+    <a href="http://en.wikipedia.org/wiki/Cloud.com" target="_blank">CloudStack</a>,
+    <a href="http://en.wikipedia.org/wiki/Eucalyptus_%28computing%29" target="_blank">Eucalyptus</a>,
+    <a href="http://en.wikipedia.org/wiki/OpenNebula" target="_blank">OpenNebula</a>,
+    and
+    <a href="http://en.wikipedia.org/wiki/Nimbus_%28cloud_computing%29" target="_blank">Nimbus</a>.  The <a href="http://en.wikipedia.org/wiki/Hypervisors" target="_blank">Hypervisor</a>
+    has existed since 1965 when software was used on the IBM 360/65 to
+    emulate an IBM 7080 with computation time split between the separate modes.
+    Modern Hypervisors provides Operating System virtualization to provide
+    better security and reliability.  There is meant to be minimal software
+    development effort when utilizing a virtualized Operating System, so
+    it is an obvious choice for source code that is not actively developed
+    (<a href="http://en.wikipedia.org/wiki/Legacy_software" target="_blank">legacy software</a>)
+    and lacks reliability/scalability.  Part of the reason Hypervisors
+    have not been popular in the past is because virtualization increases
+    the hardware requirements for the same amount of processing.  Hardware
+    has advanced enough that many software applications are unable to fully
+    utilize the hardware capacity that has become commonplace.  For software
+    that is often idle, Hypervisors can provide cost savings on both
+    hardware and power without software modifications.
+  </p>
+  <h4>Integration "Clouds"</h4>
+  <p class="paragraph">
+    Integration "Clouds" provide software developers with a platform for
+    simpler integration development.
+    Popular examples include:
+    <a href="http://en.wikipedia.org/wiki/AppScale" target="_blank">AppScale</a>,
+    <a href="http://en.wikipedia.org/wiki/Cloud_Foundry" target="_blank">CloudFoundry</a>,
+    OpenShift,
+    and
+    <a href="http://en.wikipedia.org/wiki/Heroku" target="_blank">Heroku</a>.
+    Generally, Integration "Clouds" provide software packages for common
+    scripting language deployment scenarios (typically Python and Ruby
+    web frameworks).  Integration "Clouds" (PaaS) normally do not provide
+    fault-tolerance or reliability, so they are typically deployed with a
+    Hypervisor.
+  </p>
+  <p class="paragraph">
+    CloudI is an Integration Cloud that focuses on flexible integration
+    that is efficient, scalable, and fault-tolerant.  CloudI does not
+    force a user to use particular software libraries but instead provides
+    light-weight interfaces for integration.  Scalability and fault-tolerance
+    are both provided by CloudI's usage of the 
+    <a href="http://en.wikipedia.org/wiki/Erlang_%28programming_language%29" target="_blank">Erlang programming language</a>.
+    This means that no Hypervisor is necessary to make CloudI's processes
+    reliable, so there can be a performance benefit when using CloudI.
+    Scalability is a natural gain with CloudI's Erlang concurrency which 
+    reduces the amount of power and hardware necessary to facilitate
+    external connections, making CloudI a greener solution!
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
   <a name="1_WhatIs"></a>
-  <h3>1.2 - What is CloudI?</h3>
+  <h3>1.3 - What is CloudI?</h3>
   <h4>Short Answer</h4>
   <p class="paragraph">
     An application server that efficiently integrates with many languages,
@@ -183,7 +271,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_OS"></a>
-  <h3>1.3 - On what Operating Systems does CloudI run?</h3>
+  <h3>1.4 - On what Operating Systems does CloudI run?</h3>
   <p class="paragraph">
     CloudI runs on UNIX-based operating systems like Linux (<a href="http://www.ubuntu.com/" target="_blank">Ubuntu</a>, etc.)
     and BSDs (<a href="http://www.freebsd.org/" target="_blank">FreeBSD</a>, <a href="http://www.openbsd.org/" target="_blank">OpenBSD</a>, <a href="http://www.netbsd.org/" target="_blank">NetBSD</a>, <a href="http://www.apple.com/macosx/" target="_blank">OSX</a>, etc.).
@@ -202,7 +290,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_Commercial"></a>
-  <h3>1.4 - Is Commercial support available for CloudI?</h3>
+  <h3>1.5 - Is Commercial support available for CloudI?</h3>
   <p>
     <ul>
       <li>Integration Development</li>
@@ -215,7 +303,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_ReallyFree"></a>
-  <h3>1.5 - Is CloudI really free?</h3>
+  <h3>1.6 - Is CloudI really free?</h3>
   <p class="paragraph">
     CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
     which permits reuse for personal or commercial purposes.  Small amounts of
@@ -231,14 +319,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_WhoDevelops"></a>
-  <h3>1.6 - Who develops CloudI?</h3>
+  <h3>1.7 - Who develops CloudI?</h3>
   <p class="paragraph">
     <a href="mailto:mjtruog@gmail.com">Michael Truog</a>
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_PrivateCloud" ></a>
-  <h3>1.7 - Can I use CloudI as a Private Cloud?</h3>
+  <h3>1.8 - Can I use CloudI as a Private Cloud?</h3>
   <p class="paragraph">
     Yes!  CloudI provides everything for running a Cloud in isolation
     (i.e., without a connection to the Internet).  For more details,
@@ -247,7 +335,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_OnlineService"></a>
-  <h3>1.8 - Can I use CloudI as an Online Service?</h3>
+  <h3>1.9 - Can I use CloudI as an Online Service?</h3>
   <p class="paragraph">
     Yes!  CloudI accepts incoming HTTP traffic and can be easily extended
     to handle other incoming protocols.  For more details,
@@ -256,7 +344,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_REST"></a>
-  <h3>1.9 - Does CloudI support REST?</h3>
+  <h3>1.10 - Does CloudI support REST?</h3>
   <p class="paragraph">
     Yes!  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>.
     For more details please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
@@ -264,11 +352,11 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_PaaS"></a>
-  <h3>1.10 - Is CloudI a Platform as a Service (PaaS)?</h3>
+  <h3>1.11 - Is CloudI a Platform as a Service (PaaS)?</h3>
   <p class="paragraph">
     Yes!  CloudI can be used as a <a href="http://en.wikipedia.org/wiki/Platform_as_a_service" target="_blank">Platform as a Service (PaaS)</a>
-    and is the first PaaS open source project (not <a href="http://www.cloudfoundry.com/" target="_blank">CloudFoundry</a>).
-    However, CloudI is not limited to the development of web services and has
+    and is the first <a href="#1_Clouds">fault-tolerant PaaS open source project</a>.
+    CloudI is not limited to the development of web services and has
     a broader focus.  CloudI also does not enforce particular development
     libraries on the programmer, so it is a much more flexible framework.
     For more details please refer to <a href="#1_WhatIs">"1.2 - What is CloudI?"</a>.
@@ -276,7 +364,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_HowAbout"></a>
-  <h3>1.11 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.12 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -355,6 +443,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="2_Presentations"></a>
   <h3>2.5 - Presentations</h3>
   <table><tr><td>
+  Version 0.1.6
+  </td><td>
+  <a href="docs/cloudi_erlounge_vancouver2011.pdf" target="_blank">2011 ErLounge Meetup Vancouver BC (slides)</a>
+  </td></tr><tr><td>
   Version 0.1.5
   </td><td>
   <a href="docs/cloudi_erlounge_sfbay2011.pdf" target="_blank">2011 ErLounge Meetup SF Bay Area (slides)</a>
@@ -844,6 +936,31 @@ PREFIX/bin/cloudi stop
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
+  <a name="4_URLregex"></a>
+  <h3>4.8 - Can I use Regular Expressions with Service Names (URLs)?</h3>
+  <p class="paragraph">
+    Currently, CloudI does not support using any regular expressions in
+    service names.  However, support for regular expressions is unlikely to
+    be necessary.  Often, regular expressions are used in URLs within a
+    web framework to support specifying an identifier.  With CloudI, all
+    valid identifiers can be specified in the service name (supplied to the
+    subscribe CloudI API function).  Handling identifiers with exact matches
+    provides efficiency your service would otherwise not have.
+  </p>
+  <p class="paragraph">
+    The memory burden of handling identifiers with exact matches should not
+    be significant.  1 million integer identifiers (starting at 0) can
+    be stored in roughly 100 MB within the CloudI Erlang data structure.
+    All services that use a "lazy" destination refresh method will
+    replicate this service name data structure, so that will increase
+    the node's memory consumption.  However, with the proper configuration,
+    handling identifiers within CloudI should be very simple.  If a CloudI
+    installation needs to handle millions of unique identifiers in
+    service names, it is likely that the organization can afford a machine
+    with a sufficient amount of memory.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
   <hr \>
   <h2>5 - Migrating to CloudI</h2>
 
@@ -861,8 +978,10 @@ PREFIX/bin/cloudi stop
     schedule based on message queue size.  So, the Erlang VM scheduling
     is able to intelligently schedule CloudI services more so than the
     kernel scheduling.  However, the problem is unavoidable with current
-    OSes and can be minimized by having a sufficiently large number of
-    non-Erlang CloudI service threads and/or processes created.
+    OSes (<a href="http://en.wikipedia.org/wiki/Systemd" target="_blank">systemd</a>
+    might improve Linux performance in this respect, in the future)
+    and can be minimized by having a sufficiently large number of non-Erlang
+    CloudI service threads and/or processes created.
   </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 
