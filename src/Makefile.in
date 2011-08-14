@@ -39,7 +39,7 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/config.h.in $(srcdir)/rebar.config.in \
 	$(srcdir)/reltool.config.in $(top_srcdir)/configure \
 	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in AUTHORS COPYING \
-	ChangeLog INSTALL NEWS TODO config/compile config/config.guess \
+	ChangeLog INSTALL NEWS config/compile config/config.guess \
 	config/config.sub config/depcomp config/install-sh \
 	config/ltmain.sh config/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
