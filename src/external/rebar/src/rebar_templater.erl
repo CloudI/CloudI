@@ -200,8 +200,8 @@ find_escript_templates() ->
 
 find_disk_templates() ->
     OtherTemplates = find_other_templates(),
-    HomeFiles = rebar_utils:find_files(filename:join(os:getenv("HOME"),
-                                                     ".rebar/templates"),
+    HomeFiles = rebar_utils:find_files(filename:join([os:getenv("HOME"),
+                                                      ".rebar", "templates"]),
                                        ?TEMPLATE_RE),
     LocalFiles = rebar_utils:find_files(".", ?TEMPLATE_RE),
     [{file, F} || F <- OtherTemplates ++ HomeFiles ++ LocalFiles].
@@ -358,6 +358,17 @@ execute_template([{dir, Name} | Rest], TemplateType, TemplateName, Context,
         {error, Reason} ->
             ?ABORT("Failed while processing template instruction "
                    "{dir, ~s}: ~p\n", [Name, Reason])
+    end;
+execute_template([{copy, Input, Output} | Rest], TemplateType, TemplateName,
+                 Context, Force, ExistingFiles) ->
+    InputName = filename:join(filename:dirname(TemplateName), Input),
+    try rebar_file_utils:cp_r([InputName ++ "/*"], Output) of
+        ok ->
+            execute_template(Rest, TemplateType, TemplateName,
+                             Context, Force, ExistingFiles)
+    catch _:_ ->
+            ?ABORT("Failed while processing template instruction "
+                   "{dir, ~s, ~s}~n", [Input, Output])
     end;
 execute_template([{chmod, Mod, File} | Rest], TemplateType, TemplateName,
                  Context, Force, ExistingFiles) when is_integer(Mod) ->

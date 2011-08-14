@@ -52,7 +52,8 @@
 %%
 %%                OtpRelease = erlang:system_info(otp_release).
 %%                SysArch = erlang:system_info(system_architecture).
-%%                Words = integer_to_list(8 * erlang:system_info(wordsize)).
+%%                Words = integer_to_list(8 *
+%%                            erlang:system_info({wordsize, external})).
 %%
 %%              E.g. to define HAVE_SENDFILE only on systems with
 %%              sendfile(), to define BACKLOG on Linux/FreeBSD as 128,
@@ -69,9 +70,12 @@
 
 -spec compile(Config::rebar_config:config(), AppFile::file:filename()) -> 'ok'.
 compile(Config, _AppFile) ->
-    ?DEPRECATED(fail_on_warning, warnings_as_errors,
-                rebar_config:get_list(Config, erl_opts, []),
-                "once OTP R14B03 is released"),
+    ?DEPRECATED(xrl_opts, fail_on_warning, warnings_as_errors,
+                rebar_config:get_list(Config, xrl_opts, []),
+                "once R14B04 is released"),
+    ?DEPRECATED(yrl_opts, fail_on_warning, warnings_as_errors,
+                rebar_config:get_list(Config, yrl_opts, []),
+                "once R14B04 is released"),
 
     rebar_base_compiler:run(Config,
                             check_files(rebar_config:get_local(
@@ -83,15 +87,19 @@ compile(Config, _AppFile) ->
                                           Config, yrl_first_files, [])),
                             "src", ".yrl", "src", ".erl",
                             fun compile_yrl/3),
-    doterl_compile(Config, "ebin"),
     rebar_base_compiler:run(Config,
                             check_files(rebar_config:get_local(
                                           Config, mib_first_files, [])),
                             "mibs", ".mib", "priv/mibs", ".bin",
-                            fun compile_mib/3).
+                            fun compile_mib/3),
+    doterl_compile(Config, "ebin").
 
 -spec clean(Config::rebar_config:config(), AppFile::file:filename()) -> 'ok'.
 clean(_Config, _AppFile) ->
+    MibFiles = rebar_utils:find_files("mibs", "^.*\\.mib\$"),
+    MIBs = [filename:rootname(filename:basename(MIB)) || MIB <- MibFiles],
+    rebar_file_utils:delete_each(
+      [filename:join(["include",MIB++".hrl"]) || MIB <- MIBs]),
     lists:foreach(fun(F) -> ok = rebar_file_utils:rm_rf(F) end,
                   ["ebin/*.beam", "priv/mibs/*.bin"]),
 
@@ -247,21 +255,10 @@ internal_erl_compile(Source, Config, Outdir, ErlOpts) ->
     case needs_compile(Source, Target, Hrls) of
         true ->
             Opts = [{outdir, filename:dirname(Target)}] ++
-                ErlOpts ++ [{i, "include"}, report, return],
+                ErlOpts ++ [{i, "include"}, report],
             case compile:file(Source, Opts) of
-                {ok, _, []} ->
+                {ok, _} ->
                     ok;
-                {ok, _, _Warnings} ->
-                    %% We got at least one warning -- if fail_on_warning
-                    %% is in options, fail
-                    case lists:member(fail_on_warning, Opts) of
-                        true ->
-                            %% remove target to prevent overlooking this failure
-                            ok = file:delete(Target),
-                            ?FAIL;
-                        false ->
-                            ok
-                    end;
                 _ ->
                     ?FAIL
             end;
@@ -277,6 +274,10 @@ compile_mib(Source, Target, Config) ->
         rebar_config:get(Config, mib_opts, []),
     case snmpc:compile(Source, Opts) of
         {ok, _} ->
+            Mib = filename:rootname(Target),
+            ok = snmpc:mib_to_hrl(Mib),
+            Hrl_filename = Mib ++ ".hrl",
+            rebar_file_utils:mv(Hrl_filename,"include"),
             ok;
         {error, compilation_failed} ->
             ?FAIL
@@ -286,14 +287,14 @@ compile_mib(Source, Target, Config) ->
                   Config::rebar_config:config()) -> 'ok'.
 compile_xrl(Source, Target, Config) ->
     Opts = [{scannerfile, Target}, {return, true}
-            |rebar_config:get(Config, xrl_opts, [])],
+            | rebar_config:get(Config, xrl_opts, [])],
     compile_xrl_yrl(Source, Target, Opts, leex).
 
 -spec compile_yrl(Source::file:filename(), Target::file:filename(),
                   Config::rebar_config:config()) -> 'ok'.
 compile_yrl(Source, Target, Config) ->
     Opts = [{parserfile, Target}, {return, true}
-            |rebar_config:get(Config, yrl_opts, [])],
+            | rebar_config:get(Config, yrl_opts, [])],
     compile_xrl_yrl(Source, Target, Opts, yecc).
 
 -spec compile_xrl_yrl(Source::file:filename(), Target::file:filename(),
@@ -305,6 +306,7 @@ compile_xrl_yrl(Source, Target, Opts, Mod) ->
                 {ok, _, []} ->
                     ok;
                 {ok, _, _Warnings} ->
+                    %% TODO: remove once R14B04 is released
                     case lists:member(fail_on_warning, Opts) of
                         true ->
                             ?FAIL;

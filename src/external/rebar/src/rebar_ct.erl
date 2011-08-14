@@ -46,8 +46,20 @@
 %% ===================================================================
 
 ct(Config, File) ->
-    run_test_if_present("test", Config, File).
-
+    case rebar_config:get_global(app, undefined) of
+        undefined ->
+            %% No app parameter specified, run everything..
+            run_test_if_present("test", Config, File);
+        Apps ->
+            TargetApps = [list_to_atom(A) || A <- string:tokens(Apps, ",")],
+            ThisApp = rebar_app_utils:app_name(File),
+            case lists:member(ThisApp, TargetApps) of
+                true ->
+                    run_test_if_present("test", Config, File);
+                false ->
+                    ?DEBUG("Skipping common_test on app: ~p\n", [ThisApp])
+            end
+    end.
 
 %% ===================================================================
 %% Internal functions
@@ -90,7 +102,7 @@ clear_log(RawLog) ->
 %% log results
 check_log(RawLog) ->
     {ok, Msg} =
-        rebar_utils:sh("grep -e 'TEST COMPLETE' -e '{error,make_failed}' "
+        rebar_utils:sh("egrep -e 'TEST COMPLETE' -e '{error,make_failed}' "
                        ++ RawLog, [{use_stdout, false}]),
     MakeFailed = string:str(Msg, "{error,make_failed}") =/= 0,
     RunFailed = string:str(Msg, ", 0 failed") =:= 0,
