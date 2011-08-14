@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -62,6 +62,8 @@
          fetch2/2,
          find1/2,
          find2/2,
+         is_key1/2,
+         is_key2/2,
          new/1,
          store/4]).
 
@@ -164,9 +166,29 @@ find1(K, {Module, Lookup1, _}) ->
 find2(K, {Module, _, Lookup2}) ->
     Module:find(K, Lookup2).
 
+-spec is_key1(K :: any(),
+              {atom(), any(), any()}) ->
+    boolean().
+
+is_key1(K, {Module, Lookup1, _}) ->
+    Module:is_key(K, Lookup1).
+
+-spec is_key2(K :: any(),
+            {atom(), any(), any()}) ->
+    boolean().
+
+is_key2(K, {Module, _, Lookup2}) ->
+    Module:is_key(K, Lookup2).
+
+-spec new(Module :: atom()) ->
+    {atom(), any(), any()}.
+
 new(Module)
     when is_atom(Module) ->
     {Module, Module:new(), Module:new()}.
+
+-spec store(K1 :: any(), K2 :: any(), V :: any(), {atom(), any(), any()}) ->
+    {atom(), any(), any()}.
 
 store(K1, K2, V, {Module, Lookup1, Lookup2}) ->
     K1L = [K1],
