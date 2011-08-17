@@ -233,8 +233,8 @@ module Cloudi
                     tmp = data[i, j].unpack("Z#{nameSize}L")
                     name = tmp[0]
                     requestSize = tmp[1]
-                    i += j; j = requestSize + 4 + 16 + 4
-                    tmp = data[i, j].unpack("a#{requestSize}La16L")
+                    i += j; j = requestSize + 1 + 4 + 16 + 4
+                    tmp = data[i, j].unpack("a#{requestSize}xLa16L")
                     request = tmp[0]
                     timeout = tmp[1]
                     transId = tmp[2]
@@ -249,10 +249,10 @@ module Cloudi
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     responseSize = data[i, j].unpack("L")[0]
-                    i += j; j = responseSize + 16
+                    i += j; j = responseSize + 1 + 16
                     i += j
                     assert{i == data.length}
-                    return data[i, j].unpack("a#{responseSize}a16")
+                    return data[i, j].unpack("a#{responseSize}xa16")
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
                     i += j

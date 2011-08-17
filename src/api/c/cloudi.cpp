@@ -639,8 +639,6 @@ static void callback(cloudi_instance_t * p,
         {
             f(p, CLOUDI_ASYNC, name, request, request_size,
               timeout, trans_id, pid, pid_size);
-            cloudi_return_async(p, name, "", 0, timeout,
-                                trans_id, pid, pid_size);
         }
         catch (return_async_exception const &)
         {
@@ -649,7 +647,14 @@ static void callback(cloudi_instance_t * p,
         catch (return_sync_exception const &)
         {
             assert(false);
+            return;
         }
+        catch (...)
+        {
+            // exception is ignored at this level
+        }
+        cloudi_return_async(p, name, "", 0, timeout,
+                            trans_id, pid, pid_size);
     }
     else if (command == MESSAGE_SEND_SYNC)
     {
@@ -657,17 +662,22 @@ static void callback(cloudi_instance_t * p,
         {
             f(p, CLOUDI_SYNC, name, request, request_size,
               timeout, trans_id, pid, pid_size);
-            cloudi_return_sync(p, name, "", 0, timeout,
-                               trans_id, pid, pid_size);
         }
         catch (return_async_exception const &)
         {
             assert(false);
+            return;
         }
         catch (return_sync_exception const &)
         {
             return;
         }
+        catch (...)
+        {
+            // exception is ignored at this level
+        }
+        cloudi_return_sync(p, name, "", 0, timeout,
+                           trans_id, pid, pid_size);
     }
     else
     {
@@ -739,7 +749,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 uint32_t request_size;
                 store_incoming_uint32(buffer, index, request_size);
                 char * request = &buffer[index];
-                index += request_size;
+                index += request_size + 1;
                 uint32_t timeout;
                 store_incoming_uint32(buffer, index, timeout);
                 char * trans_id = &buffer[index];
@@ -760,7 +770,7 @@ int cloudi_poll(cloudi_instance_t * p,
             {
                 store_incoming_uint32(buffer, index, p->response_size);
                 p->response = &buffer[index];
-                index += p->response_size;
+                index += p->response_size + 1;
                 p->trans_id_count = 1;
                 p->trans_id = &buffer[index];
                 index += 16;
@@ -827,6 +837,27 @@ int cloudi_poll(cloudi_instance_t * p,
         if (result)
             return result;
     }
+}
+
+// CloudI helper functions
+
+char const ** cloudi_request_http_qs_parse(void const * const request,
+                                           uint32_t const request_size)
+{
+    char const * http_qs = reinterpret_cast<char const * const>(request);
+    realloc_ptr<char const *> result(16, 8192);
+    result[0] = http_qs;
+    size_t i = 1;
+    for (size_t request_i = 1; request_i < request_size; ++request_i)
+    {
+        if (http_qs[request_i] == '\0')
+        {
+            result[i] = &http_qs[++request_i];
+            result.reserve(++i + 1);
+        }
+    }
+    result[i] = 0;
+    return result.release();
 }
 
 }

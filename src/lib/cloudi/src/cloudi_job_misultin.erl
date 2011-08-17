@@ -133,24 +133,13 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-content_type(Headers) ->
-    case misultin_utility:get_key_value('Content-Type', Headers) of
-        undefined ->
-            "";
-        ContentType ->
-            case string2:beforel($;, ContentType) of
-                [] ->
-                    ContentType;
-                L ->
-                    L
-            end
-    end.
-
 handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
     Name = HttpRequest:get(uri_unquoted),
     RequestBinary = case HttpRequest:get(method) of
         'GET' ->
-            erlang:list_to_binary(HttpRequest:get(args));
+            erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
+                [erlang:list_to_binary(K), 0, erlang:list_to_binary(V), 0 | L]
+            end, [], HttpRequest:parse_qs()));
         'POST' ->
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
@@ -158,7 +147,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
             % though multiple names may lead to the same callback
             % (i.e., the name can be checked in the callback if different
             %  types must be handled in the same area of code)
-            Type = content_type(HttpRequest:get(headers)),
+            Type = header_content_type(HttpRequest:get(headers)),
             if
                 Type == "application/zip" ->
                     zlib:unzip(HttpRequest:get(body));
@@ -192,7 +181,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
                         Extension == [] ->
                             [{'Content-Type', "text/plain"}];
                         true ->
-                            case get_content_type(Extension) of
+                            case filename_content_type(Extension) of
                                 "text/html" ->
                                     [{'Content-Type', "text/html"}];
                                 "text/plain" ->
@@ -212,12 +201,26 @@ handle_http(HttpRequest, OutputType, DefaultContentType, Dispatcher) ->
             HttpRequest:respond(500)
     end.
 
+header_content_type(Headers) ->
+    case misultin_utility:get_key_value('Content-Type', Headers) of
+        undefined ->
+            "";
+        ContentType ->
+            case string2:beforel($;, ContentType) of
+                [] ->
+                    ContentType;
+                L ->
+                    L
+            end
+    end.
+
 % get content type (taken from misultin_utility)
-get_content_type(Extension) ->
+filename_content_type(Extension) ->
     case Extension of
         % most common first
         [] -> "text/plain";
         ".json" -> "application/json";
+        ".xml" -> "text/xml";
         ".doc" -> "application/msword";
         ".exe" -> "application/octet-stream";
         ".pdf" -> "application/pdf";

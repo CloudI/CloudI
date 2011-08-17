@@ -57,11 +57,19 @@ public:
     typedef T element_type;
 
     explicit realloc_ptr(size_t initialSize, size_t maxSize) :
-        m_size(greater_pow2(initialSize)),
+        m_initialSize(greater_pow2(initialSize)),
+        m_size(m_initialSize),
         m_maxSize(greater_pow2(maxSize)),
-        m_p(reinterpret_cast<T *>(malloc(m_size * sizeof(T)))) {}
+        m_p(reinterpret_cast<T *>(malloc(m_initialSize * sizeof(T)))) {}
 
-    ~realloc_ptr() { free(m_p); }
+    ~realloc_ptr() throw() { free(m_p); }
+
+    T * release() throw()
+    {
+        T * t = m_p;
+        m_p = reinterpret_cast<T *>(malloc(m_initialSize * sizeof(T)));
+        return t;
+    }
 
     size_t size() const { return m_size; }
 
@@ -160,6 +168,7 @@ private:
             return (value << 1);
     }
 
+    size_t const m_initialSize;
     size_t m_size;
     size_t const m_maxSize;
     T * m_p;

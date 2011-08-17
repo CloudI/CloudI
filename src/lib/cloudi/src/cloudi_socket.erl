@@ -724,7 +724,7 @@ handle_mcast_async(Name, Request, Timeout, StateName,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0,
       RequestSize:32/unsigned-integer-native,
-      Request/binary,
+      Request/binary, 0,
       Timeout:32/unsigned-integer-native,
       TransId/binary,             % 128 bits
       PidSize:32/unsigned-integer-native,
@@ -742,7 +742,7 @@ handle_mcast_async(Name, Request, Timeout, StateName,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0,
       RequestSize:32/unsigned-integer-native,
-      Request/binary,
+      Request/binary, 0,
       Timeout:32/unsigned-integer-native,
       TransId/binary,             % 128 bits
       PidSize:32/unsigned-integer-native,
@@ -773,7 +773,7 @@ handle_mcast_async(Name, Request, Timeout, StateName,
     ResponseSize = erlang:byte_size(Response),
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
       ResponseSize:32/unsigned-integer-native,
-      Response/binary,
+      Response/binary, 0,
       TransId/binary>>.           % 128 bits
 
 'returns_async_out'() ->
@@ -799,7 +799,7 @@ handle_mcast_async(Name, Request, Timeout, StateName,
     ResponseSize = erlang:byte_size(Response),
     <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
       ResponseSize:32/unsigned-integer-native,
-      Response/binary,
+      Response/binary, 0,
       TransId/binary>>.           % 128 bits
 
 send(Data, #state{protocol = Protocol,
