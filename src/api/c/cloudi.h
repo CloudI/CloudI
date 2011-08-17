@@ -194,6 +194,9 @@ int cloudi_recv_async(cloudi_instance_t * p,
 int cloudi_poll(cloudi_instance_t * p,
                 int timeout);
 
+char const ** cloudi_request_http_qs_parse(void const * const request,
+                                           uint32_t const request_size);
+
 enum
 {
     cloudi_success                             =   0,

@@ -199,7 +199,7 @@ class API(object):
                 i, j = j, j + 4
                 prefixSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + prefixSize + 4 + 4
-                (prefix, null_terminator, timeoutAsync,
+                (prefix, nullTerminator, timeoutAsync,
                  timeoutSync) = struct.unpack("=%dscII" % (prefixSize - 1),
                                                data[i:j])
                 assert j == len(data)
@@ -209,12 +209,12 @@ class API(object):
                 i, j = j, j + 4
                 nameSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + nameSize + 4
-                (name, null_terminator,
+                (name, nullTerminator,
                  requestSize) = struct.unpack("=%dscI" % (nameSize - 1),
                                               data[i:j])
-                i, j = j, j + requestSize + 4 + 16 + 4
-                (request, timeout, transId,
-                 pidSize) = struct.unpack("=%dsI16sI" % requestSize, data[i:j])
+                i, j = j, j + requestSize + 1 + 4 + 16 + 4
+                (request, nullTerminator, timeout, transId,
+                 pidSize) = struct.unpack("=%dscI16sI" % requestSize, data[i:j])
                 i, j = j, j + pidSize
                 pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
                 assert j == len(data)
@@ -225,9 +225,11 @@ class API(object):
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
                 responseSize = struct.unpack("=I", data[i:j])[0]
-                i, j = j, j + responseSize + 16
+                i, j = j, j + responseSize + 1 + 16
                 assert j == len(data)
-                return struct.unpack("=%ds16s" % responseSize, data[i:j])
+                (request, nullTerminator,
+                 transId) = struct.unpack("=%dsc16s" % responseSize, data[i:j])
+                return (request, transId)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
                 assert j == len(data)

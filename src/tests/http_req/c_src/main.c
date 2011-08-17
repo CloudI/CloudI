@@ -61,10 +61,28 @@ static void request(cloudi_instance_t * api,
                     char const * const pid,
                     uint32_t const pid_size)
 {
-    char const * const response =
-"<html><head><title>Hello World</title></head>"
-"<body><p>Hello World!</p></body></html>";
-    
+    char response[128];
+    char const ** http_qs = cloudi_request_http_qs_parse(request, request_size);
+    char const * value = 0;
+    size_t i;
+    for (i = 0; http_qs[i]; i += 2)
+    {
+        if (strcmp(http_qs[i], "value") == 0)
+        {
+            value = http_qs[i + 1];
+            break;
+        }
+    }
+    if (value)
+    {
+        snprintf(response, sizeof(response),
+                 "<http_test><value>%d</value></http_test>", atoi(value));
+    }
+    else
+    {
+        memcpy(response,
+               "<http_test><error>no value specified</error></http_test>", 57);
+    }
     cloudi_return(api, command, name,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);
@@ -79,7 +97,7 @@ void process_requests(void * p)
                                    data->protocol,
                                    data->buffer_size);
 
-    result = cloudi_subscribe(&api, "c.html", &request);
+    result = cloudi_subscribe(&api, "c.xml", &request);
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);

@@ -470,6 +470,7 @@ public class API
                         String name = API.getString(buffer, nameSize);
                         int requestSize = buffer.getInt();
                         byte[] request = API.getBytes(buffer, requestSize);
+                        buffer.get();
                         int timeout = buffer.getInt();
                         byte[] transId = API.getBytes(buffer, 16);
                         int pidSize = buffer.getInt();
@@ -483,6 +484,7 @@ public class API
                     {
                         int responseSize = buffer.getInt();
                         byte[] response = API.getBytes(buffer, responseSize);
+                        buffer.get();
                         byte[] transId = API.getBytes(buffer, 16);
                         assert ! buffer.hasRemaining() : "extra data";
                         return new Response(response, transId);
