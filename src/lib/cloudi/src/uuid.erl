@@ -212,7 +212,7 @@ uuid_to_string(Value)
       B3:16/unsigned-integer,
       B4:16/unsigned-integer,
       B5:48/unsigned-integer>> = Value,
-    lists:flatten(io_lib:format("~.16b-~.16b-~.16b-~.16b-~.16b",
+    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
                                 [B1, B2, B3, B4, B5])).
 
 % The RFC said to increment the clock sequence counter
