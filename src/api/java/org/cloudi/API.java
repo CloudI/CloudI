@@ -537,6 +537,31 @@ public class API
         }
     }
 
+    public HashMap<String, String> request_http_qs_parse(byte[] request)
+    {
+        HashMap<String, String> result = new HashMap<String, String>();
+        String key = null;
+        int request_i = 0;
+        for (int request_j = 0; request_j < request.length; ++request_j)
+        {
+            if (request[request_j] == 0)
+            {
+                if (key == null)
+                {
+                    key = new String(request, request_i, request_j - request_i);
+                }
+                else
+                {
+                    result.put(key, new String(request, request_i,
+                                               request_j - request_i));
+                    key = null;
+                }
+                request_i = request_j + 1;
+            }
+        }
+        return result;
+    }
+
     private void send(OtpOutputStream command)
     {
         try

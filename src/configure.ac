@@ -116,6 +116,11 @@ AC_CONFIG_FILES([cloudi.conf
                  tests/http/service/org/cloudi/tests/http/Makefile
                  tests/http_req/Makefile
                  tests/http_req/c_src/Makefile
+                 tests/http_req/jar/Makefile
+                 tests/http_req/org/Makefile
+                 tests/http_req/org/cloudi/Makefile
+                 tests/http_req/org/cloudi/tests/Makefile
+                 tests/http_req/org/cloudi/tests/http_req/Makefile
                  tests/flood/Makefile
                  tests/flood/src/Makefile
                  tests/flood/service/Makefile
