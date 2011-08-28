@@ -39,7 +39,7 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/config.h.in $(srcdir)/rebar.config.in \
 	$(srcdir)/reltool.config.in $(top_srcdir)/configure \
 	$(top_srcdir)/lib/cloudi/src/cloudi.app.src.in AUTHORS COPYING \
-	ChangeLog INSTALL NEWS config/compile config/config.guess \
+	ChangeLog INSTALL NEWS TODO config/compile config/config.guess \
 	config/config.sub config/depcomp config/install-sh \
 	config/ltmain.sh config/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -980,6 +980,8 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/http_req/c_src/http_req" \
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \

@@ -270,6 +270,14 @@ class API(object):
             if len(data) == 0:
                 return None # socket was closed
 
+    def request_http_qs_parse(self, request):
+        result = {}
+        data = request.split(chr(0))
+        for i in xrange(0, len(data) - 1, 2):
+            result[data[i]] = data[i + 1]
+        return result
+
+
 class _return_sync_exception(SystemExit):
     def __init__(self):
         pass
