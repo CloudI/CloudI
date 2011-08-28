@@ -154,20 +154,26 @@ class API(object):
             try:
                 response = function(API.__ASYNC, name, request,
                                     timeout, transId, pid)
-                self.return_async(name, response, timeout, transId, pid)
             except _return_async_exception:
                 return
             except _return_sync_exception:
                 assert False
+                return
+            except:
+                response = '' # exception is ignored at this level
+            self.return_async(name, response, timeout, transId, pid)
         elif command == _MESSAGE_SEND_SYNC:
             try:
                 response = function(API.__SYNC, name, request,
                                     timeout, transId, pid)
-                self.return_sync(name, response, timeout, transId, pid)
             except _return_sync_exception:
                 return
             except _return_async_exception:
                 assert False
+                return
+            except:
+                response = '' # exception is ignored at this level
+            self.return_sync(name, response, timeout, transId, pid)
         else:
             assert False
 

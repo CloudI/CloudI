@@ -270,6 +270,8 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.rb" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \

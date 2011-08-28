@@ -165,22 +165,28 @@ module Cloudi
                 begin
                     response = function.call(ASYNC, name, request,
                                              timeout, transId, pid)
-                    return_async(name, response, timeout, transId, pid)
                 rescue ReturnAsyncException
                     return
                 rescue ReturnSyncException
                     assert{false}
+                    return
+                rescue
+                    response = '' # exception is ignored at this level
                 end
+                return_async(name, response, timeout, transId, pid)
             when MESSAGE_SEND_SYNC
                 begin
                     response = function.call(SYNC, name, request,
                                              timeout, transId, pid)
-                    return_sync(name, response, timeout, transId, pid)
                 rescue ReturnSyncException
                     return
                 rescue ReturnAsyncException
                     assert{false}
+                    return
+                rescue
+                    response = '' # exception is ignored at this level
                 end
+                return_sync(name, response, timeout, transId, pid)
             end
         end
 
@@ -306,6 +312,15 @@ module Cloudi
             end
         end
 
+        def request_http_qs_parse(request)
+            result = {}
+            data = request.split(NULL.chr)
+            (0...(data.length)).step(2).each do |i|
+                result[data[i]] = data[i + 1]
+            end
+            return result
+        end
+
         private :callback
 
         ASYNC  =  1
@@ -319,6 +334,8 @@ module Cloudi
         MESSAGE_RETURN_SYNC    = 6
         MESSAGE_RETURNS_ASYNC  = 7
         MESSAGE_KEEPALIVE      = 8
+
+        NULL = 0
 
         def assert
             raise "Assertion failed !" unless yield if $DEBUG
