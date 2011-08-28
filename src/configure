@@ -17417,7 +17417,7 @@ $as_echo "no" >&6; }
 
 
 
-ac_config_files="$ac_config_files cloudi.conf rebar.config reltool.config lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile tests/flood/Makefile tests/flood/src/Makefile tests/flood/service/Makefile tests/flood/service/jar/Makefile tests/flood/service/org/Makefile tests/flood/service/org/cloudi/Makefile tests/flood/service/org/cloudi/tests/Makefile tests/flood/service/org/cloudi/tests/flood/Makefile"
+ac_config_files="$ac_config_files cloudi.conf rebar.config reltool.config lib/cloudi/src/cloudi.app.src Makefile api/Makefile api/c/Makefile api/java/Makefile api/java/org/Makefile api/java/org/cloudi/Makefile api/java/com/Makefile api/java/com/ericsson/Makefile api/java/com/ericsson/otp/Makefile api/java/com/ericsson/otp/erlang/Makefile api/java/jar/Makefile lib/Makefile lib/cloudi/Makefile lib/cloudi/cxx_src/Makefile tests/Makefile tests/hexpi/Makefile tests/hexpi/src/Makefile tests/hexpi/cxx_src/Makefile tests/http/Makefile tests/http/service/Makefile tests/http/service/jar/Makefile tests/http/service/org/Makefile tests/http/service/org/cloudi/Makefile tests/http/service/org/cloudi/tests/Makefile tests/http/service/org/cloudi/tests/http/Makefile tests/http_req/Makefile tests/http_req/c_src/Makefile tests/http_req/jar/Makefile tests/http_req/org/Makefile tests/http_req/org/cloudi/Makefile tests/http_req/org/cloudi/tests/Makefile tests/http_req/org/cloudi/tests/http_req/Makefile tests/flood/Makefile tests/flood/src/Makefile tests/flood/service/Makefile tests/flood/service/jar/Makefile tests/flood/service/org/Makefile tests/flood/service/org/cloudi/Makefile tests/flood/service/org/cloudi/tests/Makefile tests/flood/service/org/cloudi/tests/flood/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -18539,6 +18539,11 @@ do
     "tests/http/service/org/cloudi/tests/http/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http/service/org/cloudi/tests/http/Makefile" ;;
     "tests/http_req/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/Makefile" ;;
     "tests/http_req/c_src/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/c_src/Makefile" ;;
+    "tests/http_req/jar/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/jar/Makefile" ;;
+    "tests/http_req/org/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/org/Makefile" ;;
+    "tests/http_req/org/cloudi/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/org/cloudi/Makefile" ;;
+    "tests/http_req/org/cloudi/tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/org/cloudi/tests/Makefile" ;;
+    "tests/http_req/org/cloudi/tests/http_req/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http_req/org/cloudi/tests/http_req/Makefile" ;;
     "tests/flood/Makefile") CONFIG_FILES="$CONFIG_FILES tests/flood/Makefile" ;;
     "tests/flood/src/Makefile") CONFIG_FILES="$CONFIG_FILES tests/flood/src/Makefile" ;;
     "tests/flood/service/Makefile") CONFIG_FILES="$CONFIG_FILES tests/flood/service/Makefile" ;;

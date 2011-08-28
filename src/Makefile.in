@@ -975,8 +975,11 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http/output/text" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/output/"
 
-tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
+tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req \
+                        $(top_builddir)/tests/http_req/jar/cloudi.jar \
+                        $(top_builddir)/tests/http_req/jar/http_req.jar
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/http_req/c_src/http_req" \
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
@@ -984,6 +987,10 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/cloudi.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \

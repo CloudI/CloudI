@@ -76,6 +76,7 @@ if __FILE__ == $PROGRAM_NAME
                 response = if value.nil?
                     '<http_test><error>no value specified</error></http_test>'
                 else
+                    value = value.to_i
                     "<http_test><value>#{value}</value></http_test>"
                 end
                 @api.return_(command, name, response, timeout, transId, pid)
