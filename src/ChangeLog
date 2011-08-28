@@ -1,12 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * http_req test now includes Java, Ruby, Python implementations
+      (in addition to the C implementation)
+    * C/C++, Java, Python, Ruby CloudI API includes the
+      request_http_qs_parse function for storing the parsed HTTP query string
+
 2011-08-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * http_req C test now handles query strings
     * All requests and responses now have a terminating null ('\0')
       character that is not included in their length, so that it is
-      easier to use C string functions without errors.
+      easier to use C string functions without errors
 
 2011-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
