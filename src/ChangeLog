@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 0.1.8 (alpha) released
+
 2011-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * http_req test now includes Java, Ruby, Python implementations
