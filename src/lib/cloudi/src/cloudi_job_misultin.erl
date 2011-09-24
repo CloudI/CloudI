@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_misultin).
@@ -230,15 +230,15 @@ header_content_type(Headers) ->
             end
     end.
 
-% static content type lookup (based on from misultin_utility)
+% static content type lookup (based on misultin_utility)
 content_type_lookup() ->
     trie:new([
         {".txt",     {request, "text/plain"}},
         {".json",    {request, "application/json"}},
         {".xml",     {request, "text/xml"}},
         {".csv",     {request, "text/csv"}},
-        {".htm",     {attachment, "text/html"}},
-        {".html",    {attachment, "text/html"}},
+        {".htm",     {request, "text/html"}},
+        {".html",    {request, "text/html"}},
         {".exe",     {attachment, "application/octet-stream"}},
         {".pdf",     {attachment, "application/pdf"}},
         {".rtf",     {attachment, "application/rtf"}},

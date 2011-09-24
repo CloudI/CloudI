@@ -1,6 +1,8 @@
 
 To install CloudI, do the following steps:
 
+0) ./autogen.sh
+
 1) ./configure (--prefix=/path/to/installation/directory)
 
 2) make
