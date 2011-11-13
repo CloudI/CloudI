@@ -455,7 +455,7 @@ module Erlang
         else
             sign = 0.chr
         end
-        l = []
+        l = [sign]
         (0...size).each do |byte|
             l.append((bignum & 255).chr)
             bignum >>= 8

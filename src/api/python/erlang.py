@@ -413,7 +413,7 @@ def _bignum_to_binary(term):
         sign = chr(1)
     else:
         sign = chr(0)
-    L = []
+    L = [sign]
     for byte in range(0, size):
         L.append(chr(bignum & 255))
         bignum >>= 8
