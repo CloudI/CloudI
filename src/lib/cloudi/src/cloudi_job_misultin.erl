@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.8 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_misultin).
@@ -71,7 +71,7 @@
 -define(DEFAULT_WS_AUTOEXIT,            true).
 -define(DEFAULT_OUTPUT,               binary).
 -define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
--define(DEFAULT_USE_METHOD_SUFFIX,     false). % get/post/etc. as a name suffix
+-define(DEFAULT_USE_METHOD_SUFFIX,      true). % get/post/etc. as a name suffix
 
 -record(state,
     {
@@ -149,7 +149,18 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
         Method =:= 'POST' ->
             NameIncoming ++ "/post";
         Method =:= 'PUT' ->
-            NameIncoming ++ "/put"
+            NameIncoming ++ "/put";
+        Method =:= 'DELETE' ->
+            NameIncoming ++ "/delete";
+        Method =:= 'HEAD' ->
+            NameIncoming ++ "/head";
+        Method =:= 'TRACE' ->
+            NameIncoming ++ "/trace";
+        Method =:= 'OPTIONS' ->
+            NameIncoming ++ "/options";
+        Method =:= 'CONNECT' ->
+            NameIncoming ++ "/connect"
+        % more cases here than necessary probably
     end,
     RequestBinary = if
         Method =:= 'GET' ->
@@ -160,11 +171,10 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
             % one type per name (path)
-            Type = header_content_type(HttpRequest:get(headers)),
-            if
-                Type == "application/zip" ->
+            case header_content_type(HttpRequest:get(headers)) of
+                "application/zip" ->
                     zlib:unzip(HttpRequest:get(body));
-                true ->
+                _ ->
                     HttpRequest:get(body)
             end
     end,
@@ -182,17 +192,15 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                 OutputType =:= binary ->
                     Response
             end,
-            FileName = string2:afterr($/, NameIncoming),
+            FileName = string2:afterr($/, NameIncoming, input),
             Headers = if
                 is_list(DefaultContentType) ->
                     [{'Content-Type', DefaultContentType}];
-                FileName == [] ->
-                    [{'Content-Type', "text/html"}];
                 true ->
                     Extension = filename:extension(FileName),
                     if
                         Extension == [] ->
-                            [{'Content-Type', "text/plain"}];
+                            [{'Content-Type', "text/html"}];
                         true ->
                             case trie:find(Extension, ContentTypeLookup) of
                                 error ->
@@ -200,9 +208,9 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                                       "attachment; filename=" ++ NameIncoming},
                                      {'Content-Type',
                                       "application/octet-stream"}];
-                                {request, ContentType} ->
+                                {ok, {request, ContentType}} ->
                                     [{'Content-Type', ContentType}];
-                                {attachment, ContentType} ->
+                                {ok, {attachment, ContentType}} ->
                                     [{'Content-Disposition',
                                       "attachment; filename=" ++ NameIncoming},
                                      {'Content-Type', ContentType}]
@@ -222,12 +230,7 @@ header_content_type(Headers) ->
         undefined ->
             "";
         ContentType ->
-            case string2:beforel($;, ContentType) of
-                [] ->
-                    ContentType;
-                L ->
-                    L
-            end
+            string2:beforel($;, ContentType, input)
     end.
 
 % static content type lookup (based on misultin_utility)

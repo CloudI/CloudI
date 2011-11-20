@@ -67,7 +67,7 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, response, timeout, transId, pid)
 
     def run(self):
-        self.__api.subscribe("python.xml", self.request)
+        self.__api.subscribe("python.xml/get", self.request)
 
         running = True
         while running:

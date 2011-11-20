@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pool2).
@@ -163,11 +163,12 @@ update(I, #state{supervisor = Supervisor} = State) ->
         ({_, Pid, _, _}, L) ->
             [Pid | L]
     end, [], supervisor:which_children(Supervisor)),
+    Count = erlang:length(Pids),
     NewState = State#state{pool = erlang:list_to_tuple(Pids),
-                           count = erlang:length(Pids)},
+                           count = Count},
     if
-        I > NewState#state.count ->
-            erlang:put(current, 2),
+        I > Count ->
+            erlang:put(current, if 1 == Count -> 1; true -> 2 end),
             {1, NewState};
         true ->
             {I, NewState}

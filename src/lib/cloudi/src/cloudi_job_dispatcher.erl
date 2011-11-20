@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.3 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_dispatcher).
@@ -597,33 +597,18 @@ destination_allowed(_, undefined, undefined) ->
     true;
 
 destination_allowed(Name, undefined, DestAllow) ->
-    case string2:beforer($/, Name) of
-        [] ->
-            false;
-        Prefix ->
-            trie:is_prefix(Prefix, DestAllow)
-    end;
+    trie:is_prefixed(Name, "/", DestAllow);
 
 destination_allowed(Name, DestDeny, undefined) ->
-    case string2:beforer($/, Name) of
-        [] ->
-            false;
-        Prefix ->
-            not trie:is_prefix(Prefix, DestDeny)
-    end;
+    not trie:is_prefixed(Name, "/", DestDeny);
 
 destination_allowed(Name, DestDeny, DestAllow) ->
-    case string2:beforer($/, Name) of
-        [] ->
-            false;
-        Prefix ->
-            case trie:is_prefix(Prefix, DestDeny) of
-                true ->
-                    false;
-                false ->
-                    trie:is_prefix(Prefix, DestAllow)
-            end
-    end.
+    case trie:is_prefixed(Name, "/", DestDeny) of
+        true -> 
+            false;  
+        false ->
+            trie:is_prefixed(Name, "/", DestAllow)
+    end.    
 
 destination_refresh_first(lazy_closest) ->
     list_pg_data:get_groups(?DEST_REFRESH_FIRST);

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.3 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job).
@@ -83,7 +83,8 @@
          return/7,
          return_async/6,
          return_sync/6,
-         return_nothrow/7]).
+         return_nothrow/7,
+         request_http_qs_parse/1]).
 
 %% behavior callbacks
 -export([behaviour_info/1]).
@@ -449,6 +450,13 @@ return_nothrow(_, 'send_sync', Name, Response, Timeout, TransId, Pid) ->
     Pid ! {'return_sync', Name, Response, Timeout, TransId, Pid},
     ok.
 
+-spec request_http_qs_parse(Request :: binary()) -> dict().
+
+request_http_qs_parse(Request)
+    when is_binary(Request) ->
+    request_http_qs_parse_list(dict:new(),
+                               binary:split(Request, <<0>>, [global])).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -541,4 +549,9 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+request_http_qs_parse_list(Lookup, []) ->
+    Lookup;
+request_http_qs_parse_list(Lookup, [K, V | L]) ->
+    request_http_qs_parse_list(dict:store(K, V, Lookup), L).
 

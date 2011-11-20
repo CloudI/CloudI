@@ -5,12 +5,14 @@
 %%% @doc
 %%% ==Erlang UUID Generation==
 %%% http://www.ietf.org/rfc/rfc4122.txt is the reference for official UUIDs.
-%%% This implementation provides a version 1 UUID that includes the Erlang pid
-%%% identifier (ID, Serial, Creation) within the 48 bit node ID.  To make room
-%%% for the Erlang pid identifier, the 48 bits from the MAC address are
-%%% bitwise-XORed (i.e., 3 OCI (Organizationally Unique Identifier)
-%%% bytes and 3 NIC (Network Interface Controller) specific bytes) down to
-%%% 16 bits. The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
+%%% This implementation provides a version 1 UUID that includes both the
+%%% Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang
+%%% node name within the 48 bit node ID.  To make room for the Erlang pid
+%%% identifier, the 48 bits from the MAC address
+%%% (i.e., 3 OCI (Organizationally Unique Identifier) bytes and
+%%% 3 NIC (Network Interface Controller) specific bytes) and
+%%% the distributed Erlang node name are bitwise-XORed down to 16 bits.
+%%% The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
 %%% The version 3 (MD5), version 4 (random), and version 5 (SHA)
 %%% methods are provided as specified within the RFC.
 %%% @end
@@ -53,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -65,6 +67,8 @@
          get_v1_time/1,
          get_v3/1,
          get_v4/0,
+         get_v4_urandom_bigint/0,
+         get_v4_urandom_native/0,
          get_v5/1,
          uuid_to_string/1,
          increment/1]).
@@ -167,8 +171,7 @@ get_v1_time(Value)
     <<Time:60>> = <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>>,
     Time. % microseconds since epoch
 
-get_v3([I | _] = Name)
-    when is_integer(I) ->
+get_v3(Name) ->
     <<B1:60, B2a:6, B2b:6, B3:56>> = crypto:md5(Name),
     B2 = B2a bxor B2b,
     <<B1:60,
@@ -195,8 +198,41 @@ get_v4() ->
       0:1, 1:1,            % reserved bits
       Rand3:56>>.
 
-get_v5([I | _] = Name)
-    when is_integer(I) ->
+% random:uniform/1 repeats every 2.78e13
+% (see B.A. Wichmann and I.D.Hill, in 
+%  'An efficient and portable pseudo-random number generator',
+%  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
+% a single random:uniform/1 call can provide a maximum of 44 bits
+% (currently this is not significantly faster
+%  because multiple function calls are necessary)
+
+get_v4_urandom_bigint() ->
+    Rand1 = random:uniform(2199023255552) - 1, % random 41 bits
+    Rand2 = random:uniform(2199023255552) - 1, % random 41 bits
+    Rand3 = random:uniform(1099511627776) - 1, % random 40 bits
+    <<Rand2a:19, Rand2b:6, Rand2c:16>> = <<Rand2:41>>,
+    <<Rand1:41, Rand2a:19,
+      0:1, 1:1, 0:1, 0:1, % version 4 bits
+      Rand2b:6,
+      0:1, 1:1, % reserved bits
+      Rand2c:16, Rand3:40>>.
+
+% Erlang only allows 27 bits to be used for a native integer
+
+get_v4_urandom_native() ->
+    Rand1 = random:uniform(134217727) - 1, % random 27 bits
+    Rand2 = random:uniform(134217727) - 1, % random 27 bits
+    Rand3 = random:uniform(16383) - 1, % random 14 bits
+    Rand4 = random:uniform(134217727) - 1, % random 27 bits
+    Rand5 = random:uniform(134217727) - 1, % random 27 bits
+    <<Rand3a:2, Rand3b:6, Rand3c:6>> = <<Rand3:14>>,
+    <<Rand1:27, Rand2:27, Rand3a:2, 
+      0:1, 1:1, 0:1, 0:1, % version 4 bits
+      Rand3b:6,
+      0:1, 1:1, % reserved bits
+      Rand3c:6, Rand4:27, Rand5:27>>.
+
+get_v5(Name) ->
     <<B1:60, B2:6, B3a:56, B3b:38>> = crypto:sha(Name),
     B3 = B3a bxor B3b,
     <<B1:60,
@@ -224,7 +260,13 @@ uuid_to_string(Value)
 % and the Erlang node lifetime (the PID Creation is different after a node 
 % crash). Therefore, it is unclear why this function would be necessary
 % within this Erlang implementation of v1 UUID generation (if the system
-% is always running).
+% is always running). The only event that seems to require this function's
+% usage is if the v1 UUID has been stored and retrieved where both actions
+% occurred at a point with a system clock change inbetween or possibly
+% on different machines with a large difference in system clocks
+% (i.e., in some situation that isn't handled by the Erlang VM, so
+%  possibly if an external distribution mechanism was used between
+%  Erlang VMs, not connected with distributed Erlang).
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
     NewClockSeq = if

@@ -7,7 +7,7 @@ do
 
   # text requests
   rm -f tmp/$FILE
-  /usr/bin/env curl -H "Content-Type: text/plain" -s \
+  /usr/bin/env curl -X POST -H "Content-Type: text/plain" -s \
                     --data-ascii @input/$FILE -o tmp/$FILE \
                     --compressed \
                     http://localhost:6464/tests/http/$FILE
@@ -24,7 +24,7 @@ do
   # compressed requests
   if [ -f input.zip/$FILE ]; then
     rm -f tmp/$FILE
-    /usr/bin/env curl -H "Content-Type: application/zip" -s \
+    /usr/bin/env curl -X POST -H "Content-Type: application/zip" -s \
                       --data-binary @input.zip/$FILE -o tmp/$FILE \
                       --compressed \
                       http://localhost:6464/tests/http/$FILE

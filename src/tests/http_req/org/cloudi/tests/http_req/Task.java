@@ -78,7 +78,7 @@ public class Task implements Runnable
  
     public void run()
     {
-        api.subscribe("java.xml", this, "request");
+        api.subscribe("java.xml/get", this, "request");
         boolean running = true;
         while (running)
         {

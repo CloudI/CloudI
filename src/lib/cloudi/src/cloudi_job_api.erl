@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_api).
@@ -86,7 +86,8 @@
                               {"nodes",
                                {fun cloudi_nodes:nodes/1, 1}}]),
         formats = trie:new([{"erlang", fun format_erlang/4},
-                            {"json_rpc", fun format_json_rpc/4}])
+                            {"json_rpc", fun format_json_rpc/4}]),
+        suffix_index = undefined
     }).
  
 %%%------------------------------------------------------------------------
@@ -97,29 +98,39 @@
 %%% Callback functions from cloudi_job
 %%%------------------------------------------------------------------------
 
-cloudi_job_init(_Args, _Prefix, Dispatcher) ->
+cloudi_job_init(_Args, Prefix, Dispatcher) ->
     % names are [prefix]format/[method] (i.e., request format)
     cloudi_job:subscribe(Dispatcher, "erlang/acl_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/acl_add/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/acl_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/acl_remove/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/jobs_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs_add/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/jobs_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs_remove/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_add/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_remove/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_alive"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_alive/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes/post"),
     cloudi_job:subscribe(Dispatcher, "json_rpc/"),
-    {ok, #state{}}.
+    cloudi_job:subscribe(Dispatcher, "json_rpc//post"),
+    {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
 
 cloudi_job_handle_request(_Type, Name, Request, Timeout, _TransId, _Pid,
-                          #state{functions = Functions,
+                          #state{suffix_index = SuffixIndex,
+                                 functions = Functions,
                                  formats = Formats} = State, _Dispatcher) ->
-    {Path1, Method} = string2:splitr($/, Name),
-    {_, Format} = string2:splitr($/, Path1),
-    FunctionArity = if
-        Method == [] ->
+    {Format, Suffix} = string2:splitl($/, string:sub_string(Name, SuffixIndex)),
+    FunctionArity = case string2:beforel($/, Suffix, input) of
+        [] ->
             undefined;
-        true ->
+        Method ->
             trie:fetch(Method, Functions)
     end,
     FormatF = trie:fetch(Format, Formats),
