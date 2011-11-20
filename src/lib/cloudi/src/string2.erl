@@ -44,17 +44,29 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(string2).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([afterl/2, beforel/2, splitl/2,
-         afterr/2, beforer/2, splitr/2,
-         binary_to_term/1, list_to_term/1,
-         term_to_binary/1, term_to_list/1,
+-export([afterl/2,
+         afterl/3,
+         afterr/2,
+         afterr/3,
+         beforel/2,
+         beforel/3,
+         beforer/2,
+         beforer/3,
+         splitl/2,
+         splitl/3,
+         splitr/2,
+         splitr/3,
+         binary_to_term/1,
+         list_to_term/1,
+         term_to_binary/1,
+         term_to_list/1,
          format/2]).
 
 %%%------------------------------------------------------------------------
@@ -78,6 +90,26 @@ afterl(Char, [_ | Rest]) when is_integer(Char) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Return the string that occurs after a character, otherwise return based on the failure atom, when traversing left to right.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec afterl(Char :: pos_integer(),
+             Input :: string(), 'empty' | 'input') -> string().
+
+afterl(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    afterl(Char, Input);
+afterl(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    afterl_input(Char, Input, Input).
+afterl_input(_, [], Input) ->
+    Input;
+afterl_input(Char, [Char | Rest], _) ->
+    Rest;
+afterl_input(Char, [_ | Rest], Input) ->
+    afterl_input(Char, Rest, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Return the string that occurs after a character, otherwise return an empty string, when traversing right to left.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -85,13 +117,34 @@ afterl(Char, [_ | Rest]) when is_integer(Char) ->
 -spec afterr(Char :: pos_integer(), string()) -> string().
 
 afterr(Char, Input) when is_integer(Char), is_list(Input) ->
-    afterr([], Char, Input).
-afterr(L, _, []) ->
+    afterr_empty([], Char, Input).
+afterr_empty(L, _, []) ->
     L;
-afterr(_, Char, [Char | Rest]) ->
-    afterr(Rest, Char, Rest);
-afterr(L, Char, [_ | Rest]) ->
-    afterr(L, Char, Rest).
+afterr_empty(_, Char, [Char | Rest]) ->
+    afterr_empty(Rest, Char, Rest);
+afterr_empty(L, Char, [_ | Rest]) ->
+    afterr_empty(L, Char, Rest).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the string that occurs after a character, otherwise return based on the failure atom, when traversing right to left.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec afterr(Char :: pos_integer(), string(), 'empty' | 'input') -> string().
+
+afterr(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    afterr_empty([], Char, Input);
+afterr(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    afterr_input([], Char, Input, Input).
+afterr_input([], _, [], Input) ->
+    Input;
+afterr_input(L, _, [], _) ->
+    L;
+afterr_input(_, Char, [Char | Rest], Input) ->
+    afterr_input(Rest, Char, Rest, Input);
+afterr_input(L, Char, [_ | Rest], Input) ->
+    afterr_input(L, Char, Rest, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -102,13 +155,32 @@ afterr(L, Char, [_ | Rest]) ->
 -spec beforel(Char :: pos_integer(), string()) -> string().
 
 beforel(Char, Input) when is_integer(Char), is_list(Input) ->
-    beforel([], Char, Input).
-beforel(_, _, []) ->
+    beforel_empty([], Char, Input).
+beforel_empty(_, _, []) ->
     [];
-beforel(Before, Char, [Char | _]) when is_integer(Char) ->
+beforel_empty(Before, Char, [Char | _]) ->
     lists:reverse(Before);
-beforel(Before, Char, [H | Input]) when is_integer(Char) ->
-    beforel([H | Before], Char, Input).
+beforel_empty(Before, Char, [H | Input]) ->
+    beforel_empty([H | Before], Char, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the string that occurs before a character, otherwise return based on the failure atom, when traversing left to right.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec beforel(Char :: pos_integer(), string(), 'empty' | 'input') -> string().
+
+beforel(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    beforel_empty([], Char, Input);
+beforel(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    beforel_input([], Char, Input, Input).
+beforel_input(_, _, [], Input) ->
+    Input;
+beforel_input(Before, Char, [Char | _], _) ->
+    lists:reverse(Before);
+beforel_input(Before, Char, [H | Rest], Input) ->
+    beforel_input([H | Before], Char, Rest, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -119,52 +191,118 @@ beforel(Before, Char, [H | Input]) when is_integer(Char) ->
 -spec beforer(Char :: pos_integer(), string()) -> string().
 
 beforer(Char, Input) when is_integer(Char), is_list(Input) ->
-    beforer([], [], Char, Input).
-beforer(Before, _, _, []) ->
+    beforer_empty([], [], Char, Input).
+beforer_empty(Before, _, _, []) ->
     Before;
-beforer(Before, L, Char, [Char | Input]) ->
-    beforer(Before ++ lists:reverse(L), [Char], Char, Input);
-beforer(Before, L, Char, [H | Input]) ->
-    beforer(Before, [H | L], Char, Input).
+beforer_empty(Before, L, Char, [Char | Rest]) ->
+    beforer_empty(Before ++ lists:reverse(L), [Char], Char, Rest);
+beforer_empty(Before, L, Char, [H | Rest]) ->
+    beforer_empty(Before, [H | L], Char, Rest).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return the two strings split at the first occurrence of the character, when traversing left to right.===
+%% ===Return the string that occurs before a character, otherwise return based on the failure atom, when traversing right to left.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec beforer(Char :: pos_integer(), string(), 'empty' | 'input') -> string().
+
+beforer(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    beforer_empty([], [], Char, Input);
+beforer(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    beforer_input([], [], Char, Input, Input).
+beforer_input([], _, _, [], Input) ->
+    Input;
+beforer_input(Before, _, _, [], _) ->
+    Before;
+beforer_input(Before, L, Char, [Char | Rest], Input) ->
+    beforer_input(Before ++ lists:reverse(L), [Char], Char, Rest, Input);
+beforer_input(Before, L, Char, [H | Rest], Input) ->
+    beforer_input(Before, [H | L], Char, Rest, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing left to right.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec splitl(Char :: pos_integer(), string()) -> {string(), string()}.
 
 splitl(Char, Input) when is_integer(Char), is_list(Input) ->
-    splitl([], Char, Input).
-splitl(_, _, []) ->
+    splitl_empty([], Char, Input).
+splitl_empty(_, _, []) ->
     {[], []};
-splitl(Before, Char, [Char | Input]) when is_integer(Char) ->
-    {lists:reverse(Before), Input};
-splitl(Before, Char, [H | Input]) when is_integer(Char) ->
-    splitl([H | Before], Char, Input).
+splitl_empty(Before, Char, [Char | Rest]) ->
+    {lists:reverse(Before), Rest};
+splitl_empty(Before, Char, [H | Rest]) ->
+    splitl_empty([H | Before], Char, Rest).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return the two strings split at the first occurrence of the character, when traversing right to left.===
+%% ===Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing left to right.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec splitl(Char :: pos_integer(),
+             string(), 'empty' | 'input') -> {string(), string()}.
+
+splitl(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    splitl_empty([], Char, Input);
+splitl(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    splitl_input([], Char, Input, Input).
+splitl_input(_, _, [], Input) ->
+    {Input, []};
+splitl_input(Before, Char, [Char | Rest], _) ->
+    {lists:reverse(Before), Rest};
+splitl_input(Before, Char, [H | Rest], Input) ->
+    splitl_input([H | Before], Char, Rest, Input).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing right to left.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec splitr(Char :: pos_integer(), string()) -> {string(), string()}.
 
 splitr(Char, Input) when is_integer(Char), is_list(Input) ->
-    splitr([], [], Char, Input).
-splitr([Char | L1], [], Char, []) ->
+    splitr_empty([], [], Char, Input).
+splitr_empty([Char | L1], [], Char, []) ->
     {lists:reverse(L1), []};
-splitr(_, [], _, []) ->
+splitr_empty(_, [], _, []) ->
     {[], []};
-splitr(L1, L2, Char, []) ->
+splitr_empty(L1, L2, Char, []) ->
     [Char | NewL1] = lists:foldl(fun(_, [_ | L]) -> L end, L1, L2),
     {lists:reverse(NewL1), L2};
-splitr(L1, _, Char, [Char | Rest]) ->
-    splitr([Char | L1], Rest, Char, Rest);
-splitr(L1, L2, Char, [C | Rest]) ->
-    splitr([C | L1], L2, Char, Rest).
+splitr_empty(L1, _, Char, [Char | Rest]) ->
+    splitr_empty([Char | L1], Rest, Char, Rest);
+splitr_empty(L1, L2, Char, [C | Rest]) ->
+    splitr_empty([C | L1], L2, Char, Rest).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing right to left.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec splitr(Char :: pos_integer(), string(),
+             'empty' | 'input') -> {string(), string()}.
+
+splitr(Char, Input, empty) when is_integer(Char), is_list(Input) ->
+    splitr_empty([], [], Char, Input);
+splitr(Char, Input, input) when is_integer(Char), is_list(Input) ->
+    splitr_input([], [], Char, Input, Input).
+splitr_input([Char | L1], [], Char, [], _) ->
+    {lists:reverse(L1), []};
+splitr_input(_, [], _, [], Input) ->
+    {[], Input};
+splitr_input(L1, L2, Char, [], _) ->
+    [Char | NewL1] = lists:foldl(fun(_, [_ | L]) -> L end, L1, L2),
+    {lists:reverse(NewL1), L2};
+splitr_input(L1, _, Char, [Char | Rest], Input) ->
+    splitr_input([Char | L1], Rest, Char, Rest, Input);
+splitr_input(L1, L2, Char, [C | Rest], Input) ->
+    splitr_input([C | L1], L2, Char, Rest, Input).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_filesystem).
@@ -63,6 +63,8 @@
 
 -include("cloudi_logger.hrl").
 
+-define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % get as a name suffix
+
 -record(state,
     {
         directory,
@@ -79,27 +81,40 @@
 
 cloudi_job_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {directory,       undefined}],
-    [Directory] =
+        {directory,              undefined},
+        {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
+    [Directory, UseHttpGetSuffix] =
         proplists2:take_values(Defaults, Args),
     true = is_list(Directory),
-    Files = filelib:fold_files(Directory, ".*", true, fun(Name, D1) ->
-        {ok, Contents} = file:read_file(Name),
-        FilePath = case lists:split(erlang:length(Directory), Name) of
+    Files = filelib:fold_files(Directory, ".*", true, fun(FilePath, D1) ->
+        {ok, Contents} = file:read_file(FilePath),
+        FileName = case lists:split(erlang:length(Directory), FilePath) of
             {Directory, [$/ | S]} ->
                 S;
             {Directory, S} ->
                 S
         end,
         D2 = if
-            FilePath == "index.htm"; FilePath == "index.html" ->
-                cloudi_job:subscribe(Dispatcher, ""),
-                trie:store(Prefix, Contents, D1);
+            FileName == "index.htm"; FileName == "index.html" ->
+                if
+                    UseHttpGetSuffix =:= true ->
+                        cloudi_job:subscribe(Dispatcher, "/get"),
+                        trie:store(Prefix ++ "/get", Contents, D1);
+                    true ->
+                        cloudi_job:subscribe(Dispatcher, ""),
+                        trie:store(Prefix, Contents, D1)
+                end;
             true ->
                 D1
         end,
-        cloudi_job:subscribe(Dispatcher, FilePath),
-        trie:store(Prefix ++ FilePath, Contents, D2)
+        Name = if
+            UseHttpGetSuffix =:= true ->
+                FileName ++ "/get";
+            true ->
+                FileName
+        end,
+        cloudi_job:subscribe(Dispatcher, Name),
+        trie:store(Prefix ++ Name, Contents, D2)
     end, trie:new()),
     {ok, #state{directory = Directory,
                 files = Files}}.

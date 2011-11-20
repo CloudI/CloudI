@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the CloudI logger work with logrotate without special configuration
+    * Prevent any services from flooding the CloudI logger
+    * Fix ACL allow/deny for complex destinations
+    * Make HTTP method suffixes on service destinations on by default
+
 2011-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 0.1.8 (alpha) released

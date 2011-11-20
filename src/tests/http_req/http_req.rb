@@ -84,7 +84,7 @@ if __FILE__ == $PROGRAM_NAME
         end
         object = Task.new(api)
 
-        api.subscribe('ruby.xml', object.method(:request))
+        api.subscribe('ruby.xml/get', object.method(:request))
         api.poll
     }}
     threads.each{ |t| t.join}

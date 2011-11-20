@@ -10,8 +10,6 @@
     {api, ["/cloudi/api/"]}
 ]}.
 {jobs, [
-    % tests/hexpi/ services
-
     % an internal job is a native Erlang job, using the cloudi_job behavior
     % the job below provides a queue for specific database queries
     {internal,

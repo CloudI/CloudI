@@ -5,7 +5,17 @@
 %%% @doc
 %%% ==A trie data structure implementation.==
 %%% The trie (i.e., from "retrieval") data structure was invented by
-%%% Edward Fredkin (it is a form of radix sort).
+%%% Edward Fredkin (it is a form of radix sort).  The implementation stores
+%%% string suffixes as a list because it is a PATRICIA trie
+%%% (PATRICIA - Practical Algorithm to Retrieve Information
+%%%  Coded in Alphanumeric, D.R.Morrison (1968)).
+%%%
+%%% This Erlang trie implementation uses string (list of integers) keys and
+%%% is able to get performance close to the process dictionary when doing
+%%% key lookups (find or fetch, see http://okeuday.livejournal.com/16941.html).
+%%% Utilizing this trie, it is possible to avoid generating dynamic atoms
+%%% in various contexts.  Also, an added benefit to using this trie is that
+%%% the traversals preserve alphabetical ordering.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -46,7 +56,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -58,16 +68,23 @@
          erase/2,
          fetch/2,
          fetch_keys/1,
+         fetch_keys_similar/2,
          filter/2,
          find/2,
          find_prefix/2,
+         find_similar/2,
          fold/3,
          foldl/3,
          foldr/3,
+         fold_similar/4,
+         foldl_similar/4,
+         foldr_similar/4,
          foreach/2,
          from_list/1,
          is_key/2,
          is_prefix/2,
+         is_prefixed/2,
+         is_prefixed/3,
          iter/2,
          itera/3,
          map/2,
@@ -88,8 +105,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type trie() :: [] | {integer(), integer(), tuple()}.
 -type trie_return() :: {integer(), integer(), tuple()}.
+-type trie() :: [] | trie_return().
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -145,14 +162,14 @@ erase_node([H | T], {I0, I1, Data} = OldNode)
     if
         T == Node ->
             if
-                Value == error ->
+                Value =:= error ->
                     OldNode;
                 true ->
                     {I0, I1, erlang:setelement(I, Data, {[], error})}
             end;
-        T == [] ->
+        T =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     OldNode;
                 true ->
                     {I0, I1, erlang:setelement(I, Data, {Node, error})}
@@ -176,9 +193,9 @@ fetch([H], {I0, I1, Data})
     when is_integer(H), H >= I0, H =< I1 ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     if
-        is_tuple(Node); Node == [] ->
+        is_tuple(Node); Node =:= [] ->
             if
-                Value /= error ->
+                Value =/= error ->
                     Value
             end
     end;
@@ -189,7 +206,7 @@ fetch([H | T], {I0, I1, Data})
     case Node of
         {_, _, _} ->
             fetch(T, Node);
-        T when Value /= error ->
+        T when Value =/= error ->
             Value
     end.
 
@@ -203,6 +220,18 @@ fetch([H | T], {I0, I1, Data})
 
 fetch_keys(Node) ->
     foldr(fun(Key, _, L) -> [Key | L] end, [], Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fetch the keys within a trie that share a common prefix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec fetch_keys_similar(Similar :: string(),
+                         Node :: trie()) -> list(string()).
+
+fetch_keys_similar(Similar, Node) ->
+    foldr_similar(Similar, fun(Key, _, L) -> [Key | L] end, [], Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -231,9 +260,9 @@ filter_element(_, 0, _, _, Data) ->
 filter_element(F, I, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        Node == [] ->
+        Node =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     filter_element(F, I - 1, Offset, Key, Data);
                 true ->
                     case F(Key ++ [Offset + I], Value) of
@@ -244,13 +273,13 @@ filter_element(F, I, Offset, Key, Data) ->
                                 erlang:setelement(I, Data, {[], error}))
                     end
             end;
-        Value == error ->
+        Value =:= error ->
             filter_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
                 {filter_node(F, Key ++ [Offset + I], Node), Value}));
         true ->
             NewKey = Key ++ [Offset + I],
             if
-                is_list(Node) == true ->
+                is_list(Node) ->
                     case F(NewKey ++ Node, Value) of
                         true ->
                             filter_element(F, I - 1, Offset, Key, Data);
@@ -286,9 +315,9 @@ find([H], {I0, _, Data})
     when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     if
-        is_tuple(Node); Node == [] ->
+        is_tuple(Node); Node =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     error;
                 true ->
                     {ok, Value}
@@ -305,7 +334,7 @@ find([H | T], {I0, _, Data})
             find(T, Node);
         T ->
             if
-                Value == error ->
+                Value =:= error ->
                     error;
                 true ->
                     {ok, Value}
@@ -335,14 +364,14 @@ find_prefix([H], {I0, _, Data})
     if
         is_tuple(Node) ->
             if
-                Value == error ->
+                Value =:= error ->
                     prefix;
                 true ->
                     {ok, Value}
             end;
-        Node == [] ->
+        Node =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     error;
                 true ->
                     {ok, Value}
@@ -361,7 +390,7 @@ find_prefix([H | T], {I0, _, Data})
             prefix;
         T ->
             if
-                Value == error ->
+                Value =:= error ->
                     error;
                 true ->
                     {ok, Value}
@@ -377,6 +406,71 @@ find_prefix([H | T], {I0, _, Data})
 
 find_prefix(_, []) ->
     error.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the first key/value pair in a trie where the key shares a common prefix.===
+%% The first match is found based on alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_similar(Similar :: string(),
+                   Node :: trie()) -> {ok, string(), any()} | 'error'.
+
+find_similar([H | _], {I0, I1, _})
+    when H < I0; H > I1 ->
+    error;
+
+find_similar(_, []) ->
+    error;
+
+find_similar(Similar, Node) ->
+    find_similar_entry(Similar, [], error, Node).
+
+find_similar_entry([H | _], Key, LastValue, {I0, I1, _} = Node)
+    when H < I0; H > I1 ->
+    if
+        LastValue =:= error ->
+            find_similar_element(Key, Node);
+        true ->
+            {ok, Key, LastValue}
+    end;
+
+find_similar_entry([H] = Suffix, Key, _, {I0, _, Data} = Node)
+    when is_integer(H) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            NewKey = Key ++ Suffix,
+            if
+                Value =:= error ->
+                    find_similar_element(NewKey, ChildNode);
+                true ->
+                    {ok, NewKey, Value}
+            end;
+        Value =/= error, ChildNode =:= [] ->
+            {ok, Key ++ Suffix, Value};
+        true ->
+            find_similar_element(Key, Node)
+    end;
+
+find_similar_entry([H | T] = Suffix, Key, _, {I0, _, Data} = Node)
+    when is_integer(H) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            find_similar_entry(T, Key ++ [H], Value, ChildNode);
+        Value =/= error, ChildNode == T ->
+            {ok, Key ++ Suffix, Value};
+        true ->
+            find_similar_element(Key, Node)
+    end.
+
+find_similar_element(Key, Node) ->
+    {trie_itera_done, Result} = itera(fun(NewKey, Value, _, _) ->
+        {ok, NewKey, Value}
+    end, {trie_itera_done, error}, Key, Node),
+    Result.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -411,9 +505,9 @@ foldl_element(_, A, N, N, _, _, _) ->
 foldl_element(F, A, I, N, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     foldl_element(F, foldl(F, A, Key ++ [Offset + I], Node),
                         I + 1, N, Offset, Key, Data);
                 true ->
@@ -424,7 +518,7 @@ foldl_element(F, A, I, N, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     foldl_element(F, A,
                         I + 1, N, Offset, Key, Data);
                 true ->
@@ -459,9 +553,9 @@ foldr_element(_, A, 0, _, _, _) ->
 foldr_element(F, A, I, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     foldr_element(F, foldr(F, A, Key ++ [Offset + I], Node),
                         I - 1, Offset, Key, Data);
                 true ->
@@ -472,7 +566,7 @@ foldr_element(F, A, I, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     foldr_element(F, A,
                         I - 1, Offset, Key, Data);
                 true ->
@@ -480,6 +574,109 @@ foldr_element(F, A, I, Offset, Key, Data) ->
                         I - 1, Offset, Key, Data)
             end
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the keys within a trie that share a common prefix.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec fold_similar(Similar :: string(),
+                   F :: fun((string(), any(), any()) -> any()),
+                   A :: any(),
+                   Node :: trie()) -> any().
+
+fold_similar(Similar, F, A, Node) ->
+    foldl_similar(Similar, F, A, Node).
+
+-spec foldl_similar(Similar :: string(),
+                    F :: fun((string(), any(), any()) -> any()),
+                    A :: any(),
+                    Node :: trie()) -> any().
+
+foldl_similar([H | _], _, A, {I0, I1, _})
+    when H < I0; H > I1 ->
+    A;
+
+foldl_similar(_, _, A, []) ->
+    A;
+
+foldl_similar(Similar, F, A, Node) ->
+    fold_similar_node(Similar, foldl, F, A, [], error, Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the keys within a trie that share a common prefix in reverse.===
+%% Traverses in reverse alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec foldr_similar(Similar :: string(),
+                    F :: fun((string(), any(), any()) -> any()),
+                    A :: any(),
+                    Node :: trie()) -> any().
+
+foldr_similar([H | _], _, A, {I0, I1, _})
+    when H < I0; H > I1 ->
+    A;
+
+foldr_similar(_, _, A, []) ->
+    A;
+
+foldr_similar(Similar, F, A, Node) ->
+    fold_similar_node(Similar, foldr, F, A, [], error, Node).
+
+fold_similar_node([H | _], Fold, F, A, Key, LastValue, {I0, I1, _} = Node)
+    when H < I0; H > I1 ->
+    if
+        LastValue =:= error ->
+            fold_similar_element(Fold, F, A, Key, Node);
+        Fold =:= foldl ->
+            fold_similar_element(Fold, F, F(Key, LastValue, A), Key, Node);
+        Fold =:= foldr ->
+            F(Key, LastValue, fold_similar_element(Fold, F, A, Key, Node))
+    end;
+
+fold_similar_node([H] = Suffix, Fold, F, A, Key, _, {I0, _, Data} = Node)
+    when is_integer(H) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            NewKey = Key ++ Suffix,
+            if
+                Value =:= error ->
+                    fold_similar_element(Fold, F, A, NewKey, ChildNode);
+                Fold =:= foldl ->
+                    fold_similar_element(Fold, F, F(NewKey, Value, A),
+                                         NewKey, ChildNode);
+                Fold =:= foldr ->
+                    F(NewKey, Value,
+                      fold_similar_element(Fold, F, A, NewKey, ChildNode))
+            end;
+        Value =/= error, ChildNode =:= [] ->
+            F(Key ++ Suffix, Value, A);
+        true ->
+            fold_similar_element(Fold, F, A, Key, Node)
+    end;
+
+fold_similar_node([H | T] = Suffix, Fold, F, A, Key, _, {I0, _, Data} = Node)
+    when is_integer(H) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            fold_similar_node(T, Fold, F, A, Key ++ [H], Value, ChildNode);
+        Value =/= error, ChildNode == T ->
+            F(Key ++ Suffix, Value, A);
+        true ->
+            fold_similar_element(Fold, F, A, Key, Node)
+    end.
+
+fold_similar_element(foldl, F, A, Key, Node) ->
+    foldl(F, A, Key, Node);
+
+fold_similar_element(foldr, F, A, Key, Node) ->
+    foldr(F, A, Key, Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -506,9 +703,9 @@ foreach_element(_, N, N, _, _, _) ->
 foreach_element(F, I, N, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     foreach(F, Key ++ [Offset + I], Node),
                     foreach_element(F, I + 1, N, Offset, Key, Data);
                 true ->
@@ -519,7 +716,7 @@ foreach_element(F, I, N, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     foreach_element(F, I + 1, N, Offset, Key, Data);
                 true ->
                     F((Key ++ [Offset + I]) ++ Node, Value),
@@ -554,8 +751,8 @@ is_key([H], {I0, _, Data})
     when is_integer(H) ->
     {Node, Value} = erlang:element(H - I0 + 1, Data),
     if
-        is_tuple(Node); Node == [] ->
-            (Value /= error);
+        is_tuple(Node); Node =:= [] ->
+            (Value =/= error);
         true ->
             false
     end;
@@ -567,7 +764,7 @@ is_key([H | T], {I0, _, Data})
         {_, _, _} ->
             is_key(T, Node);
         T ->
-            (Value /= error);
+            (Value =/= error);
         _ ->
             false
     end;
@@ -577,7 +774,8 @@ is_key(_, []) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Determine if a prefix exists in a trie.===
+%% ===Determine if the prefix provided exists within a trie.===
+%% So, find a string within the trie that matches only the prefix supplied.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -593,13 +791,8 @@ is_prefix([H], {I0, _, Data})
     if
         is_tuple(Node) ->
             true;
-        Node == [] ->
-            if
-                Value == error ->
-                    false;
-                true ->
-                    true
-            end;
+        Node =:= [] ->
+            (Value =/= error);
         true ->
             true
     end;
@@ -613,17 +806,99 @@ is_prefix([H | T], {I0, _, Data})
         [] ->
             true;
         T ->
-            if
-                Value == error ->
-                    false;
-                true ->
-                    true
-            end;
+            (Value =/= error);
         L ->
             lists:prefix(T, L)
     end;
 
 is_prefix(_, []) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine if the provided string has a prefix within a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_prefixed(string(), trie()) -> 'true' | 'false'.
+
+is_prefixed([H | _], {I0, I1, _})
+    when H < I0; H > I1 ->
+    false;
+
+is_prefixed([H], {I0, _, Data})
+    when is_integer(H) ->
+    {_, Value} = erlang:element(H - I0 + 1, Data),
+    (Value =/= error);
+
+is_prefixed([H | T], {I0, _, Data})
+    when is_integer(H) ->
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _} = Node, error} ->
+            is_prefixed(T, Node);
+        {{_, _, _}, _} ->
+            true;
+        {_, error} ->
+            false;
+        {_, _} ->
+            true
+    end;
+
+is_prefixed(_, []) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine if the provided string has an acceptable prefix within a trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_prefixed(string(), string(), trie()) -> 'true' | 'false'.
+
+is_prefixed([H | _], _, {I0, I1, _})
+    when H < I0; H > I1 ->
+    false;
+
+is_prefixed([H], Exclude, {I0, _, Data})
+    when is_integer(H) ->
+    {_, Value} = erlang:element(H - I0 + 1, Data),
+    (not lists:member(H, Exclude)) andalso (Value =/= error);
+
+is_prefixed([H | T], Exclude, {I0, _, Data})
+    when is_integer(H) ->
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _} = Node, error} ->
+            is_prefixed(T, Exclude, Node);
+        {{_, _, _} = Node, _} ->
+            case lists:member(H, Exclude) of
+                true ->
+                    is_prefixed(T, Exclude, Node);
+                false ->
+                    true
+            end;
+        {_, error} ->
+            false;
+        {L, _} ->
+            case lists:member(H, Exclude) of
+                true ->
+                    is_prefixed_check(T, L, Exclude);
+                false ->
+                    true
+            end
+    end;
+
+is_prefixed(_, _, []) ->
+    false.
+
+is_prefixed_check([H | T1], [H | T2], Exclude) ->
+    case lists:member(H, Exclude) of
+        true ->
+            is_prefixed_check(T1, T2, Exclude);
+        false ->
+            true
+    end;
+
+is_prefixed_check(_, _, _) ->
     false.
 
 %%-------------------------------------------------------------------------
@@ -652,9 +927,9 @@ iter_element(_, N, N, _, _, _) ->
 iter_element(F, I, N, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     iter(F, Key ++ [Offset + I], Node),
                     iter_element(F, I + 1, N, Offset, Key, Data);
                 true ->
@@ -671,7 +946,7 @@ iter_element(F, I, N, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     iter_element(F, I + 1, N, Offset, Key, Data);
                 true ->
                     Iter = fun() ->
@@ -708,9 +983,9 @@ itera_element(_, {trie_itera_done, _} = ReturnValue, N, N, _, _, _) ->
 itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     itera_element(F,
                         itera(F, ReturnValue, Key ++ [Offset + I], Node),
                         I + 1, N, Offset, Key, Data);
@@ -729,7 +1004,7 @@ itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     itera_element(F, ReturnValue, I + 1, N, Offset, Key, Data);
                 true ->
                     Iter = fun(NewA) ->
@@ -774,18 +1049,18 @@ map_element(F, I, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     NewKey = Key ++ [Offset + I],
     if
-        Node == [] ->
+        Node =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     map_element(F, I - 1, Offset, Key, Data);
                 true ->
                     map_element(F, I - 1, Offset, Key,
                         erlang:setelement(I, Data, {Node, F(NewKey, Value)}))
             end;
-        Value == error ->
+        Value =:= error ->
             map_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
                 {map_node(F, NewKey, Node), Value}));
-        is_list(Node) == true ->
+        is_list(Node) =:= true ->
             map_element(F, I - 1, Offset, Key, erlang:setelement(I, Data,
                 {map_node(F, NewKey, Node), F(NewKey ++ Node, Value)}));
         true ->
@@ -845,7 +1120,7 @@ new_instance([Tuple | T], Node)
     when is_tuple(Tuple) ->
     FirstElement = erlang:element(1, Tuple),
     Key = if
-        is_atom(FirstElement) == true ->
+        is_atom(FirstElement) ->
             erlang:element(2, Tuple);
         true ->
             FirstElement
@@ -920,7 +1195,7 @@ store([H] = Key, NewValue, {I0, I1, Data})
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     if
-        is_tuple(Node); Node == [] ->
+        is_tuple(Node); Node =:= [] ->
             {I0, I1, erlang:setelement(I, Data, {Node, NewValue})};
         true ->
             NewNode = {I0, I1,
@@ -941,7 +1216,7 @@ store([H | T] = Key, NewValue, {I0, I1, Data})
             {I0, I1, erlang:setelement(I, Data, {Node, Value})};
         [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     {I0, I1, erlang:setelement(I, Data, {T, NewValue})};
                 true ->
                     {I0, I1, erlang:setelement(I, Data,
@@ -977,9 +1252,9 @@ to_list_element(L, I, Offset, Key, Data) ->
     {Node, Value} = erlang:element(I, Data),
     NewKey = Key ++ [Offset + I],
     if
-        is_list(Node) == false ->
+        is_list(Node) =:= false ->
             if
-                Value == error ->
+                Value =:= error ->
                     to_list_element(
                         to_list_node(L, NewKey, Node),
                         I - 1, Offset, Key, Data);
@@ -990,7 +1265,7 @@ to_list_element(L, I, Offset, Key, Data) ->
             end;
         true ->
             if
-                Value == error ->
+                Value =:= error ->
                     to_list_element(L, I - 1, Offset, Key, Data);
                 true ->
                     to_list_element([{NewKey ++ Node, Value} | L],
@@ -1013,7 +1288,7 @@ update([H], F, {I0, I1, Data})
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     if
-        is_tuple(Node); Node == [], Value /= error ->
+        is_tuple(Node); Node =:= [], Value =/= error ->
             {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
     end;
 
@@ -1025,7 +1300,7 @@ update([H | T], F, {I0, I1, Data})
         {_, _, _} ->
             {I0, I1, erlang:setelement(I, Data, {update(T, F, Node), Value})};
         T ->
-            true = Value /= error,
+            true = Value =/= error,
             {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
     end.
 
@@ -1063,9 +1338,9 @@ update([H] = Key, F, Initial, {I0, I1, Data})
     I = H - I0 + 1,
     {Node, Value} = erlang:element(I, Data),
     if
-        is_tuple(Node); Node == [] ->
+        is_tuple(Node); Node =:= [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     {I0, I1, erlang:setelement(I, Data, {Node, Initial})};
                 true ->
                     {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})}
@@ -1089,7 +1364,7 @@ update([H | T] = Key, F, Initial, {I0, I1, Data})
             {I0, I1, erlang:setelement(I, Data, {Node, F(Value)})};
         [] ->
             if
-                Value == error ->
+                Value =:= error ->
                     {I0, I1, erlang:setelement(I, Data, {T, Initial})};
                 true ->
                     {I0, I1, erlang:setelement(I, Data,
@@ -1267,6 +1542,31 @@ test() ->
     RootNode4 = trie:erase("a", trie:erase("aaaa", RootNode5)),
     true = trie:is_key("aaaa", RootNode5),
     false = trie:is_key("aaaa", RootNode4),
+    ["aa",
+     "aaa",
+     "aaaaaaaa",
+     "aaaaaaaaaaa"] = trie:fetch_keys_similar("aa", RootNode4),
+    ["aaa",
+     "aaaaaaaa",
+     "aaaaaaaaaaa"] = trie:fetch_keys_similar("aaac", RootNode4),
+    ["ab",
+     "aba"] = trie:fetch_keys_similar("abba", RootNode4),
+    ["aa",
+     "aaa",
+     "aaaaaaaa",
+     "aaaaaaaaaaa",
+     "ab",
+     "aba",
+     "ammmmmmm"] = trie:fetch_keys_similar("a", RootNode4),
+    [] = trie:fetch_keys_similar("b", RootNode4),
+    {ok, "aa", 1} = trie:find_similar("aa", RootNode4),
+    {ok, "aaa", 2} = trie:find_similar("aaac", RootNode4),
+    {ok, "aaaaaaaa", 3} = trie:find_similar("aaaa", RootNode4),
+    {ok, "ab", 5} = trie:find_similar("abba", RootNode4),
+    {ok, "aa", 1} = trie:find_similar("a", RootNode4),
+    true = trie:is_prefixed("abacus", RootNode4),
+    false = trie:is_prefixed("ac", RootNode4),
+    false = trie:is_prefixed("abacus", "ab", RootNode4),
     ok.
 
 %%%------------------------------------------------------------------------

@@ -65,7 +65,7 @@ public class Task implements Runnable
  
     public void run()
     {
-        api.subscribe("text", this, "text");
+        api.subscribe("text/post", this, "text");
         boolean running = true;
         while (running)
         {

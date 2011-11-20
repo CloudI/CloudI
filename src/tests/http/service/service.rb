@@ -79,7 +79,7 @@ if __FILE__ == $PROGRAM_NAME
         end
         object = Task.new(api)
 
-        api.subscribe("text", object.method(:text))
+        api.subscribe("text/post", object.method(:text))
         api.poll
     }}
     threads.each{ |t| t.join}

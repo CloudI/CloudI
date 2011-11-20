@@ -1,5 +1,5 @@
-%% Derived from the pg2 module in the OTP stdlib application
-%% (lib/kernel-2.14.2/src/pg2.erl)
+%% Derived from the pg2 module in the OTP kernel application
+%% (lib/kernel-x.x.x/src/pg2.erl)
 %% the pg2 module copyright is below:
 %%
 %% %CopyrightBegin%
@@ -42,6 +42,12 @@
 
 -include("list_pg_data.hrl").
 -include("cloudi_logger.hrl").
+
+-record(state,
+    {
+        groups = trie:new(),    % string() -> #list_pg_data{}
+        pids = dict:new()       % pid() -> list(string())
+    }).
 
 %%% monitors are used instead of links.
 
@@ -139,9 +145,6 @@ get_random_pid(Name, Exclude) when is_list(Name), is_pid(Exclude) ->
 %%%
 %%% Callback functions from gen_server
 %%%
-
--record(state, {groups = trie:new(),
-                pids = dict:new()}).
 
 -spec init([]) -> {'ok', #state{}}.
 

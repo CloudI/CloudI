@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -53,7 +53,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/1, reopen/0,
+-export([start_link/1,
          fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
 
 %% gen_server callbacks
@@ -62,13 +62,18 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_configuration.hrl").
+-include_lib("kernel/include/file.hrl").
 
 -record(state,
     {
         file_path,
         interface_module,
-        fd
+        fd,
+        inode
     }).
+
+%% prevent any process from flooding the logging process with messages
+-define(MIN_MICROSECONDS_PER_CALL, 10).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -84,17 +89,6 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Reopen the log files so that they can be rotated elsewhere.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec reopen() -> 'ok'.
-
-reopen() ->
-    gen_server:cast(?MODULE, reopen).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -210,13 +204,11 @@ trace(Process, Module, Line, Format, Args) ->
 
 init([#config_logging{level = Level,
                       file = FilePath}]) ->
-    case file:open(FilePath, [append, raw]) of
-        {ok, Fd} ->
-            case load_interface_module(Level) of
-                {ok, Binary} ->
-                    {ok, #state{file_path = FilePath,
-                                interface_module = Binary,
-                                fd = Fd}};
+    case load_interface_module(Level) of
+        {ok, Binary} ->
+            case log_open(FilePath, #state{interface_module = Binary}) of
+                {ok, _} = Success ->
+                    Success;
                 {error, Reason} ->
                     {stop, Reason}
             end;
@@ -227,28 +219,11 @@ init([#config_logging{level = Level,
 handle_call(Request, _, State) ->
     {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
 
-handle_cast(reopen, #state{file_path = FilePath, fd = Fd} = State) ->
-    file:close(Fd),
-    case file:rename(FilePath, filename:rootname(FilePath) ++ "-old.log") of
-        ok ->
-            case reopen_sasl() of
-                ok ->
-                    case file:open(FilePath, [append, raw]) of
-                        {ok, NewFd} ->
-                            {noreply, State#state{fd = NewFd}};
-                        {error, Reason} ->
-                            {stop, Reason, State#state{fd = undefined}}
-                    end;
-                {error, Reason} ->
-                    {stop, Reason, State#state{fd = undefined}}
-            end;
-        {error, Reason} ->
-            {stop, Reason, State#state{fd = undefined}}
-    end;
-
 handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
              Module, Line, Format, Args},
-            #state{fd = Fd} = State)
+            #state{file_path = FilePath,
+                   fd = OldFd,
+                   inode = OldInode} = State)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     Description = lists:map(fun(S) ->
@@ -264,9 +239,38 @@ handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
                               TimeHH, TimeMM, TimeSS, MicroSeconds,
                               level_to_string(Level),
                               Module, Line, Pid, Description]),
-    file:write(Fd, Message),
-    %file:sync(Fd),
-    {noreply, State};
+    case file:read_file_info(FilePath) of
+        {ok, FileInfo} ->
+            CurrentInode = FileInfo#file_info.inode,
+            if
+                CurrentInode == OldInode ->
+                    file:write(OldFd, Message),
+                    file:datasync(OldFd),
+                    {noreply, State};
+                true ->
+                    file:close(OldFd),
+                    case log_reopen(FilePath, CurrentInode, State) of
+                        {ok, #state{fd = NewFd} = NewState} ->
+                            file:write(NewFd, Message),
+                            file:datasync(NewFd),
+                            {noreply, NewState};
+                        {error, Reason} ->
+                            {stop, Reason, State#state{fd = undefined}}
+                    end
+            end;
+        {error, enoent} ->
+            file:close(OldFd),
+            case log_open(FilePath, State) of
+                {ok, #state{fd = NewFd} = NewState} ->
+                    file:write(NewFd, Message),
+                    file:datasync(NewFd),
+                    {noreply, NewState};
+                {error, Reason} ->
+                    {stop, Reason, State#state{fd = undefined}}
+            end;
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
 
 handle_cast(Request, State) ->
     {stop, string2:format("Unknown cast \"~p\"~n", [Request]), State}.
@@ -287,8 +291,62 @@ code_change(_, State, _) ->
 
 log_message(Process, Level, Module, Line, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line) ->
-    gen_server:cast(Process, {Level, erlang:now(), self(),
-                              Module, Line, Format, Args}).
+    Now = erlang:now(),
+    case flooding_logger(Now) of
+        true ->
+            ok;
+        false ->
+            gen_server:cast(Process, {Level, Now, self(),
+                                      Module, Line, Format, Args})
+    end.
+
+%% every 10 seconds, determine if the process has sent too many logging messages
+flooding_logger(Now2) ->
+    case erlang:get(cloudi_logger) of
+        undefined ->
+            erlang:put(cloudi_logger, {Now2, 1}),
+            false;
+        {Now1, Count1} ->
+            Count2 = Count1 + 1,
+            MicroSecondsElapsed = timer:now_diff(Now2, Now1),
+            if
+                MicroSecondsElapsed > 10000000 ->
+                    erlang:put(cloudi_logger, {Now2, 1}),
+                    false;
+                (MicroSecondsElapsed / Count2) < ?MIN_MICROSECONDS_PER_CALL ->
+                    erlang:put(cloudi_logger, {Now1, Count2}),
+                    true;
+                true ->
+                    erlang:put(cloudi_logger, {Now1, Count2}),
+                    false
+            end
+    end.
+
+log_open(FilePath, State) ->
+    case file:open(FilePath, [append, raw]) of
+        {ok, Fd} ->
+            case file:read_file_info(FilePath) of
+                {ok, FileInfo} ->
+                    Inode = FileInfo#file_info.inode,
+                    {ok, State#state{file_path = FilePath,
+                                     fd = Fd,
+                                     inode = Inode}};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+log_reopen(FilePath, Inode, State) ->
+    case file:open(FilePath, [append, raw]) of
+        {ok, Fd} ->
+            {ok, State#state{file_path = FilePath,
+                             fd = Fd,
+                             inode = Inode}};
+        {error, _} = Error ->
+            Error
+    end.
 
 level_to_string(fatal) ->
     "FATAL";
@@ -416,37 +474,5 @@ load_interface_module(Level) when is_atom(Level) ->
             {ok, Binary};
         {error, _} = Error ->
             Error
-    end.
-
-%% determine what types of events sasl wants to log
-%% taken from lib/erlang/lib/sasl-2.1.6/src/sasl.erl
-get_sasl_error_logger_type() ->
-    case application:get_env(sasl, errlog_type) of
-        {ok, error} ->
-            error;
-        {ok, progress} ->
-            progress;
-        {ok, all} ->
-            all;
-        {ok, Bad} ->
-            exit({bad_config, {sasl, {errlog_type, Bad}}});
-        _ ->
-            all
-    end.
-
-%% reopen the sasl log file after moving the file
-reopen_sasl() ->
-    case application:get_env(sasl, sasl_error_logger) of
-        {ok, {file, SASLFilePath}} ->
-            error_logger:delete_report_handler(sasl_report_file_h),
-            OldSASLFilePath = filename:rootname(SASLFilePath) ++ "-old.log",
-            Result = file:rename(SASLFilePath, OldSASLFilePath),
-            error_logger:add_report_handler(sasl_report_file_h,
-                {SASLFilePath, get_sasl_error_logger_type()}),
-            Result;
-        undefined ->
-            {error, "sasl sasl_error_logger application env not set"};
-        _ ->
-            {error, "sasl sasl_error_logger application env invalid"}
     end.
 

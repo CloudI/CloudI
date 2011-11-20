@@ -63,7 +63,7 @@ class _Task(threading.Thread):
 
     def run(self):
         #print "> 32 characters to test stdout<"
-        self.__api.subscribe("text", self.text)
+        self.__api.subscribe("text/post", self.text)
 
         running = True
         while running:
