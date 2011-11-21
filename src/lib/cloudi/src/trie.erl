@@ -828,8 +828,18 @@ is_prefixed([H | _], {I0, I1, _})
 
 is_prefixed([H], {I0, _, Data})
     when is_integer(H) ->
-    {_, Value} = erlang:element(H - I0 + 1, Data),
-    (Value =/= error);
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _}, error} ->
+            false;
+        {{_, _, _}, _} ->
+            true;
+        {_, error} ->
+            false;
+        {[], _} ->
+            true;
+        {_, _} ->
+            false
+    end;
 
 is_prefixed([H | T], {I0, _, Data})
     when is_integer(H) ->
@@ -840,8 +850,10 @@ is_prefixed([H | T], {I0, _, Data})
             true;
         {_, error} ->
             false;
+        {T, _} ->
+            true;
         {_, _} ->
-            true
+            false
     end;
 
 is_prefixed(_, []) ->
@@ -850,55 +862,68 @@ is_prefixed(_, []) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Determine if the provided string has an acceptable prefix within a trie.===
+%% The prefix within the trie must match at least 1 character that is not within the excluded list of characters.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec is_prefixed(string(), string(), trie()) -> 'true' | 'false'.
 
-is_prefixed([H | _], _, {I0, I1, _})
+is_prefixed(Key, Exclude, Node) ->
+    is_prefixed_match(Key, false, Exclude, Node).
+
+is_prefixed_match([H | _], _, _, {I0, I1, _})
     when H < I0; H > I1 ->
     false;
 
-is_prefixed([H], Exclude, {I0, _, Data})
+is_prefixed_match([H], Matched, Exclude, {I0, _, Data})
     when is_integer(H) ->
-    {_, Value} = erlang:element(H - I0 + 1, Data),
-    (not lists:member(H, Exclude)) andalso (Value =/= error);
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _}, error} ->
+            false;
+        {{_, _, _}, _} ->
+            Matched orelse (not lists:member(H, Exclude));
+        {_, error} ->
+            false;
+        {[], _} ->
+            Matched orelse (not lists:member(H, Exclude));
+        {_, _} ->
+            false
+    end;
 
-is_prefixed([H | T], Exclude, {I0, _, Data})
+is_prefixed_match([H | T], Matched, Exclude, {I0, _, Data})
     when is_integer(H) ->
     case erlang:element(H - I0 + 1, Data) of
         {{_, _, _} = Node, error} ->
-            is_prefixed(T, Exclude, Node);
+            is_prefixed_match(T, Matched orelse (not lists:member(H, Exclude)),
+                              Exclude, Node);
         {{_, _, _} = Node, _} ->
-            case lists:member(H, Exclude) of
+            case (Matched orelse (not lists:member(H, Exclude))) of
                 true ->
-                    is_prefixed(T, Exclude, Node);
+                    true;
                 false ->
-                    true
+                    is_prefixed_match(T, false, Exclude, Node)
             end;
         {_, error} ->
             false;
         {L, _} ->
-            case lists:member(H, Exclude) of
-                true ->
-                    is_prefixed_check(T, L, Exclude);
-                false ->
-                    true
-            end
+            is_prefixed_match_check(T, L,
+                                    Matched orelse
+                                    (not lists:member(H, Exclude)),
+                                    Exclude)
     end;
 
-is_prefixed(_, _, []) ->
+is_prefixed_match(_, _, _, []) ->
     false.
 
-is_prefixed_check([H | T1], [H | T2], Exclude) ->
-    case lists:member(H, Exclude) of
-        true ->
-            is_prefixed_check(T1, T2, Exclude);
-        false ->
-            true
-    end;
+is_prefixed_match_check([], [], Matched, _) ->
+    Matched;
 
-is_prefixed_check(_, _, _) ->
+is_prefixed_match_check([H | T1], [H | T2], Matched, Exclude) ->
+    is_prefixed_match_check(T1, T2,
+                            Matched orelse (not lists:member(H, Exclude)),
+                            Exclude);
+
+is_prefixed_match_check(_, _, _, _) ->
     false.
 
 %%-------------------------------------------------------------------------
