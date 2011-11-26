@@ -70,6 +70,7 @@ AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
+AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 
 # rebar dependency
 AC_CONFIG_COMMANDS([rebar],

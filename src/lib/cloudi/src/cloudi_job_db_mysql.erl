@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_mysql).
@@ -57,7 +57,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/8,
+         cloudi_job_handle_request/10,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -73,7 +73,7 @@
 -record(state,
     {
         process,
-        prepared_queries = rbdict:new()
+        prepared_queries = dict:new()
     }).
 
 -record(mysql_result, {fieldinfo = [], rows = [], affectedrows = 0,
@@ -186,7 +186,8 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
             {stop, Reason}
     end.
 
-cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
+cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
+                          Timeout, _Priority, _TransId, _Pid,
                           #state{process = Process,
                                  prepared_queries = Queries} = State,
                           _Dispatcher) ->
@@ -197,12 +198,12 @@ cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
             {reply, response_internal(Result, Request), State};
         {prepare, Identifier, String} ->
             {reply, ok,
-             State#state{prepared_queries = rbdict:update(Identifier,
+             State#state{prepared_queries = dict:update(Identifier,
                 fun({Version, _}) ->
                     {Version + 1, String}
                 end, {1, String}, Queries)}};
         {execute, Identifier, Arguments} ->
-            case rbdict:find(Identifier, Queries) of
+            case dict:find(Identifier, Queries) of
                 error ->
                     {reply, {error, "not prepared"}, State};
                 {ok, {Version, String}} ->

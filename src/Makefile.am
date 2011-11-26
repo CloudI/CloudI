@@ -123,8 +123,23 @@ clean-configure: config.log
 	find $(top_builddir)/tests \
          -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 
-dialyze: rebar
-	$(ESCRIPT) rebar dialyze || exit 0
+dialyze: all-local dialyzer.plt
+	$(DIALYZER) --plt dialyzer.plt \
+                -I lib/cloudi/include/ \
+                lib/cloudi/ebin/ \
+                external/epgsql/ebin \
+                external/etokyotyrant/ebin \
+                external/ememcached/ebin \
+                external/ecouchdb/ebin \
+                external/emysql/ebin \
+                external/misultin/ebin \
+                external/jsx/ebin \
+                external/erlzmq/ebin/
+
+dialyzer.plt:
+	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
+                --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
+                       compiler debugger ssl tools
 
 run:
 	@echo

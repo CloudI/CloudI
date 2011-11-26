@@ -63,6 +63,7 @@ import com.ericsson.otp.erlang.OtpErlangPid;
 import com.ericsson.otp.erlang.OtpErlangString;
 import com.ericsson.otp.erlang.OtpErlangBinary;
 import com.ericsson.otp.erlang.OtpErlangUInt;
+import com.ericsson.otp.erlang.OtpErlangInt;
 import com.ericsson.otp.erlang.OtpErlangTuple;
 
 public class API
@@ -82,10 +83,12 @@ public class API
     private FileDescriptor socket;
     private FileOutputStream output;
     private FileInputStream input;
-    private HashMap<String, Function6<Integer,
+    private HashMap<String, Function8<Integer,
                                       String,
                                       byte[],
+                                      byte[],
                                       Integer,
+                                      Byte,
                                       byte[],
                                       OtpErlangPid> > callbacks;
     private final int buffer_size;
@@ -99,10 +102,12 @@ public class API
         assert this.socket != null : (index + 3);
         this.output = new FileOutputStream(this.socket);
         this.input = new FileInputStream(this.socket);
-        this.callbacks = new HashMap<String, Function6<Integer,
+        this.callbacks = new HashMap<String, Function8<Integer,
                                                        String,
                                                        byte[],
+                                                       byte[],
                                                        Integer,
+                                                       Byte,
                                                        byte[],
                                                        OtpErlangPid> >();
         this.buffer_size = size;
@@ -122,10 +127,12 @@ public class API
                           final String methodName)
     {
         this.callbacks.put(this.prefix + name,
-                           new Function6<Integer,
+                           new Function8<Integer,
                                          String,
                                          byte[],
+                                         byte[],
                                          Integer,
+                                         Byte,
                                          byte[],
                                          OtpErlangPid>(instance, methodName));
         OtpOutputStream subscribe = new OtpOutputStream();
@@ -149,10 +156,12 @@ public class API
 
     public TransId send_async(String name, byte[] request)
     {
-        return send_async(name, request, this.timeout_async);
+        return send_async(name, ("").getBytes(), request,
+                          this.timeout_async, (byte) 0);
     }
 
-    public TransId send_async(String name, byte[] request, Integer timeout)
+    public TransId send_async(String name, byte[] requestInfo, byte[] request,
+                              Integer timeout, Byte priority)
     {
         try
         {
@@ -160,8 +169,10 @@ public class API
             send_async.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("send_async"),
                                              new OtpErlangString(name),
+                                             new OtpErlangBinary(requestInfo),
                                              new OtpErlangBinary(request),
-                                             new OtpErlangUInt(timeout)};
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority)};
             send_async.write_any(new OtpErlangTuple(tuple));
             send(send_async);
             return (TransId) poll();
@@ -175,10 +186,12 @@ public class API
 
     public Response send_sync(String name, byte[] request)
     {
-        return send_sync(name, request, this.timeout_sync);
+        return send_sync(name, ("").getBytes(), request,
+                         this.timeout_sync, (byte) 0);
     }
 
-    public Response send_sync(String name, byte[] request, Integer timeout)
+    public Response send_sync(String name, byte[] requestInfo, byte[] request,
+                              Integer timeout, Byte priority)
     {
         try
         {
@@ -186,8 +199,10 @@ public class API
             send_sync.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("send_sync"),
                                              new OtpErlangString(name),
+                                             new OtpErlangBinary(requestInfo),
                                              new OtpErlangBinary(request),
-                                             new OtpErlangUInt(timeout)};
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority)};
             send_sync.write_any(new OtpErlangTuple(tuple));
             send(send_sync);
             return (Response) poll();
@@ -201,12 +216,14 @@ public class API
 
     public List<TransId> mcast_async(String name, byte[] request)
     {
-        return mcast_async(name, request, this.timeout_async);
+        return mcast_async(name, new byte[0], request,
+                           this.timeout_async, (byte) 0);
     }
 
     @SuppressWarnings("unchecked")
-    public List<TransId> mcast_async(String name, byte[] request,
-                                     Integer timeout)
+    public List<TransId> mcast_async(String name,
+                                     byte[] requestInfo, byte[] request,
+                                     Integer timeout, Byte priority)
     {
         try
         {
@@ -214,8 +231,10 @@ public class API
             mcast_async.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("mcast_async"),
                                              new OtpErlangString(name),
+                                             new OtpErlangBinary(requestInfo),
                                              new OtpErlangBinary(request),
-                                             new OtpErlangUInt(timeout)};
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority)};
             mcast_async.write_any(new OtpErlangTuple(tuple));
             send(mcast_async);
             return (List<TransId>) poll();
@@ -228,18 +247,22 @@ public class API
     }
 
     public void forward_(Integer command,
-                         String name, byte[] response, Integer timeout,
+                         String name, byte[] requestInfo, byte[] request,
+                         Integer timeout, Byte priority,
                          byte[] transId, OtpErlangPid pid)
     {
         if (command == API.ASYNC)
-            forward_async(name, response, timeout, transId, pid);
+            forward_async(name, requestInfo, request,
+                          timeout, priority, transId, pid);
         else if (command == API.SYNC)
-            forward_sync(name, response, timeout, transId, pid);
+            forward_sync(name, requestInfo, request,
+                         timeout, priority, transId, pid);
         else
             assert false : command;
     }
 
-    public void forward_async(String name, byte[] response, Integer timeout,
+    public void forward_async(String name, byte[] requestInfo, byte[] request,
+                              Integer timeout, Byte priority,
                               byte[] transId, OtpErlangPid pid)
     {
         try
@@ -248,8 +271,10 @@ public class API
             forward_async.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_async"),
                                              new OtpErlangString(name),
-                                             new OtpErlangBinary(response),
+                                             new OtpErlangBinary(requestInfo),
+                                             new OtpErlangBinary(request),
                                              new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority),
                                              new OtpErlangBinary(transId), pid};
             forward_async.write_any(new OtpErlangTuple(tuple));
             send(forward_async);
@@ -261,7 +286,8 @@ public class API
         }
     }
 
-    public void forward_sync(String name, byte[] response, Integer timeout,
+    public void forward_sync(String name, byte[] requestInfo, byte[] request,
+                             Integer timeout, Byte priority,
                              byte[] transId, OtpErlangPid pid)
     {
         try
@@ -270,8 +296,10 @@ public class API
             forward_sync.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_sync"),
                                              new OtpErlangString(name),
-                                             new OtpErlangBinary(response),
+                                             new OtpErlangBinary(requestInfo),
+                                             new OtpErlangBinary(request),
                                              new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority),
                                              new OtpErlangBinary(transId), pid};
             forward_sync.write_any(new OtpErlangTuple(tuple));
             send(forward_sync);
@@ -284,20 +312,20 @@ public class API
     }
 
     public void return_(Integer command,
-                        String name, byte[] response, Integer timeout,
-                        byte[] transId, OtpErlangPid pid)
+                        String name, byte[] responseInfo, byte[] response,
+                        Integer timeout, byte[] transId, OtpErlangPid pid)
                         throws ReturnAsyncException, ReturnSyncException
     {
         if (command == API.ASYNC)
-            return_async(name, response, timeout, transId, pid);
+            return_async(name, responseInfo, response, timeout, transId, pid);
         else if (command == API.SYNC)
-            return_sync(name, response, timeout, transId, pid);
+            return_sync(name, responseInfo, response, timeout, transId, pid);
         else
             assert false : command;
     }
 
-    public void return_async(String name, byte[] response, Integer timeout,
-                             byte[] transId, OtpErlangPid pid)
+    public void return_async(String name, byte[] responseInfo, byte[] response,
+                             Integer timeout, byte[] transId, OtpErlangPid pid)
                              throws ReturnAsyncException
     {
         try
@@ -306,6 +334,7 @@ public class API
             return_async.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("return_async"),
                                              new OtpErlangString(name),
+                                             new OtpErlangBinary(responseInfo),
                                              new OtpErlangBinary(response),
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangBinary(transId), pid};
@@ -320,8 +349,8 @@ public class API
         }
     }
 
-    public void return_sync(String name, byte[] response, Integer timeout,
-                            byte[] transId, OtpErlangPid pid)
+    public void return_sync(String name, byte[] responseInfo, byte[] response,
+                            Integer timeout, byte[] transId, OtpErlangPid pid)
                             throws ReturnSyncException
     {
         try
@@ -330,6 +359,7 @@ public class API
             return_sync.write(OtpExternal.versionTag);
             final OtpErlangObject[] tuple = {new OtpErlangAtom("return_sync"),
                                              new OtpErlangString(name),
+                                             new OtpErlangBinary(responseInfo),
                                              new OtpErlangBinary(response),
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangBinary(transId), pid};
@@ -364,36 +394,46 @@ public class API
         }
     }
 
-    private void callback(int command, String name, byte[] request,
-                          Integer timeout, byte[] transId, OtpErlangPid pid)
+    private void callback(int command, String name,
+                          byte[] requestInfo, byte[] request,
+                          Integer timeout, Byte priority,
+                          byte[] transId, OtpErlangPid pid)
     {
         if (command == MESSAGE_SEND_ASYNC)
         {
             try
             {
                 Object response = this.callbacks.get(name)
-                                      .invoke(API.ASYNC, name, request,
-                                              timeout, transId, pid);
-                if (response.getClass() == byte[].class)
+                                      .invoke(API.ASYNC, name,
+                                              requestInfo, request,
+                                              timeout, priority, transId, pid);
+                if (response.getClass() == byte[][].class)
                 {
-                    return_async(name, (byte[]) response,
+                    byte [][] responseArray = (byte[][]) response;
+                    assert responseArray.length == 2 : "invalid response";
+                    return_async(name,
+                                 responseArray[0],
+                                 responseArray[1],
+                                 timeout, transId, pid);
+                    
+                }
+                else if (response.getClass() == byte[].class)
+                {
+                    return_async(name,
+                                 ("").getBytes(),
+                                 (byte[]) response,
                                  timeout, transId, pid);
                 }
                 else
                 {
-                    return_async(name, response.toString().getBytes(),
+                    return_async(name,
+                                 ("").getBytes(),
+                                 response.toString().getBytes(),
                                  timeout, transId, pid);
                 }
-                // to force the sync catch below to be valid
-                return_sync(name, ("").getBytes(), timeout, transId, pid);
             }
             catch (ReturnAsyncException e)
             {
-                return;
-            }
-            catch (ReturnSyncException e)
-            {
-                e.printStackTrace();
                 return;
             }
             catch (Throwable e)
@@ -407,28 +447,36 @@ public class API
             try
             {
                 Object response = this.callbacks.get(name)
-                                      .invoke(API.SYNC, name, request,
-                                              timeout, transId, pid);
-                if (response.getClass() == byte[].class)
+                                      .invoke(API.SYNC, name,
+                                              requestInfo, request,
+                                              timeout, priority, transId, pid);
+                if (response.getClass() == byte[][].class)
                 {
-                    return_sync(name, (byte[]) response,
+                    byte [][] responseArray = (byte[][]) response;
+                    assert responseArray.length == 2 : "invalid response";
+                    return_sync(name,
+                                responseArray[0],
+                                responseArray[1],
+                                timeout, transId, pid);
+                    
+                }
+                else if (response.getClass() == byte[].class)
+                {
+                    return_sync(name,
+                                ("").getBytes(),
+                                (byte[]) response,
                                 timeout, transId, pid);
                 }
                 else
                 {
-                    return_sync(name, response.toString().getBytes(),
+                    return_sync(name,
+                                ("").getBytes(),
+                                response.toString().getBytes(),
                                 timeout, transId, pid);
                 }
-                // to force the async catch below to be valid
-                return_async(name, ("").getBytes(), timeout, transId, pid);
             }
             catch (ReturnSyncException e)
             {
-                return;
-            }
-            catch (ReturnAsyncException e)
-            {
-                e.printStackTrace();
                 return;
             }
             catch (Throwable e)
@@ -468,26 +516,35 @@ public class API
                     {
                         int nameSize = buffer.getInt();
                         String name = API.getString(buffer, nameSize);
+                        int requestInfoSize = buffer.getInt();
+                        byte[] requestInfo = API.getBytes(buffer,
+                                                          requestInfoSize);
+                        buffer.get();
                         int requestSize = buffer.getInt();
                         byte[] request = API.getBytes(buffer, requestSize);
                         buffer.get();
                         int timeout = buffer.getInt();
+                        byte priority = buffer.get();
                         byte[] transId = API.getBytes(buffer, 16);
                         int pidSize = buffer.getInt();
                         OtpErlangPid pid = API.getPid(buffer, pidSize);
                         assert ! buffer.hasRemaining() : "extra data";
-                        callback(command, name, request, timeout, transId, pid);
+                        callback(command, name, requestInfo, request,
+                                 timeout, priority, transId, pid);
                         break;
                     }
                     case MESSAGE_RECV_ASYNC:
                     case MESSAGE_RETURN_SYNC:
                     {
+                        int responseInfoSize = buffer.getInt();
+                        byte[] responseInfo = API.getBytes(buffer,
+                                                           responseInfoSize);
                         int responseSize = buffer.getInt();
                         byte[] response = API.getBytes(buffer, responseSize);
                         buffer.get();
                         byte[] transId = API.getBytes(buffer, 16);
                         assert ! buffer.hasRemaining() : "extra data";
-                        return new Response(response, transId);
+                        return new Response(responseInfo, response, transId);
                     }
                     case MESSAGE_RETURN_ASYNC:
                     {
@@ -681,11 +738,13 @@ public class API
 
     public class Response
     {
+        public final byte[] responseInfo;
         public final byte[] response;
         public final byte[] id;
 
-        Response(byte[] resp, byte[] transId)
+        Response(byte[] info, byte[] resp, byte[] transId)
         {
+            this.responseInfo = info;
             this.response = resp;
             this.id = transId;
         }
@@ -704,6 +763,8 @@ public class API
         {
             StringBuilder result = new StringBuilder();
             result.append("('");
+            result.append(new String(this.responseInfo));
+            result.append("', '");
             result.append(new String(this.response));
             result.append("', '");
             result.append(new String(this.id));

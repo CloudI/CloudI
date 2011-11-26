@@ -41,7 +41,7 @@
 
 __all__ = ["API"]
 
-import sys, os, struct, socket, select, threading, inspect
+import sys, os, types, struct, socket, select, threading, inspect
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
 
@@ -70,7 +70,7 @@ class API(object):
 
     def subscribe(self, name, Function):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
-        assert len(args) == 7 # self + arguments, so a non-static method
+        assert len(args) == 9 # self + arguments, so a non-static method
         self.__callbacks[self.__prefix + name] = Function
         self.__s.sendall(term_to_binary((OtpErlangAtom("subscribe"), name)))
 
@@ -78,66 +78,100 @@ class API(object):
         del self.__callbacks[self.__prefix + name]
         self.__s.sendall(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
 
-    def send_async_(self, name, request):
-        return self.send_async(name, request, self.__timeout_async)
-
-    def send_async(self, name, request, timeout):
+    def send_async(self, name, request,
+                   timeout=None, request_info=None, priority=None):
+        if timeout is None:
+            timeout = self.__timeout_async
+        if request_info is None:
+            request_info = ''
+        if priority is None:
+            priority = 0
         self.__s.sendall(term_to_binary((OtpErlangAtom("send_async"), name,
-                                         OtpErlangBinary(request), timeout)))
+                                         OtpErlangBinary(request_info),
+                                         OtpErlangBinary(request),
+                                         timeout, priority)))
         return self.poll()
 
-    def send_sync_(self, name, request):
-        return self.send_sync(name, request, self.__timeout_sync)
-
-    def send_sync(self, name, request, timeout):
+    def send_sync(self, name, request,
+                  timeout=None, request_info=None, priority=None):
+        if timeout is None:
+            timeout = self.__timeout_async
+        if request_info is None:
+            request_info = ''
+        if priority is None:
+            priority = 0
         self.__s.sendall(term_to_binary((OtpErlangAtom("send_sync"), name,
-                                         OtpErlangBinary(request), timeout)))
+                                         OtpErlangBinary(request_info),
+                                         OtpErlangBinary(request),
+                                         timeout, priority)))
         return self.poll()
 
-    def mcast_async_(self, name, request):
-        return self.mcast_async(name, request, self.__timeout_async)
-
-    def mcast_async(self, name, request, timeout):
+    def mcast_async(self, name, request,
+                    timeout=None, request_info=None, priority=None):
+        if timeout is None:
+            timeout = self.__timeout_async
+        if request_info is None:
+            request_info = ''
+        if priority is None:
+            priority = 0
         self.__s.sendall(term_to_binary((OtpErlangAtom("mcast_async"), name,
-                                         OtpErlangBinary(request), timeout)))
+                                         OtpErlangBinary(request_info),
+                                         OtpErlangBinary(request),
+                                         timeout, priority)))
         return self.poll()
 
-    def forward_(self, command, name, request, timeout, transId, pid):
+    def forward_(self, command, name, request_info, request,
+                 timeout, priority, transId, pid):
         if command == API.__ASYNC:
-            self.forward_async(name, request, timeout, transId, pid)
+            self.forward_async(name, request_info, request,
+                               timeout, priority, transId, pid)
         elif command == API.__SYNC:
-            self.forward_sync(name, request, timeout, transId, pid)
+            self.forward_sync(name, request_info, request,
+                              timeout, priority, transId, pid)
         else:
             assert False
 
-    def forward_async(self, name, request, timeout, transId, pid):
+    def forward_async(self, name, request_info, request,
+                      timeout, priority, transId, pid):
         self.__s.sendall(term_to_binary((OtpErlangAtom("forward_async"), name,
-                                         OtpErlangBinary(request), timeout,
+                                         OtpErlangBinary(request_info),
+                                         OtpErlangBinary(request),
+                                         timeout, priority,
                                          OtpErlangBinary(transId), pid)))
         raise _return_async_exception()
 
-    def forward_sync(self, name, request, timeout, transId, pid):
+    def forward_sync(self, name, request_info, request,
+                     timeout, priority, transId, pid):
         self.__s.sendall(term_to_binary((OtpErlangAtom("forward_sync"), name,
-                                         OtpErlangBinary(request), timeout,
+                                         OtpErlangBinary(request_info),
+                                         OtpErlangBinary(request),
+                                         timeout, priority,
                                          OtpErlangBinary(transId), pid)))
         raise _return_sync_exception()
 
-    def return_(self, command, name, response, timeout, transId, pid):
+    def return_(self, command, name, response_info, response,
+                timeout, transId, pid):
         if command == API.__ASYNC:
-            self.return_async(name, response, timeout, transId, pid)
+            self.return_async(name, response_info, response,
+                              timeout, transId, pid)
         elif command == API.__SYNC:
-            self.return_sync(name, response, timeout, transId, pid)
+            self.return_sync(name, response_info, response,
+                             timeout, transId, pid)
         else:
             assert False
 
-    def return_async(self, name, response, timeout, transId, pid):
+    def return_async(self, name, response_info, response,
+                     timeout, transId, pid):
         self.__s.sendall(term_to_binary((OtpErlangAtom("return_async"), name,
+                                         OtpErlangBinary(response_info),
                                          OtpErlangBinary(response), timeout,
                                          OtpErlangBinary(transId), pid)))
         raise _return_async_exception()
 
-    def return_sync(self, name, response, timeout, transId, pid):
+    def return_sync(self, name, response_info, response,
+                    timeout, transId, pid):
         self.__s.sendall(term_to_binary((OtpErlangAtom("return_sync"), name,
+                                         OtpErlangBinary(response_info),
                                          OtpErlangBinary(response), timeout,
                                          OtpErlangBinary(transId), pid)))
         raise _return_sync_exception()
@@ -147,33 +181,48 @@ class API(object):
                                          OtpErlangBinary(transId))))
         return self.poll()
 
-    def __callback(self, command, name, request, timeout, transId, pid):
+    def __callback(self, command, name, requestInfo, request,
+                   timeout, priority, transId, pid):
         function = self.__callbacks.get(name, None)
         assert function is not None
         if command == _MESSAGE_SEND_ASYNC:
             try:
-                response = function(API.__ASYNC, name, request,
-                                    timeout, transId, pid)
+                response = function(API.__ASYNC, name, requestInfo, request,
+                                    timeout, priority, transId, pid)
+                if type(response) == types.TupleType:
+                    responseInfo, response = response
+                else:
+                    responseInfo = ''
             except _return_async_exception:
                 return
             except _return_sync_exception:
                 assert False
                 return
             except:
-                response = '' # exception is ignored at this level
-            self.return_async(name, response, timeout, transId, pid)
+                # exception is ignored at this level
+                responseInfo = ''
+                response = ''
+            self.return_async(name, responseInfo, response,
+                              timeout, transId, pid)
         elif command == _MESSAGE_SEND_SYNC:
             try:
-                response = function(API.__SYNC, name, request,
-                                    timeout, transId, pid)
+                response = function(API.__SYNC, name, requestInfo, request,
+                                    timeout, priority, transId, pid)
+                if type(response) == types.TupleType:
+                    responseInfo, response = response
+                else:
+                    responseInfo = ''
             except _return_sync_exception:
                 return
             except _return_async_exception:
                 assert False
                 return
             except:
-                response = '' # exception is ignored at this level
-            self.return_sync(name, response, timeout, transId, pid)
+                # exception is ignored at this level
+                responseInfo = ''
+                response = ''
+            self.return_sync(name, responseInfo, response,
+                             timeout, transId, pid)
         else:
             assert False
 
@@ -216,26 +265,36 @@ class API(object):
                 nameSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + nameSize + 4
                 (name, nullTerminator,
-                 requestSize) = struct.unpack("=%dscI" % (nameSize - 1),
+                 requestInfoSize) = struct.unpack("=%dscI" % (nameSize - 1),
+                                                  data[i:j])
+                i, j = j, j + requestInfoSize + 1 + 4
+                (requestInfo, nullTerminator,
+                 requestSize) = struct.unpack("=%dscI" % requestInfoSize,
                                               data[i:j])
-                i, j = j, j + requestSize + 1 + 4 + 16 + 4
-                (request, nullTerminator, timeout, transId,
-                 pidSize) = struct.unpack("=%dscI16sI" % requestSize, data[i:j])
+                i, j = j, j + requestSize + 1 + 4 + 1 + 16 + 4
+                (request, nullTerminator, timeout, priority, transId,
+                 pidSize) = struct.unpack("=%dscIb16sI" % requestSize,
+                                          data[i:j])
                 i, j = j, j + pidSize
                 pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
                 assert j == len(data)
                 data = ''
-                self.__callback(command, name, request, timeout, transId,
+                self.__callback(command, name, requestInfo, request,
+                                timeout, priority, transId,
                                 binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
-                responseSize = struct.unpack("=I", data[i:j])[0]
+                responseInfoSize = struct.unpack("=I", data[i:j])[0]
+                i, j = j, j + requestInfoSize + 1 + 4
+                (responseInfo, nullTerminator,
+                 responseSize) = struct.unpack("=%dscI" % responseInfoSize,
+                                               data[i:j])
                 i, j = j, j + responseSize + 1 + 16
                 assert j == len(data)
-                (request, nullTerminator,
+                (response, nullTerminator,
                  transId) = struct.unpack("=%dsc16s" % responseSize, data[i:j])
-                return (request, transId)
+                return (responseInfo, response, transId)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
                 assert j == len(data)

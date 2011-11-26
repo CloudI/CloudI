@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-11-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add priorities to CloudI messages
+    * Add both request_info and response_info to CloudI messages (not yet used)
+    * Fix a bug with C/C++ CloudI API data handling.
+
 2011-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make the CloudI logger work with logrotate without special configuration

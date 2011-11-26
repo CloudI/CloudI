@@ -57,7 +57,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/8,
+         cloudi_job_handle_request/10,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -119,7 +119,8 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
     {ok, #state{directory = Directory,
                 files = Files}}.
 
-cloudi_job_handle_request(_Type, Name, _Request, _Timeout, _TransId, _Pid,
+cloudi_job_handle_request(_Type, Name, _RequestInfo, _Request,
+                          _Timeout, _Priority, _TransId, _Pid,
                           #state{files = Files} = State, _Dispatcher) ->
     {reply, trie:fetch(Name, Files), State}.
 

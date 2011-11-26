@@ -43,7 +43,7 @@ import sys, os
 sys.path.append(
     os.path.sep.join(
         os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-2] + ["api", "python"]
+               .split(os.path.sep)[:-2] + ['api', 'python']
     )
 )
 
@@ -55,7 +55,8 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(index, protocol, size)
 
-    def request(self, command, name, request, timeout, transId, pid):
+    def request(self, command, name, requestInfo, request,
+                timeout, priority, transId, pid):
         http_qs = self.__api.request_http_qs_parse(request)
         value = http_qs.get('value', None)
         if value is None:
@@ -64,10 +65,10 @@ class _Task(threading.Thread):
         else:
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
-        self.__api.return_(command, name, response, timeout, transId, pid)
+        self.__api.return_(command, name, '', response, timeout, transId, pid)
 
     def run(self):
-        self.__api.subscribe("python.xml/get", self.request)
+        self.__api.subscribe('python.xml/get', self.request)
 
         running = True
         while running:
@@ -75,17 +76,17 @@ class _Task(threading.Thread):
             if result is None:
                 running = False
             else:
-                print "(python) received:",result
-        print "exited thread"
+                print '(python) received:',result
+        print 'exited thread'
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print >> sys.stderr, "Usage: %s thread_count protocol buffer_size" % (
+        print >> sys.stderr, 'Usage: %s thread_count protocol buffer_size' % (
                                  sys.argv[0],
                              )
         sys.exit(-1)
     thread_count = int(sys.argv[1])
-    if sys.argv[2] == "udp":
+    if sys.argv[2] == 'udp':
         protocol = socket.SOCK_DGRAM
     else:
         protocol = socket.SOCK_STREAM

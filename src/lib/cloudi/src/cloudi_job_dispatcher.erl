@@ -159,90 +159,109 @@ handle_call({'get_pid', Name, Timeout}, {Exclude, _} = Client,
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'send_async', Name, Request}, Client,
+handle_call({'send_async', Name, RequestInfo, Request}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
-    handle_call({'send_async', Name, Request, TimeoutAsync}, Client, State);
+    handle_call({'send_async', Name, RequestInfo, Request,
+                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
 
-handle_call({'send_async', Name, Request, Timeout}, Client,
+handle_call({'send_async', Name, RequestInfo, Request,
+             Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            handle_send_async(Name, Request, Timeout, Client, State);
+            handle_send_async(Name, RequestInfo, Request,
+                              Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'send_async', Name, Request, Timeout, Pid}, _,
+handle_call({'send_async', Name, RequestInfo, Request,
+             Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+    Pid ! {'send_async', Name, RequestInfo, Request,
+           Timeout, Priority, TransId, self()},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
 
-handle_call({'send_async_active', Name, Request}, Client,
+handle_call({'send_async_active', Name, RequestInfo, Request}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
-    handle_call({'send_async_active', Name, Request, TimeoutAsync}, Client,
-                State);
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
 
-handle_call({'send_async_active', Name, Request, Timeout}, Client,
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            handle_send_async_active(Name, Request, Timeout, Client, State);
+            handle_send_async_active(Name, RequestInfo, Request,
+                                     Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'send_async_active', Name, Request, Timeout, Pid}, _,
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+    Pid ! {'send_async', Name, RequestInfo, Request,
+           Timeout, Priority, TransId, self()},
     {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
                                                            TransId, State)};
 
-handle_call({'send_sync', Name, Request}, Client,
+handle_call({'send_sync', Name, RequestInfo, Request}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
-    handle_call({'send_sync', Name, Request, TimeoutSync}, Client, State);
+    handle_call({'send_sync', Name, RequestInfo, Request,
+                 TimeoutSync, ?PRIORITY_DEFAULT}, Client, State);
 
-handle_call({'send_sync', Name, Request, Timeout}, Client,
+handle_call({'send_sync', Name, RequestInfo, Request,
+             Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            handle_send_sync(Name, Request, Timeout, Client, State);
+            handle_send_sync(Name, RequestInfo, Request,
+                             Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'send_sync', Name, Request, Timeout, Pid}, _,
+handle_call({'send_sync', Name, RequestInfo, Request,
+             Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
     Self = self(),
-    Pid ! {'send_sync', Name, Request, Timeout - ?TIMEOUT_DELTA, TransId, Self},
+    Pid ! {'send_sync', Name, RequestInfo, Request,
+           Timeout - ?TIMEOUT_DELTA, Priority, TransId, Self},
     receive
-        {'return_sync', Name, Response, _, TransId, Self} ->
+        {'return_sync', _, ResponseInfo, Response, _, TransId, Self} ->
             if
                 Response == <<>> ->
                     {reply, {error, timeout}, State};
+                ResponseInfo == <<>> ->
+                    {reply, {ok, Response}, State};
                 true ->
-                    {reply, {ok, Response}, State}
+                    {reply, {ok, ResponseInfo, Response}, State}
             end
     after
         Timeout ->
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'mcast_async', Name, Request}, Client,
+handle_call({'mcast_async', Name, RequestInfo, Request}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
-    handle_call({'mcast_async', Name, Request, TimeoutAsync}, Client, State);
+    handle_call({'mcast_async', Name, RequestInfo, Request,
+                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
 
-handle_call({'mcast_async', Name, Request, Timeout}, Client,
+handle_call({'mcast_async', Name, RequestInfo, Request,
+             Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            handle_mcast_async(Name, Request, Timeout, Client, State);
+            handle_mcast_async(Name, RequestInfo, Request,
+                               Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
     end;
@@ -260,9 +279,13 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                     {noreply, State};
                 [] ->
                     {reply, {error, timeout}, State};
-                [{TransIdUsed, Response} | _] ->
+                [{TransIdUsed, {<<>>, Response}} | _] ->
                     NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
                     {reply, {ok, Response},
+                     State#state{async_responses = NewAsyncResponses}};
+                [{TransIdUsed, {ResponseInfo, Response}} | _] ->
+                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
+                    {reply, {ok, ResponseInfo, Response},
                      State#state{async_responses = NewAsyncResponses}}
             end;
         true ->
@@ -275,9 +298,13 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                     {noreply, State};
                 error ->
                     {reply, {error, timeout}, State};
-                {ok, Response} ->
+                {ok, {<<>>, Response}} ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     {reply, {ok, Response},
+                     State#state{async_responses = NewAsyncResponses}};
+                {ok, {ResponseInfo, Response}} ->
+                    NewAsyncResponses = dict:erase(TransId, AsyncResponses),
+                    {reply, {ok, ResponseInfo, Response},
                      State#state{async_responses = NewAsyncResponses}}
             end
     end;
@@ -325,19 +352,28 @@ handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
             {noreply, State}
     end;
 
-handle_info({'send_async', Name, Request, Timeout, Client}, State) ->
-    handle_send_async(Name, Request, Timeout, Client, State);
+handle_info({'send_async', Name, RequestInfo, Request,
+             Timeout, Priority, Client}, State) ->
+    handle_send_async(Name, RequestInfo, Request,
+                      Timeout, Priority, Client, State);
 
-handle_info({'send_async_active', Name, Request, Timeout, Client}, State) ->
-    handle_send_async_active(Name, Request, Timeout, Client, State);
+handle_info({'send_async_active', Name, RequestInfo, Request,
+             Timeout, Priority, Client}, State) ->
+    handle_send_async_active(Name, RequestInfo, Request,
+                             Timeout, Priority, Client, State);
 
-handle_info({'send_sync', Name, Request, Timeout, Client}, State) ->
-    handle_send_sync(Name, Request, Timeout, Client, State);
+handle_info({'send_sync', Name, RequestInfo, Request,
+             Timeout, Priority, Client}, State) ->
+    handle_send_sync(Name, RequestInfo, Request,
+                     Timeout, Priority, Client, State);
 
-handle_info({'mcast_async', Name, Request, Timeout, Client}, State) ->
-    handle_mcast_async(Name, Request, Timeout, Client, State);
+handle_info({'mcast_async', Name, RequestInfo, Request,
+             Timeout, Priority, Client}, State) ->
+    handle_mcast_async(Name, RequestInfo, Request,
+                       Timeout, Priority, Client, State);
 
-handle_info({'forward_async', Name, Request, Timeout, TransId, Pid},
+handle_info({'forward_async', Name, RequestInfo, Request,
+             Timeout, Priority, TransId, Pid},
             #state{dest_refresh = DestRefresh,
                    list_pg_data = Groups,
                    dest_deny = DestDeny,
@@ -347,22 +383,24 @@ handle_info({'forward_async', Name, Request, Timeout, TransId, Pid},
             case destination_get(DestRefresh, Name, Pid, Groups) of
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
-                                      {'forward_async', Name, Request,
+                                      {'forward_async', Name,
+                                       RequestInfo, Request,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
-                                       TransId, Pid}),
+                                       Priority, TransId, Pid}),
                     ok;
                 {error, _} ->
                     ok;
                 NextPid ->
-                    NextPid ! {'send_async', Name, Request,
-                               Timeout, TransId, Pid}
+                    NextPid ! {'send_async', Name, RequestInfo, Request,
+                               Timeout, Priority, TransId, Pid}
             end;
         false ->
             ok
     end,
     {noreply, State};
 
-handle_info({'forward_sync', Name, Request, Timeout, TransId, Pid},
+handle_info({'forward_sync', Name, RequestInfo, Request,
+             Timeout, Priority, TransId, Pid},
             #state{dest_refresh = DestRefresh,
                    list_pg_data = Groups,
                    dest_deny = DestDeny,
@@ -372,15 +410,16 @@ handle_info({'forward_sync', Name, Request, Timeout, TransId, Pid},
             case destination_get(DestRefresh, Name, Pid, Groups) of
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
-                                      {'forward_sync', Name, Request,
+                                      {'forward_sync', Name,
+                                       RequestInfo, Request,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
-                                       TransId, Pid}),
+                                       Priority, TransId, Pid}),
                     ok;
                 {error, _} ->
                     ok;
                 NextPid ->
-                    NextPid ! {'send_sync', Name, Request,
-                               Timeout, TransId, Pid}
+                    NextPid ! {'send_sync', Name, RequestInfo, Request,
+                               Timeout, Priority, TransId, Pid}
             end;
         false ->
             ok
@@ -401,10 +440,16 @@ handle_info({'recv_async', Timeout, TransId, Client},
                 [] ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                [{TransIdUsed, Response} | _] ->
+                [{TransIdUsed, {<<>>, Response}} | _] ->
                     NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
                     gen_server:reply(Client, {ok, Response}),
-                    {noreply, State#state{async_responses = NewAsyncResponses}}
+                    {noreply,
+                     State#state{async_responses = NewAsyncResponses}};
+                [{TransIdUsed, {ResponseInfo, Response}} | _] ->
+                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
+                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
+                    {noreply,
+                     State#state{async_responses = NewAsyncResponses}}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -417,14 +462,19 @@ handle_info({'recv_async', Timeout, TransId, Client},
                 error ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                {ok, Response} ->
+                {ok, {<<>>, Response}} ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     gen_server:reply(Client, {ok, Response}),
+                    {noreply, State#state{async_responses = NewAsyncResponses}};
+                {ok, {ResponseInfo, Response}} ->
+                    NewAsyncResponses = dict:erase(TransId, AsyncResponses),
+                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
                     {noreply, State#state{async_responses = NewAsyncResponses}}
             end
     end;
 
-handle_info({'return_async', Name, Response, Timeout, TransId, Pid},
+handle_info({'return_async', Name, ResponseInfo, Response,
+             Timeout, TransId, Pid},
             #state{job = Job} = State) ->
     true = Pid == self(),
     case send_timeout_check(TransId, State) of
@@ -437,7 +487,8 @@ handle_info({'return_async', Name, Response, Timeout, TransId, Pid},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {active, Tref}} ->
             erlang:cancel_timer(Tref),
-            Job ! {'return_async_active', Name, Response, Timeout, TransId},
+            Job ! {'return_async_active', Name, ResponseInfo, Response,
+                   Timeout, TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
@@ -445,11 +496,12 @@ handle_info({'return_async', Name, Response, Timeout, TransId, Pid},
         {ok, {passive, Tref}} ->
             erlang:cancel_timer(Tref),
             {noreply,
-             recv_async_timeout_start(Response, Timeout, TransId,
+             recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
                                       send_timeout_end(TransId, State))}
     end;
 
-handle_info({'return_sync', _Name, _Response, _Timeout, _TransId, _Pid},
+handle_info({'return_sync', _Name, _ResponseInfo, _Response,
+             _Timeout, _TransId, _Pid},
             State) ->
     % a response after a timeout is discarded
     {noreply, State};
@@ -487,56 +539,66 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-handle_send_async(Name, Request, Timeout, {Exclude, _} = Client,
+handle_send_async(Name, RequestInfo, Request,
+                  Timeout, Priority, {Exclude, _} = Client,
                   #state{uuid_generator = UUID,
                          dest_refresh = DestRefresh,
                          list_pg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Exclude, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
-                              {'send_async', Name, Request,
-                               Timeout - ?SEND_ASYNC_INTERVAL, Client}),
+                              {'send_async', Name,
+                               RequestInfo, Request,
+                               Timeout - ?SEND_ASYNC_INTERVAL,
+                               Priority, Client}),
             {noreply, State};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         Pid ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+            Pid ! {'send_async', Name, RequestInfo, Request,
+                   Timeout, Priority, TransId, self()},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
     end.
 
-handle_send_async_active(Name, Request, Timeout, {Exclude, _} = Client,
+handle_send_async_active(Name, RequestInfo, Request,
+                         Timeout, Priority, {Exclude, _} = Client,
                          #state{uuid_generator = UUID,
                                 dest_refresh = DestRefresh,
                                 list_pg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Exclude, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
-                              {'send_async_active', Name, Request,
-                               Timeout - ?SEND_ASYNC_INTERVAL, Client}),
+                              {'send_async_active', Name,
+                               RequestInfo, Request,
+                               Timeout - ?SEND_ASYNC_INTERVAL,
+                               Priority, Client}),
             {noreply, State};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         Pid ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, Request, Timeout, TransId, self()},
+            Pid ! {'send_async', Name, RequestInfo, Request,
+                   Timeout, Priority, TransId, self()},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
 
-handle_send_sync(Name, Request, Timeout, {Exclude, _} = Client,
+handle_send_sync(Name, RequestInfo, Request,
+                 Timeout, Priority, {Exclude, _} = Client,
                  #state{uuid_generator = UUID,
                         dest_refresh = DestRefresh,
                         list_pg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Exclude, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
-                              {'send_sync', Name, Request,
+                              {'send_sync', Name,
+                               RequestInfo, Request,
                                Timeout - ?SEND_SYNC_INTERVAL,
-                               Client}),
+                               Priority, Client}),
             {noreply, State};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
@@ -544,14 +606,18 @@ handle_send_sync(Name, Request, Timeout, {Exclude, _} = Client,
         Pid ->
             TransId = uuid:get_v1(UUID),
             Self = self(),
-            Pid ! {'send_sync', Name, Request, Timeout, TransId, Self},
+            Pid ! {'send_sync', Name, RequestInfo, Request,
+                   Timeout, Priority, TransId, Self},
             receive
-                {'return_sync', Name, Response, _, TransId, Self} ->
+                {'return_sync', _, ResponseInfo, Response, _, TransId, Self} ->
                     if
                         Response == <<>> ->
                             gen_server:reply(Client, {error, timeout});
+                        ResponseInfo == <<>> ->
+                            gen_server:reply(Client, {ok, Response});
                         true ->
-                            gen_server:reply(Client, {ok, Response})
+                            gen_server:reply(Client, {ok, ResponseInfo,
+                                                      Response})
                     end
             after
                 Timeout ->
@@ -560,7 +626,8 @@ handle_send_sync(Name, Request, Timeout, {Exclude, _} = Client,
             {noreply, State}
     end.
 
-handle_mcast_async(Name, Request, Timeout, {Exclude, _} = Client,
+handle_mcast_async(Name, RequestInfo, Request,
+                   Timeout, Priority, {Exclude, _} = Client,
                    #state{uuid_generator = UUID,
                           dest_refresh = DestRefresh,
                           list_pg_data = Groups} = State) ->
@@ -568,9 +635,10 @@ handle_mcast_async(Name, Request, Timeout, {Exclude, _} = Client,
     case destination_all(DestRefresh, Name, Exclude, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
-                              {'mcast_async', Name, Request,
+                              {'mcast_async', Name,
+                               RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL,
-                               Client}),
+                               Priority, Client}),
             {noreply, State};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
@@ -578,8 +646,8 @@ handle_mcast_async(Name, Request, Timeout, {Exclude, _} = Client,
         PidList ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
-                Pid ! {'send_async', Name, Request, Timeout,
-                       TransId, Self},
+                Pid ! {'send_async', Name, RequestInfo, Request,
+                       Timeout, Priority, TransId, Self},
                 TransId
             end, PidList),
             gen_server:reply(Client, {ok, TransIdList}),
@@ -692,11 +760,12 @@ send_timeout_end(TransId, #state{send_timeouts = Ids} = State)
     when is_binary(TransId) ->
     State#state{send_timeouts = dict:erase(TransId, Ids)}.
 
-recv_async_timeout_start(Response, Timeout, TransId,
+recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
                          #state{async_responses = Ids} = State)
     when is_binary(Response), is_integer(Timeout), is_binary(TransId) ->
     erlang:send_after(Timeout, self(), {'recv_async_timeout', TransId}),
-    State#state{async_responses = dict:store(TransId, Response, Ids)}.
+    State#state{async_responses = dict:store(TransId,
+                                             {ResponseInfo, Response}, Ids)}.
 
 recv_async_timeout_end(TransId,
                        #state{async_responses = Ids} = State)

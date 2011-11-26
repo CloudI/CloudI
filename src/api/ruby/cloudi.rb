@@ -69,82 +69,102 @@ module Cloudi
         end
 
         def send_async(name, request)
-            send_async(name, request, @timeoutAsync)
+            send_async(name, "", request, @timeoutAsync, 0)
         end
 
-        def send_async(name, request, timeout)
+        def send_async(name, request_info, request,
+                       timeout, priority)
             @socket.write(term_to_binary([:send_async, name,
+                                          OtpErlangBinary.new(request_info),
                                           OtpErlangBinary.new(request),
-                                          timeout]))
+                                          timeout, priority]))
             return poll
         end
 
         def send_sync(name, request)
-            send_sync(name, request, @timeoutSync)
+            send_sync(name, "", request, @timeoutSync, 0)
         end
 
-        def send_sync(name, request, timeout)
+        def send_sync(name, request_info, request,
+                      timeout, priority)
             @socket.write(term_to_binary([:send_sync, name,
+                                          OtpErlangBinary.new(request_info),
                                           OtpErlangBinary.new(request),
-                                          timeout]))
+                                          timeout, priority]))
             return poll
         end
 
         def mcast_async(name, request)
-            mcast_async(name, request, @timeoutAsync)
+            mcast_async(name, "", request, @timeoutAsync, 0)
         end
 
-        def mcast_async(name, request, timeout)
+        def mcast_async(name, request_info, request,
+                        timeout, priority)
             @socket.write(term_to_binary([:mcast_async, name,
+                                          OtpErlangBinary.new(request_info),
                                           OtpErlangBinary.new(request),
-                                          timeout]))
+                                          timeout, priority]))
             return poll
         end
 
-        def forward_(command, name, response, timeout, transId, pid)
+        def forward_(command, name, request_info, request,
+                     timeout, priority, transId, pid)
             case command
             when ASYNC
-                forward_async(name, response, timeout, transId, pid)
+                forward_async(name, request_info, request,
+                              timeout, priority, transId, pid)
             when SYNC
-                forward_sync(name, response, timeout, transId, pid)
+                forward_sync(name, request_info, request,
+                             timeout, priority, transId, pid)
             end
         end
 
-        def forward_async(name, response, timeout, transId, pid)
+        def forward_async(name, request_info, request,
+                          timeout, priority, transId, pid)
             @socket.write(term_to_binary([:forward_async, name,
-                                          OtpErlangBinary.new(response),
-                                          timeout,
+                                          OtpErlangBinary.new(request_info),
+                                          OtpErlangBinary.new(request),
+                                          timeout, priority,
                                           OtpErlangBinary.new(transId), pid]))
             raise ReturnAsyncException
         end
 
-        def forward_sync(name, response, timeout, transId, pid)
+        def forward_sync(name, request_info, request,
+                         timeout, priority, transId, pid)
             @socket.write(term_to_binary([:forward_sync, name, 
-                                          OtpErlangBinary.new(response),
-                                          timeout,
+                                          OtpErlangBinary.new(request_info),
+                                          OtpErlangBinary.new(request),
+                                          timeout, priority,
                                           OtpErlangBinary.new(transId), pid]))
             raise ReturnSyncException
         end
 
-        def return_(command, name, response, timeout, transId, pid)
+        def return_(command, name, response_info, response,
+                    timeout, transId, pid)
             case command
             when ASYNC
-                return_async(name, response, timeout, transId, pid)
+                return_async(name, response_info, response,
+                             timeout, transId, pid)
             when SYNC
-                return_sync(name, response, timeout, transId, pid)
+                return_sync(name, response_info, response,
+                            timeout, transId, pid)
             end
         end
 
-        def return_async(name, response, timeout, transId, pid)
+        def return_async(name, response_info, response,
+                         timeout, transId, pid)
             @socket.write(term_to_binary([:return_async, name,
+                                          OtpErlangBinary.new(response_info),
                                           OtpErlangBinary.new(response),
                                           timeout,
                                           OtpErlangBinary.new(transId), pid]))
             raise ReturnAsyncException
         end
 
-        def return_sync(name, response, timeout, transId, pid)
+        def return_sync(name, response_info, response,
+                        timeout, transId, pid)
             @socket.write(term_to_binary([:return_sync, name,
+                                          OtpErlangBinary.new(response_info),
                                           OtpErlangBinary.new(response),
                                           timeout,
                                           OtpErlangBinary.new(transId), pid]))
@@ -157,36 +177,59 @@ module Cloudi
             return poll
         end
 
-        def callback(command, name, request, timeout, transId, pid)
+        def callback(command, name, requestInfo, request,
+                     timeout, priority, transId, pid)
             function = @callbacks[name]
             assert{function != nil}
             case command
             when MESSAGE_SEND_ASYNC
                 begin
-                    response = function.call(ASYNC, name, request,
-                                             timeout, transId, pid)
+                    response = function.call(ASYNC, name,
+                                             requestInfo, request,
+                                             timeout, priority, transId, pid)
+                    if response.kind_of?(Array)
+                        assert{response.length == 2}
+                        responseInfo = response[0]
+                        response = response[1]
+                    else
+                        responseInfo = ''
+                    end
                 rescue ReturnAsyncException
                     return
                 rescue ReturnSyncException
                     assert{false}
                     return
                 rescue
-                    response = '' # exception is ignored at this level
+                    # exception is ignored at this level
+                    responseInfo = ''
+                    response = ''
                 end
-                return_async(name, response, timeout, transId, pid)
+                return_async(name, responseInfo, response,
+                             timeout, transId, pid)
             when MESSAGE_SEND_SYNC
                 begin
-                    response = function.call(SYNC, name, request,
-                                             timeout, transId, pid)
+                    response = function.call(SYNC, name,
+                                             requestInfo, request,
+                                             timeout, priority, transId, pid)
+                    if response.kind_of?(Array)
+                        assert{response.length == 2}
+                        responseInfo = response[0]
+                        response = response[1]
+                    else
+                        responseInfo = ''
+                    end
                 rescue ReturnSyncException
                     return
                 rescue ReturnAsyncException
                     assert{false}
                     return
                 rescue
-                    response = '' # exception is ignored at this level
+                    # exception is ignored at this level
+                    responseInfo = ''
+                    response = ''
                 end
-                return_sync(name, response, timeout, transId, pid)
+                return_sync(name, responseInfo, response,
+                            timeout, transId, pid)
             end
         end
 
@@ -238,27 +281,39 @@ module Cloudi
                     i += j; j = nameSize + 4
                     tmp = data[i, j].unpack("Z#{nameSize}L")
                     name = tmp[0]
+                    requestInfoSize = tmp[1]
+                    i += j; j = requestInfoSize + 1 + 4
+                    tmp = data[i, j].unpack("a#{requestInfoSize}xL")
+                    requestInfo = tmp[0]
                     requestSize = tmp[1]
-                    i += j; j = requestSize + 1 + 4 + 16 + 4
-                    tmp = data[i, j].unpack("a#{requestSize}xLa16L")
+                    i += j; j = requestSize + 1 + 4 + 1 + 16 + 4
+                    tmp = data[i, j].unpack("a#{requestSize}xLca16L")
                     request = tmp[0]
                     timeout = tmp[1]
-                    transId = tmp[2]
-                    pidSize = tmp[3]
+                    priority = tmp[2]
+                    transId = tmp[3]
+                    pidSize = tmp[4]
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     i += j
                     assert{i == data.length}
                     data.clear()
-                    callback(command, name, request, timeout, transId,
-                             binary_to_term(pid))
+                    callback(command, name, requestInfo, request,
+                             timeout, priority, transId, binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
-                    responseSize = data[i, j].unpack("L")[0]
+                    responseInfoSize = data[i, j].unpack("L")[0]
+                    i += j; j = responseInfoSize + 1 + 4
+                    tmp = data[i, j].unpack("a#{responseInfoSize}xL")
+                    responseInfo = tmp[0]
+                    responseSize = tmp[1]
                     i += j; j = responseSize + 1 + 16
                     i += j
                     assert{i == data.length}
-                    return data[i, j].unpack("a#{responseSize}xa16")
+                    tmp = data[i, j].unpack("a#{responseSize}xa16")
+                    response = tmp[0]
+                    transId = tmp[1]
+                    return [responseInfo, response, transId]
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
                     i += j

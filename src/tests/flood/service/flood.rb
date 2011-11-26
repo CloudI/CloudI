@@ -70,8 +70,9 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield if $DEBUG
             end
 
-            def flood(command, name, request, timeout, transId, pid)
-                @api.return_(command, name, "ruby", timeout, transId, pid)
+            def flood(command, name, request_info, request,
+                      timeout, priority, transId, pid)
+                @api.return_(command, name, "", "ruby", timeout, transId, pid)
             end
         end
         object = Task.new(api)

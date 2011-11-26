@@ -54,9 +54,12 @@ typedef struct
 static void request(cloudi_instance_t * api,
                     int const command,
                     char const * const name,
+                    void const * const request_info,
+                    uint32_t const request_info_size,
                     void const * const request,
                     uint32_t const request_size,
                     uint32_t timeout,
+                    int8_t priority,
                     char const * const trans_id,
                     char const * const pid,
                     uint32_t const pid_size)
@@ -83,7 +86,7 @@ static void request(cloudi_instance_t * api,
         memcpy(response,
                "<http_test><error>no value specified</error></http_test>", 57);
     }
-    cloudi_return(api, command, name,
+    cloudi_return(api, command, name, "", 0,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);
 }

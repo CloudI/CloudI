@@ -24,7 +24,7 @@
 #       written permission
 # 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
@@ -43,7 +43,7 @@ import sys, os
 cwd = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(
     os.path.sep.join(
-        cwd.split(os.path.sep)[:-2] + ["api", "python"]
+        cwd.split(os.path.sep)[:-2] + ['api', 'python']
     )
 )
 
@@ -56,48 +56,49 @@ class _Task(threading.Thread):
         self.__api = API(index, protocol, size)
         self.__index = index
 
-    def zigzag_finish(self, command, name, request, timeout, transId, pid):
-        print "Got to CloudI finish from ZeroMQ zig-zag:",request
-        self.__api.return_(command, name, "done", timeout, transId, pid)
+    def zigzag_finish(self, command, name, requestInfo, request,
+                      timeout, priority, transId, pid):
+        print 'Got to CloudI finish from ZeroMQ zig-zag:',request
+        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
 
-    def chain_inproc_finish(self, command, name, request,
-                            timeout, transId, pid):
-        print "chain_inproc_finish"
-        self.__api.return_(command, name, "done", timeout, transId, pid)
+    def chain_inproc_finish(self, command, name, requestInfo, request,
+                            timeout, priority, transId, pid):
+        print 'chain_inproc_finish'
+        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
 
-    def chain_ipc_finish(self, command, name, request,
-                         timeout, transId, pid):
-        print "chain_ipc_finish"
-        self.__api.return_(command, name, "done", timeout, transId, pid)
+    def chain_ipc_finish(self, command, name, requestInfo, request,
+                         timeout, priority, transId, pid):
+        print 'chain_ipc_finish'
+        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
 
     def run(self):
         # sends outside of a callback must occur before the subscriptions
         # so that the sends going out do not conflict with the
         # sends coming in to call local callbacks
         if self.__index == 0:
-            self.__api.send_async_("/tests/zeromq/zigzag_start", "magic")
-            self.__api.send_async_("/tests/zeromq/chain_inproc_start", "inproc")
-            self.__api.send_async_("/tests/zeromq/chain_ipc_start", "ipc")
-        self.__api.subscribe("zigzag_finish", self.zigzag_finish)
-        self.__api.subscribe("chain_inproc_finish", self.chain_inproc_finish)
-        self.__api.subscribe("chain_ipc_finish", self.chain_ipc_finish)
+            self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
+            self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
+            self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
+        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
+        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
+        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
         running = True
         while running:
             result = self.__api.poll()
             if result is None:
                 running = False
             else:
-                print "(python) received:",result
-        print "exited thread"
+                print '(python) received:',result
+        print 'exited thread'
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print >> sys.stderr, "Usage: %s thread_count protocol buffer_size" % (
+        print >> sys.stderr, 'Usage: %s thread_count protocol buffer_size' % (
                                  sys.argv[0],
                              )
         sys.exit(-1)
     thread_count = int(sys.argv[1])
-    if sys.argv[2] == "udp":
+    if sys.argv[2] == 'udp':
         protocol = socket.SOCK_DGRAM
     else:
         protocol = socket.SOCK_STREAM

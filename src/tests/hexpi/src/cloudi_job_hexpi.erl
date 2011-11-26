@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_hexpi).
@@ -54,7 +54,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/8,
+         cloudi_job_handle_request/10,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -126,7 +126,8 @@ cloudi_job_init([IndexStart, IndexEnd, ConcurrentTasks],
                 index_end = IndexEnd,
                 concurrent_tasks = ConcurrentTasks}}.
 
-cloudi_job_handle_request(_Type, _Name, _Request, _Timeout, _TransId, _Pid,
+cloudi_job_handle_request(_Type, _Name, _RequestInfo, _Request,
+                          _Timeout, _Priority, _TransId, _Pid,
                           State, _Dispatcher) ->
     {reply, <<>>, State}.
 

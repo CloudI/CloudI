@@ -24,7 +24,7 @@
 #       written permission
 # 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
@@ -43,7 +43,7 @@ import sys, os
 sys.path.append(
     os.path.sep.join(
         os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-3] + ["api", "python"]
+               .split(os.path.sep)[:-3] + ['api', 'python']
     )
 )
 
@@ -55,15 +55,16 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(index, protocol, size)
 
-    def text(self, command, name, request, timeout, transId, pid):
-        print "(" + request + ")"
-        assert "Test Text" == request
-        self.__api.return_(command, name, "Test Response",
+    def text(self, command, name, requestInfo, request,
+             timeout, priority, transId, pid):
+        print '(' + request + ')'
+        assert 'Test Text' == request
+        self.__api.return_(command, name, '', 'Test Response',
                            timeout, transId, pid)
 
     def run(self):
-        #print "> 32 characters to test stdout<"
-        self.__api.subscribe("text/post", self.text)
+        #print '> 32 characters to test stdout<'
+        self.__api.subscribe('text/post', self.text)
 
         running = True
         while running:
@@ -71,17 +72,17 @@ class _Task(threading.Thread):
             if result is None:
                 running = False
             else:
-                print "(python) received:",result
-        print "exited thread"
+                print '(python) received:',result
+        print 'exited thread'
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print >> sys.stderr, "Usage: %s thread_count protocol buffer_size" % (
+        print >> sys.stderr, 'Usage: %s thread_count protocol buffer_size' % (
                                  sys.argv[0],
                              )
         sys.exit(-1)
     thread_count = int(sys.argv[1])
-    if sys.argv[2] == "udp":
+    if sys.argv[2] == 'udp':
         protocol = socket.SOCK_DGRAM
     else:
         protocol = socket.SOCK_STREAM

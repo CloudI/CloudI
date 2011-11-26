@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_json_rpc).
@@ -61,6 +61,9 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-spec request_to_term(Data :: binary() | string()) ->
+    {binary(), list(binary()), integer()}.
 
 request_to_term(Data) ->
     DataBin = if
@@ -79,8 +82,17 @@ request_to_term(Data) ->
             {MethodBin, [], Id}
     end.
 
+-spec request_to_json(Method :: atom() | string() | binary(),
+                      Id :: integer()) ->
+    binary().
+
 request_to_json(Method, Id) ->
     request_to_json(Method, [], Id).
+
+-spec request_to_json(Method :: atom() | string() | binary(),
+                      Params :: list(),
+                      Id :: integer()) ->
+    binary().
 
 request_to_json(Method, Params, Id) ->
     MethodBin = if
@@ -106,6 +118,9 @@ request_to_json(Method, Params, Id) ->
                               {<<"jsonrpc">>, <<"2.0">>}])
     end.
 
+-spec response_to_term(Data :: binary() | string()) ->
+    {binary(), binary(), integer()}.
+
 response_to_term(Data) ->
     DataBin = if
         is_list(Data) ->
@@ -119,8 +134,17 @@ response_to_term(Data) ->
     {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
     {Result, Error, Id}.
 
+-spec response_to_json(Result :: binary(),
+                       Id :: integer()) ->
+    binary().
+
 response_to_json(Result, Id) ->
     response_to_json(Result, null, Id).
+
+-spec response_to_json(Result :: binary(),
+                       Error :: binary() | 'null',
+                       Id :: integer()) ->
+    binary().
 
 response_to_json(Result, Error, Id) ->
     jsx:term_to_json([{<<"result">>, Result}, % string result is binary

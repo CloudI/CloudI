@@ -44,3 +44,8 @@
 % to incoming API calls).
 -define(KEEPALIVE_UDP, 5000). % milliseconds
 
+% pqueue4 usage limited by the signed byte integer storage
+-define(PRIORITY_HIGH, -128).
+-define(PRIORITY_LOW, 127).
+-define(PRIORITY_DEFAULT, 0).
+
