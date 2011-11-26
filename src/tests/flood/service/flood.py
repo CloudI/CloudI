@@ -55,8 +55,9 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(index, protocol, size)
 
-    def flood(self, command, name, request, timeout, transId, pid):
-        self.__api.return_(command, name, "python", timeout, transId, pid)
+    def flood(self, command, name, request_info, request,
+              timeout, priority, transId, pid):
+        self.__api.return_(command, name, '', 'python', timeout, transId, pid)
 
     def run(self):
         self.__api.subscribe("python", self.flood)

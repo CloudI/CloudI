@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_zeromq).
@@ -57,7 +57,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/8,
+         cloudi_job_handle_request/10,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -178,7 +178,8 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                 push = Push,
                 receives = ReceivesZMQ4}}.
 
-cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
+cloudi_job_handle_request(Type, Name, _RequestInfo, Request,
+                          Timeout, _Priority, TransId, Pid,
                           #state{publish = PublishZMQ,
                                  request = RequestZMQ,
                                  push = PushZMQ,
@@ -203,7 +204,8 @@ cloudi_job_handle_request(Type, Name, Request, Timeout, TransId, Pid,
         {ok, RequestS} ->
             ok = erlzmq:send(RequestS, Request),
             F = fun(Response) ->
-                cloudi_job:return_nothrow(Dispatcher, Type, Name, Response,
+                cloudi_job:return_nothrow(Dispatcher, Type, Name,
+                                          <<>>, Response,
                                           Timeout, TransId, Pid)
             end,
             {noreply, State#state{receives = dict:store(RequestS,
@@ -247,7 +249,7 @@ cloudi_job_handle_info({zmq, S, Incoming},
             {noreply, State}
     end;
 
-cloudi_job_handle_info({'return_async_active', _Name, Response,
+cloudi_job_handle_info({'return_async_active', _Name, _ResponseInfo, Response,
                         _Timeout, TransId},
                        #state{reply_replies = ReplyReplies} = State,
                        _Dispatcher) ->

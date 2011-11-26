@@ -53,9 +53,11 @@ public class Task implements Runnable
         api = new API(index, protocol, buffer_size);
     }
 
-    public void request(Integer command, String name, byte[] request,
-                     Integer timeout, byte[] transId, OtpErlangPid pid)
-                     throws API.ReturnAsyncException, API.ReturnSyncException
+    public void request(Integer command, String name,
+                        byte[] requestInfo, byte[] request,
+                        Integer timeout, Byte priority,
+                        byte[] transId, OtpErlangPid pid)
+                        throws API.ReturnAsyncException, API.ReturnSyncException
     {
         HashMap<String, String> http_qs = api.request_http_qs_parse(request);
         final String value = http_qs.remove("value");
@@ -73,7 +75,9 @@ public class Task implements Runnable
                 Long.toString(value_long) +
                 "</value></http_test>";
         }
-        api.return_(command, name, response.getBytes(), timeout, transId, pid);
+        api.return_(command, name,
+                    ("").getBytes(), response.getBytes(),
+                    timeout, transId, pid);
     }
  
     public void run()

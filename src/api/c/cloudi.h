@@ -61,6 +61,8 @@ typedef struct
     char * prefix;
     uint32_t timeout_async;
     uint32_t timeout_sync;
+    char * response_info;
+    uint32_t response_info_size;
     char * response;
     uint32_t response_size;
     char * trans_id;          /* always 16 characters (128 bits) length */
@@ -71,9 +73,12 @@ typedef struct
 typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   int const command,
                                   char const * const name,
+                                  void const * const request_info,
+                                  uint32_t const request_info_size,
                                   void const * const request,
                                   uint32_t const request_size,
                                   uint32_t timeout,
+                                  int8_t priority,
                                   char const * const trans_id,
                                   char const * const pid,
                                   uint32_t const pid_size);
@@ -105,9 +110,12 @@ int cloudi_send_async(cloudi_instance_t * p,
 
 int cloudi_send_async_(cloudi_instance_t * p,
                        char const * const name,
+                       void const * const request_info,
+                       uint32_t const request_info_size,
                        void const * const request,
                        uint32_t const request_size,
-                       uint32_t timeout);
+                       uint32_t timeout,
+                       int8_t priority);
 
 int cloudi_send_sync(cloudi_instance_t * p,
                      char const * const name,
@@ -116,9 +124,12 @@ int cloudi_send_sync(cloudi_instance_t * p,
 
 int cloudi_send_sync_(cloudi_instance_t * p,
                       char const * const name,
+                      void const * const request_info,
+                      uint32_t const request_info_size,
                       void const * const request,
                       uint32_t const request_size,
-                      uint32_t timeout);
+                      uint32_t timeout,
+                      int8_t priority);
 
 int cloudi_mcast_async(cloudi_instance_t * p,
                        char const * const name,
@@ -127,34 +138,46 @@ int cloudi_mcast_async(cloudi_instance_t * p,
 
 int cloudi_mcast_async_(cloudi_instance_t * p,
                         char const * const name,
+                        void const * const request_info,
+                        uint32_t const request_info_size,
                         void const * const request,
                         uint32_t const request_size,
-                        uint32_t timeout);
+                        uint32_t timeout,
+                        int8_t priority);
 
 int cloudi_forward(cloudi_instance_t * p,
                    int const command,
                    char const * const name,
+                   void const * const request_info,
+                   uint32_t const request_info_size,
                    void const * const request,
                    uint32_t const request_size,
                    uint32_t timeout,
+                   int8_t priority,
                    char const * const trans_id,
                    char const * const pid,
                    uint32_t const pid_size);
 
 int cloudi_forward_async(cloudi_instance_t * p,
                          char const * const name,
+                         void const * const request_info,
+                         uint32_t const request_info_size,
                          void const * const request,
                          uint32_t const request_size,
                          uint32_t timeout,
+                         int8_t priority,
                          char const * const trans_id,
                          char const * const pid,
                          uint32_t const pid_size);
 
 int cloudi_forward_sync(cloudi_instance_t * p,
                         char const * const name,
+                        void const * const request_info,
+                        uint32_t const request_info_size,
                         void const * const request,
                         uint32_t const request_size,
                         uint32_t timeout,
+                        int8_t priority,
                         char const * const trans_id,
                         char const * const pid,
                         uint32_t const pid_size);
@@ -162,6 +185,8 @@ int cloudi_forward_sync(cloudi_instance_t * p,
 int cloudi_return(cloudi_instance_t * p,
                   int const command,
                   char const * const name,
+                  void const * const response_info,
+                  uint32_t const response_info_size,
                   void const * const response,
                   uint32_t const response_size,
                   uint32_t timeout,
@@ -171,6 +196,8 @@ int cloudi_return(cloudi_instance_t * p,
 
 int cloudi_return_async(cloudi_instance_t * p,
                         char const * const name,
+                        void const * const response_info,
+                        uint32_t const response_info_size,
                         void const * const response,
                         uint32_t const response_size,
                         uint32_t timeout,
@@ -180,6 +207,8 @@ int cloudi_return_async(cloudi_instance_t * p,
 
 int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const name,
+                       void const * const response_info,
+                       uint32_t const response_info_size,
                        void const * const response,
                        uint32_t const response_size,
                        uint32_t timeout,

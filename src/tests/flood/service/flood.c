@@ -54,14 +54,18 @@ typedef struct
 static void flood(cloudi_instance_t * api,
                   int const command,
                   char const * const name,
+                  void const * const request_info,
+                  uint32_t const request_info_size,
                   void const * const request,
                   uint32_t const request_size,
                   uint32_t timeout,
+                  int8_t priority,
                   char const * const trans_id,
                   char const * const pid,
                   uint32_t const pid_size)
 {
-    cloudi_return(api, command, name, "c", 1, timeout, trans_id, pid, pid_size);
+    cloudi_return(api, command, name, "", 0, "c", 1,
+                  timeout, trans_id, pid, pid_size);
 }
 
 void process_requests(void * p)

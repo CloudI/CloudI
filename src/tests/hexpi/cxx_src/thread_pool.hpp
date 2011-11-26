@@ -225,8 +225,12 @@ class ThreadPool
                 m_objects[i].exit();
             boost::posix_time::milliseconds const zero(0);
             boost::posix_time::milliseconds t(timeout);
-            for (size_t i = 0; i < m_totalConfigured && t > zero; ++i)
+            for (size_t i = 0; i < m_totalConfigured; ++i)
+            {
                 m_objects[i].wait_on_exit(t);
+                if (t == zero)
+                    break;
+            }
             m_currentThread = 0;
             m_totalConfigured = 0;
             m_totalActive = 0;

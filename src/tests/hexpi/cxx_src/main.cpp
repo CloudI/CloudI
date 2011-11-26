@@ -98,9 +98,12 @@ class Input
         static void hexpi(cloudi_instance_t * api,
                           int const command,
                           char const * const name,
+                          void const * const request_info,
+                          uint32_t const request_info_size,
                           void const * const request,
                           uint32_t const request_size,
                           uint32_t timeout,
+                          int8_t priority,
                           char const * const trans_id,
                           char const * const pid,
                           uint32_t const pid_size)
@@ -141,7 +144,7 @@ class Input
                 const_cast<char *>(pi_result.c_str()));
             *elapsed_hours = static_cast<float>(t.elapsed() / 3600.0);
 
-            cloudi_return(api, command, name,
+            cloudi_return(api, command, name, "", 0,
                           pi_result.c_str(), pi_result.size(),
                           timeout, trans_id, pid, pid_size);
             std::cout << "execution never gets here" << std::endl;
@@ -151,7 +154,7 @@ class Input
         {
             OutputData resultObject;
             int value;
-            while (cloudi_timeout == (value = cloudi_poll(&m_api, 2000)))
+            while (cloudi_timeout == (value = cloudi_poll(&m_api, 1000)))
             {
                 if (stop)
                     return resultObject.setError(cloudi_success);
@@ -221,7 +224,7 @@ int main(int argc, char ** argv)
 
     while (outputObject.got_output() == false)
         ::sleep(1);
-    threadPool.exit(4000);
+    threadPool.exit(3000);
     return 0;
 }
 

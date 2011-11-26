@@ -38,47 +38,61 @@
 // DAMAGE.
 //
 
-package org.cloudi.tests.http;
+package org.cloudi;
 
-import com.ericsson.otp.erlang.OtpErlangPid;
-import org.cloudi.API;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 
-public class Task implements Runnable
+public class Function8<C1, C2, C3, C4, C5, C6, C7, C8>
 {
-    private API api;
-     
-    public Task(final int index, final String protocol, final int buffer_size)
+    private Object instance;
+    private String methodName;
+    private Method method;
+
+    public Function8(final Object instance, final String methodName)
     {
-        api = new API(index, protocol, buffer_size);
+        this.instance = instance;
+        this.methodName = methodName;
+        this.method = null;
     }
 
-    public void text(Integer command, String name,
-                     byte[] requestInfo, byte[] request,
-                     Integer timeout, Byte priority,
-                     byte[] transId, OtpErlangPid pid)
-                     throws API.ReturnAsyncException, API.ReturnSyncException
+    public Object invoke(C1 a1, C2 a2, C3 a3, C4 a4, C5 a5, C6 a6,
+                         C7 a7, C8 a8)
+                         throws Throwable
     {
-        final String value = new String(request);
-        System.out.println("(" + value + ")");
-        assert "Test Text" == value : value;
-        api.return_(command, name,
-                    ("").getBytes(), ("Test Response").getBytes(),
-                    timeout, transId, pid);
-    }
- 
-    public void run()
-    {
-        api.subscribe("text/post", this, "text");
-        boolean running = true;
-        while (running)
+        try
         {
-            Object result = api.poll();
-            if (result == null)
-                running = false;
-            else
-                System.out.println("(java) received: " + result.toString());
+            if (this.method == null)
+            {
+                this.method = this.instance
+                                  .getClass()
+                                  .getDeclaredMethod(methodName,
+                                                     a1.getClass(),
+                                                     a2.getClass(),
+                                                     a3.getClass(),
+                                                     a4.getClass(),
+                                                     a5.getClass(),
+                                                     a6.getClass(),
+                                                     a7.getClass(),
+                                                     a8.getClass());
+            }
+            return this.method.invoke(this.instance, a1, a2, a3, a4, a5, a6,
+                                      a7, a8);
         }
-        System.out.println("exited thread");
+        catch (IllegalAccessException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+        catch (InvocationTargetException e)
+        {
+            throw e.getTargetException();
+        }
+        catch (NoSuchMethodException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
 

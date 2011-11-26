@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.6 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_couchdb).
@@ -81,7 +81,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/8,
+         cloudi_job_handle_request/10,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -870,7 +870,8 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
             {stop, Reason}
     end.
 
-cloudi_job_handle_request(_Type, _Name, Request, Timeout, _TransId, _Pid,
+cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
+                          Timeout, _Priority, _TransId, _Pid,
                           #state{hostname = HostName,
                                  port = Port,
                                  connection = Connection,

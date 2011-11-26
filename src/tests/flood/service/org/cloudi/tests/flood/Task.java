@@ -52,11 +52,15 @@ public class Task implements Runnable
         api = new API(index, protocol, buffer_size);
     }
 
-    public void flood(Integer command, String name, byte[] request,
-                      Integer timeout, byte[] transId, OtpErlangPid pid)
+    public void flood(Integer command, String name,
+                      byte[] requestInfo, byte[] request,
+                      Integer timeout, Byte priority,
+                      byte[] transId, OtpErlangPid pid)
                       throws API.ReturnAsyncException, API.ReturnSyncException
     {
-        api.return_(command, name, ("java").getBytes(), timeout, transId, pid);
+        api.return_(command, name,
+                    ("").getBytes(), ("java").getBytes(),
+                    timeout, transId, pid);
     }
  
     public void run()
