@@ -280,10 +280,12 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
 
 tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req \
                         $(top_builddir)/tests/http_req/jar/cloudi.jar \
-                        $(top_builddir)/tests/http_req/jar/http_req.jar
+                        $(top_builddir)/tests/http_req/jar/http_req.jar \
+                        $(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/http_req/c_src/http_req" \
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
@@ -294,6 +296,8 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \

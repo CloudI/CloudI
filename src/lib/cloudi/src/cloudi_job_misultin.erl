@@ -164,7 +164,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             NameIncoming ++ "/connect"
         % more cases here than necessary probably
     end,
-    Headers = HttpRequest:get(headers),
+    HeadersIncoming = HttpRequest:get(headers),
     RequestBinary = if
         Method =:= 'GET' ->
             erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
@@ -174,7 +174,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
             % one type per name (path)
-            case header_content_type(Headers) of
+            case header_content_type(HeadersIncoming) of
                 "application/zip" ->
                     zlib:unzip(HttpRequest:get(body));
                 _ ->
@@ -191,12 +191,12 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
         OutputType =:= list ->
             % list data will only be handled by erlang jobs, so there is no
             % need to use a special format for the headers data
-            Headers;
+            HeadersIncoming;
         OutputType =:= binary ->
             erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
                 [erlang:list_to_binary(erlang:atom_to_list(K)), 0,
                  erlang:list_to_binary(V), 0 | L]
-            end, [], Headers))
+            end, [], HeadersIncoming))
     end,
     case cloudi_job:send_sync(Dispatcher, NameOutgoing,
                               RequestInfo, Request,
@@ -209,7 +209,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                     Response
             end,
             FileName = string2:afterr($/, NameIncoming, input),
-            Headers = if
+            HeadersOutgoing = if
                 is_list(DefaultContentType) ->
                     [{'Content-Type', DefaultContentType}];
                 true ->
@@ -233,7 +233,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                             end
                     end
             end,
-            HttpRequest:ok(Headers, ResponseBinary);
+            HttpRequest:ok(HeadersOutgoing, ResponseBinary);
         {error, timeout} ->
             HttpRequest:respond(504);
         {error, Reason} ->

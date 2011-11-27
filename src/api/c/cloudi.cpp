@@ -245,11 +245,10 @@ int cloudi_initialize(cloudi_instance_t * p,
     int result = write_exact(p->fd, buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p, -1);
-    if (result)
-        return result;
 
-    return cloudi_success;
+    while (cloudi_timeout == (result = cloudi_poll(p, 1000)));
+
+    return result;
 }
 
 void cloudi_destroy(cloudi_instance_t * p)

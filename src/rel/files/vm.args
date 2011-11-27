@@ -25,3 +25,6 @@
 # flood tests service module not included in an application
 -pz tests/flood/ebin/
 
+# http_req tests service module not included in an application
+-pz tests/http_req/ebin/
+
