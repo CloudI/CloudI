@@ -84,7 +84,9 @@
                               {"nodes_dead",
                                {fun cloudi_nodes:dead/1, 1}},
                               {"nodes",
-                               {fun cloudi_nodes:nodes/1, 1}}]),
+                               {fun cloudi_nodes:nodes/1, 1}},
+                              {"loglevel_set",
+                               {fun change_loglevel/2, 2}}]),
         formats = trie:new([{"erlang", fun format_erlang/4},
                             {"json_rpc", fun format_json_rpc/4}]),
         suffix_index = undefined
@@ -118,6 +120,8 @@ cloudi_job_init(_Args, Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set"),
+    cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set/post"),
     cloudi_job:subscribe(Dispatcher, "json_rpc/"),
     cloudi_job:subscribe(Dispatcher, "json_rpc//post"),
     {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
@@ -199,7 +203,10 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
             cloudi_json_rpc:response_to_json(string2:term_to_binary(Result), Id)
     catch
         _:Error ->
-            cloudi_json_rpc:response_to_json(null,
+            cloudi_json_rpc:response_to_json(null, 0,
                                              string2:term_to_binary(Error), Id)
     end.
+
+change_loglevel(Level, _Timeout) ->
+    cloudi_logger:change_loglevel(Level).
 
