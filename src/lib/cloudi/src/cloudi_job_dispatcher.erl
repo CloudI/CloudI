@@ -159,10 +159,11 @@ handle_call({'get_pid', Name, Timeout}, {Exclude, _} = Client,
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'send_async', Name, RequestInfo, Request}, Client,
+handle_call({'send_async', Name, RequestInfo, Request,
+             undefined, Priority}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async', Name, RequestInfo, Request,
-                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
+                 TimeoutAsync, Priority}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -177,6 +178,12 @@ handle_call({'send_async', Name, RequestInfo, Request,
     end;
 
 handle_call({'send_async', Name, RequestInfo, Request,
+             undefined, Priority, Pid}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'send_async', Name, RequestInfo, Request,
+                 TimeoutAsync, Priority, Pid}, Client, State);
+
+handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
@@ -184,10 +191,11 @@ handle_call({'send_async', Name, RequestInfo, Request,
            Timeout, Priority, TransId, self()},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
 
-handle_call({'send_async_active', Name, RequestInfo, Request}, Client,
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             undefined, Priority}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async_active', Name, RequestInfo, Request,
-                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
+                 TimeoutAsync, Priority}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -202,6 +210,12 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
     end;
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
+             undefined, Priority, Pid}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 TimeoutAsync, Priority, Pid}, Client, State);
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
@@ -210,10 +224,11 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
     {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
                                                            TransId, State)};
 
-handle_call({'send_sync', Name, RequestInfo, Request}, Client,
+handle_call({'send_sync', Name, RequestInfo, Request,
+             undefined, Priority}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'send_sync', Name, RequestInfo, Request,
-                 TimeoutSync, ?PRIORITY_DEFAULT}, Client, State);
+                 TimeoutSync, Priority}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -226,6 +241,12 @@ handle_call({'send_sync', Name, RequestInfo, Request,
         false ->
             {reply, {error, timeout}, State}
     end;
+
+handle_call({'send_sync', Name, RequestInfo, Request,
+             undefined, Priority, Pid}, Client,
+            #state{timeout_sync = TimeoutSync} = State) ->
+    handle_call({'send_sync', Name, RequestInfo, Request,
+                 TimeoutSync, Priority, Pid}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
@@ -249,10 +270,11 @@ handle_call({'send_sync', Name, RequestInfo, Request,
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'mcast_async', Name, RequestInfo, Request}, Client,
+handle_call({'mcast_async', Name, RequestInfo, Request,
+             undefined, Priority}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'mcast_async', Name, RequestInfo, Request,
-                 TimeoutAsync, ?PRIORITY_DEFAULT}, Client, State);
+                 TimeoutAsync, Priority}, Client, State);
 
 handle_call({'mcast_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
