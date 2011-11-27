@@ -934,12 +934,12 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request_http_qs_parse_list(Lookup, []) ->
+request_http_qs_parse_list(Lookup, [<<>>]) ->
     Lookup;
 request_http_qs_parse_list(Lookup, [K, V | L]) ->
     request_http_qs_parse_list(dict:store(K, V, Lookup), L).
 
-request_info_http_headers_parse_list(Lookup, []) ->
+request_info_http_headers_parse_list(Lookup, [<<>>]) ->
     Lookup;
 request_info_http_headers_parse_list(Lookup, [K, V | L]) ->
     request_info_http_headers_parse_list(dict:store(K, V, Lookup), L).
