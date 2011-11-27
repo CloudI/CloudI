@@ -9,8 +9,8 @@ To install CloudI, do the following steps:
 
 3) make install
 
-The installation includes the hexpi and http tests along with the configuration
-file to start the tests.  Each test is configured to use 4 threads.
+The installation includes the various tests along with the default configuration
+to start the tests.
 
 
 Within the installation directory the "bin/cloudi" script controls CloudI.

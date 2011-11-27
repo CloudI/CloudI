@@ -304,6 +304,10 @@ tests-job_api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/job_api"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/run.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/logging_on.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/logging_off.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"

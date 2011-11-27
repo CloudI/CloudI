@@ -54,6 +54,7 @@
 
 %% external interface
 -export([start_link/1,
+         change_loglevel/1,
          fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
 
 %% gen_server callbacks
@@ -89,6 +90,21 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Change the log level,===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec change_loglevel(Level :: atom()) ->
+    'ok'.
+
+change_loglevel(Level)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace;
+         Level =:= off ->
+    gen_server:cast(?MODULE, {change_loglevel, Level}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -218,6 +234,14 @@ init([#config_logging{level = Level,
 
 handle_call(Request, _, State) ->
     {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
+
+handle_cast({change_loglevel, Level}, State) ->
+    case load_interface_module(Level) of
+        {ok, Binary} ->
+            {noreply, State#state{interface_module = Binary}};
+        {error, Reason} ->
+            {stop, Reason}
+    end;
 
 handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
              Module, Line, Format, Args},
@@ -465,6 +489,12 @@ get_interface_module_code(trace, Process) ->
     ", [Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(Level) when is_atom(Level) ->
+    case code:is_loaded(cloudi_logger_interface) of
+        {file, _} ->
+            code:soft_purge(cloudi_logger_interface);
+        false ->
+            ok
+    end,
     code:delete(cloudi_logger_interface),
     % do not purge the module, but let it get purged after the new one is loaded
     {Module, Binary} =

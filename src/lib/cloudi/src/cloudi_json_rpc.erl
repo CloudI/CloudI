@@ -56,7 +56,7 @@
          request_to_json/3,
          response_to_term/1,
          response_to_json/2,
-         response_to_json/3]).
+         response_to_json/4]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -94,7 +94,8 @@ request_to_json(Method, Id) ->
                       Id :: integer()) ->
     binary().
 
-request_to_json(Method, Params, Id) ->
+request_to_json(Method, Params, Id)
+    when is_list(Params), is_integer(Id) ->
     MethodBin = if
         is_atom(Method) ->
             erlang:list_to_binary(erlang:atom_to_list(Method));
@@ -119,7 +120,7 @@ request_to_json(Method, Params, Id) ->
     end.
 
 -spec response_to_term(Data :: binary() | string()) ->
-    {binary(), binary(), integer()}.
+    {binary(), integer() | 'null', binary() | 'null', binary() | integer()}.
 
 response_to_term(Data) ->
     DataBin = if
@@ -132,25 +133,57 @@ response_to_term(Data) ->
     {value, {_, Result}, RPC1} = lists:keytake(<<"result">>, 1, RPC0),
     {value, {_, Error}, RPC2} = lists:keytake(<<"error">>, 1, RPC1),
     {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
-    {Result, Error, Id}.
+    if
+        is_list(Error) ->
+            {value, {_, ErrorCode}, Error1} = lists:keytake(<<"code">>,
+                                                            1, Error),
+            {value, {_, ErrorMessage}, _} = lists:keytake(<<"message">>,
+                                                          1, Error1),
+            {Result, ErrorCode, ErrorMessage, Id};
+        true ->
+            {Result, null, null, Id}
+    end.
 
 -spec response_to_json(Result :: binary(),
                        Id :: integer()) ->
     binary().
 
 response_to_json(Result, Id) ->
-    response_to_json(Result, null, Id).
+    response_to_json(Result, null, null, Id).
 
--spec response_to_json(Result :: binary(),
-                       Error :: binary() | 'null',
-                       Id :: integer()) ->
+-spec response_to_json(Result :: binary() | 'null',
+                       ErrorCode :: integer() | 'null',
+                       ErrorMessage :: binary() | 'null',
+                       Id :: binary() | integer()) ->
     binary().
 
-response_to_json(Result, Error, Id) ->
-    jsx:term_to_json([{<<"result">>, Result}, % string result is binary
-                      {<<"error">>, Error},
+response_to_json(Result, null, null, Id) ->
+    Version = if
+        is_integer(Id) ->
+            <<"2.0">>;
+        is_binary(Id) ->
+            <<"1.1">>
+    end,
+    jsx:term_to_json([{<<"result">>, Result},
+                      {<<"error">>, null},
                       {<<"id">>, Id},
-                      {<<"jsonrpc">>, <<"2.0">>}]).
+                      {<<"jsonrpc">>, Version}]);
+
+response_to_json(Result, ErrorCode, ErrorMessage, Id)
+    when is_integer(ErrorCode), is_binary(ErrorMessage) ->
+    Version = if
+        is_integer(Id) ->
+            <<"2.0">>;
+        is_binary(Id) ->
+            <<"1.1">>
+    end,
+    jsx:term_to_json([{<<"result">>, Result},
+                      {<<"error">>, [
+                       {<<"code">>, ErrorCode},
+                       {<<"message">>, ErrorMessage}
+                      ]},
+                      {<<"id">>, Id},
+                      {<<"jsonrpc">>, Version}]).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
