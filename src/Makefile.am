@@ -312,6 +312,8 @@ tests-job_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/logging_off.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/path.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"

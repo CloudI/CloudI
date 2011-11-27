@@ -86,7 +86,14 @@
                               {"nodes",
                                {fun cloudi_nodes:nodes/1, 1}},
                               {"loglevel_set",
-                               {fun change_loglevel/2, 2}}]),
+                               {fun loglevel_set/2, 2}},
+                              {"code_path_add",
+                               {fun code_path_add/2, 2}},
+                              {"code_path_remove",
+                               {fun code_path_remove/2, 2}},
+                              {"code_path",
+                               {fun code_path/1, 1}}
+                             ]),
         formats = trie:new([{"erlang", fun format_erlang/4},
                             {"json_rpc", fun format_json_rpc/4}]),
         suffix_index = undefined
@@ -122,6 +129,12 @@ cloudi_job_init(_Args, Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang/nodes/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set"),
     cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path_add"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path_add/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path_remove"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path_remove/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path/post"),
     cloudi_job:subscribe(Dispatcher, "json_rpc/"),
     cloudi_job:subscribe(Dispatcher, "json_rpc//post"),
     {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
@@ -207,6 +220,15 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
                                              string2:term_to_binary(Error), Id)
     end.
 
-change_loglevel(Level, _Timeout) ->
+loglevel_set(Level, _Timeout) ->
     cloudi_logger:change_loglevel(Level).
+
+code_path_add(Dir, _Timeout) ->
+    code:add_pathz(Dir).
+
+code_path_remove(Dir, _Timeout) ->
+    code:del_path(Dir).
+
+code_path(_Timeout) ->
+    code:get_path().
 
