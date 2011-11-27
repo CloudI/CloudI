@@ -225,6 +225,7 @@ int cloudi_poll(cloudi_instance_t * p,
 
 char const ** cloudi_request_http_qs_parse(void const * const request,
                                            uint32_t const request_size);
+void cloudi_request_http_qs_destroy(char const ** p);
 
 enum
 {

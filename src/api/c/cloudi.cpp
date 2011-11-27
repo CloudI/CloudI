@@ -1008,5 +1008,10 @@ char const ** cloudi_request_http_qs_parse(void const * const request,
     return result.release();
 }
 
+void cloudi_request_http_qs_destroy(char const ** p)
+{
+    free(p);
+}
+
 }
 
