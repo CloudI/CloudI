@@ -76,6 +76,7 @@ static void request(cloudi_instance_t * api,
             break;
         }
     }
+    cloudi_request_http_qs_destroy(http_qs);
     if (value)
     {
         snprintf(response, sizeof(response),
