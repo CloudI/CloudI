@@ -29,7 +29,7 @@ as a service subscribing to:
   * "/cloudi/api/erlang/nodes"
 
 The [default configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
-expects HTTP requests to port 8081 with the proper service path and format
+expects HTTP requests to port 6464 with the proper service path and format
 (listed above) to call the CloudI job interface.
 
 Examples exist:
