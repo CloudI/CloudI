@@ -61,6 +61,7 @@
          cloudi_job_terminate/2]).
 
 -include("cloudi_logger.hrl").
+-include("cloudi_constants.hrl").
 
 -define(DEFAULT_INTERFACE,       {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                   8080).
@@ -163,6 +164,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             NameIncoming ++ "/connect"
         % more cases here than necessary probably
     end,
+    Headers = HttpRequest:get(headers),
     RequestBinary = if
         Method =:= 'GET' ->
             erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
@@ -172,7 +174,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
             % one type per name (path)
-            case header_content_type(HttpRequest:get(headers)) of
+            case header_content_type(Headers) of
                 "application/zip" ->
                     zlib:unzip(HttpRequest:get(body));
                 _ ->
@@ -185,7 +187,20 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
         OutputType =:= binary ->
             RequestBinary
     end,
-    case cloudi_job:send_sync(Dispatcher, NameOutgoing, Request) of
+    RequestInfo = if
+        OutputType =:= list ->
+            % list data will only be handled by erlang jobs, so there is no
+            % need to use a special format for the headers data
+            Headers;
+        OutputType =:= binary ->
+            erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
+                [erlang:list_to_binary(erlang:atom_to_list(K)), 0,
+                 erlang:list_to_binary(V), 0 | L]
+            end, [], Headers))
+    end,
+    case cloudi_job:send_sync(Dispatcher, NameOutgoing,
+                              RequestInfo, Request,
+                              undefined, ?PRIORITY_DEFAULT) of
         {ok, Response} ->
             ResponseBinary = if
                 OutputType =:= list ->

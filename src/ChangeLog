@@ -3,6 +3,7 @@
 
 2011-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add HTTP headers to the request_info
     * Add loglevel_set to the CloudI Job API, to dynamically change the loglevel
     * Fix a JSON-RPC protocol version problem
 
