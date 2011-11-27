@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add code path add/remove/get operations to the CloudI Job API, to provide
+      an easy way for the code paths to be modified before an internal job is
+      started in a directory CloudI's code server isn't aware of.
+
 2011-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the erlang variation to the http_req test
