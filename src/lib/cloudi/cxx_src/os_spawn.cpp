@@ -785,13 +785,16 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
               char * env, uint32_t env_len)
 {
     int type;
+    int use_header;
     if (protocol == 't') // tcp
     {
         type = SOCK_STREAM;
+        use_header = 1;
     }
     else if (protocol == 'u') // udp
     {
         type = SOCK_DGRAM;
+        use_header = 0;
     }
     else
     {
@@ -826,6 +829,8 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
 
         char pid_message[1024];
         int pid_message_index = 0;
+        if (use_header)
+            pid_message_index = 4;
         unsigned long const pid_child = ::getpid();
         if (ei_encode_version(pid_message, &pid_message_index))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
@@ -835,6 +840,14 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             ::_exit(GEPD::ExitStatus::ei_encode_error);
         if (ei_encode_ulong(pid_message, &pid_message_index, pid_child))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
+        if (use_header)
+        {
+            int pid_message_length = pid_message_index - 4;
+            pid_message[0] = (pid_message_length & 0xff000000) >> 24;
+            pid_message[1] = (pid_message_length & 0x00ff0000) >> 16;
+            pid_message[2] = (pid_message_length & 0x0000ff00) >> 8;
+            pid_message[3] =  pid_message_length & 0x000000ff;
+        }
 
         for (size_t i = 0; i < ports_len; ++i)
         {

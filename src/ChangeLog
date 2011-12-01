@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change external tcp job handling to utilize a 4 byte header
+      (so the max total message size possible for tcp jobs becomes 2GB, but
+       udp jobs are likely to be limited to 16KB
+       (with the current code and a normal loopback MTU))
+    * Fix a queuing bug with forward operations
+    * Add msg_size test for testing messages > 16KB but < 4MB (currently 2MB)
+      (with the current CloudI API settings, the 4MB limit can be increased)
+    * Add timeout decrement for forward operations to prevent infinite messages
+    * Fix stderr/stdout stream buffering in the Java CloudI API
+    * Add the ability to forward with new job state within an Erlang CloudI job
+
 2011-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add code path add/remove/get operations to the CloudI Job API, to provide

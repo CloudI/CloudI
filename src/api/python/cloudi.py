@@ -60,9 +60,10 @@ class API(object):
 
     def __init__(self, index, protocol, size):
         self.__s = socket.fromfd(index + 3, socket.AF_INET, protocol)
+        self.__use_header = (protocol == socket.SOCK_STREAM)
         self.__size = size
         self.__callbacks = {}
-        self.__s.sendall(term_to_binary(OtpErlangAtom("init")))
+        self.__send(term_to_binary(OtpErlangAtom("init")))
         self.__prefix, self.__timeout_async, self.__timeout_sync = self.poll()
 
     def __del__(self):
@@ -72,11 +73,11 @@ class API(object):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
         assert len(args) == 9 # self + arguments, so a non-static method
         self.__callbacks[self.__prefix + name] = Function
-        self.__s.sendall(term_to_binary((OtpErlangAtom("subscribe"), name)))
+        self.__send(term_to_binary((OtpErlangAtom("subscribe"), name)))
 
     def unsubscribe(self, name):
         del self.__callbacks[self.__prefix + name]
-        self.__s.sendall(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
+        self.__send(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
 
     def send_async(self, name, request,
                    timeout=None, request_info=None, priority=None):
@@ -86,10 +87,10 @@ class API(object):
             request_info = ''
         if priority is None:
             priority = 0
-        self.__s.sendall(term_to_binary((OtpErlangAtom("send_async"), name,
-                                         OtpErlangBinary(request_info),
-                                         OtpErlangBinary(request),
-                                         timeout, priority)))
+        self.__send(term_to_binary((OtpErlangAtom("send_async"), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority)))
         return self.poll()
 
     def send_sync(self, name, request,
@@ -100,10 +101,10 @@ class API(object):
             request_info = ''
         if priority is None:
             priority = 0
-        self.__s.sendall(term_to_binary((OtpErlangAtom("send_sync"), name,
-                                         OtpErlangBinary(request_info),
-                                         OtpErlangBinary(request),
-                                         timeout, priority)))
+        self.__send(term_to_binary((OtpErlangAtom("send_sync"), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority)))
         return self.poll()
 
     def mcast_async(self, name, request,
@@ -114,10 +115,10 @@ class API(object):
             request_info = ''
         if priority is None:
             priority = 0
-        self.__s.sendall(term_to_binary((OtpErlangAtom("mcast_async"), name,
-                                         OtpErlangBinary(request_info),
-                                         OtpErlangBinary(request),
-                                         timeout, priority)))
+        self.__send(term_to_binary((OtpErlangAtom("mcast_async"), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority)))
         return self.poll()
 
     def forward_(self, command, name, request_info, request,
@@ -133,20 +134,20 @@ class API(object):
 
     def forward_async(self, name, request_info, request,
                       timeout, priority, transId, pid):
-        self.__s.sendall(term_to_binary((OtpErlangAtom("forward_async"), name,
-                                         OtpErlangBinary(request_info),
-                                         OtpErlangBinary(request),
-                                         timeout, priority,
-                                         OtpErlangBinary(transId), pid)))
+        self.__send(term_to_binary((OtpErlangAtom("forward_async"), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority,
+                                    OtpErlangBinary(transId), pid)))
         raise _return_async_exception()
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, transId, pid):
-        self.__s.sendall(term_to_binary((OtpErlangAtom("forward_sync"), name,
-                                         OtpErlangBinary(request_info),
-                                         OtpErlangBinary(request),
-                                         timeout, priority,
-                                         OtpErlangBinary(transId), pid)))
+        self.__send(term_to_binary((OtpErlangAtom("forward_sync"), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority,
+                                    OtpErlangBinary(transId), pid)))
         raise _return_sync_exception()
 
     def return_(self, command, name, response_info, response,
@@ -162,23 +163,33 @@ class API(object):
 
     def return_async(self, name, response_info, response,
                      timeout, transId, pid):
-        self.__s.sendall(term_to_binary((OtpErlangAtom("return_async"), name,
-                                         OtpErlangBinary(response_info),
-                                         OtpErlangBinary(response), timeout,
-                                         OtpErlangBinary(transId), pid)))
+        self.__return_async_nothrow(name, response_info, response,
+                                    timeout, transId, pid)
         raise _return_async_exception()
+
+    def __return_async_nothrow(self, name, response_info, response,
+                               timeout, transId, pid):
+        self.__send(term_to_binary((OtpErlangAtom("return_async"), name,
+                                    OtpErlangBinary(response_info),
+                                    OtpErlangBinary(response), timeout,
+                                    OtpErlangBinary(transId), pid)))
 
     def return_sync(self, name, response_info, response,
                     timeout, transId, pid):
-        self.__s.sendall(term_to_binary((OtpErlangAtom("return_sync"), name,
-                                         OtpErlangBinary(response_info),
-                                         OtpErlangBinary(response), timeout,
-                                         OtpErlangBinary(transId), pid)))
+        self.__return_sync_nothrow(name, response_info, response,
+                                   timeout, transId, pid)
         raise _return_sync_exception()
 
+    def __return_sync_nothrow(self, name, response_info, response,
+                              timeout, transId, pid):
+        self.__send(term_to_binary((OtpErlangAtom("return_sync"), name,
+                                    OtpErlangBinary(response_info),
+                                    OtpErlangBinary(response), timeout,
+                                    OtpErlangBinary(transId), pid)))
+
     def recv_async(self, timeout, transId):
-        self.__s.sendall(term_to_binary((OtpErlangAtom("recv_async"), timeout,
-                                         OtpErlangBinary(transId))))
+        self.__send(term_to_binary((OtpErlangAtom("recv_async"), timeout,
+                                    OtpErlangBinary(transId))))
         return self.poll()
 
     def __callback(self, command, name, requestInfo, request,
@@ -202,8 +213,8 @@ class API(object):
                 # exception is ignored at this level
                 responseInfo = ''
                 response = ''
-            self.return_async(name, responseInfo, response,
-                              timeout, transId, pid)
+            self.__return_async_nothrow(name, responseInfo, response,
+                                        timeout, transId, pid)
         elif command == _MESSAGE_SEND_SYNC:
             try:
                 response = function(API.__SYNC, name, requestInfo, request,
@@ -221,8 +232,8 @@ class API(object):
                 # exception is ignored at this level
                 responseInfo = ''
                 response = ''
-            self.return_sync(name, responseInfo, response,
-                             timeout, transId, pid)
+            self.__return_sync_nothrow(name, responseInfo, response,
+                                       timeout, transId, pid)
         else:
             assert False
 
@@ -236,13 +247,7 @@ class API(object):
                 ready = True
 
         data = ''
-        while ready == True:
-            fragment = self.__s.recv(self.__size)
-            data += fragment
-            ready = (len(fragment) == self.__size)
-            if ready:
-                IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                ready == (len(IN) > 0)
+        data = self.__recv(data)
 
         if len(data) == 0:
             return None # socket was closed
@@ -306,7 +311,7 @@ class API(object):
                 assert j == len(data)
                 return struct.unpack("=" + "16s" * transIdCount, data[i:j])
             elif command == _MESSAGE_KEEPALIVE:
-                self.__s.sendall(term_to_binary(OtpErlangAtom("keepalive")))
+                self.__send(term_to_binary(OtpErlangAtom("keepalive")))
                 assert j >= len(data)
                 data = data[j:]
                 if len(data) > 0:
@@ -324,13 +329,7 @@ class API(object):
                 if len(IN) > 0:
                     ready = True
     
-            while ready == True:
-                fragment = self.__s.recv(self.__size)
-                data += fragment
-                ready = (len(fragment) == self.__size)
-                if ready:
-                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                    ready == (len(IN) > 0)
+            data = self.__recv(data)
     
             if len(data) == 0:
                 return None # socket was closed
@@ -342,6 +341,31 @@ class API(object):
             result[data[i]] = data[i + 1]
         return result
 
+    def __send(self, data):
+        if self.__use_header:
+            data = struct.pack('>I', len(data)) + data
+        self.__s.sendall(data)
+
+    def __recv(self, data):
+        if self.__use_header:
+            while len(data) < 4:
+                fragment = self.__s.recv(self.__size)
+                data += fragment
+            total = struct.unpack('>I', data[:4])[0]
+            data = data[4:]
+            while len(data) < total:
+                fragment = self.__s.recv(self.__size)
+                data += fragment
+        else:
+            ready = True
+            while ready == True:
+                fragment = self.__s.recv(self.__size)
+                data += fragment
+                ready = (len(fragment) == self.__size)
+                if ready:
+                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
+                    ready == (len(IN) > 0)
+        return data
 
 class _return_sync_exception(SystemExit):
     def __init__(self):
@@ -350,6 +374,21 @@ class _return_sync_exception(SystemExit):
 class _return_async_exception(SystemExit):
     def __init__(self):
         pass
+
+# force unbuffered stdout/stderr handling without external configuration
+class _unbuffered(object):
+    def __init__(self, stream):
+        self.__stream = stream
+
+    def write(self, data):
+        self.__stream.write(data)
+        self.__stream.flush()
+
+    def __getattr__(self, attr):
+        return getattr(self.__stream, attr)
+
+sys.stdout = _unbuffered(sys.stdout)
+sys.stderr = _unbuffered(sys.stderr)
 
 class _Task(threading.Thread):
     def __init__(self, index, protocol, size):

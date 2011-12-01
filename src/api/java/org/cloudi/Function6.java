@@ -57,7 +57,9 @@ public class Function6<C1, C2, C3, C4, C5, C6>
     }
 
     public Object invoke(C1 a1, C2 a2, C3 a3, C4 a4, C5 a5, C6 a6)
-                         throws Throwable
+                         throws Throwable,
+                                IllegalAccessException,
+                                NoSuchMethodException
     {
         try
         {
@@ -76,19 +78,9 @@ public class Function6<C1, C2, C3, C4, C5, C6>
             }
             return this.method.invoke(this.instance, a1, a2, a3, a4, a5, a6);
         }
-        catch (IllegalAccessException e)
-        {
-            e.printStackTrace();
-            return null;
-        }
         catch (InvocationTargetException e)
         {
             throw e.getTargetException();
-        }
-        catch (NoSuchMethodException e)
-        {
-            e.printStackTrace();
-            return null;
         }
     }
 }

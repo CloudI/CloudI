@@ -139,33 +139,85 @@ namespace
         return cloudi_success;
     }
 
-    int read_all(int fd, buffer_t & buffer, uint32_t & total,
+    int read_exact(int fd,
+                   unsigned char * const buffer,
+                   uint32_t const length)
+    {
+        uint32_t total = 0;
+        while (total < length)
+        {
+            ssize_t const i = ::read(fd, buffer + total, length - total);
+            if (i <= 0)
+            {
+                if (i == -1)
+                    return errno_read();
+                else
+                    return cloudi_error_read_null;
+            }
+            total += i;
+        }
+        if (total > length)
+            return cloudi_error_read_overflow;
+        return cloudi_success;
+    }
+
+    int read_all(int fd, int const use_header,
+                 buffer_t & buffer, uint32_t & total,
                  uint32_t const buffer_size)
     {
-        bool ready = true;
-        while (ready)
+        total = 0;
+        if (use_header)
         {
-            if (buffer.reserve(total + buffer_size) == false)
+            unsigned char header[4];
+            int const status = read_exact(fd, header, 4);
+            if (status)
+                return status;
+            uint32_t const length = (header[0] << 24) |
+                                    (header[1] << 16) |
+                                    (header[2] <<  8) |
+                                     header[3];
+            if (buffer.reserve(length) == false)
                 return cloudi_out_of_memory;
-            ssize_t i = ::read(fd, &buffer[total], buffer_size);
-            if (i < 0)
-                return errno_read();
-            total += i;
-            ready = (i == static_cast<signed>(buffer_size)) ||
-                    (i == 0 && total == 0);
-            if (ready)
+            total = length;
+            return read_exact(fd, buffer.get<unsigned char>(), length);
+        }
+        else
+        {
+            bool ready = true;
+            while (ready)
             {
-                int const status = data_ready(fd, ready);
-                if (status)
-                    return status;
+                if (buffer.reserve(total + buffer_size) == false)
+                    return cloudi_out_of_memory;
+                ssize_t i = ::read(fd, &buffer[total], buffer_size);
+                if (i < 0)
+                    return errno_read();
+                total += i;
+                ready = (i == static_cast<signed>(buffer_size)) ||
+                        (i == 0 && total == 0);
+                if (ready)
+                {
+                    int const status = data_ready(fd, ready);
+                    if (status)
+                        return status;
+                }
             }
         }
 
         return cloudi_success;
     }
 
-    int write_exact(int fd, char const * const buffer, uint32_t const length)
+    int write_exact(int fd, int const use_header,
+                    char * const buffer, uint32_t const length)
     {
+        if (use_header)
+        {
+            uint32_t const length_body = length - 4;
+            buffer[0] = (length_body & 0xff000000) >> 24;
+            buffer[1] = (length_body & 0x00ff0000) >> 16;
+            buffer[2] = (length_body & 0x0000ff00) >> 8;
+            buffer[3] =  length_body & 0x000000ff;
+        }
+
         uint32_t total = 0;
         while (total < length)
         {
@@ -221,11 +273,15 @@ static void exit_handler()
 
 int cloudi_initialize(cloudi_instance_t * p,
                       int index,
-                      char const * const /*protocol*/,
+                      char const * const protocol,
                       uint32_t buffer_size)
 {
     assert(index >= 0);
     p->fd = index + 3;
+    if (::strcmp(protocol, "tcp") == 0)
+        p->use_header = 1;
+    else
+        p->use_header = 0;
     p->buffer_size = buffer_size;
     p->lookup = new lookup_t();
     p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
@@ -237,12 +293,15 @@ int cloudi_initialize(cloudi_instance_t * p,
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
-    index = 0;
+    if (p->use_header)
+        index = 4;
+    else
+        index = 0;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "init"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
 
@@ -275,6 +334,8 @@ int cloudi_subscribe(cloudi_instance_t * p,
 
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
@@ -285,7 +346,7 @@ int cloudi_subscribe(cloudi_instance_t * p,
         return cloudi_error_write_overflow;
     if (ei_encode_string(buffer.get<char>(), &index, name))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -308,6 +369,8 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
 
         buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
         int index = 0;
+        if (p->use_header)
+            index = 4;
         if (ei_encode_version(buffer.get<char>(), &index))
             return cloudi_error_ei_encode;
         if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
@@ -318,7 +381,8 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
             return cloudi_error_write_overflow;
         if (ei_encode_string(buffer.get<char>(), &index, name))
             return cloudi_error_ei_encode;
-        int result = write_exact(p->fd, buffer.get<char>(), index);
+        int result = write_exact(p->fd, p->use_header,
+                                 buffer.get<char>(), index);
         if (result)
             return result;
         return cloudi_success;
@@ -337,6 +401,8 @@ static int cloudi_send_(cloudi_instance_t * p,
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 6))
@@ -357,7 +423,7 @@ static int cloudi_send_(cloudi_instance_t * p,
         return cloudi_error_ei_encode;
     if (ei_encode_long(buffer.get<char>(), &index, priority))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     result = cloudi_poll(p, -1);
@@ -450,6 +516,8 @@ static int cloudi_forward_(cloudi_instance_t * p,
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 8))
@@ -480,7 +548,7 @@ static int cloudi_forward_(cloudi_instance_t * p,
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
 
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -579,6 +647,8 @@ static int cloudi_return_(cloudi_instance_t * p,
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 7))
@@ -607,7 +677,7 @@ static int cloudi_return_(cloudi_instance_t * p,
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
 
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -693,6 +763,8 @@ int cloudi_recv_async(cloudi_instance_t * p,
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 3))
@@ -703,7 +775,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
         return cloudi_error_ei_encode;
     if (ei_encode_binary(buffer.get<char>(), &index, trans_id, 16))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     result = cloudi_poll(p, -1);
@@ -716,11 +788,13 @@ static int keepalive(cloudi_instance_t * p)
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
+    if (p->use_header)
+        index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "keepalive"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, buffer.get<char>(), index);
+    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -775,8 +849,8 @@ static void callback(cloudi_instance_t * p,
         {
             // exception is ignored at this level
         }
-        cloudi_return_async(p, name, "", 0, "", 0, timeout,
-                            trans_id, pid, pid_size);
+        cloudi_return_(p, "return_async", name, "", 0, "", 0,
+                       timeout, trans_id, pid, pid_size);
     }
     else if (command == MESSAGE_SEND_SYNC)
     {
@@ -800,8 +874,8 @@ static void callback(cloudi_instance_t * p,
         {
             // exception is ignored at this level
         }
-        cloudi_return_sync(p, name, "", 0, "", 0, timeout,
-                           trans_id, pid, pid_size);
+        cloudi_return_(p, "return_sync", name, "", 0, "", 0,
+                       timeout, trans_id, pid, pid_size);
     }
     else
     {
@@ -847,8 +921,8 @@ int cloudi_poll(cloudi_instance_t * p,
     else if (count < 0)
         return errno_poll();
 
-    int result = read_all(p->fd, buffer,
-                          p->buffer_recv_index,
+    int result = read_all(p->fd, p->use_header,
+                          buffer, p->buffer_recv_index,
                           p->buffer_size);
     if (result)
         return result;
@@ -979,8 +1053,8 @@ int cloudi_poll(cloudi_instance_t * p,
         else if (count < 0)
             return errno_poll();
 
-        result = read_all(p->fd, buffer,
-                          p->buffer_recv_index,
+        result = read_all(p->fd, p->use_header,
+                          buffer, p->buffer_recv_index,
                           p->buffer_size);
         if (result)
             return result;
