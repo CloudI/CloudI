@@ -20,6 +20,9 @@
 % interval at which asynchronous forwarded messages are sent
 -define(FORWARD_ASYNC_INTERVAL, 500). % milliseconds
 
+% decrement the timeout of each successful forward, to prevent infinite messages
+-define(FORWARD_DELTA, 100). % milliseconds
+
 % maximum possible time for a process death to remove process group membership
 % when using a slow refresh (fast refresh is immediate).  slow refresh is
 % used when a process is mainly communicating with long-lived processes

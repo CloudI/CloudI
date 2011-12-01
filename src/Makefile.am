@@ -115,7 +115,8 @@ clean-configure: config.log
            $(top_builddir)/lib/cloudi/cxx_src/.deps/ \
            $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
            $(top_builddir)/tests/http_req/c_src/.deps/ \
-           $(top_builddir)/tests/flood/service/.deps/
+           $(top_builddir)/tests/flood/service/.deps/ \
+           $(top_builddir)/tests/msg_size/cxx_src/.deps/
 	find $(top_builddir)/api \
          -name "Makefile.in" -o -name "Makefile" | xargs rm -f
 	find $(top_builddir)/lib \
@@ -174,6 +175,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-http-install \
                    tests-http_req-install \
                    tests-job_api-install \
+                   tests-msg_size-install \
                    tests-zeromq-install \
                    api-install \
                    api-c-install \
@@ -278,10 +280,11 @@ tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http/output/text" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http/output/"
 
-tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req \
-                        $(top_builddir)/tests/http_req/jar/cloudi.jar \
-                        $(top_builddir)/tests/http_req/jar/http_req.jar \
-                        $(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam
+tests-http_req-install: \
+        $(top_builddir)/tests/http_req/c_src/http_req \
+        $(top_builddir)/tests/http_req/jar/cloudi.jar \
+        $(top_builddir)/tests/http_req/jar/http_req.jar \
+        $(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
@@ -296,8 +299,9 @@ tests-http_req-install: $(top_builddir)/tests/http_req/c_src/http_req \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \
@@ -314,6 +318,17 @@ tests-job_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/path.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+
+tests-msg_size-install: \
+        $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
+        $(top_builddir)/tests/msg_size/cxx_src/msg_size
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin/"
+	$(INSTALL_PROGRAM) "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
+                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"

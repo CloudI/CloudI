@@ -133,7 +133,7 @@ init([tcp, BufferSize, Timeout, Prefix,
     process_flag(trap_exit, true),
     Opts = [binary, {ip, {127,0,0,1}},
             {recbuf, BufferSize}, {sndbuf, BufferSize},
-            {packet, 0}, {nodelay, true}, {delay_send, false},
+            {packet, 4}, {nodelay, true}, {delay_send, false},
             {keepalive, false}, {backlog, 0},
             {active, false}],
     case gen_tcp:listen(0, Opts) of
@@ -271,14 +271,17 @@ init([udp, BufferSize, Timeout, Prefix,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid ->
+                NextPid when Timeout >= ?FORWARD_DELTA ->
                     NextPid ! {'send_async', Name, RequestInfo, Request,
-                               Timeout, Priority, TransId, Pid}
+                               Timeout - ?FORWARD_DELTA,
+                               Priority, TransId, Pid};
+                _ ->
+                    ok
             end;
         false ->
             ok
     end,
-    {next_state, 'HANDLE', StateData};
+    {next_state, 'HANDLE', process_queue(StateData)};
 
 'HANDLE'({'forward_sync', Name, RequestInfo, Request,
           Timeout, Priority, TransId, Pid},
@@ -298,14 +301,17 @@ init([udp, BufferSize, Timeout, Prefix,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid ->
+                NextPid when Timeout >= ?FORWARD_DELTA ->
                     NextPid ! {'send_sync', Name, RequestInfo, Request,
-                               Timeout, Priority, TransId, Pid}
+                               Timeout - ?FORWARD_DELTA,
+                               Priority, TransId, Pid};
+                _ ->
+                    ok
             end;
         false ->
             ok
     end,
-    {next_state, 'HANDLE', StateData};
+    {next_state, 'HANDLE', process_queue(StateData)};
 
 'HANDLE'({'recv_async', Timeout, TransId},
          #state{async_responses = AsyncResponses} = StateData) ->
@@ -434,6 +440,11 @@ handle_info({tcp_closed, Socket}, _,
                    socket = Socket} = StateData) ->
     {stop, normal, StateData};
 
+handle_info({tcp_error, Socket, Reason}, _,
+            #state{protocol = tcp,
+                   socket = Socket} = StateData) ->
+    {stop, Reason, StateData};
+
 handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
             #state{protocol = tcp,
                    listener = Listener,
@@ -487,9 +498,12 @@ handle_info({'forward_async', Name, RequestInfo, Request,
             ok;
         {error, _} ->
             ok;
-        NextPid ->
+        NextPid when Timeout >= ?FORWARD_DELTA ->
             NextPid ! {'send_async', Name, RequestInfo, Request,
-                       Timeout, Priority, TransId, Pid}
+                       Timeout - ?FORWARD_DELTA,
+                       Priority, TransId, Pid};
+        _ ->
+            ok
     end,
     {next_state, StateName, StateData};
 
@@ -507,9 +521,12 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
             ok;
         {error, _} ->
             ok;
-        NextPid ->
+        NextPid when Timeout >= ?FORWARD_DELTA ->
             NextPid ! {'send_sync', Name, RequestInfo, Request,
-                       Timeout, Priority, TransId, Pid}
+                       Timeout - ?FORWARD_DELTA,
+                       Priority, TransId, Pid};
+        _ ->
+            ok
     end,
     {next_state, StateName, StateData};
 

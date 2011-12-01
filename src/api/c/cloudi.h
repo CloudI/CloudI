@@ -53,6 +53,7 @@ extern "C"
 typedef struct
 {
     int fd;
+    int use_header;
     uint32_t buffer_size;
     void * lookup;
     void * buffer_send;
@@ -248,6 +249,8 @@ enum
     cloudi_error_read_EINVAL                   =  85,
     cloudi_error_read_EIO                      =  86,
     cloudi_error_read_EISDIR                   =  87,
+    cloudi_error_read_null                     =  88,
+    cloudi_error_read_overflow                 =  89,
     cloudi_error_read_unknown                  =  90,
     cloudi_error_write_EAGAIN                  =  91,
     cloudi_error_write_EBADF                   =  92,

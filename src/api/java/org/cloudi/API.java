@@ -45,6 +45,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -68,6 +69,10 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 
 public class API
 {
+    // unbuffered output is with API.err.printf(), etc.
+    private static final PrintStream out = new PrintStream(System.out, true);
+    private static final PrintStream err = new PrintStream(System.err, true);
+
     private static final int ASYNC  =  1;
     private static final int SYNC   = -1;
 
@@ -81,6 +86,7 @@ public class API
     private static final int MESSAGE_KEEPALIVE       = 8;
 
     private FileDescriptor socket;
+    private boolean use_header;
     private FileOutputStream output;
     private FileInputStream input;
     private HashMap<String, Function8<Integer,
@@ -100,6 +106,7 @@ public class API
     {
         this.socket = API.storeFD(index + 3);
         assert this.socket != null : (index + 3);
+        this.use_header = (protocol.compareTo("tcp") == 0);
         this.output = new FileOutputStream(this.socket);
         this.input = new FileInputStream(this.socket);
         this.callbacks = new HashMap<String, Function8<Integer,
@@ -179,7 +186,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -209,7 +216,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -241,7 +248,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -281,7 +288,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return;
         }
     }
@@ -306,7 +313,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return;
         }
     }
@@ -328,6 +335,16 @@ public class API
                              Integer timeout, byte[] transId, OtpErlangPid pid)
                              throws ReturnAsyncException
     {
+        return_async_nothrow(name, responseInfo, response,
+                             timeout, transId, pid);
+        throw new ReturnAsyncException();
+    }
+
+    private void return_async_nothrow(String name,
+                                      byte[] responseInfo, byte[] response,
+                                      Integer timeout, byte[] transId,
+                                      OtpErlangPid pid)
+    {
         try
         {
             OtpOutputStream return_async = new OtpOutputStream();
@@ -340,11 +357,10 @@ public class API
                                              new OtpErlangBinary(transId), pid};
             return_async.write_any(new OtpErlangTuple(tuple));
             send(return_async);
-            throw new ReturnAsyncException();
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return;
         }
     }
@@ -352,6 +368,16 @@ public class API
     public void return_sync(String name, byte[] responseInfo, byte[] response,
                             Integer timeout, byte[] transId, OtpErlangPid pid)
                             throws ReturnSyncException
+    {
+        return_sync_nothrow(name, responseInfo, response,
+                            timeout, transId, pid);
+        throw new ReturnSyncException();
+    }
+
+    private void return_sync_nothrow(String name,
+                                     byte[] responseInfo, byte[] response,
+                                     Integer timeout, byte[] transId,
+                                     OtpErlangPid pid)
     {
         try
         {
@@ -365,11 +391,10 @@ public class API
                                              new OtpErlangBinary(transId), pid};
             return_sync.write_any(new OtpErlangTuple(tuple));
             send(return_sync);
-            throw new ReturnSyncException();
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return;
         }
     }
@@ -389,7 +414,7 @@ public class API
         }
         catch (OtpErlangRangeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -411,25 +436,25 @@ public class API
                 {
                     byte [][] responseArray = (byte[][]) response;
                     assert responseArray.length == 2 : "invalid response";
-                    return_async(name,
-                                 responseArray[0],
-                                 responseArray[1],
-                                 timeout, transId, pid);
+                    return_async_nothrow(name,
+                                         responseArray[0],
+                                         responseArray[1],
+                                         timeout, transId, pid);
                     
                 }
                 else if (response.getClass() == byte[].class)
                 {
-                    return_async(name,
-                                 ("").getBytes(),
-                                 (byte[]) response,
-                                 timeout, transId, pid);
+                    return_async_nothrow(name,
+                                         ("").getBytes(),
+                                         (byte[]) response,
+                                         timeout, transId, pid);
                 }
                 else
                 {
-                    return_async(name,
-                                 ("").getBytes(),
-                                 response.toString().getBytes(),
-                                 timeout, transId, pid);
+                    return_async_nothrow(name,
+                                         ("").getBytes(),
+                                         response.toString().getBytes(),
+                                         timeout, transId, pid);
                 }
             }
             catch (ReturnAsyncException e)
@@ -438,7 +463,11 @@ public class API
             }
             catch (Throwable e)
             {
-                e.printStackTrace();
+                e.printStackTrace(API.err);
+                return_async_nothrow(name,
+                                     ("").getBytes(),
+                                     ("").getBytes(),
+                                     timeout, transId, pid);
                 return;
             }
         }
@@ -454,25 +483,25 @@ public class API
                 {
                     byte [][] responseArray = (byte[][]) response;
                     assert responseArray.length == 2 : "invalid response";
-                    return_sync(name,
-                                responseArray[0],
-                                responseArray[1],
-                                timeout, transId, pid);
+                    return_sync_nothrow(name,
+                                        responseArray[0],
+                                        responseArray[1],
+                                        timeout, transId, pid);
                     
                 }
                 else if (response.getClass() == byte[].class)
                 {
-                    return_sync(name,
-                                ("").getBytes(),
-                                (byte[]) response,
-                                timeout, transId, pid);
+                    return_sync_nothrow(name,
+                                        ("").getBytes(),
+                                        (byte[]) response,
+                                        timeout, transId, pid);
                 }
                 else
                 {
-                    return_sync(name,
-                                ("").getBytes(),
-                                response.toString().getBytes(),
-                                timeout, transId, pid);
+                    return_sync_nothrow(name,
+                                        ("").getBytes(),
+                                        response.toString().getBytes(),
+                                        timeout, transId, pid);
                 }
             }
             catch (ReturnSyncException e)
@@ -481,7 +510,11 @@ public class API
             }
             catch (Throwable e)
             {
-                e.printStackTrace();
+                e.printStackTrace(API.err);
+                return_sync_nothrow(name,
+                                    ("").getBytes(),
+                                    ("").getBytes(),
+                                    timeout, transId, pid);
                 return;
             }
         }
@@ -489,12 +522,10 @@ public class API
 
     public Object poll()
     {
-        byte[] data = API.recv(null, this.input, this.buffer_size);
-        if (data == null || data.length == 0)
+        ByteBuffer buffer = recv(null);
+        if (buffer == null || buffer.remaining() == 0)
             return null;
 
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.order(ByteOrder.nativeOrder());
         while (true)
         {
             try
@@ -539,6 +570,7 @@ public class API
                         int responseInfoSize = buffer.getInt();
                         byte[] responseInfo = API.getBytes(buffer,
                                                            responseInfoSize);
+                        buffer.get();
                         int responseSize = buffer.getInt();
                         byte[] response = API.getBytes(buffer, responseSize);
                         buffer.get();
@@ -579,16 +611,13 @@ public class API
                         return null;
                 }
     
-                data = API.recv(buffer, this.input, this.buffer_size);
-                if (data == null || data.length == 0)
+                buffer = recv(buffer);
+                if (buffer == null || buffer.remaining() == 0)
                     return null;
-        
-                buffer = ByteBuffer.wrap(data);
-                buffer.order(ByteOrder.nativeOrder());
             }
             catch (IOException e)
             {
-                e.printStackTrace();
+                e.printStackTrace(API.err);
                 return null;
             }
         }
@@ -623,39 +652,79 @@ public class API
     {
         try
         {
+            if (this.use_header)
+            {
+                final long length = command.size();
+                final byte[] header = {(byte) ((length & 0xff000000) >> 24),
+                                       (byte) ((length & 0x00ff0000) >> 16),
+                                       (byte) ((length & 0x0000ff00) >> 8),
+                                       (byte) ( length & 0x000000ff)};
+                this.output.write(header);
+            }
             command.writeTo(this.output);
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return;
         }
     }
 
-    private static byte[] recv(ByteBuffer buffer,
-                               FileInputStream input,
-                               final int size)
+    private ByteBuffer recv(ByteBuffer buffer_in)
     {
         try
         {
-            byte[] bytes = new byte[size];
             ByteArrayOutputStream output = new ByteArrayOutputStream();
-            if (buffer != null && buffer.hasRemaining())
-                output.write(buffer.array(), buffer.position(), buffer.limit());
+            if (buffer_in != null && buffer_in.hasRemaining())
+                output.write(buffer_in.array(),
+                             buffer_in.position(),
+                             buffer_in.limit());
             int read = 0;
-            while ((read = input.read(bytes, 0, size)) == size &&
-                   input.available() > 0)
-                output.write(bytes, 0, size);
-    
+            byte[] bytes = new byte[this.buffer_size];
+            while ((read = this.input.read(bytes, 0, this.buffer_size)) ==
+                   this.buffer_size && this.input.available() > 0)
+                output.write(bytes, 0, this.buffer_size);
             if (read == -1)
                 return null;
             output.write(bytes, 0, read);
-        
-            return output.toByteArray();
+            byte[] result = output.toByteArray();
+            ByteBuffer buffer_out = null;
+            if (this.use_header)
+            {
+                final long length = (result[0] << 24) |
+                                    (result[1] << 16) |
+                                    (result[2] <<  8) |
+                                     result[3];
+                if (output.size() != (length + 4))
+                {
+                    assert output.size() < (length + 4) : "recv overflow";
+                    output = new ByteArrayOutputStream();
+                    output.write(result, 4, result.length - 4);
+                    while (output.size() < length)
+                    {
+                        read = this.input.read(bytes, 0, this.buffer_size);
+                        if (read == -1)
+                            return null;
+                        output.write(bytes, 0, read);
+                    }
+                    result = output.toByteArray();
+                    buffer_out = ByteBuffer.wrap(result);
+                }
+                else
+                {
+                    buffer_out = ByteBuffer.wrap(result, 4, result.length - 4);
+                }
+            }
+            else
+            {
+                buffer_out = ByteBuffer.wrap(result);
+            }
+            buffer_out.order(ByteOrder.nativeOrder());
+            return buffer_out;
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -675,7 +744,7 @@ public class API
         }
         catch (OtpErlangDecodeException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
     }
@@ -698,12 +767,12 @@ public class API
         }
         catch (SecurityException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
         catch (NoSuchMethodException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
 
@@ -715,22 +784,22 @@ public class API
         }
         catch (IllegalArgumentException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
         catch (InstantiationException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
         catch (IllegalAccessException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
         catch (InvocationTargetException e)
         {
-            e.printStackTrace();
+            e.printStackTrace(API.err);
             return null;
         }
         return object;

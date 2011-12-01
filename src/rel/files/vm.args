@@ -28,3 +28,6 @@
 # http_req tests service module not included in an application
 -pz tests/http_req/ebin/
 
+# msg_size tests service module not included in an application
+-pz tests/msg_size/ebin/
+

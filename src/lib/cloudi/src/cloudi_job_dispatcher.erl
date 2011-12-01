@@ -412,9 +412,12 @@ handle_info({'forward_async', Name, RequestInfo, Request,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid ->
+                NextPid when Timeout >= ?FORWARD_DELTA ->
                     NextPid ! {'send_async', Name, RequestInfo, Request,
-                               Timeout, Priority, TransId, Pid}
+                               Timeout - ?FORWARD_DELTA,
+                               Priority, TransId, Pid};
+                _ ->
+                    ok
             end;
         false ->
             ok
@@ -439,9 +442,12 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid ->
+                NextPid when Timeout >= ?FORWARD_DELTA ->
                     NextPid ! {'send_sync', Name, RequestInfo, Request,
-                               Timeout, Priority, TransId, Pid}
+                               Timeout - ?FORWARD_DELTA,
+                               Priority, TransId, Pid};
+                _ ->
+                    ok
             end;
         false ->
             ok

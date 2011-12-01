@@ -130,6 +130,10 @@ AC_CONFIG_FILES([cloudi.conf
                  tests/flood/service/org/Makefile
                  tests/flood/service/org/cloudi/Makefile
                  tests/flood/service/org/cloudi/tests/Makefile
-                 tests/flood/service/org/cloudi/tests/flood/Makefile])
+                 tests/flood/service/org/cloudi/tests/flood/Makefile
+                 tests/msg_size/Makefile
+                 tests/msg_size/src/Makefile
+                 tests/msg_size/cxx_src/Makefile
+                 ])
 AC_OUTPUT
 

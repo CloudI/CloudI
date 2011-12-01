@@ -865,6 +865,18 @@ handle_info({'send_async', Name, RequestInfo, Request,
             Pid ! {'return_async', Name, ResponseInfo, Response,
                    Timeout, TransId, Pid},
             {noreply, State#state{job_state = NewJobState}};
+        {forward, NextName, NextRequestInfo, NextRequest,
+                  NextTimeout, NextPriority, NewJobState} ->
+            Dispatcher ! {'forward_async', NextName,
+                          NextRequestInfo, NextRequest,
+                          NextTimeout, NextPriority, TransId, Pid},
+            {noreply, State#state{job_state = NewJobState}};
+        {forward, NextName, NextRequestInfo, NextRequest,
+                  NewJobState} ->
+            Dispatcher ! {'forward_async', NextName,
+                          NextRequestInfo, NextRequest,
+                          Timeout, Priority, TransId, Pid},
+            {noreply, State#state{job_state = NewJobState}};
         {noreply, NewJobState} ->
             {noreply, State#state{job_state = NewJobState}}
     catch
@@ -894,6 +906,18 @@ handle_info({'send_sync', Name, RequestInfo, Request,
         {reply, ResponseInfo, Response, NewJobState} ->
             Pid ! {'return_sync', Name, ResponseInfo, Response,
                    Timeout, TransId, Pid},
+            {noreply, State#state{job_state = NewJobState}};
+        {forward, NextName, NextRequestInfo, NextRequest,
+                  NextTimeout, NextPriority, NewJobState} ->
+            Dispatcher ! {'forward_sync', NextName,
+                          NextRequestInfo, NextRequest,
+                          NextTimeout, NextPriority, TransId, Pid},
+            {noreply, State#state{job_state = NewJobState}};
+        {forward, NextName, NextRequestInfo, NextRequest,
+                  NewJobState} ->
+            Dispatcher ! {'forward_sync', NextName,
+                          NextRequestInfo, NextRequest,
+                          Timeout, Priority, TransId, Pid},
             {noreply, State#state{job_state = NewJobState}};
         {noreply, NewJobState} ->
             {noreply, State#state{job_state = NewJobState}}
