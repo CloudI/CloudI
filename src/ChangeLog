@@ -3,6 +3,9 @@
 
 2011-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add java msg_size test and make the java socket handling more robust
+    * Catch cloudi_job Erlang module timeout exceptions and return as the
+      expected error timeout return value
     * Add request_info parsing (expected to always be key/value pairs)
 
 2011-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>

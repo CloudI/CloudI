@@ -59,7 +59,7 @@ public class Task implements Runnable
                      throws API.ReturnAsyncException, API.ReturnSyncException
     {
         final String value = new String(request);
-        System.out.println("(" + value + ")");
+        API.out.println("(" + value + ")");
         assert "Test Text" == value : value;
         api.return_(command, name,
                     ("").getBytes(), ("Test Response").getBytes(),
@@ -76,9 +76,9 @@ public class Task implements Runnable
             if (result == null)
                 running = false;
             else
-                System.out.println("(java) received: " + result.toString());
+                API.out.println("(java) received: " + result.toString());
         }
-        System.out.println("exited thread");
+        API.err.println("exited thread");
     }
 }
 

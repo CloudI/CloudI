@@ -53,6 +53,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.Math;
 import com.ericsson.otp.erlang.OtpExternal;
 import com.ericsson.otp.erlang.OtpOutputStream;
 import com.ericsson.otp.erlang.OtpInputStream;
@@ -70,8 +71,8 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 public class API
 {
     // unbuffered output is with API.err.printf(), etc.
-    private static final PrintStream out = new PrintStream(System.out, true);
-    private static final PrintStream err = new PrintStream(System.err, true);
+    public static final PrintStream out = new PrintStream(System.out, true);
+    public static final PrintStream err = new PrintStream(System.err, true);
 
     private static final int ASYNC  =  1;
     private static final int SYNC   = -1;
@@ -257,6 +258,7 @@ public class API
                          String name, byte[] requestInfo, byte[] request,
                          Integer timeout, Byte priority,
                          byte[] transId, OtpErlangPid pid)
+                         throws ReturnAsyncException, ReturnSyncException
     {
         if (command == API.ASYNC)
             forward_async(name, requestInfo, request,
@@ -271,6 +273,7 @@ public class API
     public void forward_async(String name, byte[] requestInfo, byte[] request,
                               Integer timeout, Byte priority,
                               byte[] transId, OtpErlangPid pid)
+                              throws ReturnAsyncException
     {
         try
         {
@@ -291,11 +294,13 @@ public class API
             e.printStackTrace(API.err);
             return;
         }
+        throw new ReturnAsyncException();
     }
 
     public void forward_sync(String name, byte[] requestInfo, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] transId, OtpErlangPid pid)
+                             throws ReturnSyncException
     {
         try
         {
@@ -316,6 +321,7 @@ public class API
             e.printStackTrace(API.err);
             return;
         }
+        throw new ReturnSyncException();
     }
 
     public void return_(Integer command,
@@ -692,12 +698,20 @@ public class API
                              buffer_in.limit());
             int read = 0;
             byte[] bytes = new byte[this.buffer_size];
-            while ((read = this.input.read(bytes, 0, this.buffer_size)) ==
-                   this.buffer_size && this.input.available() > 0)
-                output.write(bytes, 0, this.buffer_size);
-            if (read == -1)
-                return null;
-            output.write(bytes, 0, read);
+            boolean consume = true;
+            while (consume)
+            {
+                while ((read = this.input.read(bytes)) == this.buffer_size &&
+                       this.input.available() > 0)
+                    output.write(bytes, 0, this.buffer_size);
+                if (read == -1)
+                    return null;
+                output.write(bytes, 0, read);
+                if (this.use_header == false)
+                    consume = false;
+                else if (output.size() >= 4)
+                    consume = false;
+            }
             byte[] result = output.toByteArray();
             ByteBuffer buffer_out = null;
             if (this.use_header)
@@ -713,7 +727,10 @@ public class API
                     output.write(result, 4, result.length - 4);
                     while (output.size() < length)
                     {
-                        read = this.input.read(bytes, 0, this.buffer_size);
+                        read = this.input.read(bytes, 0,
+                                               Math.min((int) (length -
+                                                               output.size()),
+                                                        this.buffer_size));
                         if (read == -1)
                             return null;
                         output.write(bytes, 0, read);

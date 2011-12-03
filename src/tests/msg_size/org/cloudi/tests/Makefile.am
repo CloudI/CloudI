@@ -1,0 +1,2 @@
+SUBDIRS = msg_size
+

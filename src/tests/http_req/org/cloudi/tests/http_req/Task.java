@@ -90,9 +90,9 @@ public class Task implements Runnable
             if (result == null)
                 running = false;
             else
-                System.out.println("(java) received: " + result.toString());
+                API.out.println("(java) received: " + result.toString());
         }
-        System.out.println("exited thread");
+        API.err.println("exited thread");
     }
 }
 
