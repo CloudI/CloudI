@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add request_info parsing (expected to always be key/value pairs)
+
 2011-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change external tcp job handling to utilize a 4 byte header

@@ -1061,20 +1061,18 @@ int cloudi_poll(cloudi_instance_t * p,
     }
 }
 
-// CloudI helper functions
-
-char const ** cloudi_request_http_qs_parse(void const * const request,
-                                           uint32_t const request_size)
+static char const ** binary_key_value_parse(void const * const binary,
+                                            uint32_t const binary_size)
 {
-    char const * http_qs = reinterpret_cast<char const * const>(request);
+    char const * p = reinterpret_cast<char const * const>(binary);
     realloc_ptr<char const *> result(16, 8192);
-    result[0] = http_qs;
+    result[0] = p;
     size_t i = 1;
-    for (size_t request_i = 1; request_i < request_size; ++request_i)
+    for (size_t binary_i = 1; binary_i < binary_size; ++binary_i)
     {
-        if (http_qs[request_i] == '\0')
+        if (p[binary_i] == '\0')
         {
-            result[i] = &http_qs[++request_i];
+            result[i] = &p[++binary_i];
             result.reserve(++i + 1);
         }
     }
@@ -1082,9 +1080,35 @@ char const ** cloudi_request_http_qs_parse(void const * const request,
     return result.release();
 }
 
-void cloudi_request_http_qs_destroy(char const ** p)
+static void binary_key_value_destroy(char const ** p)
 {
     free(p);
+}
+
+// CloudI helper functions
+
+char const ** cloudi_request_http_qs_parse(void const * const request,
+                                           uint32_t const request_size)
+{
+    return binary_key_value_parse(request, request_size);
+}
+
+void cloudi_request_http_qs_destroy(char const ** p)
+{
+    binary_key_value_destroy(p);
+}
+
+char const ** cloudi_request_info_key_value_parse(void const *
+                                                  const request_info,
+                                                  uint32_t
+                                                  const request_info_size)
+{
+    return binary_key_value_parse(request_info, request_info_size);
+}
+
+void cloudi_request_info_key_value_destroy(char const ** p)
+{
+    binary_key_value_destroy(p);
 }
 
 }

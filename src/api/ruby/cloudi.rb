@@ -24,7 +24,7 @@
 #       written permission
 # 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-# CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
@@ -363,18 +363,27 @@ module Cloudi
             end
         end
 
-        def request_http_qs_parse(request)
+        def binary_key_value_parse(binary)
             result = {}
-            data = request.split(NULL.chr)
+            data = binary.split(NULL.chr)
             (0...(data.length)).step(2).each do |i|
                 result[data[i]] = data[i + 1]
             end
-            return result
+            result
+        end
+
+        def request_http_qs_parse(request)
+            request_key_value_parse(request)
+        end
+
+        def request_info_key_value_parse(request_info)
+            request_key_value_parse(request_info)
         end
 
         private :return_async_nothrow
         private :return_sync_nothrow
         private :callback
+        private :binary_key_value_parse
         private
 
         def send(data)

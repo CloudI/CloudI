@@ -623,29 +623,40 @@ public class API
         }
     }
 
-    public HashMap<String, String> request_http_qs_parse(byte[] request)
+    private HashMap<String, String> binary_key_value_parse(byte[] binary)
     {
         HashMap<String, String> result = new HashMap<String, String>();
         String key = null;
-        int request_i = 0;
-        for (int request_j = 0; request_j < request.length; ++request_j)
+        int binary_i = 0;
+        for (int binary_j = 0; binary_j < binary.length; ++binary_j)
         {
-            if (request[request_j] == 0)
+            if (binary[binary_j] == 0)
             {
                 if (key == null)
                 {
-                    key = new String(request, request_i, request_j - request_i);
+                    key = new String(binary, binary_i, binary_j - binary_i);
                 }
                 else
                 {
-                    result.put(key, new String(request, request_i,
-                                               request_j - request_i));
+                    result.put(key, new String(binary, binary_i,
+                                               binary_j - binary_i));
                     key = null;
                 }
-                request_i = request_j + 1;
+                binary_i = binary_j + 1;
             }
         }
         return result;
+    }
+
+    public HashMap<String, String> request_http_qs_parse(byte[] request)
+    {
+        return binary_key_value_parse(request);
+    }
+
+    public HashMap<String, String> request_info_key_value_parse(byte[] 
+                                                                request_info)
+    {
+        return binary_key_value_parse(request_info);
     }
 
     private void send(OtpOutputStream command)

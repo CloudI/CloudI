@@ -334,12 +334,18 @@ class API(object):
             if len(data) == 0:
                 return None # socket was closed
 
-    def request_http_qs_parse(self, request):
+    def __binary_key_value_parse(self, binary):
         result = {}
-        data = request.split(chr(0))
+        data = binary.split(chr(0))
         for i in xrange(0, len(data) - 1, 2):
             result[data[i]] = data[i + 1]
         return result
+
+    def request_http_qs_parse(self, request):
+        return self.__binary_key_value_parse(request)
+
+    def request_info_key_value_parse(self, request_info):
+        return self.__binary_key_value_parse(request_info)
 
     def __send(self, data):
         if self.__use_header:
