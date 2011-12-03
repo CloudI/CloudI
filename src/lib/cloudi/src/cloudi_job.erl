@@ -95,7 +95,7 @@
          return_sync/7,
          return_nothrow/8,
          request_http_qs_parse/1,
-         request_info_http_headers_parse/1]).
+         request_info_key_value_parse/1]).
 
 %% behavior callbacks
 -export([behaviour_info/1]).
@@ -809,21 +809,21 @@ request_http_qs_parse(Request)
     request_http_qs_parse_list(dict:new(),
                                binary:split(Request, <<0>>, [global])).
 
--spec request_info_http_headers_parse(RequestInfo :: binary() | list()) ->
+-spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
     dict().
 
-request_info_http_headers_parse(RequestInfo)
+request_info_key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->
     % atom() -> string()
     lists:foldl(fun({K, V}, D) ->
         dict:store(K, V, D)
     end, dict:new(), RequestInfo);
-request_info_http_headers_parse(RequestInfo)
+request_info_key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
     % binary() -> binary()
-    request_info_http_headers_parse_list(dict:new(),
-                                         binary:split(RequestInfo, <<0>>,
-                                                      [global])).
+    request_info_key_value_parse_list(dict:new(),
+                                      binary:split(RequestInfo, <<0>>,
+                                                   [global])).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -963,8 +963,8 @@ request_http_qs_parse_list(Lookup, [<<>>]) ->
 request_http_qs_parse_list(Lookup, [K, V | L]) ->
     request_http_qs_parse_list(dict:store(K, V, Lookup), L).
 
-request_info_http_headers_parse_list(Lookup, [<<>>]) ->
+request_info_key_value_parse_list(Lookup, [<<>>]) ->
     Lookup;
-request_info_http_headers_parse_list(Lookup, [K, V | L]) ->
-    request_info_http_headers_parse_list(dict:store(K, V, Lookup), L).
+request_info_key_value_parse_list(Lookup, [K, V | L]) ->
+    request_info_key_value_parse_list(dict:store(K, V, Lookup), L).
 

@@ -228,6 +228,12 @@ char const ** cloudi_request_http_qs_parse(void const * const request,
                                            uint32_t const request_size);
 void cloudi_request_http_qs_destroy(char const ** p);
 
+char const ** cloudi_request_info_key_value_parse(void const *
+                                                  const request_info,
+                                                  uint32_t
+                                                  const request_info_size);
+void cloudi_request_info_key_value_destroy(char const ** p);
+
 enum
 {
     cloudi_success                             =   0,
