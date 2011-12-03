@@ -38,44 +38,30 @@
 // DAMAGE.
 //
 
-package org.cloudi.tests.flood;
+package org.cloudi.tests.msg_size;
 
-import com.ericsson.otp.erlang.OtpErlangPid;
-import org.cloudi.API;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
-public class Task implements Runnable
+public class Main
 {
-    private API api;
-     
-    public Task(final int index, final String protocol, final int buffer_size)
+    public static void main(String[] args)
     {
-        api = new API(index, protocol, buffer_size);
-    }
-
-    public void flood(Integer command, String name,
-                      byte[] requestInfo, byte[] request,
-                      Integer timeout, Byte priority,
-                      byte[] transId, OtpErlangPid pid)
-                      throws API.ReturnAsyncException, API.ReturnSyncException
-    {
-        api.return_(command, name,
-                    ("").getBytes(), ("java").getBytes(),
-                    timeout, transId, pid);
-    }
- 
-    public void run()
-    {
-        api.subscribe("java", this, "flood");
-        boolean running = true;
-        while (running)
+        if (args.length != 3)
         {
-            Object result = api.poll();
-            if (result == null)
-                running = false;
-            else
-                API.out.println("(java) received: " + result.toString());
+            System.err.println("Usage: [java Main] " +
+                               "thread_count protocol buffer_size");
+            System.exit(-1);
         }
-        API.err.println("exited thread");
+
+        int thread_count = Integer.parseInt(args[0]);
+        String protocol = args[1];
+        int buffer_size = Integer.parseInt(args[2]);
+        ExecutorService threads = Executors.newFixedThreadPool(thread_count);
+        for (int index = 0; index < thread_count; ++index)
+            threads.execute(new Task(index, protocol, buffer_size));
+
+        threads.shutdown();
     }
 }
 

@@ -1,1 +1,1 @@
-SUBDIRS = cxx_src src
+SUBDIRS = cxx_src org jar src

@@ -321,12 +321,19 @@ tests-job_api-install:
 
 tests-msg_size-install: \
         $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
+        $(top_builddir)/tests/msg_size/jar/cloudi.jar \
+        $(top_builddir)/tests/msg_size/jar/msg_size.jar \
         $(top_builddir)/tests/msg_size/cxx_src/msg_size
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv"
 	$(INSTALL_DATA) \
         "$(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/msg_size/jar/cloudi.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/msg_size/jar/msg_size.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
                        "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
 

@@ -38,42 +38,53 @@
 // DAMAGE.
 //
 
-package org.cloudi.tests.flood;
+package org.cloudi.tests.msg_size;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import com.ericsson.otp.erlang.OtpErlangPid;
 import org.cloudi.API;
 
 public class Task implements Runnable
 {
     private API api;
+    private static final String DESTINATION = "/tests/msg_size/erlang";
      
     public Task(final int index, final String protocol, final int buffer_size)
     {
         api = new API(index, protocol, buffer_size);
     }
 
-    public void flood(Integer command, String name,
-                      byte[] requestInfo, byte[] request,
-                      Integer timeout, Byte priority,
-                      byte[] transId, OtpErlangPid pid)
-                      throws API.ReturnAsyncException, API.ReturnSyncException
+    public void request(Integer command, String name,
+                        byte[] requestInfo, byte[] request,
+                        Integer timeout, Byte priority,
+                        byte[] transId, OtpErlangPid pid)
+                        throws API.ReturnAsyncException, API.ReturnSyncException
     {
-        api.return_(command, name,
-                    ("").getBytes(), ("java").getBytes(),
-                    timeout, transId, pid);
+        ByteBuffer buffer = ByteBuffer.wrap(request);
+        buffer.order(ByteOrder.nativeOrder());
+        int i = buffer.getInt(0);
+        if (i == 4294967295L)
+            i = 0;
+        else
+            i++;
+        buffer.putInt(0, i);
+        API.out.printf("forward #%d to %s (with timeout %d ms)\n",
+                       i, Task.DESTINATION, timeout);
+        api.forward_(command, Task.DESTINATION,
+                     requestInfo, request,
+                     timeout, priority, transId, pid);
     }
  
     public void run()
     {
-        api.subscribe("java", this, "flood");
+        api.subscribe("java", this, "request");
         boolean running = true;
         while (running)
         {
             Object result = api.poll();
             if (result == null)
                 running = false;
-            else
-                API.out.println("(java) received: " + result.toString());
         }
         API.err.println("exited thread");
     }

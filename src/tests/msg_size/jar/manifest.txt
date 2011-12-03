@@ -1,0 +1,3 @@
+Main-Class: org.cloudi.tests.msg_size.Main
+Class-Path: cloudi.jar
+

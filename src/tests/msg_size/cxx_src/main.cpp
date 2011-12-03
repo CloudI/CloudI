@@ -68,7 +68,7 @@ static void request(cloudi_instance_t * api,
         *i = 0;
     else
         (*i)++;
-    std::cerr << "forward #" << *i << " to " DESTINATION
+    std::cout << "forward #" << *i << " to " DESTINATION
         " (with timeout " << timeout << " ms)" << std::endl;
     cloudi_forward(api, command, DESTINATION,
                    request_info, request_info_size,
@@ -103,7 +103,7 @@ int main(int argc, char ** argv)
                                 -5);
     assert(result == cloudi_success);
 
-    result = cloudi_subscribe(&api, "c", &request);
+    result = cloudi_subscribe(&api, "cxx", &request);
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);
