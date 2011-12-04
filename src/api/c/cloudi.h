@@ -48,7 +48,7 @@ extern "C"
 {
 #endif
 
-#define CLOUDI_MAX_BUFFERSIZE 4194304 /* 4MB */
+#define CLOUDI_MAX_BUFFERSIZE 2147483648 /* 2GB */
 
 typedef struct
 {
