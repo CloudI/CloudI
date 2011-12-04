@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Misultin Integration==
+%%% ==CloudI HTTP Integration==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -47,7 +47,7 @@
 %%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_misultin).
+-module(cloudi_job_http).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_job).

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the python and ruby variations on the msg_size test
+    * Increase the C/C++ message buffer size to 2GB (from 4MB),
+      to match the current tcp packet encoding limitation
+    * Move cloudi_job_misultin to be cloudi_job_http
+
 2011-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add java msg_size test and make the java socket handling more robust

@@ -17,7 +17,7 @@
         cloudi_job_dispatcher,
         cloudi_job,
         cloudi_job_filesystem,
-        cloudi_job_misultin,
+        cloudi_job_http,
         cloudi_job_sup,
         cloudi_job_timers,
         cloudi_job_work_manager,

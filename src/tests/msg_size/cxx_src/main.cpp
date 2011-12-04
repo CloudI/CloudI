@@ -46,7 +46,7 @@
 #define DESTINATION "/tests/msg_size/erlang"
 #define MSG_SIZE 2097152 // 2 MB
 
-static char buffer[CLOUDI_MAX_BUFFERSIZE];
+static char buffer[MSG_SIZE];
 
 static void request(cloudi_instance_t * api,
                     int const command,
