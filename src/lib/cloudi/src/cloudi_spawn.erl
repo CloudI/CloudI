@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -53,6 +53,11 @@
 %% external interface
 -export([start_internal/9,
          start_external/13]).
+
+% environmental variables used by CloudI API initialization
+-define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
+-define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
+-define(ENVIRONMENT_BUFFER_SIZE,   "CLOUDI_API_INIT_BUFFER_SIZE").
 
 %%%------------------------------------------------------------------------
 %%% External interface
@@ -128,19 +133,23 @@ start_external(ThreadsPerProcess,
                 Error
         end
     end, [], [], lists:seq(1, ThreadsPerProcess)),
+    NewEnvironment = environment_update(Environment,
+                                        ThreadsPerProcess,
+                                        Protocol,
+                                        BufferSize),
     if
         Pids == error ->
             % an error occurred in cloudi_socket_sup:create_socket
-            {Pids, Ports};
+            {error, Ports};
         true ->
             SpawnProcess = pool2:get(cloudi_os_spawn),
             ProtocolChar = if Protocol == tcp -> $t; Protocol == udp -> $u end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,
                                        Ports,
-                                       terminate_string(Filename),
-                                       parse_arguments(Arguments),
-                                       format_environment(Environment)) of
+                                       string_terminate(Filename),
+                                       arguments_parse(Arguments),
+                                       environment_format(NewEnvironment)) of
                 {ok, _} ->
                     {ok, Pids};
                 {error, _} = Error ->
@@ -152,54 +161,69 @@ start_external(ThreadsPerProcess,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-terminate_string([_ | _] = L) ->
+string_terminate([_ | _] = L) ->
     L ++ [0].
 
-parse_arguments([32 | Args]) ->
-    parse_arguments(Args);
+arguments_parse([32 | Args]) ->
+    arguments_parse(Args);
 
-parse_arguments(Args) ->
-    parse_arguments([], none, Args).
+arguments_parse(Args) ->
+    arguments_parse([], none, Args).
 
-parse_arguments(Output, none, []) ->
+arguments_parse(Output, none, []) ->
     lists:reverse([0 | Output]);
 
-parse_arguments(Output, none, [$' | T]) ->
-    parse_arguments(Output, $', T);
+arguments_parse(Output, none, [$' | T]) ->
+    arguments_parse(Output, $', T);
 
-parse_arguments(Output, none, [$" | T]) ->
-    parse_arguments(Output, $", T);
+arguments_parse(Output, none, [$" | T]) ->
+    arguments_parse(Output, $", T);
 
-parse_arguments(Output, none, [$` | T]) ->
-    parse_arguments(Output, $`, T);
+arguments_parse(Output, none, [$` | T]) ->
+    arguments_parse(Output, $`, T);
 
-parse_arguments(Output, none, [32 | [32 | _] = T]) ->
-    parse_arguments(Output, none, T);
+arguments_parse(Output, none, [32 | [32 | _] = T]) ->
+    arguments_parse(Output, none, T);
 
-parse_arguments(Output, none, [32 | T]) ->
-    parse_arguments([0 | Output], none, T);
+arguments_parse(Output, none, [32 | T]) ->
+    arguments_parse([0 | Output], none, T);
 
-parse_arguments(Output, $', [$' | T]) ->
-    parse_arguments(Output, none, T);
+arguments_parse(Output, $', [$' | T]) ->
+    arguments_parse(Output, none, T);
 
-parse_arguments(Output, $", [$" | T]) ->
-    parse_arguments(Output, none, T);
+arguments_parse(Output, $", [$" | T]) ->
+    arguments_parse(Output, none, T);
 
-parse_arguments(Output, $`, [$` | T]) ->
-    parse_arguments(Output, none, T);
+arguments_parse(Output, $`, [$` | T]) ->
+    arguments_parse(Output, none, T);
 
-parse_arguments(Output, Delim, [H | T]) ->
-    parse_arguments([H | Output], Delim, T).
+arguments_parse(Output, Delim, [H | T]) ->
+    arguments_parse([H | Output], Delim, T).
 
-format_environment([]) ->
+environment_update(Environment0,
+                   ThreadsPerProcess,
+                   Protocol,
+                   BufferSize) ->
+    Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1, Environment0,
+                                  {?ENVIRONMENT_THREAD_COUNT,
+                                   erlang:integer_to_list(ThreadsPerProcess)}),
+    Environment2 = lists:keystore(?ENVIRONMENT_PROTOCOL, 1, Environment1,
+                                  {?ENVIRONMENT_PROTOCOL,
+                                   erlang:atom_to_list(Protocol)}),
+    Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1, Environment2,
+                                  {?ENVIRONMENT_BUFFER_SIZE,
+                                   erlang:integer_to_list(BufferSize)}),
+    Environment3.
+
+environment_format([]) ->
     [0];
 
-format_environment(Environment) ->
-    format_environment([], Environment).
+environment_format(Environment) ->
+    environment_format([], Environment).
 
-format_environment(Output, []) ->
+environment_format(Output, []) ->
     Output;
 
-format_environment(Output, [{K, V} | Environment]) ->
-    format_environment(Output ++ K ++ [$=] ++ V ++ [0], Environment).
+environment_format(Output, [{K, V} | Environment]) ->
+    environment_format(Output ++ K ++ [$=] ++ V ++ [0], Environment).
 

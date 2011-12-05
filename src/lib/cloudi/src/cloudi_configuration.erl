@@ -420,17 +420,17 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#internal.count_process),
          is_integer(Job#internal.max_r),
          is_integer(Job#internal.max_t) ->
-    true = (Job#internal.dest_refresh == immediate_closest) or
-           (Job#internal.dest_refresh == lazy_closest) or
-           (Job#internal.dest_refresh == immediate_random) or
-           (Job#internal.dest_refresh == lazy_random) or
+    true = (Job#internal.dest_refresh == immediate_closest) orelse
+           (Job#internal.dest_refresh == lazy_closest) orelse
+           (Job#internal.dest_refresh == immediate_random) orelse
+           (Job#internal.dest_refresh == lazy_random) orelse
            (Job#internal.dest_refresh == none),
     true = Job#internal.timeout_init > 0,
     true = Job#internal.timeout_async > ?TIMEOUT_DELTA,
     true = Job#internal.timeout_sync > ?TIMEOUT_DELTA,
-    true = is_list(Job#internal.dest_list_deny) or
+    true = is_list(Job#internal.dest_list_deny) orelse
            (Job#internal.dest_list_deny == undefined),
-    true = is_list(Job#internal.dest_list_allow) or
+    true = is_list(Job#internal.dest_list_allow) orelse
            (Job#internal.dest_list_allow == undefined),
     true = Job#internal.count_process >= 1,
     true = Job#internal.max_r >= 0,
@@ -466,24 +466,24 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#external.count_thread),
          is_integer(Job#external.max_r),
          is_integer(Job#external.max_t) ->
-    true = (Job#external.prefix == []) or
+    true = (Job#external.prefix == []) orelse
            is_integer(erlang:hd(Job#external.prefix)),
-    true = (Job#external.args == []) or
+    true = (Job#external.args == []) orelse
            is_integer(erlang:hd(Job#external.args)),
-    true = (Job#external.dest_refresh == immediate_closest) or
-           (Job#external.dest_refresh == lazy_closest) or
-           (Job#external.dest_refresh == immediate_random) or
-           (Job#external.dest_refresh == lazy_random) or
+    true = (Job#external.dest_refresh == immediate_closest) orelse
+           (Job#external.dest_refresh == lazy_closest) orelse
+           (Job#external.dest_refresh == immediate_random) orelse
+           (Job#external.dest_refresh == lazy_random) orelse
            (Job#external.dest_refresh == none),
-    true = (Job#external.protocol == tcp) or
+    true = (Job#external.protocol == tcp) orelse
            (Job#external.protocol == udp),
     true = Job#external.buffer_size >= 1024, % should be roughly 16436
     true = Job#external.timeout_init > 0,
     true = Job#external.timeout_async > ?TIMEOUT_DELTA,
     true = Job#external.timeout_sync > ?TIMEOUT_DELTA,
-    true = is_list(Job#external.dest_list_deny) or
+    true = is_list(Job#external.dest_list_deny) orelse
            (Job#external.dest_list_deny == undefined),
-    true = is_list(Job#external.dest_list_allow) or
+    true = is_list(Job#external.dest_list_allow) orelse
            (Job#external.dest_list_allow == undefined),
     true = Job#external.count_process >= 1,
     true = Job#external.count_thread >= 1,

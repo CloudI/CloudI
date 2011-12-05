@@ -47,9 +47,9 @@ public class Task implements Runnable
 {
     private API api;
      
-    public Task(final int index, final String protocol, final int buffer_size)
+    public Task(final int thread_index) throws API.InvalidInputException
     {
-        api = new API(index, protocol, buffer_size);
+        api = new API(thread_index);
     }
 
     public void text(Integer command, String name,

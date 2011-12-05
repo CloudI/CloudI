@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change the external job configuration to not rely on command-line
+      arguments to avoid replicating configuration values
+      (instead use automatically assigned environmental variables,
+       managed by the CloudI API source code)
+
 2011-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the python and ruby variations on the msg_size test

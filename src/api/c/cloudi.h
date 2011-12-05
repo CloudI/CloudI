@@ -91,11 +91,11 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 #define cloudi_get_trans_id(p, i)       (&(p->trans_id[i * 16]))
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      int index,
-                      char const * const protocol,
-                      uint32_t buffer_size);
+                      int thread_index);
 
 void cloudi_destroy(cloudi_instance_t * p);
+
+int cloudi_initialize_thread_count(int * const thread_count);
 
 int cloudi_subscribe(cloudi_instance_t * p,
                      char const * const name,
@@ -246,6 +246,7 @@ enum
     cloudi_error_read_underflow                =   9,
     cloudi_error_ei_decode                     =  10,
     // reuse some exit status values from os_spawn
+    cloudi_invalid_input                       =  11,
     cloudi_out_of_memory                       =  12,
     // reuse some exit status values from GEPD
     cloudi_error_read_EAGAIN                   =  81,

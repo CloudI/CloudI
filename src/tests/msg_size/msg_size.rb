@@ -47,17 +47,10 @@ $DEBUG = true
 require 'cloudi'
 
 if __FILE__ == $PROGRAM_NAME
+    thread_count = CloudI::API.thread_count()
 
-    if ARGV.size != 3
-        puts "Usage: #{$PROGRAM_NAME} thread_count protocol buffer_size"
-        exit 1
-    end
-    thread_count = Integer(ARGV[0])
-    protocol = ARGV[1]
-    buffer_size = Integer(ARGV[2])
-
-    threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |index|
-        api = Cloudi::API.new(index, protocol, buffer_size)
+    threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
+        api = CloudI::API.new(thread_index)
 
         class Task
             def initialize(api)

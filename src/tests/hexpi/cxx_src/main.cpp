@@ -71,12 +71,9 @@ class OutputData
 class Input
 {
     public:
-        Input(int const index,
-              char const * const protocol,
-              int const buffer_size)
+        Input(int const thread_index)
         {
-            int result = cloudi_initialize(&m_api,
-                                           index, protocol, buffer_size);
+            int result = cloudi_initialize(&m_api, thread_index);
             assert(result == cloudi_success);
             
             result = cloudi_subscribe(&m_api, "hexpi", &Input::hexpi);
@@ -198,27 +195,21 @@ class Output
         bool m_got_output;
 };
 
-int main(int argc, char ** argv)
+int main(int, char **)
 {
-    if (argc != 4)
-    {
-        std::cout << "Usage: " << argv[0] <<
-            " thread_count protocol buffer_size" << std::endl;
-        return 1;
-    }
-    int const count = ::atoi(argv[1]);
-    char const * const protocol = argv[2];
-    int const buffer_size = ::atoi(argv[3]);
+    int thread_count;
+    int result = cloudi_initialize_thread_count(&thread_count);
+    assert(result == cloudi_success);
 
     Output outputObject;
     ThreadPool<Input, ThreadData, Output, OutputData>
-        threadPool(count, count, outputObject);
+        threadPool(thread_count, thread_count, outputObject);
 
     Input::setStop(threadPool.stop());
 
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < thread_count; ++i)
     {
-        Input inputObject(i, protocol, buffer_size);
+        Input inputObject(i);
         threadPool.input(inputObject);
     }
 

@@ -46,19 +46,26 @@ $stderr.sync = true
 
 require 'erlang'
 
-module Cloudi
+module CloudI
     class API
         include Erlang
         # unbuffered output is with $stderr.puts '...'
 
-        def initialize(index, protocol, size)
-            @socket = IO.for_fd(index + 3, File::RDWR, autoclose: false)
+        def initialize(thread_index)
+            protocol = API.getenv('CLOUDI_API_INIT_PROTOCOL')
+            buffer_size_str = API.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
+            @socket = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
             @socket.sync = true
             @use_header = (protocol == 'tcp')
-            @size = size
+            @size = buffer_size_str.to_i
             @callbacks = Hash.new
             send(term_to_binary(:init))
             poll
+        end
+
+        def self.thread_count
+            s = getenv('CLOUDI_API_INIT_THREAD_COUNT')
+            s.to_i
         end
 
         def subscribe(name, function)
@@ -195,7 +202,7 @@ module Cloudi
         def callback(command, name, requestInfo, request,
                      timeout, priority, transId, pid)
             function = @callbacks[name]
-            assert{function != nil}
+            API.assert{function != nil}
             case command
             when MESSAGE_SEND_ASYNC
                 begin
@@ -203,7 +210,7 @@ module Cloudi
                                              requestInfo, request,
                                              timeout, priority, transId, pid)
                     if response.kind_of?(Array)
-                        assert{response.length == 2}
+                        API.assert{response.length == 2}
                         responseInfo = response[0]
                         response = response[1]
                     else
@@ -212,7 +219,7 @@ module Cloudi
                 rescue ReturnAsyncException
                     return
                 rescue ReturnSyncException
-                    assert{false}
+                    API.assert{false}
                     return
                 rescue
                     # exception is ignored at this level
@@ -227,7 +234,7 @@ module Cloudi
                                              requestInfo, request,
                                              timeout, priority, transId, pid)
                     if response.kind_of?(Array)
-                        assert{response.length == 2}
+                        API.assert{response.length == 2}
                         responseInfo = response[0]
                         response = response[1]
                     else
@@ -236,7 +243,7 @@ module Cloudi
                 rescue ReturnSyncException
                     return
                 rescue ReturnAsyncException
-                    assert{false}
+                    API.assert{false}
                     return
                 rescue
                     # exception is ignored at this level
@@ -278,7 +285,7 @@ module Cloudi
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
                     i += j
-                    assert{i == data.length}
+                    API.assert{i == data.length}
                     return
                 when MESSAGE_SEND_ASYNC, MESSAGE_SEND_SYNC
                     i += j; j = 4
@@ -301,7 +308,7 @@ module Cloudi
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     i += j
-                    assert{i == data.length}
+                    API.assert{i == data.length}
                     data.clear()
                     callback(command, name, requestInfo, request,
                              timeout, priority, transId, binary_to_term(pid))
@@ -314,7 +321,7 @@ module Cloudi
                     responseSize = tmp[1]
                     i += j; j = responseSize + 1 + 16
                     i += j
-                    assert{i == data.length}
+                    API.assert{i == data.length}
                     tmp = data[i, j].unpack("a#{responseSize}xa16")
                     response = tmp[0]
                     transId = tmp[1]
@@ -322,19 +329,19 @@ module Cloudi
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
                     i += j
-                    assert{i == data.length}
+                    API.assert{i == data.length}
                     return data[i, j].unpack('a16')[0]
                 when MESSAGE_RETURNS_ASYNC
                     i += j; j = 4
                     transIdCount = data[i, j].unpack('L')[0]
                     i += j; j = 16 * transIdCount
                     i += j
-                    assert{i == data.length}
+                    API.assert{i == data.length}
                     return data[i, j].unpack('a16' * transIdCount)
                 when MESSAGE_KEEPALIVE
                     send(term_to_binary(:keepalive))
                     i += j
-                    assert{i >= data.length}
+                    API.assert{i >= data.length}
                     data.slice!(0, i)
                     if data.length > 0
                         if IO.select([@socket], nil, nil, 0).nil?
@@ -342,7 +349,7 @@ module Cloudi
                         end
                     end
                 else
-                    assert{false}
+                    API.assert{false}
                 end
 
                 ready = false
@@ -434,8 +441,15 @@ module Cloudi
 
         NULL = 0
 
-        def assert
+        def self.assert
             raise 'Assertion failed !' unless yield if $DEBUG
+        end
+
+        def self.getenv(key)
+            ENV[key] or raise InvalidInputException
+        end
+
+        class InvalidInputException < SystemExit
         end
 
         class ReturnSyncException < SystemExit
@@ -447,17 +461,10 @@ module Cloudi
 end
 
 if __FILE__ == $PROGRAM_NAME
+    thread_count = CloudI::API.thread_count()
 
-    if ARGV.size != 3
-        puts "Usage: #{$PROGRAM_NAME} thread_count protocol buffer_size"
-        exit 1
-    end
-    thread_count = Integer(ARGV[0])
-    protocol = ARGV[1]
-    buffer_size = Integer(ARGV[2])
-
-    threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |index|
-        api = Cloudi::API.new(index, protocol, buffer_size)
+    threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
+        api = CloudI::API.new(thread_index)
 
         class Foobar
             def initialize(api)
