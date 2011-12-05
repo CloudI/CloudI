@@ -42,26 +42,30 @@ package org.cloudi.tests.msg_size;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import org.cloudi.API;
 
 public class Main
 {
     public static void main(String[] args)
     {
-        if (args.length != 3)
+        try
         {
-            System.err.println("Usage: [java Main] " +
-                               "thread_count protocol buffer_size");
-            System.exit(-1);
+            final int thread_count = API.thread_count();
+            ExecutorService threads =
+                Executors.newFixedThreadPool(thread_count);
+            for (int thread_index = 0;
+                 thread_index < thread_count;
+                 ++thread_index)
+            {
+                threads.execute(new Task(thread_index));
+            }
+
+            threads.shutdown();
         }
-
-        int thread_count = Integer.parseInt(args[0]);
-        String protocol = args[1];
-        int buffer_size = Integer.parseInt(args[2]);
-        ExecutorService threads = Executors.newFixedThreadPool(thread_count);
-        for (int index = 0; index < thread_count; ++index)
-            threads.execute(new Task(index, protocol, buffer_size));
-
-        threads.shutdown();
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+        }
     }
 }
 

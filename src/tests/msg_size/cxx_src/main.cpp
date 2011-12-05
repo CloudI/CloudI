@@ -76,22 +76,16 @@ static void request(cloudi_instance_t * api,
                    timeout, priority, trans_id, pid, pid_size);
 }
 
-int main(int argc, char ** argv)
+int main(int, char **)
 {
-    if (argc != 4)
-    {
-        std::cout << "Usage: " << argv[0] <<
-            " thread_count protocol buffer_size" << std::endl;
-        return 1;
-    }
-    int const count = ::atoi(argv[1]);
-    char const * const protocol = argv[2];
-    int const buffer_size = ::atoi(argv[3]);
-
-    assert(count == 1);
+    int thread_count;
+    int result = cloudi_initialize_thread_count(&thread_count);
+    assert(result == cloudi_success);
+    assert(thread_count == 1);
 
     cloudi_instance_t api;
-    int result = cloudi_initialize(&api, 0, protocol, buffer_size);
+    result = cloudi_initialize(&api, 0);
+    assert(result == cloudi_success);
 
     assert(MSG_SIZE <= CLOUDI_MAX_BUFFERSIZE);
     char msg[MSG_SIZE];

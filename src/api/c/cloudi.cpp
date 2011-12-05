@@ -41,13 +41,13 @@
 #include "cloudi.h"
 #include "realloc_ptr.hpp"
 #include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <poll.h>
 #include <ei.h>
 #include <boost/unordered_map.hpp>
 #include <map>
 #include <string>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include "assert.hpp"
@@ -272,12 +272,17 @@ static void exit_handler()
 }
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      int index,
-                      char const * const protocol,
-                      uint32_t buffer_size)
+                      int thread_index)
 {
-    assert(index >= 0);
-    p->fd = index + 3;
+    char const * const protocol = ::getenv("CLOUDI_API_INIT_PROTOCOL");
+    if (protocol == 0)
+        return cloudi_invalid_input;
+    char const * const buffer_size_p = ::getenv("CLOUDI_API_INIT_BUFFER_SIZE");
+    if (buffer_size_p == 0)
+        return cloudi_invalid_input;
+    uint32_t const buffer_size = ::atoi(buffer_size_p);
+    assert(thread_index >= 0);
+    p->fd = thread_index + 3;
     if (::strcmp(protocol, "tcp") == 0)
         p->use_header = 1;
     else
@@ -293,6 +298,7 @@ int cloudi_initialize(cloudi_instance_t * p,
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    int index;
     if (p->use_header)
         index = 4;
     else
@@ -321,6 +327,15 @@ void cloudi_destroy(cloudi_instance_t * p)
         if (p->prefix)
             delete p->prefix;
     }
+}
+
+int cloudi_initialize_thread_count(int * const thread_count)
+{
+    char const * const p = ::getenv("CLOUDI_API_INIT_THREAD_COUNT");
+    if (p == 0)
+        return cloudi_invalid_input;
+    *thread_count = ::atoi(p);
+    return cloudi_success;
 }
 
 int cloudi_subscribe(cloudi_instance_t * p,

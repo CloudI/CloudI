@@ -51,9 +51,9 @@ import threading, socket
 from cloudi import API
 
 class _Task(threading.Thread):
-    def __init__(self, index, protocol, size):
+    def __init__(self, thread_index):
         threading.Thread.__init__(self)
-        self.__api = API(index, protocol, size)
+        self.__api = API(thread_index)
 
     def flood(self, command, name, request_info, request,
               timeout, priority, transId, pid):
@@ -72,20 +72,10 @@ class _Task(threading.Thread):
         print "exited thread"
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print >> sys.stderr, "Usage: %s thread_count protocol buffer_size" % (
-                                 sys.argv[0],
-                             )
-        sys.exit(-1)
-    thread_count = int(sys.argv[1])
-    if sys.argv[2] == "udp":
-        protocol = socket.SOCK_DGRAM
-    else:
-        protocol = socket.SOCK_STREAM
-    buffer_size = int(sys.argv[3])
+    thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [_Task(i, protocol, buffer_size) for i in range(thread_count)]
+    threads = [_Task(i) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

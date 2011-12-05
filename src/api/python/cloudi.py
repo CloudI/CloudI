@@ -58,16 +58,32 @@ class API(object):
     __ASYNC  =  1
     __SYNC   = -1
 
-    def __init__(self, index, protocol, size):
-        self.__s = socket.fromfd(index + 3, socket.AF_INET, protocol)
+    def __init__(self, thread_index):
+        protocol_str = os.getenv('CLOUDI_API_INIT_PROTOCOL')
+        if protocol_str is None:
+            raise _invalid_input_exception()
+        buffer_size_str = os.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
+        if buffer_size_str is None:
+            raise _invalid_input_exception()
+        if protocol_str == "tcp":
+            protocol = socket.SOCK_STREAM
+        elif protocol_str == "udp":
+            protocol = socket.SOCK_DGRAM
+        else:
+            raise _invalid_input_exception()
+        self.__s = socket.fromfd(thread_index + 3, socket.AF_INET, protocol)
         self.__use_header = (protocol == socket.SOCK_STREAM)
-        self.__size = size
+        self.__size = int(buffer_size_str)
         self.__callbacks = {}
         self.__send(term_to_binary(OtpErlangAtom("init")))
         self.__prefix, self.__timeout_async, self.__timeout_sync = self.poll()
 
-    def __del__(self):
-        self.__s.close()
+    @staticmethod
+    def thread_count():
+        s = os.getenv('CLOUDI_API_INIT_THREAD_COUNT')
+        if s is None:
+            raise _invalid_input_exception()
+        return int(s)
 
     def subscribe(self, name, Function):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
@@ -373,13 +389,17 @@ class API(object):
                     ready == (len(IN) > 0)
         return data
 
-class _return_sync_exception(SystemExit):
+class _invalid_input_exception(Exception):
     def __init__(self):
-        pass
+        Exception.__init__(self, 'Invalid Input')
 
-class _return_async_exception(SystemExit):
+class _return_sync_exception(Exception):
     def __init__(self):
-        pass
+        Exception.__init__(self, 'Synchronous Call Return Invalid')
+
+class _return_async_exception(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'Asynchronous Call Return Invalid')
 
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):
@@ -397,9 +417,9 @@ sys.stdout = _unbuffered(sys.stdout)
 sys.stderr = _unbuffered(sys.stderr)
 
 class _Task(threading.Thread):
-    def __init__(self, index, protocol, size):
+    def __init__(self, thread_index):
         threading.Thread.__init__(self)
-        self.__api = API(index, protocol, size)
+        self.__api = API(thread_index)
 
     def foobar(self, command, name, request, timeout, transId, pid):
         print "got foobar"
@@ -418,20 +438,10 @@ class _Task(threading.Thread):
         print "exited thread"
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print >> sys.stderr, "Usage: %s thread_count protocol buffer_size" % (
-                                 sys.argv[0],
-                             )
-        sys.exit(-1)
-    thread_count = int(sys.argv[1])
-    if sys.argv[2] == "udp":
-        protocol = socket.SOCK_DGRAM
-    else:
-        protocol = socket.SOCK_STREAM
-    buffer_size = int(sys.argv[3])
+    thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [_Task(i, protocol, buffer_size) for i in range(thread_count)]
+    threads = [_Task(i) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

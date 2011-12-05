@@ -103,10 +103,17 @@ public class API
     private int timeout_sync;
     private int timeout_async;
 
-    public API(final int index, final String protocol, final int size)
+    public API(final int thread_index) throws InvalidInputException
     {
-        this.socket = API.storeFD(index + 3);
-        assert this.socket != null : (index + 3);
+        final String protocol = System.getenv("CLOUDI_API_INIT_PROTOCOL");
+        if (protocol == null)
+            throw new InvalidInputException();
+        final String buffer_size_str =
+            System.getenv("CLOUDI_API_INIT_BUFFER_SIZE");
+        if (buffer_size_str == null)
+            throw new InvalidInputException();
+        this.socket = API.storeFD(thread_index + 3);
+        assert this.socket != null : (thread_index + 3);
         this.use_header = (protocol.compareTo("tcp") == 0);
         this.output = new FileOutputStream(this.socket);
         this.input = new FileInputStream(this.socket);
@@ -118,7 +125,7 @@ public class API
                                                        Byte,
                                                        byte[],
                                                        OtpErlangPid> >();
-        this.buffer_size = size;
+        this.buffer_size = Integer.parseInt(buffer_size_str);
         this.timeout_sync = 5000;
         this.timeout_async = 5000;
 
@@ -128,6 +135,15 @@ public class API
         init.write_any(new OtpErlangAtom("init"));
         send(init);
         poll();
+    }
+
+    public static int thread_count() throws InvalidInputException
+    {
+        final String s = System.getenv("CLOUDI_API_INIT_THREAD_COUNT");
+        if (s == null)
+            throw new InvalidInputException();
+        final int thread_count = Integer.parseInt(s);
+        return thread_count;
     }
 
     public void subscribe(final String name,
@@ -893,7 +909,16 @@ public class API
         }
     }
 
-    public class ReturnSyncException extends Exception
+    public static class InvalidInputException extends Exception
+    {
+        private static final long serialVersionUID = 1L;
+        InvalidInputException()
+        {
+            super("Invalid Input");
+        }
+    }
+
+    public static class ReturnSyncException extends Exception
     {
         private static final long serialVersionUID = 1L;
         ReturnSyncException()
@@ -902,7 +927,7 @@ public class API
         }
     }
     
-    public class ReturnAsyncException extends Exception
+    public static class ReturnAsyncException extends Exception
     {
         private static final long serialVersionUID = 1L;
         ReturnAsyncException()

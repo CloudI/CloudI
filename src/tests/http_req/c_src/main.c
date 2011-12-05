@@ -45,9 +45,7 @@
 
 typedef struct
 {
-    int index;
-    char const * protocol;
-    int buffer_size;
+    int thread_index;
 
 } process_requests_t;
 
@@ -96,10 +94,7 @@ void process_requests(void * p)
 {
     cloudi_instance_t api;
     process_requests_t * data = (process_requests_t *) p;
-    int result = cloudi_initialize(&api,
-                                   data->index,
-                                   data->protocol,
-                                   data->buffer_size);
+    int result = cloudi_initialize(&api, data->thread_index);
 
     result = cloudi_subscribe(&api, "c.xml/get", &request);
     assert(result == cloudi_success);
@@ -113,18 +108,12 @@ void process_requests(void * p)
 
 int main(int argc, char ** argv)
 {
-    if (argc != 4)
-    {
-        printf("Usage: %s thread_count protocol buffer_size", argv[0]);
-        return 1;
-    }
-    int const count = atoi(argv[1]);
-    char const * const protocol = argv[2];
-    int const buffer_size = atoi(argv[3]);
+    int thread_count;
+    int result = cloudi_initialize_thread_count(&thread_count);
+    assert(result == cloudi_success);
+    assert(thread_count == 1);
 
-    assert(count == 1);
-
-    process_requests_t data = {0, protocol, buffer_size};
+    process_requests_t data = {0};
 
     process_requests(&data);
 
