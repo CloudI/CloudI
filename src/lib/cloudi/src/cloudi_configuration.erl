@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2, jobs/1,
+         jobs_add/2, jobs_remove/2, jobs_restart/2, jobs/1,
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
@@ -262,6 +262,31 @@ jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
             end
         end, L),
         cloudi_configurator:job_stop(Job),
+        NewL
+    end, Jobs, lists2:rsort(Value)),
+    Config#config{jobs = NewJobs}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Restart jobs (services) based on their UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+jobs_restart([UUID | _] = Value, #config{jobs = Jobs} = Config)
+    when is_binary(UUID), byte_size(UUID) == 16 ->
+    NewJobs = lists:foldl(fun(ID, L) ->
+        {[Job], NewL} = lists:partition(fun(J) ->
+            if
+                is_record(J, config_job_internal),
+                J#config_job_internal.uuid == ID ->
+                    true;
+                is_record(J, config_job_external),
+                J#config_job_external.uuid == ID ->
+                    true;
+                true ->
+                    false
+            end
+        end, L),
+        cloudi_configurator:job_restart(Job),
         NewL
     end, Jobs, lists2:rsort(Value)),
     Config#config{jobs = NewJobs}.
