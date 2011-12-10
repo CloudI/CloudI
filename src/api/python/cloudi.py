@@ -87,7 +87,8 @@ class API(object):
 
     def subscribe(self, name, Function):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
-        assert len(args) == 9 # self + arguments, so a non-static method
+        if len(args) != 9: # self + arguments, so a non-static method
+            raise invalid_input_exception()
         self.__callbacks[self.__prefix + name] = Function
         self.__send(term_to_binary((OtpErlangAtom("subscribe"), name)))
 
@@ -146,7 +147,7 @@ class API(object):
             self.forward_sync(name, request_info, request,
                               timeout, priority, transId, pid)
         else:
-            assert False
+            raise invalid_input_exception()
 
     def forward_async(self, name, request_info, request,
                       timeout, priority, transId, pid):
@@ -175,7 +176,7 @@ class API(object):
             self.return_sync(name, response_info, response,
                              timeout, transId, pid)
         else:
-            assert False
+            raise invalid_input_exception()
 
     def return_async(self, name, response_info, response,
                      timeout, transId, pid):
@@ -251,7 +252,7 @@ class API(object):
             self.__return_sync_nothrow(name, responseInfo, response,
                                        timeout, transId, pid)
         else:
-            assert False
+            raise message_decoding_exception()
 
     def poll(self):
         ready = False
@@ -278,7 +279,8 @@ class API(object):
                 (prefix, nullTerminator, timeoutAsync,
                  timeoutSync) = struct.unpack("=%dscII" % (prefixSize - 1),
                                                data[i:j])
-                assert j == len(data)
+                if j != len(data):
+                    raise message_decoding_exception()
                 return (prefix, timeoutSync, timeoutAsync)
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
@@ -298,7 +300,8 @@ class API(object):
                                           data[i:j])
                 i, j = j, j + pidSize
                 pid = struct.unpack("=%ds" % pidSize, data[i:j])[0]
-                assert j == len(data)
+                if j != len(data):
+                    raise message_decoding_exception()
                 data = ''
                 self.__callback(command, name, requestInfo, request,
                                 timeout, priority, transId,
@@ -312,30 +315,34 @@ class API(object):
                  responseSize) = struct.unpack("=%dscI" % responseInfoSize,
                                                data[i:j])
                 i, j = j, j + responseSize + 1 + 16
-                assert j == len(data)
+                if j != len(data):
+                    raise message_decoding_exception()
                 (response, nullTerminator,
                  transId) = struct.unpack("=%dsc16s" % responseSize, data[i:j])
                 return (responseInfo, response, transId)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
-                assert j == len(data)
+                if j != len(data):
+                    raise message_decoding_exception()
                 return struct.unpack("=16s", data[i:j])[0]
             elif command == _MESSAGE_RETURNS_ASYNC:
                 i, j = j, j + 4
                 transIdCount = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + 16 * transIdCount
-                assert j == len(data)
+                if j != len(data):
+                    raise message_decoding_exception()
                 return struct.unpack("=" + "16s" * transIdCount, data[i:j])
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom("keepalive")))
-                assert j >= len(data)
+                if j < len(data):
+                    raise message_decoding_exception()
                 data = data[j:]
                 if len(data) > 0:
                     IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
                     if len(IN) == 0:
                         continue
             else:
-                assert False
+                raise message_decoding_exception()
 
             ready = False
             while ready == False:
@@ -400,6 +407,10 @@ class return_sync_exception(Exception):
 class return_async_exception(Exception):
     def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Return Invalid')
+
+class message_decoding_exception(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'Message Decoding Error')
 
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):

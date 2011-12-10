@@ -103,7 +103,8 @@ public class API
     private int timeout_sync;
     private int timeout_async;
 
-    public API(final int thread_index) throws InvalidInputException
+    public API(final int thread_index)
+               throws InvalidInputException, MessageDecodingException
     {
         final String protocol = System.getenv("CLOUDI_API_INIT_PROTOCOL");
         if (protocol == null)
@@ -179,6 +180,7 @@ public class API
     }
 
     public TransId send_async(String name, byte[] request)
+                              throws MessageDecodingException
     {
         return send_async(name, ("").getBytes(), request,
                           this.timeout_async, (byte) 0);
@@ -186,6 +188,7 @@ public class API
 
     public TransId send_async(String name, byte[] requestInfo, byte[] request,
                               Integer timeout, Byte priority)
+                              throws MessageDecodingException
     {
         try
         {
@@ -209,6 +212,7 @@ public class API
     }
 
     public Response send_sync(String name, byte[] request)
+                              throws MessageDecodingException
     {
         return send_sync(name, ("").getBytes(), request,
                          this.timeout_sync, (byte) 0);
@@ -216,6 +220,7 @@ public class API
 
     public Response send_sync(String name, byte[] requestInfo, byte[] request,
                               Integer timeout, Byte priority)
+                              throws MessageDecodingException
     {
         try
         {
@@ -239,6 +244,7 @@ public class API
     }
 
     public List<TransId> mcast_async(String name, byte[] request)
+                                     throws MessageDecodingException
     {
         return mcast_async(name, new byte[0], request,
                            this.timeout_async, (byte) 0);
@@ -248,6 +254,7 @@ public class API
     public List<TransId> mcast_async(String name,
                                      byte[] requestInfo, byte[] request,
                                      Integer timeout, Byte priority)
+                                     throws MessageDecodingException
     {
         try
         {
@@ -274,7 +281,9 @@ public class API
                          String name, byte[] requestInfo, byte[] request,
                          Integer timeout, Byte priority,
                          byte[] transId, OtpErlangPid pid)
-                         throws ReturnAsyncException, ReturnSyncException
+                         throws ReturnAsyncException,
+                                ReturnSyncException,
+                                InvalidInputException
     {
         if (command == API.ASYNC)
             forward_async(name, requestInfo, request,
@@ -283,7 +292,7 @@ public class API
             forward_sync(name, requestInfo, request,
                          timeout, priority, transId, pid);
         else
-            assert false : command;
+            throw new InvalidInputException();
     }
 
     public void forward_async(String name, byte[] requestInfo, byte[] request,
@@ -343,14 +352,16 @@ public class API
     public void return_(Integer command,
                         String name, byte[] responseInfo, byte[] response,
                         Integer timeout, byte[] transId, OtpErlangPid pid)
-                        throws ReturnAsyncException, ReturnSyncException
+                        throws ReturnAsyncException,
+                               ReturnSyncException,
+                               InvalidInputException
     {
         if (command == API.ASYNC)
             return_async(name, responseInfo, response, timeout, transId, pid);
         else if (command == API.SYNC)
             return_sync(name, responseInfo, response, timeout, transId, pid);
         else
-            assert false : command;
+            throw new InvalidInputException();
     }
 
     public void return_async(String name, byte[] responseInfo, byte[] response,
@@ -422,6 +433,7 @@ public class API
     }
 
     public Response recv_async(Integer timeout, byte[] transId)
+                               throws MessageDecodingException
     {
         try
         {
@@ -445,6 +457,7 @@ public class API
                           byte[] requestInfo, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] transId, OtpErlangPid pid)
+                          throws MessageDecodingException
     {
         if (command == MESSAGE_SEND_ASYNC)
         {
@@ -540,9 +553,13 @@ public class API
                 return;
             }
         }
+        else
+        {
+            throw new MessageDecodingException();
+        }
     }
 
-    public Object poll()
+    public Object poll() throws MessageDecodingException
     {
         ByteBuffer buffer = recv(null);
         if (buffer == null || buffer.remaining() == 0)
@@ -561,7 +578,8 @@ public class API
                         this.prefix = API.getString(buffer, prefixSize);
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
-                        assert ! buffer.hasRemaining() : "extra data";
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
                         return null;
                     }
                     case MESSAGE_SEND_ASYNC:
@@ -581,7 +599,8 @@ public class API
                         byte[] transId = API.getBytes(buffer, 16);
                         int pidSize = buffer.getInt();
                         OtpErlangPid pid = API.getPid(buffer, pidSize);
-                        assert ! buffer.hasRemaining() : "extra data";
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
                         callback(command, name, requestInfo, request,
                                  timeout, priority, transId, pid);
                         break;
@@ -597,13 +616,15 @@ public class API
                         byte[] response = API.getBytes(buffer, responseSize);
                         buffer.get();
                         byte[] transId = API.getBytes(buffer, 16);
-                        assert ! buffer.hasRemaining() : "extra data";
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
                         return new Response(responseInfo, response, transId);
                     }
                     case MESSAGE_RETURN_ASYNC:
                     {
                         byte[] transId = API.getBytes(buffer, 16);
-                        assert ! buffer.hasRemaining() : "extra data";
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
                         return new TransId(transId);
                     }
                     case MESSAGE_RETURNS_ASYNC:
@@ -615,7 +636,8 @@ public class API
                             byte[] transId = API.getBytes(buffer, 16);
                             transIdList.add(new TransId(transId));
                         }
-                        assert ! buffer.hasRemaining() : "extra data";
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
                         return transIdList;
                     }
                     case MESSAGE_KEEPALIVE:
@@ -630,7 +652,7 @@ public class API
                         break;
                     }
                     default:
-                        return null;
+                        throw new MessageDecodingException();
                 }
     
                 buffer = recv(buffer);
@@ -932,6 +954,15 @@ public class API
         ReturnAsyncException()
         {
             super("Asynchronous Call Return Invalid");
+        }
+    }
+
+    public static class MessageDecodingException extends Exception
+    {
+        private static final long serialVersionUID = 1L;
+        MessageDecodingException()
+        {
+            super("Message Decoding Error");
         }
     }
 

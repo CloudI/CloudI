@@ -47,7 +47,9 @@ public class Task implements Runnable
 {
     private API api;
      
-    public Task(final int thread_index) throws API.InvalidInputException
+    public Task(final int thread_index)
+                throws API.InvalidInputException,
+                       API.MessageDecodingException
     {
         api = new API(thread_index);
     }
@@ -56,7 +58,9 @@ public class Task implements Runnable
                      byte[] requestInfo, byte[] request,
                      Integer timeout, Byte priority,
                      byte[] transId, OtpErlangPid pid)
-                     throws API.ReturnAsyncException, API.ReturnSyncException
+                     throws API.ReturnAsyncException,
+                            API.ReturnSyncException,
+                            API.InvalidInputException
     {
         final String value = new String(request);
         API.out.println("(" + value + ")");
@@ -72,11 +76,19 @@ public class Task implements Runnable
         boolean running = true;
         while (running)
         {
-            Object result = api.poll();
-            if (result == null)
+            try
+            {
+                Object result = api.poll();
+                if (result == null)
+                    running = false;
+                else
+                    API.out.println("(java) received: " + result.toString());
+            }
+            catch (API.MessageDecodingException e)
+            {
+                e.printStackTrace(API.err);
                 running = false;
-            else
-                API.out.println("(java) received: " + result.toString());
+            }
         }
         API.err.println("exited thread");
     }

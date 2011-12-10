@@ -50,7 +50,9 @@ public class Task implements Runnable
     private API api;
     private static final String DESTINATION = "/tests/msg_size/erlang";
      
-    public Task(final int thread_index) throws API.InvalidInputException
+    public Task(final int thread_index)
+                throws API.InvalidInputException,
+                       API.MessageDecodingException
     {
         api = new API(thread_index);
     }
@@ -59,7 +61,9 @@ public class Task implements Runnable
                         byte[] requestInfo, byte[] request,
                         Integer timeout, Byte priority,
                         byte[] transId, OtpErlangPid pid)
-                        throws API.ReturnAsyncException, API.ReturnSyncException
+                        throws API.ReturnAsyncException,
+                               API.ReturnSyncException,
+                               API.InvalidInputException
     {
         ByteBuffer buffer = ByteBuffer.wrap(request);
         buffer.order(ByteOrder.nativeOrder());
@@ -82,9 +86,17 @@ public class Task implements Runnable
         boolean running = true;
         while (running)
         {
-            Object result = api.poll();
-            if (result == null)
+            try
+            {
+                Object result = api.poll();
+                if (result == null)
+                    running = false;
+            }
+            catch (API.MessageDecodingException e)
+            {
+                e.printStackTrace(API.err);
                 running = false;
+            }
         }
         API.err.println("exited thread");
     }

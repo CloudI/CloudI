@@ -328,7 +328,7 @@ init([udp, BufferSize, Timeout, Prefix,
                     send('recv_async_out'(timeout, TransId), StateData),
                     {next_state, 'HANDLE', StateData};
                 L ->
-                    TransIdPick = recv_async_oldest(L),
+                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
                     NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
@@ -645,6 +645,7 @@ handle_info({'EXIT', _, Reason}, _, StateData) ->
 
 handle_info(Request, StateName, StateData) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
+    use_unused_functions(undefined),
     {next_state, StateName, StateData}.
 
 terminate(_, _, #state{protocol = tcp,
@@ -1011,19 +1012,22 @@ recv_async_timeout_end(TransId,
     when is_binary(TransId) ->
     StateData#state{async_responses = dict:erase(TransId, Ids)}.
 
-recv_async_oldest([{TransId, _} | L]) ->
-    recv_async_oldest(L, uuid:get_v1_time(TransId), TransId).
+recv_async_select_random([{TransId, _} | _]) ->
+    TransId.
 
-recv_async_oldest([], _, TransIdCurrent) ->
+recv_async_select_oldest([{TransId, _} | L]) ->
+    recv_async_select_oldest(L, uuid:get_v1_time(TransId), TransId).
+
+recv_async_select_oldest([], _, TransIdCurrent) ->
     TransIdCurrent;
 
-recv_async_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
+recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
     Time1 = uuid:get_v1_time(TransId),
     if
         Time1 < Time0 ->
-            recv_async_oldest(L, Time1, TransId);
+            recv_async_select_oldest(L, Time1, TransId);
         true ->
-            recv_async_oldest(L, Time0, TransIdCurrent)
+            recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
             
 process_queue(#state{queue_messages = true,
@@ -1046,3 +1050,10 @@ process_queue(#state{queue_messages = true,
             StateData#state{queued = NewQueue}
     end.
 
+use_unused_functions(undefined) ->
+    ok;
+
+use_unused_functions(_) ->
+    recv_async_select_random([]),
+    recv_async_select_oldest([]),
+    ok.
