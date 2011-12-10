@@ -51,6 +51,9 @@ module CloudI
         include Erlang
         # unbuffered output is with $stderr.puts '...'
 
+        ASYNC  =  1
+        SYNC   = -1
+
         def initialize(thread_index)
             protocol = API.getenv('CLOUDI_API_INIT_PROTOCOL')
             buffer_size_str = API.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
@@ -218,7 +221,9 @@ module CloudI
                     end
                 rescue ReturnAsyncException
                     return
-                rescue ReturnSyncException
+                rescue ReturnSyncException => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
                     API.assert{false}
                     return
                 rescue
@@ -242,7 +247,9 @@ module CloudI
                     end
                 rescue ReturnSyncException
                     return
-                rescue ReturnAsyncException
+                rescue ReturnAsyncException => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
                     API.assert{false}
                     return
                 rescue
@@ -383,8 +390,8 @@ module CloudI
             request_key_value_parse(request)
         end
 
-        def request_info_key_value_parse(request_info)
-            request_key_value_parse(request_info)
+        def info_key_value_parse(message_info)
+            binary_key_value_parse(message_info)
         end
 
         private :return_async_nothrow
@@ -427,9 +434,6 @@ module CloudI
             data
         end
 
-        ASYNC  =  1
-        SYNC   = -1
-
         MESSAGE_INIT           = 1
         MESSAGE_SEND_ASYNC     = 2
         MESSAGE_SEND_SYNC      = 3
@@ -442,21 +446,21 @@ module CloudI
         NULL = 0
 
         def self.assert
-            raise 'Assertion failed !' unless yield if $DEBUG
+            raise 'Assertion failed !' unless yield # if $DEBUG
         end
 
         def self.getenv(key)
             ENV[key] or raise InvalidInputException
         end
+    end
 
-        class InvalidInputException < SystemExit
-        end
+    class InvalidInputException < Exception
+    end
 
-        class ReturnSyncException < SystemExit
-        end
+    class ReturnSyncException < Exception
+    end
 
-        class ReturnAsyncException < SystemExit
-        end
+    class ReturnAsyncException < Exception
     end
 end
 
@@ -464,8 +468,6 @@ if __FILE__ == $PROGRAM_NAME
     thread_count = CloudI::API.thread_count()
 
     threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
-        api = CloudI::API.new(thread_index)
-
         class Foobar
             def initialize(api)
                 @api = api
@@ -475,10 +477,15 @@ if __FILE__ == $PROGRAM_NAME
                 @api.return_(command, name, 'bye', timeout, transId, pid)
             end
         end
-        object = Foobar.new(api)
-
-        api.subscribe('foobar', object.method(:foobar))
-        api.poll
+        begin
+            api = CloudI::API.new(thread_index)
+            object = Foobar.new(api)
+            api.subscribe('foobar', object.method(:foobar))
+            api.poll
+        rescue
+            $stderr.puts $!.message
+            $stderr.puts $!.backtrace
+        end
     }}
     threads.each{ |t| t.join}
 end

@@ -74,8 +74,8 @@ public class API
     public static final PrintStream out = new PrintStream(System.out, true);
     public static final PrintStream err = new PrintStream(System.err, true);
 
-    private static final int ASYNC  =  1;
-    private static final int SYNC   = -1;
+    public static final int ASYNC  =  1;
+    public static final int SYNC   = -1;
 
     private static final int MESSAGE_INIT            = 1;
     private static final int MESSAGE_SEND_ASYNC      = 2;
@@ -675,10 +675,9 @@ public class API
         return binary_key_value_parse(request);
     }
 
-    public HashMap<String, String> request_info_key_value_parse(byte[] 
-                                                                request_info)
+    public HashMap<String, String> info_key_value_parse(byte[] message_info)
     {
-        return binary_key_value_parse(request_info);
+        return binary_key_value_parse(message_info);
     }
 
     private void send(OtpOutputStream command)

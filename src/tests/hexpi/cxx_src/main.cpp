@@ -37,7 +37,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#include "cloudi.h"
+#include "cloudi.hpp"
 #include "timer.hpp"
 #include "thread_pool.hpp"
 #include "piqpr8_gmp.hpp"
@@ -71,39 +71,27 @@ class OutputData
 class Input
 {
     public:
-        Input(int const thread_index)
+        Input(int const thread_index) :
+            m_stop_default(false),
+            m_stop(m_stop_default),
+            m_api(thread_index)
         {
-            int result = cloudi_initialize(&m_api, thread_index);
-            assert(result == cloudi_success);
-            
-            result = cloudi_subscribe(&m_api, "hexpi", &Input::hexpi);
-            assert(result == cloudi_success);
+            int const result = m_api.subscribe("hexpi", *this, &Input::hexpi);
+            assert(result == CloudI::API::return_value::success);
         }
 
-        ~Input()
-        {
-            cloudi_destroy(&m_api);
-        }
-
-        Input(Input const & object)
-        {
-            m_api = object.m_api;
-            ::memset(const_cast<cloudi_instance_t *>(&object.m_api), 0,
-                     sizeof(cloudi_instance_t));
-        }
-
-        static void hexpi(cloudi_instance_t * api,
-                          int const command,
-                          char const * const name,
-                          void const * const request_info,
-                          uint32_t const request_info_size,
-                          void const * const request,
-                          uint32_t const request_size,
-                          uint32_t timeout,
-                          int8_t priority,
-                          char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+        void hexpi(CloudI::API const & api,
+                   int const command,
+                   std::string const & name,
+                   void const * const request_info,
+                   uint32_t const request_info_size,
+                   void const * const request,
+                   uint32_t const request_size,
+                   uint32_t timeout,
+                   int8_t priority,
+                   char const * const trans_id,
+                   char const * const pid,
+                   uint32_t const pid_size)
         {
             uint32_t const * const parameters = 
                 reinterpret_cast<uint32_t const * const>(request);
@@ -141,41 +129,35 @@ class Input
                 const_cast<char *>(pi_result.c_str()));
             *elapsed_hours = static_cast<float>(t.elapsed() / 3600.0);
 
-            cloudi_return(api, command, name, "", 0,
-                          pi_result.c_str(), pi_result.size(),
-                          timeout, trans_id, pid, pid_size);
+            api.return_(command, name, "", 0,
+                        pi_result.c_str(), pi_result.size(),
+                        timeout, trans_id, pid, pid_size);
             std::cout << "execution never gets here" << std::endl;
         }
 
         OutputData process(bool const & stop, ThreadData & /*data*/)
         {
+            using CloudI::API;
             OutputData resultObject;
             int value;
-            while (cloudi_timeout == (value = cloudi_poll(&m_api, 1000)))
+            m_stop = stop;
+            while (CloudI::API::return_value::timeout ==
+                   (value = m_api.poll(1000)))
             {
                 if (stop)
-                    return resultObject.setError(cloudi_success);
+                    return resultObject.setError(
+                        CloudI::API::return_value::success);
             }
             return resultObject.setError(value);
         }
 
-        static void setStop(bool const & stop)
-        {
-            // store stop for the hexpi static function callback
-            // (keep the variable external to the function pointer,
-            //  and keep the type as 'bool const &' to prevent modification)
-            const_cast<bool &>(m_stop) = stop;
-        }
-
     private:
-        static bool m_stop_default;
-        static bool const & m_stop;
-        cloudi_instance_t m_api;
+        bool m_stop_default;
+        bool & m_stop;
+
+        CloudI::API m_api;
 
 };
-
-bool Input::m_stop_default = false;
-bool const & Input::m_stop = Input::m_stop_default;
 
 class Output
 {
@@ -197,15 +179,11 @@ class Output
 
 int main(int, char **)
 {
-    int thread_count;
-    int result = cloudi_initialize_thread_count(&thread_count);
-    assert(result == cloudi_success);
+    int const thread_count = CloudI::API::thread_count();
 
     Output outputObject;
     ThreadPool<Input, ThreadData, Output, OutputData>
         threadPool(thread_count, thread_count, outputObject);
-
-    Input::setStop(threadPool.stop());
 
     for (int i = 0; i < thread_count; ++i)
     {

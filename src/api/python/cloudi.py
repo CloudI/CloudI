@@ -55,22 +55,22 @@ _MESSAGE_RETURNS_ASYNC  = 7
 _MESSAGE_KEEPALIVE      = 8
 
 class API(object):
-    __ASYNC  =  1
-    __SYNC   = -1
+    ASYNC  =  1
+    SYNC   = -1
 
     def __init__(self, thread_index):
         protocol_str = os.getenv('CLOUDI_API_INIT_PROTOCOL')
         if protocol_str is None:
-            raise _invalid_input_exception()
+            raise invalid_input_exception()
         buffer_size_str = os.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
         if buffer_size_str is None:
-            raise _invalid_input_exception()
+            raise invalid_input_exception()
         if protocol_str == "tcp":
             protocol = socket.SOCK_STREAM
         elif protocol_str == "udp":
             protocol = socket.SOCK_DGRAM
         else:
-            raise _invalid_input_exception()
+            raise invalid_input_exception()
         self.__s = socket.fromfd(thread_index + 3, socket.AF_INET, protocol)
         self.__use_header = (protocol == socket.SOCK_STREAM)
         self.__size = int(buffer_size_str)
@@ -82,7 +82,7 @@ class API(object):
     def thread_count():
         s = os.getenv('CLOUDI_API_INIT_THREAD_COUNT')
         if s is None:
-            raise _invalid_input_exception()
+            raise invalid_input_exception()
         return int(s)
 
     def subscribe(self, name, Function):
@@ -139,10 +139,10 @@ class API(object):
 
     def forward_(self, command, name, request_info, request,
                  timeout, priority, transId, pid):
-        if command == API.__ASYNC:
+        if command == API.ASYNC:
             self.forward_async(name, request_info, request,
                                timeout, priority, transId, pid)
-        elif command == API.__SYNC:
+        elif command == API.SYNC:
             self.forward_sync(name, request_info, request,
                               timeout, priority, transId, pid)
         else:
@@ -155,7 +155,7 @@ class API(object):
                                     OtpErlangBinary(request),
                                     timeout, priority,
                                     OtpErlangBinary(transId), pid)))
-        raise _return_async_exception()
+        raise return_async_exception()
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, transId, pid):
@@ -164,14 +164,14 @@ class API(object):
                                     OtpErlangBinary(request),
                                     timeout, priority,
                                     OtpErlangBinary(transId), pid)))
-        raise _return_sync_exception()
+        raise return_sync_exception()
 
     def return_(self, command, name, response_info, response,
                 timeout, transId, pid):
-        if command == API.__ASYNC:
+        if command == API.ASYNC:
             self.return_async(name, response_info, response,
                               timeout, transId, pid)
-        elif command == API.__SYNC:
+        elif command == API.SYNC:
             self.return_sync(name, response_info, response,
                              timeout, transId, pid)
         else:
@@ -181,7 +181,7 @@ class API(object):
                      timeout, transId, pid):
         self.__return_async_nothrow(name, response_info, response,
                                     timeout, transId, pid)
-        raise _return_async_exception()
+        raise return_async_exception()
 
     def __return_async_nothrow(self, name, response_info, response,
                                timeout, transId, pid):
@@ -194,7 +194,7 @@ class API(object):
                     timeout, transId, pid):
         self.__return_sync_nothrow(name, response_info, response,
                                    timeout, transId, pid)
-        raise _return_sync_exception()
+        raise return_sync_exception()
 
     def __return_sync_nothrow(self, name, response_info, response,
                               timeout, transId, pid):
@@ -214,15 +214,15 @@ class API(object):
         assert function is not None
         if command == _MESSAGE_SEND_ASYNC:
             try:
-                response = function(API.__ASYNC, name, requestInfo, request,
+                response = function(API.ASYNC, name, requestInfo, request,
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
                 else:
                     responseInfo = ''
-            except _return_async_exception:
+            except return_async_exception:
                 return
-            except _return_sync_exception:
+            except return_sync_exception:
                 assert False
                 return
             except:
@@ -233,15 +233,15 @@ class API(object):
                                         timeout, transId, pid)
         elif command == _MESSAGE_SEND_SYNC:
             try:
-                response = function(API.__SYNC, name, requestInfo, request,
+                response = function(API.SYNC, name, requestInfo, request,
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
                 else:
                     responseInfo = ''
-            except _return_sync_exception:
+            except return_sync_exception:
                 return
-            except _return_async_exception:
+            except return_async_exception:
                 assert False
                 return
             except:
@@ -360,8 +360,8 @@ class API(object):
     def request_http_qs_parse(self, request):
         return self.__binary_key_value_parse(request)
 
-    def request_info_key_value_parse(self, request_info):
-        return self.__binary_key_value_parse(request_info)
+    def info_key_value_parse(self, message_info):
+        return self.__binary_key_value_parse(message_info)
 
     def __send(self, data):
         if self.__use_header:
@@ -389,15 +389,15 @@ class API(object):
                     ready == (len(IN) > 0)
         return data
 
-class _invalid_input_exception(Exception):
+class invalid_input_exception(Exception):
     def __init__(self):
         Exception.__init__(self, 'Invalid Input')
 
-class _return_sync_exception(Exception):
+class return_sync_exception(Exception):
     def __init__(self):
         Exception.__init__(self, 'Synchronous Call Return Invalid')
 
-class _return_async_exception(Exception):
+class return_async_exception(Exception):
     def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Return Invalid')
 

@@ -164,7 +164,7 @@ class ThreadPool
                         m_queueConditional.wait(lock);
                     while (m_running)
                     {
-                        ThreadFunctionObject function = m_queue.front();
+                        ThreadFunctionObject & function = m_queue.front();
                         lock.unlock();
         
                         function(m_data);
