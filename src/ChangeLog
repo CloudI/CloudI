@@ -6,6 +6,10 @@
     * Add C++ CloudI API interface, based on the C CloudI API and integrated
       with the hexpi test
     * Make recv_async return the oldest response when given a null UUID
+      (cloudi_constants.erl can change the RECV_ASYNC_STRATEGY to the faster
+       "random" strategy)
+    * Change various asserts to instead throw message decoding exceptions or
+      invalid input exceptions within the CloudI API implementations
 
 2011-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

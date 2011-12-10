@@ -259,6 +259,8 @@ module CloudI
                 end
                 return_sync_nothrow(name, responseInfo, response,
                                     timeout, transId, pid)
+            else
+                raise MessageDecodingException
             end
         end
 
@@ -292,7 +294,9 @@ module CloudI
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
                     i += j
-                    API.assert{i == data.length}
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
                     return
                 when MESSAGE_SEND_ASYNC, MESSAGE_SEND_SYNC
                     i += j; j = 4
@@ -315,7 +319,9 @@ module CloudI
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
                     i += j
-                    API.assert{i == data.length}
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
                     data.clear()
                     callback(command, name, requestInfo, request,
                              timeout, priority, transId, binary_to_term(pid))
@@ -328,7 +334,9 @@ module CloudI
                     responseSize = tmp[1]
                     i += j; j = responseSize + 1 + 16
                     i += j
-                    API.assert{i == data.length}
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
                     tmp = data[i, j].unpack("a#{responseSize}xa16")
                     response = tmp[0]
                     transId = tmp[1]
@@ -336,19 +344,25 @@ module CloudI
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
                     i += j
-                    API.assert{i == data.length}
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
                     return data[i, j].unpack('a16')[0]
                 when MESSAGE_RETURNS_ASYNC
                     i += j; j = 4
                     transIdCount = data[i, j].unpack('L')[0]
                     i += j; j = 16 * transIdCount
                     i += j
-                    API.assert{i == data.length}
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
                     return data[i, j].unpack('a16' * transIdCount)
                 when MESSAGE_KEEPALIVE
                     send(term_to_binary(:keepalive))
                     i += j
-                    API.assert{i >= data.length}
+                    if i < data.length
+                        raise MessageDecodingException
+                    end
                     data.slice!(0, i)
                     if data.length > 0
                         if IO.select([@socket], nil, nil, 0).nil?
@@ -356,7 +370,7 @@ module CloudI
                         end
                     end
                 else
-                    API.assert{false}
+                    raise MessageDecodingException
                 end
 
                 ready = false
@@ -387,7 +401,7 @@ module CloudI
         end
 
         def request_http_qs_parse(request)
-            request_key_value_parse(request)
+            binary_key_value_parse(request)
         end
 
         def info_key_value_parse(message_info)
@@ -461,6 +475,9 @@ module CloudI
     end
 
     class ReturnAsyncException < Exception
+    end
+
+    class MessageDecodingException < Exception
     end
 end
 

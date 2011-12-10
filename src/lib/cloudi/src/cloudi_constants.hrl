@@ -20,6 +20,10 @@
 % interval at which asynchronous forwarded messages are sent
 -define(FORWARD_ASYNC_INTERVAL, 500). % milliseconds
 
+% recv_async null UUID strategy
+-define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).
+%-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
+
 % decrement the timeout of each successful forward, to prevent infinite messages
 -define(FORWARD_DELTA, 100). % milliseconds
 

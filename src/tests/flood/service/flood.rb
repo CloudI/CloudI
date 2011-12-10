@@ -42,7 +42,7 @@
 path = File.split(File.dirname(__FILE__)); path.pop(3)
 $:.unshift File.join(*path, *%w[api ruby])
 
-$DEBUG = true
+$DEBUG = false
 
 require 'cloudi'
 
