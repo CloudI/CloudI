@@ -327,9 +327,12 @@ init([udp, BufferSize, Timeout, Prefix,
                 [] ->
                     send('recv_async_out'(timeout, TransId), StateData),
                     {next_state, 'HANDLE', StateData};
-                [{TransIdUsed, {ResponseInfo, Response}} | _] ->
-                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
-                    send('recv_async_out'(ResponseInfo, Response, TransIdUsed),
+                L ->
+                    TransIdPick = recv_async_oldest(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
+                    send('recv_async_out'(ResponseInfo, Response, TransIdPick),
                          StateData),
                     {next_state, 'HANDLE',
                      StateData#state{async_responses = NewAsyncResponses}}
@@ -1008,6 +1011,21 @@ recv_async_timeout_end(TransId,
     when is_binary(TransId) ->
     StateData#state{async_responses = dict:erase(TransId, Ids)}.
 
+recv_async_oldest([{TransId, _} | L]) ->
+    recv_async_oldest(L, uuid:get_v1_time(TransId), TransId).
+
+recv_async_oldest([], _, TransIdCurrent) ->
+    TransIdCurrent;
+
+recv_async_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
+    Time1 = uuid:get_v1_time(TransId),
+    if
+        Time1 < Time0 ->
+            recv_async_oldest(L, Time1, TransId);
+        true ->
+            recv_async_oldest(L, Time0, TransIdCurrent)
+    end.
+            
 process_queue(#state{queue_messages = true,
                      queued = Queue} = StateData) ->
     case pqueue4:out(Queue) of
