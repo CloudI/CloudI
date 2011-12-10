@@ -5,6 +5,7 @@
 
     * Add C++ CloudI API interface, based on the C CloudI API and integrated
       with the hexpi test
+    * Make recv_async return the oldest response when given a null UUID
 
 2011-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

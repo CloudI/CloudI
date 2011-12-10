@@ -301,14 +301,19 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                     {noreply, State};
                 [] ->
                     {reply, {error, timeout}, State};
-                [{TransIdUsed, {<<>>, Response}} | _] ->
-                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
-                    {reply, {ok, Response},
-                     State#state{async_responses = NewAsyncResponses}};
-                [{TransIdUsed, {ResponseInfo, Response}} | _] ->
-                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
-                    {reply, {ok, ResponseInfo, Response},
-                     State#state{async_responses = NewAsyncResponses}}
+                L ->
+                    TransIdPick = recv_async_oldest(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
+                    if
+                        ResponseInfo == <<>> ->
+                            {reply, {ok, Response},
+                             State#state{async_responses = NewAsyncResponses}};
+                        true ->
+                            {reply, {ok, ResponseInfo, Response},
+                             State#state{async_responses = NewAsyncResponses}}
+                    end
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -809,4 +814,19 @@ recv_async_timeout_end(TransId,
                        #state{async_responses = Ids} = State)
     when is_binary(TransId) ->
     State#state{async_responses = dict:erase(TransId, Ids)}.
+
+recv_async_oldest([{TransId, _} | L]) ->
+    recv_async_oldest(L, uuid:get_v1_time(TransId), TransId).
+
+recv_async_oldest([], _, TransIdCurrent) ->
+    TransIdCurrent;
+
+recv_async_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
+    Time1 = uuid:get_v1_time(TransId),
+    if
+        Time1 < Time0 ->
+            recv_async_oldest(L, Time1, TransId);
+        true ->
+            recv_async_oldest(L, Time0, TransIdCurrent)
+    end.
 
