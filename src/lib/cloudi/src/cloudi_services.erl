@@ -57,7 +57,8 @@
 %% external interface
 -export([start_link/0,
          monitor/6,
-         shutdown/1]).
+         shutdown/1,
+         restart/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -101,6 +102,10 @@ monitor(M, F, A, MaxR, MaxT, JobId)
 shutdown(JobId)
     when is_binary(JobId), byte_size(JobId) == 16 ->
     gen_server:call(?MODULE, {shutdown, JobId}).
+
+restart(JobId)
+    when is_binary(JobId), byte_size(JobId) == 16 ->
+    gen_server:call(?MODULE, {restart, JobId}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -148,6 +153,18 @@ handle_call({shutdown, JobId}, _,
                 key2value:erase(JobId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
+
+handle_call({restart, JobId}, _,
+            #state{services = Services} = State) ->
+    case key2value:find1(JobId, Services) of
+        {ok, {Pids, _}} ->
+            lists:foreach(fun(P) ->
+                erlang:exit(P, restart)
+            end, Pids),
+            {reply, ok, State};
         error ->
             {reply, {error, not_found}, State}
     end;

@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @version 0.1.9 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -56,10 +56,11 @@
 %% external interface
 -export([start_link/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2, jobs/1,
+         jobs_add/2, jobs_remove/2, jobs_restart/2, jobs/1,
          nodes_add/2, nodes_remove/2,
          job_start/1,
-         job_stop/1]).
+         job_stop/1,
+         job_restart/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -97,6 +98,10 @@ jobs_add(L, Timeout) ->
 
 jobs_remove(L, Timeout) ->
     gen_server:call(?MODULE, {jobs_remove, L,
+                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+
+jobs_restart(L, Timeout) ->
+    gen_server:call(?MODULE, {jobs_restart, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 jobs(Timeout) ->
@@ -145,6 +150,14 @@ job_stop(Job)
     when is_record(Job, config_job_external) ->
     job_stop_external(Job).
 
+job_restart(Job)
+    when is_record(Job, config_job_internal) ->
+    job_restart_internal(Job);
+
+job_restart(Job)
+    when is_record(Job, config_job_external) ->
+    job_restart_external(Job).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -171,6 +184,11 @@ handle_call({jobs_add, L, _}, _,
 handle_call({jobs_remove, L, _}, _,
             #state{configuration = Config} = State) ->
     NewConfig = cloudi_configuration:jobs_remove(L, Config),
+    {reply, ok, State#state{configuration = NewConfig}};
+
+handle_call({jobs_restart, L, _}, _,
+            #state{configuration = Config} = State) ->
+    NewConfig = cloudi_configuration:jobs_restart(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({jobs, _}, _,
@@ -292,6 +310,28 @@ job_stop_external(Job)
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error stopping external job (~p):~n ~p",
+                       [Job#config_job_external.file_path, Reason]),
+            ok
+    end.
+
+job_restart_internal(Job)
+    when is_record(Job, config_job_internal) ->
+    case cloudi_services:restart(Job#config_job_internal.uuid) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("error restarting internal job (~p):~n ~p",
+                       [Job#config_job_internal.module, Reason]),
+            ok
+    end.
+
+job_restart_external(Job)
+    when is_record(Job, config_job_external) ->
+    case cloudi_services:restart(Job#config_job_external.uuid) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("error restarting external job (~p):~n ~p",
                        [Job#config_job_external.file_path, Reason]),
             ok
     end.

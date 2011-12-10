@@ -10,6 +10,7 @@
        "random" strategy)
     * Change various asserts to instead throw message decoding exceptions or
       invalid input exceptions within the CloudI API implementations
+    * Add interface to restart a job through the CloudI Job API
 
 2011-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
