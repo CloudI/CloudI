@@ -50,7 +50,7 @@ extern "C"
 
 #define CLOUDI_MAX_BUFFERSIZE 2147483648 /* 2GB */
 
-typedef struct
+typedef struct cloudi_instance_t
 {
     int fd;
     int use_header;
@@ -71,6 +71,10 @@ typedef struct
 
 } cloudi_instance_t;
 
+/* command values */
+#define CLOUDI_ASYNC     1
+#define CLOUDI_SYNC     -1
+
 typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   int const command,
                                   char const * const name,
@@ -85,13 +89,15 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   uint32_t const pid_size);
 
 
-#define cloudi_get_response(p)          (p->response)
-#define cloudi_get_response_size(p)     (p->response_size)
-#define cloudi_get_trans_id_count(p)    (p->trans_id_count)
-#define cloudi_get_trans_id(p, i)       (&(p->trans_id[i * 16]))
+#define cloudi_get_response(p)               (p->response)
+#define cloudi_get_response_size(p)          (p->response_size)
+#define cloudi_get_response_info(p)          (p->response_info)
+#define cloudi_get_response_info_size(p)     (p->response_info_size)
+#define cloudi_get_trans_id_count(p)         (p->trans_id_count)
+#define cloudi_get_trans_id(p, i)            (&(p->trans_id[i * 16]))
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      int thread_index);
+                      int const thread_index);
 
 void cloudi_destroy(cloudi_instance_t * p);
 
@@ -116,7 +122,7 @@ int cloudi_send_async_(cloudi_instance_t * p,
                        void const * const request,
                        uint32_t const request_size,
                        uint32_t timeout,
-                       int8_t priority);
+                       int8_t const priority);
 
 int cloudi_send_sync(cloudi_instance_t * p,
                      char const * const name,
@@ -130,7 +136,7 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                       void const * const request,
                       uint32_t const request_size,
                       uint32_t timeout,
-                      int8_t priority);
+                      int8_t const priority);
 
 int cloudi_mcast_async(cloudi_instance_t * p,
                        char const * const name,
@@ -144,7 +150,7 @@ int cloudi_mcast_async_(cloudi_instance_t * p,
                         void const * const request,
                         uint32_t const request_size,
                         uint32_t timeout,
-                        int8_t priority);
+                        int8_t const priority);
 
 int cloudi_forward(cloudi_instance_t * p,
                    int const command,
@@ -154,7 +160,7 @@ int cloudi_forward(cloudi_instance_t * p,
                    void const * const request,
                    uint32_t const request_size,
                    uint32_t timeout,
-                   int8_t priority,
+                   int8_t const priority,
                    char const * const trans_id,
                    char const * const pid,
                    uint32_t const pid_size);
@@ -166,7 +172,7 @@ int cloudi_forward_async(cloudi_instance_t * p,
                          void const * const request,
                          uint32_t const request_size,
                          uint32_t timeout,
-                         int8_t priority,
+                         int8_t const priority,
                          char const * const trans_id,
                          char const * const pid,
                          uint32_t const pid_size);
@@ -178,7 +184,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
                         void const * const request,
                         uint32_t const request_size,
                         uint32_t timeout,
-                        int8_t priority,
+                        int8_t const priority,
                         char const * const trans_id,
                         char const * const pid,
                         uint32_t const pid_size);
@@ -228,11 +234,9 @@ char const ** cloudi_request_http_qs_parse(void const * const request,
                                            uint32_t const request_size);
 void cloudi_request_http_qs_destroy(char const ** p);
 
-char const ** cloudi_request_info_key_value_parse(void const *
-                                                  const request_info,
-                                                  uint32_t
-                                                  const request_info_size);
-void cloudi_request_info_key_value_destroy(char const ** p);
+char const ** cloudi_info_key_value_parse(void const * const request_info,
+                                          uint32_t const request_info_size);
+void cloudi_info_key_value_destroy(char const ** p);
 
 enum
 {

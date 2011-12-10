@@ -42,7 +42,7 @@
 path = File.split(File.dirname(__FILE__)); path.pop(2)
 $:.unshift File.join(*path, *%w[api ruby])
 
-$DEBUG = true
+$DEBUG = false
 
 require 'cloudi'
 
@@ -50,8 +50,6 @@ if __FILE__ == $PROGRAM_NAME
     thread_count = CloudI::API.thread_count()
 
     threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
-        api = CloudI::API.new(thread_index)
-
         class Task
             def initialize(api)
                 @api = api
@@ -82,10 +80,16 @@ if __FILE__ == $PROGRAM_NAME
                               timeout, priority, transId, pid)
             end
         end
-        object = Task.new(api)
 
-        api.subscribe('ruby', object.method(:request))
-        api.poll
+        begin
+            api = CloudI::API.new(thread_index)
+            object = Task.new(api)
+            api.subscribe('ruby', object.method(:request))
+            api.poll
+        rescue
+            $stderr.puts $!.message
+            $stderr.puts $!.backtrace
+        end
     }}
     threads.each{ |t| t.join}
 end

@@ -750,7 +750,12 @@ destination_get(immediate_closest, Name, Pid, _)
 
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_random_pid(Name, Pid).
+    list_pg:get_random_pid(Name, Pid);
+
+destination_get(DestRefresh, _, _, _) ->
+    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
+               [DestRefresh]),
+    throw(badarg).
 
 destination_all(lazy_closest, Name, Pid, Groups)
     when is_list(Name) ->
@@ -766,7 +771,12 @@ destination_all(immediate_closest, Name, Pid, _)
 
 destination_all(immediate_random, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_members(Name, Pid).
+    list_pg:get_members(Name, Pid);
+
+destination_all(DestRefresh, _, _, _) ->
+    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
+               [DestRefresh]),
+    throw(badarg).
 
 send_async_timeout_start(Timeout, TransId,
                          #state{send_timeouts = Ids} = State)
