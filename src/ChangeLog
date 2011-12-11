@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2011-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 0.1.9 (alpha) released
+
 2011-12-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add C++ CloudI API interface, based on the C CloudI API and integrated
