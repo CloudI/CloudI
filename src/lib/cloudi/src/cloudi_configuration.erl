@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.6 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -394,10 +394,12 @@ new([{'logging', [T | _] = Value} | Terms], Config)
     when is_atom(erlang:element(1, T)) ->
     Defaults = [
         {level, (Config#config.logging)#config_logging.level},
-        {file, (Config#config.logging)#config_logging.file}],
-    [Level, File] = proplists2:take_values(Defaults, Value),
+        {file, (Config#config.logging)#config_logging.file},
+        {redirect, (Config#config.logging)#config_logging.redirect}],
+    [Level, File, Redirect] = proplists2:take_values(Defaults, Value),
     new(Terms, Config#config{logging = #config_logging{level = Level,
-                                                       file = File}}).
+                                                       file = File,
+                                                       redirect = Redirect}}).
 
 jobs_acl_update(Output, [], _) ->
     lists:reverse(Output);
@@ -442,7 +444,7 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#internal.timeout_init),
          is_integer(Job#internal.timeout_async),
          is_integer(Job#internal.timeout_sync),
-         is_integer(Job#internal.count_process),
+         is_number(Job#internal.count_process),
          is_integer(Job#internal.max_r),
          is_integer(Job#internal.max_t) ->
     true = (Job#internal.dest_refresh == immediate_closest) orelse
@@ -457,7 +459,6 @@ jobs_validate(Output, [Job | L], UUID)
            (Job#internal.dest_list_deny == undefined),
     true = is_list(Job#internal.dest_list_allow) orelse
            (Job#internal.dest_list_allow == undefined),
-    true = Job#internal.count_process >= 1,
     true = Job#internal.max_r >= 0,
     true = Job#internal.max_t >= 0,
     C = #config_job_internal{prefix = Job#internal.prefix,
@@ -487,8 +488,8 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#external.timeout_init),
          is_integer(Job#external.timeout_async),
          is_integer(Job#external.timeout_sync),
-         is_integer(Job#external.count_process),
-         is_integer(Job#external.count_thread),
+         is_number(Job#external.count_process),
+         is_number(Job#external.count_thread),
          is_integer(Job#external.max_r),
          is_integer(Job#external.max_t) ->
     true = (Job#external.prefix == []) orelse
@@ -510,8 +511,6 @@ jobs_validate(Output, [Job | L], UUID)
            (Job#external.dest_list_deny == undefined),
     true = is_list(Job#external.dest_list_allow) orelse
            (Job#external.dest_list_allow == undefined),
-    true = Job#external.count_process >= 1,
-    true = Job#external.count_thread >= 1,
     true = Job#external.max_r >= 0,
     true = Job#external.max_t >= 0,
     C = #config_job_external{prefix = Job#external.prefix,

@@ -89,6 +89,8 @@
                                {fun cloudi_nodes:nodes/1, 1}},
                               {"loglevel_set",
                                {fun loglevel_set/2, 2}},
+                              {"log_redirect",
+                               {fun log_redirect/2, 2}},
                               {"code_path_add",
                                {fun code_path_add/2, 2}},
                               {"code_path_remove",
@@ -121,6 +123,8 @@ cloudi_job_init(_Args, Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang/jobs_remove/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/jobs_restart"),
     cloudi_job:subscribe(Dispatcher, "erlang/jobs_restart/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs"),
+    cloudi_job:subscribe(Dispatcher, "erlang/jobs/get"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_add"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_add/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_remove"),
@@ -130,15 +134,17 @@ cloudi_job_init(_Args, Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes_dead/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/nodes"),
-    cloudi_job:subscribe(Dispatcher, "erlang/nodes/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/nodes/get"),
     cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set"),
     cloudi_job:subscribe(Dispatcher, "erlang/loglevel_set/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/log_redirect"),
+    cloudi_job:subscribe(Dispatcher, "erlang/log_redirect/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/code_path_add"),
     cloudi_job:subscribe(Dispatcher, "erlang/code_path_add/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/code_path_remove"),
     cloudi_job:subscribe(Dispatcher, "erlang/code_path_remove/post"),
     cloudi_job:subscribe(Dispatcher, "erlang/code_path"),
-    cloudi_job:subscribe(Dispatcher, "erlang/code_path/post"),
+    cloudi_job:subscribe(Dispatcher, "erlang/code_path/get"),
     cloudi_job:subscribe(Dispatcher, "json_rpc/"),
     cloudi_job:subscribe(Dispatcher, "json_rpc//post"),
     {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
@@ -226,6 +232,9 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
 
 loglevel_set(Level, _Timeout) ->
     cloudi_logger:change_loglevel(Level).
+
+log_redirect(Node, _Timeout) ->
+    cloudi_logger:redirect(Node).
 
 code_path_add(Dir, _Timeout) ->
     code:add_pathz(Dir).

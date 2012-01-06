@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket
+import threading, socket, types
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -63,6 +63,8 @@ class _Task(threading.Thread):
             response = """\
 <http_test><error>no value specified</error></http_test>"""
         else:
+            if type(value) == types.ListType:
+                value = value[0]
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
         self.__api.return_(command, name, '', response, timeout, transId, pid)

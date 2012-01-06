@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,9 @@
 //
 
 #include "cloudi.hpp"
+#undef CLOUDI_HPP // avoid header warning
 #include "cloudi.h"
+#define CLOUDI_HPP
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
 #include <unistd.h>

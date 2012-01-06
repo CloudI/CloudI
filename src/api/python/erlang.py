@@ -439,3 +439,72 @@ class OutputException(TypeError):
     def __str__(self):
         return self.__s
 
+# provide file:consult/1 functionality with python types
+def consult(string_in):
+    # manually parse textual erlang data to avoid external dependencies
+    list_out = []
+    tuple_binary = False   # binaries become tuples of integers
+    quoted_string = False  # strings become python string
+    atom_string = False    # atoms become python string
+    number = False
+    whitespace = frozenset(('\n', '\t', ' '))
+    i = 0
+    while i < len(string_in):
+        c = string_in[i]
+        if c == ',':
+            if atom_string:
+                list_out.append('"')
+                atom_string = False
+            list_out.append(',')
+            number = string_in[i + 1].isdigit()
+        elif c == '{':
+            list_out.append('(')
+            number = string_in[i + 1].isdigit()
+        elif c == '}':
+            if atom_string:
+                list_out.append('"')
+                atom_string = False
+            list_out.append(')')
+            number = False
+        elif c == '[':
+            list_out.append('[')
+            number = string_in[i + 1].isdigit()
+        elif c == ']':
+            if atom_string:
+                list_out.append('"')
+                atom_string = False
+            list_out.append(']')
+            number = False
+        elif c == '<' and string_in[i + 1] == '<':
+            list_out.append('(')
+            tuple_binary = True
+            i += 1
+        elif c == '>' and string_in[i + 1] == '>':
+            list_out.append(')')
+            tuple_binary = False
+            i += 1
+        elif not quoted_string and not atom_string and c in whitespace:
+            number = string_in[i + 1].isdigit()
+        elif tuple_binary or number:
+            list_out.append(c)
+        elif c == '"':
+            if quoted_string:
+                quoted_string = False
+            else:
+                quoted_string = True
+            list_out.append('"')
+        elif c == "'":
+            if atom_string:
+                atom_string = False
+            else:
+                atom_string = True
+            list_out.append('"')
+        elif not quoted_string and not atom_string:
+            atom_string = True
+            list_out.append('"')
+            list_out.append(c)
+        else:
+            list_out.append(c)
+        i += 1
+    return eval(''.join(list_out))
+

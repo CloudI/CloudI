@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -60,7 +60,8 @@
          nodes_add/2, nodes_remove/2,
          job_start/1,
          job_stop/1,
-         job_restart/1]).
+         job_restart/1,
+         concurrency/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -136,11 +137,11 @@ job_start(Job)
         _ ->
             ok
     end,
-    job_start_internal(Job#config_job_internal.count_process, Job);
+    job_start_internal(concurrency(Job#config_job_internal.count_process), Job);
 
 job_start(Job)
     when is_record(Job, config_job_external) ->
-    job_start_external(Job#config_job_external.count_process, Job).
+    job_start_external(concurrency(Job#config_job_external.count_process), Job).
 
 job_stop(Job)
     when is_record(Job, config_job_internal) ->
@@ -157,6 +158,20 @@ job_restart(Job)
 job_restart(Job)
     when is_record(Job, config_job_external) ->
     job_restart_external(Job).
+
+concurrency(I)
+    when is_integer(I) ->
+    I;
+concurrency(I)
+    when is_float(I) ->
+    if
+        I > 1.0 ->
+            erlang:round((I * erlang:system_info(schedulers)) + 0.5);
+        I < 1.0 ->
+            erlang:round(I * erlang:system_info(schedulers));
+        true ->
+            erlang:system_info(schedulers)
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -267,7 +282,8 @@ job_start_external(0, _) ->
 job_start_external(Count, Job)
     when is_record(Job, config_job_external) ->
     case cloudi_services:monitor(cloudi_spawn, start_external,
-                                 [Job#config_job_external.count_thread,
+                                 [concurrency(
+                                    Job#config_job_external.count_thread),
                                   Job#config_job_external.file_path,
                                   Job#config_job_external.args,
                                   Job#config_job_external.env,

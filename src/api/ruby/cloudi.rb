@@ -395,7 +395,14 @@ module CloudI
             result = {}
             data = binary.split(NULL.chr)
             (0...(data.length)).step(2).each do |i|
-                result[data[i]] = data[i + 1]
+                value = result[data[i]]
+                if value == nil
+                    result[data[i]] = data[i + 1]
+                elsif value.kind_of?(Array)
+                    value << data[i + 1]
+                else
+                    result[data[i]] = [value, data[i + 1]]
+                end
             end
             result
         end

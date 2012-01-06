@@ -667,9 +667,10 @@ public class API
         }
     }
 
-    private HashMap<String, String> binary_key_value_parse(byte[] binary)
+    private HashMap<String, List<String> > binary_key_value_parse(byte[] binary)
     {
-        HashMap<String, String> result = new HashMap<String, String>();
+        HashMap<String, List<String> > result =
+            new HashMap<String, List<String> >();
         String key = null;
         int binary_i = 0;
         for (int binary_j = 0; binary_j < binary.length; ++binary_j)
@@ -682,8 +683,19 @@ public class API
                 }
                 else
                 {
-                    result.put(key, new String(binary, binary_i,
-                                               binary_j - binary_i));
+                    List<String> value = result.get(key);
+                    final String element = new String(binary, binary_i,
+                                                      binary_j - binary_i);
+                    if (value == null)
+                    {
+                        value = new ArrayList<String>();
+                        value.add(element);
+                        result.put(key, value);
+                    }
+                    else
+                    {
+                        value.add(element);
+                    }
                     key = null;
                 }
                 binary_i = binary_j + 1;
@@ -692,14 +704,14 @@ public class API
         return result;
     }
 
-    public HashMap<String, String> request_http_qs_parse(byte[] request)
+    public HashMap<String, List<String> > request_http_qs_parse(byte[] request)
     {
         return binary_key_value_parse(request);
     }
 
-    public HashMap<String, String> info_key_value_parse(byte[] message_info)
+    public HashMap<String, List<String> > info_key_value_parse(byte[] info)
     {
-        return binary_key_value_parse(message_info);
+        return binary_key_value_parse(info);
     }
 
     private void send(OtpOutputStream command)

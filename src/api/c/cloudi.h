@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,9 @@
  * DAMAGE.
  */
 
+#ifdef CLOUDI_HPP
+#warning "Only need to include cloudi.h (C), not cloudi.hpp (C++)"
+#endif
 #ifndef CLOUDI_H
 #define CLOUDI_H
 
