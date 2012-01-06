@@ -64,7 +64,9 @@ if __name__ == '__main__':
 
     # remove the hexpi jobs
     jobs = obj.jobs()
-    assert obj.jobs_remove('[' + jobs[1][0] + ', ' + jobs[4][0] + ']') == 'ok'
+    assert obj.jobs_remove('[%s, %s]' % (
+        str(jobs[1][0]), str(jobs[4][0]),
+    )) == 'ok'
 
     # start the C flood test
     assert obj.jobs_add("""\
@@ -87,5 +89,7 @@ if __name__ == '__main__':
 
     # stop the C flood test
     jobs = obj.jobs()
-    assert obj.jobs_remove('[' + jobs[14][0] + ', ' + jobs[15][0] + ']') == 'ok'
+    assert obj.jobs_remove('[%s, %s]' % (
+        str(jobs[14][0]), str(jobs[15][0]),
+    )) == 'ok'
 

@@ -44,7 +44,8 @@
 -record(config_logging,
     {
         level = trace,
-        file = "logs/cloudi.log"
+        file = "logs/cloudi.log",
+        redirect = undefined
     }).
 
 % internal job parameters

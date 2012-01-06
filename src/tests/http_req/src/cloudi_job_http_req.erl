@@ -81,7 +81,12 @@ cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
     HttpQS = cloudi_job:request_http_qs_parse(Request),
     Response = case dict:find(<<"value">>, HttpQS) of
         {ok, RawValue} ->
-            Value = erlang:list_to_integer(erlang:binary_to_list(RawValue)),
+            Value = case RawValue of
+                [V | _] ->
+                    erlang:list_to_integer(erlang:binary_to_list(V));
+                V ->
+                    erlang:list_to_integer(erlang:binary_to_list(V))
+            end,
             erlang:list_to_binary(string2:format(
                 "<http_test><value>~w</value></http_test>", [Value]
             ));

@@ -70,6 +70,9 @@ if __FILE__ == $PROGRAM_NAME
                 response = if value.nil?
                     '<http_test><error>no value specified</error></http_test>'
                 else
+                    if value.kind_of?(Array)
+                        value = value[0]
+                    end
                     value = value.to_i
                     "<http_test><value>#{value}</value></http_test>"
                 end

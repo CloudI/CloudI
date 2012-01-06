@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_hexpi).
@@ -124,7 +124,8 @@ cloudi_job_init([IndexStart, IndexEnd, ConcurrentTasks],
     {ok, #state{index = IndexStart,
                 index_start = IndexStart,
                 index_end = IndexEnd,
-                concurrent_tasks = ConcurrentTasks}}.
+                concurrent_tasks =
+                    cloudi_configurator:concurrency(ConcurrentTasks)}}.
 
 cloudi_job_handle_request(_Type, _Name, _RequestInfo, _Request,
                           _Timeout, _Priority, _TransId, _Pid,

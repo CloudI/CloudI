@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -361,7 +361,14 @@ class API(object):
         result = {}
         data = binary.split(chr(0))
         for i in xrange(0, len(data) - 1, 2):
-            result[data[i]] = data[i + 1]
+            key = data[i]
+            current = result.get(key, None)
+            if current is None:
+                result[key] = data[i + 1]
+            elif type(current) == types.ListType:
+                current.append(data[i + 1])
+            else:
+                result[key] = [current, data[i + 1]]
         return result
 
     def request_http_qs_parse(self, request):

@@ -826,8 +826,8 @@ return_nothrow(_, 'send_sync', Name, ResponseInfo, Response,
 
 request_http_qs_parse(Request)
     when is_binary(Request) ->
-    request_http_qs_parse_list(dict:new(),
-                               binary:split(Request, <<0>>, [global])).
+    binary_key_value_parse_list(dict:new(),
+                                binary:split(Request, <<0>>, [global])).
 
 -spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
     dict().
@@ -841,9 +841,8 @@ request_info_key_value_parse(RequestInfo)
 request_info_key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
     % binary() -> binary()
-    request_info_key_value_parse_list(dict:new(),
-                                      binary:split(RequestInfo, <<0>>,
-                                                   [global])).
+    binary_key_value_parse_list(dict:new(),
+                                binary:split(RequestInfo, <<0>>, [global])).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -978,13 +977,16 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request_http_qs_parse_list(Lookup, [<<>>]) ->
+binary_key_value_parse_list(Lookup, [<<>>]) ->
     Lookup;
-request_http_qs_parse_list(Lookup, [K, V | L]) ->
-    request_http_qs_parse_list(dict:store(K, V, Lookup), L).
-
-request_info_key_value_parse_list(Lookup, [<<>>]) ->
-    Lookup;
-request_info_key_value_parse_list(Lookup, [K, V | L]) ->
-    request_info_key_value_parse_list(dict:store(K, V, Lookup), L).
+binary_key_value_parse_list(Lookup, [K, V | L]) ->
+    case dict:find(K, Lookup) of
+        {ok, [_ | _] = ListV0} ->
+            ListV1 = lists:reverse([V | lists:reverse(ListV0)]),
+            binary_key_value_parse_list(dict:store(K, ListV1, Lookup), L);
+        {ok, V0} ->
+            binary_key_value_parse_list(dict:store(K, [V0, V], Lookup), L);
+        error ->
+            binary_key_value_parse_list(dict:store(K, V, Lookup), L)
+    end.
 

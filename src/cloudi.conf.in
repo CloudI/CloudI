@@ -124,7 +124,7 @@
         1,
         % specify how many threads should be created with this configuration
         % (i.e., how many sockets should be opened to each OS process)
-        2,
+        1.5,
         % If more than MaxR restarts occur within MaxT seconds,
         % CloudI terminates the process
         % MaxR (maximum restarts)
@@ -163,7 +163,7 @@
         cloudi_job_hexpi,
         [1,       % starting index
          65536,   % ending index
-         2],      % concurrent tasks
+         1.5],    % concurrent tasks
         immediate_closest, % recover from failures (process deaths) immediately
         5000, 5000, 5000, [api], undefined, 1, 5, 300},
 
@@ -537,6 +537,7 @@
     'cloudi@host2'
 ]}.
 {logging, [
-    {level, trace} % levels: off, fatal, error, warn, info, debug, trace
+    {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
+    {redirect, undefined}
 ]}.
 

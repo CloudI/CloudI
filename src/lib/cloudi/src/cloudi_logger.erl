@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -55,6 +55,7 @@
 %% external interface
 -export([start_link/1,
          change_loglevel/1,
+         redirect/1,
          fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
 
 %% gen_server callbacks
@@ -70,7 +71,9 @@
         file_path,
         interface_module,
         fd,
-        inode
+        inode,
+        level,
+        destination
     }).
 
 %% prevent any process from flooding the logging process with messages
@@ -93,7 +96,7 @@ start_link(#config{logging = LoggingConfig}) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Change the log level,===
+%% ===Change the log level.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -108,7 +111,19 @@ change_loglevel(Level)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Critical log message,===
+%% ===Redirect this node's logging to a different node.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec redirect(Node :: atom()) ->
+    'ok'.
+
+redirect(Node) ->
+    gen_server:cast(?MODULE, {redirect, Node}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Critical log message.===
 %% which indicates the system has failed and can not continue.
 %% Called with ?LOG_CRITICAL(Format, []).
 %% @end
@@ -126,7 +141,7 @@ fatal(Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Error log message,===
+%% ===Error log message.===
 %% which indicates a subsystem has failed but the failure is not fatal.
 %% Called with ?LOG_ERROR(Format, []).
 %% @end
@@ -144,7 +159,7 @@ error(Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Warning log message,===
+%% ===Warning log message.===
 %% which indicates an unexpected occurance was found in a subsystem.
 %% Called with ?LOG_WARNING(Format, []).
 %% @end
@@ -162,7 +177,7 @@ warn(Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Info log message,===
+%% ===Info log message.===
 %% which indicates a subsystem has changed state.
 %% Called with ?LOG_INFO(Format, []).
 %% @end
@@ -180,7 +195,7 @@ info(Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Debug log message,===
+%% ===Debug log message.===
 %% which reports subsystem data that should be useful for debugging.
 %% Called with ?LOG_DEBUG(Format, []).
 %% @end
@@ -198,7 +213,7 @@ debug(Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Trace log message,===
+%% ===Trace log message.===
 %% which reports subsystem data that is only for tracing execution.
 %% Called with ?LOG_TRACE(Format, []).
 %% @end
@@ -219,15 +234,28 @@ trace(Process, Module, Line, Format, Args) ->
 %%%------------------------------------------------------------------------
 
 init([#config_logging{level = Level,
-                      file = FilePath}]) ->
-    case load_interface_module(Level) of
-        {ok, Binary} ->
-            case log_open(FilePath, #state{interface_module = Binary}) of
+                      file = FilePath,
+                      redirect = Redirect}]) ->
+    Destination = if
+        Redirect == node(); Redirect =:= undefined ->
+            ?MODULE;
+        true ->
+            {cloudi_logger, Redirect}
+    end,
+    case load_interface_module(Level, Destination) of
+        {ok, Binary} when Destination == ?MODULE ->
+            case log_open(FilePath, #state{interface_module = Binary,
+                                           level = Level,
+                                           destination = Destination}) of
                 {ok, _} = Success ->
                     Success;
                 {error, Reason} ->
                     {stop, Reason}
             end;
+        {ok, Binary} ->
+            {ok, #state{interface_module = Binary,
+                        level = Level,
+                        destination = Destination}};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -235,10 +263,28 @@ init([#config_logging{level = Level,
 handle_call(Request, _, State) ->
     {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
 
-handle_cast({change_loglevel, Level}, State) ->
-    case load_interface_module(Level) of
+handle_cast({change_loglevel, Level},
+            #state{destination = Destination} = State) ->
+    case load_interface_module(Level, Destination) of
         {ok, Binary} ->
-            {noreply, State#state{interface_module = Binary}};
+            {noreply, State#state{interface_module = Binary,
+                                  level = Level}};
+        {error, Reason} ->
+            {stop, Reason}
+    end;
+
+handle_cast({redirect, Node},
+            #state{level = Level} = State) ->
+    Destination = if
+        Node == node(); Node =:= undefined ->
+            ?MODULE;
+        true ->
+            {cloudi_logger, Node}
+    end,
+    case load_interface_module(Level, Destination) of
+        {ok, Binary} ->
+            {noreply, State#state{interface_module = Binary,
+                                  destination = Destination}};
         {error, Reason} ->
             {stop, Reason}
     end;
@@ -390,7 +436,7 @@ level_to_string(trace) ->
     -module(cloudi_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
     -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4]).").
-get_interface_module_code(off, _) ->
+interface(off, _) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(_, _, _, _) -> ok.
@@ -400,7 +446,7 @@ get_interface_module_code(off, _) ->
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     ";
-get_interface_module_code(fatal, Process) ->
+interface(fatal, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -412,7 +458,7 @@ get_interface_module_code(fatal, Process) ->
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     ", [Process]);
-get_interface_module_code(error, Process) ->
+interface(error, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -425,7 +471,7 @@ get_interface_module_code(error, Process) ->
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     ", [Process, Process]);
-get_interface_module_code(warn, Process) ->
+interface(warn, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -439,7 +485,7 @@ get_interface_module_code(warn, Process) ->
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process]);
-get_interface_module_code(info, Process) ->
+interface(info, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -454,7 +500,7 @@ get_interface_module_code(info, Process) ->
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process, Process]);
-get_interface_module_code(debug, Process) ->
+interface(debug, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -470,7 +516,7 @@ get_interface_module_code(debug, Process) ->
         cloudi_logger:debug(~p, Module, Line, Format, Arguments).
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process, Process, Process]);
-get_interface_module_code(trace, Process) ->
+interface(trace, Process) ->
     string2:format(
     ?INTERFACE_MODULE_HEADER
     "
@@ -488,7 +534,7 @@ get_interface_module_code(trace, Process) ->
         cloudi_logger:trace(~p, Module, Line, Format, Arguments).
     ", [Process, Process, Process, Process, Process, Process]).
 
-load_interface_module(Level) when is_atom(Level) ->
+load_interface_module(Level, Destination) when is_atom(Level) ->
     case code:is_loaded(cloudi_logger_interface) of
         {file, _} ->
             code:soft_purge(cloudi_logger_interface);
@@ -498,7 +544,7 @@ load_interface_module(Level) when is_atom(Level) ->
     code:delete(cloudi_logger_interface),
     % do not purge the module, but let it get purged after the new one is loaded
     {Module, Binary} =
-        dynamic_compile:from_string(get_interface_module_code(Level, ?MODULE)),
+        dynamic_compile:from_string(interface(Level, Destination)),
     case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
         {module, Module} ->
             {ok, Binary};
