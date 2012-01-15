@@ -1065,44 +1065,30 @@ process_queue(#state{recv_timeouts = Ids,
             StateData#state{queue_messages = false,
                             queued = NewQueue};
         {{value, {'send_async', Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid}}, NewQueue} ->
-            NewTimeout = case dict:find(TransId, Ids) of
-                {ok, Tref} ->
-                    case erlang:cancel_timer(Tref) of
-                        false ->
-                            % should never happen, since the timer should
-                            % always be active while the requests is queued
-                            Timeout;
-                        V ->
-                            V
-                    end;
-                error ->
-                    % should never happen
-                    Timeout
+                  _, Priority, TransId, Pid}}, NewQueue} ->
+            Tref = dict:fetch(TransId, Ids),
+            Timeout = case erlang:cancel_timer(Tref) of
+                false ->
+                    1;
+                V ->    
+                    V       
             end,
             send('send_async_out'(Name, RequestInfo, Request,
-                                  NewTimeout, Priority, TransId, Pid),
+                                  Timeout, Priority, TransId, Pid),
                  StateData),
             StateData#state{recv_timeouts = dict:erase(TransId, Ids),
                             queued = NewQueue};
         {{value, {'send_sync', Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid}}, NewQueue} ->
-            NewTimeout = case dict:find(TransId, Ids) of
-                {ok, Tref} ->
-                    case erlang:cancel_timer(Tref) of
-                        false ->
-                            % should never happen, since the timer should
-                            % always be active while the requests is queued
-                            Timeout;
-                        V ->
-                            V
-                    end;
-                error ->
-                    % should never happen
-                    Timeout
+                  _, Priority, TransId, Pid}}, NewQueue} ->
+            Tref = dict:fetch(TransId, Ids),
+            Timeout = case erlang:cancel_timer(Tref) of
+                false ->
+                    1;
+                V ->    
+                    V       
             end,
             send('send_sync_out'(Name, RequestInfo, Request,
-                                 NewTimeout, Priority, TransId, Pid),
+                                 Timeout, Priority, TransId, Pid),
                  StateData),
             StateData#state{recv_timeouts = dict:erase(TransId, Ids),
                             queued = NewQueue}

@@ -167,9 +167,9 @@ concurrency(I)
     if
         I > 1.0 ->
             erlang:round((I * erlang:system_info(schedulers)) + 0.5);
-        I < 1.0 ->
-            erlang:round(I * erlang:system_info(schedulers));
-        true ->
+        I > 0.0, I < 1.0 ->
+            erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
+        I == 1.0 ->
             erlang:system_info(schedulers)
     end.
 

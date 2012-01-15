@@ -164,7 +164,9 @@ cloudi_job_handle_info({timeout_async_active, TransId},
                               pid = Pid}, NewPending} ->
             ?LOG_ERROR("index ~p result timeout (after ~p ms)~n",
                        [Index, Timeout]),
-            ElapsedTime = Timeout / 3600000.0,
+            % a timeout generates a guess at what the
+            % elapsed time could have been to reduce the task size
+            ElapsedTime = (Timeout / 3600000.0) * 10.0,
             NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
                                                      TargetTime,
                                                      ElapsedTime,

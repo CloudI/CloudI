@@ -980,89 +980,89 @@ code_change(_, State, _) ->
 
 handle_request('send_async', Name, RequestInfo, Request,
                Timeout, Priority, TransId, Pid,
-               Module, Dispatcher, JobState, Self) ->
+               Module, Dispatcher, JobState, Parent) ->
     try Module:cloudi_job_handle_request('send_async', Name,
                                          RequestInfo, Request,
                                          Timeout, Priority,
                                          TransId, Pid, JobState, Dispatcher) of
         {reply, Response, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'return_async', Name, <<>>, Response,
-                     Timeout, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'return_async', Name, <<>>, Response,
+                       Timeout, TransId, Pid},
+                      NewJobState};
         {reply, ResponseInfo, Response, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'return_async', Name, ResponseInfo, Response,
-                     Timeout, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'return_async', Name, ResponseInfo, Response,
+                       Timeout, TransId, Pid},
+                      NewJobState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'forward_async', NextName,
-                     NextRequestInfo, NextRequest,
-                     NextTimeout, NextPriority, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'forward_async', NextName,
+                       NextRequestInfo, NextRequest,
+                       NextTimeout, NextPriority, TransId, Pid},
+                      NewJobState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'forward_async', NextName,
-                     NextRequestInfo, NextRequest,
-                     Timeout, Priority, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'forward_async', NextName,
+                       NextRequestInfo, NextRequest,
+                       Timeout, Priority, TransId, Pid},
+                      NewJobState};
         {noreply, NewJobState} ->
-            Self ! {cloudi_request_success, undefined, NewJobState}
+            Parent ! {cloudi_request_success, undefined, NewJobState}
     catch
         throw:return ->
-            Self ! {cloudi_request_success, undefined, JobState};
+            Parent ! {cloudi_request_success, undefined, JobState};
         throw:forward ->
-            Self ! {cloudi_request_success, undefined, JobState};
+            Parent ! {cloudi_request_success, undefined, JobState};
         Type:Error ->
             Stack = erlang:get_stacktrace(),
-            Self ! {cloudi_request_failure, Type, Error, Stack}
+            Parent ! {cloudi_request_failure, Type, Error, Stack}
     end,
     erlang:exit(self(), cloudi_request_done);
 
 handle_request('send_sync', Name, RequestInfo, Request,
                Timeout, Priority, TransId, Pid,
-               Module, Dispatcher, JobState, Self) ->
+               Module, Dispatcher, JobState, Parent) ->
     try Module:cloudi_job_handle_request('send_sync', Name,
                                          RequestInfo, Request,
                                          Timeout, Priority,
                                          TransId, Pid, JobState, Dispatcher) of
         {reply, Response, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'return_sync', Name, <<>>, Response,
-                     Timeout, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'return_sync', Name, <<>>, Response,
+                       Timeout, TransId, Pid},
+                      NewJobState};
         {reply, ResponseInfo, Response, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'return_sync', Name, ResponseInfo, Response,
-                     Timeout, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'return_sync', Name, ResponseInfo, Response,
+                       Timeout, TransId, Pid},
+                      NewJobState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'forward_sync', NextName,
-                     NextRequestInfo, NextRequest,
-                     NextTimeout, NextPriority, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'forward_sync', NextName,
+                       NextRequestInfo, NextRequest,
+                       NextTimeout, NextPriority, TransId, Pid},
+                      NewJobState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewJobState} ->
-            Self ! {cloudi_request_success,
-                    {'forward_sync', NextName,
-                     NextRequestInfo, NextRequest,
-                     Timeout, Priority, TransId, Pid},
-                    NewJobState};
+            Parent ! {cloudi_request_success,
+                      {'forward_sync', NextName,
+                       NextRequestInfo, NextRequest,
+                       Timeout, Priority, TransId, Pid},
+                      NewJobState};
         {noreply, NewJobState} ->
-            Self ! {cloudi_request_success, undefined, NewJobState}
+            Parent ! {cloudi_request_success, undefined, NewJobState}
     catch
         throw:return ->
-            Self ! {cloudi_request_success, undefined, JobState};
+            Parent ! {cloudi_request_success, undefined, JobState};
         throw:forward ->
-            Self ! {cloudi_request_success, undefined, JobState};
+            Parent ! {cloudi_request_success, undefined, JobState};
         Type:Error ->
             Stack = erlang:get_stacktrace(),
-            Self ! {cloudi_request_failure, Type, Error, Stack}
+            Parent ! {cloudi_request_failure, Type, Error, Stack}
     end,
     erlang:exit(self(), cloudi_request_done).
 
@@ -1088,25 +1088,18 @@ process_queue(NewJobState,
                         queued = NewQueue,
                         request = undefined};
         {{value, {'send_async', Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid}}, NewQueue} ->
-            NewTimeout = case dict:find(TransId, Ids) of
-                {ok, Tref} ->
-                    case erlang:cancel_timer(Tref) of
-                        false ->
-                            % should never happen, since the timer should
-                            % always be active while the requests is queued
-                            Timeout;
-                        V ->
-                            V
-                    end;
-                error ->
-                    % should never happen
-                    Timeout
+                  _, Priority, TransId, Pid}}, NewQueue} ->
+            Tref = dict:fetch(TransId, Ids),
+            Timeout = case erlang:cancel_timer(Tref) of
+                false ->
+                    1;
+                V ->
+                    V
             end,
             RequestPid = erlang:spawn_link(?MODULE, handle_request,
                                            ['send_async', Name,
                                             RequestInfo, Request,
-                                            NewTimeout, Priority, TransId, Pid,
+                                            Timeout, Priority, TransId, Pid,
                                             Module, Dispatcher,
                                             NewJobState, self()]),
             State#state{job_state = NewJobState,
@@ -1114,25 +1107,18 @@ process_queue(NewJobState,
                         queued = NewQueue,
                         request = RequestPid};
         {{value, {'send_sync', Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid}}, NewQueue} ->
-            NewTimeout = case dict:find(TransId, Ids) of
-                {ok, Tref} ->
-                    case erlang:cancel_timer(Tref) of
-                        false ->
-                            % should never happen, since the timer should
-                            % always be active while the requests is queued
-                            Timeout;
-                        V ->
-                            V
-                    end;
-                error ->
-                    % should never happen
-                    Timeout
+                  _, Priority, TransId, Pid}}, NewQueue} ->
+            Tref = dict:fetch(TransId, Ids),
+            Timeout = case erlang:cancel_timer(Tref) of
+                false ->
+                    1;
+                V ->
+                    V
             end,
             RequestPid = erlang:spawn_link(?MODULE, handle_request,
                                            ['send_sync', Name,
                                             RequestInfo, Request,
-                                            NewTimeout, Priority, TransId, Pid,
+                                            Timeout, Priority, TransId, Pid,
                                             Module, Dispatcher,
                                             NewJobState, self()]),
             State#state{job_state = NewJobState,
