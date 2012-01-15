@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-01-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add priority queuing to Erlang services
+    * Add timeout events to remove any requests that remain within the
+      priority queue after the request timeout expires
+      (so no processing needs to occur on queued requests that have already
+       timed-out, such that the response is ignored)
+    * Reduce request timeouts by the time spent queued waiting to be processed
+    * Erlang services now handle requests within a short-lived process to help
+      avoid garbage collection latency
+    * The hexpi test Erlang service was partially re-written to be more
+      event-driven (avoiding problems with accumulated timeout latency)
+    * Add the node to all log lines (important when using 
+      log redirect configuration)
+    * Delay node reconnect attempts to allow for normal startup time
+
 2012-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add floating point number usage for process and thread counts, so that

@@ -12,7 +12,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_dispatcher).
@@ -73,7 +73,7 @@
         prefix,          % subscribe/unsubscribe name prefix
         timeout_async,   % default timeout for send_async
         timeout_sync,    % default timeout for send_sync
-        send_timeouts = dict:new(),    % tracking for timeouts
+        send_timeouts = dict:new(),    % tracking for send timeouts
         async_responses = dict:new(),  % tracking for async messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
@@ -529,8 +529,9 @@ handle_info({'return_async', Name, ResponseInfo, Response,
         {ok, {passive, Tref}} ->
             erlang:cancel_timer(Tref),
             {noreply,
-             recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                                      send_timeout_end(TransId, State))}
+             async_response_timeout_start(ResponseInfo, Response,
+                                          Timeout, TransId,
+                                          send_timeout_end(TransId, State))}
     end;
 
 handle_info({'return_sync', _Name, _ResponseInfo, _Response,
@@ -556,7 +557,7 @@ handle_info({'send_async_timeout', TransId},
 
 handle_info({'recv_async_timeout', TransId},
             State) ->
-    {noreply, recv_async_timeout_end(TransId, State)};
+    {noreply, async_response_timeout_end(TransId, State)};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -804,15 +805,15 @@ send_timeout_end(TransId, #state{send_timeouts = Ids} = State)
     when is_binary(TransId) ->
     State#state{send_timeouts = dict:erase(TransId, Ids)}.
 
-recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                         #state{async_responses = Ids} = State)
+async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
+                             #state{async_responses = Ids} = State)
     when is_binary(Response), is_integer(Timeout), is_binary(TransId) ->
     erlang:send_after(Timeout, self(), {'recv_async_timeout', TransId}),
     State#state{async_responses = dict:store(TransId,
                                              {ResponseInfo, Response}, Ids)}.
 
-recv_async_timeout_end(TransId,
-                       #state{async_responses = Ids} = State)
+async_response_timeout_end(TransId,
+                           #state{async_responses = Ids} = State)
     when is_binary(TransId) ->
     State#state{async_responses = dict:erase(TransId, Ids)}.
 

@@ -397,6 +397,11 @@ new([{'logging', [T | _] = Value} | Terms], Config)
         {file, (Config#config.logging)#config_logging.file},
         {redirect, (Config#config.logging)#config_logging.redirect}],
     [Level, File, Redirect] = proplists2:take_values(Defaults, Value),
+    true = ((Level =:= fatal) or (Level =:= error) or (Level =:= warn) or
+            (Level =:= info) or (Level =:= debug) or (Level =:= trace) or
+            (Level =:= off)),
+    true = is_list(File),
+    true = is_atom(Redirect),
     new(Terms, Config#config{logging = #config_logging{level = Level,
                                                        file = File,
                                                        redirect = Redirect}}).

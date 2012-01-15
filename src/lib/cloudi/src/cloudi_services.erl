@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services).
@@ -118,6 +118,7 @@ handle_call({monitor, M, F, A, MaxR, MaxT, JobId}, _,
             #state{services = Services} = State) ->
     case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
+            ?LOG_INFO("~p ~p -> ~p", [F, A, Pid]),
             NewServices =
                 key2value:store(JobId, Pid,
                                 #service{service_m = M,
@@ -129,6 +130,7 @@ handle_call({monitor, M, F, A, MaxR, MaxT, JobId}, _,
                                          max_t = MaxT}, Services),
             {reply, ok, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+            ?LOG_INFO("~p ~p -> ~p", [F, A, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
                 key2value:store(JobId, P,
                                 #service{service_m = M,
