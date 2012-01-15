@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_nodes).
@@ -103,8 +103,10 @@ nodes(Timeout) ->
 
 init([Config]) ->
     net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
-    self() ! reconnect,
     {ok, #state{nodes_dead = Config#config.nodes,
+                timer_reconnect = erlang:send_after(?NODE_RECONNECT_START,
+                                                    self(),
+                                                    reconnect),
                 nodes = Config#config.nodes}}.
 
 handle_call({reconfigure, Config, _}, _,

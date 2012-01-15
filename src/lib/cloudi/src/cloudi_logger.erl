@@ -289,7 +289,7 @@ handle_cast({redirect, Node},
             {stop, Reason}
     end;
 
-handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
+handle_cast({Level, {_, _, MicroSeconds} = Now, Node, Pid,
              Module, Line, Format, Args},
             #state{file_path = FilePath,
                    fd = OldFd,
@@ -303,12 +303,12 @@ handle_cast({Level, {_, _, MicroSeconds} = Now, Pid,
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     Message = string2:format("~4..0w-~2..0w-~2..0wT"
-                             "~2..0w:~2..0w:~2..0w.~6..0wZ ~s"
-                             " (~p:~p:~p)~n~s",
+                             "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
+                             "(~p:~p:~p:~p)~n~s",
                              [DateYYYY, DateMM, DateDD,
                               TimeHH, TimeMM, TimeSS, MicroSeconds,
                               level_to_string(Level),
-                              Module, Line, Pid, Description]),
+                              Module, Line, Pid, Node, Description]),
     case file:read_file_info(FilePath) of
         {ok, FileInfo} ->
             CurrentInode = FileInfo#file_info.inode,
@@ -366,7 +366,7 @@ log_message(Process, Level, Module, Line, Format, Args)
         true ->
             ok;
         false ->
-            gen_server:cast(Process, {Level, Now, self(),
+            gen_server:cast(Process, {Level, Now, node(), self(),
                                       Module, Line, Format, Args})
     end.
 

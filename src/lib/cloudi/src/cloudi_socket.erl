@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_socket).
@@ -89,10 +89,11 @@
         timeout_sync,    % default timeout for send_sync
         os_pid = undefined,            % os_pid reported by the socket
         keepalive = undefined,         % stores if a keepalive succeeded
-        send_timeouts = dict:new(),    % tracking for timeouts
+        send_timeouts = dict:new(),    % tracking for send timeouts
+        recv_timeouts = dict:new(),    % tracking for recv timeouts
+        async_responses = dict:new(),  % tracking for async messages
         queue_messages = false,        % is the external process busy?
         queued = pqueue4:new(),        % queued incoming messages
-        async_responses = dict:new(),  % tracking for async messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
                          % lazy_closest |
@@ -549,11 +550,11 @@ handle_info({'send_async', Name, RequestInfo, Request,
                           Timeout, Priority, TransId, Pid), StateData),
     {next_state, StateName, StateData#state{queue_messages = true}};
 
-handle_info({'send_async', _, _, _, _, Priority, _, _} = T, StateName,
-            #state{queue_messages = true,
-                   queued = Queue} = StateData) ->
+handle_info({'send_async', _, _, _,
+             Timeout, Priority, TransId, _} = T, StateName,
+            #state{queue_messages = true} = StateData) ->
     {next_state, StateName,
-     StateData#state{queued = pqueue4:in(T, Priority, Queue)}};
+     recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
 
 handle_info({'send_sync', _, _, Request, _, _, _, _}, StateName, StateData)
     when is_binary(Request) =:= false ->
@@ -566,11 +567,11 @@ handle_info({'send_sync', Name, RequestInfo, Request,
                          Timeout, Priority, TransId, Pid), StateData),
     {next_state, StateName, StateData#state{queue_messages = true}};
 
-handle_info({'send_sync', _, _, _, _, Priority, _, _} = T, StateName,
-            #state{queue_messages = true,
-                   queued = Queue} = StateData) ->
+handle_info({'send_sync', _, _, _,
+             Timeout, Priority, TransId, _} = T, StateName,
+            #state{queue_messages = true} = StateData) ->
     {next_state, StateName,
-     StateData#state{queued = pqueue4:in(T, Priority, Queue)}};
+     recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
 
 handle_info({'return_async', _, ResponseInfo, Response,
              _, _, _}, StateName, StateData)
@@ -591,8 +592,9 @@ handle_info({'return_async', _Name, ResponseInfo, Response,
         {ok, Tref} ->
             erlang:cancel_timer(Tref),
             {next_state, StateName,
-             recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                                      send_timeout_end(TransId, StateData))}
+             async_response_timeout_start(ResponseInfo, Response,
+                                          Timeout, TransId,
+                                          send_timeout_end(TransId, StateData))}
     end;
 
 handle_info({'return_sync', _, ResponseInfo, Response,
@@ -614,31 +616,47 @@ handle_info({'return_sync', _Name, ResponseInfo, Response,
             {next_state, StateName, send_timeout_end(TransId, StateData)}
     end;
 
-handle_info({'send_async_timeout', TransId}, StateName, StateData) ->
+handle_info({recv_timeout, Priority, TransId}, StateName,
+            #state{recv_timeouts = Ids,
+                   queue_messages = QueueMessages,
+                   queued = Queue} = StateData) ->
+    NewQueue = if
+        QueueMessages =:= true ->
+            pqueue4:filter(fun({_, _, _, _, _, _, Id, _}) ->
+                Id /= TransId
+            end, Priority, Queue);
+        true ->
+            Queue
+    end,
+    {next_state, StateName,
+     StateData#state{recv_timeouts = dict:erase(TransId, Ids),
+                     queued = NewQueue}};
+
+handle_info({send_async_timeout, TransId}, StateName, StateData) ->
     case send_timeout_check(TransId, StateData) of
         error ->
             % should never happen, timer should have been cancelled
             % if the send_async already returned
-            %XXX
+            ?LOG_WARN("send_async_timeout not found", []),
             {next_state, StateName, StateData};
         {ok, _} ->
             {next_state, StateName, send_timeout_end(TransId, StateData)}
     end;
 
-handle_info({'send_sync_timeout', TransId}, StateName, StateData) ->
+handle_info({send_sync_timeout, TransId}, StateName, StateData) ->
     case send_timeout_check(TransId, StateData) of
         error ->
             % should never happen, timer should have been cancelled
             % if the send_sync already returned
-            %XXX
+            ?LOG_WARN("send_sync_timeout not found", []),
             {next_state, StateName, StateData};
         {ok, _} ->
             send('return_sync_out'(timeout, TransId), StateData),
             {next_state, StateName, send_timeout_end(TransId, StateData)}
     end;
 
-handle_info({'recv_async_timeout', TransId}, StateName, StateData) ->
-    {next_state, StateName, recv_async_timeout_end(TransId, StateData)};
+handle_info({recv_async_timeout, TransId}, StateName, StateData) ->
+    {next_state, StateName, async_response_timeout_end(TransId, StateData)};
 
 handle_info({'EXIT', _, Reason}, _, StateData) ->
     {stop, Reason, StateData};
@@ -982,13 +1000,13 @@ destination_all(DestRefresh, _, _, _) ->
 send_async_timeout_start(Timeout, TransId,
                          #state{send_timeouts = Ids} = StateData)
     when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, self(), {'send_async_timeout', TransId}),
+    Tref = erlang:send_after(Timeout, self(), {send_async_timeout, TransId}),
     StateData#state{send_timeouts = dict:store(TransId, Tref, Ids)}.
 
 send_sync_timeout_start(Timeout, TransId,
                         #state{send_timeouts = Ids} = StateData)
     when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, self(), {'send_sync_timeout', TransId}),
+    Tref = erlang:send_after(Timeout, self(), {send_sync_timeout, TransId}),
     StateData#state{send_timeouts = dict:store(TransId, Tref, Ids)}.
 
 send_timeout_check(TransId, #state{send_timeouts = Ids})
@@ -999,16 +1017,25 @@ send_timeout_end(TransId, #state{send_timeouts = Ids} = StateData)
     when is_binary(TransId) ->
     StateData#state{send_timeouts = dict:erase(TransId, Ids)}.
 
-recv_async_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                         #state{async_responses = Ids} = StateData)
+recv_timeout_start(Timeout, Priority, TransId, T,
+                   #state{recv_timeouts = Ids,
+                          queued = Queue} = StateData)
+    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
+    Tref = erlang:send_after(Timeout, self(),
+                             {recv_timeout, Priority, TransId}),
+    StateData#state{recv_timeouts = dict:store(TransId, Tref, Ids),
+                    queued = pqueue4:in(T, Priority, Queue)}.
+
+async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
+                             #state{async_responses = Ids} = StateData)
     when is_binary(Response), is_integer(Timeout), is_binary(TransId) ->
-    erlang:send_after(Timeout, self(), {'recv_async_timeout', TransId}),
+    erlang:send_after(Timeout, self(), {recv_async_timeout, TransId}),
     StateData#state{async_responses = dict:store(TransId,
                                                  {ResponseInfo, Response},
                                                  Ids)}.
 
-recv_async_timeout_end(TransId,
-                       #state{async_responses = Ids} = StateData)
+async_response_timeout_end(TransId,
+                           #state{async_responses = Ids} = StateData)
     when is_binary(TransId) ->
     StateData#state{async_responses = dict:erase(TransId, Ids)}.
 
@@ -1030,7 +1057,8 @@ recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
             recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
             
-process_queue(#state{queue_messages = true,
+process_queue(#state{recv_timeouts = Ids,
+                     queue_messages = true,
                      queued = Queue} = StateData) ->
     case pqueue4:out(Queue) of
         {empty, NewQueue} ->
@@ -1038,16 +1066,46 @@ process_queue(#state{queue_messages = true,
                             queued = NewQueue};
         {{value, {'send_async', Name, RequestInfo, Request,
                   Timeout, Priority, TransId, Pid}}, NewQueue} ->
+            NewTimeout = case dict:find(TransId, Ids) of
+                {ok, Tref} ->
+                    case erlang:cancel_timer(Tref) of
+                        false ->
+                            % should never happen, since the timer should
+                            % always be active while the requests is queued
+                            Timeout;
+                        V ->
+                            V
+                    end;
+                error ->
+                    % should never happen
+                    Timeout
+            end,
             send('send_async_out'(Name, RequestInfo, Request,
-                                  Timeout, Priority, TransId, Pid),
+                                  NewTimeout, Priority, TransId, Pid),
                  StateData),
-            StateData#state{queued = NewQueue};
+            StateData#state{recv_timeouts = dict:erase(TransId, Ids),
+                            queued = NewQueue};
         {{value, {'send_sync', Name, RequestInfo, Request,
                   Timeout, Priority, TransId, Pid}}, NewQueue} ->
+            NewTimeout = case dict:find(TransId, Ids) of
+                {ok, Tref} ->
+                    case erlang:cancel_timer(Tref) of
+                        false ->
+                            % should never happen, since the timer should
+                            % always be active while the requests is queued
+                            Timeout;
+                        V ->
+                            V
+                    end;
+                error ->
+                    % should never happen
+                    Timeout
+            end,
             send('send_sync_out'(Name, RequestInfo, Request,
-                                 Timeout, Priority, TransId, Pid),
+                                 NewTimeout, Priority, TransId, Pid),
                  StateData),
-            StateData#state{queued = NewQueue}
+            StateData#state{recv_timeouts = dict:erase(TransId, Ids),
+                            queued = NewQueue}
     end.
 
 use_unused_functions(undefined) ->

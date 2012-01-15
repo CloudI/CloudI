@@ -80,21 +80,25 @@
 % on all the machines that will be running tasks
 -define(MAX_ITERATIONS, 1000000.0).
 
--record(task,
+-record(task_pending,
     {
         task_size,
         iterations,
         step,
         index,
-        timeout
+        timeout,
+        trans_id,
+        pid
     }).
 
 -record(state,
     {
+        destination = "/tests/hexpi",
         index,
         index_start,
         index_end,
-        tasks_failed = [],
+        tasks_pending = [],
+        done = false,
         concurrent_tasks,
         step = ?PI_DIGIT_STEP_SIZE,
         target_time = (1.0 / 3600.0), % hours
@@ -138,9 +142,83 @@ cloudi_job_handle_info(setup, State, Dispatcher) ->
 cloudi_job_handle_info(task,
                        #state{concurrent_tasks = ConcurrentTasks} = State,
                        Dispatcher) ->
-    {Requests, Done, NewState} = send_tasks(ConcurrentTasks, [],
-                                            State, Dispatcher),
-    {noreply, recv_tasks(Requests, Done, NewState, Dispatcher)};
+    case send_tasks(ConcurrentTasks, State, Dispatcher) of
+        {ok, NewState} ->
+            {noreply, NewState};
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
+
+cloudi_job_handle_info({timeout_async_active, TransId},
+                       #state{tasks_pending = Pending,
+                              target_time = TargetTime,
+                              task_size_lookup = TaskSizeLookup} = State,
+                       Dispatcher) ->
+    case lists:keytake(TransId, #task_pending.trans_id, Pending) of
+        {value, #task_pending{task_size = TaskSize,
+                              iterations = Iterations,
+                              step = Step,
+                              index = Index,
+                              timeout = Timeout,
+                              trans_id = TransId,
+                              pid = Pid}, NewPending} ->
+            ?LOG_ERROR("index ~p result timeout (after ~p ms)~n",
+                       [Index, Timeout]),
+            ElapsedTime = Timeout / 3600000.0,
+            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
+                                                     TargetTime,
+                                                     ElapsedTime,
+                                                     Pid,
+                                                     TaskSizeLookup),
+            case resend_task(TaskSize, Iterations, Step, Index, Timeout * 2,
+                             State#state{tasks_pending = NewPending,
+                                         task_size_lookup = NewTaskSizeLookup},
+                             Dispatcher) of
+                {ok, NewState} ->
+                    {noreply, NewState};
+                {error, Reason} ->
+                    {stop, Reason, State}
+            end;
+        false ->
+            {noreply, State}
+    end;
+
+cloudi_job_handle_info({return_async_active, _Name, _ResponseInfo, Response,
+                        _Timeout, TransId},
+                       #state{tasks_pending = Pending,
+                              done = Done,
+                              target_time = TargetTime,
+                              task_size_lookup = TaskSizeLookup} = State,
+                       Dispatcher) ->
+    case lists:keytake(TransId, #task_pending.trans_id, Pending) of
+        {value, #task_pending{task_size = TaskSize,
+                              index = Index,
+                              trans_id = TransId,
+                              pid = Pid}, NewPending} ->
+            ?LOG_INFO("index ~p result received~n", [Index]),
+            <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
+            send_results(Index, PiResult, Pid, State, Dispatcher),
+            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
+                                                     TargetTime,
+                                                     ElapsedTime,
+                                                     Pid,
+                                                     TaskSizeLookup),
+            NextState = State#state{tasks_pending = NewPending,
+                                    task_size_lookup = NewTaskSizeLookup},
+            if
+                Done =:= false ->
+                    case send_tasks(1, NextState, Dispatcher) of
+                        {ok, NewState} ->
+                            {noreply, NewState};
+                        {error, Reason} ->
+                            {stop, Reason, NextState}
+                    end;
+                true ->
+                    {noreply, NextState}
+            end;
+        false ->
+            {noreply, State}
+    end;
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -218,40 +296,40 @@ setup(State, Dispatcher) ->
                 use_tokyotyrant = is_pid(PidTokyotyrant),
                 use_couchdb = is_pid(PidCouchdb)}.
 
-send_task(Name,
-          #state{tasks_failed = [#task{task_size = TaskSize,
-                                       iterations = Iterations,
-                                       step = Step,
-                                       index = Index,
-                                       timeout = Timeout} | Failed]} = State,
-          Dispatcher) ->
+resend_task(TaskSize, Iterations, Step, Index, Timeout,
+            #state{destination = Name,
+                   tasks_pending = Pending} = State, Dispatcher) ->
     case cloudi_job:get_pid(Dispatcher, Name) of
         {ok, Pid} ->
-            ?LOG_INFO("~p iterations starting at digit ~p (retry)~n",
-                      [Iterations, Index]),
             % define the task
             IndexStr = erlang:integer_to_list(Index),
             IndexBin = erlang:list_to_binary(IndexStr),
             Request = <<Iterations:32/unsigned-integer-native,
                         Step:32/unsigned-integer-native,
                         IndexBin/binary, 0>>,
-            case cloudi_job:send_async(Dispatcher, Name, Request,
-                                       Timeout, Pid) of
+            case cloudi_job:send_async_active(Dispatcher, Name, Request,
+                                              Timeout, Pid) of
                 {ok, TransId} ->
-                    {next, TaskSize, Iterations, Step, Index,
-                     Pid, Timeout, TransId,
-                     State#state{tasks_failed = Failed}};
+                    ?LOG_INFO("~p iterations starting at digit ~p (retry)~n",
+                              [Iterations, Index]),
+                    NewPending = [#task_pending{task_size = TaskSize,
+                                                iterations = Iterations,
+                                                step = Step,
+                                                index = Index,
+                                                timeout = Timeout,
+                                                trans_id = TransId,
+                                                pid = Pid} | Pending],
+                    {ok, State#state{tasks_pending = NewPending}};
                 {error, _} = Error ->
                     Error
             end;
         {error, _} = Error ->
             Error
-    end;
+    end.
 
-send_task(Name,
-          #state{index = Index,
+send_task(#state{destination = Name,
+                 index = Index,
                  index_end = IndexEnd,
-                 tasks_failed = [],
                  step = Step,
                  target_time = TargetTime,
                  task_size_initial = TaskSizeInitial,
@@ -264,18 +342,19 @@ send_task(Name,
             Iterations = math2:ceil(TaskSize * ?MAX_ITERATIONS),
             % determine the size of the task and take the ceiling of the value
             % (to avoid iterations of 0)
-            ?LOG_INFO("~p iterations starting at digit ~p~n",
-                      [Iterations, Index]),
-            % define the task
             IndexStr = erlang:integer_to_list(Index),
             IndexBin = erlang:list_to_binary(IndexStr),
             Request = <<Iterations:32/unsigned-integer-native,
                         Step:32/unsigned-integer-native,
                         IndexBin/binary, 0>>,
-            Timeout = math2:ceil(TargetTime * 3600000.0) * 10,
-            case cloudi_job:send_async(Dispatcher, Name, Request,
-                                       Timeout, Pid) of
+            % TargetTime is the percentage of an hour
+            % (elapsed time is returned this way from the hexpi C++ code)
+            Timeout = math2:ceil(TargetTime * 3600000.0) + 5000,
+            case cloudi_job:send_async_active(Dispatcher, Name, Request,
+                                              Timeout, Pid) of
                 {ok, TransId} ->
+                    ?LOG_INFO("~p iterations starting at digit ~p~n",
+                              [Iterations, Index]),
                     NewIndex = Index + Step * Iterations,
                     if
                         NewIndex =< IndexEnd ->
@@ -294,82 +373,39 @@ send_task(Name,
             Error
     end.
 
-send_tasks(0, L, State, _) ->
-    {lists:reverse(L), false, State};
+send_tasks(I, State, Dispatcher) ->
+    send_tasks(I, [], State, Dispatcher).
 
-send_tasks(Count, L, State, Dispatcher) ->
-    Name = "/tests/hexpi",
-    case send_task(Name, State, Dispatcher) of
+send_tasks(0, L, #state{tasks_pending = Pending} = State, _) ->
+    {ok, State#state{tasks_pending = Pending ++ lists:reverse(L)}};
+
+send_tasks(Count, L,
+           #state{tasks_pending = Pending} = State, Dispatcher) ->
+    case send_task(State, Dispatcher) of
         {next, TaskSize, Iterations, Step, Index,
          Pid, Timeout, TransId, NewState} ->
             send_tasks(Count - 1,
-                       [{TaskSize, Iterations, Step, Index,
-                         Pid, Timeout, TransId} | L],
+                       [#task_pending{task_size = TaskSize,
+                                      iterations = Iterations,
+                                      step = Step,
+                                      index = Index,
+                                      timeout = Timeout,
+                                      trans_id = TransId,
+                                      pid = Pid} | L],
                        NewState, Dispatcher);
         {done, TaskSize, Iterations, Step, Index,
          Pid, Timeout, TransId, NewState} ->
-            {[{TaskSize, Iterations, Step, Index,
-               Pid, Timeout, TransId} | L], true, NewState};
-        {error, Reason} ->
-            ?LOG_ERROR("send_task error ~p~n", [Reason]),
-            {L, false, State}
-    end.
-
-recv_tasks([], Done, State, _) ->
-    if
-        Done == false ->
-            self() ! task;
-        true ->
-            ok
-    end,
-    State;
-
-recv_tasks([{TaskSize, Iterations, Step, Index, Pid, Timeout, TransId} | L],
-           Done,
-           #state{tasks_failed = Failed,
-                  target_time = TargetTime,
-                  task_size_lookup = TaskSizeLookup} = State, Dispatcher) ->
-
-    case cloudi_job:recv_async(Dispatcher, Timeout, TransId) of
-        {ok, Response} ->
-            <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
-            send_results(Index, PiResult, Pid, State, Dispatcher),
-            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
-                                                     TargetTime,
-                                                     ElapsedTime,
-                                                     Pid,
-                                                     TaskSizeLookup),
-            NextState = State#state{task_size_lookup = NewTaskSizeLookup},
-            if
-                Done == false ->
-                    {Task, NewDone, FinalState} = send_tasks(1, [], NextState,
-                                                             Dispatcher),
-                    recv_tasks(L ++ Task, NewDone, FinalState, Dispatcher);
-                true ->
-                    recv_tasks(L, Done, NextState, Dispatcher)
-            end;
-        {error, timeout} ->
-            ?LOG_ERROR("index ~p result timeout (after ~p ms)~n",
-                       [Index, Timeout]),
-            % exaggerate the elapsed timeout, to reduce the task size 
-            ElapsedTime = (Timeout * 4) / 3600000.0,
-            Task = #task{task_size = TaskSize,
-                         iterations = Iterations,
-                         step = Step,
-                         index = Index,
-                         timeout = Timeout * 2},
-            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
-                                                     TargetTime,
-                                                     ElapsedTime,
-                                                     Pid,
-                                                     TaskSizeLookup),
-            recv_tasks(L, Done,
-                       State#state{tasks_failed = [Task | Failed],
-                                   task_size_lookup = NewTaskSizeLookup},
-                       Dispatcher);
-        {error, Reason} ->
-            ?LOG_ERROR("recv_async error ~p~n", [Reason]),
-            recv_tasks(L, Done, State, Dispatcher)
+            NewL = [#task_pending{task_size = TaskSize,
+                                  iterations = Iterations,
+                                  step = Step,
+                                  index = Index,
+                                  timeout = Timeout,
+                                  trans_id = TransId,
+                                  pid = Pid} | L],
+            {ok, NewState#state{tasks_pending = lists:reverse(NewL) ++ Pending,
+                                done = true}};
+        {error, _} = Error ->
+            Error
     end.
 
 send_results(DigitIndex, PiResult, Pid,

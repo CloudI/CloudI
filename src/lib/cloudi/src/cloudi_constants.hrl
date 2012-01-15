@@ -25,6 +25,7 @@
 %-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
 
 % decrement the timeout of each successful forward, to prevent infinite messages
+% (i.e., this is the timeout penalty a request takes when forwarding a request)
 -define(FORWARD_DELTA, 100). % milliseconds
 
 % maximum possible time for a process death to remove process group membership
@@ -43,6 +44,9 @@
 
 % maximum wait time before a reconnect is attempted with a node
 -define(NODE_RECONNECT, 60000). % milliseconds
+
+% time to wait before the first reconnect is attempted with a node
+-define(NODE_RECONNECT_START, 300000). % milliseconds
 
 % periodic connection checks to determine if the udp connection is still active
 % must be a short time since this impacts MaxR and MaxT.  However, this time
