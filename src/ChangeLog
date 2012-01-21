@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-01-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix a race condition within the usage of the hexpi thread pool
+    * Prevent external services from receiving messages prematurely
+    * Changes to make sure a failed send to an external service's OS pid
+      causes the service to terminate
+
 2012-01-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add priority queuing to Erlang services

@@ -1113,6 +1113,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 if (index < p->buffer_recv_index) {
                     p->buffer_recv_index -= index;
                     buffer.move(index, p->buffer_recv_index, 0);
+                    assert(p->use_header == false);
                     count = ::poll(fds, 1, 0);
                     if (count < 0)
                         return errno_poll();

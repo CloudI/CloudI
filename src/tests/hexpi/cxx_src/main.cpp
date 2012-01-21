@@ -188,7 +188,8 @@ int main(int, char **)
     for (int i = 0; i < thread_count; ++i)
     {
         Input inputObject(i);
-        threadPool.input(inputObject);
+        bool const result = threadPool.input(inputObject);
+        assert(result);
     }
 
     while (outputObject.got_output() == false)

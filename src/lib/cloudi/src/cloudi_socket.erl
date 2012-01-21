@@ -92,7 +92,7 @@
         send_timeouts = dict:new(),    % tracking for send timeouts
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         async_responses = dict:new(),  % tracking for async messages
-        queue_messages = false,        % is the external process busy?
+        queue_messages = true,         % is the external process busy?
         queued = pqueue4:new(),        % queued incoming messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
@@ -136,6 +136,7 @@ init([tcp, BufferSize, Timeout, Prefix,
             {recbuf, BufferSize}, {sndbuf, BufferSize},
             {packet, 4}, {nodelay, true}, {delay_send, false},
             {keepalive, false}, {backlog, 0},
+            {send_timeout, 5000}, {send_timeout_close, true},
             {active, false}],
     case gen_tcp:listen(0, Opts) of
         {ok, Listener} ->
@@ -191,7 +192,8 @@ init([udp, BufferSize, Timeout, Prefix,
 'CONNECT'('init', #state{protocol = Protocol,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
-                         timeout_sync = TimeoutSync} = StateData) ->
+                         timeout_sync = TimeoutSync,
+                         queue_messages = true} = StateData) ->
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
     if
         Protocol =:= udp ->
@@ -200,7 +202,7 @@ init([udp, BufferSize, Timeout, Prefix,
         true ->
             ok
     end,
-    {next_state, 'HANDLE', StateData};
+    {next_state, 'HANDLE', process_queue(StateData)};
 
 'CONNECT'(timeout, StateData) ->
     {stop, timeout, StateData};
