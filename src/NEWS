@@ -1,10 +1,27 @@
+December 12, 2011
+  Version 0.1.9 (alpha) released.
+
+  * added request_info/response_info parameters to CloudI messages
+  * added the priority parameter to CloudI messages (-128 high to 127 low)
+  * new C++ CloudI API (as an alternative to the C CloudI API)
+  * prevent CloudI logger flooding from misbehaving services
+  * other fixes and enhancements (see ChangeLog)
+
+September 6, 2011
+  Version 0.1.8 (alpha) released.
+  Changes for HTTP support and robust C API usage.
+
+June 23, 2011
+  Version 0.1.7 (alpha) released.
+  More build system improvements.
+
 May 14, 2011
   Version 0.1.6 (alpha) released.
   Many build system improvements.
 
 April 25, 2011
   Version 0.1.5 (alpha) released.
-  The Job API is finalize with using UUIDs for jobs_remove() and the addition
+  The Job API is finalized with using UUIDs for jobs_remove() and the addition
   of the jobs() request.
 
 April 15, 2011

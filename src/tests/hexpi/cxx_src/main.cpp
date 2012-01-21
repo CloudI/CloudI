@@ -137,7 +137,6 @@ class Input
 
         OutputData process(bool const & stop, ThreadData & /*data*/)
         {
-            using CloudI::API;
             OutputData resultObject;
             int value;
             m_stop = stop;
