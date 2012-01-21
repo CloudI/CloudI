@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -94,6 +94,7 @@ class ThreadPool
             public:
                 ThreadObjectData() :
                     m_running(false),
+                    m_runningLock(m_runningMutex),
                     m_exited(true)
                 {
                 }
@@ -101,10 +102,17 @@ class ThreadPool
                 ThreadObjectData(ThreadObjectData const & object) :
                     m_data(object.m_data),
                     m_running(object.m_running),
+                    m_runningLock(m_runningMutex),
                     m_exited(object.m_exited)
                 {
                     // can not be called after the thread is started
                     assert(object.m_running == false);
+                }
+
+                /// wait for the thread to start
+                void wait_on_start()
+                {
+                    boost::lock_guard<boost::mutex> lock(m_runningMutex);
                 }
 
                 /// make the executing thread exit this function object
@@ -113,7 +121,7 @@ class ThreadPool
                     if (! m_running)
                         return;
                     {
-                        boost::unique_lock<boost::mutex> lock(m_queueMutex);
+                        boost::lock_guard<boost::mutex> lock(m_queueMutex);
                         m_running = false;
                     }
                     m_queueConditional.notify_one();
@@ -159,6 +167,7 @@ class ThreadPool
                 {
                     m_running = true;
                     m_exited = false;
+                    m_runningLock.unlock();
                     boost::unique_lock<boost::mutex> lock(m_queueMutex);
                     while (m_running && m_queue.empty())
                         m_queueConditional.wait(lock);
@@ -181,6 +190,8 @@ class ThreadPool
             private:
                 THREAD_DATA m_data;
                 bool m_running;  /// thread is running
+                boost::mutex m_runningMutex;
+                boost::unique_lock<boost::mutex> m_runningLock;
                 bool m_exited;   /// thread was terminated
                 QueueType m_queue;
                 boost::mutex m_queueMutex;
@@ -263,6 +274,12 @@ class ThreadPool
             configure(m_totalActive - decrement);
         }
 
+        /// return the current count of active threads
+        size_t count() const
+        {
+            return m_totalActive;
+        }
+
         /// stop boolean reference for checking if an exit should occur
         /// (should be stored as a 'boost const &' to
         ///  prevent external modifications)
@@ -288,6 +305,8 @@ class ThreadPool
                 for (size_t i = m_totalConfigured; i < count; ++i)
                     m_threads[i].reset(
                         new boost::thread(ThreadObject(m_objects[i])));
+                for (size_t i = m_totalConfigured; i < count; ++i)
+                    m_objects[i].wait_on_start();
                 m_totalConfigured = count;
             }
             
