@@ -209,11 +209,11 @@ class API
         static int const ASYNC = 1;
         static int const SYNC = -1;
 
-        API(int const thread_index);
+        API(unsigned int const thread_index);
         ~API();
         API(API const & object);
 
-        static int thread_count();
+        static unsigned int thread_count();
 
         template <typename T>
         int subscribe(std::string const & name,
@@ -416,14 +416,14 @@ class API
                                priority);
         }
 
-        char const * const get_response() const;
+        char const * get_response() const;
         uint32_t get_response_size() const;
 
-        char const * const get_response_info() const;
+        char const * get_response_info() const;
         uint32_t get_response_info_size() const;
 
         uint32_t get_trans_id_count() const;
-        char const * const get_trans_id(int const i) const;
+        char const * get_trans_id(unsigned int const i) const;
 
         int forward_(int const command,
                      char const * const name,

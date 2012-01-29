@@ -92,7 +92,7 @@
         send_timeouts = dict:new(),    % tracking for send timeouts
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         async_responses = dict:new(),  % tracking for async messages
-        queue_messages = true,         % is the external process busy?
+        queue_messages = false,        % is the external process busy?
         queued = pqueue4:new(),        % queued incoming messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
@@ -192,8 +192,9 @@ init([udp, BufferSize, Timeout, Prefix,
 'CONNECT'('init', #state{protocol = Protocol,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
-                         timeout_sync = TimeoutSync,
-                         queue_messages = true} = StateData) ->
+                         timeout_sync = TimeoutSync} = StateData) ->
+    % first message within the CloudI API received during
+    % the object construction or init API function
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
     if
         Protocol =:= udp ->
@@ -202,7 +203,7 @@ init([udp, BufferSize, Timeout, Prefix,
         true ->
             ok
     end,
-    {next_state, 'HANDLE', process_queue(StateData)};
+    {next_state, 'HANDLE', StateData};
 
 'CONNECT'(timeout, StateData) ->
     {stop, timeout, StateData};
