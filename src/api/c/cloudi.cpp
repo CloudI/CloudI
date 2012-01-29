@@ -333,7 +333,7 @@ static void exit_handler()
 }
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      int const thread_index)
+                      unsigned int const thread_index)
 {
     char const * const protocol = ::getenv("CLOUDI_API_INIT_PROTOCOL");
     if (protocol == 0)
@@ -342,7 +342,6 @@ int cloudi_initialize(cloudi_instance_t * p,
     if (buffer_size_p == 0)
         return cloudi_invalid_input;
     uint32_t const buffer_size = ::atoi(buffer_size_p);
-    assert(thread_index >= 0);
     p->fd = thread_index + 3;
     if (::strcmp(protocol, "tcp") == 0)
         p->use_header = 1;
@@ -390,12 +389,15 @@ void cloudi_destroy(cloudi_instance_t * p)
     }
 }
 
-int cloudi_initialize_thread_count(int * const thread_count)
+int cloudi_initialize_thread_count(unsigned int * const thread_count)
 {
     char const * const p = ::getenv("CLOUDI_API_INIT_THREAD_COUNT");
     if (p == 0)
         return cloudi_invalid_input;
-    *thread_count = ::atoi(p);
+    int const value = ::atoi(p);
+    if (value < 0)
+        return cloudi_invalid_input;
+    *thread_count = static_cast<unsigned int>(value);
     return cloudi_success;
 }
 
@@ -1200,7 +1202,7 @@ void cloudi_info_key_value_destroy(char const ** p)
 namespace CloudI
 {
 
-API::API(int const thread_index) :
+API::API(unsigned int const thread_index) :
     m_api(new cloudi_instance_t()),
     m_count(new int)
 {
@@ -1227,9 +1229,9 @@ API::API(API const & object) :
     ++(*m_count);
 }
 
-int API::thread_count()
+unsigned int API::thread_count()
 {
-    int thread_count;
+    unsigned int thread_count;
     int const result = cloudi_initialize_thread_count(&thread_count);
     if (result != return_value::success)
         throw invalid_input_exception();
@@ -1334,7 +1336,7 @@ int API::mcast_async(char const * const name,
                               priority);
 }
 
-char const * const API::get_response() const
+char const * API::get_response() const
 {
     return m_api->response;
 }
@@ -1344,7 +1346,7 @@ uint32_t API::get_response_size() const
     return m_api->response_size;
 }
 
-char const * const API::get_response_info() const
+char const * API::get_response_info() const
 {
     return m_api->response_info;
 }
@@ -1359,9 +1361,9 @@ uint32_t API::get_trans_id_count() const
     return m_api->trans_id_count;
 }
 
-char const * const API::get_trans_id(int const i) const
+char const * API::get_trans_id(unsigned int const i) const
 {
-    if (i < 0 || i >= m_api->trans_id_count)
+    if (i >= m_api->trans_id_count)
         return 0;
     return &(m_api->trans_id[i * 16]);
 }

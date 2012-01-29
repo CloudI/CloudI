@@ -71,7 +71,7 @@ class OutputData
 class Input
 {
     public:
-        Input(int const thread_index) :
+        Input(unsigned int const thread_index) :
             m_stop_default(false),
             m_stop(m_stop_default),
             m_api(thread_index)
@@ -83,12 +83,12 @@ class Input
         void hexpi(CloudI::API const & api,
                    int const command,
                    std::string const & name,
-                   void const * const request_info,
-                   uint32_t const request_info_size,
+                   void const * const /*request_info*/,
+                   uint32_t const /*request_info_size*/,
                    void const * const request,
                    uint32_t const request_size,
                    uint32_t timeout,
-                   int8_t priority,
+                   int8_t /*priority*/,
                    char const * const trans_id,
                    char const * const pid,
                    uint32_t const pid_size)
@@ -178,13 +178,13 @@ class Output
 
 int main(int, char **)
 {
-    int const thread_count = CloudI::API::thread_count();
+    unsigned int const thread_count = CloudI::API::thread_count();
 
     Output outputObject;
     ThreadPool<Input, ThreadData, Output, OutputData>
         threadPool(thread_count, thread_count, outputObject);
 
-    for (int i = 0; i < thread_count; ++i)
+    for (unsigned int i = 0; i < thread_count; ++i)
     {
         Input inputObject(i);
         bool const result = threadPool.input(inputObject);

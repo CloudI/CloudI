@@ -100,11 +100,11 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 #define cloudi_get_trans_id(p, i)            (&(p->trans_id[i * 16]))
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      int const thread_index);
+                      unsigned int const thread_index);
 
 void cloudi_destroy(cloudi_instance_t * p);
 
-int cloudi_initialize_thread_count(int * const thread_count);
+int cloudi_initialize_thread_count(unsigned int * const thread_count);
 
 int cloudi_subscribe(cloudi_instance_t * p,
                      char const * const name,
