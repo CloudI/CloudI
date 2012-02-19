@@ -27,6 +27,19 @@
 #include <cstring>
 #include <exception>
 
+// Detect whether the compiler supports C++11 rvalue references.
+#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 2)) && defined(__GXX_EXPERIMENTAL_CXX0X__))
+#   define ZMQ_HAS_RVALUE_REFS
+#endif
+#if (defined(__clang__))
+#   if __has_feature(cxx_rvalue_references)
+#       define ZMQ_HAS_RVALUE_REFS
+#   endif
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER >= 1600))
+#   define ZMQ_HAS_RVALUE_REFS
+#endif
+
 namespace zmq
 {
 
@@ -184,8 +197,22 @@ namespace zmq
                 throw error_t ();
         }
 
+#ifdef ZMQ_HAS_RVALUE_REFS
+        inline context_t(context_t&& rhs) : ptr(rhs.ptr)
+        {
+            rhs.ptr = NULL;
+        }
+        inline context_t& operator=(context_t&& rhs)
+        {
+            std::swap(ptr, rhs.ptr);
+            return *this;
+        }
+#endif
+
         inline ~context_t ()
         {
+            if (ptr == NULL)
+                return;
             int rc = zmq_term (ptr);
             assert (rc == 0);
         }
@@ -197,7 +224,7 @@ namespace zmq
         {
             return ptr;
         }
-        
+
     private:
 
         void *ptr;
@@ -216,6 +243,18 @@ namespace zmq
             if (ptr == NULL)
                 throw error_t ();
         }
+
+#ifdef ZMQ_HAS_RVALUE_REFS
+        inline socket_t(socket_t&& rhs) : ptr(rhs.ptr)
+        {
+            rhs.ptr = NULL;
+        }
+        inline socket_t& operator=(socket_t&& rhs)
+        {
+            std::swap(ptr, rhs.ptr);
+            return *this;
+        }
+#endif
 
         inline ~socket_t ()
         {

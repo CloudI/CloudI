@@ -50,7 +50,7 @@ Applicable socket types:: all
 ZMQ_SWAP: Set disk offload size
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The 'ZMQ_SWAP' option shall set the disk offload (swap) size for the specified
-'socket'. A socket which has 'ZMQ_SWAP' set to a non-zero value may exceed it's
+'socket'. A socket which has 'ZMQ_SWAP' set to a non-zero value may exceed its
 high water mark; in this case outstanding messages shall be offloaded to
 storage on disk rather than held in memory.
 
@@ -334,8 +334,8 @@ The requested option _option_name_ is unknown, or the requested _option_len_ or
 _option_value_ is invalid.
 *ETERM*::
 The 0MQ 'context' associated with the specified 'socket' was terminated.
-*EFAULT*::
-The provided 'socket' was not valid (NULL).
+*ENOTSOCK*::
+The provided 'socket' was invalid.
 *EINTR*::
 The operation was interrupted by delivery of a signal.
 

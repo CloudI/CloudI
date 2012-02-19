@@ -162,6 +162,11 @@ int zmq::tcp_socket_t::open (fd_t fd_, uint64_t sndbuf_, uint64_t rcvbuf_)
         errno_assert (rc == 0);
     }
 
+#if defined ZMQ_HAVE_OSX || defined ZMQ_HAVE_FREEBSD
+    int set = 1;
+    int rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof (int));
+    errno_assert (rc == 0);
+#endif
     return 0;
 }
 
@@ -206,13 +211,19 @@ int zmq::tcp_socket_t::read (void *data, int size)
     //  Several errors are OK. When speculative read is being done we may not
     //  be able to read a single byte to the socket. Also, SIGSTOP issued
     //  by a debugging tool can result in EINTR error.
-    if (nbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK ||
-          errno == EINTR))
+    if (nbytes == -1
+    && (errno == EAGAIN
+     || errno == EWOULDBLOCK
+     || errno == EINTR))
         return 0;
 
-    //  Signalise peer failure.
-    if (nbytes == -1 && (errno == ECONNRESET || errno == ECONNREFUSED ||
-          errno == ETIMEDOUT || errno == EHOSTUNREACH))
+    //  Signal peer failure.
+    if (nbytes == -1
+    && (errno == ECONNRESET
+     || errno == ECONNREFUSED
+     || errno == ETIMEDOUT
+     || errno == EHOSTUNREACH
+     || errno == ENOTCONN))
         return -1;
 
     errno_assert (nbytes != -1);

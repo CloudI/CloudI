@@ -48,14 +48,16 @@ shall return `-1` and set 'errno' to one of the values defined below.
 
 ERRORS
 ------
+*EINVAL*::
+The endpoint supplied is invalid.
 *EPROTONOSUPPORT*::
 The requested 'transport' protocol is not supported.
 *ENOCOMPATPROTO*::
 The requested 'transport' protocol is not compatible with the socket type.
 *ETERM*::
 The 0MQ 'context' associated with the specified 'socket' was terminated.
-*EFAULT*::
-The provided 'socket' was not valid (NULL).
+*ENOTSOCK*::
+The provided 'socket' was invalid.
 *EMTHREAD*::
 No I/O thread is available to accomplish the task.
 

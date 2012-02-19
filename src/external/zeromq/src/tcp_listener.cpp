@@ -176,7 +176,7 @@ int zmq::tcp_listener_t::set_address (const char *protocol_, const char *addr_,
             return -1;
 
         //  Create a listening socket.
-        s = socket (addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
+        s = open_socket (addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
         if (s == -1)
             return -1;
 
@@ -310,7 +310,8 @@ zmq::fd_t zmq::tcp_listener_t::accept ()
 
 #if (defined ZMQ_HAVE_LINUX || defined ZMQ_HAVE_FREEBSD || \
      defined ZMQ_HAVE_OPENBSD || defined ZMQ_HAVE_OSX || \
-     defined ZMQ_HAVE_OPENVMS || defined ZMQ_HAVE_NETBSD)
+     defined ZMQ_HAVE_OPENVMS || defined ZMQ_HAVE_NETBSD || \
+     defined ZMQ_HAVE_CYGWIN)
     if (sock == -1 && 
         (errno == EAGAIN || errno == EWOULDBLOCK || 
          errno == EINTR || errno == ECONNABORTED))

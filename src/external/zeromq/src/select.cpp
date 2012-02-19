@@ -19,20 +19,21 @@
 */
 
 #include "platform.hpp"
+#if defined ZMQ_HAVE_WINDOWS
+#include "windows.hpp"
+#endif
 
 #include <string.h>
 #include <algorithm>
 
-#ifdef ZMQ_HAVE_WINDOWS
-#include "winsock2.h"
-#elif defined ZMQ_HAVE_HPUX
+#if defined ZMQ_HAVE_HPUX
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #elif defined ZMQ_HAVE_OPENVMS
 #include <sys/types.h>
 #include <sys/time.h>
-#else
+#elif !defined ZMQ_HAVE_WINDOWS
 #include <sys/select.h>
 #endif
 

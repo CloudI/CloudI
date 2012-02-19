@@ -49,6 +49,8 @@
 
 namespace zmq
 {
+    //  Same as socket(2), but allows for transparent tweaking the options.
+    int open_socket (int domain_, int type_, int protocol_);
 
     //  Resolves network interface name in <nic-name>:<port> format. Symbol "*"
     //  (asterisk) resolves to INADDR_ANY (all network interfaces).

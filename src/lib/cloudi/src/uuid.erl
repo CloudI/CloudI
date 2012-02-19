@@ -19,7 +19,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.8 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -66,11 +66,14 @@
          get_v1/1,
          get_v1_time/1,
          get_v3/1,
+         get_v3/2,
          get_v4/0,
          get_v4_urandom_bigint/0,
          get_v4_urandom_native/0,
          get_v5/1,
+         get_v5/2,
          uuid_to_string/1,
+         string_to_uuid/1,
          increment/1]).
 
 -record(uuid_state,
@@ -86,6 +89,7 @@
 %%%------------------------------------------------------------------------
 
 new(Pid) when is_pid(Pid) ->
+    % make the version 1 UUID specific to the Erlang node and pid
     {ok, Ifs} = inet:getiflist(),
     If = lists:last(lists:filter(fun(I) ->
         not lists:prefix("lo", I)
@@ -100,41 +104,41 @@ new(Pid) when is_pid(Pid) ->
             % include the distributed Erlang node name to be node specific
             erlang:list_to_binary(MAC ++ erlang:atom_to_list(node()))
     end,
-    <<NODE01, NODE02, NODE03, NODE04, NODE05,
-      NODE06, NODE07, NODE08, NODE09, NODE10,
-      NODE11, NODE12, NODE13, NODE14, NODE15,
-      NODE16, NODE17, NODE18, NODE19, NODE20>> = crypto:sha(NodeData),
-    % reduce the 160 bit checksum to 16 bits
-    NodeByte1 = ((((((((NODE01 bxor NODE02)
-                       bxor NODE03)
-                      bxor NODE04)
-                     bxor NODE05)
-                    bxor NODE06)
-                   bxor NODE07)
-                  bxor NODE08)
-                 bxor NODE09)
-                bxor NODE10,
-    NodeByte2 = ((((((((NODE11 bxor NODE12)
-                       bxor NODE13)
-                      bxor NODE14)
-                     bxor NODE15)
-                    bxor NODE16)
-                   bxor NODE17)
-                  bxor NODE18)
-                 bxor NODE19)
-                bxor NODE20,
-    % make the version 1 UUID both node and pid specific
+    <<NodeD01, NodeD02, NodeD03, NodeD04, NodeD05,
+      NodeD06, NodeD07, NodeD08, NodeD09, NodeD10,
+      NodeD11, NodeD12, NodeD13, NodeD14, NodeD15,
+      NodeD16, NodeD17, NodeD18, NodeD19, NodeD20>> = crypto:sha(NodeData),
     PidBin = erlang:term_to_binary(Pid),
     % 72 bits for the Erlang pid
-    <<ID1:8, ID2:8, ID3:8, ID4:8, % ID (Node index)
-      SR1:8, SR2:8, SR3:8, SR4:8, % Serial (Process index)
-      CR1:8                       % Node Creation Count
+    <<PidID1:8, PidID2:8, PidID3:8, PidID4:8, % ID (Node specific, 15 bits)
+      PidSR1:8, PidSR2:8, PidSR3:8, PidSR4:8, % Serial (extra uniqueness)
+      PidCR1:8                       % Node Creation Count
       >> = binary:part(PidBin, erlang:byte_size(PidBin), -9),
+    % reduce the 160 bit NodeData checksum to 16 bits
+    NodeByte1 = ((((((((NodeD01 bxor NodeD02)
+                       bxor NodeD03)
+                      bxor NodeD04)
+                     bxor NodeD05)
+                    bxor NodeD06)
+                   bxor NodeD07)
+                  bxor NodeD08)
+                 bxor NodeD09)
+                bxor NodeD10,
+    NodeByte2 = (((((((((NodeD11 bxor NodeD12)
+                        bxor NodeD13)
+                       bxor NodeD14)
+                      bxor NodeD15)
+                     bxor NodeD16)
+                    bxor NodeD17)
+                   bxor NodeD18)
+                  bxor NodeD19)
+                 bxor NodeD20)
+                bxor PidCR1,
     % reduce the Erlang pid to 32 bits
-    PidByte1 = ID1 bxor SR4,
-    PidByte2 = ID2 bxor SR3,
-    PidByte3 = ID3 bxor SR2,
-    PidByte4 = (ID4 bxor SR1) bxor CR1,
+    PidByte1 = PidID1 bxor PidSR4,
+    PidByte2 = PidID2 bxor PidSR3,
+    PidByte3 = PidID3 bxor PidSR2,
+    PidByte4 = PidID4 bxor PidSR1,
     ClockSeq = random:uniform(16384) - 1,
     <<ClockSeqHigh:6, ClockSeqLow:8>> = <<ClockSeq:14>>,
     #uuid_state{node_id = <<NodeByte1:8, NodeByte2:8,
@@ -179,6 +183,15 @@ get_v3(Name) ->
       B2:6,
       0:1, 1:1,            % reserved bits
       B3:56>>.
+
+get_v3(Namespace, Name) when is_binary(Namespace) ->
+    NameBin = if
+        is_binary(Name) ->
+            Name;
+        is_list(Name) ->
+            erlang:list_to_binary(Name)
+    end,
+    get_v3(<<Namespace/binary, NameBin/binary>>).
 
 % crypto:rand_bytes/1 repeats in the same way as
 % RAND_pseudo_bytes within OpenSSL.
@@ -241,6 +254,15 @@ get_v5(Name) ->
       0:1, 1:1,            % reserved bits
       B3:56>>.
 
+get_v5(Namespace, Name) when is_binary(Namespace) ->
+    NameBin = if
+        is_binary(Name) ->
+            Name;
+        is_list(Name) ->
+            erlang:list_to_binary(Name)
+    end,
+    get_v5(<<Namespace/binary, NameBin/binary>>).
+
 uuid_to_string(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<B1:32/unsigned-integer,
@@ -250,6 +272,83 @@ uuid_to_string(Value)
       B5:48/unsigned-integer>> = Value,
     lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
                                 [B1, B2, B3, B4, B5])).
+
+string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08, $-,
+                N09, N10, N11, N12, $-,
+                N13, N14, N15, N16, $-,
+                N17, N18, N19, N20, $-,
+                N21, N22, N23, N24, N25, N26,
+                N27, N28, N29, N30, N31, N32]) ->
+    string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
+                   N09, N10, N11, N12,
+                   N13, N14, N15, N16,
+                   N17, N18, N19, N20,
+                   N21, N22, N23, N24, N25, N26,
+                   N27, N28, N29, N30, N31, N32);
+
+string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08,
+                N09, N10, N11, N12,
+                N13, N14, N15, N16,
+                N17, N18, N19, N20,
+                N21, N22, N23, N24, N25, N26,
+                N27, N28, N29, N30, N31, N32]) ->
+    string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
+                   N09, N10, N11, N12,
+                   N13, N14, N15, N16,
+                   N17, N18, N19, N20,
+                   N21, N22, N23, N24, N25, N26,
+                   N27, N28, N29, N30, N31, N32);
+
+string_to_uuid(<<N01, N02, N03, N04, N05, N06, N07, N08, $-,
+                 N09, N10, N11, N12, $-,
+                 N13, N14, N15, N16, $-,
+                 N17, N18, N19, N20, $-,
+                 N21, N22, N23, N24, N25, N26,
+                 N27, N28, N29, N30, N31, N32>>) ->
+    string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
+                   N09, N10, N11, N12,
+                   N13, N14, N15, N16,
+                   N17, N18, N19, N20,
+                   N21, N22, N23, N24, N25, N26,
+                   N27, N28, N29, N30, N31, N32);
+
+string_to_uuid(<<N01, N02, N03, N04, N05, N06, N07, N08,
+                 N09, N10, N11, N12,
+                 N13, N14, N15, N16,
+                 N17, N18, N19, N20,
+                 N21, N22, N23, N24, N25, N26,
+                 N27, N28, N29, N30, N31, N32>>) ->
+    string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
+                   N09, N10, N11, N12,
+                   N13, N14, N15, N16,
+                   N17, N18, N19, N20,
+                   N21, N22, N23, N24, N25, N26,
+                   N27, N28, N29, N30, N31, N32).
+
+string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
+               N09, N10, N11, N12,
+               N13, N14, N15, N16,
+               N17, N18, N19, N20,
+               N21, N22, N23, N24, N25, N26,
+               N27, N28, N29, N30, N31, N32) ->
+    B01 = hex_to_int(N01, N02),
+    B02 = hex_to_int(N03, N04),
+    B03 = hex_to_int(N05, N06),
+    B04 = hex_to_int(N07, N08),
+    B05 = hex_to_int(N09, N10),
+    B06 = hex_to_int(N11, N12),
+    B07 = hex_to_int(N13, N14),
+    B08 = hex_to_int(N15, N16),
+    B09 = hex_to_int(N17, N18),
+    B10 = hex_to_int(N19, N20),
+    B11 = hex_to_int(N21, N22),
+    B12 = hex_to_int(N23, N24),
+    B13 = hex_to_int(N25, N26),
+    B14 = hex_to_int(N27, N28),
+    B15 = hex_to_int(N29, N30),
+    B16 = hex_to_int(N31, N32),
+    <<B01, B02, B03, B04, B05, B06, B07, B08,
+      B09, B10, B11, B12, B13, B14, B15, B16>>.
 
 % The RFC said to increment the clock sequence counter
 % if the system clock was set backwards.  However, erlang:now/0 always
@@ -279,4 +378,20 @@ increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     State#uuid_state{clock_seq = NewClockSeq,
                      clock_seq_high = ClockSeqHigh,
                      clock_seq_low = ClockSeqLow}.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+-compile({inline, [{hex_to_int,1}]}).
+
+hex_to_int(C1, C2) ->
+    hex_to_int(C1) * 16 + hex_to_int(C2).
+
+hex_to_int(C) when $0 =< C, C =< $9 ->
+    C - $0;
+hex_to_int(C) when $A =< C, C =< $F ->
+    C - $A + 10;
+hex_to_int(C) when $a =< C, C =< $f ->
+    C - $a + 10.
 

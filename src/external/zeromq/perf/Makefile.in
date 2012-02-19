@@ -35,7 +35,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = local_lat$(EXEEXT) remote_lat$(EXEEXT) \
-	local_thr$(EXEEXT) remote_thr$(EXEEXT)
+	local_thr$(EXEEXT) remote_thr$(EXEEXT) inproc_lat$(EXEEXT) \
+	inproc_thr$(EXEEXT)
 subdir = perf
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -52,12 +53,18 @@ CONFIG_HEADER = $(top_builddir)/src/platform.hpp
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am_local_lat_OBJECTS = local_lat.$(OBJEXT)
-local_lat_OBJECTS = $(am_local_lat_OBJECTS)
-local_lat_DEPENDENCIES = $(top_builddir)/src/libzmq.la
+am_inproc_lat_OBJECTS = inproc_lat.$(OBJEXT)
+inproc_lat_OBJECTS = $(am_inproc_lat_OBJECTS)
+inproc_lat_DEPENDENCIES = $(top_builddir)/src/libzmq.la
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
 am__v_lt_0 = --silent
+am_inproc_thr_OBJECTS = inproc_thr.$(OBJEXT)
+inproc_thr_OBJECTS = $(am_inproc_thr_OBJECTS)
+inproc_thr_DEPENDENCIES = $(top_builddir)/src/libzmq.la
+am_local_lat_OBJECTS = local_lat.$(OBJEXT)
+local_lat_OBJECTS = $(am_local_lat_OBJECTS)
+local_lat_DEPENDENCIES = $(top_builddir)/src/libzmq.la
 am_local_thr_OBJECTS = local_thr.$(OBJEXT)
 local_thr_OBJECTS = $(am_local_thr_OBJECTS)
 local_thr_DEPENDENCIES = $(top_builddir)/src/libzmq.la
@@ -93,9 +100,11 @@ am__v_CXXLD_0 = @echo "  CXXLD " $@;
 AM_V_GEN = $(am__v_GEN_$(V))
 am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(local_lat_SOURCES) $(local_thr_SOURCES) \
+SOURCES = $(inproc_lat_SOURCES) $(inproc_thr_SOURCES) \
+	$(local_lat_SOURCES) $(local_thr_SOURCES) \
 	$(remote_lat_SOURCES) $(remote_thr_SOURCES)
-DIST_SOURCES = $(local_lat_SOURCES) $(local_thr_SOURCES) \
+DIST_SOURCES = $(inproc_lat_SOURCES) $(inproc_thr_SOURCES) \
+	$(local_lat_SOURCES) $(local_thr_SOURCES) \
 	$(remote_lat_SOURCES) $(remote_thr_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -150,6 +159,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LTVER = @LTVER@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -157,6 +167,8 @@ OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
+OpenPGM_CFLAGS = @OpenPGM_CFLAGS@
+OpenPGM_LIBS = @OpenPGM_LIBS@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -165,6 +177,9 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -176,11 +191,10 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
-ac_zmq_have_asciidoc = @ac_zmq_have_asciidoc@
-ac_zmq_have_xmlto = @ac_zmq_have_xmlto@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -209,15 +223,17 @@ infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libzmq_have_asciidoc = @libzmq_have_asciidoc@
+libzmq_have_xmlto = @libzmq_have_xmlto@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 pgm_basename = @pgm_basename@
 pgm_srcdir = @pgm_srcdir@
+pgm_subdir = @pgm_subdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -239,6 +255,10 @@ local_thr_LDADD = $(top_builddir)/src/libzmq.la
 local_thr_SOURCES = local_thr.cpp
 remote_thr_LDADD = $(top_builddir)/src/libzmq.la
 remote_thr_SOURCES = remote_thr.cpp
+inproc_lat_LDADD = $(top_builddir)/src/libzmq.la
+inproc_lat_SOURCES = inproc_lat.cpp
+inproc_thr_LDADD = $(top_builddir)/src/libzmq.la
+inproc_thr_SOURCES = inproc_thr.cpp
 all: all-am
 
 .SUFFIXES:
@@ -282,6 +302,12 @@ clean-noinstPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+inproc_lat$(EXEEXT): $(inproc_lat_OBJECTS) $(inproc_lat_DEPENDENCIES) 
+	@rm -f inproc_lat$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(inproc_lat_OBJECTS) $(inproc_lat_LDADD) $(LIBS)
+inproc_thr$(EXEEXT): $(inproc_thr_OBJECTS) $(inproc_thr_DEPENDENCIES) 
+	@rm -f inproc_thr$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(inproc_thr_OBJECTS) $(inproc_thr_LDADD) $(LIBS)
 local_lat$(EXEEXT): $(local_lat_OBJECTS) $(local_lat_DEPENDENCIES) 
 	@rm -f local_lat$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(local_lat_OBJECTS) $(local_lat_LDADD) $(LIBS)
@@ -301,6 +327,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inproc_lat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inproc_thr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/local_lat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/local_thr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/remote_lat.Po@am__quote@

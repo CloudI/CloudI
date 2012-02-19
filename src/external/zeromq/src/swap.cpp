@@ -111,7 +111,7 @@ int zmq::swap_t::init ()
     if (fd == -1)
         return -1;
 
-#ifdef ZMQ_HAVE_LINUX
+#if (defined (ZMQ_HAVE_LINUX) && !defined (ZMQ_HAVE_ANDROID))
     //  Enable more aggresive read-ahead optimization.
     posix_fadvise (fd, 0, filesize, POSIX_FADV_SEQUENTIAL);
 #endif
@@ -134,8 +134,6 @@ bool zmq::swap_t::store (zmq_msg_t *msg_)
     copy_to_file (&msg_size, sizeof msg_size);
     copy_to_file (&msg_flags, sizeof msg_flags);
     copy_to_file (zmq_msg_data (msg_), msg_size);
-
-    zmq_msg_close (msg_);
 
     return true;
 }
@@ -214,7 +212,7 @@ void zmq::swap_t::copy_from_file (void *buffer_, size_t count_)
     size_t chunk_size, remainder = count_;
 
     while (remainder > 0) {
-        chunk_size = std::min (remainder, 
+        chunk_size = std::min (remainder,
             std::min ((size_t) (filesize - read_pos),
             (size_t) (block_size - read_pos % block_size)));
 
@@ -238,7 +236,7 @@ void zmq::swap_t::copy_to_file (const void *buffer_, size_t count_)
     size_t chunk_size, remainder = count_;
 
     while (remainder > 0) {
-        chunk_size = std::min (remainder, 
+        chunk_size = std::min (remainder,
             std::min ((size_t) (filesize - write_pos),
             (size_t) (block_size - write_pos % block_size)));
 

@@ -18,24 +18,27 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "platform.hpp"
+#if defined ZMQ_HAVE_WINDOWS
+#include "windows.hpp"
+#endif
+
 #include <new>
 #include <string.h>
 
 #include "ctx.hpp"
 #include "socket_base.hpp"
 #include "io_thread.hpp"
-#include "platform.hpp"
 #include "reaper.hpp"
 #include "err.hpp"
 #include "pipe.hpp"
 
-#if defined ZMQ_HAVE_WINDOWS
-#include "windows.h"
-#else
-#include "unistd.h"
+#if !defined ZMQ_HAVE_WINDOWS
+#include <unistd.h>
 #endif
 
 zmq::ctx_t::ctx_t (uint32_t io_threads_) :
+    tag (0xbadcafe0),
     terminating (false)
 {
     int rc;
@@ -78,6 +81,11 @@ zmq::ctx_t::ctx_t (uint32_t io_threads_) :
     zmq_assert (rc == 0);
 }
 
+bool zmq::ctx_t::check_tag ()
+{
+    return tag == 0xbadcafe0;
+}
+
 zmq::ctx_t::~ctx_t ()
 {
     //  Check that there are no remaining sockets.
@@ -99,6 +107,9 @@ zmq::ctx_t::~ctx_t ()
     //  needed as mailboxes themselves were deallocated with their
     //  corresponding io_thread/socket objects.
     free (slots);
+
+    //  Remove the tag, so that the object is considered dead.
+    tag = 0xdeadbeef;
 }
 
 int zmq::ctx_t::terminate ()
@@ -132,7 +143,7 @@ int zmq::ctx_t::terminate ()
 
     //  Wait till reaper thread closes all the sockets.
     command_t cmd;
-    int rc = term_mailbox.recv (&cmd, true);
+    int rc = term_mailbox.recv (&cmd, -1);
     if (rc == -1 && errno == EINTR)
         return -1;
     zmq_assert (rc == 0);

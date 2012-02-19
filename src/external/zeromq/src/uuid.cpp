@@ -44,14 +44,22 @@ const char *zmq::uuid_t::to_string ()
     return (char*) string_buf;
 }
 
-#elif defined ZMQ_HAVE_FREEBSD || defined ZMQ_HAVE_NETBSD
+#elif defined ZMQ_HAVE_FREEBSD || defined ZMQ_HAVE_NETBSD || (defined ZMQ_HAVE_HPUX && defined HAVE_LIBDCEKT)
 
 #include <stdlib.h>
-#include <uuid.h>
+#ifdef ZMQ_HAVE_HPUX
+#  include <dce/uuid.h>
+#else
+#  include <uuid.h>
+#endif
 
 zmq::uuid_t::uuid_t ()
 {
+#ifdef ZMQ_HAVE_HPUX
+    unsigned32 status;
+#else
     uint32_t status;
+#endif
     uuid_create (&uuid, &status);
     zmq_assert (status == uuid_s_ok);
     uuid_to_string (&uuid, &string_buf, &status);
@@ -67,7 +75,7 @@ zmq::uuid_t::~uuid_t ()
 
 const char *zmq::uuid_t::to_string ()
 {
-    return string_buf;
+    return (char*) string_buf;
 }
 
 #elif defined ZMQ_HAVE_LINUX || defined ZMQ_HAVE_SOLARIS ||\

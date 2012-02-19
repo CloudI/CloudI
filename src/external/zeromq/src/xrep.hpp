@@ -47,6 +47,7 @@ namespace zmq
             const blob_t &peer_identity_);
         int xsend (zmq_msg_t *msg_, int flags_);
         int xrecv (zmq_msg_t *msg_, int flags_);
+        int rollback ();
         bool xhas_in ();
         bool xhas_out ();
 

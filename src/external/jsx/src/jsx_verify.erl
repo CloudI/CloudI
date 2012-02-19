@@ -21,92 +21,66 @@
 %% THE SOFTWARE.
 
 
-
 -module(jsx_verify).
 
-
 -export([is_json/2]).
+-export([init/1, handle_event/2]).
 
 
--include("./include/jsx_common.hrl").
+-record(opts, {
+    repeated_keys = true
+}).
+
+-type opts() :: [].
 
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
-
-
--spec is_json(JSON::binary(), Opts::verify_opts()) -> true | false.
-
-is_json(JSON, Opts) ->
-    P = jsx:parser(extract_parser_opts(Opts)),
-    case proplists:get_value(strict, Opts, true) of
-        true -> collect_strict(P(JSON), [[]])
-        ; false -> collect(P(JSON), [[]])
+-spec is_json(Source::(binary() | list()), Opts::opts()) -> binary().
+    
+is_json(Source, Opts) when (is_binary(Source) andalso is_list(Opts))
+        orelse (is_list(Source) andalso is_list(Opts)) ->
+    try (gen_json:parser(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source)
+    catch error:badarg -> false
     end.
 
 
-extract_parser_opts(Opts) ->
-    extract_parser_opts(Opts, []).
 
-extract_parser_opts([], Acc) -> Acc;    
-extract_parser_opts([{K,V}|Rest], Acc) ->
-    case lists:member(K, [comments, encoding, unquoted_keys]) of
-        true -> [{K,V}] ++ Acc
-        ; false -> extract_parser_opts(Rest, Acc)
-    end;
-extract_parser_opts([K|Rest], Acc) ->
-    case lists:member(K, [comments, encoding, unquoted_keys]) of
-        true -> [K] ++ Acc
-        ; false -> extract_parser_opts(Rest, Acc)
-    end.
+parse_opts(Opts) -> parse_opts(Opts, #opts{}).
+
+parse_opts([{repeated_keys, Val}|Rest], Opts) when Val == true; Val == false ->
+    parse_opts(Rest, Opts#opts{repeated_keys = Val});
+parse_opts([repeated_keys|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{repeated_keys = true});
+parse_opts([_|Rest], Opts) ->
+    parse_opts(Rest, Opts);
+parse_opts([], Opts) ->
+    Opts.
 
 
-%% enforce only arrays and objects at top level
-collect_strict({event, start_object, Next}, Keys) ->
-    collect(Next(), Keys);
-collect_strict({event, start_array, Next}, Keys) ->
-    collect(Next(), Keys);
-collect_strict(_, _) ->
-    false.
+
+init(Opts) -> {parse_opts(Opts), []}.
 
 
-collect({event, end_json, _Next}, _Keys) ->
-    true;
 
+handle_event(end_json, _) -> true;
 
-%% allocate new key accumulator at start_object, discard it at end_object    
-collect({event, start_object, Next}, Keys) -> collect(Next(), [[]|Keys]);
-collect({event, end_object, Next}, [_|Keys]) -> collect(Next(), [Keys]);
+handle_event(_, {Opts, _} = State) when Opts#opts.repeated_keys == true -> State;
 
+handle_event(start_object, {Opts, Keys}) -> {Opts, [dict:new()] ++ Keys};
+handle_event(end_object, {Opts, [_|Keys]}) -> {Opts, Keys};
 
-%% check to see if key has already been encountered, if not add it to the key 
-%%   accumulator and continue, else return false 
-collect({event, {key, Key}, Next}, [Current|Keys]) ->
-    case lists:member(Key, Current) of
-        true -> false
-        ; false -> collect(Next(), [[Key] ++ Current] ++ Keys)
+handle_event({key, Key}, {Opts, [CurrentKeys|Keys]}) ->
+    case dict:is_key(Key, CurrentKeys) of
+        true -> erlang:error(badarg)
+        ; false -> {Opts, [dict:store(Key, blah, CurrentKeys)|Keys]}
     end;
 
-                
-collect({event, _, Next}, Keys) ->
-    collect(Next(), Keys);
+handle_event(_, State) -> State.
 
 
-%% needed to parse numbers that don't have trailing whitespace in less strict 
-%%   mode    
-collect({incomplete, More}, Keys) ->
-    collect(More(end_stream), Keys);
-
-    
-collect(_, _) ->
-    false.
-    
-    
 
 %% eunit tests
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 true_test_() ->
     [
@@ -144,63 +118,32 @@ true_test_() ->
         },
         {"nested objects", 
             ?_assert(is_json(<<"{\"key\": { \"key\": true}}">>, []) =:= true)
+        },        
+        {"repeated key ok", ?_assert(is_json(<<"{\"key\": true, \"key\": true}">>, []) =:= true)},
+        {"nested repeated key", ?_assert(is_json(<<"{\"key\": { \"key\": true }}">>,
+            [{repeated_keys, false}]) =:= true)
         }
     ].
 
 false_test_() ->
     [
-        {"naked true", ?_assert(is_json(<<"true">>, []) =:= false)},
-        {"naked number", ?_assert(is_json(<<"1">>, []) =:= false)},
-        {"naked string", 
-            ?_assert(is_json(<<"\"i am not json\"">>, []) =:= false)
-        },
-        {"unbalanced list", ?_assert(is_json(<<"[[[]]">>, []) =:= false)},
+        {"unbalanced list", ?_assert(is_json(<<"[]]">>, []) =:= false)},
         {"trailing comma", 
             ?_assert(is_json(<<"[ true, false, null, ]">>, []) =:= false)
         },
         {"unquoted key", ?_assert(is_json(<<"{ key: false }">>, []) =:= false)},
-        {"repeated key", 
-            ?_assert(is_json(
-                    <<"{\"key\": true, \"key\": true}">>, 
-                    []
-                ) =:= false
-            )
+        {"repeated key", ?_assert(is_json(<<"{\"key\": true, \"key\": true}">>,
+            [{repeated_keys, false}]) =:= false)
         },
-        {"comments", ?_assert(is_json(<<"[ /* a comment */ ]">>, []) =:= false)}
-    ].
-    
-less_strict_test_() ->
-    [
-        {"naked true", 
-            ?_assert(is_json(<<"true">>, [{strict, false}]) =:= true)
-        },
-        {"naked number", 
-            ?_assert(is_json(<<"1">>, [{strict, false}]) =:= true)
-        },
-        {"naked string", 
-            ?_assert(is_json(
-                    <<"\"i am not json\"">>, 
-                    [{strict, false}]
-                ) =:= true
-            )
-        },
-        {"comments", 
-            ?_assert(is_json(
-                    <<"[ /* a comment */ ]">>, 
-                    [{comments, true}]
-                ) =:= true
-            )
-        },
-        {"unquoted keys",
-            ?_assert(is_json(
-                    <<"{unquotedkey : true}">>,
-                    [{unquoted_keys, true}]
-                ) =:= true
-            )
+        {"nested repeated key", ?_assert(is_json(<<"{\"key\": { \"a\": true, \"a\": false }}">>,
+            [{repeated_keys, false}]) =:= false)
         }
-    ].    
+    ].
+
+incomplete_test_() ->
+    [
+        {"incomplete test", ?_assertMatch({incomplete, _}, is_json(<<"[">>, []))}
+    ].
+        
     
 -endif.
-
-    
-    

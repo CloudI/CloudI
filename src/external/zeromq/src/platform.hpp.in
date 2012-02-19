@@ -6,11 +6,11 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
+/* Define to 1 if you have the `clock_gettime' function. */
+#undef HAVE_CLOCK_GETTIME
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
-
-/* Define to 1 if you have the `epoll_create' function. */
-#undef HAVE_EPOLL_CREATE
 
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
@@ -20,15 +20,6 @@
 
 /* Define to 1 if you have the `getifaddrs' function. */
 #undef HAVE_GETIFADDRS
-
-/* Define to 1 if you have the `getopt' function. */
-#undef HAVE_GETOPT
-
-/* Define to 1 if you have the `getprotobyname_r' function. */
-#undef HAVE_GETPROTOBYNAME_R
-
-/* Define to 1 if you have the `getprotobyname_r2' function. */
-#undef HAVE_GETPROTOBYNAME_R2
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
@@ -41,6 +32,9 @@
 
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #undef HAVE_LIBCRYPTO
+
+/* Define to 1 if you have the `dcekt' library (-ldcekt). */
+#undef HAVE_LIBDCEKT
 
 /* Define to 1 if you have the `iphlpapi' library (-liphlpapi). */
 #undef HAVE_LIBIPHLPAPI
@@ -84,14 +78,11 @@
 /* Define to 1 if you have the `perror' function. */
 #undef HAVE_PERROR
 
-/* Define to 1 if you have the `poll' function. */
-#undef HAVE_POLL
-
-/* Define to 1 if you have the `pselect' function. */
-#undef HAVE_PSELECT
-
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
+
+/* Whether SOCK_CLOEXEC is defined and functioning. */
+#undef HAVE_SOCK_CLOEXEC
 
 /* Define to 1 if stdbool.h conforms to C99. */
 #undef HAVE_STDBOOL_H
@@ -123,11 +114,11 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <time.h> header file. */
+#undef HAVE_TIME_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if you have the `vasprintf' function. */
-#undef HAVE_VASPRINTF
 
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
@@ -180,6 +171,9 @@
 
 /* Have AIX OS */
 #undef ZMQ_HAVE_AIX
+
+/* Have Android OS */
+#undef ZMQ_HAVE_ANDROID
 
 /* Have Cygwin */
 #undef ZMQ_HAVE_CYGWIN

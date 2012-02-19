@@ -25,7 +25,7 @@ using namespace zmqtestutil;
 
 int main (int argc, char *argv [])
 {
-    const char *transport = "tcp://127.0.0.1:5555" ;
+    const char *transport = "tcp://127.0.0.1:5560" ;
     basic_tests (transport, ZMQ_REQ, ZMQ_REP);
     return 0 ;
 }

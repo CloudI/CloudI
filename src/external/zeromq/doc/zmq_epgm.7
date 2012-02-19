@@ -2,12 +2,12 @@
 .\"     Title: zmq_pgm
 .\"    Author: [see the "AUTHORS" section]
 .\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 03/15/2011
+.\"      Date: 11/22/2011
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 2.1.3
+.\"    Source: 0MQ 2.1.10
 .\"  Language: English
 .\"
-.TH "ZMQ_PGM" "7" "03/15/2011" "0MQ 2\&.1\&.3" "0MQ Manual"
+.TH "ZMQ_PGM" "7" "11/22/2011" "0MQ 2\&.1\&.10" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -83,7 +83,7 @@ The interface name as defined by the operating system\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-The primary IPv4 address assigned to the interface, in it\(cqs numeric representation\&.
+The primary IPv4 address assigned to the interface, in its numeric representation\&.
 .RE
 .if n \{\
 .sp
@@ -102,7 +102,7 @@ Interface names are not standardised in any way and should be assumed to be arbi
 .sp .5v
 .RE
 .sp
-A \fImulticast address\fR is specified by an IPv4 multicast address in it\(cqs numeric representation\&.
+A \fImulticast address\fR is specified by an IPv4 multicast address in its numeric representation\&.
 .SH "WIRE FORMAT"
 .sp
 Consecutive PGM datagrams are interpreted by 0MQ as a single continuous stream of data where 0MQ messages are not necessarily aligned with PGM datagram boundaries and a single 0MQ message may span several PGM datagrams\&. This stream of data consists of 0MQ messages encapsulated in \fIframes\fR as described in \fBzmq_tcp\fR(7)\&.
@@ -123,6 +123,8 @@ data                   = *OCTET
 .\}
 .sp
 In order for late joining consumers to be able to identify message boundaries, each PGM datagram payload starts with a 16\-bit unsigned integer in network byte order specifying either the offset of the first message \fIframe\fR in the datagram or containing the value 0xFFFF if the datagram contains solely an intermediate part of a larger message\&.
+.sp
+Note that offset specifies where the first message begins rather than the first message part\&. Thus, if there are trailing message parts at the beginning of the packet the offset ignores them and points to first initial message part in the packet\&.
 .sp
 The following diagram illustrates the layout of a single PGM datagram payload:
 .sp
