@@ -1,6 +1,6 @@
 Component: Atomic Operations
-Maintainer: Martin Lucina
-Contact: mato@kotelna.sk
+Maintainer: Martin Sustrik
+Contact: sustrik@250bpm.com
 
 Component: Lock-free Algorithms
 Maintainer: Martin Sustrik
@@ -38,13 +38,13 @@ Component: Generic Infrastructure (context, mailbox, command, pipe)
 Maintainer: Martin Sustrik
 Contact: sustrik@250bpm.com
 
-Component: Reference manual
-Maintainer: Martin Lucina
-Contact: mato@kotelna.sk
+Component: Documentation
+Maintainer: Martin Sustrik
+Contact: sustrik@250bpm.com
 
 Component: Autotools build system
-Maintainer: Mikko Koppanen, Martin Lucina
-Contact: mato@kotelna.sk
+Maintainer: Mikko Koppanen
+Contact: mikko.koppanen@gmail.com
 
 Component: MSVC build system
 Maintainer: Martin Sustrik

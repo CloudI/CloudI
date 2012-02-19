@@ -64,10 +64,10 @@ int zmq::pgm_sender_t::init (bool udp_encapsulation_, const char *network_)
 void zmq::pgm_sender_t::plug (io_thread_t *io_thread_, i_inout *inout_)
 {
     //  Alocate 2 fds for PGM socket.
-    int downlink_socket_fd = 0;
-    int uplink_socket_fd = 0;
-    int rdata_notify_fd = 0;
-    int pending_notify_fd = 0;
+    fd_t downlink_socket_fd = retired_fd;
+    fd_t uplink_socket_fd = retired_fd;
+    fd_t rdata_notify_fd = retired_fd;
+    fd_t pending_notify_fd = retired_fd;
 
     encoder.set_inout (inout_);
 

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_zeromq).
@@ -217,7 +217,7 @@ cloudi_job_handle_request(Type, Name, _RequestInfo, Request,
             {reply, <<>>, State}
     end.
 
-cloudi_job_handle_info({zmq, S, Incoming},
+cloudi_job_handle_info({zmq, S, Incoming, _},
                        #state{receives = ReceivesZMQ,
                               reply_replies = ReplyReplies} = State,
                        Dispatcher) ->

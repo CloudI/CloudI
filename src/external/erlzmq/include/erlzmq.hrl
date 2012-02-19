@@ -3,8 +3,10 @@
 -define('ZMQ_SUB',          2).
 -define('ZMQ_REQ',          3).
 -define('ZMQ_REP',          4).
--define('ZMQ_XREQ',         5).
--define('ZMQ_XREP',         6).
+-define('ZMQ_DEALER',       5).
+-define('ZMQ_ROUTER',       6).
+-define('ZMQ_XREQ',         ?'ZMQ_DEALER').
+-define('ZMQ_XREP',         ?'ZMQ_ROUTER').
 -define('ZMQ_PULL',         7).
 -define('ZMQ_PUSH',         8).
 -define('ZMQ_XPUB',         9).
@@ -106,7 +108,7 @@
 
 %% @type erlzmq_socket() = binary().
 %% An opaque handle to an erlzmq socket.
--opaque erlzmq_socket() :: binary().
+-opaque erlzmq_socket() :: {pos_integer(), binary()}.
 
 %% @type erlzmq_send_recv_flag() = noblock | sndmore | recvmore | {timeout, timeout()}.
 %% The individual flags to use with {@link erlzmq:send/3. send/3}

@@ -33,7 +33,7 @@ It is also available on [http://erlagner.org/ Agner]:
     $ agner build erlzmq
 '''
 
-In order to build erlzmq2 against a specific version of ZeroMQ (not 'master'), use this:
+In order to build erlzmq2 against a specific version of ZeroMQ (not 'v2.1.4'), use this:
 
 ```
     $ ZEROMQ_VERSION=v<VERSION> agner build erlzmq
@@ -46,7 +46,7 @@ Build the code
     $ make
 '''
 
-If you want to build against a specific version of ZeroMQ (not 'master'), use this:
+If you want to build against a specific version of ZeroMQ (not 'v2.1.4'), use this:
 
 ```
     $ ZEROMQ_VERSION=v<VERSION> make

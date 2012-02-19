@@ -50,6 +50,9 @@ namespace zmq
 
     public:
 
+        //  Returns false if object is not a socket.
+        bool check_tag ();
+
         //  Create a socket of a specified type.
         static socket_base_t *create (int type_, class ctx_t *parent_,
             uint32_t tid_);
@@ -136,6 +139,9 @@ namespace zmq
 
     private:
 
+        //  Used to check whether the object is a socket.
+        uint32_t tag;
+
         //  If true, associated context was already terminated.
         bool ctx_terminated;
 
@@ -156,11 +162,11 @@ namespace zmq
         void attach_pipes (class reader_t *inpipe_, class writer_t *outpipe_,
             const blob_t &peer_identity_);
 
-        //  Processes commands sent to this socket (if any). If 'block' is
-        //  set to true, returns only after at least one command was processed.
+        //  Processes commands sent to this socket (if any). If timeout is -1,
+        //  returns only after at least one command was processed.
         //  If throttle argument is true, commands are processed at most once
         //  in a predefined time period.
-        int process_commands (bool block_, bool throttle_);
+        int process_commands (int timeout_, bool throttle_);
 
         //  Handlers for incoming commands.
         void process_stop ();

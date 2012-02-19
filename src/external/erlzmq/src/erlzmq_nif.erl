@@ -10,7 +10,8 @@
          setsockopt/3,
          getsockopt/2,
          close/1,
-         term/1]).
+         term/1,
+         version/0]).
 
 -on_load(init/0).
 
@@ -61,4 +62,7 @@ close(_Socket) ->
     erlang:nif_error(not_loaded).
 
 term(_Context) ->
+    erlang:nif_error(not_loaded).
+
+version() ->
     erlang:nif_error(not_loaded).

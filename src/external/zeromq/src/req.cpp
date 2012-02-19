@@ -49,7 +49,7 @@ int zmq::req_t::xsend (zmq_msg_t *msg_, int flags_)
         zmq_msg_t prefix;
         int rc = zmq_msg_init (&prefix);
         zmq_assert (rc == 0);
-        prefix.flags = ZMQ_MSG_MORE;
+        prefix.flags |= ZMQ_MSG_MORE;
         rc = xreq_t::xsend (&prefix, flags_);
         if (rc != 0)
             return rc;
@@ -84,8 +84,12 @@ int zmq::req_t::xrecv (zmq_msg_t *msg_, int flags_)
         int rc = xreq_t::xrecv (msg_, flags_);
         if (rc != 0)
             return rc;
-        zmq_assert (msg_->flags & ZMQ_MSG_MORE);
-        zmq_assert (zmq_msg_size (msg_) == 0);
+
+        // TODO: this should also close the connection with the peer
+        if (!(msg_->flags & ZMQ_MSG_MORE) || zmq_msg_size (msg_) != 0) {
+            errno = EAGAIN;
+            return -1;
+        }
         message_begins = false;
     }
 

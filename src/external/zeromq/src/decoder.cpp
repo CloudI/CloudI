@@ -109,11 +109,11 @@ bool zmq::decoder_t::eight_byte_size_ready ()
 bool zmq::decoder_t::flags_ready ()
 {
     //  Store the flags from the wire into the message structure.
-    in_progress.flags = tmpbuf [0];
+    in_progress.flags = tmpbuf [0] | ~ZMQ_MSG_MASK;
 
     next_step (zmq_msg_data (&in_progress), zmq_msg_size (&in_progress),
         &decoder_t::message_ready);
-    
+
     return true;
 }
 

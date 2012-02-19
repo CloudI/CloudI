@@ -61,6 +61,11 @@
 #include "xpub.hpp"
 #include "xsub.hpp"
 
+bool zmq::socket_base_t::check_tag ()
+{
+    return tag == 0xbaddecaf;
+}
+
 zmq::socket_base_t *zmq::socket_base_t::create (int type_, class ctx_t *parent_,
     uint32_t tid_)
 {
@@ -87,7 +92,7 @@ zmq::socket_base_t *zmq::socket_base_t::create (int type_, class ctx_t *parent_,
         break;
     case ZMQ_XREP:
         s = new (std::nothrow) xrep_t (parent_, tid_);
-        break;     
+        break;
     case ZMQ_PULL:
         s = new (std::nothrow) pull_t (parent_, tid_);
         break;
@@ -99,7 +104,7 @@ zmq::socket_base_t *zmq::socket_base_t::create (int type_, class ctx_t *parent_,
         break;
     case ZMQ_XSUB:
         s = new (std::nothrow) xsub_t (parent_, tid_);
-        break;    
+        break;
     default:
         errno = EINVAL;
         return NULL;
@@ -110,6 +115,7 @@ zmq::socket_base_t *zmq::socket_base_t::create (int type_, class ctx_t *parent_,
 
 zmq::socket_base_t::socket_base_t (ctx_t *parent_, uint32_t tid_) :
     own_t (parent_, tid_),
+    tag (0xbaddecaf),
     ctx_terminated (false),
     destroyed (false),
     last_tsc (0),
@@ -126,6 +132,9 @@ zmq::socket_base_t::~socket_base_t ()
     sessions_sync.lock ();
     zmq_assert (sessions.empty ());
     sessions_sync.unlock ();
+
+    //  Mark the socket as dead.
+    tag = 0xdeadbeef;
 }
 
 zmq::mailbox_t *zmq::socket_base_t::get_mailbox ()
@@ -268,7 +277,7 @@ int zmq::socket_base_t::getsockopt (int option_, void *optval_,
             errno = EINVAL;
             return -1;
         }
-        int rc = process_commands (false, false);
+        int rc = process_commands (0, false);
         if (rc != 0 && (errno == EINTR || errno == ETERM))
             return -1;
         errno_assert (rc == 0);
@@ -334,7 +343,7 @@ int zmq::socket_base_t::bind (const char *addr_)
 
         //  For convenience's sake, bind can be used interchageable with
         //  connect for PGM and EPGM transports.
-        return connect (addr_); 
+        return connect (addr_);
     }
 
     zmq_assert (false);
@@ -355,7 +364,20 @@ int zmq::socket_base_t::connect (const char *addr_)
     if (rc != 0)
         return -1;
 
+    //  Checks that protocol is valid and supported on this system
     rc = check_protocol (protocol);
+    if (rc != 0)
+        return -1;
+
+    //  Parsed address for validation
+    sockaddr_storage addr;
+    socklen_t addr_len;
+
+    if (protocol == "tcp")
+        rc = resolve_ip_hostname (&addr, &addr_len, address.c_str ());
+    else
+    if (protocol == "ipc")
+        rc = resolve_local_path (&addr, &addr_len, address.c_str ());
     if (rc != 0)
         return -1;
 
@@ -458,13 +480,20 @@ int zmq::socket_base_t::connect (const char *addr_)
 
 int zmq::socket_base_t::send (::zmq_msg_t *msg_, int flags_)
 {
+    //  Check whether the library haven't been shut down yet.
     if (unlikely (ctx_terminated)) {
         errno = ETERM;
         return -1;
     }
 
+    //  Check whether message passed to the function is valid.
+    if (unlikely ((msg_->flags | ZMQ_MSG_MASK) != 0xff)) {
+        errno = EFAULT;
+        return -1;
+    }
+
     //  Process pending commands, if any.
-    int rc = process_commands (false, true);
+    int rc = process_commands (0, true);
     if (unlikely (rc != 0))
         return -1;
 
@@ -476,33 +505,59 @@ int zmq::socket_base_t::send (::zmq_msg_t *msg_, int flags_)
     rc = xsend (msg_, flags_);
     if (rc == 0)
         return 0;
+    if (unlikely (errno != EAGAIN))
+        return -1;
 
     //  In case of non-blocking send we'll simply propagate
     //  the error - including EAGAIN - upwards.
     if (flags_ & ZMQ_NOBLOCK)
         return -1;
 
+    //  Compute the time when the timeout should occur.
+    //  If the timeout is infite, don't care. 
+    clock_t clock ;
+    int timeout = -1;
+    uint64_t end = timeout < 0 ? 0 : (clock.now_ms () + timeout);
+
     //  Oops, we couldn't send the message. Wait for the next
     //  command, process it and try to send the message again.
-    while (rc != 0) {
-        if (errno != EAGAIN)
-            return -1;
-        if (unlikely (process_commands (true, false) != 0))
+    while (true) {
+        if (unlikely (process_commands (timeout, false) != 0))
             return -1;
         rc = xsend (msg_, flags_);
+        if (rc == 0)
+            break;
+        if (unlikely (errno != EAGAIN))
+            return -1;
+        if (timeout > 0) {
+            timeout = (int) (end - clock.now_ms ());
+            if (timeout <= 0) {
+                errno = EAGAIN;
+                return -1;
+            }
+        }
     }
     return 0;
 }
 
 int zmq::socket_base_t::recv (::zmq_msg_t *msg_, int flags_)
 {
+    //  Check whether the library haven't been shut down yet.
     if (unlikely (ctx_terminated)) {
         errno = ETERM;
         return -1;
     }
 
+    //  Check whether message passed to the function is valid.
+    if (unlikely ((msg_->flags | ZMQ_MSG_MASK) != 0xff)) {
+        errno = EFAULT;
+        return -1;
+    }
+
     //  Get the message.
     int rc = xrecv (msg_, flags_);
+    if (unlikely (rc != 0 && errno != EAGAIN))
+        return -1;
     int err = errno;
 
     //  Once every inbound_poll_rate messages check for signals and process
@@ -514,7 +569,7 @@ int zmq::socket_base_t::recv (::zmq_msg_t *msg_, int flags_)
     //  described above) from the one used by 'send'. This is because counting
     //  ticks is more efficient than doing RDTSC all the time.
     if (++ticks == inbound_poll_rate) {
-        if (unlikely (process_commands (false, false) != 0))
+        if (unlikely (process_commands (0, false) != 0))
             return -1;
         ticks = 0;
     }
@@ -537,7 +592,7 @@ int zmq::socket_base_t::recv (::zmq_msg_t *msg_, int flags_)
     if (flags_ & ZMQ_NOBLOCK) {
         if (errno != EAGAIN)
             return -1;
-        if (unlikely (process_commands (false, false) != 0))
+        if (unlikely (process_commands (0, false) != 0))
             return -1;
         ticks = 0;
 
@@ -550,17 +605,33 @@ int zmq::socket_base_t::recv (::zmq_msg_t *msg_, int flags_)
         return rc;
     }
 
+    //  Compute the time when the timeout should occur.
+    //  If the timeout is infite, don't care. 
+    clock_t clock ;
+    int timeout = -1;
+    uint64_t end = timeout < 0 ? 0 : (clock.now_ms () + timeout);
+
     //  In blocking scenario, commands are processed over and over again until
     //  we are able to fetch a message.
     bool block = (ticks != 0);
-    while (rc != 0) {
-        if (errno != EAGAIN)
-            return -1;
-        if (unlikely (process_commands (block, false) != 0))
+    while (true) {
+        if (unlikely (process_commands (block ? timeout : 0, false) != 0))
             return -1;
         rc = xrecv (msg_, flags_);
-        ticks = 0;
+        if (rc == 0) {
+            ticks = 0;
+            break;
+        }
+        if (unlikely (errno != EAGAIN))
+            return -1;
         block = true;
+        if (timeout > 0) {
+            timeout = (int) (end - clock.now_ms ());
+            if (timeout <= 0) {
+                errno = EAGAIN;
+                return -1;
+            }
+        }
     }
 
     rcvmore = msg_->flags & ZMQ_MSG_MORE;
@@ -622,7 +693,7 @@ zmq::session_t *zmq::socket_base_t::find_session (const blob_t &name_)
     session->inc_seqnum ();
 
     sessions_sync.unlock ();
-    return session;    
+    return session;
 }
 
 void zmq::socket_base_t::start_reaping (poller_t *poller_)
@@ -632,17 +703,19 @@ void zmq::socket_base_t::start_reaping (poller_t *poller_)
     poller->set_pollin (handle);
 }
 
-int zmq::socket_base_t::process_commands (bool block_, bool throttle_)
+int zmq::socket_base_t::process_commands (int timeout_, bool throttle_)
 {
     int rc;
     command_t cmd;
-    if (block_) {
-        rc = mailbox.recv (&cmd, true);
-        if (rc == -1 && errno == EINTR)
-            return -1;
-        errno_assert (rc == 0);
+    if (timeout_ != 0) {
+
+        //  If we are asked to wait, simply ask mailbox to wait.
+        rc = mailbox.recv (&cmd, timeout_);
     }
     else {
+
+        //  If we are asked not to wait, check whether we haven't processed
+        //  commands recently, so that we can throttle the new commands.
 
         //  Get the CPU's tick counter. If 0, the counter is not available.
         uint64_t tsc = zmq::clock_t::rdtsc ();
@@ -664,7 +737,7 @@ int zmq::socket_base_t::process_commands (bool block_, bool throttle_)
         }
 
         //  Check whether there are any commands pending for this thread.
-        rc = mailbox.recv (&cmd, false);
+        rc = mailbox.recv (&cmd, 0);
     }
 
     //  Process all the commands available at the moment.
@@ -675,7 +748,7 @@ int zmq::socket_base_t::process_commands (bool block_, bool throttle_)
             return -1;
         errno_assert (rc == 0);
         cmd.destination->process_command (cmd);
-        rc = mailbox.recv (&cmd, false);
+        rc = mailbox.recv (&cmd, 0);
      }
 
     if (ctx_terminated) {

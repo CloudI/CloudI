@@ -50,7 +50,7 @@ int zmq::tcp_connecter_t::set_address (const char *protocol_, const char *addr_)
         return resolve_ip_hostname (&addr, &addr_len, addr_);
 
     errno = EPROTONOSUPPORT;
-    return -1;    
+    return -1;
 }
 
 int zmq::tcp_connecter_t::open ()
@@ -58,7 +58,7 @@ int zmq::tcp_connecter_t::open ()
     zmq_assert (s == retired_fd);
 
     //  Create the socket.
-    s = socket (addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
+    s = open_socket (addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
     if (s == INVALID_SOCKET) {
         wsa_error_to_errno ();
         return -1;
@@ -88,7 +88,7 @@ int zmq::tcp_connecter_t::open ()
         errno = EAGAIN;
         return -1;
     }
-    
+
     wsa_error_to_errno ();
     return -1;
 }
@@ -118,11 +118,12 @@ zmq::fd_t zmq::tcp_connecter_t::connect ()
 
         //  Assert that the error was caused by the networking problems
         //  rather than 0MQ bug.
-        errno = err;
-        errno_assert (errno == WSAECONNREFUSED || errno == WSAETIMEDOUT ||
-            errno == WSAECONNABORTED || errno == WSAEHOSTUNREACH);
+        if (err == WSAECONNREFUSED || err == WSAETIMEDOUT ||
+              err == WSAECONNABORTED || err == WSAEHOSTUNREACH ||
+              err == WSAENETUNREACH || err == WSAENETDOWN)
+            return retired_fd;
 
-        return retired_fd;
+        wsa_assert_no (err);
     }
 
     //  Return the newly connected socket.
@@ -161,7 +162,8 @@ int zmq::tcp_connecter_t::set_address (const char *protocol_, const char *addr_)
 {
     if (strcmp (protocol_, "tcp") == 0)
         return resolve_ip_hostname (&addr, &addr_len, addr_);
-    else if (strcmp (protocol_, "ipc") == 0)
+    else
+    if (strcmp (protocol_, "ipc") == 0)
         return resolve_local_path (&addr, &addr_len, addr_);
 
     errno = EPROTONOSUPPORT;
@@ -176,7 +178,7 @@ int zmq::tcp_connecter_t::open ()
     if (AF_UNIX != sa->sa_family) {
 
         //  Create the socket.
-        s = socket (sa->sa_family, SOCK_STREAM, IPPROTO_TCP);
+        s = open_socket (sa->sa_family, SOCK_STREAM, IPPROTO_TCP);
         if (s == -1)
             return -1;
 
@@ -232,13 +234,13 @@ int zmq::tcp_connecter_t::open ()
 
         //  Create the socket.
         zmq_assert (AF_UNIX == sa->sa_family);
-        s = socket (AF_UNIX, SOCK_STREAM, 0);
+        s = open_socket (AF_UNIX, SOCK_STREAM, 0);
         if (s == -1)
             return -1;
 
         //  Set the non-blocking flag.
         int flag = fcntl (s, F_GETFL, 0);
-        if (flag == -1) 
+        if (flag == -1)
             flag = 0;
         int rc = fcntl (s, F_SETFL, flag | O_NONBLOCK);
         errno_assert (rc != -1);
@@ -296,7 +298,8 @@ zmq::fd_t zmq::tcp_connecter_t::connect ()
         //  Networking problems are OK. No need to assert.
         errno = err;
         errno_assert (errno == ECONNREFUSED || errno == ECONNRESET ||
-            errno == ETIMEDOUT || errno == EHOSTUNREACH);
+            errno == ETIMEDOUT || errno == EHOSTUNREACH ||
+            errno == ENETUNREACH);
 
         return retired_fd;
     }

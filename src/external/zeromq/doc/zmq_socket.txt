@@ -68,7 +68,7 @@ ZMQ_REQ
 A socket of type 'ZMQ_REQ' is used by a _client_ to send requests to and
 receive replies from a _service_. This socket type allows only an alternating
 sequence of _zmq_send(request)_ and subsequent _zmq_recv(reply)_ calls. Each
-request sent is load-balanced among all _services_, and each reply received is
+request sent is round-robined among all _services_, and each reply received is
 matched with the last issued request.
 
 When a 'ZMQ_REQ' socket enters an exceptional state due to having reached the
@@ -82,7 +82,7 @@ messages are not discarded.
 Compatible peer sockets:: 'ZMQ_REP'
 Direction:: Bidirectional
 Send/receive pattern:: Send, Receive, Send, Receive, ...
-Outgoing routing strategy:: Load-balanced
+Outgoing routing strategy:: Round-robin
 Incoming routing strategy:: Last peer
 ZMQ_HWM option action:: Block
 
@@ -113,7 +113,7 @@ ZMQ_HWM option action:: Drop
 ZMQ_DEALER
 ^^^^^^^^^^
 A socket of type 'ZMQ_DEALER' is an advanced pattern used for extending
-request/reply sockets. Each message sent is load-balanced among all connected
+request/reply sockets. Each message sent is round-robined among all connected
 peers, and each message received is fair-queued from all connected peers.
 
 Previously this socket was called 'ZMQ_XREQ' and that name remains available
@@ -131,10 +131,10 @@ _body parts_.
 
 [horizontal]
 .Summary of ZMQ_DEALER characteristics
-Compatible peer sockets:: 'ZMQ_ROUTER', 'ZMQ_REP'
+Compatible peer sockets:: 'ZMQ_ROUTER', 'ZMQ_REQ', 'ZMQ_REP'
 Direction:: Bidirectional
 Send/receive pattern:: Unrestricted
-Outgoing routing strategy:: Load-balanced
+Outgoing routing strategy:: Round-robin
 Incoming routing strategy:: Fair-queued
 ZMQ_HWM option action:: Block
 
@@ -168,7 +168,7 @@ application must include the _delimiter_ part.
 
 [horizontal]
 .Summary of ZMQ_ROUTER characteristics
-Compatible peer sockets:: 'ZMQ_DEALER', 'ZMQ_REQ'
+Compatible peer sockets:: 'ZMQ_DEALER', 'ZMQ_REQ', 'ZMQ_REP'
 Direction:: Bidirectional
 Send/receive pattern:: Unrestricted
 Outgoing routing strategy:: See text
@@ -226,13 +226,13 @@ Pipeline pattern
 The pipeline pattern is used for distributing data to _nodes_ arranged in
 a pipeline. Data always flows down the pipeline, and each stage of the pipeline
 is connected to at least one _node_. When a pipeline stage is connected to
-multiple _nodes_ data is load-balanced among all connected _nodes_.
+multiple _nodes_ data is round-robined among all connected _nodes_.
 
 
 ZMQ_PUSH
 ^^^^^^^^
 A socket of type 'ZMQ_PUSH' is used by a pipeline _node_ to send messages
-to downstream pipeline _nodes_. Messages are load-balanced to all connected
+to downstream pipeline _nodes_. Messages are round-robined to all connected
 downstream _nodes_. The _zmq_recv()_ function is not implemented for this
 socket type.
 
@@ -250,7 +250,7 @@ Compatible peer sockets:: 'ZMQ_PULL'
 Direction:: Unidirectional
 Send/receive pattern:: Send only
 Incoming routing strategy:: N/A
-Outgoing routing strategy:: Load-balanced
+Outgoing routing strategy:: Round-robin
 ZMQ_HWM option action:: Block
 
 
@@ -318,7 +318,9 @@ ERRORS
 *EINVAL*::
 The requested socket 'type' is invalid.
 *EFAULT*::
-The provided 'context' was not valid (NULL).
+The provided 'context' is invalid.
+*EMFILE*::
+The limit on the total number of open 0MQ sockets has been reached.
 *ETERM*::
 The context specified was terminated.
 

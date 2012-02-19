@@ -1,11 +1,11 @@
 Name:          zeromq
-Version:       2.1.3
+Version:       2.1.11
 Release:       1%{?dist}
 Summary:       The ZeroMQ messaging library
 Group:         Applications/Internet
 License:       LGPLv3+
 URL:           http://www.zeromq.org/
-Source:        http://www.zeromq.org/local--files/area:download/%{name}-%{version}.tar.gz
+Source:        http://download.zeromq.org/%{name}-%{version}.tar.gz
 Prefix:        %{_prefix}
 Buildroot:     %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: gcc, make, gcc-c++, libstdc++-devel
@@ -91,14 +91,7 @@ This package contains ZeroMQ related development libraries and header files.
 %{_libdir}/libzmq.so.1
 %{_libdir}/libzmq.so.1.0.0
 
-%attr(0755,root,root) %{_bindir}/zmq_forwarder
-%attr(0755,root,root) %{_bindir}/zmq_queue
-%attr(0755,root,root) %{_bindir}/zmq_streamer
-
 %{_mandir}/man7/zmq.7.gz
-%{_mandir}/man1/zmq_forwarder.1.gz
-%{_mandir}/man1/zmq_queue.1.gz
-%{_mandir}/man1/zmq_streamer.1.gz
 
 %files devel
 %defattr(-,root,root,-)
@@ -115,6 +108,7 @@ This package contains ZeroMQ related development libraries and header files.
 %{_mandir}/man3/zmq_close.3.gz
 %{_mandir}/man3/zmq_connect.3.gz
 %{_mandir}/man3/zmq_errno.3.gz
+%{_mandir}/man3/zmq_device.3.gz
 %{_mandir}/man3/zmq_getsockopt.3.gz
 %{_mandir}/man3/zmq_init.3.gz
 %{_mandir}/man3/zmq_msg_close.3.gz

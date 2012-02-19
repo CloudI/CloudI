@@ -82,9 +82,9 @@ erlzmq
 ------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 
-- https://github.com/okeuday/erlzmq2
-- commit 006d8c47d4616d7ba283
-- Fri Apr  8 19:26:21 PDT 2011
+- https://github.com/zeromq/erlzmq2
+- commit 0471f082685f17c6f9633ce9cfe4bec0c73cfd58
+- Sat Feb 18 17:05:03 PST 2012
 - BSD
 
 etokyotyrant (medici)
@@ -118,8 +118,8 @@ jsx
 Erlang JSON Parsing
 
 - https://github.com/talentdeficit/jsx
-- commit cbade4f88b07ffbb5442
-- Sat Apr  2 23:11:56 PDT 2011
+- commit 61ef73ff729407dda67f3cf9b0c6bdd2644411b0
+- Sat Feb 18 17:07:15 PST 2012
 - MIT
 
 misultin
@@ -127,8 +127,8 @@ misultin
 Fast Erlang HTTP Server
 
 - http://github.com/ostinelli/misultin
-- commit d2e99f7b14cbe17ed89b
-- Fri Apr  8 19:28:47 PDT 2011
+- commit b9fe3125cf17f4415a6d7fc60642b670f5e18eb8
+- Sat Feb 18 17:11:31 PST 2012
 - BSD
 
 rebar
@@ -142,9 +142,9 @@ Erlang OTP-compliant build tool
 
 zeromq
 ------
-ZeroMQ 2.1.3
+ZeroMQ 3.1.0 beta
 
-- http://download.zeromq.org/zeromq-2.1.3.tar.gz
-- Wed Mar 23 16:46:10 PDT 2011
+- http://download.zeromq.org/zeromq-3.1.0-beta.tar.gz
+- Sat Feb 18 17:03:40 PST 2012
 - LGPL
 

@@ -30,6 +30,7 @@ hwm_loop(N, S) ->
     ?assertMatch({error, _} ,erlzmq:send(S, <<"test">>, [noblock])),
     hwm_loop(N-1, S).
 
+
 pair_inproc_test() ->
     basic_tests("inproc://tester", pair, pair, active),
     basic_tests("inproc://tester", pair, pair, passive).
@@ -54,8 +55,15 @@ reqrep_tcp_test() ->
     basic_tests("tcp://127.0.0.1:5556", req, rep, active),
     basic_tests("tcp://127.0.0.1:5557", req, rep, passive).
 
+bad_init_test() ->
+    ?assertEqual({error, einval}, erlzmq:context(-1)).
+
 shutdown_stress_test() ->
     ?assertMatch(ok, shutdown_stress_loop(10)).
+
+version_test() ->
+    {Major, Minor, Patch} = erlzmq:version(),
+    ?assert(is_integer(Major) andalso is_integer(Minor) andalso is_integer(Patch)).
 
 shutdown_stress_loop(0) ->
     ok;
@@ -68,11 +76,28 @@ shutdown_stress_loop(N) ->
     ?assertMatch(ok, erlzmq:term(C)),
     shutdown_stress_loop(N-1).
 
-shutdown_test() ->
+shutdown_no_blocking_test() ->
     {ok, C} = erlzmq:context(),
     {ok, S} = erlzmq:socket(C, [pub, {active, false}]),
     erlzmq:close(S),
     ?assertEqual(ok, erlzmq:term(C, 500)).
+
+shutdown_blocking_test() ->
+    {ok, C} = erlzmq:context(),
+    {ok, _S} = erlzmq:socket(C, [pub, {active, false}]),
+    ?assertMatch({error, {timeout, _}}, erlzmq:term(C, 0)).
+
+shutdown_blocking_unblocking_test() ->
+    {ok, C} = erlzmq:context(),
+    {ok, S} = erlzmq:socket(C, [pub, {active, false}]),
+    V = erlzmq:term(C, 500),
+    ?assertMatch({error, {timeout, _}}, V),
+    {error, {timeout, Ref}} = V,
+    erlzmq:close(S),
+    receive 
+        {Ref, ok} ->
+            ok
+    end.
 
 join_procs(0) ->
     ok;
@@ -111,9 +136,17 @@ create_bound_pair(Ctx, Type1, Type2, Mode, Transport) ->
     {S1, S2}.
 
 ping_pong({S1, S2}, Msg, active) ->
+    ok = erlzmq:send(S1, Msg, [sndmore]),
     ok = erlzmq:send(S1, Msg),
     receive
-        {zmq, S2, Msg} ->
+        {zmq, S2, Msg, [rcvmore]} ->
+            ok
+    after
+        1000 ->
+            ?assertMatch({ok, Msg}, timeout)
+    end,
+    receive
+        {zmq, S2, Msg, []} ->
             ok
     after
         1000 ->
@@ -121,7 +154,7 @@ ping_pong({S1, S2}, Msg, active) ->
     end,
     ok = erlzmq:send(S2, Msg),
     receive
-        {zmq, S1, Msg} ->
+        {zmq, S1, Msg, []} ->
             ok
     after
         1000 ->
@@ -129,7 +162,7 @@ ping_pong({S1, S2}, Msg, active) ->
     end,
     ok = erlzmq:send(S1, Msg),
     receive
-        {zmq, S2, Msg} ->
+        {zmq, S2, Msg, []} ->
             ok
     after
         1000 ->
@@ -137,18 +170,23 @@ ping_pong({S1, S2}, Msg, active) ->
     end,
     ok = erlzmq:send(S2, Msg),
     receive
-        {zmq, S1, Msg} ->
+        {zmq, S1, Msg, []} ->
             ok
     after
         1000 ->
             ?assertMatch({ok, Msg}, timeout)
     end,
     ok;
+    
 ping_pong({S1, S2}, Msg, passive) ->
     ok = erlzmq:send(S1, Msg),
     ?assertMatch({ok, Msg}, erlzmq:recv(S2)),
     ok = erlzmq:send(S2, Msg),
     ?assertMatch({ok, Msg}, erlzmq:recv(S1)),
+    ok = erlzmq:send(S1, Msg, [sndmore]),
+    ok = erlzmq:send(S1, Msg),
+    ?assertMatch({ok, Msg}, erlzmq:recv(S2)),
+    ?assertMatch({ok, Msg}, erlzmq:recv(S2)),
     ok.
 
 basic_tests(Transport, Type1, Type2, Mode) ->

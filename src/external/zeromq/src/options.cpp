@@ -19,9 +19,11 @@
 */
 
 #include <string.h>
+#ifndef ZMQ_HAVE_WINDOWS
+#include <sys/stat.h>
+#endif
 
 #include "../include/zmq.h"
-
 #include "options.hpp"
 #include "err.hpp"
 
@@ -62,6 +64,12 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
     case ZMQ_SWAP:
         if (optvallen_ != sizeof (int64_t) || *((int64_t*) optval_) < 0) {
             errno = EINVAL;
+            return -1;
+        }
+        //  Check that SWAP directory (.) is writable
+        struct stat stat_buf;
+        if (stat (".", &stat_buf) || ((stat_buf.st_mode & S_IWRITE) == 0)) {
+            errno = EACCES;
             return -1;
         }
         swap = *((int64_t*) optval_);

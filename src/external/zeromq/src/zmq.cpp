@@ -81,7 +81,7 @@ const char *zmq_strerror (int errnum_)
 int zmq_msg_init (zmq_msg_t *msg_)
 {
     msg_->content = (zmq::msg_content_t*) ZMQ_VSM;
-    msg_->flags = 0;
+    msg_->flags = (unsigned char) ~ZMQ_MSG_MASK;
     msg_->vsm_size = 0;
     return 0;
 }
@@ -90,7 +90,7 @@ int zmq_msg_init_size (zmq_msg_t *msg_, size_t size_)
 {
     if (size_ <= ZMQ_MAX_VSM_SIZE) {
         msg_->content = (zmq::msg_content_t*) ZMQ_VSM;
-        msg_->flags = 0;
+        msg_->flags = (unsigned char) ~ZMQ_MSG_MASK;
         msg_->vsm_size = (uint8_t) size_;
     }
     else {
@@ -100,8 +100,8 @@ int zmq_msg_init_size (zmq_msg_t *msg_, size_t size_)
             errno = ENOMEM;
             return -1;
         }
-        msg_->flags = 0;
-        
+        msg_->flags = (unsigned char) ~ZMQ_MSG_MASK;
+
         zmq::msg_content_t *content = (zmq::msg_content_t*) msg_->content;
         content->data = (void*) (content + 1);
         content->size = size_;
@@ -117,7 +117,7 @@ int zmq_msg_init_data (zmq_msg_t *msg_, void *data_, size_t size_,
 {
     msg_->content = (zmq::msg_content_t*) malloc (sizeof (zmq::msg_content_t));
     alloc_assert (msg_->content);
-    msg_->flags = 0;
+    msg_->flags = (unsigned char) ~ZMQ_MSG_MASK;
     zmq::msg_content_t *content = (zmq::msg_content_t*) msg_->content;
     content->data = data_;
     content->size = size_;
@@ -129,6 +129,12 @@ int zmq_msg_init_data (zmq_msg_t *msg_, void *data_, size_t size_,
 
 int zmq_msg_close (zmq_msg_t *msg_)
 {
+    //  Check the validity tag.
+    if (unlikely (msg_->flags | ZMQ_MSG_MASK) != 0xff) {
+        errno = EFAULT;
+        return -1;
+    }
+
     //  For VSMs and delimiters there are no resources to free.
     if (msg_->content != (zmq::msg_content_t*) ZMQ_DELIMITER &&
           msg_->content != (zmq::msg_content_t*) ZMQ_VSM) {
@@ -148,17 +154,22 @@ int zmq_msg_close (zmq_msg_t *msg_)
         }
     }
 
-    //  As a safety measure, let's make the deallocated message look like
-    //  an empty message.
-    msg_->content = (zmq::msg_content_t*) ZMQ_VSM;
+    //  Remove the validity tag from the message.
     msg_->flags = 0;
-    msg_->vsm_size = 0;
 
     return 0;
 }
 
 int zmq_msg_move (zmq_msg_t *dest_, zmq_msg_t *src_)
 {
+#if 0
+    //  Check the validity tags.
+    if (unlikely ((dest_->flags | ZMQ_MSG_MASK) != 0xff ||
+          (src_->flags | ZMQ_MSG_MASK) != 0xff)) {
+        errno = EFAULT;
+        return -1;
+    }
+#endif
     zmq_msg_close (dest_);
     *dest_ = *src_;
     zmq_msg_init (src_);
@@ -167,6 +178,13 @@ int zmq_msg_move (zmq_msg_t *dest_, zmq_msg_t *src_)
 
 int zmq_msg_copy (zmq_msg_t *dest_, zmq_msg_t *src_)
 {
+    //  Check the validity tags.
+    if (unlikely ((dest_->flags | ZMQ_MSG_MASK) != 0xff ||
+          (src_->flags | ZMQ_MSG_MASK) != 0xff)) {
+        errno = EFAULT;
+        return -1;
+    }
+
     zmq_msg_close (dest_);
 
     //  VSMs and delimiters require no special handling.
@@ -190,6 +208,8 @@ int zmq_msg_copy (zmq_msg_t *dest_, zmq_msg_t *src_)
 
 void *zmq_msg_data (zmq_msg_t *msg_)
 {
+    zmq_assert ((msg_->flags | ZMQ_MSG_MASK) == 0xff);
+
     if (msg_->content == (zmq::msg_content_t*) ZMQ_VSM)
         return msg_->vsm_data;
     if (msg_->content == (zmq::msg_content_t*) ZMQ_DELIMITER)
@@ -200,6 +220,8 @@ void *zmq_msg_data (zmq_msg_t *msg_)
 
 size_t zmq_msg_size (zmq_msg_t *msg_)
 {
+    zmq_assert ((msg_->flags | ZMQ_MSG_MASK) == 0xff);
+
     if (msg_->content == (zmq::msg_content_t*) ZMQ_VSM)
         return msg_->vsm_size;
     if (msg_->content == (zmq::msg_content_t*) ZMQ_DELIMITER)
@@ -262,7 +284,7 @@ void *zmq_init (int io_threads_)
 
 int zmq_term (void *ctx_)
 {
-    if (!ctx_) {
+    if (!ctx_ || !((zmq::ctx_t*) ctx_)->check_tag ()) {
         errno = EFAULT;
         return -1;
     }
@@ -288,7 +310,7 @@ int zmq_term (void *ctx_)
 
 void *zmq_socket (void *ctx_, int type_)
 {
-    if (!ctx_) {
+    if (!ctx_ || !((zmq::ctx_t*) ctx_)->check_tag ()) {
         errno = EFAULT;
         return NULL;
     }
@@ -297,8 +319,8 @@ void *zmq_socket (void *ctx_, int type_)
 
 int zmq_close (void *s_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     ((zmq::socket_base_t*) s_)->close ();
@@ -308,8 +330,8 @@ int zmq_close (void *s_)
 int zmq_setsockopt (void *s_, int option_, const void *optval_,
     size_t optvallen_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->setsockopt (option_, optval_,
@@ -318,8 +340,8 @@ int zmq_setsockopt (void *s_, int option_, const void *optval_,
 
 int zmq_getsockopt (void *s_, int option_, void *optval_, size_t *optvallen_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->getsockopt (option_, optval_,
@@ -328,8 +350,8 @@ int zmq_getsockopt (void *s_, int option_, void *optval_, size_t *optvallen_)
 
 int zmq_bind (void *s_, const char *addr_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->bind (addr_));
@@ -337,8 +359,8 @@ int zmq_bind (void *s_, const char *addr_)
 
 int zmq_connect (void *s_, const char *addr_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->connect (addr_));
@@ -346,8 +368,8 @@ int zmq_connect (void *s_, const char *addr_)
 
 int zmq_send (void *s_, zmq_msg_t *msg_, int flags_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->send (msg_, flags_));
@@ -355,8 +377,8 @@ int zmq_send (void *s_, zmq_msg_t *msg_, int flags_)
 
 int zmq_recv (void *s_, zmq_msg_t *msg_, int flags_)
 {
-    if (!s_) {
-        errno = EFAULT;
+    if (!s_ || !((zmq::socket_base_t*) s_)->check_tag ()) {
+        errno = ENOTSOCK;
         return -1;
     }
     return (((zmq::socket_base_t*) s_)->recv (msg_, flags_));
@@ -390,7 +412,8 @@ int zmq_poll (zmq_pollitem_t *items_, int nitems_, long timeout_)
         Sleep (timeout_ > 0 ? timeout_ / 1000 : INFINITE);
         return 0;
 #else
-        return usleep (timeout_);
+        usleep (timeout_);
+	return 0;
 #endif
     }
 
@@ -543,7 +566,8 @@ int zmq_poll (zmq_pollitem_t *items_, int nitems_, long timeout_)
         Sleep (timeout_ > 0 ? timeout_ / 1000 : INFINITE);
         return 0;
 #else
-        return usleep (timeout_);
+        usleep (timeout_);
+        return 0;
 #endif
     }
 
@@ -627,13 +651,21 @@ int zmq_poll (zmq_pollitem_t *items_, int nitems_, long timeout_)
             memcpy (&inset, &pollset_in, sizeof (fd_set));
             memcpy (&outset, &pollset_out, sizeof (fd_set));
             memcpy (&errset, &pollset_err, sizeof (fd_set));
-            int rc = select (maxfd + 1, &inset, &outset, &errset, ptimeout);
 #if defined ZMQ_HAVE_WINDOWS
-            wsa_assert (rc != SOCKET_ERROR);
+            int rc = select (0, &inset, &outset, &errset, ptimeout);
+            if (unlikely (rc == SOCKET_ERROR)) {
+                zmq::wsa_error_to_errno ();
+                if (errno == ENOTSOCK)
+                    return -1;
+                wsa_assert (false);
+            }
 #else
-            if (rc == -1 && errno == EINTR)
-                return -1;
-            errno_assert (rc >= 0);
+            int rc = select (maxfd + 1, &inset, &outset, &errset, ptimeout);
+            if (unlikely (rc == -1)) {
+                if (errno == EINTR || errno == EBADF)
+                    return -1;
+                errno_assert (false);
+            }
 #endif
             break;
         }

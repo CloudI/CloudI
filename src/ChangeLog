@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update zeromq to 2.1.11 and erlzmq2
+    * Update jsx to 1.0rc1
+    * Update misultin to 0.9f
+    * Update trie and uuid code
+
 2012-01-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix a race condition within the usage of the hexpi thread pool
