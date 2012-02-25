@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,11 +44,11 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(pool2).
+-module(cloudi_pool).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -112,14 +112,15 @@ handle_call(get, _, #state{pool = Pool,
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+     error, State}.
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
-    Pids = lists2:itera(fun(Child, L, F) ->
+    Pids = cloudi_lists:itera(fun(Child, L, F) ->
         case supervisor:start_child(Supervisor, Child) of
             {ok, Pid} ->
                 F([Pid | L]);
@@ -156,7 +157,7 @@ code_change(_, State, _) ->
 
 update(I, #state{supervisor = Supervisor} = State) ->
     Pids = lists:foldl(fun
-        ({pool2, _, _, _}, L) ->
+        ({cloudi_pool, _, _, _}, L) ->
             L;
         ({_, undefined, _, _}, L) ->
             L;

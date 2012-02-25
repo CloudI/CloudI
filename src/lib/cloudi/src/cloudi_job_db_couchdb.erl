@@ -858,7 +858,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {timeout, ?DEFAULT_TIMEOUT},
         {database, ?DEFAULT_DATABASE}],
     [HostName, Port, Timeout, DatabaseName] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     case ecouchdb:connect(HostName, Port, Timeout) of
         {ok, Connection} ->
             cloudi_job:subscribe(Dispatcher, DatabaseName),
@@ -1033,15 +1033,15 @@ reply_internal({OutputState, OutputData}, _, State) ->
     {reply, {OutputState, OutputData}, State}.
 
 reply_external({Output, Output, NewConnection}, Input, State) ->
-    reply_binary(string2:term_to_binary(Output),
+    reply_binary(cloudi_string:term_to_binary(Output),
                  Input, State#state{connection = NewConnection});
 reply_external({OutputState, OutputData, NewConnection}, Input, State) ->
-    reply_binary(string2:term_to_binary({OutputState, OutputData}),
+    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
                  Input, State#state{connection = NewConnection});
 reply_external({Output, Output}, Input, State) ->
-    reply_binary(string2:term_to_binary(Output), Input, State);
+    reply_binary(cloudi_string:term_to_binary(Output), Input, State);
 reply_external({OutputState, OutputData}, Input, State) ->
-    reply_binary(string2:term_to_binary({OutputState, OutputData}),
+    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
                  Input, State);
 reply_external(Output, Input, State) when is_binary(Output) ->
     reply_binary(Output, Input, State).
@@ -1051,7 +1051,7 @@ reply_binary(Output, Input, State) ->
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Connection, HostName, Port, Database, Timeout) ->
-    try (case string2:binary_to_term(Query) of
+    try (case cloudi_string:binary_to_term(Query) of
         'create_database' ->
             ecouchdb:create_database_c(Connection, HostName, Port,
                                        Database, Timeout);

@@ -87,7 +87,7 @@ cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
                 V ->
                     erlang:list_to_integer(erlang:binary_to_list(V))
             end,
-            erlang:list_to_binary(string2:format(
+            erlang:list_to_binary(cloudi_string:format(
                 "<http_test><value>~w</value></http_test>", [Value]
             ));
         error ->

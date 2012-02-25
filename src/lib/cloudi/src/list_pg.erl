@@ -211,7 +211,8 @@ handle_call({get_random_pid, Name, Exclude}, _,
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+     error, State}.
 
 -type cast() :: {'exchange', node(), #state{}}.
 

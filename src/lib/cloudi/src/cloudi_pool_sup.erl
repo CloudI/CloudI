@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Tuple operations==
+%%% ==Pool Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,16 +43,20 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
+%%% @copyright 2011 Michael Truog
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(tuple2).
+-module(cloudi_pool_sup).
 -author('mjtruog [at] gmail (dot) com').
 
+-behaviour(supervisor).
+
 %% external interface
--export([move/4,
-         match/3]).
+-export([start_link/3]).
+
+%% supervisor callbacks
+-export([init/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -60,66 +64,34 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Move a tuple into a larger tuple.===
-%% Make a new tuple with arity N and default D, then
-%% move tuple T into the new tuple at index I.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec move(I :: pos_integer(),
-           N :: pos_integer(),
-           T :: tuple(),
-           D :: any()) -> tuple().
+start_link(Name, Count, {_, StartFunc, Restart, Shutdown, Type, Modules})
+    when is_atom(Name), is_integer(Count), Count > 0 ->
+    ChildSpecs = lists:foldl(fun(Id, L) ->
+        [{Id, StartFunc, Restart, Shutdown, Type, Modules} | L]
+    end, [], lists:seq(1, Count)),
+    start_link(Name, ChildSpecs).
 
-move(I, N, T, D)
-    when is_integer(I), is_integer(N), is_tuple(T),
-         (N - I + 1) >= tuple_size(T) ->
-    move_i(I, 1, I + tuple_size(T), erlang:make_tuple(N, D), T).
+%%%------------------------------------------------------------------------
+%%% Callback functions from supervisor
+%%%------------------------------------------------------------------------
 
-move_i(N1, _, N1, T1, _) ->
-    T1;
+init([Name, ChildSpecs]) ->
+    MaxRestarts = 5,
+    MaxTime = 60, % seconds (1 minute)
+    Shutdown = 2000, % milliseconds (2 seconds)
+    {ok, {{one_for_one, MaxRestarts, MaxTime}, 
+          [{cloudi_pool,
+            {cloudi_pool, start_link, [Name, ChildSpecs, self()]},
+            permanent, Shutdown, worker, [cloudi_pool]}]}}.
 
-move_i(I1, I0, N1, T1, T0) ->
-    move_i(I1 + 1, I0 + 1, N1,
-           erlang:setelement(I1, T1, erlang:element(I0, T0)), T0).
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Match tuples based on a bitmask.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec match({any()} | {any(), any()} | {any(), any(), any()},
-            {any()} | {any(), any()} | {any(), any(), any()},
-            pos_integer()) -> boolean().
-
-match({E0}, {E0}, 2#1) ->
-    true;
-match({ _, E1}, { _, E1}, 2#01) ->
-    true;
-match({ _,  _, E2}, { _,  _, E2}, 2#001) ->
-    true;
-match({E0,  _}, {E0,  _}, 2#10) ->
-    true;
-match({ _, E1,  _}, { _, E1,  _}, 2#010) ->
-    true;
-match({E0, E1}, {E0, E1}, 2#11) ->
-    true;
-match({ _, E1, E2}, { _, E1, E2}, 2#011) ->
-    true;
-match({E0,  _,  _}, {E0,  _,  _}, 2#100) ->
-    true;
-match({E0,  _, E2}, {E0,  _, E2}, 2#101) ->
-    true;
-match({E0, E1,  _}, {E0, E1,  _}, 2#110) ->
-    true;
-match({E0, E1, E2}, {E0, E1, E2}, 2#111) ->
-    true;
-match({ _,  _,  _}, { _,  _,  _},     _) ->
-    false;
-match({ _,  _}, { _,  _},    _) ->
-    false;
-match({ _}, { _},   _) ->
-    false.
+start_link(Name, ChildSpecs)
+    when is_atom(Name), is_list(ChildSpecs) ->
+    supervisor:start_link(?MODULE, [Name, ChildSpecs]).
 

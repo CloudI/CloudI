@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
+%%% @copyright 2009-2012 Michael Truog
 %%% @version 0.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -138,26 +138,23 @@ child_specification(cloudi_job_sup) ->
 child_specification(cloudi_os_spawn_pool) ->
     Shutdown = 2000, % milliseconds
     {cloudi_os_spawn_pool,
-     {pool2_sup, start_link,
+     {cloudi_pool_sup, start_link,
       [cloudi_os_spawn, os_process_count(),
        {undefined, {cloudi_os_spawn, start_link, []},
         permanent, Shutdown, worker, [cloudi_os_spawn]}]},
-     permanent, infinity, supervisor, [pool2_sup]};
+     permanent, infinity, supervisor, [cloudi_pool_sup]};
 
 child_specification(cloudi_socket_sup) ->
     {cloudi_socket_sup,
      {cloudi_socket_sup, start_link, []},
      permanent, infinity, supervisor, [cloudi_socket_sup]}.
 
-os_process_count() ->
-    1.
+% determine the number of cloudi_os_spawn child processes within the
+% cloudi_pool_sup, referenced by a cloudi_pool process with a
+% locally registered name of 'cloudi_os_spawn'
+
 %os_process_count() ->
-%    case erlang:system_info(logical_processors_available) of
-%       unknown ->
-%           2;
-%       Count when Count > 2 ->
-%           Count;
-%       _ ->
-%           2
-%    end.
+%    1.
+os_process_count() ->
+    erlang:system_info(schedulers).
 

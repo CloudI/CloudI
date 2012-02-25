@@ -113,7 +113,7 @@ handle_call({reconfigure, Config, _}, _,
             #state{nodes_alive = NodesAlive,
                    timer_reconnect = TimerReconnect} = State) ->
     NewNodesDead = lists:foldl(fun(N, L) ->
-        case lists2:delete_checked(N, L) of
+        case cloudi_lists:delete_checked(N, L) of
             false ->
                 % node is alive, but is no longer configured
                 net_kernel:disconnect(N),
@@ -150,7 +150,8 @@ handle_call(nodes, _,
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+     error, State}.
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
@@ -160,8 +161,9 @@ handle_info({'nodeup', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead} = State) ->
     ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
-    {noreply, State#state{nodes_alive = [Node | NodesAlive],
-                          nodes_dead = lists2:delete_all(Node, NodesDead)}};
+    {noreply,
+     State#state{nodes_alive = [Node | NodesAlive],
+                 nodes_dead = cloudi_lists:delete_all(Node, NodesDead)}};
 
 handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,

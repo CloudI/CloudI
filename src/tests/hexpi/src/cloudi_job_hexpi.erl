@@ -341,7 +341,7 @@ send_task(#state{destination = Name,
         {ok, Pid} ->
             TaskSize = cloudi_task_size:get(TaskSizeInitial, Pid,
                                             TaskSizeLookup),
-            Iterations = math2:ceil(TaskSize * ?MAX_ITERATIONS),
+            Iterations = cloudi_math:ceil(TaskSize * ?MAX_ITERATIONS),
             % determine the size of the task and take the ceiling of the value
             % (to avoid iterations of 0)
             IndexStr = erlang:integer_to_list(Index),
@@ -351,7 +351,7 @@ send_task(#state{destination = Name,
                         IndexBin/binary, 0>>,
             % TargetTime is the percentage of an hour
             % (elapsed time is returned this way from the hexpi C++ code)
-            Timeout = math2:ceil(TargetTime * 3600000.0) + 5000,
+            Timeout = cloudi_math:ceil(TargetTime * 3600000.0) + 5000,
             case cloudi_job:send_async_active(Dispatcher, Name, Request,
                                               Timeout, Pid) of
                 {ok, TransId} ->
@@ -462,20 +462,21 @@ sql_create() ->
       ");">>.
 
 sql_insert(DigitIndex, PiResult) ->
-    list_to_binary(string2:format("INSERT INTO incoming_results "
-                                  "(digit_index, data) VALUES (~w, '~s');",
-                                  [DigitIndex, PiResult])).
+    list_to_binary(cloudi_string:format("INSERT INTO incoming_results "
+                                        "(digit_index, data) "
+                                        "VALUES (~w, '~s');",
+                                        [DigitIndex, PiResult])).
 
 memcached(DigitIndex, PiResult) ->
-    string2:format("{set, \"~w\", <<\"~s\">>}",
-                   [DigitIndex, PiResult]).
+    cloudi_string:format("{set, \"~w\", <<\"~s\">>}",
+                         [DigitIndex, PiResult]).
 
 tokyotyrant(DigitIndex, PiResult) ->
-    string2:format("{put, \"~w\", <<\"~s\">>}",
-                   [DigitIndex, PiResult]).
+    cloudi_string:format("{put, \"~w\", <<\"~s\">>}",
+                         [DigitIndex, PiResult]).
 
 couchdb(DigitIndex, Pid) ->
-    string2:format("{update_document, \"pi_state\","
-                   " [{<<\"~s\", <<\"~w\">>}]}",
-                   [erlang:pid_to_list(Pid), DigitIndex]).
+    cloudi_string:format("{update_document, \"pi_state\","
+                         " [{<<\"~s\", <<\"~w\">>}]}",
+                         [erlang:pid_to_list(Pid), DigitIndex]).
 

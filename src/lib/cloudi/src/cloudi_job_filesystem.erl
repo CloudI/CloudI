@@ -84,7 +84,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
         {directory,              undefined},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [Directory, UseHttpGetSuffix] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Directory),
     Files = filelib:fold_files(Directory, ".*", true, fun(FilePath, D1) ->
         {ok, Contents} = file:read_file(FilePath),

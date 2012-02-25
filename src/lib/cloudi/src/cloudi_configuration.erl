@@ -263,7 +263,7 @@ jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
         end, L),
         cloudi_configurator:job_stop(Job),
         NewL
-    end, Jobs, lists2:rsort(Value)),
+    end, Jobs, cloudi_lists:rsort(Value)),
     Config#config{jobs = NewJobs}.
 
 %%-------------------------------------------------------------------------
@@ -288,7 +288,7 @@ jobs_restart([UUID | _] = Value, #config{jobs = Jobs} = Config)
         end, L),
         cloudi_configurator:job_restart(Job),
         NewL
-    end, Jobs, lists2:rsort(Value)),
+    end, Jobs, cloudi_lists:rsort(Value)),
     Config#config{jobs = NewJobs}.
 
 %%-------------------------------------------------------------------------
@@ -297,7 +297,7 @@ jobs_restart([UUID | _] = Value, #config{jobs = Jobs} = Config)
 %% @end
 %%-------------------------------------------------------------------------
 jobs(#config{jobs = Jobs}) ->
-    erlang:list_to_binary(string2:format("~p", [lists:map(fun(Job) ->
+    erlang:list_to_binary(cloudi_string:format("~p", [lists:map(fun(Job) ->
         if
             is_record(Job, config_job_internal) ->
                 {Job#config_job_internal.uuid,
@@ -396,7 +396,7 @@ new([{'logging', [T | _] = Value} | Terms], Config)
         {level, (Config#config.logging)#config_logging.level},
         {file, (Config#config.logging)#config_logging.file},
         {redirect, (Config#config.logging)#config_logging.redirect}],
-    [Level, File, Redirect] = proplists2:take_values(Defaults, Value),
+    [Level, File, Redirect] = cloudi_proplists:take_values(Defaults, Value),
     true = ((Level =:= fatal) or (Level =:= error) or (Level =:= warn) or
             (Level =:= info) or (Level =:= debug) or (Level =:= trace) or
             (Level =:= off)),

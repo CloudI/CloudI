@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_mysql).
@@ -172,7 +172,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {encoding, ?DEFAULT_ENCODING},
         {database, undefined}],
     [HostName, UserName, Password, Port, Encoding, Database] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Database),
     try mysql_conn:start(HostName, Port, UserName, Password,
                          Database, Encoding, undefined) of
@@ -249,9 +249,9 @@ response_internal({error, _} = Error, _) ->
     Error.
 
 response_external({data, Result}, Input) ->
-    cloudi_response:new(Input, string2:term_to_binary(Result));
+    cloudi_response:new(Input, cloudi_string:term_to_binary(Result));
 response_external({update, Result}, Input) ->
-    cloudi_response:new(Input, string2:term_to_binary(Result));
+    cloudi_response:new(Input, cloudi_string:term_to_binary(Result));
 response_external({error, _} = Error, Input) ->
     cloudi_response:new(Input, Error).
 

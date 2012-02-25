@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_db_tokyotyrant).
@@ -1193,7 +1193,7 @@ cloudi_job_init([{database, DatabaseName, Args}], _Prefix, Dispatcher) ->
         {run_server, ?DEFAULT_RUN_SERVER}],
     [HostName, Port, Timeout, Connections, AutoSync, AutoTune,
      Native, ConnectOpts, AutoCopy, RunServer] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     MediciOptions = [   
         {hostname, HostName},
         {port, Port},
@@ -1314,7 +1314,7 @@ cloudi_job_terminate(_, #state{connection = Connection}) ->
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Timeout, Connection) ->
-    try (case string2:binary_to_term(Query) of
+    try (case cloudi_string:binary_to_term(Query) of
         % basic medici API
         {'addint', Key, Integer}
             when is_list(Key), is_integer(Integer);
@@ -1482,7 +1482,7 @@ do_query(Query, Timeout, Connection) ->
         Result when is_binary(Result) ->
             Result;
         Result when is_list(Result) ->
-            string2:term_to_list(Result)
+            cloudi_string:term_to_list(Result)
             
     catch
         _:Reason ->

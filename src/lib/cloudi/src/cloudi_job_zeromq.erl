@@ -86,12 +86,12 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init(Args, Prefix, Dispatcher) ->
-    {SubscribeL, L1} = proplists2:partition(subscribe, Args),
-    {PublishL, L2} = proplists2:partition(publish, L1),
-    {RequestL, L3} = proplists2:partition(outbound, L2),
-    {ReplyL, L4} = proplists2:partition(inbound, L3),
-    {PullL, L5} = proplists2:partition(pull, L4),
-    {PushL, []} = proplists2:partition(push, L5),
+    {SubscribeL, L1} = cloudi_proplists:partition(subscribe, Args),
+    {PublishL, L2} = cloudi_proplists:partition(publish, L1),
+    {RequestL, L3} = cloudi_proplists:partition(outbound, L2),
+    {ReplyL, L4} = cloudi_proplists:partition(inbound, L3),
+    {PullL, L5} = cloudi_proplists:partition(pull, L4),
+    {PushL, []} = cloudi_proplists:partition(push, L5),
 
     {ok, Context} = erlzmq:context(),
     ReceivesZMQ1 = dict:new(),

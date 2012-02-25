@@ -14,7 +14,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -49,8 +49,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_work_manager).
@@ -93,7 +93,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {destination,     ?DEFAULT_DESTINATION},
         {name,            undefined}],
     [Delay, Destination, Name] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Delay),
     true = is_list(Destination),
     true = is_list(Name),

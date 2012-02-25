@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.2 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(lists2).
+-module(cloudi_lists).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -229,7 +229,7 @@ keypttake(Key, N, Match, L) when is_integer(N), N > 0 ->
     keypttake(Key, N, Match, L, 0, []).
 
 keypttake(Key, N, Match, [H | T], I, L) ->
-    case tuple2:match(element(N, H), Key, Match) of
+    case cloudi_tuple:match(element(N, H), Key, Match) of
         true ->
             {value, I, H, lists:reverse(L) ++ T};
         false ->
