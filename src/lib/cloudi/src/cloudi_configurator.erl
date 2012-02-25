@@ -224,7 +224,8 @@ handle_call({nodes_remove, L, Timeout}, _,
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+     error, State}.
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),

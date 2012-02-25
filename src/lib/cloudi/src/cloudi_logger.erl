@@ -261,7 +261,8 @@ init([#config_logging{level = Level,
     end.
 
 handle_call(Request, _, State) ->
-    {stop, string2:format("Unknown call \"~p\"~n", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]),
+     error, State}.
 
 handle_cast({change_loglevel, Level},
             #state{destination = Destination} = State) ->
@@ -298,17 +299,17 @@ handle_cast({Level, {_, _, MicroSeconds} = Now, Node, Pid,
          Level =:= info; Level =:= debug; Level =:= trace ->
     Description = lists:map(fun(S) ->
       io_lib:format(" ~s~n", [S])
-    end, string:tokens(string2:format(Format, Args), "\n")),
+    end, string:tokens(cloudi_string:format(Format, Args), "\n")),
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
-    Message = string2:format("~4..0w-~2..0w-~2..0wT"
-                             "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                             "(~p:~p:~p:~p)~n~s",
-                             [DateYYYY, DateMM, DateDD,
-                              TimeHH, TimeMM, TimeSS, MicroSeconds,
-                              level_to_string(Level),
-                              Module, Line, Pid, Node, Description]),
+    Message = cloudi_string:format("~4..0w-~2..0w-~2..0wT"
+                                   "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
+                                   "(~p:~p:~p:~p)~n~s",
+                                   [DateYYYY, DateMM, DateDD,
+                                    TimeHH, TimeMM, TimeSS, MicroSeconds,
+                                    level_to_string(Level),
+                                    Module, Line, Pid, Node, Description]),
     case file:read_file_info(FilePath) of
         {ok, FileInfo} ->
             CurrentInode = FileInfo#file_info.inode,
@@ -343,10 +344,10 @@ handle_cast({Level, {_, _, MicroSeconds} = Now, Node, Pid,
     end;
 
 handle_cast(Request, State) ->
-    {stop, string2:format("Unknown cast \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
 
 handle_info(Request, State) ->
-    {stop, string2:format("Unknown info \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~p\"~n", [Request]), State}.
 
 terminate(_, #state{fd = Fd}) ->
     file:close(Fd),
@@ -447,7 +448,7 @@ interface(off, _) ->
     trace(_, _, _, _) -> ok.
     ";
 interface(fatal, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
@@ -459,7 +460,7 @@ interface(fatal, Process) ->
     trace(_, _, _, _) -> ok.
     ", [Process]);
 interface(error, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
@@ -472,7 +473,7 @@ interface(error, Process) ->
     trace(_, _, _, _) -> ok.
     ", [Process, Process]);
 interface(warn, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
@@ -486,7 +487,7 @@ interface(warn, Process) ->
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process]);
 interface(info, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
@@ -501,7 +502,7 @@ interface(info, Process) ->
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process, Process]);
 interface(debug, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
@@ -517,7 +518,7 @@ interface(debug, Process) ->
     trace(_, _, _, _) -> ok.
     ", [Process, Process, Process, Process, Process]);
 interface(trace, Process) ->
-    string2:format(
+    cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->

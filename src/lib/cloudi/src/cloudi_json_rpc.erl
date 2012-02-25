@@ -111,7 +111,7 @@ request_to_json(Method, Params, Id)
                               {<<"jsonrpc">>, <<"2.0">>}]);
         true ->
             ParamsBin = lists:map(fun(E) ->
-                string2:term_to_binary(E)
+                cloudi_string:term_to_binary(E)
             end, Params),
             jsx:term_to_json([{<<"method">>, MethodBin},
                               {<<"params">>, ParamsBin},

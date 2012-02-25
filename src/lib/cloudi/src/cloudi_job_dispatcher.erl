@@ -338,7 +338,8 @@ handle_call({'recv_async', Timeout, TransId}, Client,
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, string2:format("Unknown call \"~p\"", [Request]), error, State}.
+    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+     error, State}.
 
 handle_cast({'subscribe', Name},
             #state{job = Job,

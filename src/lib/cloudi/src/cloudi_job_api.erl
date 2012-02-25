@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_api).
@@ -65,41 +65,46 @@
 
 -record(state,
     {
-        functions = trie:new([{"acl_add",
-                               {fun cloudi_configurator:acl_add/2, 2}},
-                              {"acl_remove",
-                               {fun cloudi_configurator:acl_remove/2, 2}},
-                              {"jobs_add",
-                               {fun cloudi_configurator:jobs_add/2, 2}},
-                              {"jobs_remove",
-                               {fun cloudi_configurator:jobs_remove/2, 2}},
-                              {"jobs_restart",
-                               {fun cloudi_configurator:jobs_restart/2, 2}},
-                              {"jobs",
-                               {fun cloudi_configurator:jobs/1, 1}},
-                              {"nodes_add",
-                               {fun cloudi_configurator:nodes_add/2, 2}},
-                              {"nodes_remove",
-                               {fun cloudi_configurator:nodes_remove/2, 2}},
-                              {"nodes_alive",
-                               {fun cloudi_nodes:alive/1, 1}},
-                              {"nodes_dead",
-                               {fun cloudi_nodes:dead/1, 1}},
-                              {"nodes",
-                               {fun cloudi_nodes:nodes/1, 1}},
-                              {"loglevel_set",
-                               {fun loglevel_set/2, 2}},
-                              {"log_redirect",
-                               {fun log_redirect/2, 2}},
-                              {"code_path_add",
-                               {fun code_path_add/2, 2}},
-                              {"code_path_remove",
-                               {fun code_path_remove/2, 2}},
-                              {"code_path",
-                               {fun code_path/1, 1}}
-                             ]),
-        formats = trie:new([{"erlang", fun format_erlang/4},
-                            {"json_rpc", fun format_json_rpc/4}]),
+        functions = trie:new([
+            {"acl_add",
+             {fun cloudi_configurator:acl_add/2, 2}},
+            {"acl_remove",
+             {fun cloudi_configurator:acl_remove/2, 2}},
+            {"jobs_add",
+             {fun cloudi_configurator:jobs_add/2, 2}},
+            {"jobs_remove",
+             {fun cloudi_configurator:jobs_remove/2, 2}},
+            {"jobs_restart",
+             {fun cloudi_configurator:jobs_restart/2, 2}},
+            {"jobs",
+             {fun cloudi_configurator:jobs/1, 1}},
+            {"nodes_add",
+             {fun cloudi_configurator:nodes_add/2, 2}},
+            {"nodes_remove",
+             {fun cloudi_configurator:nodes_remove/2, 2}},
+            {"nodes_alive",
+             {fun cloudi_nodes:alive/1, 1}},
+            {"nodes_dead",
+             {fun cloudi_nodes:dead/1, 1}},
+            {"nodes",
+             {fun cloudi_nodes:nodes/1, 1}},
+            {"loglevel_set",
+             {fun loglevel_set/2, 2}},
+            {"log_redirect",
+             {fun log_redirect/2, 2}},
+            {"code_path_add",
+             {fun code_path_add/2, 2}},
+            {"code_path_remove",
+             {fun code_path_remove/2, 2}},
+            {"code_path",
+             {fun code_path/1, 1}}
+        ]),
+        formats = trie:new([
+            {"erlang",
+             fun format_erlang/4},
+            {"json_rpc",
+             fun format_json_rpc/4}
+        ]),
         suffix_index = undefined
     }).
  
@@ -154,8 +159,10 @@ cloudi_job_handle_request(_Type, Name, _RequestInfo, Request,
                           #state{suffix_index = SuffixIndex,
                                  functions = Functions,
                                  formats = Formats} = State, _Dispatcher) ->
-    {Format, Suffix} = string2:splitl($/, string:sub_string(Name, SuffixIndex)),
-    FunctionArity = case string2:beforel($/, Suffix, input) of
+    {Format, Suffix} = cloudi_string:splitl(
+        $/, string:sub_string(Name, SuffixIndex)
+    ),
+    FunctionArity = case cloudi_string:beforel($/, Suffix, input) of
         [] ->
             undefined;
         Method ->
@@ -179,18 +186,18 @@ cloudi_job_terminate(_, #state{}) ->
 format_erlang({F, 2}, Input, Timeout, _) ->
     if
         is_binary(Input) ->
-            case F(string2:binary_to_term(Input), Timeout) of
+            case F(cloudi_string:binary_to_term(Input), Timeout) of
                 Result when is_binary(Result) ->
                     Result;
                 Result ->
-                    string2:term_to_binary(Result)
+                    cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
-            case F(string2:list_to_term(Input), Timeout) of
+            case F(cloudi_string:list_to_term(Input), Timeout) of
                 Result when is_binary(Result) ->
                     erlang:binary_to_list(Result);
                 Result ->
-                    string2:term_to_list(Result)
+                    cloudi_string:term_to_list(Result)
             end
     end;
 
@@ -201,14 +208,14 @@ format_erlang({F, 1}, Input, Timeout, _) ->
                 Result when is_binary(Result) ->
                     Result;
                 Result ->
-                    string2:term_to_binary(Result)
+                    cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
             case F(Timeout) of
                 Result when is_binary(Result) ->
                     erlang:binary_to_list(Result);
                 Result ->
-                    string2:term_to_list(Result)
+                    cloudi_string:term_to_list(Result)
             end
     end.
 
@@ -218,16 +225,21 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
         {F, 1} when Params == [] ->
             F(Timeout);
         {F, 2} when length(Params) == 1 ->
-            F(string2:binary_to_term(erlang:hd(Params)), Timeout)
+            F(cloudi_string:binary_to_term(erlang:hd(Params)), Timeout)
          end) of
         Result when is_binary(Result) ->
-            cloudi_json_rpc:response_to_json(Result, Id);
+            cloudi_json_rpc:response_to_json(
+                Result, Id
+            );
         Result ->
-            cloudi_json_rpc:response_to_json(string2:term_to_binary(Result), Id)
+            cloudi_json_rpc:response_to_json(
+                cloudi_string:term_to_binary(Result), Id
+            )
     catch
         _:Error ->
-            cloudi_json_rpc:response_to_json(null, 0,
-                                             string2:term_to_binary(Error), Id)
+            cloudi_json_rpc:response_to_json(
+                null, 0, cloudi_string:term_to_binary(Error), Id
+            )
     end.
 
 loglevel_set(Level, _Timeout) ->

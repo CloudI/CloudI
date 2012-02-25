@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_timers).
@@ -82,7 +82,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {timers,          ?DEFAULT_TIMERS},
         {name,                  undefined}],
     [Timers, Name] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Name),
     process_timers(Timers),
     cloudi_job:subscribe(Dispatcher, Name),
@@ -94,9 +94,9 @@ cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
                           _Dispatcher) ->
     {Type, Time, F, A} = if
         is_binary(Request) ->
-            string2:binary_to_term(Request);
+            cloudi_string:binary_to_term(Request);
         is_list(Request) ->
-            string2:list_to_term(Request);
+            cloudi_string:list_to_term(Request);
         is_tuple(Request), tuple_size(Request) == 4 ->
             Request
     end,

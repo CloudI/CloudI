@@ -699,7 +699,7 @@ os_pid_kill(OsPid) ->
     % if the OsPid exists at this point, it is probably stuck.
     % without this kill, the process could just stay around, while
     % being unresponsive and without its Erlang socket pids.
-    os:cmd(string2:format("kill -9 ~w", [OsPid])).
+    os:cmd(cloudi_string:format("kill -9 ~w", [OsPid])).
 
 handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                   #state{uuid_generator = UUID,

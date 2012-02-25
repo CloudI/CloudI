@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_http).
@@ -101,7 +101,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {use_method_suffix,      ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
      OutputType, DefaultContentType, UseMethodSuffix] =
-        proplists2:take_values(Defaults, Args),
+        cloudi_proplists:take_values(Defaults, Args),
     ContentTypeLookup = content_type_lookup(),
     Loop = fun(HttpRequest) ->
         handle_http(HttpRequest, OutputType, DefaultContentType,
@@ -208,7 +208,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                 OutputType =:= binary ->
                     Response
             end,
-            FileName = string2:afterr($/, NameIncoming, input),
+            FileName = cloudi_string:afterr($/, NameIncoming, input),
             HeadersOutgoing = if
                 is_list(DefaultContentType) ->
                     [{'Content-Type', DefaultContentType}];
@@ -246,7 +246,7 @@ header_content_type(Headers) ->
         undefined ->
             "";
         ContentType ->
-            string2:beforel($;, ContentType, input)
+            cloudi_string:beforel($;, ContentType, input)
     end.
 
 % static content type lookup (based on misultin_utility)

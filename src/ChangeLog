@@ -1,6 +1,20 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Rename "2" suffix module names to avoid Erlang module name conflicts with
+      other Erlang applications:
+        array2.erl -> cloudi_array.erl
+        lists2.erl -> cloudi_lists.erl
+        math2.erl -> cloudi_math.erl
+        pool2.erl -> cloudi_pool.erl
+        pool2_sup.erl -> cloudi_pool_sup.erl
+        proplists2.erl -> cloudi_proplists.erl
+        string2.erl -> cloudi_string.erl
+        tuple2.erl -> cloudi_tuple.erl
+    * Update pqueue4 code
+
 2012-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update zeromq to 2.1.11 and erlzmq2

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -121,7 +121,7 @@ start_external(ThreadsPerProcess,
         is_list(DestAllowList) ->
             trie:new(DestAllowList)
     end,
-    {Pids, Ports} = lists2:itera2(fun(_, L1, L2, F) ->
+    {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
         case cloudi_socket_sup:create_socket(Protocol, BufferSize, Timeout,
                                              Prefix, TimeoutAsync, TimeoutSync,
                                              DestRefresh,
@@ -142,7 +142,7 @@ start_external(ThreadsPerProcess,
             % an error occurred in cloudi_socket_sup:create_socket
             {error, Ports};
         true ->
-            SpawnProcess = pool2:get(cloudi_os_spawn),
+            SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
             ProtocolChar = if Protocol == tcp -> $t; Protocol == udp -> $u end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,
