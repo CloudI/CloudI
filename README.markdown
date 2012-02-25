@@ -88,7 +88,7 @@ Integration points:
 
 * CloudI API (See [src/api/README](https://github.com/okeuday/CloudI/tree/master/src/api#readme))
 * ZeroMQ with [cloudi_job_zeromq](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_zeromq.erl) [configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
-* HTTP with [cloudi_job_misultin](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_misultin.erl) [configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
+* HTTP with [cloudi_job_http](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_http.erl) [configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
 * Supported databases
   * CouchDB with [cloudi_job_db_couchdb](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_couchdb.erl)
   * memcached with [cloudi_job_db_memcached](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_db_memcached.erl)
