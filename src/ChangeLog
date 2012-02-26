@@ -3,6 +3,10 @@
 
 2012-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * If cloudi_logger output is redirected to a different node, and it is
+      listed as a configured node, it is monitored for
+      disconnection/reconnection so that logging can be done locally if
+      necessary (i.e., while the node is known to be disconnected).
     * Rename "2" suffix module names to avoid Erlang module name conflicts with
       other Erlang applications:
         array2.erl -> cloudi_array.erl
