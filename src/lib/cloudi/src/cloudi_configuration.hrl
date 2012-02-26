@@ -48,6 +48,25 @@
         redirect = undefined
     }).
 
+-record(config_job_options,
+    {
+        % -128 (high) <= priority_default <= 127 (low)
+        priority_default = 0,
+        % a limit on the total number of incoming service messages that
+        % are queued while the service is busy (limits memory consumption)
+        queue_limit = undefined,
+        % after startup, assign the initial service group membership
+        dest_refresh_start = 500, % milliseconds
+        % maximum possible time for a service death to remove service
+        % group membership when using a lazy destination refresh method
+        % (not an immediate destination refresh method).
+        % a lazy destination refresh method is used when a
+        % service is mainly communicating with long-lived services
+        % (and an immediate destination refresh method is used when
+        %  a service is mainly communicating with short-lived services).
+        dest_refresh_delay = 300000 % milliseconds (5 minutes)
+    }).
+
 % internal job parameters
 -record(config_job_internal,
     {
@@ -63,6 +82,7 @@
         count_process,
         max_r,
         max_t,
+        options,
         uuid
     }).
 
@@ -85,6 +105,7 @@
         count_thread,
         max_r,
         max_t,
+        options,
         uuid
     }).
 

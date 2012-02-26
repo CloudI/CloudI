@@ -138,22 +138,16 @@ handle_call({reconfigure, Config, _}, _,
     NewNodesAlive = lists:filter(fun(N) ->
         not lists:member(N, NewNodesDead)
     end, Config#config.nodes),
-    NodeLogger = (Config#config.logging)#config_logging.redirect,
-    NewNodeLogger = if
-        NodeLogger == node(); NodeLogger =:= undefined ->
-            undefined;
-        true ->
-            NodeLogger
-    end,
     NewTimerReconnect = if
         NewNodesDead /= [], TimerReconnect == undefined ->
             erlang:send_after(?NODE_RECONNECT, self(), reconnect);
         true ->
             TimerReconnect
     end,
+    % assume the logger_redirect node does not need to be checked
+    % if the node was removed intentionally
     {reply, ok, State#state{nodes_dead = NewNodesDead,
                             nodes_alive = NewNodesAlive,
-                            logger_redirect = NewNodeLogger,
                             timer_reconnect = NewTimerReconnect,
                             nodes = Config#config.nodes}};
 

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.4 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_job/9]).
+         create_job/10]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,8 +76,8 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_job(Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync, DestRefresh, DestDeny, DestAllow)
+create_job(Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync,
+           DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (DestRefresh == immediate_closest) or
@@ -87,7 +87,8 @@ create_job(Module, Args, Timeout, Prefix,
            (DestRefresh == none),
     case supervisor:start_child(?MODULE, [Module, Args, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow]) of
+                                          DestRefresh, DestDeny, DestAllow,
+                                          ConfigOptions]) of
         {ok, Pid} ->
             {ok, Pid};
         {ok, Pid, _} ->

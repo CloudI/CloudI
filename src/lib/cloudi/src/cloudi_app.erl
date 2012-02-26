@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2011 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @copyright 2009-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_app).
@@ -67,6 +67,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 start(_, _) ->
+    random:seed(erlang:now()),
     {ok, Path} = application:get_env(configuration),
     case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
         {ok, Pid} ->

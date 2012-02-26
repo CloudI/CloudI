@@ -53,7 +53,7 @@
 -behaviour(gen_server).
 
 %% dispatcher interface
--export([start_link/4]).
+-export([start_link/5]).
 
 %% behavior interface
 -export([subscribe/2,
@@ -108,19 +108,21 @@
 %% internal interface
 -export([handle_request/12]).
 
+-include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
 
 -record(state,
     {
-        module,                        % job module
-        dispatcher,                    % dispatcher pid
-        job_state,                     % job state
-        recv_timeouts = dict:new(),    % tracking for recv timeouts
-        queue_messages = false,        % is the request pid busy?
-        queued = pqueue4:new(),        % queued incoming messages
-        queued_info = queue:new(),     % queue process messages for job
-        request = undefined            % request pid
+        module,                      % job module
+        dispatcher,                  % dispatcher pid
+        job_state,                   % job state
+        recv_timeouts = dict:new(),  % tracking for recv timeouts
+        queue_messages = false,      % is the request pid busy?
+        queued = pqueue4:new(),      % queued incoming messages
+        queued_info = queue:new(),   % queue process messages for job
+        request = undefined,         % request pid
+        options                      % #config_job_options{} from configuration
     }).
 
 -define(CATCH_TIMEOUT(F),
@@ -146,9 +148,11 @@ behaviour_info(_) ->
 %%% Dispatcher interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Module, Args, Prefix, Timeout)
-    when is_atom(Module), is_list(Args), is_integer(Timeout) ->
-    gen_server:start_link(?MODULE, [Module, Args, Prefix, self()],
+start_link(Module, Args, Prefix, ConfigOptions, Timeout)
+    when is_atom(Module), is_list(Args), 
+         is_record(ConfigOptions, config_job_options), is_integer(Timeout) ->
+    gen_server:start_link(?MODULE,
+                          [Module, Args, Prefix, ConfigOptions, self()],
                           [{timeout, Timeout}]).
 
 %%%------------------------------------------------------------------------
@@ -210,8 +214,7 @@ get_pid(Dispatcher, Name, Timeout)
 send_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity).
+                                 undefined, undefined}, infinity).
 
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
@@ -223,8 +226,7 @@ send_async(Dispatcher, Name, Request)
 send_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity);
+                                 undefined, undefined}, infinity);
 
 send_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -232,7 +234,7 @@ send_async(Dispatcher, Name, Request, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT}, Timeout)).
+                                    undefined}, Timeout)).
 
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
@@ -245,8 +247,7 @@ send_async(Dispatcher, Name, Request, Timeout)
 send_async(Dispatcher, Name, Request, undefined, Pid)
     when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT, Pid}, infinity);
+                                 undefined, undefined, Pid}, infinity);
 
 send_async(Dispatcher, Name, Request, Timeout, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -254,16 +255,23 @@ send_async(Dispatcher, Name, Request, Timeout, Pid)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT, Pid}, Timeout)).
+                                    undefined, Pid}, Timeout)).
 
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  RequestInfo :: any(),
                  Request :: any(),
                  Timeout :: pos_integer() | 'undefined',
-                 Priority :: integer()) ->
+                 Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'send_async', Name,
+                                 RequestInfo, Request,
+                                 undefined, undefined}, infinity);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            undefined, Priority)
@@ -271,8 +279,16 @@ send_async(Dispatcher, Name, RequestInfo, Request,
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
-                                 undefined,
-                                 Priority}, infinity);
+                                 undefined, Priority}, infinity);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'send_async', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined}, infinity);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, Priority)
@@ -290,10 +306,18 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                  RequestInfo :: any(),
                  Request :: any(),
                  Timeout :: pos_integer() | 'undefined',
-                 Priority :: integer(),
+                 Priority :: integer() | 'undefined',
                  Pid :: pid()) ->
     {'ok', binary()} |
     {'error', atom()}.
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           undefined, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined, Pid}, infinity);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            undefined, Priority, Pid)
@@ -303,6 +327,15 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority, Pid}, infinity);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           Timeout, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined, Pid}, infinity);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, Priority, Pid)
@@ -324,8 +357,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
 send_async_active(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity).
+                                 undefined, undefined}, infinity).
 
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
@@ -337,8 +369,7 @@ send_async_active(Dispatcher, Name, Request)
 send_async_active(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity);
+                                 undefined, undefined}, infinity);
 
 send_async_active(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -346,7 +377,7 @@ send_async_active(Dispatcher, Name, Request, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT}, Timeout)).
+                                    undefined}, Timeout)).
 
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
@@ -359,8 +390,7 @@ send_async_active(Dispatcher, Name, Request, Timeout)
 send_async_active(Dispatcher, Name, Request, undefined, Pid)
     when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT, Pid}, infinity);
+                                 undefined, undefined, Pid}, infinity);
 
 send_async_active(Dispatcher, Name, Request, Timeout, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -368,16 +398,24 @@ send_async_active(Dispatcher, Name, Request, Timeout, Pid)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT, Pid}, Timeout)).
+                                    undefined, Pid}, Timeout)).
 
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         RequestInfo :: any(),
                         Request :: any(),
                         Timeout :: pos_integer() | 'undefined',
-                        Priority :: integer()) ->
+                        Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined}, infinity);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   undefined, Priority)
@@ -387,6 +425,15 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined}, infinity);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Priority)
@@ -404,10 +451,18 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                         RequestInfo :: any(),
                         Request :: any(),
                         Timeout :: pos_integer() | 'undefined',
-                        Priority :: integer(),
+                        Priority :: integer() | 'undefined',
                         Pid :: pid()) ->
     {'ok', binary()} |
     {'error', atom()}.
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  undefined, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined, Pid}, infinity);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   undefined, Priority, Pid)
@@ -417,6 +472,15 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority, Pid}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined, Pid}, infinity);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Priority, Pid)
@@ -464,7 +528,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout, Pid) ->
                          RequestInfo :: any(),
                          Request :: any(),
                          Timeout :: pos_integer() | 'undefined',
-                         Priority :: integer()) ->
+                         Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
 
@@ -478,7 +542,7 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                          RequestInfo :: any(),
                          Request :: any(),
                          Timeout :: pos_integer() | 'undefined',
-                         Priority :: integer(),
+                         Priority :: integer() | 'undefined',
                          Pid :: pid()) ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -498,8 +562,7 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
 send_sync(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity).
+                                 undefined, undefined}, infinity).
 
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
@@ -512,8 +575,7 @@ send_sync(Dispatcher, Name, Request)
 send_sync(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity);
+                                 undefined, undefined}, infinity);
 
 send_sync(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -521,7 +583,7 @@ send_sync(Dispatcher, Name, Request, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT}, Timeout)).
+                                    undefined}, Timeout)).
 
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
@@ -535,8 +597,7 @@ send_sync(Dispatcher, Name, Request, Timeout)
 send_sync(Dispatcher, Name, Request, undefined, Pid)
     when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT, Pid}, infinity);
+                                 undefined, undefined, Pid}, infinity);
 
 send_sync(Dispatcher, Name, Request, Timeout, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -544,17 +605,23 @@ send_sync(Dispatcher, Name, Request, Timeout, Pid)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT, Pid}, Timeout)).
-
+                                    undefined, Pid}, Timeout)).
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 RequestInfo :: any(),
                 Request :: any(),
                 Timeout :: pos_integer() | 'undefined', 
-                Priority :: integer()) ->
+                Priority :: integer() | 'undefined') ->
     {'ok', any(), any()} |
     {'ok', any()} |
     {'error', atom()}.
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'send_sync', Name,
+                                 RequestInfo, Request,
+                                 undefined, undefined}, infinity);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           undefined, Priority)
@@ -562,8 +629,16 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
-                                 undefined,
-                                 Priority}, infinity);
+                                 undefined, Priority}, infinity);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'send_sync', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined}, infinity);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority)
@@ -581,11 +656,19 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                 RequestInfo :: any(),
                 Request :: any(),
                 Timeout :: pos_integer() | 'undefined',
-                Priority :: integer(),
+                Priority :: integer() | 'undefined',
                 Pid :: pid()) ->
     {'ok', any(), any()} |
     {'ok', any()} |
     {'error', atom()}.
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          undefined, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_sync', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined, Pid}, infinity);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           undefined, Priority, Pid)
@@ -595,6 +678,15 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority, Pid}, infinity);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          Timeout, undefined, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA, is_pid(Pid) ->
+    gen_server:call(Dispatcher, {'send_sync', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined, Pid}, infinity);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority, Pid)
@@ -616,8 +708,7 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
 mcast_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity).
+                                 undefined, undefined}, infinity).
 
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
@@ -629,8 +720,7 @@ mcast_async(Dispatcher, Name, Request)
 mcast_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT}, infinity);
+                                 undefined, undefined}, infinity);
 
 mcast_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -638,7 +728,7 @@ mcast_async(Dispatcher, Name, Request, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT}, Timeout)).
+                                    undefined}, Timeout)).
 
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
@@ -651,8 +741,7 @@ mcast_async(Dispatcher, Name, Request, Timeout)
 mcast_async(Dispatcher, Name, Request, undefined, Pid)
     when is_pid(Dispatcher), is_list(Name), is_pid(Pid) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
-                                 undefined,
-                                 ?PRIORITY_DEFAULT, Pid}, infinity);
+                                 undefined, undefined, Pid}, infinity);
 
 mcast_async(Dispatcher, Name, Request, Timeout, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -660,16 +749,23 @@ mcast_async(Dispatcher, Name, Request, Timeout, Pid)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
-                                    ?PRIORITY_DEFAULT, Pid}, Timeout)).
+                                    undefined, Pid}, Timeout)).
 
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   RequestInfo :: any(),
                   Request :: any(),
                   Timeout :: pos_integer() | 'undefined',
-                  Priority :: integer()) ->
+                  Priority :: integer() | 'undefined') ->
     {'ok', list(binary())} |
     {'error', atom()}.
+
+mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined}, infinity);
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
     when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
@@ -678,6 +774,14 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
                                  RequestInfo, Request,
                                  undefined,
                                  Priority}, infinity);
+
+mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout > ?TIMEOUT_DELTA ->
+    gen_server:call(Dispatcher, {'mcast_async', Name,
+                                 RequestInfo, Request,
+                                 Timeout - ?TIMEOUT_DELTA,
+                                 undefined}, infinity);
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -856,13 +960,14 @@ request_info_key_value_parse(RequestInfo)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Module, Args, Prefix, Dispatcher]) ->
+init([Module, Args, Prefix, ConfigOptions, Dispatcher]) ->
     case Module:cloudi_job_init(Args, Prefix, Dispatcher) of
         {ok, JobState} ->
             erlang:process_flag(trap_exit, true),
             {ok, #state{module = Module,
                         dispatcher = Dispatcher,
-                        job_state = JobState}};
+                        job_state = JobState,
+                        options = ConfigOptions}};
         {stop, _} = Stop ->
             Stop
     end.
@@ -903,8 +1008,23 @@ handle_info({'send_sync', Name, RequestInfo, Request,
                           request = RequestPid}};
 
 handle_info({_, _, _, _, Timeout, Priority, TransId, _} = T,
-            #state{queue_messages = true} = State) ->
-    {noreply, recv_timeout_start(Timeout, Priority, TransId, T, State)};
+            #state{queue_messages = true,
+                   queued = Queue,
+                   options = ConfigOptions} = State) ->
+    QueueLimit = ConfigOptions#config_job_options.queue_limit,
+    QueueLimitOk = if
+        QueueLimit /= undefined ->
+            pqueue4:len(Queue) < QueueLimit;
+        true ->
+            true
+    end,
+    if
+        QueueLimitOk ->
+            {noreply, recv_timeout_start(Timeout, Priority, TransId, T, State)};
+        true ->
+            % message is discarded since too many messages have been queued
+            {noreply, State}
+    end;
 
 handle_info({cloudi_recv_timeout, Priority, TransId},
             #state{recv_timeouts = Ids,

@@ -3,10 +3,15 @@
 
 2012-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add service options for optional parameters that control
+      typical service defaults for: priority_default, queue_limit,
+      dest_refresh_start, dest_refresh_delay
     * If cloudi_logger output is redirected to a different node, and it is
       listed as a configured node, it is monitored for
       disconnection/reconnection so that logging can be done locally if
       necessary (i.e., while the node is known to be disconnected).
+    * Fix random:uniform/1 usage so that a seed is assigned
+      based on erlang:now/1
     * Rename "2" suffix module names to avoid Erlang module name conflicts with
       other Erlang applications:
         array2.erl -> cloudi_array.erl
