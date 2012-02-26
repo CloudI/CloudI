@@ -76,7 +76,9 @@ class API(object):
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
         self.__send(term_to_binary(OtpErlangAtom("init")))
-        self.__prefix, self.__timeout_async, self.__timeout_sync = self.poll()
+        (self.__prefix,
+         self.__timeout_async, self.__timeout_sync,
+         self.__priority_default) = self.poll()
 
     @staticmethod
     def thread_count():
@@ -103,7 +105,7 @@ class API(object):
         if request_info is None:
             request_info = ''
         if priority is None:
-            priority = 0
+            priority = self.__priority_default
         self.__send(term_to_binary((OtpErlangAtom("send_async"), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -117,7 +119,7 @@ class API(object):
         if request_info is None:
             request_info = ''
         if priority is None:
-            priority = 0
+            priority = self.__priority_default
         self.__send(term_to_binary((OtpErlangAtom("send_sync"), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -131,7 +133,7 @@ class API(object):
         if request_info is None:
             request_info = ''
         if priority is None:
-            priority = 0
+            priority = self.__priority_default
         self.__send(term_to_binary((OtpErlangAtom("mcast_async"), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -275,13 +277,13 @@ class API(object):
             if command == _MESSAGE_INIT:
                 i, j = j, j + 4
                 prefixSize = struct.unpack("=I", data[i:j])[0]
-                i, j = j, j + prefixSize + 4 + 4
-                (prefix, nullTerminator, timeoutAsync,
-                 timeoutSync) = struct.unpack("=%dscII" % (prefixSize - 1),
-                                               data[i:j])
+                i, j = j, j + prefixSize + 4 + 4 + 1
+                (prefix, nullTerminator, timeoutAsync, timeoutSync,
+                 priorityDefault) = struct.unpack("=%dscIIb" % (prefixSize - 1),
+                                                  data[i:j])
                 if j != len(data):
                     raise message_decoding_exception()
-                return (prefix, timeoutSync, timeoutAsync)
+                return (prefix, timeoutSync, timeoutAsync, priorityDefault)
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4

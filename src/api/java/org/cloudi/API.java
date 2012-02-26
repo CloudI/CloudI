@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -102,6 +102,7 @@ public class API
     private String prefix;
     private int timeout_sync;
     private int timeout_async;
+    private byte priority_default;
 
     public API(final int thread_index)
                throws InvalidInputException, MessageDecodingException
@@ -129,6 +130,7 @@ public class API
         this.buffer_size = Integer.parseInt(buffer_size_str);
         this.timeout_sync = 5000;
         this.timeout_async = 5000;
+        this.priority_default = 0;
 
         // send the initialization message to the managing Erlang process
         OtpOutputStream init = new OtpOutputStream();
@@ -183,7 +185,7 @@ public class API
                               throws MessageDecodingException
     {
         return send_async(name, ("").getBytes(), request,
-                          this.timeout_async, (byte) 0);
+                          this.timeout_async, this.priority_default);
     }
 
     public TransId send_async(String name, byte[] requestInfo, byte[] request,
@@ -215,7 +217,7 @@ public class API
                               throws MessageDecodingException
     {
         return send_sync(name, ("").getBytes(), request,
-                         this.timeout_sync, (byte) 0);
+                         this.timeout_sync, this.priority_default);
     }
 
     public Response send_sync(String name, byte[] requestInfo, byte[] request,
@@ -247,7 +249,7 @@ public class API
                                      throws MessageDecodingException
     {
         return mcast_async(name, new byte[0], request,
-                           this.timeout_async, (byte) 0);
+                           this.timeout_async, this.priority_default);
     }
 
     @SuppressWarnings("unchecked")
@@ -578,6 +580,7 @@ public class API
                         this.prefix = API.getString(buffer, prefixSize);
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
+                        this.priority_default = buffer.get();
                         if (buffer.hasRemaining())
                             throw new MessageDecodingException();
                         return null;

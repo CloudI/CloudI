@@ -55,7 +55,8 @@
         % a limit on the total number of incoming service messages that
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined,
-        % after startup, assign the initial service group membership
+        % delay after startup before requesting the initial service
+        % group membership (when using a lazy destination refresh method)
         dest_refresh_start = 500, % milliseconds
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
