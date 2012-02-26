@@ -66,12 +66,18 @@
 -include("cloudi_configuration.hrl").
 -include_lib("kernel/include/file.hrl").
 
+%% logging macros used only within this module
+-define(LOG_INFO_T0(Format, Args, State),
+    log_message_internal_t0(info, ?LINE, Format, Args, State)).
+-define(LOG_INFO_T1(Format, Args, State),
+    log_message_internal_t1(info, ?LINE, Format, Args, State)).
+
 -record(state,
     {
         file_path,
         interface_module,
-        fd,
-        inode,
+        fd = undefined,
+        inode = undefined,
         level,
         destination
     }).
@@ -137,7 +143,7 @@ redirect(Node) ->
     'ok'.
 
 fatal(Process, Module, Line, Format, Args) ->
-    log_message(Process, fatal, Module, Line, Format, Args).
+    log_message_external(Process, fatal, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -155,7 +161,7 @@ fatal(Process, Module, Line, Format, Args) ->
     'ok'.
 
 error(Process, Module, Line, Format, Args) ->
-    log_message(Process, error, Module, Line, Format, Args).
+    log_message_external(Process, error, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -173,7 +179,7 @@ error(Process, Module, Line, Format, Args) ->
     'ok'.
 
 warn(Process, Module, Line, Format, Args) ->
-    log_message(Process, warn, Module, Line, Format, Args).
+    log_message_external(Process, warn, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -191,7 +197,7 @@ warn(Process, Module, Line, Format, Args) ->
     'ok'.
 
 info(Process, Module, Line, Format, Args) ->
-    log_message(Process, info, Module, Line, Format, Args).
+    log_message_external(Process, info, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -209,7 +215,7 @@ info(Process, Module, Line, Format, Args) ->
     'ok'.
 
 debug(Process, Module, Line, Format, Args) ->
-    log_message(Process, debug, Module, Line, Format, Args).
+    log_message_external(Process, debug, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -227,7 +233,7 @@ debug(Process, Module, Line, Format, Args) ->
     'ok'.
 
 trace(Process, Module, Line, Format, Args) ->
-    log_message(Process, trace, Module, Line, Format, Args).
+    log_message_external(Process, trace, Module, Line, Format, Args).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -235,12 +241,12 @@ trace(Process, Module, Line, Format, Args) ->
 
 init([#config_logging{level = Level,
                       file = FilePath,
-                      redirect = Redirect}]) ->
+                      redirect = NodeLogger}]) ->
     Destination = if
-        Redirect == node(); Redirect =:= undefined ->
+        NodeLogger == node(); NodeLogger =:= undefined ->
             ?MODULE;
         true ->
-            {cloudi_logger, Redirect}
+            {cloudi_logger, NodeLogger}
     end,
     case load_interface_module(Level, Destination) of
         {ok, Binary} when Destination == ?MODULE ->
@@ -253,9 +259,17 @@ init([#config_logging{level = Level,
                     {stop, Reason}
             end;
         {ok, Binary} ->
-            {ok, #state{interface_module = Binary,
-                        level = Level,
-                        destination = Destination}};
+            case ?LOG_INFO_T0("redirecting log output to ~p",
+                              [NodeLogger],
+                              #state{file_path = FilePath,
+                                     interface_module = Binary,
+                                     level = Level,
+                                     destination = ?MODULE}) of
+                {ok, State} ->
+                    {ok, State#state{destination = Destination}};
+                {error, Reason, _} ->
+                    {stop, Reason}
+            end;
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -265,82 +279,51 @@ handle_call(Request, _, State) ->
      error, State}.
 
 handle_cast({change_loglevel, Level},
-            #state{destination = Destination} = State) ->
-    case load_interface_module(Level, Destination) of
-        {ok, Binary} ->
-            {noreply, State#state{interface_module = Binary,
-                                  level = Level}};
-        {error, Reason} ->
-            {stop, Reason}
+            #state{level = Level} = State) ->
+    {noreply, State};
+
+handle_cast({change_loglevel, Level},
+            #state{level = LevelOld,
+                   destination = Destination} = State) ->
+    case ?LOG_INFO_T0("changing loglevel from ~p to ~p",
+                      [LevelOld, Level], State) of
+        {ok, NextState} ->
+            case load_interface_module(Level, Destination) of
+                {ok, Binary} ->
+                    NewState = NextState#state{interface_module = Binary,
+                                               level = Level},
+                    ?LOG_INFO_T1("changed loglevel from ~p to ~p",
+                                 [LevelOld, Level], NewState),
+                    {noreply, NewState};
+                {error, Reason} ->
+                    {stop, Reason, NextState}
+            end;
+        {error, Reason, NextState} ->
+            {stop, Reason, NextState}
     end;
 
-handle_cast({redirect, Node},
-            #state{level = Level} = State) ->
+handle_cast({redirect, Node}, State) ->
     Destination = if
         Node == node(); Node =:= undefined ->
             ?MODULE;
         true ->
             {cloudi_logger, Node}
     end,
-    case load_interface_module(Level, Destination) of
-        {ok, Binary} ->
-            {noreply, State#state{interface_module = Binary,
-                                  destination = Destination}};
-        {error, Reason} ->
-            {stop, Reason}
+    case log_redirect(Node, Destination, State) of
+        {ok, NewState} ->
+            {noreply, NewState};
+        {error, Reason, NewState} ->
+            {stop, Reason, NewState}
     end;
 
-handle_cast({Level, {_, _, MicroSeconds} = Now, Node, Pid,
-             Module, Line, Format, Args},
-            #state{file_path = FilePath,
-                   fd = OldFd,
-                   inode = OldInode} = State)
-    when Level =:= fatal; Level =:= error; Level =:= warn;
-         Level =:= info; Level =:= debug; Level =:= trace ->
-    Description = lists:map(fun(S) ->
-      io_lib:format(" ~s~n", [S])
-    end, string:tokens(cloudi_string:format(Format, Args), "\n")),
-    {{DateYYYY, DateMM, DateDD},
-     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
-    % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
-    Message = cloudi_string:format("~4..0w-~2..0w-~2..0wT"
-                                   "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                                   "(~p:~p:~p:~p)~n~s",
-                                   [DateYYYY, DateMM, DateDD,
-                                    TimeHH, TimeMM, TimeSS, MicroSeconds,
-                                    level_to_string(Level),
-                                    Module, Line, Pid, Node, Description]),
-    case file:read_file_info(FilePath) of
-        {ok, FileInfo} ->
-            CurrentInode = FileInfo#file_info.inode,
-            if
-                CurrentInode == OldInode ->
-                    file:write(OldFd, Message),
-                    file:datasync(OldFd),
-                    {noreply, State};
-                true ->
-                    file:close(OldFd),
-                    case log_reopen(FilePath, CurrentInode, State) of
-                        {ok, #state{fd = NewFd} = NewState} ->
-                            file:write(NewFd, Message),
-                            file:datasync(NewFd),
-                            {noreply, NewState};
-                        {error, Reason} ->
-                            {stop, Reason, State#state{fd = undefined}}
-                    end
-            end;
-        {error, enoent} ->
-            file:close(OldFd),
-            case log_open(FilePath, State) of
-                {ok, #state{fd = NewFd} = NewState} ->
-                    file:write(NewFd, Message),
-                    file:datasync(NewFd),
-                    {noreply, NewState};
-                {error, Reason} ->
-                    {stop, Reason, State#state{fd = undefined}}
-            end;
-        {error, Reason} ->
-            {stop, Reason, State}
+handle_cast({Level, Now, Node, Pid,
+             Module, Line, Format, Args}, State) ->
+    case log_message_internal(Level, Now, Node, Pid,
+                              Module, Line, Format, Args, State) of
+        {ok, NewState} ->
+            {noreply, NewState};
+        {error, Reason, NewState} ->
+            {stop, Reason, NewState}
     end;
 
 handle_cast(Request, State) ->
@@ -360,7 +343,7 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-log_message(Process, Level, Module, Line, Format, Args)
+log_message_external(Process, Level, Module, Line, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line) ->
     Now = erlang:now(),
     case flooding_logger(Now) of
@@ -393,6 +376,59 @@ flooding_logger(Now2) ->
             end
     end.
 
+log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
+                     Module, Line, Format, Args,
+                     #state{file_path = FilePath,
+                            fd = OldFd,
+                            inode = OldInode} = State)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    Description = lists:map(fun(S) ->
+      io_lib:format(" ~s~n", [S])
+    end, string:tokens(cloudi_string:format(Format, Args), "\n")),
+    {{DateYYYY, DateMM, DateDD},
+     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
+    % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
+    Message = cloudi_string:format("~4..0w-~2..0w-~2..0wT"
+                                   "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
+                                   "(~p:~p:~p:~p)~n~s",
+                                   [DateYYYY, DateMM, DateDD,
+                                    TimeHH, TimeMM, TimeSS, MicroSeconds,
+                                    level_to_string(Level),
+                                    Module, Line, Pid, Node, Description]),
+    case file:read_file_info(FilePath) of
+        {ok, FileInfo} ->
+            CurrentInode = FileInfo#file_info.inode,
+            if
+                CurrentInode == OldInode ->
+                    file:write(OldFd, Message),
+                    file:datasync(OldFd),
+                    {ok, State};
+                true ->
+                    file:close(OldFd),
+                    case log_reopen(FilePath, CurrentInode, State) of
+                        {ok, #state{fd = NewFd} = NewState} ->
+                            file:write(NewFd, Message),
+                            file:datasync(NewFd),
+                            {ok, NewState};
+                        {error, Reason} ->
+                            {error, Reason, State#state{fd = undefined}}
+                    end
+            end;
+        {error, enoent} ->
+            file:close(OldFd),
+            case log_open(FilePath, State) of
+                {ok, #state{fd = NewFd} = NewState} ->
+                    file:write(NewFd, Message),
+                    file:datasync(NewFd),
+                    {ok, NewState};
+                {error, Reason} ->
+                    {error, Reason, State#state{fd = undefined}}
+            end;
+        {error, Reason} ->
+            {error, Reason, State}
+    end.
+
 log_open(FilePath, State) ->
     case file:open(FilePath, [append, raw]) of
         {ok, Fd} ->
@@ -416,6 +452,91 @@ log_reopen(FilePath, Inode, State) ->
                              fd = Fd,
                              inode = Inode}};
         {error, _} = Error ->
+            Error
+    end.
+
+log_message_internal_t0(LevelCheck, Line, Format, Args,
+                        #state{level = Level} = State) ->
+    case log_level_allowed(LevelCheck, Level) of
+        true ->
+            log_message_internal(LevelCheck, erlang:now(), node(), self(),
+                                 ?MODULE, Line, Format, Args, State);
+        false ->
+            {ok, State}
+    end.
+
+log_message_internal_t1(LevelCheck, Line, Format, Args,
+                        #state{level = Level,
+                               destination = Destination}) ->
+    case log_level_allowed(LevelCheck, Level) of
+        true ->
+            gen_server:cast(Destination,
+                            {LevelCheck, erlang:now(), node(), self(),
+                             ?MODULE, Line, Format, Args});
+        false ->
+            ok
+    end.
+
+log_level_allowed(fatal, fatal) ->
+    true;
+log_level_allowed(fatal, error) ->
+    true;
+log_level_allowed(error, error) ->
+    true;
+log_level_allowed(fatal, warn) ->
+    true;
+log_level_allowed(error, warn) ->
+    true;
+log_level_allowed(warn, warn) ->
+    true;
+log_level_allowed(fatal, info) ->
+    true;
+log_level_allowed(error, info) ->
+    true;
+log_level_allowed(warn, info) ->
+    true;
+log_level_allowed(info, info) ->
+    true;
+log_level_allowed(fatal, debug) ->
+    true;
+log_level_allowed(error, debug) ->
+    true;
+log_level_allowed(warn, debug) ->
+    true;
+log_level_allowed(info, debug) ->
+    true;
+log_level_allowed(debug, debug) ->
+    true;
+log_level_allowed(_, trace) ->
+    true;
+log_level_allowed(_LevelCheck, _Level) ->
+    false.
+
+log_redirect(_, Destination,
+             #state{destination = Destination} = State) ->
+    {ok, State};
+
+log_redirect(Node, NewDestination,
+             #state{level = Level} = State) ->
+    NodeLogger = if
+        NewDestination =:= ?MODULE ->
+            node();
+        true ->
+            Node
+    end,
+    case ?LOG_INFO_T0("redirecting log output to ~p",
+                      [NodeLogger], State) of
+        {ok, NextState} ->
+            case load_interface_module(Level, NewDestination) of
+                {ok, Binary} ->
+                    ?LOG_INFO_T1("redirected log output from ~p to ~p",
+                                 [node(), NodeLogger], NextState),
+                    {ok, NextState#state{interface_module = Binary,
+                                         destination = NewDestination}};
+                {error, Reason} ->
+                    {error, Reason, NextState}
+            end;
+        {error, _, _} = Error ->
             Error
     end.
 

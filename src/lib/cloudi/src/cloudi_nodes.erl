@@ -58,7 +58,8 @@
          reconfigure/2,
          alive/1,
          dead/1,
-         nodes/1]).
+         nodes/1,
+         logger_redirect/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -73,6 +74,7 @@
     {
         nodes_alive = [],
         nodes_dead = [],
+        logger_redirect = undefined,
         timer_reconnect = undefined,
         nodes = []
     }).
@@ -97,13 +99,24 @@ dead(Timeout) ->
 nodes(Timeout) ->
     gen_server:call(?MODULE, nodes, Timeout).
 
+logger_redirect(Node) when is_atom(Node) ->
+    gen_server:cast(?MODULE, {logger_redirect, Node}).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
     net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
+    NodeLogger = (Config#config.logging)#config_logging.redirect,
+    NewNodeLogger = if
+        NodeLogger == node(); NodeLogger =:= undefined ->
+            undefined;
+        true ->
+            NodeLogger
+    end,
     {ok, #state{nodes_dead = Config#config.nodes,
+                logger_redirect = NewNodeLogger,
                 timer_reconnect = erlang:send_after(?NODE_RECONNECT_START,
                                                     self(),
                                                     reconnect),
@@ -125,6 +138,13 @@ handle_call({reconfigure, Config, _}, _,
     NewNodesAlive = lists:filter(fun(N) ->
         not lists:member(N, NewNodesDead)
     end, Config#config.nodes),
+    NodeLogger = (Config#config.logging)#config_logging.redirect,
+    NewNodeLogger = if
+        NodeLogger == node(); NodeLogger =:= undefined ->
+            undefined;
+        true ->
+            NodeLogger
+    end,
     NewTimerReconnect = if
         NewNodesDead /= [], TimerReconnect == undefined ->
             erlang:send_after(?NODE_RECONNECT, self(), reconnect);
@@ -133,6 +153,7 @@ handle_call({reconfigure, Config, _}, _,
     end,
     {reply, ok, State#state{nodes_dead = NewNodesDead,
                             nodes_alive = NewNodesAlive,
+                            logger_redirect = NewNodeLogger,
                             timer_reconnect = NewTimerReconnect,
                             nodes = Config#config.nodes}};
 
@@ -153,13 +174,47 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
+handle_cast({logger_redirect, NodeLogger},
+            #state{nodes_alive = NodesAlive,
+                   logger_redirect = OldNodeLogger} = State) ->
+    NewNodeLogger = if
+        NodeLogger == node(); NodeLogger =:= undefined ->
+            undefined;
+        true ->
+            NodeLogger
+    end,
+    if
+        NewNodeLogger /= OldNodeLogger ->
+            if
+                NewNodeLogger =:= undefined ->
+                    cloudi_logger:redirect(undefined);
+                true ->
+                    case lists:member(NewNodeLogger, NodesAlive) of
+                        true ->
+                            cloudi_logger:redirect(NewNodeLogger);
+                        false ->
+                            ok
+                    end
+            end,
+            {noreply, State#state{logger_redirect = NewNodeLogger}};
+        true ->
+            {noreply, State}
+    end;
+
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({'nodeup', Node, InfoList},
             #state{nodes_alive = NodesAlive,
-                   nodes_dead = NodesDead} = State) ->
+                   nodes_dead = NodesDead,
+                   logger_redirect = NodeLogger} = State) ->
+    if
+        Node == NodeLogger ->
+            cloudi_logger:redirect(NodeLogger);
+        true ->
+            ok
+    end,
     ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
     {noreply,
      State#state{nodes_alive = [Node | NodesAlive],
@@ -168,7 +223,14 @@ handle_info({'nodeup', Node, InfoList},
 handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
+                   logger_redirect = NodeLogger,
                    timer_reconnect = TimerReconnect} = State) ->
+    if
+        Node == NodeLogger ->
+            cloudi_logger:redirect(undefined);
+        true ->
+            ok
+    end,
     ?LOG_INFO("nodedown ~p ~p", [Node, InfoList]),
     NewTimerReconnect = if
         TimerReconnect == undefined ->

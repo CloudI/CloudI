@@ -246,7 +246,7 @@ loglevel_set(Level, _Timeout) ->
     cloudi_logger:change_loglevel(Level).
 
 log_redirect(Node, _Timeout) ->
-    cloudi_logger:redirect(Node).
+    cloudi_nodes:logger_redirect(Node).
 
 code_path_add(Dir, _Timeout) ->
     code:add_pathz(Dir).
