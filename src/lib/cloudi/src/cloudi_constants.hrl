@@ -28,16 +28,6 @@
 % (i.e., this is the timeout penalty a request takes when forwarding a request)
 -define(FORWARD_DELTA, 100). % milliseconds
 
-% maximum possible time for a process death to remove process group membership
-% when using a slow refresh (fast refresh is immediate).  slow refresh is
-% used when a process is mainly communicating with long-lived processes
-% (and fast refresh is used when mainly communicating with
-%  short-lived processes).
--define(DEST_REFRESH_SLOW, 300000). % milliseconds
-
-% after startup, assign the initial process group membership
--define(DEST_REFRESH_FIRST,  500). % milliseconds
-
 % blocking operations must decrement the timeout to make sure timeouts
 % have time to unravel all synchronous calls
 -define(TIMEOUT_DELTA, 100). % milliseconds
@@ -58,5 +48,4 @@
 % pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
--define(PRIORITY_DEFAULT, 0).
 

@@ -1299,13 +1299,13 @@ int API::send_sync(char const * const name,
                    int8_t const priority) const
 {
     return cloudi_send_sync_(m_api,
-                            name,
-                            request_info,
-                            request_info_size,
-                            request,
-                            request_size,
-                            timeout,
-                            priority);
+                             name,
+                             request_info,
+                             request_info_size,
+                             request,
+                             request_size,
+                             timeout,
+                             priority);
 }
 
 int API::mcast_async(char const * const name,
@@ -1327,13 +1327,13 @@ int API::mcast_async(char const * const name,
                      int8_t const priority) const
 {
     return cloudi_mcast_async_(m_api,
-                              name,
-                              request_info,
-                              request_info_size,
-                              request,
-                              request_size,
-                              timeout,
-                              priority);
+                               name,
+                               request_info,
+                               request_info_size,
+                               request,
+                               request_size,
+                               timeout,
+                               priority);
 }
 
 char const * API::get_response() const

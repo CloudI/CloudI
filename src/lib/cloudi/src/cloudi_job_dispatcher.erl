@@ -57,13 +57,14 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/9]).
+-export([start_link/10]).
 
 %% gen_server callbacks
 -export([init/1,
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
 
@@ -82,17 +83,19 @@
                          % lazy_random, destination pid refresh
         list_pg_data = list_pg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
-        dest_allow       % is the socket allowed to send to a destination
+        dest_allow,      % is the socket allowed to send to a destination
+        options          % #config_job_options{} from configuration
     }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Module, Args, Timeout, Prefix,
-           TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow)
+start_link(Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+           DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_record(ConfigOptions, config_job_options) ->
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
@@ -100,18 +103,18 @@ start_link(Module, Args, Timeout, Prefix,
            (DestRefresh == none),
     gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutAsync,
                                     TimeoutSync, DestRefresh,
-                                    DestDeny, DestAllow], []).
+                                    DestDeny, DestAllow, ConfigOptions], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
 init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
-      DestRefresh, DestDeny, DestAllow]) ->
-    case cloudi_job:start_link(Module, Args, Prefix, Timeout) of
+      DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
+    case cloudi_job:start_link(Module, Args, Prefix, ConfigOptions, Timeout) of
         {ok, Job} ->
-            destination_refresh_first(DestRefresh),
-            destination_refresh_start(DestRefresh),
+            random:seed(erlang:now()),
+            destination_refresh_first(DestRefresh, ConfigOptions),
             {ok, #state{job = Job,
                         prefix = Prefix,
                         timeout_async = TimeoutAsync,
@@ -119,7 +122,8 @@ init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                         uuid_generator = uuid:new(Job),
                         dest_refresh = DestRefresh,
                         dest_deny = DestDeny,
-                        dest_allow = DestAllow}};
+                        dest_allow = DestAllow,
+                        options = ConfigOptions}};
         ignore ->
             ignore;
         {error, Reason} ->
@@ -166,6 +170,13 @@ handle_call({'send_async', Name, RequestInfo, Request,
                  TimeoutAsync, Priority}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
+             Timeout, undefined}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_async', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault}, Client, State);
+
+handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
@@ -184,6 +195,13 @@ handle_call({'send_async', Name, RequestInfo, Request,
                  TimeoutAsync, Priority, Pid}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
+             Timeout, undefined, Pid}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_async', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault, Pid}, Client, State);
+
+handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
@@ -196,6 +214,13 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async_active', Name, RequestInfo, Request,
                  TimeoutAsync, Priority}, Client, State);
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, undefined}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -216,6 +241,13 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
                  TimeoutAsync, Priority, Pid}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, undefined, Pid}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault, Pid}, Client, State);
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
@@ -229,6 +261,13 @@ handle_call({'send_sync', Name, RequestInfo, Request,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'send_sync', Name, RequestInfo, Request,
                  TimeoutSync, Priority}, Client, State);
+
+handle_call({'send_sync', Name, RequestInfo, Request,
+             Timeout, undefined}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_sync', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -247,6 +286,13 @@ handle_call({'send_sync', Name, RequestInfo, Request,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'send_sync', Name, RequestInfo, Request,
                  TimeoutSync, Priority, Pid}, Client, State);
+
+handle_call({'send_sync', Name, RequestInfo, Request,
+             Timeout, undefined, Pid}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'send_sync', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault, Pid}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority, Pid}, _,
@@ -275,6 +321,13 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'mcast_async', Name, RequestInfo, Request,
                  TimeoutAsync, Priority}, Client, State);
+
+handle_call({'mcast_async', Name, RequestInfo, Request,
+             Timeout, undefined}, Client,
+            #state{options = ConfigOptions} = State) ->
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    handle_call({'mcast_async', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault}, Client, State);
 
 handle_call({'mcast_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
@@ -358,8 +411,9 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info({list_pg_data, Groups},
-            #state{dest_refresh = DestRefresh} = State) ->
-    destination_refresh_start(DestRefresh),
+            #state{dest_refresh = DestRefresh,
+                   options = ConfigOptions} = State) ->
+    destination_refresh_start(DestRefresh, ConfigOptions),
     {noreply, State#state{list_pg_data = Groups}};
 
 handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
@@ -714,34 +768,38 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             trie:is_prefixed(Name, "/", DestAllow)
     end.    
 
-destination_refresh_first(lazy_closest) ->
-    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+destination_refresh_first(lazy_closest,
+                          #config_job_options{dest_refresh_start = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_first(lazy_random) ->
-    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+destination_refresh_first(lazy_random,
+                          #config_job_options{dest_refresh_start = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_first(immediate_closest) ->
+destination_refresh_first(immediate_closest, _) ->
     ok;
 
-destination_refresh_first(immediate_random) ->
+destination_refresh_first(immediate_random, _) ->
     ok;
 
-destination_refresh_first(none) ->
+destination_refresh_first(none, _) ->
     ok.
 
-destination_refresh_start(lazy_closest) ->
-    list_pg_data:get_groups(?DEST_REFRESH_SLOW);
+destination_refresh_start(lazy_closest,
+                          #config_job_options{dest_refresh_delay = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_start(lazy_random) ->
-    list_pg_data:get_groups(?DEST_REFRESH_SLOW);
+destination_refresh_start(lazy_random,
+                          #config_job_options{dest_refresh_delay = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_start(immediate_closest) ->
+destination_refresh_start(immediate_closest, _) ->
     ok;
 
-destination_refresh_start(immediate_random) ->
+destination_refresh_start(immediate_random, _) ->
     ok;
 
-destination_refresh_start(none) ->
+destination_refresh_start(none, _) ->
     ok.
 
 destination_get(lazy_closest, Name, Pid, Groups)

@@ -51,8 +51,10 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/9,
-         start_external/13]).
+-export([start_internal/10,
+         start_external/14]).
+
+-include("cloudi_configuration.hrl").
 
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
@@ -65,9 +67,10 @@
 
 start_internal(Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList)
+               DestDenyList, DestAllowList, ConfigOptions)
     when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_record(ConfigOptions, config_job_options) ->
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
            (DestRefresh == immediate_random) or
@@ -91,18 +94,20 @@ start_internal(Module, Args, Timeout, Prefix,
         {file, _} ->
             cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
                                       TimeoutAsync, TimeoutSync,
-                                      DestRefresh, DestDeny, DestAllow)
+                                      DestRefresh, DestDeny, DestAllow,
+                                      ConfigOptions)
     end.
 
 start_external(ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList)
+               DestDenyList, DestAllowList, ConfigOptions)
     when is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_record(ConfigOptions, config_job_options) ->
     true = (Protocol == tcp) or (Protocol == udp),
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
@@ -124,8 +129,8 @@ start_external(ThreadsPerProcess,
     {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
         case cloudi_socket_sup:create_socket(Protocol, BufferSize, Timeout,
                                              Prefix, TimeoutAsync, TimeoutSync,
-                                             DestRefresh,
-                                             DestDeny, DestAllow) of
+                                             DestRefresh, DestDeny, DestAllow,
+                                             ConfigOptions) of
             {ok, Pid, Port} ->
                 F([Pid | L1], [Port | L2]);
             {error, _} = Error ->

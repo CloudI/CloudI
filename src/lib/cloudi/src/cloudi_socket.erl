@@ -53,7 +53,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/9, port/1]).
+-export([start_link/10, port/1]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -63,6 +63,7 @@
 -export(['CONNECT'/2,
          'HANDLE'/2]).
 
+-include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
 
@@ -101,17 +102,19 @@
                          % lazy_random, destination pid refresh
         list_pg_data = list_pg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
-        dest_allow       % is the socket allowed to send to a destination
+        dest_allow,      % is the socket allowed to send to a destination
+        options          % #config_job_options{} from configuration
     }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Protocol, BufferSize, Timeout, Prefix,
-           TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow)
+start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+           DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_record(ConfigOptions, config_job_options) ->
     true = (Protocol == tcp) or (Protocol == udp),
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
@@ -120,7 +123,7 @@ start_link(Protocol, BufferSize, Timeout, Prefix,
            (DestRefresh == none),
     gen_fsm:start_link(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                  TimeoutAsync, TimeoutSync, DestRefresh,
-                                 DestDeny, DestAllow], []).
+                                 DestDeny, DestAllow, ConfigOptions], []).
 
 port(Process) when is_pid(Process) ->
     gen_fsm:sync_send_all_state_event(Process, port).
@@ -129,8 +132,8 @@ port(Process) when is_pid(Process) ->
 %%% Callback functions from gen_fsm
 %%%------------------------------------------------------------------------
 
-init([tcp, BufferSize, Timeout, Prefix,
-      TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow]) ->
+init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+      DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
     process_flag(trap_exit, true),
     Opts = [binary, {ip, {127,0,0,1}},
             {recbuf, BufferSize}, {sndbuf, BufferSize},
@@ -142,8 +145,9 @@ init([tcp, BufferSize, Timeout, Prefix,
         {ok, Listener} ->
             {ok, Port} = inet:port(Listener),
             {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
-            destination_refresh_first(DestRefresh),
-            destination_refresh_start(DestRefresh),
+            random:seed(erlang:now()),
+            destination_refresh_first(DestRefresh, ConfigOptions),
+            destination_refresh_start(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{protocol = tcp,
                                    port = Port,
                                    listener = Listener,
@@ -154,13 +158,14 @@ init([tcp, BufferSize, Timeout, Prefix,
                                    uuid_generator = uuid:new(self()),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
-                                   dest_allow = DestAllow}, Timeout};
+                                   dest_allow = DestAllow,
+                                   options = ConfigOptions}, Timeout};
         {error, Reason} ->
             {stop, Reason}
     end;
 
-init([udp, BufferSize, Timeout, Prefix,
-      TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow]) ->
+init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+      DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
     process_flag(trap_exit, true),
     Opts = [binary, {ip, {127,0,0,1}},
             {recbuf, BufferSize}, {sndbuf, BufferSize},
@@ -168,8 +173,8 @@ init([udp, BufferSize, Timeout, Prefix,
     case gen_udp:open(0, Opts) of
         {ok, Socket} ->
             {ok, Port} = inet:port(Socket),
-            destination_refresh_first(DestRefresh),
-            destination_refresh_start(DestRefresh),
+            random:seed(erlang:now()),
+            destination_refresh_first(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{protocol = udp,
                                    port = Port,
                                    socket = Socket,
@@ -179,7 +184,8 @@ init([udp, BufferSize, Timeout, Prefix,
                                    uuid_generator = uuid:new(self()),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
-                                   dest_allow = DestAllow}, Timeout};
+                                   dest_allow = DestAllow,
+                                   options = ConfigOptions}, Timeout};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -472,8 +478,9 @@ handle_info({inet_async, Listener, Acceptor, Error}, StateName,
     {stop, {StateName, inet_async, Error}, StateData};
 
 handle_info({list_pg_data, Groups}, StateName,
-            #state{dest_refresh = DestRefresh} = StateData) ->
-    destination_refresh_start(DestRefresh),
+            #state{dest_refresh = DestRefresh,
+                   options = ConfigOptions} = StateData) ->
+    destination_refresh_start(DestRefresh, ConfigOptions),
     {next_state, StateName, StateData#state{list_pg_data = Groups}};
 
 handle_info({'send_async', Name, RequestInfo, Request,
@@ -555,9 +562,23 @@ handle_info({'send_async', Name, RequestInfo, Request,
 
 handle_info({'send_async', _, _, _,
              Timeout, Priority, TransId, _} = T, StateName,
-            #state{queue_messages = true} = StateData) ->
-    {next_state, StateName,
-     recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
+            #state{queue_messages = true,
+                   queued = Queue,
+                   options = ConfigOptions} = StateData) ->
+    QueueLimit = ConfigOptions#config_job_options.queue_limit,
+    QueueLimitOk = if
+        QueueLimit /= undefined ->
+            pqueue4:len(Queue) < QueueLimit;
+        true ->
+            true
+    end,
+    if
+        QueueLimitOk ->
+            {next_state, StateName,
+             recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
+        true ->
+            {next_state, StateName, StateData}
+    end;
 
 handle_info({'send_sync', _, _, Request, _, _, _, _}, StateName, StateData)
     when is_binary(Request) =:= false ->
@@ -572,9 +593,23 @@ handle_info({'send_sync', Name, RequestInfo, Request,
 
 handle_info({'send_sync', _, _, _,
              Timeout, Priority, TransId, _} = T, StateName,
-            #state{queue_messages = true} = StateData) ->
-    {next_state, StateName,
-     recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
+            #state{queue_messages = true,
+                   queued = Queue,
+                   options = ConfigOptions} = StateData) ->
+    QueueLimit = ConfigOptions#config_job_options.queue_limit,
+    QueueLimitOk = if
+        QueueLimit /= undefined ->
+            pqueue4:len(Queue) < QueueLimit;
+        true ->
+            true
+    end,
+    if
+        QueueLimitOk ->
+            {next_state, StateName,
+             recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
+        true ->
+            {next_state, StateName, StateData}
+    end;
 
 handle_info({'return_async', _, ResponseInfo, Response,
              _, _, _}, StateName, StateData)
@@ -928,34 +963,38 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             trie:is_prefixed(Name, "/", DestAllow)
     end.
 
-destination_refresh_first(lazy_closest) ->
-    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+destination_refresh_first(lazy_closest,
+                          #config_job_options{dest_refresh_start = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_first(lazy_random) ->
-    list_pg_data:get_groups(?DEST_REFRESH_FIRST);
+destination_refresh_first(lazy_random,
+                          #config_job_options{dest_refresh_start = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_first(immediate_closest) ->
+destination_refresh_first(immediate_closest, _) ->
     ok;
 
-destination_refresh_first(immediate_random) ->
+destination_refresh_first(immediate_random, _) ->
     ok;
 
-destination_refresh_first(none) ->
+destination_refresh_first(none, _) ->
     ok.
 
-destination_refresh_start(lazy_closest) ->
-    list_pg_data:get_groups(?DEST_REFRESH_SLOW);
+destination_refresh_start(lazy_closest,
+                          #config_job_options{dest_refresh_delay = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_start(lazy_random) ->
-    list_pg_data:get_groups(?DEST_REFRESH_SLOW);
+destination_refresh_start(lazy_random,
+                          #config_job_options{dest_refresh_delay = Delay}) ->
+    list_pg_data:get_groups(Delay);
 
-destination_refresh_start(immediate_closest) ->
+destination_refresh_start(immediate_closest, _) ->
     ok;
 
-destination_refresh_start(immediate_random) ->
+destination_refresh_start(immediate_random, _) ->
     ok;
 
-destination_refresh_start(none) ->
+destination_refresh_start(none, _) ->
     ok.
 
 destination_get(lazy_closest, Name, Pid, Groups)

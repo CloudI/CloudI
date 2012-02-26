@@ -265,7 +265,8 @@ job_start_internal(Count, Job)
                                   Job#config_job_internal.timeout_sync,
                                   Job#config_job_internal.dest_refresh,
                                   Job#config_job_internal.dest_list_deny,
-                                  Job#config_job_internal.dest_list_allow],
+                                  Job#config_job_internal.dest_list_allow,
+                                  Job#config_job_internal.options],
                                  Job#config_job_internal.max_r,
                                  Job#config_job_internal.max_t,
                                  Job#config_job_internal.uuid) of
@@ -284,7 +285,8 @@ job_start_external(Count, Job)
     when is_record(Job, config_job_external) ->
     case cloudi_services:monitor(cloudi_spawn, start_external,
                                  [concurrency(
-                                    Job#config_job_external.count_thread),
+                                      Job#config_job_external.count_thread
+                                  ),
                                   Job#config_job_external.file_path,
                                   Job#config_job_external.args,
                                   Job#config_job_external.env,
@@ -296,7 +298,8 @@ job_start_external(Count, Job)
                                   Job#config_job_external.timeout_sync,
                                   Job#config_job_external.dest_refresh,
                                   Job#config_job_external.dest_list_deny,
-                                  Job#config_job_external.dest_list_allow],
+                                  Job#config_job_external.dest_list_allow,
+                                  Job#config_job_external.options],
                                  Job#config_job_external.max_r,
                                  Job#config_job_external.max_t,
                                  Job#config_job_external.uuid) of

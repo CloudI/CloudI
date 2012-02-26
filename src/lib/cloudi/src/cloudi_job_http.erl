@@ -200,7 +200,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
     end,
     case cloudi_job:send_sync(Dispatcher, NameOutgoing,
                               RequestInfo, Request,
-                              undefined, ?PRIORITY_DEFAULT) of
+                              undefined, undefined) of
         {ok, Response} ->
             ResponseBinary = if
                 OutputType =:= list ->

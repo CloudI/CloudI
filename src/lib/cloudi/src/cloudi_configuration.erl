@@ -78,7 +78,8 @@
         dest_list_allow,
         count_process,
         max_r,
-        max_t
+        max_t,
+        options
     }).
     
 % external job parameters
@@ -101,7 +102,8 @@
         count_process,
         count_thread,
         max_r,
-        max_t
+        max_t,
+        options
     }).
 
 %%%------------------------------------------------------------------------
@@ -451,7 +453,8 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#internal.timeout_sync),
          is_number(Job#internal.count_process),
          is_integer(Job#internal.max_r),
-         is_integer(Job#internal.max_t) ->
+         is_integer(Job#internal.max_t),
+         is_list(Job#internal.options) ->
     true = (Job#internal.dest_refresh == immediate_closest) orelse
            (Job#internal.dest_refresh == lazy_closest) orelse
            (Job#internal.dest_refresh == immediate_random) orelse
@@ -478,6 +481,9 @@ jobs_validate(Output, [Job | L], UUID)
                              count_process = Job#internal.count_process,
                              max_r = Job#internal.max_r,
                              max_t = Job#internal.max_t,
+                             options = jobs_validate_options(
+                                 Job#internal.options
+                             ),
                              uuid = uuid:get_v1(UUID)},
     jobs_validate([C | Output], L, UUID);
 jobs_validate(Output, [Job | L], UUID)
@@ -496,7 +502,8 @@ jobs_validate(Output, [Job | L], UUID)
          is_number(Job#external.count_process),
          is_number(Job#external.count_thread),
          is_integer(Job#external.max_r),
-         is_integer(Job#external.max_t) ->
+         is_integer(Job#external.max_t),
+         is_list(Job#external.options) ->
     true = (Job#external.prefix == []) orelse
            is_integer(erlang:hd(Job#external.prefix)),
     true = (Job#external.args == []) orelse
@@ -534,8 +541,30 @@ jobs_validate(Output, [Job | L], UUID)
                              count_thread = Job#external.count_thread,
                              max_r = Job#external.max_r,
                              max_t = Job#external.max_t,
+                             options = jobs_validate_options(
+                                 Job#external.options
+                             ),
                              uuid = uuid:get_v1(UUID)},
     jobs_validate([C | Output], L, UUID).
+
+jobs_validate_options(OptionsList) ->
+    Options = #config_job_options{},
+    Defaults = [
+        {priority_default,     Options#config_job_options.priority_default},
+        {queue_limit,          Options#config_job_options.queue_limit},
+        {dest_refresh_start,   Options#config_job_options.dest_refresh_start},
+        {dest_refresh_delay,   Options#config_job_options.dest_refresh_delay}],
+    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay] =
+        cloudi_proplists:take_values(Defaults, OptionsList),
+    true = (PriorityDefault >= ?PRIORITY_HIGH) and
+           (PriorityDefault =< ?PRIORITY_LOW),
+    true = (QueueLimit =:= undefined) orelse is_integer(QueueLimit),
+    true = is_integer(DestRefreshStart),
+    true = is_integer(DestRefreshDelay),
+    Options#config_job_options{priority_default = PriorityDefault,
+                               queue_limit = QueueLimit,
+                               dest_refresh_start = DestRefreshStart,
+                               dest_refresh_delay = DestRefreshDelay}.
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).
