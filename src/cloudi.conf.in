@@ -65,7 +65,12 @@
         5,
         % MaxT (maximum time)
         300, % seconds
-        % options
+        % options, e.g.:
+        % {queue_limit, 1024} % to limit the job's queue to a maximum
+        %                     % of 1024 messages (to prevent excessive memory
+        %                     % consumption while the job is busy, handling a
+        %                     % previous message)
+        % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
         []},
 
     % an external job is an OS process connected
@@ -133,7 +138,13 @@
         5,
         % MaxT (maximum time)
         300, % seconds
-        []}, % options
+        % options, e.g.:
+        % {queue_limit, 1024} % to limit the job's queue to a maximum
+        %                     % of 1024 messages (to prevent excessive memory
+        %                     % consumption while the job is busy, handling a
+        %                     % previous message)
+        % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
+        []},
     % the job below provides a connection to the cloudi_tests PostgreSQL DB
     %{internal,
     %    "/db/pgsql/",

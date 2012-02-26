@@ -198,10 +198,13 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 'CONNECT'('init', #state{protocol = Protocol,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
-                         timeout_sync = TimeoutSync} = StateData) ->
+                         timeout_sync = TimeoutSync,
+                         options = ConfigOptions} = StateData) ->
     % first message within the CloudI API received during
     % the object construction or init API function
-    send('init_out'(Prefix, TimeoutAsync, TimeoutSync), StateData),
+    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    send('init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault),
+         StateData),
     if
         Protocol =:= udp ->
             send('keepalive_out'(), StateData),
@@ -811,15 +814,18 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
             {next_state, StateName, NewStateData}
     end.
 
-'init_out'(Prefix, TimeoutAsync, TimeoutSync)
-    when is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+'init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault)
+    when is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(PriorityDefault),
+         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
     PrefixBin = erlang:list_to_binary(Prefix),
     PrefixSize = erlang:byte_size(PrefixBin) + 1,
     <<?MESSAGE_INIT:32/unsigned-integer-native,
       PrefixSize:32/unsigned-integer-native,
       PrefixBin/binary, 0:8,
       TimeoutAsync:32/unsigned-integer-native,
-      TimeoutSync:32/unsigned-integer-native>>.
+      TimeoutSync:32/unsigned-integer-native,
+      PriorityDefault:8/signed-integer-native>>.
 
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.

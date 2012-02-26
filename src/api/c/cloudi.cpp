@@ -524,7 +524,8 @@ int cloudi_send_async(cloudi_instance_t * p,
                       uint32_t const request_size)
 {
     return cloudi_send_(p, "send_async", name, "", 0,
-                        request, request_size, p->timeout_async, 0);
+                        request, request_size,
+                        p->timeout_async, p->priority_default);
 }
 
 int cloudi_send_async_(cloudi_instance_t * p,
@@ -547,7 +548,8 @@ int cloudi_send_sync(cloudi_instance_t * p,
                      uint32_t const request_size)
 {
     return cloudi_send_(p, "send_sync", name, "", 0,
-                        request, request_size, p->timeout_sync, 0);
+                        request, request_size,
+                        p->timeout_sync, p->priority_default);
 }
 
 int cloudi_send_sync_(cloudi_instance_t * p,
@@ -570,7 +572,8 @@ int cloudi_mcast_async(cloudi_instance_t * p,
                        uint32_t const request_size)
 {
     return cloudi_send_(p, "mcast_async", name, "", 0,
-                        request, request_size, p->timeout_async, 0);
+                        request, request_size,
+                        p->timeout_async, p->priority_default);
 }
 
 int cloudi_mcast_async_(cloudi_instance_t * p,
@@ -1029,6 +1032,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_binary(buffer, index, p->prefix);
                 store_incoming_uint32(buffer, index, p->timeout_async);
                 store_incoming_uint32(buffer, index, p->timeout_sync);
+                store_incoming_int8(buffer, index, p->priority_default);
                 if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
                 p->buffer_recv_index = 0;

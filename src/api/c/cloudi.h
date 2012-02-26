@@ -65,6 +65,7 @@ typedef struct cloudi_instance_t
     char * prefix;
     uint32_t timeout_async;
     uint32_t timeout_sync;
+    int8_t priority_default;
     char * response_info;
     uint32_t response_info_size;
     char * response;

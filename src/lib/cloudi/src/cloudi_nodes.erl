@@ -115,6 +115,19 @@ init([Config]) ->
         true ->
             NodeLogger
     end,
+    if
+        NewNodeLogger =/= undefined ->
+            case lists:member(NewNodeLogger, Config#config.nodes) of
+                true ->
+                    ok;
+                false ->
+                    ?LOG_WARN("unable to control log output redirection "
+                              "to unmonitored node (~p)",
+                              [NewNodeLogger])
+            end;
+        true ->
+            ok
+    end,
     {ok, #state{nodes_dead = Config#config.nodes,
                 logger_redirect = NewNodeLogger,
                 timer_reconnect = erlang:send_after(?NODE_RECONNECT_START,
@@ -170,6 +183,7 @@ handle_call(Request, _, State) ->
 
 handle_cast({logger_redirect, NodeLogger},
             #state{nodes_alive = NodesAlive,
+                   nodes_dead = NodesDead,
                    logger_redirect = OldNodeLogger} = State) ->
     NewNodeLogger = if
         NodeLogger == node(); NodeLogger =:= undefined ->
@@ -187,7 +201,16 @@ handle_cast({logger_redirect, NodeLogger},
                         true ->
                             cloudi_logger:redirect(NewNodeLogger);
                         false ->
-                            ok
+                            case lists:member(NewNodeLogger, NodesDead) of
+                                true ->
+                                    ?LOG_INFO("redirecting log output to ~p "
+                                              "after it reconnects",
+                                              [NewNodeLogger]);
+                                false ->
+                                    ?LOG_WARN("unable to redirect log output "
+                                              "to an unmonitored node (~p)",
+                                              [NewNodeLogger])
+                            end
                     end
             end,
             {noreply, State#state{logger_redirect = NewNodeLogger}};

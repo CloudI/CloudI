@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,7 @@ module CloudI
         end
 
         def send_async(name, request)
-            send_async(name, '', request, @timeoutAsync, 0)
+            send_async(name, '', request, @timeoutAsync, @priorityDefault)
         end
 
         def send_async(name, request_info, request,
@@ -95,7 +95,7 @@ module CloudI
         end
 
         def send_sync(name, request)
-            send_sync(name, '', request, @timeoutSync, 0)
+            send_sync(name, '', request, @timeoutSync, @priorityDefault)
         end
 
         def send_sync(name, request_info, request,
@@ -108,7 +108,7 @@ module CloudI
         end
 
         def mcast_async(name, request)
-            mcast_async(name, '', request, @timeoutAsync, 0)
+            mcast_async(name, '', request, @timeoutAsync, @priorityDefault)
         end
 
         def mcast_async(name, request_info, request,
@@ -288,11 +288,12 @@ module CloudI
                 when MESSAGE_INIT
                     i += j; j = 4
                     prefixSize = data[i, j].unpack('L')[0]
-                    i += j; j = prefixSize + 4 + 4
-                    tmp = data[i, j].unpack("Z#{prefixSize}LL")
+                    i += j; j = prefixSize + 4 + 4 + 1
+                    tmp = data[i, j].unpack("Z#{prefixSize}LLc")
                     @prefix = tmp[0]
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
+                    @priorityDefault = tmp[3]
                     i += j
                     if i != data.length
                         raise MessageDecodingException
