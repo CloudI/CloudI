@@ -51,7 +51,7 @@
 %%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_dispatcher).
+-module(cloudi_dispatcher).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -113,7 +113,7 @@ init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
     case cloudi_job:start_link(Module, Args, Prefix, ConfigOptions, Timeout) of
         {ok, Job} ->
-            random:seed(erlang:now()),
+            cloudi_random:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             {ok, #state{job = Job,
                         prefix = Prefix,

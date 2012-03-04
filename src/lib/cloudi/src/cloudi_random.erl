@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Job Supervisor==
+%%% ==CloudI Random==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,74 +43,27 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
+%%% @copyright 2012 Michael Truog
 %%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_sup).
+-module(cloudi_random).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
-
 %% external interface
--export([start_link/0,
-         create_job/10]).
-
-%% supervisor callbacks
--export([init/1]).
+-export([seed/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-create_job(Module, Args, Timeout, Prefix, TimeoutSync, TimeoutAsync,
-           DestRefresh, DestDeny, DestAllow, ConfigOptions)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
-           (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [Module, Args, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow,
-                                          ConfigOptions]) of
-        {ok, Pid} ->
-            {ok, Pid};
-        {ok, Pid, _} ->
-            {ok, Pid};
-        {error, _} = Error ->
-            Error
-    end.
-
-%%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
-%%%------------------------------------------------------------------------
-
-init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
-          [{undefined,
-            {cloudi_dispatcher, start_link, []},
-            temporary, Shutdown, worker, []}]}}.
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
+seed() ->
+    % to provide better seeding than erlang:now()
+    % (the random module is still used since it provides quick
+    %  pseudo-random number generation, quicker than provided
+    %  with a linked-in port_driver or NIF)
+    <<B1:16/unsigned-integer,
+      B2:16/unsigned-integer,
+      B3:16/unsigned-integer>> = crypto:rand_bytes(6),
+    random:seed(B1, B2, B3).
 

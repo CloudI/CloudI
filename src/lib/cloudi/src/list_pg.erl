@@ -158,7 +158,7 @@ init([]) ->
                           % has restarted and wants previous state
                           %self() ! {nodeup, N} % pg2 does this
                   end, Ns),
-    random:seed(erlang:now()),
+    cloudi_random:seed(),
     {ok, #state{}}.
 
 -type call() :: {'create', name()}
