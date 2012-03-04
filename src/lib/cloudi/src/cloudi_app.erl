@@ -67,7 +67,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 start(_, _) ->
-    random:seed(erlang:now()),
+    cloudi_random:seed(),
     {ok, Path} = application:get_env(configuration),
     case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
         {ok, Pid} ->

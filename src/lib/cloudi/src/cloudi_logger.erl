@@ -64,6 +64,7 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_configuration.hrl").
+-include("cloudi_constants.hrl").
 -include_lib("kernel/include/file.hrl").
 
 %% logging macros used only within this module
@@ -81,9 +82,6 @@
         level,
         destination
     }).
-
-%% prevent any process from flooding the logging process with messages
--define(MIN_MICROSECONDS_PER_CALL, 10).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -367,7 +365,7 @@ flooding_logger(Now2) ->
                 MicroSecondsElapsed > 10000000 ->
                     erlang:put(cloudi_logger, {Now2, 1}),
                     false;
-                (MicroSecondsElapsed / Count2) < ?MIN_MICROSECONDS_PER_CALL ->
+                (MicroSecondsElapsed / Count2) < ?LOGGER_FLOODING_DELTA ->
                     erlang:put(cloudi_logger, {Now1, Count2}),
                     true;
                 true ->

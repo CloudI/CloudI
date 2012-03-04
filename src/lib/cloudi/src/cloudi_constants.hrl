@@ -38,6 +38,12 @@
 % time to wait before the first reconnect is attempted with a node
 -define(NODE_RECONNECT_START, 300000). % milliseconds
 
+% minimum average time inbetween CloudI logger calls during 10 seconds
+% to trigger logger flooding prevention, so that logging messages are discarded
+% since they are coming from source code that is misbehaving that has already
+% logged enough
+-define(LOGGER_FLOODING_DELTA, 10). % microseconds
+
 % periodic connection checks to determine if the udp connection is still active
 % must be a short time since this impacts MaxR and MaxT.  However, this time
 % becomes a hard maximum (minus a delta for overhead) for a task time target
