@@ -356,18 +356,25 @@ find(_, []) ->
 %% a regex of ".+".  "**" within the trie will result in undefined behavior
 %% (the pattern is malformed).  The function will search for the most specific
 %% match possible, given the input string and the trie contents.  The input
-%% string must not contain wildcard characters.  If you instead want to supply
-%% a pattern string to match the contents of the trie, see fold_match/4.
+%% string must not contain wildcard characters, otherwise badarg is thrown.
+%% If you instead want to supply a pattern string to match the contents of
+%% the trie, see fold_match/4.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec find_match(string(), trie()) -> {ok, any(), any()} | 'error'.
 
+find_match(_, []) ->
+    error;
+
 find_match(Match, Node) ->
     find_match_node(Match, [], Node).
 
+find_match_node([$* | _], _, _) ->
+    erlang:exit(badarg);
+
 find_match_node([H | T] = Match, Key, {I0, I1, Data} = Node)
-    when is_integer(H), H =/= $* ->
+    when is_integer(H) ->
     Result = if
         H < I0; H > I1 ->
             error;
@@ -408,10 +415,7 @@ find_match_node([H | T] = Match, Key, {I0, I1, Data} = Node)
             find_match_element_1(Match, Key, Node);
         true ->
             Result
-    end;
-
-find_match_node(_, _, []) ->
-    error.
+    end.
 
 find_match_element_1([_ | T] = Match, Key, {I0, I1, Data})
     when $* >= I0, $* =< I1 ->
@@ -439,6 +443,9 @@ find_match_element_N([], _, error, _) ->
 
 find_match_element_N([], Key, WildValue, _) ->
     {ok, lists:reverse(Key), WildValue};
+
+find_match_element_N([$* | _], _, _, _) ->
+    erlang:exit(badarg);
 
 find_match_element_N([H | T], Key, WildValue, {I0, I1, _} = Node)
     when H < I0; H > I1 ->
@@ -689,8 +696,9 @@ foldr_element(F, A, I, Offset, Key, Data) ->
 %% ===Fold a function over the keys within a trie that matches a pattern.===
 %% Traverses in alphabetical order.  Uses "*" as a wildcard character
 %% within the pattern (it acts like a ".+" regex, and "**" is forbidden).
-%% If you want to match a specific string without wildcards on trie values
-%% that contain wildcard characters, see find_match/2.
+%% The trie keys must not contain wildcard characters, otherwise badarg
+%% is thrown. If you want to match a specific string without wildcards
+%% on trie values that contain wildcard characters, see find_match/2.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -749,6 +757,16 @@ fold_match_node_1([H | T], F, A, Prefix, {I0, _, Data})
 fold_match_element_1(_, _, A, N, N, _, _, _, _) ->
     A;
 
+fold_match_element_1(Match, F, A, I, N, Offset, Prefix, Mid, Data)
+    when I + Offset =:= $* ->
+    case erlang:element(I, Data) of
+        {[], error} ->
+            fold_match_element_1(Match, F, A,
+                I + 1, N, Offset, Prefix, Mid, Data);
+        _ ->
+            erlang:exit(badarg)
+    end;
+            
 fold_match_element_1([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
     {Node, Value} = erlang:element(I, Data),
     case Node of
@@ -784,6 +802,16 @@ fold_match_element_1([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
 
 fold_match_element_N(_, _, A, N, N, _, _, _, _) ->
     A;
+
+fold_match_element_N(Match, F, A, I, N, Offset, Prefix, Mid, Data)
+    when I + Offset =:= $* ->
+    case erlang:element(I, Data) of
+        {[], error} ->
+            fold_match_element_N(Match, F, A,
+                I + 1, N, Offset, Prefix, Mid, Data);
+        _ ->
+            erlang:exit(badarg)
+    end;
 
 fold_match_element_N([$*] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
     {Node, Value} = erlang:element(I, Data),
@@ -1969,6 +1997,9 @@ test() ->
     {ok,"aa*a*",4} = trie:find_match("aababb", RootNode6),
     {ok,"aa*a*",4} = trie:find_match("aabbab", RootNode6),
     {ok,"aa*a*",4} = trie:find_match("aabbabb", RootNode6),
+    {'EXIT',badarg} = (catch trie:find_match("aa*", RootNode6)),
+    {'EXIT',badarg} = (catch trie:find_match("aaaa*", RootNode6)),
+    {'EXIT',badarg} = (catch trie:find_match("aaaaa*", RootNode6)),
     ["aa"] = trie:pattern_parse("aa*", "aaaa"),
     ["b"] = trie:pattern_parse("aa*", "aab"),
     ["b"] = trie:pattern_parse("aa*b", "aabb"),
@@ -2000,20 +2031,35 @@ tuple_move_i(I1, I0, N1, T1, T0) ->
 wildcard_match_lists_element(_, []) ->
     error;
 
+wildcard_match_lists_element(_, [$* | _]) ->
+    erlang:exit(badarg);
+
 wildcard_match_lists_element(C, [C | L]) ->
     {ok, L};
 
 wildcard_match_lists_element(C, [_ | L]) ->
     wildcard_match_lists_element(C, L).
 
+wildcard_match_lists_valid([], Result) ->
+    Result;
+
+wildcard_match_lists_valid([$* | _], _) ->
+    erlang:exit(badarg);
+
+wildcard_match_lists_valid([_ | L], Result) ->
+    wildcard_match_lists_valid(L, Result).
+
 wildcard_match_lists([], []) ->
     true;
 
-wildcard_match_lists([], [_ | _]) ->
-    false;
+wildcard_match_lists([], [_ | _] = L) ->
+    wildcard_match_lists_valid(L, false);
 
-wildcard_match_lists([$*], [_ | _]) ->
-    true;
+wildcard_match_lists([_ | _], [$* | _]) ->
+    erlang:exit(badarg);
+
+wildcard_match_lists([$*], [_ | L]) ->
+    wildcard_match_lists_valid(L, true);
 
 wildcard_match_lists([$*, C | Match], [_ | L]) ->
     true = C =/= $*,
@@ -2021,12 +2067,12 @@ wildcard_match_lists([$*, C | Match], [_ | L]) ->
         {ok, NewL} ->
             wildcard_match_lists(Match, NewL);
         error ->
-            false
+            wildcard_match_lists_valid(L, false)
     end;
 
 wildcard_match_lists([C | Match], [C | L]) ->
     wildcard_match_lists(Match, L);
 
-wildcard_match_lists(_, _) ->
-    false.
+wildcard_match_lists(_, L) ->
+    wildcard_match_lists_valid(L, false).
 

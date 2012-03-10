@@ -89,7 +89,7 @@ init([Config]) when is_record(Config, config) ->
        child_specification(cloudi_nodes, Config),
        child_specification(cloudi_services),
        child_specification(cloudi_socket_sup),
-       child_specification(cloudi_job_sup),
+       child_specification(cloudi_dispatcher_sup),
        child_specification(cloudi_os_spawn_pool),
        child_specification(cloudi_configurator, Config)]}}.
 
@@ -130,10 +130,10 @@ child_specification(cloudi_services) ->
      {cloudi_services, start_link, []},
      permanent, Shutdown, worker, [cloudi_services]};
 
-child_specification(cloudi_job_sup) ->
-    {cloudi_job_sup,
-     {cloudi_job_sup, start_link, []},
-     permanent, infinity, supervisor, [cloudi_job_sup]};
+child_specification(cloudi_dispatcher_sup) ->
+    {cloudi_dispatcher_sup,
+     {cloudi_dispatcher_sup, start_link, []},
+     permanent, infinity, supervisor, [cloudi_dispatcher_sup]};
 
 child_specification(cloudi_os_spawn_pool) ->
     Shutdown = 2000, % milliseconds

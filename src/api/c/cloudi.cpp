@@ -73,6 +73,7 @@ namespace
 
                     virtual void operator () (int const command,
                                               char const * const name,
+                                              char const * const pattern,
                                               void const * const request_info,
                                               uint32_t const request_info_size,
                                               void const * const request,
@@ -86,6 +87,7 @@ namespace
                         m_f(m_p,
                             command,
                             name,
+                            pattern,
                             request_info,
                             request_info_size,
                             request,
@@ -111,6 +113,7 @@ namespace
 
             void operator () (int const command,
                               char const * const name,
+                              char const * const pattern,
                               void const * const request_info,
                               uint32_t const request_info_size,
                               void const * const request,
@@ -123,6 +126,7 @@ namespace
             {
                 (*m_function)(command,
                               name,
+                              pattern,
                               request_info,
                               request_info_size,
                               request,
@@ -402,12 +406,12 @@ int cloudi_initialize_thread_count(unsigned int * const thread_count)
 }
 
 static int cloudi_subscribe_(cloudi_instance_t * p,
-                             char const * const name,
+                             char const * const pattern,
                              callback_function const & f)
 {
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
     lookup.insert(std::pair<std::string, callback_function>(
-        std::string(p->prefix) + name, f));
+        std::string(p->prefix) + pattern, f));
 
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
@@ -419,9 +423,9 @@ static int cloudi_subscribe_(cloudi_instance_t * p,
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "subscribe"))
         return cloudi_error_ei_encode;
-    if (buffer.reserve(index + strlen(name) + 1) == false)
+    if (buffer.reserve(index + strlen(pattern) + 1) == false)
         return cloudi_error_write_overflow;
-    if (ei_encode_string(buffer.get<char>(), &index, name))
+    if (ei_encode_string(buffer.get<char>(), &index, pattern))
         return cloudi_error_ei_encode;
     int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
@@ -430,19 +434,19 @@ static int cloudi_subscribe_(cloudi_instance_t * p,
 }
 
 int cloudi_subscribe(cloudi_instance_t * p,
-                     char const * const name,
+                     char const * const pattern,
                      cloudi_callback_t f)
 {
     return cloudi_subscribe_(p,
-                             name,
+                             pattern,
                              callback_function(p, f));
 }
 
 int cloudi_unsubscribe(cloudi_instance_t * p,
-                       char const * const name)
+                       char const * const pattern)
 {
     std::string str(p->prefix);
-    str += name;
+    str += pattern;
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
     lookup_t::iterator itr = lookup.find(str);
     if (itr == lookup.end())
@@ -463,9 +467,9 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
             return cloudi_error_ei_encode;
         if (ei_encode_atom(buffer.get<char>(), &index, "unsubscribe"))
             return cloudi_error_ei_encode;
-        if (buffer.reserve(index + strlen(name) + 1) == false)
+        if (buffer.reserve(index + strlen(pattern) + 1) == false)
             return cloudi_error_write_overflow;
-        if (ei_encode_string(buffer.get<char>(), &index, name))
+        if (ei_encode_string(buffer.get<char>(), &index, pattern))
             return cloudi_error_ei_encode;
         int result = write_exact(p->fd, p->use_header,
                                  buffer.get<char>(), index);
@@ -725,6 +729,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
 static int cloudi_return_(cloudi_instance_t * p,
                           char const * const command_name,
                           char const * const name,
+                          char const * const pattern,
                           void const * const response_info,
                           uint32_t const response_info_size,
                           void const * const response,
@@ -740,14 +745,16 @@ static int cloudi_return_(cloudi_instance_t * p,
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
-    if (ei_encode_tuple_header(buffer.get<char>(), &index, 7))
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 8))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, command_name))
         return cloudi_error_ei_encode;
-    if (buffer.reserve(index + strlen(name) + 1 +
+    if (buffer.reserve(index + strlen(name) + 1 + strlen(pattern) + 1 +
                        response_info_size + response_size + pid_size) == false)
         return cloudi_error_write_overflow;
     if (ei_encode_string(buffer.get<char>(), &index, name))
+        return cloudi_error_ei_encode;
+    if (ei_encode_string(buffer.get<char>(), &index, pattern))
         return cloudi_error_ei_encode;
     if (ei_encode_binary(buffer.get<char>(), &index,
                          response_info, response_info_size))
@@ -775,6 +782,7 @@ static int cloudi_return_(cloudi_instance_t * p,
 int cloudi_return(cloudi_instance_t * p,
                   int const command,
                   char const * const name,
+                  char const * const pattern,
                   void const * const response_info,
                   uint32_t const response_info_size,
                   void const * const response,
@@ -787,7 +795,7 @@ int cloudi_return(cloudi_instance_t * p,
     int result;
     if (command > 0)   // CLOUDI_ASYNC
     {
-        result = cloudi_return_(p, "return_async", name,
+        result = cloudi_return_(p, "return_async", name, pattern,
                                 response_info, response_info_size,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
@@ -796,7 +804,7 @@ int cloudi_return(cloudi_instance_t * p,
     }
     else               // CLOUDI_SYNC
     {
-        result = cloudi_return_(p, "return_sync", name,
+        result = cloudi_return_(p, "return_sync", name, pattern,
                                 response_info, response_info_size,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
@@ -808,6 +816,7 @@ int cloudi_return(cloudi_instance_t * p,
 
 int cloudi_return_async(cloudi_instance_t * p,
                         char const * const name,
+                        char const * const pattern,
                         void const * const response_info,
                         uint32_t const response_info_size,
                         void const * const response,
@@ -817,7 +826,7 @@ int cloudi_return_async(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size)
 {
-    int const result = cloudi_return_(p, "return_async", name,
+    int const result = cloudi_return_(p, "return_async", name, pattern,
                                       response_info, response_info_size,
                                       response, response_size,
                                       timeout, trans_id, pid, pid_size);
@@ -828,6 +837,7 @@ int cloudi_return_async(cloudi_instance_t * p,
 
 int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const name,
+                       char const * const pattern,
                        void const * const response_info,
                        uint32_t const response_info_size,
                        void const * const response,
@@ -837,7 +847,7 @@ int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const pid,
                        uint32_t const pid_size)
 {
-    int const result = cloudi_return_(p, "return_sync", name,
+    int const result = cloudi_return_(p, "return_sync", name, pattern,
                                       response_info, response_info_size,
                                       response, response_size,
                                       timeout, trans_id, pid, pid_size);
@@ -901,6 +911,7 @@ static int keepalive(cloudi_instance_t * p)
 static void callback(cloudi_instance_t * p,
                      int const command,
                      char const * const name,
+                     char const * const pattern,
                      void const * const request_info,
                      uint32_t const request_info_size,
                      void const * const request,
@@ -912,7 +923,7 @@ static void callback(cloudi_instance_t * p,
                      uint32_t const pid_size)
 {
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup_t::iterator itr = lookup.find(std::string(name));
+    lookup_t::iterator itr = lookup.find(std::string(pattern));
     assert(itr != lookup.end());
     callback_function f = itr->second;
     
@@ -920,7 +931,7 @@ static void callback(cloudi_instance_t * p,
     {
         try
         {
-            f(CLOUDI_ASYNC, name,
+            f(CLOUDI_ASYNC, name, pattern,
               request_info, request_info_size,
               request, request_size,
               timeout, priority, trans_id, pid, pid_size);
@@ -938,14 +949,14 @@ static void callback(cloudi_instance_t * p,
         {
             // exception is ignored at this level
         }
-        cloudi_return_(p, "return_async", name, "", 0, "", 0,
+        cloudi_return_(p, "return_async", name, pattern, "", 0, "", 0,
                        timeout, trans_id, pid, pid_size);
     }
     else if (command == MESSAGE_SEND_SYNC)
     {
         try
         {
-            f(CLOUDI_SYNC, name,
+            f(CLOUDI_SYNC, name, pattern,
               request_info, request_info_size,
               request, request_size,
               timeout, priority, trans_id, pid, pid_size);
@@ -963,7 +974,7 @@ static void callback(cloudi_instance_t * p,
         {
             // exception is ignored at this level
         }
-        cloudi_return_(p, "return_sync", name, "", 0, "", 0,
+        cloudi_return_(p, "return_sync", name, pattern, "", 0, "", 0,
                        timeout, trans_id, pid, pid_size);
     }
     else
@@ -1045,6 +1056,10 @@ int cloudi_poll(cloudi_instance_t * p,
                 store_incoming_uint32(buffer, index, name_size);
                 char * name = &buffer[index];
                 index += name_size;
+                uint32_t pattern_size;
+                store_incoming_uint32(buffer, index, pattern_size);
+                char * pattern = &buffer[index];
+                index += pattern_size;
                 uint32_t request_info_size;
                 store_incoming_uint32(buffer, index, request_info_size);
                 char * request_info = &buffer[index];
@@ -1066,7 +1081,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 if (index != p->buffer_recv_index)
                     return cloudi_error_read_underflow;
                 p->buffer_recv_index = 0;
-                callback(p, command, name,
+                callback(p, command, name, pattern,
                          request_info, request_info_size,
                          request, request_size,
                          timeout, priority, trans_id, pid, pid_size);
@@ -1242,18 +1257,18 @@ unsigned int API::thread_count()
     return thread_count;
 }
 
-int API::subscribe(char const * const name,
+int API::subscribe(char const * const pattern,
                    API::callback_function_generic * p) const
 {
     return cloudi_subscribe_(m_api,
-                             name,
+                             pattern,
                              callback_function(p));
 }
 
-int API::unsubscribe(char const * const name) const
+int API::unsubscribe(char const * const pattern) const
 {
     return cloudi_unsubscribe(m_api,
-                              name);
+                              pattern);
 }
 
 int API::send_async(char const * const name,
@@ -1448,6 +1463,7 @@ int API::forward_sync(char const * const name,
 
 int API::return_(int const command,
                  char const * const name,
+                 char const * const pattern,
                  void const * const response_info,
                  uint32_t const response_info_size,
                  void const * const response,
@@ -1460,6 +1476,7 @@ int API::return_(int const command,
     return cloudi_return(m_api,
                          command,
                          name,
+                         pattern,
                          response_info,
                          response_info_size,
                          response,
@@ -1471,6 +1488,7 @@ int API::return_(int const command,
 }
 
 int API::return_async(char const * const name,
+                      char const * const pattern,
                       void const * const response_info,
                       uint32_t const response_info_size,
                       void const * const response,
@@ -1482,6 +1500,7 @@ int API::return_async(char const * const name,
 {
     return cloudi_return_async(m_api,
                                name,
+                               pattern,
                                response_info,
                                response_info_size,
                                response,
@@ -1493,6 +1512,7 @@ int API::return_async(char const * const name,
 }
 
 int API::return_sync(char const * const name,
+                     char const * const pattern,
                      void const * const response_info,
                      uint32_t const response_info_size,
                      void const * const response,
@@ -1504,6 +1524,7 @@ int API::return_sync(char const * const name,
 {
     return cloudi_return_sync(m_api,
                               name,
+                              pattern,
                               response_info,
                               response_info_size,
                               response,

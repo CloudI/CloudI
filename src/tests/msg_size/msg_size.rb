@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ if __FILE__ == $PROGRAM_NAME
                 raise 'Assertion failed !' unless yield if $DEBUG
             end
 
-            def request(command, name, requestInfo, request,
+            def request(command, name, pattern, requestInfo, request,
                         timeout, priority, transId, pid)
                 i = request[0,4].unpack('L')[0]
                 if i == 4294967295

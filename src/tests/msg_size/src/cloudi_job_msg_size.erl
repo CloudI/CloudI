@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_job_msg_size).
@@ -54,7 +54,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/10,
+         cloudi_job_handle_request/11,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -77,7 +77,7 @@ cloudi_job_init(_Args, _Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang"),
     {ok, #state{}}.
 
-cloudi_job_handle_request(_Type, Name, RequestInfo, Request,
+cloudi_job_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                           Timeout, _Priority, _TransId, _Pid,
                           #state{suffixes = [Suffix | Suffixes]} = State,
                           Dispatcher) ->
@@ -89,7 +89,7 @@ cloudi_job_handle_request(_Type, Name, RequestInfo, Request,
             I + 1
     end,
     NewRequest = <<NewI:32/unsigned-integer-native, Rest/binary>>,
-    NewName = cloudi_string:beforer($/, Name, input) ++ [$/ | Suffix],
+    NewName = cloudi_string:beforer($/, Pattern, input) ++ [$/ | Suffix],
     ?LOG_INFO(" forward #~w to ~s (with timeout ~w ms)",
               [NewI, NewName, Timeout]),
     {forward, NewName, RequestInfo, NewRequest,

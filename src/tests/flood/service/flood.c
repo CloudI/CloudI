@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@ typedef struct
 static void flood(cloudi_instance_t * api,
                   int const command,
                   char const * const name,
+                  char const * const pattern,
                   void const * const request_info,
                   uint32_t const request_info_size,
                   void const * const request,
@@ -62,7 +63,7 @@ static void flood(cloudi_instance_t * api,
                   char const * const pid,
                   uint32_t const pid_size)
 {
-    cloudi_return(api, command, name, "", 0, "c", 1,
+    cloudi_return(api, command, name, pattern, "", 0, "c", 1,
                   timeout, trans_id, pid, pid_size);
 }
 

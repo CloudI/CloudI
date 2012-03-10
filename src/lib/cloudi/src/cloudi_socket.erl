@@ -220,14 +220,14 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 'CONNECT'(Request, StateData) ->
     {stop, {'CONNECT', undefined_message, Request}, StateData}.
 
-'HANDLE'({'subscribe', Name},
+'HANDLE'({'subscribe', Pattern},
          #state{prefix = Prefix} = StateData) ->
-    list_pg:join(Prefix ++ Name, self()),
+    list_pg:join(Prefix ++ Pattern, self()),
     {next_state, 'HANDLE', StateData};
 
-'HANDLE'({'unsubscribe', Name},
+'HANDLE'({'unsubscribe', Pattern},
          #state{prefix = Prefix} = StateData) ->
-    list_pg:leave(Prefix ++ Name, self()),
+    list_pg:leave(Prefix ++ Pattern, self()),
     {next_state, 'HANDLE', StateData};
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
@@ -284,8 +284,9 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_async', Name, RequestInfo, Request,
+                {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+                    NextPid ! {'send_async', Name, NextPattern,
+                               RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
                 _ ->
@@ -314,8 +315,9 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_sync', Name, RequestInfo, Request,
+                {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+                    NextPid ! {'send_sync', Name, NextPattern,
+                               RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
                 _ ->
@@ -370,13 +372,13 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
             end
     end;
 
-'HANDLE'({'return_async', _Name, _ResponseInfo, _Response,
+'HANDLE'({'return_async', _Name, _Pattern, _ResponseInfo, _Response,
           _Timeout, _TransId, Pid} = T,
          StateData) ->
     Pid ! T,
     {next_state, 'HANDLE', process_queue(StateData)};
 
-'HANDLE'({'return_sync', _Name, _ResponseInfo, _Response,
+'HANDLE'({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
           _Timeout, _TransId, Pid} = T,
          StateData) ->
     Pid ! T,
@@ -515,8 +517,9 @@ handle_info({'forward_async', Name, RequestInfo, Request,
             ok;
         {error, _} ->
             ok;
-        NextPid when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'send_async', Name, RequestInfo, Request,
+        {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+            NextPid ! {'send_async', Name, Pattern,
+                       RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Pid};
         _ ->
@@ -538,8 +541,9 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
             ok;
         {error, _} ->
             ok;
-        NextPid when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'send_sync', Name, RequestInfo, Request,
+        {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+            NextPid ! {'send_sync', Name, Pattern,
+                       RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Pid};
         _ ->
@@ -552,18 +556,18 @@ handle_info({'recv_async', _, _} = T, StateName, StateData) ->
 
 % incoming messages (from Erlang pids to the port socket)
 
-handle_info({'send_async', _, _, Request, _, _, _, _}, StateName, StateData)
+handle_info({'send_async', _, _, _, Request, _, _, _, _}, StateName, StateData)
     when is_binary(Request) =:= false ->
     {next_state, StateName, StateData};
 
-handle_info({'send_async', Name, RequestInfo, Request,
+handle_info({'send_async', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
             #state{queue_messages = false} = StateData) ->
-    send('send_async_out'(Name, RequestInfo, Request,
+    send('send_async_out'(Name, Pattern, RequestInfo, Request,
                           Timeout, Priority, TransId, Pid), StateData),
     {next_state, StateName, StateData#state{queue_messages = true}};
 
-handle_info({'send_async', _, _, _,
+handle_info({'send_async', _, _, _, _,
              Timeout, Priority, TransId, _} = T, StateName,
             #state{queue_messages = true,
                    queued = Queue,
@@ -583,18 +587,18 @@ handle_info({'send_async', _, _, _,
             {next_state, StateName, StateData}
     end;
 
-handle_info({'send_sync', _, _, Request, _, _, _, _}, StateName, StateData)
+handle_info({'send_sync', _, _, _, Request, _, _, _, _}, StateName, StateData)
     when is_binary(Request) =:= false ->
     {next_state, StateName, StateData};
 
-handle_info({'send_sync', Name, RequestInfo, Request,
+handle_info({'send_sync', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
             #state{queue_messages = false} = StateData) ->
-    send('send_sync_out'(Name, RequestInfo, Request,
+    send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Pid), StateData),
     {next_state, StateName, StateData#state{queue_messages = true}};
 
-handle_info({'send_sync', _, _, _,
+handle_info({'send_sync', _, _, _, _,
              Timeout, Priority, TransId, _} = T, StateName,
             #state{queue_messages = true,
                    queued = Queue,
@@ -614,12 +618,12 @@ handle_info({'send_sync', _, _, _,
             {next_state, StateName, StateData}
     end;
 
-handle_info({'return_async', _, ResponseInfo, Response,
+handle_info({'return_async', _, _, ResponseInfo, Response,
              _, _, _}, StateName, StateData)
     when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
     {next_state, StateName, StateData};
 
-handle_info({'return_async', _Name, ResponseInfo, Response,
+handle_info({'return_async', _Name, _Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid},
             StateName, StateData) ->
     true = Pid == self(),
@@ -638,12 +642,12 @@ handle_info({'return_async', _Name, ResponseInfo, Response,
                                           send_timeout_end(TransId, StateData))}
     end;
 
-handle_info({'return_sync', _, ResponseInfo, Response,
+handle_info({'return_sync', _, _, ResponseInfo, Response,
              _, _, _}, StateName, StateData)
     when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
     {next_state, StateName, StateData};
 
-handle_info({'return_sync', _Name, ResponseInfo, Response,
+handle_info({'return_sync', _Name, _Pattern, ResponseInfo, Response,
              _Timeout, TransId, Pid},
             StateName, StateData) ->
     true = Pid == self(),
@@ -663,7 +667,7 @@ handle_info({recv_timeout, Priority, TransId}, StateName,
                    queued = Queue} = StateData) ->
     NewQueue = if
         QueueMessages =:= true ->
-            pqueue4:filter(fun({_, _, _, _, _, _, Id, _}) ->
+            pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
                 Id /= TransId
             end, Priority, Queue);
         true ->
@@ -753,9 +757,9 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
         {error, _} ->
             send('return_async_out'(), StateData),
             {next_state, StateName, StateData};
-        Pid ->
+        {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, RequestInfo, Request,
+            Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Self},
             send('return_async_out'(TransId), StateData),
             {next_state, StateName, send_async_timeout_start(Timeout,
@@ -777,9 +781,9 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
         {error, _} ->
             send('return_sync_out'(), StateData),
             {next_state, StateName, StateData};
-        Pid ->
+        {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_sync', Name, RequestInfo, Request,
+            Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Self},
             {next_state, StateName, send_sync_timeout_start(Timeout,
                                                             TransId,
@@ -800,10 +804,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
         {error, _} ->
             send('returns_async_out'(), StateData),
             {next_state, StateName, StateData};
-        PidList ->
+        {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
-                Pid ! {'send_async', Name, RequestInfo, Request,
+                Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Self},
                 TransId
             end, PidList),
@@ -830,12 +834,16 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.
 
-'send_async_out'(Name, RequestInfo, Request, Timeout, Priority, TransId, Pid)
-    when is_list(Name), is_binary(RequestInfo), is_binary(Request),
+'send_async_out'(Name, Pattern, RequestInfo, Request,
+                 Timeout, Priority, TransId, Pid)
+    when is_list(Name), is_list(Pattern),
+         is_binary(RequestInfo), is_binary(Request),
          is_integer(Timeout), is_integer(Priority),
          is_binary(TransId), is_pid(Pid) ->
     NameBin = erlang:list_to_binary(Name),
     NameSize = erlang:byte_size(NameBin) + 1,
+    PatternBin = erlang:list_to_binary(Pattern),
+    PatternSize = erlang:byte_size(PatternBin) + 1,
     RequestInfoSize = erlang:byte_size(RequestInfo),
     RequestSize = erlang:byte_size(Request),
     PidBin = erlang:term_to_binary(Pid),
@@ -843,6 +851,8 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     <<?MESSAGE_SEND_ASYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0:8,
+      PatternSize:32/unsigned-integer-native,
+      PatternBin/binary, 0:8,
       RequestInfoSize:32/unsigned-integer-native,
       RequestInfo/binary, 0:8,
       RequestSize:32/unsigned-integer-native,
@@ -853,12 +863,16 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
       PidSize:32/unsigned-integer-native,
       PidBin/binary>>.
 
-'send_sync_out'(Name, RequestInfo, Request, Timeout, Priority, TransId, Pid)
-    when is_list(Name), is_binary(RequestInfo), is_binary(Request),
+'send_sync_out'(Name, Pattern, RequestInfo, Request,
+                Timeout, Priority, TransId, Pid)
+    when is_list(Name), is_list(Pattern),
+         is_binary(RequestInfo), is_binary(Request),
          is_integer(Timeout), is_integer(Priority),
          is_binary(TransId), is_pid(Pid) ->
     NameBin = erlang:list_to_binary(Name),
     NameSize = erlang:byte_size(NameBin) + 1,
+    PatternBin = erlang:list_to_binary(Pattern),
+    PatternSize = erlang:byte_size(PatternBin) + 1,
     RequestInfoSize = erlang:byte_size(RequestInfo),
     RequestSize = erlang:byte_size(Request),
     PidBin = erlang:term_to_binary(Pid),
@@ -866,6 +880,8 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     <<?MESSAGE_SEND_SYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0:8,
+      PatternSize:32/unsigned-integer-native,
+      PatternBin/binary, 0:8,
       RequestInfoSize:32/unsigned-integer-native,
       RequestInfo/binary, 0:8,
       RequestSize:32/unsigned-integer-native,
@@ -1112,7 +1128,7 @@ process_queue(#state{recv_timeouts = Ids,
         {empty, NewQueue} ->
             StateData#state{queue_messages = false,
                             queued = NewQueue};
-        {{value, {'send_async', Name, RequestInfo, Request,
+        {{value, {'send_async', Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
             Tref = dict:fetch(TransId, Ids),
             Timeout = case erlang:cancel_timer(Tref) of
@@ -1121,12 +1137,12 @@ process_queue(#state{recv_timeouts = Ids,
                 V ->    
                     V       
             end,
-            send('send_async_out'(Name, RequestInfo, Request,
+            send('send_async_out'(Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Pid),
                  StateData),
             StateData#state{recv_timeouts = dict:erase(TransId, Ids),
                             queued = NewQueue};
-        {{value, {'send_sync', Name, RequestInfo, Request,
+        {{value, {'send_sync', Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
             Tref = dict:fetch(TransId, Ids),
             Timeout = case erlang:cancel_timer(Tref) of
@@ -1135,7 +1151,7 @@ process_queue(#state{recv_timeouts = Ids,
                 V ->    
                     V       
             end,
-            send('send_sync_out'(Name, RequestInfo, Request,
+            send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Pid),
                  StateData),
             StateData#state{recv_timeouts = dict:erase(TransId, Ids),
@@ -1149,3 +1165,4 @@ use_unused_functions(_) ->
     recv_async_select_random([]),
     recv_async_select_oldest([]),
     ok.
+

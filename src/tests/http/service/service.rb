@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -63,11 +63,11 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield if $DEBUG
             end
 
-            def text(command, name, requestInfo, request,
+            def text(command, name, pattern, requestInfo, request,
                      timeout, priority, transId, pid)
                 $stdout.puts "(#{request})"
                 assert{"Test Text" == request}
-                @api.return_(command, name, "", "Test Response",
+                @api.return_(command, name, pattern, "", "Test Response",
                              timeout, transId, pid)
             end
         end

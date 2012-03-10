@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -55,9 +55,10 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
 
-    def flood(self, command, name, request_info, request,
+    def flood(self, command, name, pattern, request_info, request,
               timeout, priority, transId, pid):
-        self.__api.return_(command, name, '', 'python', timeout, transId, pid)
+        self.__api.return_(command, name, pattern,
+                           '', 'python', timeout, transId, pid)
 
     def run(self):
         self.__api.subscribe("python", self.flood)

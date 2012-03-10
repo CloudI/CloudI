@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -57,7 +57,7 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
 
-    def request(self, command, name, requestInfo, request,
+    def request(self, command, name, pattern, requestInfo, request,
                 timeout, priority, transId, pid):
         i = struct.unpack('=I', request[:4])[0]
         if i == 4294967295:

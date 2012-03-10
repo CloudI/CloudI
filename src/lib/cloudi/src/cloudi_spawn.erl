@@ -92,10 +92,10 @@ start_internal(Module, Args, Timeout, Prefix,
         false ->
             {error, not_loaded};
         {file, _} ->
-            cloudi_job_sup:create_job(Module, Args, Timeout, Prefix,
-                                      TimeoutAsync, TimeoutSync,
-                                      DestRefresh, DestDeny, DestAllow,
-                                      ConfigOptions)
+            cloudi_dispatcher_sup:create_job(Module, Args, Timeout, Prefix,
+                                             TimeoutAsync, TimeoutSync,
+                                             DestRefresh, DestDeny, DestAllow,
+                                             ConfigOptions)
     end.
 
 start_external(ThreadsPerProcess,
