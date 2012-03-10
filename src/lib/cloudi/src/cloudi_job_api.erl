@@ -219,6 +219,11 @@ format_erlang({F, 1}, Input, Timeout, _) ->
             end
     end.
 
+-spec format_json_rpc('undefined',
+                      Input :: binary() | string(),
+                      Timeout :: integer(),
+                      Functions :: any()) -> binary().
+
 format_json_rpc(undefined, Input, Timeout, Functions) ->
     {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
     try (case trie:fetch(erlang:binary_to_list(Method), Functions) of

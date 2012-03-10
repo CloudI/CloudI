@@ -454,8 +454,10 @@ log_reopen(FilePath, Inode, State) ->
     end.
 
 log_message_internal_t0(LevelCheck, Line, Format, Args,
-                        #state{level = Level} = State) ->
-    case log_level_allowed(LevelCheck, Level) of
+                        #state{level = Level} = State)
+    when LevelCheck =:= fatal; LevelCheck =:= error; LevelCheck =:= warn;
+         LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
+    case log_level_allowed(Level, LevelCheck) of
         true ->
             log_message_internal(LevelCheck, erlang:now(), node(), self(),
                                  ?MODULE, Line, Format, Args, State);
@@ -465,8 +467,10 @@ log_message_internal_t0(LevelCheck, Line, Format, Args,
 
 log_message_internal_t1(LevelCheck, Line, Format, Args,
                         #state{level = Level,
-                               destination = Destination}) ->
-    case log_level_allowed(LevelCheck, Level) of
+                               destination = Destination})
+    when LevelCheck =:= fatal; LevelCheck =:= error; LevelCheck =:= warn;
+         LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
+    case log_level_allowed(Level, LevelCheck) of
         true ->
             gen_server:cast(Destination,
                             {LevelCheck, erlang:now(), node(), self(),
@@ -475,40 +479,45 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
             ok
     end.
 
-log_level_allowed(fatal, fatal) ->
-    true;
-log_level_allowed(fatal, error) ->
-    true;
-log_level_allowed(error, error) ->
-    true;
-log_level_allowed(fatal, warn) ->
-    true;
-log_level_allowed(error, warn) ->
-    true;
-log_level_allowed(warn, warn) ->
-    true;
-log_level_allowed(fatal, info) ->
-    true;
-log_level_allowed(error, info) ->
-    true;
-log_level_allowed(warn, info) ->
-    true;
-log_level_allowed(info, info) ->
-    true;
-log_level_allowed(fatal, debug) ->
-    true;
-log_level_allowed(error, debug) ->
-    true;
-log_level_allowed(warn, debug) ->
-    true;
-log_level_allowed(info, debug) ->
-    true;
-log_level_allowed(debug, debug) ->
-    true;
-log_level_allowed(_, trace) ->
-    true;
-log_level_allowed(_LevelCheck, _Level) ->
-    false.
+log_level_allowed(Level, LevelCheck) ->
+    % comments make dialyzer happy
+    if
+        Level =:= trace ->
+            (LevelCheck =:= info);
+            %(LevelCheck =:= fatal) orelse
+            %(LevelCheck =:= error) orelse
+            %(LevelCheck =:= warn) orelse
+            %(LevelCheck =:= info) orelse
+            %(LevelCheck =:= debug) orelse
+            %(LevelCheck =:= trace);
+        Level =:= debug ->
+            (LevelCheck =:= info);
+            %(LevelCheck =:= fatal) orelse
+            %(LevelCheck =:= error) orelse
+            %(LevelCheck =:= warn) orelse
+            %(LevelCheck =:= info) orelse
+            %(LevelCheck =:= debug);
+        Level =:= info ->
+            (LevelCheck =:= info);
+            %(LevelCheck =:= fatal) orelse
+            %(LevelCheck =:= error) orelse
+            %(LevelCheck =:= warn) orelse
+            %(LevelCheck =:= info);
+        Level =:= warn ->
+            false;
+            %(LevelCheck =:= fatal) orelse
+            %(LevelCheck =:= error) orelse
+            %(LevelCheck =:= warn);
+        Level =:= error ->
+            false;
+            %(LevelCheck =:= fatal) orelse
+            %(LevelCheck =:= error);
+        Level =:= fatal ->
+            false;
+            %(LevelCheck =:= fatal);
+        Level =:= off ->
+            false
+    end.
 
 log_redirect(_, Destination,
              #state{destination = Destination} = State) ->

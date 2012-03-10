@@ -106,6 +106,9 @@
         options          % #config_job_options{} from configuration
     }).
 
+-compile({nowarn_unused_function, [{recv_async_select_random, 1},
+                                   {recv_async_select_oldest, 1}]}).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -708,7 +711,6 @@ handle_info({'EXIT', _, Reason}, _, StateData) ->
 
 handle_info(Request, StateName, StateData) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    use_unused_functions(undefined),
     {next_state, StateName, StateData}.
 
 terminate(_, _, #state{protocol = tcp,
@@ -1157,12 +1159,4 @@ process_queue(#state{recv_timeouts = Ids,
             StateData#state{recv_timeouts = dict:erase(TransId, Ids),
                             queued = NewQueue}
     end.
-
-use_unused_functions(undefined) ->
-    ok;
-
-use_unused_functions(_) ->
-    recv_async_select_random([]),
-    recv_async_select_oldest([]),
-    ok.
 
