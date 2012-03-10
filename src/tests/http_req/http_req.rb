@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield if $DEBUG
             end
 
-            def request(command, name, requestInfo, request,
+            def request(command, name, pattern, requestInfo, request,
                         timeout, priority, transId, pid)
                 http_qs = @api.request_http_qs_parse(request)
                 value = http_qs.fetch('value', nil)
@@ -76,7 +76,8 @@ if __FILE__ == $PROGRAM_NAME
                     value = value.to_i
                     "<http_test><value>#{value}</value></http_test>"
                 end
-                @api.return_(command, name, '', response, timeout, transId, pid)
+                @api.return_(command, name, pattern,
+                             '', response, timeout, transId, pid)
             end
         end
         object = Task.new(api)

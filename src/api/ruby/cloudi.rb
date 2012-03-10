@@ -71,14 +71,14 @@ module CloudI
             s.to_i
         end
 
-        def subscribe(name, function)
-            @callbacks[@prefix + name] = function
-            send(term_to_binary([:subscribe, name]))
+        def subscribe(pattern, function)
+            @callbacks[@prefix + pattern] = function
+            send(term_to_binary([:subscribe, pattern]))
         end
 
-        def unsubscribe(name, function)
-            @callbacks.delete(@prefix + name)
-            send(term_to_binary([:unsubscribe, name]))
+        def unsubscribe(pattern, function)
+            @callbacks.delete(@prefix + pattern)
+            send(term_to_binary([:unsubscribe, pattern]))
         end
 
         def send_async(name, request)
@@ -152,44 +152,44 @@ module CloudI
             raise ReturnSyncException
         end
 
-        def return_(command, name, response_info, response,
+        def return_(command, name, pattern, response_info, response,
                     timeout, transId, pid)
             case command
             when ASYNC
-                return_async(name, response_info, response,
+                return_async(name, pattern, response_info, response,
                              timeout, transId, pid)
             when SYNC
-                return_sync(name, response_info, response,
+                return_sync(name, pattern, response_info, response,
                             timeout, transId, pid)
             end
         end
 
-        def return_async(name, response_info, response,
+        def return_async(name, pattern, response_info, response,
                          timeout, transId, pid)
-            return_async_nothrow(name, response_info, response,
+            return_async_nothrow(name, pattern, response_info, response,
                                  timeout, transId, pid)
             raise ReturnAsyncException
         end
 
-        def return_async_nothrow(name, response_info, response,
+        def return_async_nothrow(name, pattern, response_info, response,
                                  timeout, transId, pid)
-            send(term_to_binary([:return_async, name,
+            send(term_to_binary([:return_async, name, pattern,
                                   OtpErlangBinary.new(response_info),
                                   OtpErlangBinary.new(response),
                                   timeout,
                                   OtpErlangBinary.new(transId), pid]))
         end
 
-        def return_sync(name, response_info, response,
+        def return_sync(name, pattern, response_info, response,
                         timeout, transId, pid)
-            return_sync_nothrow(name, response_info, response,
+            return_sync_nothrow(name, pattern, response_info, response,
                                 timeout, transId, pid)
             raise ReturnSyncException
         end
 
-        def return_sync_nothrow(name, response_info, response,
+        def return_sync_nothrow(name, pattern, response_info, response,
                                 timeout, transId, pid)
-            send(term_to_binary([:return_sync, name,
+            send(term_to_binary([:return_sync, name, pattern,
                                   OtpErlangBinary.new(response_info),
                                   OtpErlangBinary.new(response),
                                   timeout,
@@ -202,14 +202,14 @@ module CloudI
             return poll
         end
 
-        def callback(command, name, requestInfo, request,
+        def callback(command, name, pattern, requestInfo, request,
                      timeout, priority, transId, pid)
-            function = @callbacks[name]
+            function = @callbacks[pattern]
             API.assert{function != nil}
             case command
             when MESSAGE_SEND_ASYNC
                 begin
-                    response = function.call(ASYNC, name,
+                    response = function.call(ASYNC, name, pattern,
                                              requestInfo, request,
                                              timeout, priority, transId, pid)
                     if response.kind_of?(Array)
@@ -231,11 +231,11 @@ module CloudI
                     responseInfo = ''
                     response = ''
                 end
-                return_async_nothrow(name, responseInfo, response,
+                return_async_nothrow(name, pattern, responseInfo, response,
                                      timeout, transId, pid)
             when MESSAGE_SEND_SYNC
                 begin
-                    response = function.call(SYNC, name,
+                    response = function.call(SYNC, name, pattern,
                                              requestInfo, request,
                                              timeout, priority, transId, pid)
                     if response.kind_of?(Array)
@@ -257,7 +257,7 @@ module CloudI
                     responseInfo = ''
                     response = ''
                 end
-                return_sync_nothrow(name, responseInfo, response,
+                return_sync_nothrow(name, pattern, responseInfo, response,
                                     timeout, transId, pid)
             else
                 raise MessageDecodingException
@@ -305,6 +305,10 @@ module CloudI
                     i += j; j = nameSize + 4
                     tmp = data[i, j].unpack("Z#{nameSize}L")
                     name = tmp[0]
+                    patternSize = tmp[1]
+                    i += j; j = patternSize + 4
+                    tmp = data[i, j].unpack("Z#{patternSize}L")
+                    pattern = tmp[0]
                     requestInfoSize = tmp[1]
                     i += j; j = requestInfoSize + 1 + 4
                     tmp = data[i, j].unpack("a#{requestInfoSize}xL")
@@ -324,7 +328,7 @@ module CloudI
                         raise MessageDecodingException
                     end
                     data.clear()
-                    callback(command, name, requestInfo, request,
+                    callback(command, name, pattern, requestInfo, request,
                              timeout, priority, transId, binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
@@ -497,9 +501,11 @@ if __FILE__ == $PROGRAM_NAME
             def initialize(api)
                 @api = api
             end
-            def foobar(command, name, request, timeout, transId, pid)
+            def foobar(command, name, pattern,
+                       request, timeout, transId, pid)
                 puts 'got foobar'
-                @api.return_(command, name, 'bye', timeout, transId, pid)
+                @api.return_(command, name, pattern,
+                             'bye', timeout, transId, pid)
             end
         end
         begin

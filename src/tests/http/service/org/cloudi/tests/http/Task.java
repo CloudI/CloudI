@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,7 @@ public class Task implements Runnable
         api = new API(thread_index);
     }
 
-    public void text(Integer command, String name,
+    public void text(Integer command, String name, String pattern,
                      byte[] requestInfo, byte[] request,
                      Integer timeout, Byte priority,
                      byte[] transId, OtpErlangPid pid)
@@ -65,7 +65,7 @@ public class Task implements Runnable
         final String value = new String(request);
         API.out.println("(" + value + ")");
         assert "Test Text" == value : value;
-        api.return_(command, name,
+        api.return_(command, name, pattern,
                     ("").getBytes(), ("Test Response").getBytes(),
                     timeout, transId, pid);
     }
