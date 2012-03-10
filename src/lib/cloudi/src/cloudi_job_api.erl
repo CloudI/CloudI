@@ -57,7 +57,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/10,
+         cloudi_job_handle_request/11,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -154,13 +154,13 @@ cloudi_job_init(_Args, Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "json_rpc//post"),
     {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
 
-cloudi_job_handle_request(_Type, Name, _RequestInfo, Request,
+cloudi_job_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
                           Timeout, _Priority, _TransId, _Pid,
                           #state{suffix_index = SuffixIndex,
                                  functions = Functions,
                                  formats = Formats} = State, _Dispatcher) ->
     {Format, Suffix} = cloudi_string:splitl(
-        $/, string:sub_string(Name, SuffixIndex)
+        $/, string:sub_string(Pattern, SuffixIndex)
     ),
     FunctionArity = case cloudi_string:beforel($/, Suffix, input) of
         [] ->

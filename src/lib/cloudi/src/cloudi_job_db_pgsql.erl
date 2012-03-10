@@ -58,7 +58,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/10,
+         cloudi_job_handle_request/11,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -144,7 +144,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
             {stop, Reason}
     end.
 
-cloudi_job_handle_request(_Type, _Name, _RequestInfo, Request,
+cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Timeout, _Priority, TransId, _Pid,
                           #state{connection = Connection} = State,
                           _Dispatcher) ->

@@ -57,7 +57,7 @@
 
 %% cloudi_job callbacks
 -export([cloudi_job_init/3,
-         cloudi_job_handle_request/10,
+         cloudi_job_handle_request/11,
          cloudi_job_handle_info/3,
          cloudi_job_terminate/2]).
 
@@ -178,7 +178,7 @@ cloudi_job_init(Args, Prefix, Dispatcher) ->
                 push = Push,
                 receives = ReceivesZMQ4}}.
 
-cloudi_job_handle_request(Type, Name, _RequestInfo, Request,
+cloudi_job_handle_request(Type, Name, Pattern, _RequestInfo, Request,
                           Timeout, _Priority, TransId, Pid,
                           #state{publish = PublishZMQ,
                                  request = RequestZMQ,
@@ -186,7 +186,7 @@ cloudi_job_handle_request(Type, Name, _RequestInfo, Request,
                                  receives = ReceivesZMQ} = State,
                           Dispatcher) ->
     true = is_binary(Request),
-    case trie:find(Name, PublishZMQ) of
+    case trie:find(Pattern, PublishZMQ) of
         {ok, PublishL} ->
             lists:foreach(fun({NameZMQ, S}) ->
                 ok = erlzmq:send(S, erlang:iolist_to_binary([NameZMQ, Request]))
@@ -194,17 +194,17 @@ cloudi_job_handle_request(Type, Name, _RequestInfo, Request,
         error ->
             ok
     end,
-    case trie:find(Name, PushZMQ) of
+    case trie:find(Pattern, PushZMQ) of
         {ok, PushS} ->
             ok = erlzmq:send(PushS, Request);
         error ->
             ok
     end,
-    case trie:find(Name, RequestZMQ) of
+    case trie:find(Pattern, RequestZMQ) of
         {ok, RequestS} ->
             ok = erlzmq:send(RequestS, Request),
             F = fun(Response) ->
-                cloudi_job:return_nothrow(Dispatcher, Type, Name,
+                cloudi_job:return_nothrow(Dispatcher, Type, Name, Pattern,
                                           <<>>, Response,
                                           Timeout, TransId, Pid)
             end,
@@ -249,7 +249,8 @@ cloudi_job_handle_info({zmq, S, Incoming, _},
             {noreply, State}
     end;
 
-cloudi_job_handle_info({'return_async_active', _Name, _ResponseInfo, Response,
+cloudi_job_handle_info({'return_async_active', _Name, _Pattern,
+                        _ResponseInfo, Response,
                         _Timeout, TransId},
                        #state{reply_replies = ReplyReplies} = State,
                        _Dispatcher) ->

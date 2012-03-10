@@ -47,7 +47,7 @@
 %%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_sup).
+-module(cloudi_dispatcher_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).

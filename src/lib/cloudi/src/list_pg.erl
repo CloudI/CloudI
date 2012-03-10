@@ -1,3 +1,5 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 %% Derived from the pg2 module in the OTP kernel application
 %% (lib/kernel-x.x.x/src/pg2.erl)
 %% the pg2 module copyright is below:
@@ -45,8 +47,8 @@
 
 -record(state,
     {
-        groups = trie:new(),    % string() -> #list_pg_data{}
-        pids = dict:new()       % pid() -> list(string())
+        groups = list_pg_data:get_empty_groups(), % string() -> #list_pg_data{}
+        pids = dict:new()                         % pid() -> list(string())
     }).
 
 %%% monitors are used instead of links.
@@ -65,6 +67,7 @@ start_link() ->
 -spec create(name()) -> 'ok'.
 
 create(Name) when is_list(Name) ->
+    group_name_validate_new(Name),
     global:trans({{?MODULE, Name}, self()},
                  fun() ->
                      gen_server:multi_call(?MODULE, {create, Name})
@@ -74,6 +77,7 @@ create(Name) when is_list(Name) ->
 -spec delete(name()) -> 'ok'.
 
 delete(Name) when is_list(Name) ->
+    group_name_validate_new(Name),
     global:trans({{?MODULE, Name}, self()},
                  fun() ->
                      gen_server:multi_call(?MODULE, {delete, Name})
@@ -83,6 +87,7 @@ delete(Name) when is_list(Name) ->
 -spec join(name(), pid()) -> 'ok'.
 
 join(Name, Pid) when is_list(Name), is_pid(Pid) ->
+    group_name_validate_new(Name),
     global:trans({{?MODULE, Name}, self()},
                  fun() ->
                      gen_server:multi_call(?MODULE, {join, Name, Pid})
@@ -92,6 +97,7 @@ join(Name, Pid) when is_list(Name), is_pid(Pid) ->
 -spec leave(name(), pid()) -> 'ok'.
 
 leave(Name, Pid) when is_list(Name), is_pid(Pid) ->
+    group_name_validate_new(Name),
     global:trans({{?MODULE, Name}, self()},
                  fun() ->
                      gen_server:multi_call(?MODULE, {leave, Name, Pid})
@@ -472,3 +478,16 @@ member_died(Pid, #state{pids = Pids} = State) ->
             end, State, Names)
     end.
 
+% pattern matching occurs with a "*" character, but "**" is forbidden,
+% so, this makes sure all group names are valid, before creating a new group
+group_name_validate_new(Name) ->
+    group_name_validate_new(Name, false).
+
+group_name_validate_new([], _) ->
+    ok;
+group_name_validate_new([$* | _], true) ->
+    erlang:exit(badarg);
+group_name_validate_new([$* | L], false) ->
+    group_name_validate_new(L, true);
+group_name_validate_new([_ | L], _) ->
+    group_name_validate_new(L, false).

@@ -87,16 +87,16 @@ class API(object):
             raise invalid_input_exception()
         return int(s)
 
-    def subscribe(self, name, Function):
+    def subscribe(self, pattern, Function):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
-        if len(args) != 9: # self + arguments, so a non-static method
+        if len(args) != 10: # self + arguments, so a non-static method
             raise invalid_input_exception()
-        self.__callbacks[self.__prefix + name] = Function
-        self.__send(term_to_binary((OtpErlangAtom("subscribe"), name)))
+        self.__callbacks[self.__prefix + pattern] = Function
+        self.__send(term_to_binary((OtpErlangAtom("subscribe"), pattern)))
 
-    def unsubscribe(self, name):
-        del self.__callbacks[self.__prefix + name]
-        self.__send(term_to_binary((OtpErlangAtom("unsubscribe"), name)))
+    def unsubscribe(self, pattern):
+        del self.__callbacks[self.__prefix + pattern]
+        self.__send(term_to_binary((OtpErlangAtom("unsubscribe"), pattern)))
 
     def send_async(self, name, request,
                    timeout=None, request_info=None, priority=None):
@@ -169,39 +169,41 @@ class API(object):
                                     OtpErlangBinary(transId), pid)))
         raise return_sync_exception()
 
-    def return_(self, command, name, response_info, response,
+    def return_(self, command, name, pattern, response_info, response,
                 timeout, transId, pid):
         if command == API.ASYNC:
-            self.return_async(name, response_info, response,
+            self.return_async(name, pattern, response_info, response,
                               timeout, transId, pid)
         elif command == API.SYNC:
-            self.return_sync(name, response_info, response,
+            self.return_sync(name, pattern, response_info, response,
                              timeout, transId, pid)
         else:
             raise invalid_input_exception()
 
-    def return_async(self, name, response_info, response,
+    def return_async(self, name, pattern, response_info, response,
                      timeout, transId, pid):
-        self.__return_async_nothrow(name, response_info, response,
+        self.__return_async_nothrow(name, pattern, response_info, response,
                                     timeout, transId, pid)
         raise return_async_exception()
 
-    def __return_async_nothrow(self, name, response_info, response,
+    def __return_async_nothrow(self, name, pattern, response_info, response,
                                timeout, transId, pid):
-        self.__send(term_to_binary((OtpErlangAtom("return_async"), name,
+        self.__send(term_to_binary((OtpErlangAtom("return_async"),
+                                    name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
                                     OtpErlangBinary(transId), pid)))
 
-    def return_sync(self, name, response_info, response,
+    def return_sync(self, name, pattern, response_info, response,
                     timeout, transId, pid):
-        self.__return_sync_nothrow(name, response_info, response,
+        self.__return_sync_nothrow(name, pattern, response_info, response,
                                    timeout, transId, pid)
         raise return_sync_exception()
 
-    def __return_sync_nothrow(self, name, response_info, response,
+    def __return_sync_nothrow(self, name, pattern, response_info, response,
                               timeout, transId, pid):
-        self.__send(term_to_binary((OtpErlangAtom("return_sync"), name,
+        self.__send(term_to_binary((OtpErlangAtom("return_sync"),
+                                    name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
                                     OtpErlangBinary(transId), pid)))
@@ -211,13 +213,14 @@ class API(object):
                                     OtpErlangBinary(transId))))
         return self.poll()
 
-    def __callback(self, command, name, requestInfo, request,
+    def __callback(self, command, name, pattern, requestInfo, request,
                    timeout, priority, transId, pid):
-        function = self.__callbacks.get(name, None)
+        function = self.__callbacks.get(pattern, None)
         assert function is not None
         if command == _MESSAGE_SEND_ASYNC:
             try:
-                response = function(API.ASYNC, name, requestInfo, request,
+                response = function(API.ASYNC, name, pattern,
+                                    requestInfo, request,
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
@@ -232,11 +235,13 @@ class API(object):
                 # exception is ignored at this level
                 responseInfo = ''
                 response = ''
-            self.__return_async_nothrow(name, responseInfo, response,
+            self.__return_async_nothrow(name, pattern,
+                                        responseInfo, response,
                                         timeout, transId, pid)
         elif command == _MESSAGE_SEND_SYNC:
             try:
-                response = function(API.SYNC, name, requestInfo, request,
+                response = function(API.SYNC, name, pattern,
+                                    requestInfo, request,
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
@@ -251,7 +256,8 @@ class API(object):
                 # exception is ignored at this level
                 responseInfo = ''
                 response = ''
-            self.__return_sync_nothrow(name, responseInfo, response,
+            self.__return_sync_nothrow(name, pattern,
+                                       responseInfo, response,
                                        timeout, transId, pid)
         else:
             raise message_decoding_exception()
@@ -290,7 +296,11 @@ class API(object):
                 nameSize = struct.unpack("=I", data[i:j])[0]
                 i, j = j, j + nameSize + 4
                 (name, nullTerminator,
-                 requestInfoSize) = struct.unpack("=%dscI" % (nameSize - 1),
+                 patternSize) = struct.unpack("=%dscI" % (nameSize - 1),
+                                              data[i:j])
+                i, j = j, j + patternSize + 4
+                (pattern, nullTerminator,
+                 requestInfoSize) = struct.unpack("=%dscI" % (patternSize - 1),
                                                   data[i:j])
                 i, j = j, j + requestInfoSize + 1 + 4
                 (requestInfo, nullTerminator,
@@ -305,7 +315,8 @@ class API(object):
                 if j != len(data):
                     raise message_decoding_exception()
                 data = ''
-                self.__callback(command, name, requestInfo, request,
+                self.__callback(command, name, pattern,
+                                requestInfo, request,
                                 timeout, priority, transId,
                                 binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
@@ -441,9 +452,11 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
 
-    def foobar(self, command, name, request, timeout, transId, pid):
+    def foobar(self, command, name, pattern,
+               request, timeout, transId, pid):
         print "got foobar"
-        self.__api.return_(command, name, "bye", timeout, transId, pid)
+        self.__api.return_(command, name, pattern,
+                           "bye", timeout, transId, pid)
 
     def run(self):
         self.__api.subscribe("foobar", self.foobar)
