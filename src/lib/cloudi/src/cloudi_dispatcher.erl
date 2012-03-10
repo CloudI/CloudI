@@ -156,8 +156,8 @@ handle_call({'get_pid', Name, Timeout}, {Exclude, _} = Client,
                     {noreply, State};
                 {error, _} ->
                     {reply, {error, timeout}, State};
-                Pid ->
-                    {reply, {ok, Pid}, State}
+                {ok, Pattern, Pid} ->
+                    {reply, {ok, {Pattern, Pid}}, State}
             end;
         false ->
             {reply, {error, timeout}, State}
@@ -189,23 +189,23 @@ handle_call({'send_async', Name, RequestInfo, Request,
     end;
 
 handle_call({'send_async', Name, RequestInfo, Request,
-             undefined, Priority, Pid}, Client,
+             undefined, Priority, PatternPid}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async', Name, RequestInfo, Request,
-                 TimeoutAsync, Priority, Pid}, Client, State);
+                 TimeoutAsync, Priority, PatternPid}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
-             Timeout, undefined, Pid}, Client,
+             Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
     PriorityDefault = ConfigOptions#config_job_options.priority_default,
     handle_call({'send_async', Name, RequestInfo, Request,
-                 Timeout, PriorityDefault, Pid}, Client, State);
+                 Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
-             Timeout, Priority, Pid}, _,
+             Timeout, Priority, {Pattern, Pid}}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, RequestInfo, Request,
+    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, self()},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
 
@@ -235,23 +235,23 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
     end;
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
-             undefined, Priority, Pid}, Client,
+             undefined, Priority, PatternPid}, Client,
             #state{timeout_async = TimeoutAsync} = State) ->
     handle_call({'send_async_active', Name, RequestInfo, Request,
-                 TimeoutAsync, Priority, Pid}, Client, State);
+                 TimeoutAsync, Priority, PatternPid}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
-             Timeout, undefined, Pid}, Client,
+             Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
     PriorityDefault = ConfigOptions#config_job_options.priority_default,
     handle_call({'send_async_active', Name, RequestInfo, Request,
-                 Timeout, PriorityDefault, Pid}, Client, State);
+                 Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
-             Timeout, Priority, Pid}, _,
+             Timeout, Priority, {Pattern, Pid}}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, RequestInfo, Request,
+    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, self()},
     {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
                                                            TransId, State)};
@@ -282,27 +282,27 @@ handle_call({'send_sync', Name, RequestInfo, Request,
     end;
 
 handle_call({'send_sync', Name, RequestInfo, Request,
-             undefined, Priority, Pid}, Client,
+             undefined, Priority, PatternPid}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'send_sync', Name, RequestInfo, Request,
-                 TimeoutSync, Priority, Pid}, Client, State);
+                 TimeoutSync, Priority, PatternPid}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
-             Timeout, undefined, Pid}, Client,
+             Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
     PriorityDefault = ConfigOptions#config_job_options.priority_default,
     handle_call({'send_sync', Name, RequestInfo, Request,
-                 Timeout, PriorityDefault, Pid}, Client, State);
+                 Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
-             Timeout, Priority, Pid}, _,
+             Timeout, Priority, {Pattern, Pid}}, _,
             #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
     Self = self(),
-    Pid ! {'send_sync', Name, RequestInfo, Request,
+    Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
            Timeout - ?TIMEOUT_DELTA, Priority, TransId, Self},
     receive
-        {'return_sync', _, ResponseInfo, Response, _, TransId, Self} ->
+        {'return_sync', _, _, ResponseInfo, Response, _, TransId, Self} ->
             if
                 Response == <<>> ->
                     {reply, {error, timeout}, State};
@@ -394,16 +394,16 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
-handle_cast({'subscribe', Name},
+handle_cast({'subscribe', Pattern},
             #state{job = Job,
                    prefix = Prefix} = State) ->
-    list_pg:join(Prefix ++ Name, Job),
+    list_pg:join(Prefix ++ Pattern, Job),
     {noreply, State};
 
-handle_cast({'unsubscribe', Name},
+handle_cast({'unsubscribe', Pattern},
             #state{job = Job,
                    prefix = Prefix} = State) ->
-    list_pg:leave(Prefix ++ Name, Job),
+    list_pg:leave(Prefix ++ Pattern, Job),
     {noreply, State};
 
 handle_cast(Request, State) ->
@@ -429,8 +429,8 @@ handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
-        Pid ->
-            gen_server:reply(Client, {ok, Pid}),
+        {ok, Pattern, Pid} ->
+            gen_server:reply(Client, {ok, {Pattern, Pid}}),
             {noreply, State}
     end;
 
@@ -472,8 +472,9 @@ handle_info({'forward_async', Name, RequestInfo, Request,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_async', Name, RequestInfo, Request,
+                {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+                    NextPid ! {'send_async', Name, NextPattern,
+                               RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
                 _ ->
@@ -502,8 +503,9 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
                     ok;
                 {error, _} ->
                     ok;
-                NextPid when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_sync', Name, RequestInfo, Request,
+                {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
+                    NextPid ! {'send_sync', Name, NextPattern,
+                               RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
                 _ ->
@@ -561,7 +563,7 @@ handle_info({'recv_async', Timeout, TransId, Client},
             end
     end;
 
-handle_info({'return_async', Name, ResponseInfo, Response,
+handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid},
             #state{job = Job} = State) ->
     true = Pid == self(),
@@ -575,7 +577,7 @@ handle_info({'return_async', Name, ResponseInfo, Response,
             {noreply, send_timeout_end(TransId, State)};
         {ok, {active, Tref}} ->
             erlang:cancel_timer(Tref),
-            Job ! {'return_async_active', Name, ResponseInfo, Response,
+            Job ! {'return_async_active', Name, Pattern, ResponseInfo, Response,
                    Timeout, TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} when Response == <<>> ->
@@ -589,7 +591,7 @@ handle_info({'return_async', Name, ResponseInfo, Response,
                                           send_timeout_end(TransId, State))}
     end;
 
-handle_info({'return_sync', _Name, _ResponseInfo, _Response,
+handle_info({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
              _Timeout, _TransId, _Pid},
             State) ->
     % a response after a timeout is discarded
@@ -645,9 +647,9 @@ handle_send_async(Name, RequestInfo, Request,
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
-        Pid ->
+        {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, RequestInfo, Request,
+            Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, self()},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
@@ -669,9 +671,9 @@ handle_send_async_active(Name, RequestInfo, Request,
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
-        Pid ->
+        {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, RequestInfo, Request,
+            Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, self()},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
@@ -693,13 +695,14 @@ handle_send_sync(Name, RequestInfo, Request,
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
-        Pid ->
+        {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Self = self(),
-            Pid ! {'send_sync', Name, RequestInfo, Request,
+            Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Self},
             receive
-                {'return_sync', _, ResponseInfo, Response, _, TransId, Self} ->
+                {'return_sync', _, _,
+                 ResponseInfo, Response, _, TransId, Self} ->
                     if
                         Response == <<>> ->
                             gen_server:reply(Client, {error, timeout});
@@ -733,10 +736,10 @@ handle_mcast_async(Name, RequestInfo, Request,
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
-        PidList ->
+        {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
-                Pid ! {'send_async', Name, RequestInfo, Request,
+                Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Self},
                 TransId
             end, PidList),

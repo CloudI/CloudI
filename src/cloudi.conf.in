@@ -3,7 +3,9 @@
     % referenced instead of the literal service name prefixes for the
     % destination allow list and/or the destination deny list.  The ACLs may
     % reference other ACLs (cyclic references and missing references
-    % in this list generate errors).
+    % in this list generate errors).  ACLs always use an exact match on the
+    % send operation destination service name when determining if a common
+    % prefix is allowed or denied (while ignoring the "/" character).
     {all, [database, tests]},
     {database, ["/db/"]},
     {tests, ["/tests/"]},
@@ -128,9 +130,13 @@
         % (earlier than the timeout specified for the message).
         undefined,
         % specify how many processes should be created with this configuration
+        % (a float is a multiplier for the erlang VM scheduler count, i.e.,
+        %  the desired cpu count)
         1,
         % specify how many threads should be created with this configuration
         % (i.e., how many sockets should be opened to each OS process)
+        % (a float is a multiplier for the erlang VM scheduler count, i.e.,
+        %  the desired cpu count)
         1.5,
         % If more than MaxR restarts occur within MaxT seconds,
         % CloudI terminates the process

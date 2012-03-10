@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -83,6 +83,7 @@ class Input
         void hexpi(CloudI::API const & api,
                    int const command,
                    std::string const & name,
+                   std::string const & pattern,
                    void const * const /*request_info*/,
                    uint32_t const /*request_info_size*/,
                    void const * const request,
@@ -129,7 +130,7 @@ class Input
                 const_cast<char *>(pi_result.c_str()));
             *elapsed_hours = static_cast<float>(t.elapsed() / 3600.0);
 
-            api.return_(command, name, "", 0,
+            api.return_(command, name, pattern, "", 0,
                         pi_result.c_str(), pi_result.size(),
                         timeout, trans_id, pid, pid_size);
             std::cout << "execution never gets here" << std::endl;

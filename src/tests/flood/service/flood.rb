@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -63,9 +63,10 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield if $DEBUG
             end
 
-            def flood(command, name, request_info, request,
+            def flood(command, name, pattern, request_info, request,
                       timeout, priority, transId, pid)
-                @api.return_(command, name, "", "ruby", timeout, transId, pid)
+                @api.return_(command, name, pattern,
+                             "", "ruby", timeout, transId, pid)
             end
         end
         object = Task.new(api)

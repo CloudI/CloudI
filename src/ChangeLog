@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-03-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Use trie:find_match/2 instead of trie:find/2 within the list_pg_data
+      module to provide pattern matching with service name strings
+      (provided for CloudI API message send operations) so that a
+      subscribed service name with a "*" wildcard character matches
+      1 or more characters, while preferring the most exact match possible
+      (so "/a/b/c" will still match "/a/b/c", not "/*")
+    * Provide the subscribed service name as the "pattern" parameter for
+      all CloudI service callback functions and the CloudI API return functions
+      (i.e., so the pattern parameter provides what the service passed to the
+       subscribe function, while the name parameter provides what the send
+       operation was given as a destination)
+    * Rename cloudi_job_sup.erl to cloudi_dispatcher_sup.erl to avoid the
+      cloudi_job_ prefix because of the cloudi_job behavior usage
+
 2012-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Rename cloudi_job_dispatcher.erl to cloudi_dispatcher.erl to avoid the

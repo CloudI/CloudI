@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -38,59 +38,54 @@
 // DAMAGE.
 //
 
-package org.cloudi.tests.http;
+package org.cloudi;
 
-import com.ericsson.otp.erlang.OtpErlangPid;
-import org.cloudi.API;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 
-public class Task implements Runnable
+public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
 {
-    private API api;
-     
-    public Task(final int thread_index)
-                throws API.InvalidInputException,
-                       API.MessageDecodingException
+    private Object instance;
+    private String methodName;
+    private Method method;
+
+    public Function9(final Object instance, final String methodName)
     {
-        api = new API(thread_index);
+        this.instance = instance;
+        this.methodName = methodName;
+        this.method = null;
     }
 
-    public void text(Integer command, String name, String pattern,
-                     byte[] requestInfo, byte[] request,
-                     Integer timeout, Byte priority,
-                     byte[] transId, OtpErlangPid pid)
-                     throws API.ReturnAsyncException,
-                            API.ReturnSyncException,
-                            API.InvalidInputException
+    public Object invoke(C1 a1, C2 a2, C3 a3, C4 a4, C5 a5, C6 a6,
+                         C7 a7, C8 a8, C9 a9)
+                         throws Throwable,
+                                IllegalAccessException,
+                                NoSuchMethodException
     {
-        final String value = new String(request);
-        API.out.println("(" + value + ")");
-        assert "Test Text" == value : value;
-        api.return_(command, name, pattern,
-                    ("").getBytes(), ("Test Response").getBytes(),
-                    timeout, transId, pid);
-    }
- 
-    public void run()
-    {
-        api.subscribe("text/post", this, "text");
-        boolean running = true;
-        while (running)
+        try
         {
-            try
+            if (this.method == null)
             {
-                Object result = api.poll();
-                if (result == null)
-                    running = false;
-                else
-                    API.out.println("(java) received: " + result.toString());
+                this.method = this.instance
+                                  .getClass()
+                                  .getDeclaredMethod(methodName,
+                                                     a1.getClass(),
+                                                     a2.getClass(),
+                                                     a3.getClass(),
+                                                     a4.getClass(),
+                                                     a5.getClass(),
+                                                     a6.getClass(),
+                                                     a7.getClass(),
+                                                     a8.getClass(),
+                                                     a9.getClass());
             }
-            catch (API.MessageDecodingException e)
-            {
-                e.printStackTrace(API.err);
-                running = false;
-            }
+            return this.method.invoke(this.instance, a1, a2, a3, a4, a5, a6,
+                                      a7, a8, a9);
         }
-        API.err.println("exited thread");
+        catch (InvocationTargetException e)
+        {
+            throw e.getTargetException();
+        }
     }
 }
 

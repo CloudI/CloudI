@@ -82,6 +82,7 @@ typedef struct cloudi_instance_t
 typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   int const command,
                                   char const * const name,
+                                  char const * const pattern,
                                   void const * const request_info,
                                   uint32_t const request_info_size,
                                   void const * const request,
@@ -108,11 +109,11 @@ void cloudi_destroy(cloudi_instance_t * p);
 int cloudi_initialize_thread_count(unsigned int * const thread_count);
 
 int cloudi_subscribe(cloudi_instance_t * p,
-                     char const * const name,
+                     char const * const pattern,
                      cloudi_callback_t f);
 
 int cloudi_unsubscribe(cloudi_instance_t * p,
-                       char const * const name);
+                       char const * const pattern);
 
 int cloudi_send_async(cloudi_instance_t * p,
                       char const * const name,
@@ -196,6 +197,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
 int cloudi_return(cloudi_instance_t * p,
                   int const command,
                   char const * const name,
+                  char const * const pattern,
                   void const * const response_info,
                   uint32_t const response_info_size,
                   void const * const response,
@@ -207,6 +209,7 @@ int cloudi_return(cloudi_instance_t * p,
 
 int cloudi_return_async(cloudi_instance_t * p,
                         char const * const name,
+                        char const * const pattern,
                         void const * const response_info,
                         uint32_t const response_info_size,
                         void const * const response,
@@ -218,6 +221,7 @@ int cloudi_return_async(cloudi_instance_t * p,
 
 int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const name,
+                       char const * const pattern,
                        void const * const response_info,
                        uint32_t const response_info_size,
                        void const * const response,

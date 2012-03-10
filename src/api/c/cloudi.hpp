@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,7 @@ class API
                 virtual ~callback_function_generic() throw() {}
                 virtual void operator () (int const,
                                           char const * const,
+                                          char const * const,
                                           void const * const,
                                           uint32_t const,
                                           void const * const,
@@ -84,6 +85,7 @@ class API
                                         void (T::*f) (API const &,
                                                       int const,
                                                       std::string const &,
+                                                      std::string const &,
                                                       void const * const,
                                                       uint32_t const,
                                                       void const * const,
@@ -101,6 +103,7 @@ class API
 
                 virtual void operator () (int const command,
                                           char const * const name,
+                                          char const * const pattern,
                                           void const * const request_info,
                                           uint32_t const request_info_size,
                                           void const * const request,
@@ -114,6 +117,7 @@ class API
                     (m_object.*m_f)(*m_api,
                                     command,
                                     std::string(name),
+                                    std::string(pattern),
                                     request_info,
                                     request_info_size,
                                     request,
@@ -129,6 +133,7 @@ class API
                 API const * m_api;
                 void (T::*m_f) (API const &,
                                 int const,
+                                std::string const &,
                                 std::string const &,
                                 void const * const,
                                 uint32_t const,
@@ -148,6 +153,7 @@ class API
                                         void (*f) (API const &,
                                                    int const,
                                                    std::string const &,
+                                                   std::string const &,
                                                    void const * const,
                                                    uint32_t const,
                                                    void const * const,
@@ -165,6 +171,7 @@ class API
 
                 virtual void operator () (int const command,
                                           char const * const name,
+                                          char const * const pattern,
                                           void const * const request_info,
                                           uint32_t const request_info_size,
                                           void const * const request,
@@ -178,6 +185,7 @@ class API
                     (*m_f)(*m_api,
                            command,
                            std::string(name),
+                           std::string(pattern),
                            request_info,
                            request_info_size,
                            request,
@@ -192,6 +200,7 @@ class API
                 API const * m_api;
                 void (*m_f) (API const &,
                              int const,
+                             std::string const &,
                              std::string const &,
                              void const * const,
                              uint32_t const,
@@ -216,10 +225,11 @@ class API
         static unsigned int thread_count();
 
         template <typename T>
-        int subscribe(std::string const & name,
+        int subscribe(std::string const & pattern,
                       T & object,
                       void (T::*f) (API const &,
                                     int const,
+                                    std::string const &,
                                     std::string const &,
                                     void const * const,
                                     uint32_t const,
@@ -231,16 +241,17 @@ class API
                                     char const * const,
                                     uint32_t const)) const
         {
-            return subscribe(name.c_str(),
+            return subscribe(pattern.c_str(),
                              new callback_function_cxx_m<T>(object,
                                                             new API(*this),
                                                             f));
         }
         template <typename T>
-        int subscribe(char const * const name,
+        int subscribe(char const * const pattern,
                       T & object,
                       void (T::*f) (API const &,
                                     int const,
+                                    std::string const &,
                                     std::string const &,
                                     void const * const,
                                     uint32_t const,
@@ -252,14 +263,15 @@ class API
                                     char const * const,
                                     uint32_t const)) const
         {
-            return subscribe(name,
+            return subscribe(pattern,
                              new callback_function_cxx_m<T>(object,
                                                             new API(*this),
                                                             f));
         }
-        int subscribe(std::string const & name,
+        int subscribe(std::string const & pattern,
                       void (*f) (API const &,
                                  int const,
+                                 std::string const &,
                                  std::string const &,
                                  void const * const,
                                  uint32_t const,
@@ -271,12 +283,13 @@ class API
                                  char const * const,
                                  uint32_t const)) const
         {
-            return subscribe(name.c_str(),
+            return subscribe(pattern.c_str(),
                              new callback_function_cxx_s(new API(*this), f));
         }
-        int subscribe(char const * const name,
+        int subscribe(char const * const pattern,
                       void (*f) (API const &,
                                  int const,
+                                 std::string const &,
                                  std::string const &,
                                  void const * const,
                                  uint32_t const,
@@ -288,18 +301,18 @@ class API
                                  char const * const,
                                  uint32_t const)) const
         {
-            return subscribe(name,
+            return subscribe(pattern,
                              new callback_function_cxx_s(new API(*this), f));
         }
     private:
-        int subscribe(char const * const name,
+        int subscribe(char const * const pattern,
                       callback_function_generic * p) const;
 
     public:
-        int unsubscribe(char const * const name) const;
-        inline int unsubscribe(std::string const & name) const
+        int unsubscribe(char const * const pattern) const;
+        inline int unsubscribe(std::string const & pattern) const
         {
-            return unsubscribe(name.c_str());
+            return unsubscribe(pattern.c_str());
         }
 
         int send_async(char const * const name,
@@ -532,6 +545,7 @@ class API
 
         int return_(int const command,
                     char const * const name,
+                    char const * const pattern,
                     void const * const response_info,
                     uint32_t const response_info_size,
                     void const * const response,
@@ -543,6 +557,7 @@ class API
 
         inline int return_(int const command,
                            std::string const & name,
+                           std::string const & pattern,
                            void const * const response_info,
                            uint32_t const response_info_size,
                            void const * const response,
@@ -554,6 +569,7 @@ class API
         {
             return return_(command,
                            name.c_str(),
+                           pattern.c_str(),
                            response_info,
                            response_info_size,
                            response,
@@ -565,6 +581,7 @@ class API
         }
 
         int return_async(char const * const name,
+                         char const * const pattern,
                          void const * const response_info,
                          uint32_t const response_info_size,
                          void const * const response,
@@ -575,6 +592,7 @@ class API
                          uint32_t const pid_size) const;
 
         inline int return_async(std::string const & name,
+                                std::string const & pattern,
                                 void const * const response_info,
                                 uint32_t const response_info_size,
                                 void const * const response,
@@ -585,6 +603,7 @@ class API
                                 uint32_t const pid_size) const
         {
             return return_async(name.c_str(),
+                                pattern.c_str(),
                                 response_info,
                                 response_info_size,
                                 response,
@@ -596,6 +615,7 @@ class API
         }
 
         int return_sync(char const * const name,
+                        char const * const pattern,
                         void const * const response_info,
                         uint32_t const response_info_size,
                         void const * const response,
@@ -606,6 +626,7 @@ class API
                         uint32_t const pid_size) const;
 
         inline int return_sync(std::string const & name,
+                               std::string const & pattern,
                                void const * const response_info,
                                uint32_t const response_info_size,
                                void const * const response,
@@ -616,6 +637,7 @@ class API
                                uint32_t const pid_size) const
         {
             return return_sync(name.c_str(),
+                               pattern.c_str(),
                                response_info,
                                response_info_size,
                                response,

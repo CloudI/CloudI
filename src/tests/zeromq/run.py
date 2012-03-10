@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -56,20 +56,26 @@ class _Task(threading.Thread):
         self.__api = API(thread_index)
         self.__index = thread_index
 
-    def zigzag_finish(self, command, name, requestInfo, request,
+    def zigzag_finish(self, command, name, pattern,
+                      requestInfo, request,
                       timeout, priority, transId, pid):
         print 'Got to CloudI finish from ZeroMQ zig-zag:',request
-        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
+        self.__api.return_(command, name, pattern,
+                           '', 'done', timeout, transId, pid)
 
-    def chain_inproc_finish(self, command, name, requestInfo, request,
+    def chain_inproc_finish(self, command, name, pattern,
+                            requestInfo, request,
                             timeout, priority, transId, pid):
         print 'chain_inproc_finish'
-        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
+        self.__api.return_(command, name, pattern,
+                           '', 'done', timeout, transId, pid)
 
-    def chain_ipc_finish(self, command, name, requestInfo, request,
+    def chain_ipc_finish(self, command, name, pattern,
+                         requestInfo, request,
                          timeout, priority, transId, pid):
         print 'chain_ipc_finish'
-        self.__api.return_(command, name, '', 'done', timeout, transId, pid)
+        self.__api.return_(command, name, pattern,
+                           '', 'done', timeout, transId, pid)
 
     def run(self):
         # sends outside of a callback must occur before the subscriptions
