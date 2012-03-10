@@ -185,7 +185,7 @@ timeout_sync(Dispatcher) ->
 
 -spec get_pid(Dispatcher :: pid(),
               Name :: string()) ->
-    {'ok', pid()} |
+    {'ok', {string(), pid()}} |
     {'error', atom()}.
 
 get_pid(Dispatcher, Name)
@@ -195,7 +195,7 @@ get_pid(Dispatcher, Name)
 -spec get_pid(Dispatcher :: pid(),
               Name :: string(),
               Timeout :: pos_integer()) ->
-    {'ok', pid()} |
+    {'ok', {string(), pid()}} |
     {'error', atom()}.
 
 get_pid(Dispatcher, Name, Timeout)

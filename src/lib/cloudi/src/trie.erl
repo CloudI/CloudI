@@ -1492,7 +1492,7 @@ new_instance_state([H | T], V1, V0)
 %%-------------------------------------------------------------------------
 
 -spec pattern_parse(Pattern :: string(),
-                    L :: string()) -> string() | 'error'.
+                    L :: string()) -> list(string()) | 'error'.
 
 pattern_parse(Pattern, L) ->
     pattern_parse(Pattern, L, []).

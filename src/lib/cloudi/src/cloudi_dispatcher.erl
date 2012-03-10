@@ -87,6 +87,9 @@
         options          % #config_job_options{} from configuration
     }).
 
+-compile({nowarn_unused_function, [{recv_async_select_random, 1},
+                                   {recv_async_select_oldest, 1}]}).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -618,7 +621,6 @@ handle_info({'recv_async_timeout', TransId},
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    use_unused_functions(undefined),
     {noreply, State}.
 
 terminate(_, _) ->
@@ -896,12 +898,4 @@ recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
         true ->
             recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
-
-use_unused_functions(undefined) ->
-    ok;
-    
-use_unused_functions(_) ->
-    recv_async_select_random([]),
-    recv_async_select_oldest([]),
-    ok.
 
