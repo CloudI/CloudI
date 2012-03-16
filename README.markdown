@@ -64,7 +64,7 @@ Build Requirements:
 
 Optional:
 
-* ZeroMQ > 2.0
+* ZeroMQ >= 2.x.x (however, 3.x.x is not yet supported)
 
 On OSX, to run configure with the OSX ports paths, use:
 CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure

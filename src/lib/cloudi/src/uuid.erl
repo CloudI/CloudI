@@ -90,24 +90,15 @@
 
 new(Pid) when is_pid(Pid) ->
     % make the version 1 UUID specific to the Erlang node and pid
-    {ok, Ifs} = inet:getiflist(),
-    If = lists:last(lists:filter(fun(I) ->
-        not lists:prefix("lo", I)
-    end, Ifs)),
-    NodeData = if
-        If =:= [] ->
-            % include the distributed Erlang node name to be node specific
-            erlang:list_to_binary(erlang:atom_to_list(node()));
-        true ->
-            % 48 bits for MAC address
-            {ok,[{hwaddr, MAC}]} = inet:ifget(If, [hwaddr]),
-            % include the distributed Erlang node name to be node specific
-            erlang:list_to_binary(MAC ++ erlang:atom_to_list(node()))
-    end,
+
+    % 48 bits for the first MAC address found is included with the
+    % distributed Erlang node name
     <<NodeD01, NodeD02, NodeD03, NodeD04, NodeD05,
       NodeD06, NodeD07, NodeD08, NodeD09, NodeD10,
       NodeD11, NodeD12, NodeD13, NodeD14, NodeD15,
-      NodeD16, NodeD17, NodeD18, NodeD19, NodeD20>> = crypto:sha(NodeData),
+      NodeD16, NodeD17, NodeD18, NodeD19, NodeD20>> =
+      crypto:sha(erlang:list_to_binary(mac_address() ++
+                                       erlang:atom_to_list(node()))),
     PidBin = erlang:term_to_binary(Pid),
     % 72 bits for the Erlang pid
     <<PidID1:8, PidID2:8, PidID3:8, PidID4:8, % ID (Node specific, 15 bits)
@@ -215,7 +206,7 @@ get_v4() ->
 % (see B.A. Wichmann and I.D.Hill, in 
 %  'An efficient and portable pseudo-random number generator',
 %  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
-% a single random:uniform/1 call can provide a maximum of 44 bits
+% a single random:uniform/1 call can provide a maximum of 45 bits
 % (currently this is not significantly faster
 %  because multiple function calls are necessary)
 
@@ -395,3 +386,21 @@ hex_to_int(C) when $A =< C, C =< $F ->
 hex_to_int(C) when $a =< C, C =< $f ->
     C - $a + 10.
 
+mac_address() ->
+    {ok, Ifs} = inet:getifaddrs(),
+    mac_address(lists:keysort(1, Ifs)).
+
+mac_address([]) ->
+    [0, 0, 0, 0, 0, 0];
+
+mac_address([{_, L} | Rest]) ->
+    case lists:keyfind(hwaddr, 1, L) of
+        false ->
+            mac_address(Rest);
+        {hwaddr, [0, 0, 0, 0, 0, 0]} ->
+            mac_address(Rest);
+        {hwaddr, [0 | _] = MAC} ->
+            MAC;
+        {hwaddr, _} ->
+            mac_address(Rest)
+    end.

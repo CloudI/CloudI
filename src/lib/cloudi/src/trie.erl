@@ -713,6 +713,9 @@ fold_match(_, _, A, []) ->
 fold_match(Match, F, A, Node) ->
     fold_match_node_1(Match, F, A, [], Node).
 
+fold_match_node_1([$*, $* | _], _, _, _, _) ->
+    erlang:exit(badarg);
+
 fold_match_node_1([$* | _] = Match, F, A, Prefix, {I0, I1, Data}) ->
     fold_match_element_1(Match, F, A, 1, I1 - I0 + 2, I0 - 1,
                          Prefix, [], Data);
@@ -1982,6 +1985,7 @@ test() ->
     ["aba",
      "aaa"
      ] = trie:fold_match("a*a", fun(K, _, L) -> [K | L] end, [], RootNode4),
+    {'EXIT',badarg} = (catch trie:fold_match("a**a", fun(K, _, L) -> [K | L] end, [], RootNode4)),
     RootNode6 = trie:new([
         {"*",      1},
         {"aa*",    2},
