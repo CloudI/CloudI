@@ -710,7 +710,7 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Process, Timeout) ->
-    try (case string_extensions:binary_to_term(Query) of
+    try (case cloudi_string:binary_to_term(Query) of
         {'get', Key} ->
             ememcached:get(Process, Key, Timeout);
         {'get_many', Keys} when is_list(Keys) ->
