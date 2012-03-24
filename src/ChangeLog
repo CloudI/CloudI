@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Refactor complexities within list_pg
+    * Fix Erlang version detection for R15B
+    * Update http://cloudi.org with css theme switcher for print mode
+
 2012-03-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Use trie:find_match/2 instead of trie:find/2 within the list_pg_data

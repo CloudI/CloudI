@@ -58,15 +58,19 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
     AC_LANG_PUSH([Erlang])
     AC_RUN_IFELSE(
         [AC_LANG_PROGRAM([], [
-            [[\$R, Maj1, Maj2, T1, Min1, Min2]] =
+            [[\$R, Maj1, Maj2, T1 | MinL]] =
                 erlang:system_info(otp_release),
+            Min = if
+                MinL == [[]] ->
+                    0;
+                true ->
+                    list_to_integer(MinL)
+            end,
             Version = if
                 T1 == \$A ->
-                    list_to_integer([[Maj1, Maj2]]) * 1000 +
-                    list_to_integer([[Min1, Min2]]);
+                    list_to_integer([[Maj1, Maj2]]) * 1000 + Min;
                 T1 == \$B ->
-                    list_to_integer([[Maj1, Maj2]]) * 1000 + 100 +
-                    list_to_integer([[Min1, Min2]])
+                    list_to_integer([[Maj1, Maj2]]) * 1000 + 100 + Min
             end,
             file:write_file("conftest.out", integer_to_list(Version)),
             ReturnValue = 0,
