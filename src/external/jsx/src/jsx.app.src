@@ -1,16 +1,15 @@
 {application, jsx,
 [
     {description, "a streaming, evented json parsing toolkit"},
-    {vsn, "1.0rc"},
+    {vsn, "1.0"},
     {modules, [
         jsx,
-        gen_json,
         jsx_encoder,
         jsx_decoder,
         jsx_to_json,
         jsx_to_term,
-		jsx_utils,
-		jsx_verify
+        jsx_utils,
+        jsx_verify
     ]},
     {registered, []},
     {applications, [

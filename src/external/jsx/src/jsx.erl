@@ -25,8 +25,9 @@
 
 -export([to_json/1, to_json/2]).
 -export([to_term/1, to_term/2]).
--export([is_json/1, is_json/2]).
+-export([is_json/1, is_json/2, is_term/1, is_term/2]).
 -export([format/1, format/2]).
+-export([encoder/3, decoder/3]).
 %% old api
 -export([term_to_json/1, term_to_json/2, json_to_term/1, json_to_term/2]).
 
@@ -42,11 +43,12 @@
 
 to_json(Source) -> to_json(Source, []).
 
-to_json(Source, Opts) -> jsx_to_json:to_json(Source, Opts ++ [{parser, encoder}]).
+to_json(Source, Opts) -> jsx_to_json:to_json(Source, Opts).
 
 %% old api, alias for to_json/x
 
 term_to_json(Source) -> to_json(Source, []).
+
 term_to_json(Source, Opts) -> to_json(Source, Opts).
 
 
@@ -55,8 +57,7 @@ term_to_json(Source, Opts) -> to_json(Source, Opts).
 
 format(Source) -> format(Source, []).
 
-format(Source, Opts) ->
-    jsx_to_json:to_json(Source, Opts ++ [{parser, decoder}]).
+format(Source, Opts) -> jsx_to_json:format(Source, Opts).
 
 
 -spec to_term(Source::binary()) ->
@@ -64,22 +65,42 @@ format(Source, Opts) ->
 -spec to_term(Source::binary(), Opts::jsx_to_term:opts()) ->
     list({binary(), any()}).
 
+
 to_term(Source) -> to_term(Source, []).
 
-to_term(Source, Opts) -> jsx_to_term:to_term(Source, Opts ++ [{parser, decoder}]).
+to_term(Source, Opts) -> jsx_to_term:to_term(Source, Opts).
 
 %% old api, alias for to_term/x
 
 json_to_term(Source) -> to_term(Source, []).
+
 json_to_term(Source, Opts) -> to_term(Source, Opts).
 
 
--spec is_json(Source::binary() | list()) -> true | false.
--spec is_json(Source::binary() | list(), Opts::jsx_verify:opts()) -> true | false.
+-spec is_json(Source::binary()) -> true | false.
+-spec is_json(Source::binary(), Opts::jsx_verify:opts()) -> true | false.
 
 is_json(Source) -> is_json(Source, []).
 
 is_json(Source, Opts) -> jsx_verify:is_json(Source, Opts).
+
+
+-spec is_term(Source::any()) -> true | false.
+-spec is_term(Source::any(), Opts::jsx_verify:opts()) -> true | false.
+
+is_term(Source) -> is_term(Source, []).
+
+is_term(Source, Opts) -> jsx_verify:is_term(Source, Opts).
+
+
+-spec decoder(Handler::module(), State::any(), Opts::list()) -> fun().
+
+decoder(Handler, State, Opts) -> jsx_decoder:decoder(Handler, State, Opts).
+
+
+-spec encoder(Handler::module(), State::any(), Opts::list()) -> fun().
+
+encoder(Handler, State, Opts) -> jsx_encoder:encoder(Handler, State, Opts).
 
 
 
@@ -88,7 +109,7 @@ is_json(Source, Opts) -> jsx_verify:is_json(Source, Opts).
 
 
 jsx_decoder_test_() ->
-    jsx_decoder_gen(load_tests(?eunit_test_path)).
+    jsx_decoder_gen(load_tests(code:lib_dir(jsx, priv) ++ "/test_cases/")).
 
 
 encoder_decoder_equiv_test_() ->
@@ -160,7 +181,7 @@ parse_tests([], _Dir, Acc) ->
 
 decode(JSON, Flags) ->
     try
-        case (gen_json:parser(?MODULE, [], Flags))(JSON) of
+        case (jsx_decoder:decoder(?MODULE, [], Flags))(JSON) of
             {incomplete, More} ->
                 case More(<<" ">>) of
                     {incomplete, _} -> {error, badjson}
@@ -174,7 +195,7 @@ decode(JSON, Flags) ->
 
     
 incremental_decode(<<C:1/binary, Rest/binary>>, Flags) ->
-	P = gen_json:parser(?MODULE, [], Flags ++ [explicit_end]),
+	P = jsx_decoder:decoder(?MODULE, [], Flags ++ [explicit_end]),
 	try incremental_decode_loop(P(C), Rest)
 	catch error:badarg -> io:format("~p~n", [erlang:get_stacktrace()]), {error, badjson}
 	end.
