@@ -1130,7 +1130,7 @@ do_query(Query, Connection, HostName, Port, Database, Timeout) ->
             ?LOG_DEBUG("Invalid couchdb command tuple ~p",
                        [binary_to_list(Query)]),
             <<>>;
-        Result when is_binary(Result) ->
+        Result ->
             Result
     catch
         _:Reason ->

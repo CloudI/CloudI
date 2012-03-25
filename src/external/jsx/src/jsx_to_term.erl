@@ -38,7 +38,7 @@
     list({binary(), any()}).
     
 to_term(Source, Opts) when is_list(Opts) ->
-    (gen_json:parser(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
+    (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
 
 
 

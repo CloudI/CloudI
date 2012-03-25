@@ -1,4 +1,4 @@
-## jsx (v1.0) ##
+## jsx (v1.0.1) ##
 
 a sane json implementation for erlang, inspired by [yajl][yajl]
 
@@ -6,10 +6,12 @@ copyright 2011, 2012 alisdair sullivan
 
 jsx is released under the terms of the [MIT][MIT] license
 
+jsx uses [rebar][rebar] and [meck][meck]
 
-## quickstart ##
+[![Build Status](https://secure.travis-ci.org/talentdeficit/jsx.png?branch=master)](http://travis-ci.org/talentdeficit/jsx)
 
-to build jsx, `make` or `./rebar compile`
+
+## api ##
 
 
 **converting json to erlang terms**
@@ -23,7 +25,9 @@ parses a JSON text (a utf8 encoded binary) and produces an erlang term (see json
 types:
 
 * `JSON` = `binary()`
-* `Term` = `[]` | `[{}]` | `[any()]` | `{incomplete, Fun}`
+* `Term` = `[]` | `[{}]` | `[Value]` | `[{Label, Value}]` | `{incomplete, Fun}`
+* `Value` = `binary()` | `integer()` | `float()` | `true` | `false` | `null`
+* `Label` = `binary()` | `atom()`
 * `Fun` = `fun(JSON)` -> `Term`
 * `Opts` = `[]` | `[Opt]`
 * `Opt` =
@@ -53,7 +57,9 @@ produces a JSON text from an erlang term (see json <-> erlang mapping details be
 types:
         
 * `JSON` = `binary()`
-* `Term` = `[]` | `[{}]` | `[any()]`
+* `Term` = `[]` | `[{}]` | `[Value]` | `[{Label, Value}]` | `{incomplete, Fun}`
+* `Value` = `binary()` | `integer()` | `float()` | `true` | `false` | `null`
+* `Label` = `binary()` | `atom()`
 * `Opts` = `[]` | `[Opt]`
 * `Opt` =
     - `space`
@@ -80,7 +86,9 @@ produces a JSON text from JSON text, reformatted
 types:
 
 * `JSON` = `binary()`
-* `Term` = `[]` | `[{}]` | `[any()]` | `{incomplete, Fun}`
+* `Term` = `[]` | `[{}]` | `[Value]` | `[{Label, Value}]` | `{incomplete, Fun}`
+* `Value` = `binary()` | `integer()` | `float()` | `true` | `false` | `null`
+* `Label` = `binary()` | `atom()`
 * `Fun` = `fun(JSON)` -> `Term`
 * `Opts` = `[]` | `[Opt]`
 * `Opt` =
@@ -105,24 +113,32 @@ see the note below about streaming mode for details of `explicit_end`
 
 **verifying json texts**
     
-returns true if input is a valid JSON text or erlang term that represents a JSON text, false if not. note that if you want to recognize naked (unwrapped) terms, you must specify a parser to use
+returns true if input is a valid JSON text, false if not
 
-`is_json(MaybeJSON)` -> `Term`
+`is_json(MaybeJSON)` -> `true` | `false` | `{incomplete, Fun}`
 
-`is_json(MaybeJSON, Opts)` -> `Term`
+`is_json(MaybeJSON, Opts)` -> `true` | `false` | `{incomplete, Fun}`
 
 types:
 
 * `MaybeJSON` = `any()`
-* `Term` = `true` | `false` | `{incomplete, Fun}`
 * `Opts` = `[]` | `[Opt]`
 * `Opt` =
-    - `{parser, Parser}`
-        * `Parser` = `jsx:decoder()` | `jsx:encoder()`
     - `loose_unicode`
     - `explicit_end`
 
-see `json_to_term` and `term_to_json` for details of options
+see `json_to_term` for details of options
+
+
+**verifying json texts**
+    
+returns true if input is a valid erlang term that represents a JSON text, false if not
+
+`is_term(MaybeJSON)` -> `true` | `false`
+
+types:
+
+* `MaybeJSON` = `any()`
 
 
 **streaming mode**
@@ -136,11 +152,11 @@ this implementation is interruptable and reentrant and may be used to incrementa
 
 **json**                        | **erlang**
 --------------------------------|--------------------------------
-`number`                        | `integer()` | `float()`
+`number`                        | `integer()` OR `float()`
 `string`                        | `binary()`
 `true`, `false` and `null`      | `true`, `false` and `null`
-`array`                         | `list()`
-`object`                        | `[{}]` | `[{binary(), JSON}]`
+`array`                         | `[]` OR `[JSON]`
+`object`                        | `[{}]` OR `[{binary(), JSON}]`
 
 **json**
 
@@ -173,77 +189,6 @@ json arrays are represented with erlang lists of json values as described in thi
 json objects are represented by erlang proplists. the empty object has the special representation `[{}]` to differentiate it from the empty list. ambiguities like `[true, false]` prevent using the shorthand form of property lists using atoms as properties. all properties must be tuples. all keys must be encoded as in `string`, above, or as atoms (which will be escaped and converted to binaries for presentation to handlers)
 
 
-## gen_json ##
-
-jsx is implemented as a set of scanners that produce tokens consumed be functions that transform them into various representations. `gen_json` is an interface to allow arbitrary representations/actions to be taken upon scanning a json text or erlang term representation of a json text
-
-
-**the gen_json parser**
-
-`gen_json:parser(Mod)` -> `Result`
-
-`gen_json:parser(Mod, Args)` -> `Result`
-
-`gen_json:parser(Mod, Args, Opts)` -> `Result`
-
-types:
-
-* `Mod` = module()
-* `Args` = any()
-* `Opts` = see note below
-
-`Mod` is the callback module implementing the `gen_json` behaviour
-
-`Args` will be passed to `Mod:init/1` as is
-
-`Result` will be the return from `Mod:handle_event(end_json, State)`
-
-in general, `Opts` will be passed as is to the scanner. the scanner will be automatically selected based on input type. to specify a specific scanner, you may use the options `{parser, Parser}` where `Parser` can currently be one of `auto`, `encoder` or `decoder`. `auto` is the default behaviour, `encoder` will only accept erlang terms (as in the mapping detailed above) and `decoder` will only accept json texts. note that to parse naked erlang terms as json, you MUST specify `{parser, encoder}`. more scanners may be added in the future
-
-
-modules that implement the `gen_json` behaviour must implement the following two functions
-
-
-**init**
-
-produces the initial state for a gen_json handler
-
-`init(Args)` -> `InitialState`
-
-types:
-
-* `Args` = `any()`
-* `InitialState` = `any()`
-
-`Args` is the argument passed to `gen_json/2` above as `Args`. when `gen_json/1` is called, `Args` will equal `[]` 
-
-
-**handle_event**
-
-`handle_event/2` will be called for each token along with the current state of the handler and should produce a new state
-
-`handle_event(Event, State)` -> `NewState`
-
-types:
-
-* `Event` =
-    - `start_object`
-    - `end_object`
-    - `start_array`
-    - `end_array`
-    - `end_json`
-    - `{key, list()}`
-    - `{string, list()}`
-    - `{integer, integer()}`
-    - `{float, float()}`
-    - `{literal, true}`
-    - `{literal, false}`
-    - `{literal, null}` 
-* `State` = `any()`
-
-`Event` types are detailed in the mapping section, above. any cleanup in your handler should be done upon receiving `end_json` as it will always be the last token received
-
-
 ## acknowledgements ##
 
 paul davis, lloyd hilaiel, john engelhart, bob ippolito, fernando benavides and alex kropivny have all contributed to the development of jsx, whether they know it or not
@@ -251,5 +196,7 @@ paul davis, lloyd hilaiel, john engelhart, bob ippolito, fernando benavides and 
 
 [yajl]: http://lloyd.github.com/yajl
 [MIT]: http://www.opensource.org/licenses/mit-license.html
+[rebar]: https://github.com/basho/rebar
+[meck]: https://github.com/eproxus/meck
 [json]: http://json.org
 [rfc4627]: http://tools.ietf.org/html/rfc4627
