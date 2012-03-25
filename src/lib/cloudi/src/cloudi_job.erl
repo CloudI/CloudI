@@ -97,8 +97,10 @@
          request_http_qs_parse/1,
          request_info_key_value_parse/1]).
 
+-ifdef(ERLANG_OTP_VER_R14).
 %% behavior callbacks
 -export([behaviour_info/1]).
+-endif.
 
 %% gen_server callbacks
 -export([init/1,
@@ -132,6 +134,49 @@
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
 
+-ifndef(ERLANG_OTP_VER_R14).
+
+% Erlang version must be >= R15
+
+-callback cloudi_job_init(Args :: list(),
+                          Prefix :: string(),
+                          Dispatcher :: pid()) ->
+    {'ok', State :: any()} |
+    {'stop', Reason :: any()}.
+
+-callback cloudi_job_handle_request(Type :: 'send_async' | 'send_sync',
+                                    Name :: string(),
+                                    Pattern :: string(),
+                                    RequestInfo :: any(),
+                                    Request :: any(),
+                                    Timeout :: non_neg_integer(),
+                                    Priority :: integer(),
+                                    TransId :: binary(),
+                                    Pid :: pid(),
+                                    State :: any(),
+                                    Dispatcher :: pid()) ->
+    {'reply', Response :: any(), NewState :: any()} |
+    {'reply', ResponseInfo :: any(), Response :: any(), NewState :: any()} |
+    {'forward', NextName :: string(),
+     NextRequestInfo :: any(), NextRequest :: any(), NewState :: any()} |
+    {'forward', NextName :: string(),
+     NextRequestInfo :: any(), NextRequest :: any(),
+     NextTimeout :: non_neg_integer(), NextPriority :: integer(),
+     NewState :: any()} |
+    {'noreply', NewState :: any()}.
+
+-callback cloudi_job_handle_info(Request :: any(),
+                                 State :: any(),
+                                 Dispatcher :: pid()) ->
+    {'noreply', NewState :: any()} |
+    {'stop', Reason :: any(), NewState :: any()}.
+
+-callback cloudi_job_terminate(Reason :: any(),
+                               State :: any()) ->
+    'ok'.
+
+-else.
+
 -spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
 
 behaviour_info(callbacks) ->
@@ -143,6 +188,8 @@ behaviour_info(callbacks) ->
     ];
 behaviour_info(_) ->
     undefined.
+
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Dispatcher interface functions

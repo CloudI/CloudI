@@ -14,6 +14,9 @@
 #   AX_ERLANG_SUBST_OTP_VER sets:
 #
 #     ERLANG_OTP_VER (e.g., "R14B01")
+#     ERLANG_OTP_VER_MAJOR (e.g., "14")
+#     ERLANG_OTP_VER_TYPE (e.g., "B")
+#     ERLANG_OTP_VER_MINOR (e.g., "01")
 #
 
 AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
@@ -21,7 +24,7 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
     AC_REQUIRE([AC_ERLANG_NEED_ERLC])
     AC_REQUIRE([AC_ERLANG_NEED_ERL])
     AC_CACHE_CHECK([for the Erlang OTP release],
-        [ax_erlang_otp_ver],
+        [ax_cv_erlang_otp_ver],
         [AC_LANG_PUSH([Erlang])
          AC_RUN_IFELSE(
             [AC_LANG_PROGRAM([], [
@@ -29,13 +32,19 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
                 file:write_file("conftest.out", Version),
                 ReturnValue = 0,
                 halt(ReturnValue)])],
-            [ax_erlang_otp_ver=`cat conftest.out`
-            rm -f conftest.out],
+            [ax_cv_erlang_otp_ver=`cat conftest.out`
+             rm -f conftest.out],
             [rm -f conftest.out
             AC_MSG_FAILURE([test Erlang program execution failed])])
         AC_LANG_POP([Erlang])
     ])
-    AC_SUBST([ERLANG_OTP_VER], [$ax_erlang_otp_ver])
+    ax_erlang_otp_ver_major=`expr $ax_cv_erlang_otp_ver : 'R\([[0-9]]*\)'`
+    ax_erlang_otp_ver_type=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*\([[A-Z]]*\)'`
+    ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*[[A-Z]]*\([[0-9]]*\)'`
+    AC_SUBST([ERLANG_OTP_VER], [$ax_cv_erlang_otp_ver])
+    AC_SUBST([ERLANG_OTP_VER_MAJOR], [$ax_erlang_otp_ver_major])
+    AC_SUBST([ERLANG_OTP_VER_TYPE], [$ax_erlang_otp_ver_type])
+    AC_SUBST([ERLANG_OTP_VER_MINOR], [$ax_erlang_otp_ver_minor])
 ])
 
 AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
