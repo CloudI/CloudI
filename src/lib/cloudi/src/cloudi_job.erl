@@ -134,9 +134,21 @@
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
 
--ifndef(ERLANG_OTP_VER_R14).
+-ifdef(ERLANG_OTP_VER_R14).
 
-% Erlang version must be >= R15
+-spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
+
+behaviour_info(callbacks) ->
+    [
+        {cloudi_job_init, 3},
+        {cloudi_job_handle_request, 11},
+        {cloudi_job_handle_info, 3},
+        {cloudi_job_terminate, 2}
+    ];
+behaviour_info(_) ->
+    undefined.
+
+-else. % Erlang version must be >= R15
 
 -callback cloudi_job_init(Args :: list(),
                           Prefix :: string(),
@@ -174,20 +186,6 @@
 -callback cloudi_job_terminate(Reason :: any(),
                                State :: any()) ->
     'ok'.
-
--else.
-
--spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
-
-behaviour_info(callbacks) ->
-    [
-        {cloudi_job_init, 3},
-        {cloudi_job_handle_request, 11},
-        {cloudi_job_handle_info, 3},
-        {cloudi_job_terminate, 2}
-    ];
-behaviour_info(_) ->
-    undefined.
 
 -endif.
 
