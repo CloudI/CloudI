@@ -507,7 +507,7 @@ store(#state{groups = ExternalGroups,
                                 store_conflict(Name, V1, V2)
                             end, T);
             false ->
-                % create the new external group locally
+                % create the new external group as an internal group
                 trie:store(Name, store_new_group(V1Local ++ V1Remote), T)
         end
     end, Groups, ExternalGroups),
@@ -533,17 +533,12 @@ member_died(Pid, #state{pids = Pids} = State) ->
 -ifdef(SERVICE_NAME_PATTERN_MATCHING).
 % pattern matching occurs with a "*" character, but "**" is forbidden,
 % so, this makes sure all group names are valid, before creating a new group
-group_name_validate_new(Name) ->
-    group_name_validate_new(Name, false).
-
-group_name_validate_new([], _) ->
+group_name_validate_new([]) ->
     ok;
-group_name_validate_new([$* | _], true) ->
+group_name_validate_new([$*, $* | _]) ->
     erlang:exit(badarg);
-group_name_validate_new([$* | L], false) ->
-    group_name_validate_new(L, true);
-group_name_validate_new([_ | L], _) ->
-    group_name_validate_new(L, false).
+group_name_validate_new([_ | L]) ->
+    group_name_validate_new(L).
 -else.
 group_name_validate_new(_) ->
     ok.

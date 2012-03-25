@@ -220,9 +220,6 @@ environment_update(Environment0,
                                    erlang:integer_to_list(BufferSize)}),
     Environment3.
 
-environment_format([]) ->
-    [0];
-
 environment_format(Environment) ->
     environment_format([], Environment).
 

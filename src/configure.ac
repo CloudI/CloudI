@@ -66,6 +66,7 @@ AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
                           [AC_MSG_ERROR([Erlang >= R14B01 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
+AX_ERLANG_SUBST_OTP_VER
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
