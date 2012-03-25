@@ -3,6 +3,7 @@
 
 2012-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Update jsx to 1.0
     * Refactor complexities within list_pg
     * Fix Erlang version detection for R15B
     * Update http://cloudi.org with css theme switcher for print mode

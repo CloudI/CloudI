@@ -23,7 +23,7 @@
 
 -module(jsx_to_json).
 
--export([to_json/2]).
+-export([to_json/2, format/2]).
 -export([init/1, handle_event/2]).
 
 
@@ -36,11 +36,16 @@
 -type opts() :: list().
 
 
--spec to_json(Source::(binary() | list()), Opts::opts()) -> binary().
+-spec to_json(Source::any(), Opts::opts()) -> binary().
     
 to_json(Source, Opts) when is_list(Opts) ->
-    (gen_json:parser(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
+    (jsx:encoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
 
+
+-spec format(Source::binary(), Opts::opts()) -> binary().
+    
+format(Source, Opts) when is_binary(Source) andalso is_list(Opts) ->
+    (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
 
 
 parse_opts(Opts) -> parse_opts(Opts, #opts{}).
@@ -137,7 +142,7 @@ encode(literal, Literal, _Opts) ->
 encode(integer, Integer, _Opts) ->
     erlang:integer_to_list(Integer);
 encode(float, Float, _Opts) ->
-    jsx_utils:nice_decimal(Float).
+    nicedecimal:format(Float).
 
 
 space(Opts) ->
@@ -171,14 +176,24 @@ indent_or_space(Opts) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-format(Source, Opts) -> to_json(Source, Opts).
+setup_nicedecimal_meck(Return) ->
+    ok = meck:new(nicedecimal),
+    ok = meck:expect(nicedecimal, format, fun(1.23) -> Return end).
 
-basic_test_() ->
+teardown_nicedecimal_meck(_) ->
+    ?assert(meck:validate(nicedecimal)),
+    ok = meck:unload(nicedecimal).
+
+basic_format_test_() ->
     [
         {"empty object", ?_assert(format(<<"{}">>, []) =:= <<"{}">>)},
         {"empty array", ?_assert(format(<<"[]">>, []) =:= <<"[]">>)},
         {"naked integer", ?_assert(format(<<"123">>, []) =:= <<"123">>)},
-        {"naked float", ?_assert(format(<<"1.23">>, []) =:= <<"1.23">>)},
+        {foreach,
+            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
+            fun(R) -> teardown_nicedecimal_meck(R) end,
+            [{"naked float", ?_assert(format(<<"1.23">>, []) =:= <<"1.23">>)}]
+        },
         {"naked string", ?_assert(format(<<"\"hi\"">>, []) =:= <<"\"hi\"">>)},
         {"naked literal", ?_assert(format(<<"true">>, []) =:= <<"true">>)},
         {"simple object", 
@@ -216,6 +231,64 @@ basic_test_() ->
         },
         {"simple nested structure",
             ?_assert(format(<<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>, []
+                ) =:= <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
+            )
+        }
+    ].
+
+basic_to_json_test_() ->
+    [
+        {"empty object", ?_assert(to_json([{}], []) =:= <<"{}">>)},
+        {"empty array", ?_assert(to_json([], []) =:= <<"[]">>)},
+        {"naked integer", ?_assert(to_json(123, []) =:= <<"123">>)},
+        {foreach,
+            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
+            fun(R) -> teardown_nicedecimal_meck(R) end,
+            [{"naked float", ?_assert(to_json(1.23, []) =:= <<"1.23">>)}]
+        },
+        {"naked string", ?_assert(to_json(<<"hi">>, []) =:= <<"\"hi\"">>)},
+        {"naked literal", ?_assert(to_json(true, []) =:= <<"true">>)},
+        {"simple object", 
+            ?_assert(to_json(
+                    [{<<"key">>, <<"value">>}],
+                    []
+                ) =:= <<"{\"key\":\"value\"}">>
+            )
+        },
+        {"nested object",
+            ?_assert(to_json(
+                    [{<<"k">>,[{<<"k">>,<<"v">>}]},{<<"j">>,[{}]}],
+                    []
+                ) =:= <<"{\"k\":{\"k\":\"v\"},\"j\":{}}">>
+            )
+        },
+        {"simple array", 
+            ?_assert(to_json(
+                    [true, false, null], 
+                    []
+                ) =:= <<"[true,false,null]">>
+            )
+        },
+        {"really simple array", ?_assert(to_json([1], []) =:= <<"[1]">>)},
+        {"nested array", ?_assert(to_json([[[]]], []) =:= <<"[[[]]]">>)},
+        {"nested structures", 
+            ?_assert(to_json(
+                    [
+                        [
+                            {<<"key">>, <<"value">>},
+                            {<<"another key">>, <<"another value">>},
+                            {<<"a list">>, [true, false]}
+                        ],
+                        [[[{}]]]
+                    ],
+                    []
+                ) =:= <<"[{\"key\":\"value\",\"another key\":\"another value\",\"a list\":[true,false]},[[{}]]]">>
+            )
+        },
+        {"simple nested structure",
+            ?_assert(to_json(
+                    [[], [{<<"k">>, [[], [{}]]}, {<<"j">>, [{}]}], []],
+                    []
                 ) =:= <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
             )
         }
@@ -259,11 +332,16 @@ opts_test_() ->
                 ) =:= <<"{\"a\":  true,  \"b\":  true,  \"c\":  true}">>
             )
         },
-        {"array indent", 
-            ?_assert(format(<<"[1.0, 2.0, 3.0]">>, 
-                    [{indent, 2}]
-                ) =:= <<"[\n  1.0,\n  2.0,\n  3.0\n]">>
-            )
+        {foreach,
+            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
+            fun(R) -> teardown_nicedecimal_meck(R) end,
+            [{
+                "array indent",
+                ?_assert(format(<<"[1.23, 1.23, 1.23]">>, 
+                        [{indent, 2}]
+                    ) =:= <<"[\n  1.23,\n  1.23,\n  1.23\n]">>
+                )
+            }]
         },
         {"object indent",
             ?_assert(format(<<"{\"a\":true,\"b\":true,\"c\":true}">>,

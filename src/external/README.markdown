@@ -118,8 +118,8 @@ jsx
 Erlang JSON Parsing
 
 - https://github.com/talentdeficit/jsx
-- commit 61ef73ff729407dda67f3cf9b0c6bdd2644411b0
-- Sat Feb 18 17:07:15 PST 2012
+- commit da88071cdd37a3b11cc4b6e8670d978c5b509574
+- Sun Mar 25 00:02:47 PDT 2012
 - MIT
 
 misultin
