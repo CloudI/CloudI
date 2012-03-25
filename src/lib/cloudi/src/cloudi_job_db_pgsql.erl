@@ -205,6 +205,8 @@ cloudi_job_terminate(_, #state{connection = Connection}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+response_internal(ok, Request) when is_list(Request) ->
+    ok;
 response_internal({ok, _I} = Response, _) ->
     Response;
 response_internal({ok, _Columns, _Data} = Response, _) ->
