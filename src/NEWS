@@ -1,3 +1,22 @@
+March 26, 2012
+  Version 0.2.0 rc1 (beta) released.
+
+  * support for Erlang R15
+  * added aupport for using service name patterns
+    (i.e., names that include the "*" wildcard character)
+  * added priority queueing to Erlang services
+  * added timeout handling to expire queued requests and now update the request
+    timeout based on the time spent queued
+  * added log output redirection with automatic partition tolerance
+    (i.e., redirect local log output to a remote node and if contact with the
+     remote node is lost, log locally until the connection is reestablished)
+  * added floating point usage for configuring process and thread counts
+    (so that it represents a ceil for numbers > 1.0 or
+     a round for numbers < 1.0 when using it as a multiple of the
+     number of cores (i.e., Erlang VM scheduler threads))
+  * added service options to the CloudI configuration so that typical
+    defaults are easily modified
+
 December 12, 2011
   Version 0.1.9 (alpha) released.
 
