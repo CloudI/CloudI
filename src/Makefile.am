@@ -175,6 +175,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-http-install \
                    tests-http_req-install \
                    tests-job_api-install \
+                   tests-messaging-install \
                    tests-msg_size-install \
                    tests-zeromq-install \
                    api-install \
@@ -318,6 +319,11 @@ tests-job_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/path.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+
+tests-messaging-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 
 tests-msg_size-install: \
         $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
