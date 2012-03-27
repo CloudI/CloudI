@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-03-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add "messaging" (i.e., internal CloudI messaging) test
+
 2012-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update jsx to 1.0

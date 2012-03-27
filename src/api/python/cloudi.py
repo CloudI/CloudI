@@ -208,10 +208,24 @@ class API(object):
                                     OtpErlangBinary(response), timeout,
                                     OtpErlangBinary(transId), pid)))
 
-    def recv_async(self, timeout, transId):
+    def recv_async(self, timeout=None, transId=None):
+        if timeout is None:
+            timeout = self.__timeout_sync
+        if transId is None:
+            transId = """\
+\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"""
         self.__send(term_to_binary((OtpErlangAtom("recv_async"), timeout,
                                     OtpErlangBinary(transId))))
         return self.poll()
+
+    def prefix(self):
+        return self.__prefix
+
+    def timeout_async(self):
+        return self.__timeout_async
+
+    def timeout_sync(self):
+        return self.__timeout_sync
 
     def __callback(self, command, name, pattern, requestInfo, request,
                    timeout, priority, transId, pid):
