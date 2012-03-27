@@ -1,4 +1,4 @@
-#[CloudI 0.1.9 (alpha)](http://cloudi.org)
+#[CloudI 0.2.0 (beta)](http://cloudi.org)
 
 ## ABOUT
 
