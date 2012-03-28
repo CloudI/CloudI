@@ -316,12 +316,21 @@ handle_cast({redirect, Node}, State) ->
 
 handle_cast({Level, Now, Node, Pid,
              Module, Line, Format, Args}, State) ->
-    case log_message_internal(Level, Now, Node, Pid,
-                              Module, Line, Format, Args, State) of
+    try log_message_internal(Level, Now, Node, Pid,
+                             Module, Line, Format, Args, State) of
         {ok, NewState} ->
             {noreply, NewState};
         {error, Reason, NewState} ->
             {stop, Reason, NewState}
+    catch
+        error:badarg ->
+            case ?LOG_INFO_T0("invalid log input: ~p ~p",
+                              [Format, Args], State) of
+                {ok, NewState} ->
+                    {noreply, NewState};
+                {error, Reason, NewState} ->
+                    {stop, Reason, NewState}
+            end
     end;
 
 handle_cast(Request, State) ->

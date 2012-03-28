@@ -58,83 +58,84 @@ class _Task(threading.Thread):
 
     def __f_abcd(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/b/c/d'
+        assert pattern == (self.__api.prefix() + 'a/b/c/d')
         assert request == 'test1'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_abc_(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/b/c/*'
+        assert pattern == (self.__api.prefix() + 'a/b/c/*')
         assert request == 'test2' or request == 'test3'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_ab_d(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/b/*/d'
+        assert pattern == (self.__api.prefix() + 'a/b/*/d')
         assert request == 'test4' or request == 'test5'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_a_cd(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/*/c/d'
+        assert pattern == (self.__api.prefix() + 'a/*/c/d')
         assert request == 'test6' or request == 'test7'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f__bcd(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == '*/b/c/d'
+        assert pattern == (self.__api.prefix() + '*/b/c/d')
         assert request == 'test8' or request == 'test9'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_ab__(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/b/*'
+        assert pattern == (self.__api.prefix() + 'a/b/*')
         assert request == 'test10'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_a__d(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/*/d'
+        assert pattern == (self.__api.prefix() + 'a/*/d')
         assert request == 'test11'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f___cd(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == '*/c/d'
+        assert pattern == (self.__api.prefix() + '*/c/d')
         assert request == 'test12'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_a___(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == 'a/*'
+        assert pattern == (self.__api.prefix() + 'a/*')
         assert request == 'test13'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f____d(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == '*/d'
+        assert pattern == (self.__api.prefix() + '*/d')
         assert request == 'test14'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __f_____(self, command, name, pattern, requestInfo, request,
                  timeout, priority, transId, pid):
-        assert pattern == '*'
+        assert pattern == (self.__api.prefix() + '*')
         assert request == 'test15'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
     def __sequence1(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
+        print 'messaging sequence1 start'
         assert request == 'start'
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'a/b/c/d',  'test1'
@@ -228,6 +229,7 @@ class _Task(threading.Thread):
         (tmp, test15_check, test15_id_check) = self.__api.recv_async()
         assert test15_check == 'test15'
         assert test15_id_check == test15_id
+        print 'messaging sequence1 end'
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
@@ -244,6 +246,14 @@ class _Task(threading.Thread):
                            '', 'end', timeout, transId, pid)
 
     def run(self):
+        # sends outside of a callback function must occur before the
+        # subscriptions so that the incoming requests do not interfere with
+        # the outgoing sends (i.e., without subscriptions there will be no
+        # incoming requests)
+        if self.__index == 0:
+            self.__api.send_async(self.__api.prefix() + 'sequence1', 'start')
+            self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
+            self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.subscribe('a/b/c/d', self.__f_abcd)
         self.__api.subscribe('a/b/c/*', self.__f_abc_)
         self.__api.subscribe('a/b/*/d', self.__f_ab_d)
@@ -258,10 +268,6 @@ class _Task(threading.Thread):
         self.__api.subscribe('sequence1', self.__sequence1)
         self.__api.subscribe('sequence2', self.__sequence2)
         self.__api.subscribe('sequence3', self.__sequence3)
-        if self.__index == 0:
-            self.__api.send_async(self.__api.prefix() + 'sequence1', 'start')
-            self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
-            self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
 
         running = True
         while running:

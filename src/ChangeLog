@@ -1,8 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-03-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix messaging test
+    * Fix python recv_async bug
+    * Prevent erroneous CloudI logger input from crashing the logging process
+
 2012-03-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 0.2.0rc1 (beta) released
     * Add "messaging" (i.e., internal CloudI messaging) test
 
 2012-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
