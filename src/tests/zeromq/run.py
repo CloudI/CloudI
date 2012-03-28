@@ -78,9 +78,10 @@ class _Task(threading.Thread):
                            '', 'done', timeout, transId, pid)
 
     def run(self):
-        # sends outside of a callback must occur before the subscriptions
-        # so that the sends going out do not conflict with the
-        # sends coming in to call local callbacks
+        # sends outside of a callback function must occur before the
+        # subscriptions so that the incoming requests do not interfere with
+        # the outgoing sends (i.e., without subscriptions there will be no
+        # incoming requests)
         if self.__index == 0:
             self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
             self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')

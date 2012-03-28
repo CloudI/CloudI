@@ -212,8 +212,7 @@ class API(object):
         if timeout is None:
             timeout = self.__timeout_sync
         if transId is None:
-            transId = """\
-\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"""
+            transId = chr(0) * 16
         self.__send(term_to_binary((OtpErlangAtom("recv_async"), timeout,
                                     OtpErlangBinary(transId))))
         return self.poll()
@@ -238,8 +237,14 @@ class API(object):
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
+                    if not (type(responseInfo) == types.StringType or
+                            type(responseInfo) == types.UnicodeType):
+                        responseInfo = ''
                 else:
                     responseInfo = ''
+                if not (type(response) == types.StringType or
+                        type(response) == types.UnicodeType):
+                    response = ''
             except return_async_exception:
                 return
             except return_sync_exception:
@@ -259,8 +264,14 @@ class API(object):
                                     timeout, priority, transId, pid)
                 if type(response) == types.TupleType:
                     responseInfo, response = response
+                    if not (type(responseInfo) == types.StringType or
+                            type(responseInfo) == types.UnicodeType):
+                        responseInfo = ''
                 else:
                     responseInfo = ''
+                if not (type(response) == types.StringType or
+                        type(response) == types.UnicodeType):
+                    response = ''
             except return_sync_exception:
                 return
             except return_async_exception:
@@ -337,7 +348,7 @@ class API(object):
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
                 responseInfoSize = struct.unpack("=I", data[i:j])[0]
-                i, j = j, j + requestInfoSize + 1 + 4
+                i, j = j, j + responseInfoSize + 1 + 4
                 (responseInfo, nullTerminator,
                  responseSize) = struct.unpack("=%dscI" % responseInfoSize,
                                                data[i:j])
