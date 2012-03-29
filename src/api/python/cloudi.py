@@ -41,7 +41,7 @@
 
 __all__ = ["API"]
 
-import sys, os, types, struct, socket, select, threading, inspect
+import sys, os, types, struct, socket, select, threading, inspect, collections
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
 
@@ -91,11 +91,21 @@ class API(object):
         args, varargs, varkw, defaults = inspect.getargspec(Function)
         if len(args) != 10: # self + arguments, so a non-static method
             raise invalid_input_exception()
-        self.__callbacks[self.__prefix + pattern] = Function
+        key = self.__prefix + pattern
+        value = self.__callbacks.get(key, None)
+        if value is None:
+            self.__callbacks[key] = collections.deque([Function])
+        else:
+            value.append(Function)
         self.__send(term_to_binary((OtpErlangAtom("subscribe"), pattern)))
 
     def unsubscribe(self, pattern):
-        del self.__callbacks[self.__prefix + pattern]
+        key = self.__prefix + pattern
+        value = self.__callbacks.get(key, None)
+        assert value is not None
+        value.popleft()
+        if len(value) == 0:
+            del self.__callbacks[key]
         self.__send(term_to_binary((OtpErlangAtom("unsubscribe"), pattern)))
 
     def send_async(self, name, request,
@@ -228,8 +238,10 @@ class API(object):
 
     def __callback(self, command, name, pattern, requestInfo, request,
                    timeout, priority, transId, pid):
-        function = self.__callbacks.get(pattern, None)
-        assert function is not None
+        function_deque = self.__callbacks.get(pattern, None)
+        assert function_deque is not None
+        function = function_deque.popleft()
+        function_deque.append(function)
         if command == _MESSAGE_SEND_ASYNC:
             try:
                 response = function(API.ASYNC, name, pattern,
