@@ -59,21 +59,22 @@ class _Task(threading.Thread):
     def zigzag_finish(self, command, name, pattern,
                       requestInfo, request,
                       timeout, priority, transId, pid):
-        print 'Got to CloudI finish from ZeroMQ zig-zag:',request
+        assert request == 'magic'
+        print 'zeromq zigzag end'
         self.__api.return_(command, name, pattern,
                            '', 'done', timeout, transId, pid)
 
     def chain_inproc_finish(self, command, name, pattern,
                             requestInfo, request,
                             timeout, priority, transId, pid):
-        print 'chain_inproc_finish'
+        print 'zeromq chain_inproc end'
         self.__api.return_(command, name, pattern,
                            '', 'done', timeout, transId, pid)
 
     def chain_ipc_finish(self, command, name, pattern,
                          requestInfo, request,
                          timeout, priority, transId, pid):
-        print 'chain_ipc_finish'
+        print 'zeromq chain_ipc end'
         self.__api.return_(command, name, pattern,
                            '', 'done', timeout, transId, pid)
 
@@ -83,8 +84,11 @@ class _Task(threading.Thread):
         # the outgoing sends (i.e., without subscriptions there will be no
         # incoming requests)
         if self.__index == 0:
+            print 'zeromq zigzag start'
             self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
+            print 'zeromq chain_inproc start'
             self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
+            print 'zeromq chain_ipc start'
             self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
         self.__api.subscribe('zigzag_finish', self.zigzag_finish)
         self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)

@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, types
+import threading, socket, types, time
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -56,78 +56,78 @@ class _Task(threading.Thread):
         self.__api = API(thread_index)
         self.__index = thread_index
 
-    def __f_abcd(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_abcd(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/b/c/d')
         assert request == 'test1'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_abc_(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_abc_(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/b/c/*')
         assert request == 'test2' or request == 'test3'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_ab_d(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_ab_d(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/b/*/d')
         assert request == 'test4' or request == 'test5'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_a_cd(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_a_cd(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/*/c/d')
         assert request == 'test6' or request == 'test7'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f__bcd(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1__bcd(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + '*/b/c/d')
         assert request == 'test8' or request == 'test9'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_ab__(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_ab__(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/b/*')
         assert request == 'test10'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_a__d(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_a__d(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/*/d')
         assert request == 'test11'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f___cd(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1___cd(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + '*/c/d')
         assert request == 'test12'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_a___(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_a___(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + 'a/*')
         assert request == 'test13'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f____d(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1____d(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + '*/d')
         assert request == 'test14'
         self.__api.return_(command, name, pattern,
                            '', request, timeout, transId, pid)
 
-    def __f_____(self, command, name, pattern, requestInfo, request,
-                 timeout, priority, transId, pid):
+    def __sequence1_____(self, command, name, pattern, requestInfo, request,
+                         timeout, priority, transId, pid):
         assert pattern == (self.__api.prefix() + '*')
         assert request == 'test15'
         self.__api.return_(command, name, pattern,
@@ -235,9 +235,70 @@ class _Task(threading.Thread):
 
     def __sequence2(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
+        print 'messaging sequence2 start'
         assert request == 'start'
+        # wait for subscriptions
+        # (the list_pg Erlang process message queue might be backed up
+        #  since it is using an "immediate" destination refresh method)
+        time.sleep(1)
+        # the sending process is excluded from the services that receive
+        # the asynchronous message, so in this case, the receiving thread
+        # will not be called, despite the fact it has subscribed to 'e',
+        # to prevent a process (in this case thread) from deadlocking
+        # with itself.
+        e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
+        # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
+        # since 1 thread is sending the mcast_async, so 3 * 8 == 24
+        assert len(e_ids) == 24
+        e_str_check = ''
+        for e_id in e_ids:
+            (tmp, e_check, e_id_check) = self.__api.recv_async(transId=e_id)
+            assert e_id == e_id_check
+            e_str_check += e_check
+        assert e_str_check == '123456781234567812345678'
+        print 'messaging sequence2 end'
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
+
+    def __sequence2_e1(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '1', timeout, transId, pid)
+
+    def __sequence2_e2(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '2', timeout, transId, pid)
+
+    def __sequence2_e3(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '3', timeout, transId, pid)
+
+    def __sequence2_e4(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '4', timeout, transId, pid)
+
+    def __sequence2_e5(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '5', timeout, transId, pid)
+
+    def __sequence2_e6(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '6', timeout, transId, pid)
+
+    def __sequence2_e7(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '7', timeout, transId, pid)
+
+    def __sequence2_e8(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', '8', timeout, transId, pid)
 
     def __sequence3(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
@@ -254,18 +315,26 @@ class _Task(threading.Thread):
             self.__api.send_async(self.__api.prefix() + 'sequence1', 'start')
             self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
             self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
-        self.__api.subscribe('a/b/c/d', self.__f_abcd)
-        self.__api.subscribe('a/b/c/*', self.__f_abc_)
-        self.__api.subscribe('a/b/*/d', self.__f_ab_d)
-        self.__api.subscribe('a/*/c/d', self.__f_a_cd)
-        self.__api.subscribe('*/b/c/d', self.__f__bcd)
-        self.__api.subscribe('a/b/*',   self.__f_ab__)
-        self.__api.subscribe('a/*/d',   self.__f_a__d)
-        self.__api.subscribe('*/c/d',   self.__f___cd)
-        self.__api.subscribe('a/*',     self.__f_a___)
-        self.__api.subscribe('*/d',     self.__f____d)
-        self.__api.subscribe('*',       self.__f_____)
+        self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
+        self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
+        self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
+        self.__api.subscribe('a/*/c/d', self.__sequence1_a_cd)
+        self.__api.subscribe('*/b/c/d', self.__sequence1__bcd)
+        self.__api.subscribe('a/b/*',   self.__sequence1_ab__)
+        self.__api.subscribe('a/*/d',   self.__sequence1_a__d)
+        self.__api.subscribe('*/c/d',   self.__sequence1___cd)
+        self.__api.subscribe('a/*',     self.__sequence1_a___)
+        self.__api.subscribe('*/d',     self.__sequence1____d)
+        self.__api.subscribe('*',       self.__sequence1_____)
         self.__api.subscribe('sequence1', self.__sequence1)
+        self.__api.subscribe('e', self.__sequence2_e1)
+        self.__api.subscribe('e', self.__sequence2_e2)
+        self.__api.subscribe('e', self.__sequence2_e3)
+        self.__api.subscribe('e', self.__sequence2_e4)
+        self.__api.subscribe('e', self.__sequence2_e5)
+        self.__api.subscribe('e', self.__sequence2_e6)
+        self.__api.subscribe('e', self.__sequence2_e7)
+        self.__api.subscribe('e', self.__sequence2_e8)
         self.__api.subscribe('sequence2', self.__sequence2)
         self.__api.subscribe('sequence3', self.__sequence3)
 
