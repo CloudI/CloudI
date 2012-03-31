@@ -53,10 +53,38 @@ if __FILE__ == $PROGRAM_NAME
         class Task
             def initialize(thread_index)
                 @api = CloudI::API.new(thread_index)
+                @thread_index = thread_index
             end
 
             def run
-                @api.subscribe('ruby', method(:request))
+                if @thread_index == 0
+                    @api.send_async(@api.prefix + 'sequence1', 'start')
+                end
+                @api.subscribe('a/b/c/d', method(:sequence1_abcd))
+                #@api.subscribe('a/b/c/*', method(:sequence1_abc_))
+                #@api.subscribe('a/b/*/d', method(:sequence1_ab_d))
+                #@api.subscribe('a/*/c/d', method(:sequence1_a_cd))
+                #@api.subscribe('*/b/c/d', method(:sequence1__bcd))
+                #@api.subscribe('a/b/*',   method(:sequence1_ab__))
+                #@api.subscribe('a/*/d',   method(:sequence1_a__d))
+                #@api.subscribe('*/c/d',   method(:sequence1___cd))
+                #@api.subscribe('a/*',     method(:sequence1_a___))
+                #@api.subscribe('*/d',     method(:sequence1____d))
+                #@api.subscribe('*',       method(:sequence1_____))
+                @api.subscribe('sequence1', method(:sequence1))
+                #@api.subscribe('e', method(:sequence2_e1))
+                #@api.subscribe('e', method(:sequence2_e2))
+                #@api.subscribe('e', method(:sequence2_e3))
+                #@api.subscribe('e', method(:sequence2_e4))
+                #@api.subscribe('e', method(:sequence2_e5))
+                #@api.subscribe('e', method(:sequence2_e6))
+                #@api.subscribe('e', method(:sequence2_e7))
+                #@api.subscribe('e', method(:sequence2_e8))
+                #@api.subscribe('sequence2', method(:sequence2))
+                #@api.subscribe('f1', method(:sequence3_f1))
+                #@api.subscribe('f2', method(:sequence3_f2))
+                #@api.subscribe('g1', method(:sequence3_g1))
+                #@api.subscribe('sequence3', method(:sequence3))
 
                 result = @api.poll
                 $stdout.puts "exited thread: #{result}"
@@ -64,27 +92,31 @@ if __FILE__ == $PROGRAM_NAME
 
             private
 
-            DESTINATION = '/tests/msg_size/erlang'
-
             def assert
                 raise 'Assertion failed !' unless yield # if $DEBUG
             end
 
-            def request(command, name, pattern, requestInfo, request,
-                        timeout, priority, transId, pid)
-                i = request[0,4].unpack('L')[0]
-                if i == 4294967295
-                    i = 0
-                else
-                    i += 1
-                end
-                request.slice!(0..3)
-                request = [i].pack('L') + request
-                name_next = DESTINATION
-                $stdout.puts "forward ##{i} ruby to #{name_next} " \
-                             "(with timeout #{timeout} ms)"
-                @api.forward_(command, name_next, requestInfo, request,
-                              timeout, priority, transId, pid)
+            def sequence1_abcd(command, name, pattern, requestInfo, request,
+                               timeout, priority, transId, pid)
+                assert{pattern == "#{@api.prefix}a/b/c/d"}
+                assert{request == 'test1'}
+                @api.return_(command, name, pattern,
+                             '', request, timeout, transId, pid)
+            end
+
+            def sequence1(command, name, pattern, requestInfo, request,
+                          timeout, priority, transId, pid)
+                $stdout.puts 'messaging sequence1 start ruby'
+                assert{request == 'start'}
+                test1_id = @api.send_async("#{@api.prefix}a/b/c/d", 'test1')
+                test1 = @api.recv_async()
+                test1_check = test1[1]
+                test1_id_check = test1[2]
+                assert{test1_check == 'test1'}
+                assert{test1_id_check == test1_id}
+                $stdout.puts 'messaging sequence1 end ruby'
+                @api.return_(command, name, pattern,
+                             '', 'end', timeout, transId, pid)
             end
         end
         begin

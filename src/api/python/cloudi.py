@@ -41,7 +41,8 @@
 
 __all__ = ["API"]
 
-import sys, os, types, struct, socket, select, threading, inspect, collections
+import sys, os, types, struct, socket, select, threading, inspect, \
+       collections, traceback
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
 
@@ -260,10 +261,11 @@ class API(object):
             except return_async_exception:
                 return
             except return_sync_exception:
+                traceback.print_exc(file=sys.stdout)
                 assert False
                 return
             except:
-                # exception is ignored at this level
+                traceback.print_exc(file=sys.stdout)
                 responseInfo = ''
                 response = ''
             self.__return_async_nothrow(name, pattern,
@@ -287,10 +289,11 @@ class API(object):
             except return_sync_exception:
                 return
             except return_async_exception:
+                traceback.print_exc(file=sys.stdout)
                 assert False
                 return
             except:
-                # exception is ignored at this level
+                traceback.print_exc(file=sys.stdout)
                 responseInfo = ''
                 response = ''
             self.__return_sync_nothrow(name, pattern,
@@ -484,36 +487,3 @@ class _unbuffered(object):
 sys.stdout = _unbuffered(sys.stdout)
 sys.stderr = _unbuffered(sys.stderr)
 
-class _Task(threading.Thread):
-    def __init__(self, thread_index):
-        threading.Thread.__init__(self)
-        self.__api = API(thread_index)
-
-    def foobar(self, command, name, pattern,
-               request, timeout, transId, pid):
-        print "got foobar"
-        self.__api.return_(command, name, pattern,
-                           "bye", timeout, transId, pid)
-
-    def run(self):
-        self.__api.subscribe("foobar", self.foobar)
-
-        running = True
-        while running:
-            result = self.__api.poll()
-            if result is None:
-                running = False
-            else:
-                print "(python) received:",result
-        print "exited thread"
-
-if __name__ == '__main__':
-    thread_count = API.thread_count()
-    assert thread_count >= 1
-    
-    threads = [_Task(i) for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-    

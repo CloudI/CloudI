@@ -90,7 +90,7 @@ cloudi_job_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
     end,
     NewRequest = <<NewI:32/unsigned-integer-native, Rest/binary>>,
     NewName = cloudi_string:beforer($/, Pattern, input) ++ [$/ | Suffix],
-    ?LOG_INFO(" forward #~w to ~s (with timeout ~w ms)",
+    ?LOG_INFO(" forward #~w erlang to ~s (with timeout ~w ms)",
               [NewI, NewName, Timeout]),
     {forward, NewName, RequestInfo, NewRequest,
      State#state{suffixes = Suffixes ++ [Suffix]}}.

@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, types
+import threading, socket, types, traceback
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -55,6 +55,48 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
         self.__index = thread_index
+
+    def run(self):
+        try:
+            # sends outside of a callback function must occur before the
+            # subscriptions so that the incoming requests do not interfere with
+            # the outgoing sends (i.e., without subscriptions there will be no
+            # incoming requests)
+            if self.__index == 0:
+                # start sequence1
+                self.__api.send_async(
+                    self.__api.prefix() + 'sequence1', 'start',
+                )
+            self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
+            self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
+            self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
+            self.__api.subscribe('a/*/c/d', self.__sequence1_a_cd)
+            self.__api.subscribe('*/b/c/d', self.__sequence1__bcd)
+            self.__api.subscribe('a/b/*',   self.__sequence1_ab__)
+            self.__api.subscribe('a/*/d',   self.__sequence1_a__d)
+            self.__api.subscribe('*/c/d',   self.__sequence1___cd)
+            self.__api.subscribe('a/*',     self.__sequence1_a___)
+            self.__api.subscribe('*/d',     self.__sequence1____d)
+            self.__api.subscribe('*',       self.__sequence1_____)
+            self.__api.subscribe('sequence1', self.__sequence1)
+            self.__api.subscribe('e', self.__sequence2_e1)
+            self.__api.subscribe('e', self.__sequence2_e2)
+            self.__api.subscribe('e', self.__sequence2_e3)
+            self.__api.subscribe('e', self.__sequence2_e4)
+            self.__api.subscribe('e', self.__sequence2_e5)
+            self.__api.subscribe('e', self.__sequence2_e6)
+            self.__api.subscribe('e', self.__sequence2_e7)
+            self.__api.subscribe('e', self.__sequence2_e8)
+            self.__api.subscribe('sequence2', self.__sequence2)
+            self.__api.subscribe('f1', self.__sequence3_f1)
+            self.__api.subscribe('f2', self.__sequence3_f2)
+            self.__api.subscribe('g1', self.__sequence3_g1)
+            self.__api.subscribe('sequence3', self.__sequence3)
+    
+            result = self.__api.poll()
+            print 'exited thread:', result
+        except:
+            traceback.print_exc(file=sys.stdout)
 
     def __sequence1_abcd(self, command, name, pattern, requestInfo, request,
                          timeout, priority, transId, pid):
@@ -135,7 +177,7 @@ class _Task(threading.Thread):
 
     def __sequence1(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
-        print 'messaging sequence1 start'
+        print 'messaging sequence1 start python'
         assert request == 'start'
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'a/b/c/d',  'test1'
@@ -229,7 +271,7 @@ class _Task(threading.Thread):
         (tmp, test15_check, test15_id_check) = self.__api.recv_async()
         assert test15_check == 'test15'
         assert test15_id_check == test15_id
-        print 'messaging sequence1 end'
+        print 'messaging sequence1 end python'
         # start sequence2
         self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
         self.__api.return_(command, name, pattern,
@@ -237,7 +279,7 @@ class _Task(threading.Thread):
 
     def __sequence2(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
-        print 'messaging sequence2 start'
+        print 'messaging sequence2 start python'
         assert request == 'start'
         # the sending process is excluded from the services that receive
         # the asynchronous message, so in this case, the receiving thread
@@ -254,7 +296,7 @@ class _Task(threading.Thread):
             assert e_id == e_id_check
             e_str_check += e_check
         assert e_str_check == '123456781234567812345678'
-        print 'messaging sequence2 end'
+        print 'messaging sequence2 end python'
         # start sequence3
         self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.return_(command, name, pattern,
@@ -302,7 +344,7 @@ class _Task(threading.Thread):
 
     def __sequence3(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
-        print 'messaging sequence3 start'
+        print 'messaging sequence3 start python'
         assert request == 'start'
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'f1',  '0'
@@ -316,7 +358,7 @@ class _Task(threading.Thread):
             self.__api.prefix() + 'g1',  'prefix_'
         )
         assert test2_check == 'prefix_suffix'
-        print 'messaging sequence3 end'
+        print 'messaging sequence3 end python'
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
@@ -342,49 +384,6 @@ class _Task(threading.Thread):
                        timeout, priority, transId, pid):
         self.__api.return_(command, name, pattern,
                            '', request + 'suffix', timeout, transId, pid)
-
-    def run(self):
-        # sends outside of a callback function must occur before the
-        # subscriptions so that the incoming requests do not interfere with
-        # the outgoing sends (i.e., without subscriptions there will be no
-        # incoming requests)
-        if self.__index == 0:
-            # start sequence1
-            self.__api.send_async(self.__api.prefix() + 'sequence1', 'start')
-        self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
-        self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
-        self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
-        self.__api.subscribe('a/*/c/d', self.__sequence1_a_cd)
-        self.__api.subscribe('*/b/c/d', self.__sequence1__bcd)
-        self.__api.subscribe('a/b/*',   self.__sequence1_ab__)
-        self.__api.subscribe('a/*/d',   self.__sequence1_a__d)
-        self.__api.subscribe('*/c/d',   self.__sequence1___cd)
-        self.__api.subscribe('a/*',     self.__sequence1_a___)
-        self.__api.subscribe('*/d',     self.__sequence1____d)
-        self.__api.subscribe('*',       self.__sequence1_____)
-        self.__api.subscribe('sequence1', self.__sequence1)
-        self.__api.subscribe('e', self.__sequence2_e1)
-        self.__api.subscribe('e', self.__sequence2_e2)
-        self.__api.subscribe('e', self.__sequence2_e3)
-        self.__api.subscribe('e', self.__sequence2_e4)
-        self.__api.subscribe('e', self.__sequence2_e5)
-        self.__api.subscribe('e', self.__sequence2_e6)
-        self.__api.subscribe('e', self.__sequence2_e7)
-        self.__api.subscribe('e', self.__sequence2_e8)
-        self.__api.subscribe('sequence2', self.__sequence2)
-        self.__api.subscribe('f1', self.__sequence3_f1)
-        self.__api.subscribe('f2', self.__sequence3_f2)
-        self.__api.subscribe('g1', self.__sequence3_g1)
-        self.__api.subscribe('sequence3', self.__sequence3)
-
-        running = True
-        while running:
-            result = self.__api.poll()
-            if result is None:
-                running = False
-            else:
-                print '(python) received:',result
-        print 'exited thread'
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
