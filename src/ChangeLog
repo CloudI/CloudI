@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add messaging test sequence3 to python messaging test
+
 2012-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add messaging test sequence2 to python messaging test

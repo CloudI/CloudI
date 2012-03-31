@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, types, time
+import threading, socket, types
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -230,6 +230,8 @@ class _Task(threading.Thread):
         assert test15_check == 'test15'
         assert test15_id_check == test15_id
         print 'messaging sequence1 end'
+        # start sequence2
+        self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
@@ -237,10 +239,6 @@ class _Task(threading.Thread):
                     timeout, priority, transId, pid):
         print 'messaging sequence2 start'
         assert request == 'start'
-        # wait for subscriptions
-        # (the list_pg Erlang process message queue might be backed up
-        #  since it is using an "immediate" destination refresh method)
-        time.sleep(1)
         # the sending process is excluded from the services that receive
         # the asynchronous message, so in this case, the receiving thread
         # will not be called, despite the fact it has subscribed to 'e',
@@ -257,6 +255,8 @@ class _Task(threading.Thread):
             e_str_check += e_check
         assert e_str_check == '123456781234567812345678'
         print 'messaging sequence2 end'
+        # start sequence3
+        self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
@@ -302,9 +302,46 @@ class _Task(threading.Thread):
 
     def __sequence3(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
+        print 'messaging sequence3 start'
         assert request == 'start'
+        test1_id = self.__api.send_async(
+            self.__api.prefix() + 'f1',  '0'
+        )
+        (tmp, test1_check, test1_id_check) = self.__api.recv_async(
+            transId=test1_id
+        )
+        assert test1_id_check == test1_id
+        assert test1_check == 'done'
+        (tmp, test2_check, test2_id_check) = self.__api.send_sync(
+            self.__api.prefix() + 'g1',  'prefix_'
+        )
+        assert test2_check == 'prefix_suffix'
+        print 'messaging sequence3 end'
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
+
+    def __sequence3_f1(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        request_i = int(request)
+        if request_i == 4:
+            return 'done'
+        request_new = request_i + 2 # two steps forward
+        self.__api.forward_(command, self.__api.prefix() + 'f2',
+                            requestInfo, str(request_new),
+                            timeout, priority, transId, pid)
+                           
+    def __sequence3_f2(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        request_i = int(request)
+        request_new = request_i - 1 # one step back
+        self.__api.forward_(command, self.__api.prefix() + 'f1',
+                            requestInfo, str(request_new),
+                            timeout, priority, transId, pid)
+
+    def __sequence3_g1(self, command, name, pattern, requestInfo, request,
+                       timeout, priority, transId, pid):
+        self.__api.return_(command, name, pattern,
+                           '', request + 'suffix', timeout, transId, pid)
 
     def run(self):
         # sends outside of a callback function must occur before the
@@ -312,9 +349,8 @@ class _Task(threading.Thread):
         # the outgoing sends (i.e., without subscriptions there will be no
         # incoming requests)
         if self.__index == 0:
+            # start sequence1
             self.__api.send_async(self.__api.prefix() + 'sequence1', 'start')
-            self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
-            self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
         self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
         self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
@@ -336,6 +372,9 @@ class _Task(threading.Thread):
         self.__api.subscribe('e', self.__sequence2_e7)
         self.__api.subscribe('e', self.__sequence2_e8)
         self.__api.subscribe('sequence2', self.__sequence2)
+        self.__api.subscribe('f1', self.__sequence3_f1)
+        self.__api.subscribe('f2', self.__sequence3_f2)
+        self.__api.subscribe('g1', self.__sequence3_g1)
         self.__api.subscribe('sequence3', self.__sequence3)
 
         running = True
