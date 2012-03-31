@@ -324,6 +324,8 @@ tests-messaging-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.rb" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 
 tests-msg_size-install: \
         $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \

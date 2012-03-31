@@ -50,17 +50,22 @@ if __FILE__ == $PROGRAM_NAME
     thread_count = CloudI::API.thread_count()
 
     threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
-        api = CloudI::API.new(thread_index)
-
         class Task
-            def initialize(api)
-                @api = api
+            def initialize(thread_index)
+                @api = CloudI::API.new(thread_index)
+            end
+
+            def run
+                @api.subscribe("ruby", method(:flood))
+
+                result = @api.poll
+                $stdout.puts "exited thread: #{result}"
             end
 
             private
 
             def assert
-                raise "Assertion failed !" unless yield if $DEBUG
+                raise "Assertion failed !" unless yield # if $DEBUG
             end
 
             def flood(command, name, pattern, request_info, request,
@@ -69,11 +74,14 @@ if __FILE__ == $PROGRAM_NAME
                              "", "ruby", timeout, transId, pid)
             end
         end
-        object = Task.new(api)
-
-        api.subscribe("ruby", object.method(:flood))
-        api.poll
+        begin
+            object = Task.new(thread_index)
+            object.run
+        rescue
+            $stderr.puts $!.message
+            $stderr.puts $!.backtrace
+        end
     }}
-    threads.each{ |t| t.join}
+    threads.each{ |t| t.join }
 end
 

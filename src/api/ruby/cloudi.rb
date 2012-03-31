@@ -76,17 +76,22 @@ module CloudI
             send(term_to_binary([:subscribe, pattern]))
         end
 
-        def unsubscribe(pattern, function)
+        def unsubscribe(pattern)
             @callbacks.delete(@prefix + pattern)
             send(term_to_binary([:unsubscribe, pattern]))
         end
 
-        def send_async(name, request)
-            send_async(name, '', request, @timeoutAsync, @priorityDefault)
-        end
-
-        def send_async(name, request_info, request,
-                       timeout, priority)
+        def send_async(name, request,
+                       timeout=nil, request_info=nil, priority=nil)
+            if timeout.nil?
+                timeout = @timeoutAsync
+            end
+            if request_info.nil?
+                request_info = ''
+            end
+            if priority.nil?
+                priority = @priorityDefault
+            end
             send(term_to_binary([:send_async, name,
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
@@ -94,12 +99,17 @@ module CloudI
             return poll
         end
 
-        def send_sync(name, request)
-            send_sync(name, '', request, @timeoutSync, @priorityDefault)
-        end
-
-        def send_sync(name, request_info, request,
-                      timeout, priority)
+        def send_sync(name, request,
+                      timeout=nil, request_info=nil, priority=nil)
+            if timeout.nil?
+                timeout = @timeoutSync
+            end
+            if request_info.nil?
+                request_info = ''
+            end
+            if priority.nil?
+                priority = @priorityDefault
+            end
             send(term_to_binary([:send_sync, name,
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
@@ -107,12 +117,17 @@ module CloudI
             return poll
         end
 
-        def mcast_async(name, request)
-            mcast_async(name, '', request, @timeoutAsync, @priorityDefault)
-        end
-
-        def mcast_async(name, request_info, request,
-                        timeout, priority)
+        def mcast_async(name, request,
+                        timeout=nil, request_info=nil, priority=nil)
+            if timeout.nil?
+                timeout = @timeoutAsync
+            end
+            if request_info.nil?
+                request_info = ''
+            end
+            if priority.nil?
+                priority = @priorityDefault
+            end
             send(term_to_binary([:mcast_async, name,
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
@@ -196,10 +211,28 @@ module CloudI
                                   OtpErlangBinary.new(transId), pid]))
         end
 
-        def recv_async(timeout, transId)
+        def recv_async(timeout=nil, transId=nil)
+            if timeout.nil?
+                timeout = @timeoutSync
+            end
+            if transId.nil?
+                transId = 0.chr * 16
+            end
             send(term_to_binary([:recv_async, timeout,
                                   OtpErlangBinary.new(transId)]))
             return poll
+        end
+
+        def prefix
+            return @prefix
+        end
+
+        def timeout_async
+            return @timeoutAsync
+        end
+
+        def timeout_sync
+            return @timeoutSync
         end
 
         def callback(command, name, pattern, requestInfo, request,
@@ -216,8 +249,14 @@ module CloudI
                         API.assert{response.length == 2}
                         responseInfo = response[0]
                         response = response[1]
+                        if not responseInfo.kind_of?(String)
+                            responseInfo = ''
+                        end
                     else
                         responseInfo = ''
+                    end
+                    if not response.kind_of?(String)
+                        response = ''
                     end
                 rescue ReturnAsyncException
                     return
@@ -227,7 +266,8 @@ module CloudI
                     API.assert{false}
                     return
                 rescue
-                    # exception is ignored at this level
+                    $stderr.puts $!.message
+                    $stderr.puts $!.backtrace
                     responseInfo = ''
                     response = ''
                 end
@@ -242,8 +282,14 @@ module CloudI
                         API.assert{response.length == 2}
                         responseInfo = response[0]
                         response = response[1]
+                        if not responseInfo.kind_of?(String)
+                            responseInfo = ''
+                        end
                     else
                         responseInfo = ''
+                    end
+                    if not response.kind_of?(String)
+                        response = ''
                     end
                 rescue ReturnSyncException
                     return
@@ -253,7 +299,8 @@ module CloudI
                     API.assert{false}
                     return
                 rescue
-                    # exception is ignored at this level
+                    $stderr.puts $!.message
+                    $stderr.puts $!.backtrace
                     responseInfo = ''
                     response = ''
                 end
@@ -338,30 +385,32 @@ module CloudI
                     responseInfo = tmp[0]
                     responseSize = tmp[1]
                     i += j; j = responseSize + 1 + 16
-                    i += j
-                    if i != data.length
-                        raise MessageDecodingException
-                    end
                     tmp = data[i, j].unpack("a#{responseSize}xa16")
                     response = tmp[0]
                     transId = tmp[1]
-                    return [responseInfo, response, transId]
-                when MESSAGE_RETURN_ASYNC
-                    i += j; j = 16
                     i += j
                     if i != data.length
                         raise MessageDecodingException
                     end
-                    return data[i, j].unpack('a16')[0]
+                    return [responseInfo, response, transId]
+                when MESSAGE_RETURN_ASYNC
+                    i += j; j = 16
+                    transId = data[i, j].unpack('a16')[0]
+                    i += j
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
+                    return transId
                 when MESSAGE_RETURNS_ASYNC
                     i += j; j = 4
                     transIdCount = data[i, j].unpack('L')[0]
                     i += j; j = 16 * transIdCount
+                    transIdList = data[i, j].unpack('a16' * transIdCount)
                     i += j
                     if i != data.length
                         raise MessageDecodingException
                     end
-                    return data[i, j].unpack('a16' * transIdCount)
+                    return transIdList
                 when MESSAGE_KEEPALIVE
                     send(term_to_binary(:keepalive))
                     i += j
@@ -491,33 +540,5 @@ module CloudI
 
     class MessageDecodingException < Exception
     end
-end
-
-if __FILE__ == $PROGRAM_NAME
-    thread_count = CloudI::API.thread_count()
-
-    threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
-        class Foobar
-            def initialize(api)
-                @api = api
-            end
-            def foobar(command, name, pattern,
-                       request, timeout, transId, pid)
-                puts 'got foobar'
-                @api.return_(command, name, pattern,
-                             'bye', timeout, transId, pid)
-            end
-        end
-        begin
-            api = CloudI::API.new(thread_index)
-            object = Foobar.new(api)
-            api.subscribe('foobar', object.method(:foobar))
-            api.poll
-        rescue
-            $stderr.puts $!.message
-            $stderr.puts $!.backtrace
-        end
-    }}
-    threads.each{ |t| t.join}
 end
 

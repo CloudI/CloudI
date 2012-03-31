@@ -56,6 +56,25 @@ class _Task(threading.Thread):
         self.__api = API(thread_index)
         self.__index = thread_index
 
+    def run(self):
+        # sends outside of a callback function must occur before the
+        # subscriptions so that the incoming requests do not interfere with
+        # the outgoing sends (i.e., without subscriptions there will be no
+        # incoming requests)
+        if self.__index == 0:
+            print 'zeromq zigzag start'
+            self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
+            print 'zeromq chain_inproc start'
+            self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
+            print 'zeromq chain_ipc start'
+            self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
+        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
+        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
+        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
+
+        result = self.__api.poll()
+        print 'exited thread:', result
+
     def zigzag_finish(self, command, name, pattern,
                       requestInfo, request,
                       timeout, priority, transId, pid):
@@ -78,30 +97,6 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, pattern,
                            '', 'done', timeout, transId, pid)
 
-    def run(self):
-        # sends outside of a callback function must occur before the
-        # subscriptions so that the incoming requests do not interfere with
-        # the outgoing sends (i.e., without subscriptions there will be no
-        # incoming requests)
-        if self.__index == 0:
-            print 'zeromq zigzag start'
-            self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
-            print 'zeromq chain_inproc start'
-            self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
-            print 'zeromq chain_ipc start'
-            self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
-        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
-        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
-        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
-        running = True
-        while running:
-            result = self.__api.poll()
-            if result is None:
-                running = False
-            else:
-                print '(python) received:',result
-        print 'exited thread'
-
 if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
@@ -111,4 +106,4 @@ if __name__ == '__main__':
         t.start()
     for t in threads:
         t.join()
-    
+

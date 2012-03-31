@@ -57,6 +57,12 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
 
+    def run(self):
+        self.__api.subscribe('python', self.request)
+
+        result = self.__api.poll()
+        print 'exited thread:', result
+
     def request(self, command, name, pattern, requestInfo, request,
                 timeout, priority, transId, pid):
         i = struct.unpack('=I', request[:4])[0]
@@ -65,23 +71,11 @@ class _Task(threading.Thread):
         else:
             i += 1
         request = struct.pack('=I', i) + request[4:]
-        print 'forward #%d to %s (with timeout %d ms)' % (
+        print 'forward #%d python to %s (with timeout %d ms)' % (
             i, _DESTINATION, timeout,
         )
         self.__api.forward_(command, _DESTINATION, requestInfo, request,
                             timeout, priority, transId, pid)
-
-    def run(self):
-        self.__api.subscribe('python', self.request)
-
-        running = True
-        while running:
-            result = self.__api.poll()
-            if result is None:
-                running = False
-            else:
-                print '(python) received:',result
-        print 'exited thread'
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
@@ -92,4 +86,4 @@ if __name__ == '__main__':
         t.start()
     for t in threads:
         t.join()
-    
+

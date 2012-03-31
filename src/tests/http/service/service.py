@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket
+import threading, socket, traceback
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -55,25 +55,22 @@ class _Task(threading.Thread):
         threading.Thread.__init__(self)
         self.__api = API(thread_index)
 
+    def run(self):
+        try:
+            #print '> 32 characters to test stdout<'
+            self.__api.subscribe('text/post', self.text)
+
+            result = self.__api.poll()
+            print 'exited thread:', result
+        except:
+            traceback.print_exc(file=sys.stdout)
+
     def text(self, command, name, pattern, requestInfo, request,
              timeout, priority, transId, pid):
         print '(' + request + ')'
         assert 'Test Text' == request
         self.__api.return_(command, name, pattern, '', 'Test Response',
                            timeout, transId, pid)
-
-    def run(self):
-        #print '> 32 characters to test stdout<'
-        self.__api.subscribe('text/post', self.text)
-
-        running = True
-        while running:
-            result = self.__api.poll()
-            if result is None:
-                running = False
-            else:
-                print '(python) received:',result
-        print 'exited thread'
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
@@ -84,4 +81,4 @@ if __name__ == '__main__':
         t.start()
     for t in threads:
         t.join()
-    
+

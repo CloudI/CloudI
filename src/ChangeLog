@@ -4,6 +4,8 @@
 2012-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add messaging test sequence3 to python messaging test
+    * Fix various problems with the ruby CloudI API
+      (now it is the same as the python interface)
 
 2012-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 

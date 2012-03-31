@@ -73,7 +73,7 @@ public class Task implements Runnable
         else
             i++;
         buffer.putInt(0, i);
-        API.out.printf("forward #%d to %s (with timeout %d ms)\n",
+        API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
                        i, Task.DESTINATION, timeout);
         api.forward_(command, Task.DESTINATION,
                      requestInfo, request,

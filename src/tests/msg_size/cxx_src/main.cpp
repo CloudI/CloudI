@@ -69,7 +69,7 @@ static void request(cloudi_instance_t * api,
         *i = 0;
     else
         (*i)++;
-    std::cout << "forward #" << *i << " to " DESTINATION
+    std::cout << "forward #" << *i << " c++ to " DESTINATION
         " (with timeout " << timeout << " ms)" << std::endl;
     cloudi_forward(api, command, DESTINATION,
                    request_info, request_info_size,
