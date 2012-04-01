@@ -239,10 +239,10 @@ class API(object):
 
     def __callback(self, command, name, pattern, requestInfo, request,
                    timeout, priority, transId, pid):
-        function_deque = self.__callbacks.get(pattern, None)
-        assert function_deque is not None
-        function = function_deque.popleft()
-        function_deque.append(function)
+        function_queue = self.__callbacks.get(pattern, None)
+        assert function_queue is not None
+        function = function_queue.popleft()
+        function_queue.append(function)
         if command == _MESSAGE_SEND_ASYNC:
             try:
                 response = function(API.ASYNC, name, pattern,
