@@ -72,7 +72,13 @@ module CloudI
         end
 
         def subscribe(pattern, function)
-            @callbacks[@prefix + pattern] = function
+            key = @prefix + pattern
+            value = @callbacks.fetch(key, nil)
+            if value.nil?
+                @callbacks[key] = [function]
+            else
+                value.push(function)
+            end
             send(term_to_binary([:subscribe, pattern]))
         end
 
@@ -237,8 +243,10 @@ module CloudI
 
         def callback(command, name, pattern, requestInfo, request,
                      timeout, priority, transId, pid)
-            function = @callbacks[pattern]
-            API.assert{function != nil}
+            function_queue = @callbacks.fetch(pattern, nil)
+            API.assert{function_queue != nil}
+            function = function_queue.shift
+            function_queue.push(function)
             case command
             when MESSAGE_SEND_ASYNC
                 begin

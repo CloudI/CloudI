@@ -277,31 +277,6 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
-    def __sequence2(self, command, name, pattern, requestInfo, request,
-                    timeout, priority, transId, pid):
-        print 'messaging sequence2 start python'
-        assert request == 'start'
-        # the sending process is excluded from the services that receive
-        # the asynchronous message, so in this case, the receiving thread
-        # will not be called, despite the fact it has subscribed to 'e',
-        # to prevent a process (in this case thread) from deadlocking
-        # with itself.
-        e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
-        # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
-        # since 1 thread is sending the mcast_async, so 3 * 8 == 24
-        assert len(e_ids) == 24
-        e_str_check = ''
-        for e_id in e_ids:
-            (tmp, e_check, e_id_check) = self.__api.recv_async(transId=e_id)
-            assert e_id == e_id_check
-            e_str_check += e_check
-        assert e_str_check == '123456781234567812345678'
-        print 'messaging sequence2 end python'
-        # start sequence3
-        self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
-        self.__api.return_(command, name, pattern,
-                           '', 'end', timeout, transId, pid)
-
     def __sequence2_e1(self, command, name, pattern, requestInfo, request,
                        timeout, priority, transId, pid):
         self.__api.return_(command, name, pattern,
@@ -342,23 +317,28 @@ class _Task(threading.Thread):
         self.__api.return_(command, name, pattern,
                            '', '8', timeout, transId, pid)
 
-    def __sequence3(self, command, name, pattern, requestInfo, request,
+    def __sequence2(self, command, name, pattern, requestInfo, request,
                     timeout, priority, transId, pid):
-        print 'messaging sequence3 start python'
+        print 'messaging sequence2 start python'
         assert request == 'start'
-        test1_id = self.__api.send_async(
-            self.__api.prefix() + 'f1',  '0'
-        )
-        (tmp, test1_check, test1_id_check) = self.__api.recv_async(
-            transId=test1_id
-        )
-        assert test1_id_check == test1_id
-        assert test1_check == 'done'
-        (tmp, test2_check, test2_id_check) = self.__api.send_sync(
-            self.__api.prefix() + 'g1',  'prefix_'
-        )
-        assert test2_check == 'prefix_suffix'
-        print 'messaging sequence3 end python'
+        # the sending process is excluded from the services that receive
+        # the asynchronous message, so in this case, the receiving thread
+        # will not be called, despite the fact it has subscribed to 'e',
+        # to prevent a process (in this case thread) from deadlocking
+        # with itself.
+        e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
+        # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
+        # since 1 thread is sending the mcast_async, so 3 * 8 == 24
+        assert len(e_ids) == 24
+        e_str_check = ''
+        for e_id in e_ids:
+            (tmp, e_check, e_id_check) = self.__api.recv_async(transId=e_id)
+            assert e_id == e_id_check
+            e_str_check += e_check
+        assert e_str_check == '123456781234567812345678'
+        print 'messaging sequence2 end python'
+        # start sequence3
+        self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.return_(command, name, pattern,
                            '', 'end', timeout, transId, pid)
 
@@ -384,6 +364,26 @@ class _Task(threading.Thread):
                        timeout, priority, transId, pid):
         self.__api.return_(command, name, pattern,
                            '', request + 'suffix', timeout, transId, pid)
+
+    def __sequence3(self, command, name, pattern, requestInfo, request,
+                    timeout, priority, transId, pid):
+        print 'messaging sequence3 start python'
+        assert request == 'start'
+        test1_id = self.__api.send_async(
+            self.__api.prefix() + 'f1',  '0'
+        )
+        (tmp, test1_check, test1_id_check) = self.__api.recv_async(
+            transId=test1_id
+        )
+        assert test1_id_check == test1_id
+        assert test1_check == 'done'
+        (tmp, test2_check, test2_id_check) = self.__api.send_sync(
+            self.__api.prefix() + 'g1',  'prefix_'
+        )
+        assert test2_check == 'prefix_suffix'
+        print 'messaging sequence3 end python'
+        self.__api.return_(command, name, pattern,
+                           '', 'end', timeout, transId, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
