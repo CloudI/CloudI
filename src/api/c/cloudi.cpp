@@ -50,8 +50,8 @@
 #include <ei.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
-#include <map>
 #include <string>
+#include <list>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -143,8 +143,81 @@ namespace
                 m_function;
     };
 
-    typedef boost::unordered_map<std::string,
-                                 callback_function> lookup_t;
+    class callback_function_lookup
+    {
+        private:
+            class callback_function_queue
+            {
+                private:
+                    typedef std::list<callback_function> queue_t;
+                public:
+                    callback_function_queue(callback_function const & f) :
+                        m_queue(new queue_t()),
+                        m_size(1)
+                    {
+                        m_queue->push_back(f);
+                    }
+
+                    void push_back(callback_function const & f)
+                    {
+                        m_queue->push_back(f);
+                        m_size++;
+                    }
+
+                    callback_function const & cycle()
+                    {
+                        queue_t & queue = *m_queue;
+                        if (m_size == 1)
+                            return queue.front();
+                        queue.push_back(queue.front());
+                        queue.pop_front();
+                        return queue.back();
+                    }
+                private:
+                    boost::shared_ptr<queue_t> m_queue;
+                    size_t m_size;
+            };
+
+            typedef boost::unordered_map<std::string, callback_function_queue>
+                lookup_queue_t;
+            typedef std::pair<std::string, callback_function_queue>
+                lookup_queue_pair_t;
+        public:
+            void insert(std::string const & pattern,
+                        callback_function const & f)
+            {
+                lookup_queue_t::iterator itr = m_lookup.find(pattern);
+                if (itr == m_lookup.end())
+                {
+                    m_lookup.insert(lookup_queue_pair_t(pattern, f));
+                }
+                else
+                {
+                    itr->second.push_back(f);
+                }
+            }
+
+            bool erase(std::string const & pattern)
+            {
+                lookup_queue_t::iterator itr = m_lookup.find(pattern);
+                if (itr == m_lookup.end())
+                    return false;
+                m_lookup.erase(itr);
+                return true;
+            }
+
+            callback_function find(std::string const & pattern)
+            {
+                lookup_queue_t::iterator itr = m_lookup.find(pattern);
+                assert(itr != m_lookup.end());
+                return itr->second.cycle();
+            }
+
+        private:
+            lookup_queue_t m_lookup;
+            
+    };
+    typedef callback_function_lookup lookup_t;
     typedef realloc_ptr<char> buffer_t;
 
     int errno_read()
@@ -410,8 +483,7 @@ static int cloudi_subscribe_(cloudi_instance_t * p,
                              callback_function const & f)
 {
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup.insert(std::pair<std::string, callback_function>(
-        std::string(p->prefix) + pattern, f));
+    lookup.insert(std::string(p->prefix) + pattern, f);
 
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
@@ -448,15 +520,8 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
     std::string str(p->prefix);
     str += pattern;
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup_t::iterator itr = lookup.find(str);
-    if (itr == lookup.end())
+    if (lookup.erase(str))
     {
-        return cloudi_error_function_parameter;
-    }
-    else
-    {
-        lookup.erase(itr);
-
         buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
         int index = 0;
         if (p->use_header)
@@ -476,6 +541,10 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
         if (result)
             return result;
         return cloudi_success;
+    }
+    else
+    {
+        return cloudi_error_function_parameter;
     }
 }
 
@@ -541,6 +610,8 @@ int cloudi_send_async_(cloudi_instance_t * p,
                        uint32_t timeout,
                        int8_t const priority)
 {
+    if (timeout == 0)
+        timeout = p->timeout_async;
     return cloudi_send_(p, "send_async", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
@@ -565,6 +636,8 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                       uint32_t timeout,
                       int8_t const priority)
 {
+    if (timeout == 0)
+        timeout = p->timeout_sync;
     return cloudi_send_(p, "send_sync", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
@@ -589,6 +662,8 @@ int cloudi_mcast_async_(cloudi_instance_t * p,
                         uint32_t timeout,
                         int8_t const priority)
 {
+    if (timeout == 0)
+        timeout = p->timeout_async;
     return cloudi_send_(p, "mcast_async", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
@@ -860,20 +935,33 @@ int cloudi_recv_async(cloudi_instance_t * p,
                       uint32_t timeout,
                       char const * const trans_id)
 {
+    char const trans_id_null[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
+                                    0, 0, 0, 0, 0, 0, 0, 0};
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
     int index = 0;
     if (p->use_header)
         index = 4;
+        
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 3))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "recv_async"))
         return cloudi_error_ei_encode;
+    if (timeout == 0)
+        timeout = p->timeout_sync;
     if (ei_encode_ulong(buffer.get<char>(), &index, timeout))
         return cloudi_error_ei_encode;
-    if (ei_encode_binary(buffer.get<char>(), &index, trans_id, 16))
-        return cloudi_error_ei_encode;
+    if (trans_id == 0)
+    {
+        if (ei_encode_binary(buffer.get<char>(), &index, trans_id_null, 16))
+            return cloudi_error_ei_encode;
+    }
+    else
+    {
+        if (ei_encode_binary(buffer.get<char>(), &index, trans_id, 16))
+            return cloudi_error_ei_encode;
+    }
     int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
     if (result)
         return result;
@@ -923,9 +1011,7 @@ static void callback(cloudi_instance_t * p,
                      uint32_t const pid_size)
 {
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup_t::iterator itr = lookup.find(std::string(pattern));
-    assert(itr != lookup.end());
-    callback_function f = itr->second;
+    callback_function f = lookup.find(std::string(pattern));
     
     if (command == MESSAGE_SEND_ASYNC)
     {
@@ -945,9 +1031,13 @@ static void callback(cloudi_instance_t * p,
             assert(false);
             return;
         }
+        catch (std::exception const & e)
+        {
+            std::cerr << "exception: " << e.what() << std::endl;
+        }
         catch (...)
         {
-            // exception is ignored at this level
+            std::cerr << "exception: (unknown)" << std::endl;
         }
         cloudi_return_(p, "return_async", name, pattern, "", 0, "", 0,
                        timeout, trans_id, pid, pid_size);
@@ -970,9 +1060,13 @@ static void callback(cloudi_instance_t * p,
         {
             return;
         }
+        catch (std::exception const & e)
+        {
+            std::cerr << "exception: " << e.what() << std::endl;
+        }
         catch (...)
         {
-            // exception is ignored at this level
+            std::cerr << "exception: (unknown)" << std::endl;
         }
         cloudi_return_(p, "return_sync", name, pattern, "", 0, "", 0,
                        timeout, trans_id, pid, pid_size);
@@ -1535,12 +1629,41 @@ int API::return_sync(char const * const name,
                               pid_size);
 }
 
+int API::recv_async() const
+{
+    return cloudi_recv_async(m_api,
+                             m_api->timeout_sync,
+                             0);
+}
+
+int API::recv_async(char const * const trans_id) const
+{
+    return cloudi_recv_async(m_api,
+                             m_api->timeout_sync,
+                             trans_id);
+}
+
 int API::recv_async(uint32_t timeout,
                     char const * const trans_id) const
 {
     return cloudi_recv_async(m_api,
                              timeout,
                              trans_id);
+}
+
+std::string API::prefix() const
+{
+    return std::string(m_api->prefix);
+}
+
+uint32_t API::timeout_async() const
+{
+    return m_api->timeout_async;
+}
+
+uint32_t API::timeout_sync() const
+{
+    return m_api->timeout_sync;
 }
 
 int API::poll(int timeout) const

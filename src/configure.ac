@@ -106,6 +106,14 @@ AC_CONFIG_FILES([cloudi.conf
                  lib/cloudi/Makefile
                  lib/cloudi/cxx_src/Makefile
                  tests/Makefile
+                 tests/flood/Makefile
+                 tests/flood/src/Makefile
+                 tests/flood/service/Makefile
+                 tests/flood/service/jar/Makefile
+                 tests/flood/service/org/Makefile
+                 tests/flood/service/org/cloudi/Makefile
+                 tests/flood/service/org/cloudi/tests/Makefile
+                 tests/flood/service/org/cloudi/tests/flood/Makefile
                  tests/hexpi/Makefile
                  tests/hexpi/src/Makefile
                  tests/hexpi/cxx_src/Makefile
@@ -124,14 +132,14 @@ AC_CONFIG_FILES([cloudi.conf
                  tests/http_req/org/cloudi/tests/Makefile
                  tests/http_req/org/cloudi/tests/http_req/Makefile
                  tests/http_req/src/Makefile
-                 tests/flood/Makefile
-                 tests/flood/src/Makefile
-                 tests/flood/service/Makefile
-                 tests/flood/service/jar/Makefile
-                 tests/flood/service/org/Makefile
-                 tests/flood/service/org/cloudi/Makefile
-                 tests/flood/service/org/cloudi/tests/Makefile
-                 tests/flood/service/org/cloudi/tests/flood/Makefile
+                 tests/messaging/Makefile
+                 tests/messaging/jar/Makefile
+                 tests/messaging/org/Makefile
+                 tests/messaging/org/cloudi/Makefile
+                 tests/messaging/org/cloudi/tests/Makefile
+                 tests/messaging/org/cloudi/tests/messaging/Makefile
+                 tests/messaging/src/Makefile
+                 tests/messaging/cxx_src/Makefile
                  tests/msg_size/Makefile
                  tests/msg_size/jar/Makefile
                  tests/msg_size/org/Makefile

@@ -116,6 +116,7 @@ clean-configure: config.log
            $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
            $(top_builddir)/tests/http_req/c_src/.deps/ \
            $(top_builddir)/tests/flood/service/.deps/ \
+           $(top_builddir)/tests/messaging/cxx_src/.deps/ \
            $(top_builddir)/tests/msg_size/cxx_src/.deps/
 	find $(top_builddir)/api \
          -name "Makefile.in" -o -name "Makefile" | xargs rm -f
@@ -320,12 +321,27 @@ tests-job_api-install:
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/path.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 
-tests-messaging-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
+tests-messaging-install: \
+        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging.beam \
+        $(top_builddir)/tests/messaging/jar/cloudi.jar \
+        $(top_builddir)/tests/messaging/jar/messaging.jar \
+        $(top_builddir)/tests/messaging/cxx_src/messaging
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/cloudi.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
+	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/messaging.jar" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
+	$(INSTALL_PROGRAM) "$(top_builddir)/tests/messaging/cxx_src/messaging" \
+                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv/"
 
 tests-msg_size-install: \
         $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
