@@ -1,1 +1,1 @@
-SUBDIRS = hexpi http http_req flood msg_size
+SUBDIRS = flood hexpi http http_req messaging msg_size

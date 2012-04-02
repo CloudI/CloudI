@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Work Module For msg_size Test==
+%%% ==CloudI Work Module For messaging Test==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
+%%% @copyright 2012 Michael Truog
 %%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_msg_size).
+-module(cloudi_job_messaging).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_job).
@@ -61,7 +61,6 @@
 -include("cloudi_logger.hrl").
 
 -record(state, {
-        suffixes = ["cxx", "java", "python", "ruby"]
     }).
 
 %%%------------------------------------------------------------------------
@@ -77,23 +76,11 @@ cloudi_job_init(_Args, _Prefix, Dispatcher) ->
     cloudi_job:subscribe(Dispatcher, "erlang"),
     {ok, #state{}}.
 
-cloudi_job_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
-                          Timeout, _Priority, _TransId, _Pid,
-                          #state{suffixes = [Suffix | Suffixes]} = State,
+cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+                          _Timeout, _Priority, _TransId, _Pid,
+                          #state{} = State,
                           _Dispatcher) ->
-    <<I:32/unsigned-integer-native, Rest/binary>> = Request,
-    NewI = if
-        I == 4294967295 ->
-            0;
-        true ->
-            I + 1
-    end,
-    NewRequest = <<NewI:32/unsigned-integer-native, Rest/binary>>,
-    NewName = cloudi_string:beforer($/, Pattern, input) ++ [$/ | Suffix],
-    ?LOG_INFO(" forward #~w erlang to ~s (with timeout ~w ms)",
-              [NewI, NewName, Timeout]),
-    {forward, NewName, RequestInfo, NewRequest,
-     State#state{suffixes = Suffixes ++ [Suffix]}}.
+    {reply, <<>>, State}.
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

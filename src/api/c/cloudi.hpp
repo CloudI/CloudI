@@ -436,7 +436,7 @@ class API
         uint32_t get_response_info_size() const;
 
         uint32_t get_trans_id_count() const;
-        char const * get_trans_id(unsigned int const i) const;
+        char const * get_trans_id(unsigned int const i = 0) const;
 
         int forward_(int const command,
                      char const * const name,
@@ -648,6 +648,10 @@ class API
                                pid_size);
         }
 
+        int recv_async() const;
+
+        int recv_async(char const * const trans_id) const;
+
         int recv_async(uint32_t timeout,
                        char const * const trans_id) const;
 
@@ -658,7 +662,13 @@ class API
                               trans_id.c_str());
         }
 
-        int poll(int timeout) const;
+        std::string prefix() const;
+
+        uint32_t timeout_async() const;
+
+        uint32_t timeout_sync() const;
+
+        int poll(int timeout = -1) const;
 
         char const ** request_http_qs_parse(void const * const request,
                                             uint32_t const request_size) const;

@@ -1,0 +1,3 @@
+Main-Class: org.cloudi.tests.messaging.Main
+Class-Path: cloudi.jar
+

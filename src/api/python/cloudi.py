@@ -261,11 +261,11 @@ class API(object):
             except return_async_exception:
                 return
             except return_sync_exception:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=sys.stderr)
                 assert False
                 return
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=sys.stderr)
                 responseInfo = ''
                 response = ''
             self.__return_async_nothrow(name, pattern,
@@ -289,11 +289,11 @@ class API(object):
             except return_sync_exception:
                 return
             except return_async_exception:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=sys.stderr)
                 assert False
                 return
             except:
-                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=sys.stderr)
                 responseInfo = ''
                 response = ''
             self.__return_sync_nothrow(name, pattern,
