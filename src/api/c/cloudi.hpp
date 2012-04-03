@@ -77,26 +77,26 @@ class API
 
     private:
         template <typename T>
-        class callback_function_cxx_m : public callback_function_generic
+        class callback_function_cxx_m1 : public callback_function_generic
         {
             public:
-                callback_function_cxx_m(T & object,
-                                        API const * api,
-                                        void (T::*f) (API const &,
-                                                      int const,
-                                                      std::string const &,
-                                                      std::string const &,
-                                                      void const * const,
-                                                      uint32_t const,
-                                                      void const * const,
-                                                      uint32_t const,
-                                                      uint32_t,
-                                                      int8_t,
-                                                      char const * const,
-                                                      char const * const,
-                                                      uint32_t const)) :
+                callback_function_cxx_m1(T & object,
+                                         API const * api,
+                                         void (T::*f) (API const &,
+                                                       int const,
+                                                       std::string const &,
+                                                       std::string const &,
+                                                       void const * const,
+                                                       uint32_t const,
+                                                       void const * const,
+                                                       uint32_t const,
+                                                       uint32_t,
+                                                       int8_t,
+                                                       char const * const,
+                                                       char const * const,
+                                                       uint32_t const)) :
                     m_object(object), m_api(api), m_f(f) {}
-                virtual ~callback_function_cxx_m() throw()
+                virtual ~callback_function_cxx_m1() throw()
                 {
                     delete m_api;
                 }
@@ -146,25 +146,95 @@ class API
                                 uint32_t const);
         };
 
-        class callback_function_cxx_s : public callback_function_generic
+        template <typename T>
+        class callback_function_cxx_m2 : public callback_function_generic
         {
             public:
-                callback_function_cxx_s(API const * api,
-                                        void (*f) (API const &,
-                                                   int const,
-                                                   std::string const &,
-                                                   std::string const &,
-                                                   void const * const,
-                                                   uint32_t const,
-                                                   void const * const,
-                                                   uint32_t const,
-                                                   uint32_t,
-                                                   int8_t,
-                                                   char const * const,
-                                                   char const * const,
-                                                   uint32_t const)) :
+                callback_function_cxx_m2(T & object,
+                                         API const * api,
+                                         void (T::*f) (API const &,
+                                                       int const,
+                                                       char const * const,
+                                                       char const * const,
+                                                       void const * const,
+                                                       uint32_t const,
+                                                       void const * const,
+                                                       uint32_t const,
+                                                       uint32_t,
+                                                       int8_t,
+                                                       char const * const,
+                                                       char const * const,
+                                                       uint32_t const)) :
+                    m_object(object), m_api(api), m_f(f) {}
+                virtual ~callback_function_cxx_m2() throw()
+                {
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    (m_object.*m_f)(*m_api,
+                                    command,
+                                    name,
+                                    pattern,
+                                    request_info,
+                                    request_info_size,
+                                    request,
+                                    request_size,
+                                    timeout,
+                                    priority,
+                                    trans_id,
+                                    pid,
+                                    pid_size);
+                }
+            private:
+                T & m_object;
+                API const * m_api;
+                void (T::*m_f) (API const &,
+                                int const,
+                                char const * const,
+                                char const * const,
+                                void const * const,
+                                uint32_t const,
+                                void const * const,
+                                uint32_t const,
+                                uint32_t,
+                                int8_t,
+                                char const * const,
+                                char const * const,
+                                uint32_t const);
+        };
+
+        class callback_function_cxx_s1 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_s1(API const * api,
+                                         void (*f) (API const &,
+                                                    int const,
+                                                    std::string const &,
+                                                    std::string const &,
+                                                    void const * const,
+                                                    uint32_t const,
+                                                    void const * const,
+                                                    uint32_t const,
+                                                    uint32_t,
+                                                    int8_t,
+                                                    char const * const,
+                                                    char const * const,
+                                                    uint32_t const)) :
                     m_api(api), m_f(f) {}
-                virtual ~callback_function_cxx_s() throw()
+                virtual ~callback_function_cxx_s1() throw()
                 {
                     delete m_api;
                 }
@@ -213,6 +283,73 @@ class API
                              uint32_t const);
         };
 
+        class callback_function_cxx_s2 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_s2(API const * api,
+                                         void (*f) (API const &,
+                                                    int const,
+                                                    char const * const,
+                                                    char const * const,
+                                                    void const * const,
+                                                    uint32_t const,
+                                                    void const * const,
+                                                    uint32_t const,
+                                                    uint32_t,
+                                                    int8_t,
+                                                    char const * const,
+                                                    char const * const,
+                                                    uint32_t const)) :
+                    m_api(api), m_f(f) {}
+                virtual ~callback_function_cxx_s2() throw()
+                {
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    (*m_f)(*m_api,
+                           command,
+                           name,
+                           pattern,
+                           request_info,
+                           request_info_size,
+                           request,
+                           request_size,
+                           timeout,
+                           priority,
+                           trans_id,
+                           pid,
+                           pid_size);
+                }
+            private:
+                API const * m_api;
+                void (*m_f) (API const &,
+                             int const,
+                             char const * const,
+                             char const * const,
+                             void const * const,
+                             uint32_t const,
+                             void const * const,
+                             uint32_t const,
+                             uint32_t,
+                             int8_t,
+                             char const * const,
+                             char const * const,
+                             uint32_t const);
+        };
+
     public:
         // command values
         static int const ASYNC = 1;
@@ -242,10 +379,11 @@ class API
                                     uint32_t const)) const
         {
             return subscribe(pattern.c_str(),
-                             new callback_function_cxx_m<T>(object,
-                                                            new API(*this),
-                                                            f));
+                             new callback_function_cxx_m1<T>(object,
+                                                             new API(*this),
+                                                             f));
         }
+
         template <typename T>
         int subscribe(char const * const pattern,
                       T & object,
@@ -264,52 +402,140 @@ class API
                                     uint32_t const)) const
         {
             return subscribe(pattern,
-                             new callback_function_cxx_m<T>(object,
-                                                            new API(*this),
-                                                            f));
+                             new callback_function_cxx_m1<T>(object,
+                                                             new API(*this),
+                                                             f));
         }
+
+        template <typename T>
         int subscribe(std::string const & pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 std::string const &,
-                                 std::string const &,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const
+                      T & object,
+                      void (T::*f) (API const &,
+                                    int const,
+                                    char const * const,
+                                    char const * const,
+                                    void const * const,
+                                    uint32_t const,
+                                    void const * const,
+                                    uint32_t const,
+                                    uint32_t,
+                                    int8_t,
+                                    char const * const,
+                                    char const * const,
+                                    uint32_t const)) const
         {
             return subscribe(pattern.c_str(),
-                             new callback_function_cxx_s(new API(*this), f));
+                             new callback_function_cxx_m2<T>(object,
+                                                             new API(*this),
+                                                             f));
         }
+
+        template <typename T>
         int subscribe(char const * const pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 std::string const &,
-                                 std::string const &,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const
+                      T & object,
+                      void (T::*f) (API const &,
+                                    int const,
+                                    char const * const,
+                                    char const * const,
+                                    void const * const,
+                                    uint32_t const,
+                                    void const * const,
+                                    uint32_t const,
+                                    uint32_t,
+                                    int8_t,
+                                    char const * const,
+                                    char const * const,
+                                    uint32_t const)) const
         {
             return subscribe(pattern,
-                             new callback_function_cxx_s(new API(*this), f));
+                             new callback_function_cxx_m2<T>(object,
+                                                             new API(*this),
+                                                             f));
         }
+
+        inline int subscribe(std::string const & pattern,
+                             void (*f) (API const &,
+                                        int const,
+                                        std::string const &,
+                                        std::string const &,
+                                        void const * const,
+                                        uint32_t const,
+                                        void const * const,
+                                        uint32_t const,
+                                        uint32_t,
+                                        int8_t,
+                                        char const * const,
+                                        char const * const,
+                                        uint32_t const)) const
+        {
+            return subscribe(pattern.c_str(),
+                             new callback_function_cxx_s1(new API(*this), f));
+        }
+
+        inline int subscribe(char const * const pattern,
+                             void (*f) (API const &,
+                                        int const,
+                                        std::string const &,
+                                        std::string const &,
+                                        void const * const,
+                                        uint32_t const,
+                                        void const * const,
+                                        uint32_t const,
+                                        uint32_t,
+                                        int8_t,
+                                        char const * const,
+                                        char const * const,
+                                        uint32_t const)) const
+        {
+            return subscribe(pattern,
+                             new callback_function_cxx_s1(new API(*this), f));
+        }
+
+        inline int subscribe(std::string const & pattern,
+                             void (*f) (API const &,
+                                        int const,
+                                        char const * const,
+                                        char const * const,
+                                        void const * const,
+                                        uint32_t const,
+                                        void const * const,
+                                        uint32_t const,
+                                        uint32_t,
+                                        int8_t,
+                                        char const * const,
+                                        char const * const,
+                                        uint32_t const)) const
+        {
+            return subscribe(pattern.c_str(),
+                             new callback_function_cxx_s2(new API(*this), f));
+        }
+
+        inline int subscribe(char const * const pattern,
+                             void (*f) (API const &,
+                                        int const,
+                                        char const * const,
+                                        char const * const,
+                                        void const * const,
+                                        uint32_t const,
+                                        void const * const,
+                                        uint32_t const,
+                                        uint32_t,
+                                        int8_t,
+                                        char const * const,
+                                        char const * const,
+                                        uint32_t const)) const
+        {
+            return subscribe(pattern,
+                             new callback_function_cxx_s2(new API(*this), f));
+        }
+
     private:
         int subscribe(char const * const pattern,
                       callback_function_generic * p) const;
 
     public:
         int unsubscribe(char const * const pattern) const;
+
         inline int unsubscribe(std::string const & pattern) const
         {
             return unsubscribe(pattern.c_str());
@@ -662,7 +888,7 @@ class API
                               trans_id.c_str());
         }
 
-        std::string prefix() const;
+        char const * prefix() const;
 
         uint32_t timeout_async() const;
 

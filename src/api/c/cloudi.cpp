@@ -429,6 +429,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->buffer_recv = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->buffer_recv_index = 0;
+    p->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->prefix = 0;
 
     ::atexit(&exit_handler);
@@ -461,6 +462,7 @@ void cloudi_destroy(cloudi_instance_t * p)
         delete reinterpret_cast<lookup_t *>(p->lookup);
         delete reinterpret_cast<buffer_t *>(p->buffer_send);
         delete reinterpret_cast<buffer_t *>(p->buffer_recv);
+        delete reinterpret_cast<buffer_t *>(p->buffer_call);
         if (p->prefix)
             delete p->prefix;
     }
@@ -874,7 +876,8 @@ int cloudi_return(cloudi_instance_t * p,
                                 response_info, response_info_size,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
-        assert(result == cloudi_success);
+        if (result != cloudi_success)
+            std::cerr << "return_async failed: " << result << std::endl;
         throw CloudI::API::return_async_exception();
     }
     else               // CLOUDI_SYNC
@@ -883,7 +886,8 @@ int cloudi_return(cloudi_instance_t * p,
                                 response_info, response_info_size,
                                 response, response_size,
                                 timeout, trans_id, pid, pid_size);
-        assert(result == cloudi_success);
+        if (result != cloudi_success)
+            std::cerr << "return_sync failed: " << result << std::endl;
         throw CloudI::API::return_sync_exception();
     }
     return result;
@@ -1108,6 +1112,7 @@ int cloudi_poll(cloudi_instance_t * p,
                 int timeout)
 {
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
     struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
     int count = ::poll(fds, 1, timeout);
     if (count == 0)
@@ -1146,31 +1151,32 @@ int cloudi_poll(cloudi_instance_t * p,
             case MESSAGE_SEND_ASYNC:
             case MESSAGE_SEND_SYNC:
             {
+                buffer_call.copy(buffer);
                 uint32_t name_size;
-                store_incoming_uint32(buffer, index, name_size);
-                char * name = &buffer[index];
+                store_incoming_uint32(buffer_call, index, name_size);
+                char * name = &buffer_call[index];
                 index += name_size;
                 uint32_t pattern_size;
-                store_incoming_uint32(buffer, index, pattern_size);
-                char * pattern = &buffer[index];
+                store_incoming_uint32(buffer_call, index, pattern_size);
+                char * pattern = &buffer_call[index];
                 index += pattern_size;
                 uint32_t request_info_size;
-                store_incoming_uint32(buffer, index, request_info_size);
-                char * request_info = &buffer[index];
+                store_incoming_uint32(buffer_call, index, request_info_size);
+                char * request_info = &buffer_call[index];
                 index += request_info_size + 1;
                 uint32_t request_size;
-                store_incoming_uint32(buffer, index, request_size);
-                char * request = &buffer[index];
+                store_incoming_uint32(buffer_call, index, request_size);
+                char * request = &buffer_call[index];
                 index += request_size + 1;
                 uint32_t timeout;
-                store_incoming_uint32(buffer, index, timeout);
+                store_incoming_uint32(buffer_call, index, timeout);
                 int8_t priority;
-                store_incoming_int8(buffer, index, priority);
-                char * trans_id = &buffer[index];
+                store_incoming_int8(buffer_call, index, priority);
+                char * trans_id = &buffer_call[index];
                 index += 16;
                 uint32_t pid_size;
-                store_incoming_uint32(buffer, index, pid_size);
-                char * pid = &buffer[index];
+                store_incoming_uint32(buffer_call, index, pid_size);
+                char * pid = &buffer_call[index];
                 index += pid_size;
                 if (index != p->buffer_recv_index)
                     return cloudi_error_read_underflow;
@@ -1651,9 +1657,9 @@ int API::recv_async(uint32_t timeout,
                              trans_id);
 }
 
-std::string API::prefix() const
+char const * API::prefix() const
 {
-    return std::string(m_api->prefix);
+    return m_api->prefix;
 }
 
 uint32_t API::timeout_async() const
