@@ -324,8 +324,9 @@ handle_cast({Level, Now, Node, Pid,
             {stop, Reason, NewState}
     catch
         error:badarg ->
-            case ?LOG_INFO_T0("invalid log input: ~p ~p",
-                              [Format, Args], State) of
+            case log_message_internal(Level, Now, Node, Pid, Module, Line,
+                                      "INVALID LOG INPUT: ~p ~p",
+                                      [Format, Args], State) of
                 {ok, NewState} ->
                     {noreply, NewState};
                 {error, Reason, NewState} ->
