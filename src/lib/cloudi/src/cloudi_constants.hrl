@@ -28,7 +28,7 @@
 % should the strings supplied to subscribe/unsubscribe be matched as patterns
 % with the "*" wildcard character when routing service name messages?
 % (service name message sends do not use the wildcard character)
--define(SERVICE_NAME_PATTERN_MATCHING, true).
+-define(SERVICE_NAME_PATTERN_MATCHING, undefined).
 
 % decrement the timeout of each successful forward, to prevent infinite messages
 % (i.e., this is the timeout penalty a request takes when forwarding a request)

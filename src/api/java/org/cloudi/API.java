@@ -48,7 +48,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.lang.reflect.Constructor;
@@ -90,19 +92,20 @@ public class API
     private boolean use_header;
     private FileOutputStream output;
     private FileInputStream input;
-    private HashMap<String, Function9<Integer,
-                                      String,
-                                      String,
-                                      byte[],
-                                      byte[],
-                                      Integer,
-                                      Byte,
-                                      byte[],
-                                      OtpErlangPid> > callbacks;
+    private HashMap<String,
+                    LinkedList< Function9<Integer,
+                                          String,
+                                          String,
+                                          byte[],
+                                          byte[],
+                                          Integer,
+                                          Byte,
+                                          byte[],
+                                          OtpErlangPid> > > callbacks;
     private final int buffer_size;
     private String prefix;
-    private int timeout_sync;
     private int timeout_async;
+    private int timeout_sync;
     private byte priority_default;
 
     public API(final int thread_index)
@@ -120,18 +123,19 @@ public class API
         this.use_header = (protocol.compareTo("tcp") == 0);
         this.output = new FileOutputStream(this.socket);
         this.input = new FileInputStream(this.socket);
-        this.callbacks = new HashMap<String, Function9<Integer,
-                                                       String,
-                                                       String,
-                                                       byte[],
-                                                       byte[],
-                                                       Integer,
-                                                       Byte,
-                                                       byte[],
-                                                       OtpErlangPid> >();
+        this.callbacks = new HashMap<String,
+                                     LinkedList< Function9<Integer,
+                                                           String,
+                                                           String,
+                                                           byte[],
+                                                           byte[],
+                                                           Integer,
+                                                           Byte,
+                                                           byte[],
+                                                           OtpErlangPid> > >();
         this.buffer_size = Integer.parseInt(buffer_size_str);
-        this.timeout_sync = 5000;
         this.timeout_async = 5000;
+        this.timeout_sync = 5000;
         this.priority_default = 0;
 
         // send the initialization message to the managing Erlang process
@@ -155,16 +159,53 @@ public class API
                           final Object instance,
                           final String methodName)
     {
-        this.callbacks.put(this.prefix + pattern,
-                           new Function9<Integer,
-                                         String,
-                                         String,
-                                         byte[],
-                                         byte[],
-                                         Integer,
-                                         Byte,
-                                         byte[],
-                                         OtpErlangPid>(instance, methodName));
+        final String s = this.prefix + pattern;
+        Function9<Integer,
+                  String,
+                  String,
+                  byte[],
+                  byte[],
+                  Integer,
+                  Byte,
+                  byte[],
+                  OtpErlangPid>
+                  callback = new Function9<Integer,
+                                           String,
+                                           String,
+                                           byte[],
+                                           byte[],
+                                           Integer,
+                                           Byte,
+                                           byte[],
+                                           OtpErlangPid>(instance, methodName);
+        LinkedList< Function9<Integer,
+                              String,
+                              String,
+                              byte[],
+                              byte[],
+                              Integer,
+                              Byte,
+                              byte[],
+                              OtpErlangPid> >
+                    callback_list = this.callbacks.get(s);
+        if (callback_list == null)
+        {
+            callback_list = new LinkedList< Function9<Integer,
+                                                      String,
+                                                      String,
+                                                      byte[],
+                                                      byte[],
+                                                      Integer,
+                                                      Byte,
+                                                      byte[],
+                                                      OtpErlangPid> >();
+            callback_list.addLast(callback);
+            this.callbacks.put(s, callback_list);
+        }
+        else
+        {
+            callback_list.addLast(callback);
+        }
         OtpOutputStream subscribe = new OtpOutputStream();
         subscribe.write(OtpExternal.versionTag);
         final OtpErlangObject[] tuple = {new OtpErlangAtom("subscribe"),
@@ -444,6 +485,18 @@ public class API
         }
     }
 
+    public Response recv_async()
+                               throws MessageDecodingException
+    {
+        return recv_async(TransIdNull);
+    }
+
+    public Response recv_async(byte[] transId)
+                               throws MessageDecodingException
+    {
+        return recv_async(this.timeout_sync, transId);
+    }
+
     public Response recv_async(Integer timeout, byte[] transId)
                                throws MessageDecodingException
     {
@@ -465,20 +518,55 @@ public class API
         }
     }
 
+    public String prefix()
+    {
+        return this.prefix;
+    }
+
+    public int timeout_async()
+    {
+        return this.timeout_async;
+    }
+
+    public int timeout_sync()
+    {
+        return this.timeout_sync;
+    }
+
     private void callback(int command, String name, String pattern,
                           byte[] requestInfo, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] transId, OtpErlangPid pid)
                           throws MessageDecodingException
     {
+        LinkedList< Function9<Integer,
+                              String,
+                              String,
+                              byte[],
+                              byte[],
+                              Integer,
+                              Byte,
+                              byte[],
+                              OtpErlangPid> >
+                    callback_list = this.callbacks.get(pattern);
+        Function9<Integer,
+                  String,
+                  String,
+                  byte[],
+                  byte[],
+                  Integer,
+                  Byte,
+                  byte[],
+                  OtpErlangPid> callback = callback_list.removeFirst();
+        callback_list.addLast(callback);
         if (command == MESSAGE_SEND_ASYNC)
         {
             try
             {
-                Object response = this.callbacks.get(pattern)
-                                      .invoke(API.ASYNC, name, pattern,
-                                              requestInfo, request,
-                                              timeout, priority, transId, pid);
+                Object response = callback.invoke(API.ASYNC, name, pattern,
+                                                  requestInfo, request,
+                                                  timeout, priority,
+                                                  transId, pid);
                 if (response.getClass() == byte[][].class)
                 {
                     byte [][] responseArray = (byte[][]) response;
@@ -522,10 +610,10 @@ public class API
         {
             try
             {
-                Object response = this.callbacks.get(pattern)
-                                      .invoke(API.SYNC, name, pattern,
-                                              requestInfo, request,
-                                              timeout, priority, transId, pid);
+                Object response = callback.invoke(API.SYNC, name, pattern,
+                                                  requestInfo, request,
+                                                  timeout, priority,
+                                                  transId, pid);
                 if (response.getClass() == byte[][].class)
                 {
                     byte [][] responseArray = (byte[][]) response;
@@ -917,7 +1005,7 @@ public class API
 
         public boolean isTimeout()
         {
-            return API.TransIdNull == this.id;
+            return Arrays.equals(this.id, API.TransIdNull);
         }
 
         public String toString()
@@ -946,9 +1034,14 @@ public class API
             this.id = transId;
         }
 
+        public boolean equals(byte[] bytes)
+        {
+            return Arrays.equals(this.id, bytes);
+        }
+
         public boolean isTimeout()
         {
-            return API.TransIdNull == this.id;
+            return equals(API.TransIdNull);
         }
 
         public String toString()

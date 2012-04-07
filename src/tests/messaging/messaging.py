@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, types, traceback
+import threading, socket, types, traceback, time
 from cloudi import API
 
 class _Task(threading.Thread):
@@ -179,6 +179,8 @@ class _Task(threading.Thread):
                     timeout, priority, transId, pid):
         print 'messaging sequence1 start python'
         assert request == 'start'
+        # n.b., depends on cloudi_constants.hrl having
+        # SERVICE_NAME_PATTERN_MATCHING defined
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'a/b/c/d',  'test1'
         )
@@ -321,6 +323,7 @@ class _Task(threading.Thread):
                     timeout, priority, transId, pid):
         print 'messaging sequence2 start python'
         assert request == 'start'
+        time.sleep(0.5)
         # the sending process is excluded from the services that receive
         # the asynchronous message, so in this case, the receiving thread
         # will not be called, despite the fact it has subscribed to 'e',

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-04-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add java version of the messaging test
+    * Fix java CloudI API isTimeout functions
+
 2012-04-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add ways to avoid std::string creation within the C++ CloudI API

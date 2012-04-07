@@ -514,6 +514,12 @@
         [{"LD_LIBRARY_PATH", "api/c/lib/"},
          {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
         immediate_closest, tcp, 16384,
+        5000, 10000, 10000, [api], undefined, 1, 4, 5, 300, []},
+    {external,
+        "/tests/messaging/java/",
+        "@JAVA@",
+        "-jar tests/messaging/jar/messaging.jar", [],
+        immediate_closest, tcp, 16384,
         5000, 10000, 10000, [api], undefined, 1, 4, 5, 300, []}
     %,
     % Flood tests configuration to generate 2K requests/second internally
