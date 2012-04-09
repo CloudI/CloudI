@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add erlang version of the messaging test
+    * Fix cloudi_job_init/3 synchronous usage of Dispatcher with the cloudi_job
+      functions (i.e., the Erlang CloudI API)
+
 2012-04-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add java version of the messaging test

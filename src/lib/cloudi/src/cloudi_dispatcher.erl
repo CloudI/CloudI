@@ -57,7 +57,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/10]).
+-export([start_link/11]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -71,6 +71,10 @@
 -record(state,
     {
         job,             % job pid
+        init_job,        % init job pid
+        init_queue_msg = queue:new(),  % messages destine for the job pid
+        init_queue_fun = queue:new(),  % function calls destine for the job pid
+        process_index,   % 0-based index of the Erlang process
         prefix,          % subscribe/unsubscribe name prefix
         timeout_async,   % default timeout for send_async
         timeout_sync,    % default timeout for send_sync
@@ -94,9 +98,11 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+start_link(ProcessIndex, Module, Args, Timeout, Prefix,
+           TimeoutAsync, TimeoutSync,
            DestRefresh, DestDeny, DestAllow, ConfigOptions)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
+    when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
+         is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_job_options) ->
     true = (DestRefresh == immediate_closest) or
@@ -104,34 +110,42 @@ start_link(Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
            (DestRefresh == immediate_random) or
            (DestRefresh == lazy_random) or
            (DestRefresh == none),
-    gen_server:start_link(?MODULE, [Module, Args, Timeout, Prefix, TimeoutAsync,
-                                    TimeoutSync, DestRefresh,
+    gen_server:start_link(?MODULE, [ProcessIndex, Module, Args, Timeout, Prefix,
+                                    TimeoutAsync, TimeoutSync, DestRefresh,
                                     DestDeny, DestAllow, ConfigOptions], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
-    case cloudi_job:start_link(Module, Args, Prefix, ConfigOptions, Timeout) of
-        {ok, Job} ->
-            cloudi_random:seed(),
-            destination_refresh_first(DestRefresh, ConfigOptions),
-            {ok, #state{job = Job,
-                        prefix = Prefix,
-                        timeout_async = TimeoutAsync,
-                        timeout_sync = TimeoutSync,
-                        uuid_generator = uuid:new(Job),
-                        dest_refresh = DestRefresh,
-                        dest_deny = DestDeny,
-                        dest_allow = DestAllow,
-                        options = ConfigOptions}};
-        ignore ->
-            ignore;
-        {error, Reason} ->
-            {stop, Reason}
-    end.
+    Dispatcher = self(),
+    InitJob = erlang:spawn_link(fun() ->
+        Result = gen_server:start_link(cloudi_job,
+                                       [Module, Args, Prefix, ConfigOptions,
+                                        Dispatcher],
+                                       [{timeout, Timeout}]),
+        Dispatcher ! {init_job_done, Result}
+    end),
+    cloudi_random:seed(),
+    {ok, #state{job = undefined,
+                init_job = InitJob,
+                process_index = ProcessIndex,
+                prefix = Prefix,
+                timeout_async = TimeoutAsync,
+                timeout_sync = TimeoutSync,
+                uuid_generator = uuid:new(Dispatcher),
+                dest_refresh = DestRefresh,
+                dest_deny = DestDeny,
+                dest_allow = DestAllow,
+                options = ConfigOptions}}.
+
+handle_call(process_index, _, #state{process_index = ProcessIndex} = State) ->
+    {reply, ProcessIndex, State};
+
+handle_call(prefix, _, #state{prefix = Prefix} = State) ->
+    {reply, Prefix, State};
 
 handle_call(timeout_async, _, #state{timeout_async = TimeoutAsync} = State) ->
     {reply, TimeoutAsync, State};
@@ -344,6 +358,10 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
             {reply, {error, timeout}, State}
     end;
 
+handle_call({'recv_async', TransId}, Client,
+            #state{timeout_sync = TimeoutSync} = State) ->
+    handle_call({'recv_async', TimeoutSync, TransId}, Client, State);
+
 handle_call({'recv_async', Timeout, TransId}, Client,
             #state{async_responses = AsyncResponses} = State) ->
     if
@@ -399,19 +417,64 @@ handle_call(Request, _, State) ->
 
 handle_cast({'subscribe', Pattern},
             #state{job = Job,
+                   init_queue_fun = FunctionCallsQueued,
                    prefix = Prefix} = State) ->
-    list_pg:join(Prefix ++ Pattern, Job),
-    {noreply, State};
+    if
+        Job =:= undefined ->
+            NewFunctionCallsQueued = queue:in(fun(P) ->
+                list_pg:join(Prefix ++ Pattern, P)
+            end, FunctionCallsQueued),
+            {noreply, State#state{init_queue_fun = NewFunctionCallsQueued}};
+        true ->
+            list_pg:join(Prefix ++ Pattern, Job),
+            {noreply, State}
+    end;
 
 handle_cast({'unsubscribe', Pattern},
             #state{job = Job,
+                   init_queue_fun = FunctionCallsQueued,
                    prefix = Prefix} = State) ->
-    list_pg:leave(Prefix ++ Pattern, Job),
-    {noreply, State};
+    if
+        Job =:= undefined ->
+            NewFunctionCallsQueued = queue:in(fun(P) ->
+                list_pg:leave(Prefix ++ Pattern, P)
+            end, FunctionCallsQueued),
+            {noreply, State#state{init_queue_fun = NewFunctionCallsQueued}};
+        true ->
+            list_pg:leave(Prefix ++ Pattern, Job),
+            {noreply, State}
+    end;
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
+
+handle_info({init_job_done, Result},
+            #state{job = undefined,
+                   init_queue_msg = MessagesQueued,
+                   init_queue_fun = FunctionCallsQueued,
+                   dest_refresh = DestRefresh,
+                   options = ConfigOptions} = State) ->
+    case Result of
+        {ok, Job} ->
+            erlang:link(Job),
+            gen_server:cast(Job, run),
+            lists:foreach(fun(Message) ->
+                Job ! Message
+            end, queue:to_list(MessagesQueued)),
+            lists:foreach(fun(F) ->
+                F(Job)
+            end, queue:to_list(FunctionCallsQueued)),
+            destination_refresh_first(DestRefresh, ConfigOptions),
+            {noreply, State#state{job = Job,
+                                  init_job = undefined,
+                                  init_queue_msg = undefined,
+                                  init_queue_fun = undefined}};
+        ignore ->
+            {stop, ignore, State};
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
 
 handle_info({list_pg_data, Groups},
             #state{dest_refresh = DestRefresh,
@@ -533,16 +596,19 @@ handle_info({'recv_async', Timeout, TransId, Client},
                 [] ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                [{TransIdUsed, {<<>>, Response}} | _] ->
-                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
-                    gen_server:reply(Client, {ok, Response}),
-                    {noreply,
-                     State#state{async_responses = NewAsyncResponses}};
-                [{TransIdUsed, {ResponseInfo, Response}} | _] ->
-                    NewAsyncResponses = dict:erase(TransIdUsed, AsyncResponses),
-                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
-                    {noreply,
-                     State#state{async_responses = NewAsyncResponses}}
+                L ->
+                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
+                    if
+                        ResponseInfo == <<>> ->
+                            gen_server:reply(Client, {ok, Response});
+                        true ->
+                            gen_server:reply(Client, {ok, ResponseInfo,
+                                                      Response})
+                    end,
+                    {noreply, State#state{async_responses = NewAsyncResponses}}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -568,7 +634,9 @@ handle_info({'recv_async', Timeout, TransId, Client},
 
 handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid},
-            #state{job = Job} = State) ->
+            #state{job = Job,
+                   init_queue_msg = MessagesQueued} = State) ->
+
     true = Pid == self(),
     case send_timeout_check(TransId, State) of
         error ->
@@ -576,13 +644,31 @@ handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
             {noreply, State};
         {ok, {active, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
-            Job ! {'timeout_async_active', TransId},
-            {noreply, send_timeout_end(TransId, State)};
+            Message = {'timeout_async_active', TransId},
+            NewMessagesQueued = if
+                Job =:= undefined ->
+                    queue:in(Message, MessagesQueued);
+                true ->
+                    Job ! Message,
+                    undefined
+            end,
+            {noreply,
+             send_timeout_end(TransId,
+                              State#state{init_queue_msg = NewMessagesQueued})};
         {ok, {active, Tref}} ->
             erlang:cancel_timer(Tref),
-            Job ! {'return_async_active', Name, Pattern, ResponseInfo, Response,
-                   Timeout, TransId},
-            {noreply, send_timeout_end(TransId, State)};
+            Message = {'return_async_active', Name, Pattern,
+                       ResponseInfo, Response, Timeout, TransId},
+            NewMessagesQueued = if
+                Job =:= undefined ->
+                    queue:in(Message, MessagesQueued);
+                true ->
+                    Job ! Message,
+                    undefined
+            end,
+            {noreply,
+             send_timeout_end(TransId,
+                              State#state{init_queue_msg = NewMessagesQueued})};
         {ok, {passive, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
             {noreply, send_timeout_end(TransId, State)};
@@ -601,7 +687,8 @@ handle_info({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
     {noreply, State};
 
 handle_info({'send_async_timeout', TransId},
-            #state{job = Job} = State) ->
+            #state{job = Job,
+                   init_queue_msg = MessagesQueued} = State) ->
     case send_timeout_check(TransId, State) of
         error ->
             % should never happen, timer should have been cancelled
@@ -609,8 +696,17 @@ handle_info({'send_async_timeout', TransId},
             %XXX
             {noreply, State};
         {ok, {active, _}} ->
-            Job ! {'timeout_async_active', TransId},
-            {noreply, send_timeout_end(TransId, State)};
+            Message = {'timeout_async_active', TransId},
+            NewMessagesQueued = if
+                Job =:= undefined ->
+                    queue:in(Message, MessagesQueued);
+                true ->
+                    Job ! Message,
+                    undefined
+            end,
+            {noreply,
+             send_timeout_end(TransId,
+                              State#state{init_queue_msg = NewMessagesQueued})};
         {ok, _} ->
             {noreply, send_timeout_end(TransId, State)}
     end;

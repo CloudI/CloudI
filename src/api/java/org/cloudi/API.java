@@ -549,6 +549,7 @@ public class API
                               byte[],
                               OtpErlangPid> >
                     callback_list = this.callbacks.get(pattern);
+        callback_list.addLast(callback_list.removeFirst());
         Function9<Integer,
                   String,
                   String,
@@ -557,8 +558,7 @@ public class API
                   Integer,
                   Byte,
                   byte[],
-                  OtpErlangPid> callback = callback_list.removeFirst();
-        callback_list.addLast(callback);
+                  OtpErlangPid> callback = callback_list.peekLast();
         if (command == MESSAGE_SEND_ASYNC)
         {
             try
