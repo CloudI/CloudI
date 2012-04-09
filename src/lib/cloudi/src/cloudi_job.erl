@@ -52,12 +52,11 @@
 
 -behaviour(gen_server).
 
-%% dispatcher interface
--export([start_link/5]).
-
 %% behavior interface
 -export([subscribe/2,
          unsubscribe/2,
+         process_index/1,
+         prefix/1,
          timeout_async/1,
          timeout_sync/1,
          get_pid/2,
@@ -89,11 +88,13 @@
          forward/9,
          forward_async/8,
          forward_sync/8,
-         recv_async/3,
          return/9,
          return_async/8,
          return_sync/8,
          return_nothrow/9,
+         recv_async/1,
+         recv_async/2,
+         recv_async/3,
          request_http_qs_parse/1,
          request_info_key_value_parse/1]).
 
@@ -120,7 +121,7 @@
         dispatcher,                  % dispatcher pid
         job_state,                   % job state
         recv_timeouts = dict:new(),  % tracking for recv timeouts
-        queue_messages = false,      % is the request pid busy?
+        queue_messages = true,       % is the request pid busy?
         queued = pqueue4:new(),      % queued incoming messages
         queued_info = queue:new(),   % queue process messages for job
         request = undefined,         % request pid
@@ -190,17 +191,6 @@ behaviour_info(_) ->
 -endif.
 
 %%%------------------------------------------------------------------------
-%%% Dispatcher interface functions
-%%%------------------------------------------------------------------------
-
-start_link(Module, Args, Prefix, ConfigOptions, Timeout)
-    when is_atom(Module), is_list(Args), 
-         is_record(ConfigOptions, config_job_options), is_integer(Timeout) ->
-    gen_server:start_link(?MODULE,
-                          [Module, Args, Prefix, ConfigOptions, self()],
-                          [{timeout, Timeout}]).
-
-%%%------------------------------------------------------------------------
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------
 
@@ -217,6 +207,16 @@ subscribe(Dispatcher, Pattern)
 unsubscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
     gen_server:cast(Dispatcher, {'unsubscribe', Pattern}).
+
+-spec process_index(Dispatcher :: pid()) -> pos_integer().
+
+process_index(Dispatcher) ->
+    gen_server:call(Dispatcher, process_index, infinity).
+
+-spec prefix(Dispatcher :: pid()) -> pos_integer().
+
+prefix(Dispatcher) ->
+    gen_server:call(Dispatcher, prefix, infinity).
 
 -spec timeout_async(Dispatcher :: pid()) -> pos_integer().
 
@@ -902,20 +902,6 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Priority, TransId, Pid},
     erlang:throw(forward).
 
--spec recv_async(Dispatcher :: pid(),
-                 Timeout :: pos_integer(),
-                 TransId :: binary()) ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
-
-recv_async(Dispatcher, Timeout, TransId)
-    when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
-         Timeout > ?TIMEOUT_DELTA ->
-    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
-                                   {'recv_async', Timeout - ?TIMEOUT_DELTA,
-                                    TransId}, Timeout)).
-
 -spec return(Dispatcher :: pid(),
              'send_async' | 'send_sync',
              Name :: string(),
@@ -988,6 +974,43 @@ return_nothrow(_, 'send_sync', Name, Pattern, ResponseInfo, Response,
            Timeout, TransId, Pid},
     ok.
 
+-spec recv_async(Dispatcher :: pid()) ->
+    {'ok', any(), any()} |
+    {'ok', any()} |
+    {'error', atom()}.
+
+recv_async(Dispatcher)
+    when is_pid(Dispatcher) ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async',
+                                    <<0:128>>}, infinity)).
+
+-spec recv_async(Dispatcher :: pid(),
+                 TransId :: binary()) ->
+    {'ok', any(), any()} |
+    {'ok', any()} |
+    {'error', atom()}.
+
+recv_async(Dispatcher, TransId)
+    when is_pid(Dispatcher), is_binary(TransId) ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async',
+                                    TransId}, infinity)).
+
+-spec recv_async(Dispatcher :: pid(),
+                 Timeout :: pos_integer(),
+                 TransId :: binary()) ->
+    {'ok', any(), any()} |
+    {'ok', any()} |
+    {'error', atom()}.
+
+recv_async(Dispatcher, Timeout, TransId)
+    when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
+         Timeout > ?TIMEOUT_DELTA ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async', Timeout - ?TIMEOUT_DELTA,
+                                    TransId}, Timeout)).
+
 -spec request_http_qs_parse(Request :: binary()) ->
     dict().
 
@@ -1018,7 +1041,6 @@ request_info_key_value_parse(RequestInfo)
 init([Module, Args, Prefix, ConfigOptions, Dispatcher]) ->
     case Module:cloudi_job_init(Args, Prefix, Dispatcher) of
         {ok, JobState} ->
-            erlang:process_flag(trap_exit, true),
             {ok, #state{module = Module,
                         dispatcher = Dispatcher,
                         job_state = JobState,
@@ -1031,6 +1053,12 @@ handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
+
+handle_cast(run,
+            #state{job_state = JobState,
+                   queue_messages = true} = State) ->
+    erlang:process_flag(trap_exit, true),
+    process_queue_info(process_queue(JobState, State));
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),

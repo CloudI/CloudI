@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Work Module For messaging Test==
+%%% ==CloudI Work Module For messaging Test (sequence3)==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -47,7 +47,7 @@
 %%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_messaging).
+-module(cloudi_job_messaging_sequence3).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_job).

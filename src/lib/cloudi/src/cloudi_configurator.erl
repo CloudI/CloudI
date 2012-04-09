@@ -254,10 +254,12 @@ configure(Config) ->
 
 job_start_internal(0, _) ->
     ok;
-job_start_internal(Count, Job)
+job_start_internal(Count0, Job)
     when is_record(Job, config_job_internal) ->
+    Count1 = Count0 - 1,
     case cloudi_services:monitor(cloudi_spawn, start_internal,
-                                 [Job#config_job_internal.module,
+                                 [Count1,
+                                  Job#config_job_internal.module,
                                   Job#config_job_internal.args,
                                   Job#config_job_internal.timeout_init,
                                   Job#config_job_internal.prefix,
@@ -277,7 +279,7 @@ job_start_internal(Count, Job)
                        [Job#config_job_internal.module, Reason]),
             ok
     end,
-    job_start_internal(Count - 1, Job).
+    job_start_internal(Count1, Job).
 
 job_start_external(0, _) ->
     ok;

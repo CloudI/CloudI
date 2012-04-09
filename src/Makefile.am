@@ -330,7 +330,13 @@ tests-messaging-install: \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging.beam" \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence1.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence2.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence3.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"

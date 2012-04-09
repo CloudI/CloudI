@@ -51,7 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/10,
+-export([start_internal/11,
          start_external/14]).
 
 -include("cloudi_configuration.hrl").
@@ -65,10 +65,11 @@
 %%% External interface
 %%%------------------------------------------------------------------------
 
-start_internal(Module, Args, Timeout, Prefix,
+start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList, ConfigOptions)
-    when is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
+    when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
+         is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_job_options) ->
     true = (DestRefresh == immediate_closest) or
@@ -92,7 +93,8 @@ start_internal(Module, Args, Timeout, Prefix,
         false ->
             {error, not_loaded};
         {file, _} ->
-            cloudi_dispatcher_sup:create_job(Module, Args, Timeout, Prefix,
+            cloudi_dispatcher_sup:create_job(ProcessIndex, Module, Args,
+                                             Timeout, Prefix,
                                              TimeoutAsync, TimeoutSync,
                                              DestRefresh, DestDeny, DestAllow,
                                              ConfigOptions)
