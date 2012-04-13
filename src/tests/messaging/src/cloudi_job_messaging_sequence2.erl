@@ -61,6 +61,7 @@
 -include("cloudi_logger.hrl").
 
 -record(state, {
+        current_state = state1
     }).
 
 %%%------------------------------------------------------------------------
@@ -73,14 +74,46 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init(_Args, _Prefix, Dispatcher) ->
-    cloudi_job:subscribe(Dispatcher, "erlang"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "e"),
+    cloudi_job:subscribe(Dispatcher, "sequence2"),
     {ok, #state{}}.
 
-cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Timeout, _Priority, _TransId, _Pid,
-                          #state{} = State,
-                          _Dispatcher) ->
-    {reply, <<>>, State}.
+                          #state{current_state = CurrentState} = State,
+                          Dispatcher) ->
+    Prefix = cloudi_job:prefix(Dispatcher),
+    if
+        Request == "start" ->
+            ?LOG_INFO("messaging sequence2 start erlang", []),
+            sequence2(Dispatcher, Prefix),
+            ?LOG_INFO("messaging sequence2 end erlang", []),
+            cloudi_job:send_async(Dispatcher, Prefix ++ "sequence3", "start"),
+            {reply, "end", State};
+        CurrentState =:= state1 ->
+            {reply, <<"1">>, State#state{current_state = state2}};
+        CurrentState =:= state2 ->
+            {reply, <<"2">>, State#state{current_state = state3}};
+        CurrentState =:= state3 ->
+            {reply, <<"3">>, State#state{current_state = state4}};
+        CurrentState =:= state4 ->
+            {reply, <<"4">>, State#state{current_state = state5}};
+        CurrentState =:= state5 ->
+            {reply, <<"5">>, State#state{current_state = state6}};
+        CurrentState =:= state6 ->
+            {reply, <<"6">>, State#state{current_state = state7}};
+        CurrentState =:= state7 ->
+            {reply, <<"7">>, State#state{current_state = state8}};
+        CurrentState =:= state8 ->
+            {reply, <<"8">>, State#state{current_state = state1}}
+    end.
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -92,4 +125,27 @@ cloudi_job_terminate(_, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+sequence2(Dispatcher, Prefix) ->
+    % the sending process is excluded from the services that receive
+    % the asynchronous message, so in this case, the receiving process
+    % will not be called, despite the fact it has subscribed to 'e',
+    % to prevent a process from deadlocking with itself.
+    {ok, TransIds} = cloudi_job:mcast_async(Dispatcher, Prefix ++ "e", " "),
+    % 4 * 8 == 32, but only 3 out of 4 CloudI services can receive messages,
+    % since 1 CloudI service is sending the mcast_async, so 3 * 8 == 24
+    true = erlang:length(TransIds) == 24,
+    L = lists:foldl(fun(TransId, Results) ->
+        {ok, Result} = cloudi_job:recv_async(Dispatcher, TransId),
+        lists:merge(Results, [Result])
+    end, [], TransIds),
+    true = L == [<<"1">>, <<"1">>, <<"1">>,
+                 <<"2">>, <<"2">>, <<"2">>,
+                 <<"3">>, <<"3">>, <<"3">>,
+                 <<"4">>, <<"4">>, <<"4">>,
+                 <<"5">>, <<"5">>, <<"5">>,
+                 <<"6">>, <<"6">>, <<"6">>,
+                 <<"7">>, <<"7">>, <<"7">>,
+                 <<"8">>, <<"8">>, <<"8">>],
+    ok.
 

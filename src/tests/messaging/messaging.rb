@@ -356,16 +356,16 @@ if __FILE__ == $PROGRAM_NAME
                 # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
                 # since 1 thread is sending the mcast_async, so 3 * 8 == 24
                 assert{e_ids.length == 24}
-                e_str_check = []
+                e_check_list = []
                 e_ids.each{ |e_id|
                     tmp = @api.recv_async(nil, e_id)
                     e_check = tmp[1]
                     e_id_check = tmp[2]
                     assert{e_id == e_id_check}
-                    e_str_check.push(e_check)
+                    e_check_list.push(e_check)
                 }
-                e_str_check.sort!
-                assert{e_str_check.join('') == '111222333444555666777888'}
+                e_check_list.sort!
+                assert{e_check_list.join('') == '111222333444555666777888'}
                 $stdout.puts 'messaging sequence2 end ruby'
                 # start sequence3
                 @api.send_async("#{@api.prefix}sequence3", 'start')

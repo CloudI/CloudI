@@ -103,6 +103,7 @@ cloudi_job_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
             ?LOG_INFO("messaging sequence1 start erlang", []),
             sequence1(Dispatcher, Prefix),
             ?LOG_INFO("messaging sequence1 end erlang", []),
+            cloudi_job:send_async(Dispatcher, Prefix ++ "sequence2", "start"),
             {reply, "end", State};
         <<"test1">> ->
             true = Pattern == (Prefix ++ "a/b/c/d"),
@@ -180,10 +181,10 @@ sequence1(Dispatcher, Prefix) ->
     cloudi_job:send_async(Dispatcher, Prefix ++ "a/bzczd", <<"test13">>),
     cloudi_job:send_async(Dispatcher, Prefix ++ "azbzc/d", <<"test14">>),
     cloudi_job:send_async(Dispatcher, Prefix ++ "azbzczd", <<"test15">>),
+    receive after 5000 -> ok end,
     % n.b., depends on cloudi_constants.hrl having
     % RECV_ASYNC_STRATEGY == recv_async_select_oldest
     {ok, Test1Response} = cloudi_job:recv_async(Dispatcher),
-    ?LOG_INFO("XXX got ~p", [Test1Response]),
     true = Test1Response == <<"test1">>,
     {ok, Test2Response} = cloudi_job:recv_async(Dispatcher),
     true = Test2Response == <<"test2">>,
@@ -213,5 +214,4 @@ sequence1(Dispatcher, Prefix) ->
     true = Test14Response == <<"test14">>,
     {ok, Test15Response} = cloudi_job:recv_async(Dispatcher),
     true = Test15Response == <<"test15">>,
-    cloudi_job:send_async(Prefix ++ "sequence2", "start"),
     ok.

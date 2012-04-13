@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Prevent cloudi_logger from having problems with erroneous argument lists
+      and excessive data within an argument list
+    * Complete erlang version of the messaging test
+    * Fix erlang CloudI API operations within the cloudi_job_handle_request/11
+      function that exclude the Job pid from service name lookup results
+
 2012-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add erlang version of the messaging test

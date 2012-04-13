@@ -333,12 +333,13 @@ class _Task(threading.Thread):
         # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
         # since 1 thread is sending the mcast_async, so 3 * 8 == 24
         assert len(e_ids) == 24
-        e_str_check = ''
+        e_check_list = []
         for e_id in e_ids:
             (tmp, e_check, e_id_check) = self.__api.recv_async(transId=e_id)
             assert e_id == e_id_check
-            e_str_check += e_check
-        assert e_str_check == '123456781234567812345678'
+            e_check_list.append(e_check)
+        e_check_list.sort()
+        assert ''.join(e_check_list) == '111222333444555666777888'
         print 'messaging sequence2 end python'
         # start sequence3
         self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
