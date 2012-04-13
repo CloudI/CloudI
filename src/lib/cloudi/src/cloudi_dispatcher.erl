@@ -129,6 +129,7 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         Dispatcher ! {init_job_done, Result}
     end),
     cloudi_random:seed(),
+    destination_refresh_first(DestRefresh, ConfigOptions),
     {ok, #state{job = undefined,
                 init_job = InitJob,
                 process_index = ProcessIndex,
@@ -144,38 +145,22 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 handle_call(process_index, _, #state{process_index = ProcessIndex} = State) ->
     {reply, ProcessIndex, State};
 
-handle_call(prefix, _, #state{prefix = Prefix} = State) ->
-    {reply, Prefix, State};
+handle_call({self, Job}, _, #state{job = undefined} = State) ->
+    {reply, Job, State};
 
-handle_call(timeout_async, _, #state{timeout_async = TimeoutAsync} = State) ->
-    {reply, TimeoutAsync, State};
-
-handle_call(timeout_sync, _, #state{timeout_sync = TimeoutSync} = State) ->
-    {reply, TimeoutSync, State};
+handle_call({self, _}, _, #state{job = Job} = State) ->
+    {reply, Job, State};
 
 handle_call({'get_pid', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'get_pid', Name, TimeoutSync}, Client, State);
 
-handle_call({'get_pid', Name, Timeout}, {Exclude, _} = Client,
-            #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups,
-                   dest_deny = DestDeny,
+handle_call({'get_pid', Name, Timeout}, Client,
+            #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Exclude, Groups) of
-                {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-                    erlang:send_after(?SEND_SYNC_INTERVAL, self(),
-                                      {'get_pid', Name,
-                                       Timeout - ?SEND_SYNC_INTERVAL,
-                                       Client}),
-                    {noreply, State};
-                {error, _} ->
-                    {reply, {error, timeout}, State};
-                {ok, Pattern, Pid} ->
-                    {reply, {ok, {Pattern, Pid}}, State}
-            end;
+            handle_get_pid(Name, Timeout, Client, State);
         false ->
             {reply, {error, timeout}, State}
     end;
@@ -410,6 +395,15 @@ handle_call({'recv_async', Timeout, TransId}, Client,
             end
     end;
 
+handle_call(prefix, _, #state{prefix = Prefix} = State) ->
+    {reply, Prefix, State};
+
+handle_call(timeout_async, _, #state{timeout_async = TimeoutAsync} = State) ->
+    {reply, TimeoutAsync, State};
+
+handle_call(timeout_sync, _, #state{timeout_sync = TimeoutSync} = State) ->
+    {reply, TimeoutSync, State};
+
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
@@ -452,9 +446,7 @@ handle_cast(Request, State) ->
 handle_info({init_job_done, Result},
             #state{job = undefined,
                    init_queue_msg = MessagesQueued,
-                   init_queue_fun = FunctionCallsQueued,
-                   dest_refresh = DestRefresh,
-                   options = ConfigOptions} = State) ->
+                   init_queue_fun = FunctionCallsQueued} = State) ->
     case Result of
         {ok, Job} ->
             erlang:link(Job),
@@ -465,7 +457,6 @@ handle_info({init_job_done, Result},
             lists:foreach(fun(F) ->
                 F(Job)
             end, queue:to_list(FunctionCallsQueued)),
-            destination_refresh_first(DestRefresh, ConfigOptions),
             {noreply, State#state{job = Job,
                                   init_job = undefined,
                                   init_queue_msg = undefined,
@@ -482,23 +473,8 @@ handle_info({list_pg_data, Groups},
     destination_refresh_start(DestRefresh, ConfigOptions),
     {noreply, State#state{list_pg_data = Groups}};
 
-handle_info({'get_pid', Name, Timeout, {Exclude, _} = Client},
-            #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
-        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
-                              {'get_pid', Name,
-                               Timeout - ?SEND_SYNC_INTERVAL,
-                               Client}),
-            {noreply, State};
-        {error, _} ->
-            gen_server:reply(Client, {error, timeout}),
-            {noreply, State};
-        {ok, Pattern, Pid} ->
-            gen_server:reply(Client, {ok, {Pattern, Pid}}),
-            {noreply, State}
-    end;
+handle_info({'get_pid', Name, Timeout, Client}, State) ->
+    handle_get_pid(Name, Timeout, Client, State);
 
 handle_info({'send_async', Name, RequestInfo, Request,
              Timeout, Priority, Client}, State) ->
@@ -636,7 +612,6 @@ handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid},
             #state{job = Job,
                    init_queue_msg = MessagesQueued} = State) ->
-
     true = Pid == self(),
     case send_timeout_check(TransId, State) of
         error ->
@@ -729,12 +704,50 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+handle_get_pid(Name, Timeout, {Job, _} = Client,
+               #state{job = undefined} = State) ->
+    handle_get_pid_job(Name, Timeout, Client, Job, State);
+
+handle_get_pid(Name, Timeout, Client,
+               #state{job = Job} = State) ->
+    handle_get_pid_job(Name, Timeout, Client, Job, State).
+
+handle_get_pid_job(Name, Timeout, Client, Job,
+                   #state{dest_refresh = DestRefresh,
+                          list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Job, Groups) of
+        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
+                              {'get_pid', Name,
+                               Timeout - ?SEND_SYNC_INTERVAL,
+                               Client}),
+            {noreply, State};
+        {error, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {ok, Pattern, Pid} ->
+            gen_server:reply(Client, {ok, {Pattern, Pid}}),
+            {noreply, State}
+    end.
+
 handle_send_async(Name, RequestInfo, Request,
-                  Timeout, Priority, {Exclude, _} = Client,
-                  #state{uuid_generator = UUID,
-                         dest_refresh = DestRefresh,
-                         list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
+                  Timeout, Priority, {Job, _} = Client,
+                  #state{job = undefined} = State) ->
+    handle_send_async_job(Name, RequestInfo, Request,
+                          Timeout, Priority, Client, Job, State);
+
+handle_send_async(Name, RequestInfo, Request,
+                  Timeout, Priority, Client,
+                  #state{job = Job} = State) ->
+    handle_send_async_job(Name, RequestInfo, Request,
+                          Timeout, Priority, Client, Job, State).
+
+handle_send_async_job(Name, RequestInfo, Request,
+                      Timeout, Priority, Client, Job,
+                      #state{uuid_generator = UUID,
+                             dest_refresh = DestRefresh,
+                             list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'send_async', Name,
@@ -754,11 +767,23 @@ handle_send_async(Name, RequestInfo, Request,
     end.
 
 handle_send_async_active(Name, RequestInfo, Request,
-                         Timeout, Priority, {Exclude, _} = Client,
-                         #state{uuid_generator = UUID,
-                                dest_refresh = DestRefresh,
-                                list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
+                         Timeout, Priority, {Job, _} = Client,
+                         #state{job = undefined} = State) ->
+    handle_send_async_active_job(Name, RequestInfo, Request,
+                                 Timeout, Priority, Client, Job, State);
+
+handle_send_async_active(Name, RequestInfo, Request,
+                         Timeout, Priority, Client,
+                         #state{job = Job} = State) ->
+    handle_send_async_active_job(Name, RequestInfo, Request,
+                                 Timeout, Priority, Client, Job, State).
+
+handle_send_async_active_job(Name, RequestInfo, Request,
+                             Timeout, Priority, Client, Job,
+                             #state{uuid_generator = UUID,
+                                    dest_refresh = DestRefresh,
+                                    list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'send_async_active', Name,
@@ -778,11 +803,23 @@ handle_send_async_active(Name, RequestInfo, Request,
     end.
 
 handle_send_sync(Name, RequestInfo, Request,
-                 Timeout, Priority, {Exclude, _} = Client,
-                 #state{uuid_generator = UUID,
-                        dest_refresh = DestRefresh,
-                        list_pg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Exclude, Groups) of
+                 Timeout, Priority, {Job, _} = Client,
+                 #state{job = undefined} = State) ->
+    handle_send_sync_job(Name, RequestInfo, Request,
+                         Timeout, Priority, Client, Job, State);
+
+handle_send_sync(Name, RequestInfo, Request,
+                 Timeout, Priority, Client,
+                 #state{job = Job} = State) ->
+    handle_send_sync_job(Name, RequestInfo, Request,
+                         Timeout, Priority, Client, Job, State).
+
+handle_send_sync_job(Name, RequestInfo, Request,
+                     Timeout, Priority, Client, Job,
+                     #state{uuid_generator = UUID,
+                            dest_refresh = DestRefresh,
+                            list_pg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'send_sync', Name,
@@ -818,12 +855,24 @@ handle_send_sync(Name, RequestInfo, Request,
     end.
 
 handle_mcast_async(Name, RequestInfo, Request,
-                   Timeout, Priority, {Exclude, _} = Client,
-                   #state{uuid_generator = UUID,
-                          dest_refresh = DestRefresh,
-                          list_pg_data = Groups} = State) ->
+                   Timeout, Priority, {Job, _} = Client,
+                   #state{job = undefined} = State) ->
+    handle_mcast_async_job(Name, RequestInfo, Request,
+                           Timeout, Priority, Client, Job, State);
+
+handle_mcast_async(Name, RequestInfo, Request,
+                   Timeout, Priority, Client,
+                   #state{job = Job} = State) ->
+    handle_mcast_async_job(Name, RequestInfo, Request,
+                           Timeout, Priority, Client, Job, State).
+
+handle_mcast_async_job(Name, RequestInfo, Request,
+                       Timeout, Priority, Client, Job,
+                       #state{uuid_generator = UUID,
+                              dest_refresh = DestRefresh,
+                              list_pg_data = Groups} = State) ->
     Self = self(),
-    case destination_all(DestRefresh, Name, Exclude, Groups) of
+    case destination_all(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
                               {'mcast_async', Name,
@@ -967,7 +1016,7 @@ send_timeout_end(TransId, #state{send_timeouts = Ids} = State)
 
 async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
                              #state{async_responses = Ids} = State)
-    when is_binary(Response), is_integer(Timeout), is_binary(TransId) ->
+    when is_integer(Timeout), is_binary(TransId) ->
     erlang:send_after(Timeout, self(), {'recv_async_timeout', TransId}),
     State#state{async_responses = dict:store(TransId,
                                              {ResponseInfo, Response}, Ids)}.

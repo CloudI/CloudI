@@ -53,12 +53,10 @@
 -behaviour(gen_server).
 
 %% behavior interface
--export([subscribe/2,
+-export([process_index/1,
+         self/1,
+         subscribe/2,
          unsubscribe/2,
-         process_index/1,
-         prefix/1,
-         timeout_async/1,
-         timeout_sync/1,
          get_pid/2,
          get_pid/3,
          send_async/3,
@@ -95,6 +93,9 @@
          recv_async/1,
          recv_async/2,
          recv_async/3,
+         prefix/1,
+         timeout_async/1,
+         timeout_sync/1,
          request_http_qs_parse/1,
          request_info_key_value_parse/1]).
 
@@ -194,6 +195,16 @@ behaviour_info(_) ->
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------
 
+-spec process_index(Dispatcher :: pid()) -> pos_integer().
+
+process_index(Dispatcher) ->
+    gen_server:call(Dispatcher, process_index, infinity).
+
+-spec self(Dispatcher :: pid()) -> pos_integer().
+
+self(Dispatcher) ->
+    gen_server:call(Dispatcher, {self, self()}, infinity).
+
 -spec subscribe(Dispatcher :: pid(),
                 Pattern :: string()) -> ok.
 
@@ -207,26 +218,6 @@ subscribe(Dispatcher, Pattern)
 unsubscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
     gen_server:cast(Dispatcher, {'unsubscribe', Pattern}).
-
--spec process_index(Dispatcher :: pid()) -> pos_integer().
-
-process_index(Dispatcher) ->
-    gen_server:call(Dispatcher, process_index, infinity).
-
--spec prefix(Dispatcher :: pid()) -> pos_integer().
-
-prefix(Dispatcher) ->
-    gen_server:call(Dispatcher, prefix, infinity).
-
--spec timeout_async(Dispatcher :: pid()) -> pos_integer().
-
-timeout_async(Dispatcher) ->
-    gen_server:call(Dispatcher, timeout_async, infinity).
-
--spec timeout_sync(Dispatcher :: pid()) -> pos_integer().
-
-timeout_sync(Dispatcher) ->
-    gen_server:call(Dispatcher, timeout_sync, infinity).
 
 -spec get_pid(Dispatcher :: pid(),
               Name :: string()) ->
@@ -1011,6 +1002,21 @@ recv_async(Dispatcher, Timeout, TransId)
                                    {'recv_async', Timeout - ?TIMEOUT_DELTA,
                                     TransId}, Timeout)).
 
+-spec prefix(Dispatcher :: pid()) -> pos_integer().
+
+prefix(Dispatcher) ->
+    gen_server:call(Dispatcher, prefix, infinity).
+
+-spec timeout_async(Dispatcher :: pid()) -> pos_integer().
+
+timeout_async(Dispatcher) ->
+    gen_server:call(Dispatcher, timeout_async, infinity).
+
+-spec timeout_sync(Dispatcher :: pid()) -> pos_integer().
+
+timeout_sync(Dispatcher) ->
+    gen_server:call(Dispatcher, timeout_sync, infinity).
+
 -spec request_http_qs_parse(Request :: binary()) ->
     dict().
 
@@ -1128,6 +1134,9 @@ handle_info({cloudi_recv_timeout, Priority, TransId},
 
 handle_info({'EXIT', _, cloudi_request_done}, State) ->
     {noreply, State};
+
+handle_info({'EXIT', _, shutdown}, State) ->
+    {stop, shutdown, State};
 
 handle_info({'EXIT', Pid, Reason}, State) ->
     % make sure the terminate function is called if the dispatcher dies

@@ -84,14 +84,14 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
     [Timers, Name] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Name),
-    process_timers(Timers),
+    process_timers(Timers, Dispatcher),
     cloudi_job:subscribe(Dispatcher, Name),
     {ok, #state{}}.
 
 cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Timeout, _Priority, _TransId, _Pid,
                           State,
-                          _Dispatcher) ->
+                          Dispatcher) ->
     {Type, Time, F, A} = if
         is_binary(Request) ->
             cloudi_string:binary_to_term(Request);
@@ -105,7 +105,8 @@ cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     true = is_atom(F),
     true = is_list(A),
     true = (0 =< TimeValue) and (TimeValue =< 4294967295),
-    erlang:send_after(TimeValue, self(), {Type, TimeValue, F, A}),
+    erlang:send_after(TimeValue, cloudi_job:self(Dispatcher),
+                      {Type, TimeValue, F, A}),
     {reply, ok, State}.
 
 cloudi_job_handle_info({once, _, F, A}, State, Dispatcher) ->
@@ -115,7 +116,7 @@ cloudi_job_handle_info({once, _, F, A}, State, Dispatcher) ->
 cloudi_job_handle_info({always, TimeValue, F, A} = Message,
                        State, Dispatcher) ->
     erlang:apply(cloudi_job, F, [Dispatcher | A]),
-    erlang:send_after(TimeValue, self(), Message),
+    erlang:send_after(TimeValue, cloudi_job:self(Dispatcher), Message),
     {noreply, State};
 
 cloudi_job_handle_info(Request, State, _) ->
@@ -129,17 +130,18 @@ cloudi_job_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-process_timers([]) ->
+process_timers([], _) ->
     ok;
 
-process_timers([{Type, Time, F, A} | T]) ->
+process_timers([{Type, Time, F, A} | T], Dispatcher) ->
     true = (Type == once) or (Type == always),
     TimeValue = time_to_milliseconds(Time),
     true = is_atom(F),
     true = is_list(A),
     true = (0 =< TimeValue) and (TimeValue =< 4294967295),
-    erlang:send_after(TimeValue, self(), {Type, TimeValue, F, A}),
-    process_timers(T).
+    erlang:send_after(TimeValue, cloudi_job:self(Dispatcher),
+                      {Type, TimeValue, F, A}),
+    process_timers(T, Dispatcher).
 
 time_to_milliseconds({X, Unit})
     when is_integer(X) ->

@@ -526,7 +526,19 @@
         cloudi_job_messaging_sequence1,
         [],
         immediate_closest,
-        5000, 10000, 10000, [api], undefined, 2, 5, 300, []}
+        5000, 10000, 10000, [api], undefined, 4, 5, 300, []},
+    {internal,
+        "/tests/messaging/erlang/",
+        cloudi_job_messaging_sequence2,
+        [],
+        immediate_closest,
+        5000, 10000, 10000, [api], undefined, 4, 5, 300, []},
+    {internal,
+        "/tests/messaging/erlang/",
+        cloudi_job_messaging_sequence3,
+        [],
+        immediate_closest,
+        5000, 10000, 10000, [api], undefined, 4, 5, 300, []}
     %,
     % Flood tests configuration to generate 2K requests/second internally
     %{external,

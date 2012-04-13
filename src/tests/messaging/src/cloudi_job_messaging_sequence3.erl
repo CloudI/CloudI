@@ -73,14 +73,42 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init(_Args, _Prefix, Dispatcher) ->
-    cloudi_job:subscribe(Dispatcher, "erlang"),
+    cloudi_job:subscribe(Dispatcher, "f1"),
+    cloudi_job:subscribe(Dispatcher, "f2"),
+    cloudi_job:subscribe(Dispatcher, "g1"),
+    cloudi_job:subscribe(Dispatcher, "sequence3"),
     {ok, #state{}}.
 
-cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+cloudi_job_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
                           _Timeout, _Priority, _TransId, _Pid,
                           #state{} = State,
-                          _Dispatcher) ->
-    {reply, <<>>, State}.
+                          Dispatcher) ->
+    Prefix = cloudi_job:prefix(Dispatcher),
+    Suffix = string:substr(Pattern, erlang:length(Prefix) + 1),
+    case Suffix of
+        "sequence3" ->
+            ?LOG_INFO("messaging sequence3 start erlang", []),
+            sequence3(Dispatcher, Prefix),
+            ?LOG_INFO("messaging sequence3 end erlang", []),
+            {reply, "end", State};
+        "f1" ->
+            RequestI = erlang:list_to_integer(Request),
+            if
+                RequestI == 4 ->
+                    {reply, "done", State};
+                true ->
+                    RequestNew = RequestI + 2, % two steps forward
+                    {forward, Prefix ++ "f2", <<>>,
+                     cloudi_string:term_to_list(RequestNew), State}
+            end;
+        "f2" ->
+            RequestI = erlang:list_to_integer(Request),
+            RequestNew = RequestI - 1, % one step back
+            {forward, Prefix ++ "f1", <<>>,
+             cloudi_string:term_to_list(RequestNew), State};
+        "g1" ->
+            {reply, Request ++ "suffix", State}
+    end.
 
 cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -93,3 +121,12 @@ cloudi_job_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+sequence3(Dispatcher, Prefix) ->
+    {ok, Test1Id} = cloudi_job:send_async(Dispatcher, Prefix ++ "f1", "0"),
+    receive after 5000 -> ok end,
+    {ok, Test1Check} = cloudi_job:recv_async(Dispatcher, Test1Id),
+    true = Test1Check == "done",
+    {ok, Test2Check} = cloudi_job:send_sync(Dispatcher, Prefix ++ "g1",
+                                            "prefix_"),
+    true = Test2Check == "prefix_suffix",
+    ok.

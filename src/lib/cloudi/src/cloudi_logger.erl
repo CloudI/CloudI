@@ -315,23 +315,13 @@ handle_cast({redirect, Node}, State) ->
     end;
 
 handle_cast({Level, Now, Node, Pid,
-             Module, Line, Format, Args}, State) ->
-    try log_message_internal(Level, Now, Node, Pid,
-                             Module, Line, Format, Args, State) of
+             Module, Line, LogMessage}, State) ->
+    case log_message_internal(Level, Now, Node, Pid,
+                              Module, Line, LogMessage, State) of
         {ok, NewState} ->
             {noreply, NewState};
         {error, Reason, NewState} ->
             {stop, Reason, NewState}
-    catch
-        error:badarg ->
-            case log_message_internal(Level, Now, Node, Pid, Module, Line,
-                                      "INVALID LOG INPUT: ~p ~p",
-                                      [Format, Args], State) of
-                {ok, NewState} ->
-                    {noreply, NewState};
-                {error, Reason, NewState} ->
-                    {stop, Reason, NewState}
-            end
     end;
 
 handle_cast(Request, State) ->
@@ -358,8 +348,14 @@ log_message_external(Process, Level, Module, Line, Format, Args)
         true ->
             ok;
         false ->
+            LogMessage = try cloudi_string:format(Format, Args)
+            catch
+                error:badarg ->
+                    cloudi_string:format("INVALID LOG INPUT: ~p ~p",
+                                         [Format, Args])
+            end,
             gen_server:cast(Process, {Level, Now, node(), self(),
-                                      Module, Line, Format, Args})
+                                      Module, Line, LogMessage})
     end.
 
 %% every 10 seconds, determine if the process has sent too many logging messages
@@ -385,7 +381,7 @@ flooding_logger(Now2) ->
     end.
 
 log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
-                     Module, Line, Format, Args,
+                     Module, Line, LogMessage,
                      #state{file_path = FilePath,
                             fd = OldFd,
                             inode = OldInode} = State)
@@ -393,7 +389,7 @@ log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
          Level =:= info; Level =:= debug; Level =:= trace ->
     Description = lists:map(fun(S) ->
       io_lib:format(" ~s~n", [S])
-    end, string:tokens(cloudi_string:format(Format, Args), "\n")),
+    end, string:tokens(LogMessage, "\n")),
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
@@ -469,8 +465,9 @@ log_message_internal_t0(LevelCheck, Line, Format, Args,
          LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
     case log_level_allowed(Level, LevelCheck) of
         true ->
+            LogMessage = cloudi_string:format(Format, Args),
             log_message_internal(LevelCheck, erlang:now(), node(), self(),
-                                 ?MODULE, Line, Format, Args, State);
+                                 ?MODULE, Line, LogMessage, State);
         false ->
             {ok, State}
     end.
@@ -482,9 +479,10 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
          LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
     case log_level_allowed(Level, LevelCheck) of
         true ->
+            LogMessage = cloudi_string:format(Format, Args),
             gen_server:cast(Destination,
                             {LevelCheck, erlang:now(), node(), self(),
-                             ?MODULE, Line, Format, Args});
+                             ?MODULE, Line, LogMessage});
         false ->
             ok
     end.

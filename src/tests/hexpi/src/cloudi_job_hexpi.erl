@@ -122,9 +122,13 @@
 %%%------------------------------------------------------------------------
 
 cloudi_job_init([IndexStart, IndexEnd, ConcurrentTasks],
-                _Prefix, _Dispatcher) ->
-    self() ! setup,
-    self() ! task,
+                _Prefix, Dispatcher) ->
+    % Self == self() within the cloudi_job_init/3 function
+    % however, Self /= self() within the cloudi_job_handle_request/11 function
+    % since a temporary process is used for each request
+    Self = cloudi_job:self(Dispatcher),
+    Self ! setup,
+    Self ! task,
     {ok, #state{index = IndexStart,
                 index_start = IndexStart,
                 index_end = IndexEnd,
