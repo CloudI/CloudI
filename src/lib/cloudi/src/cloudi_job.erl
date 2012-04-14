@@ -210,14 +210,14 @@ self(Dispatcher) ->
 
 subscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
-    gen_server:cast(Dispatcher, {'subscribe', Pattern}).
+    gen_server:call(Dispatcher, {'subscribe', Pattern}, infinity).
 
 -spec unsubscribe(Dispatcher :: pid(),
                   Pattern :: string()) -> ok.
 
 unsubscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
-    gen_server:cast(Dispatcher, {'unsubscribe', Pattern}).
+    gen_server:call(Dispatcher, {'unsubscribe', Pattern}, infinity).
 
 -spec get_pid(Dispatcher :: pid(),
               Name :: string()) ->
@@ -1097,6 +1097,18 @@ handle_info({'send_sync', Name, Pattern, RequestInfo, Request,
                                     Module, Dispatcher, JobState, self()]),
     {noreply, State#state{queue_messages = true,
                           request = RequestPid}};
+
+handle_info({'return_async', _, _, _, _, _, _, Pid} = T,
+            #state{dispatcher = Dispatcher} = State) ->
+    true = Pid == self(),
+    Dispatcher ! T,
+    {noreply, State};
+
+handle_info({'return_sync', _, _, _, _, _, _, Pid} = T,
+            #state{dispatcher = Dispatcher} = State) ->
+    true = Pid == self(),
+    Dispatcher ! T,
+    {noreply, State};
 
 handle_info({_, _, _, _, _, Timeout, Priority, TransId, _} = T,
             #state{queue_messages = true,

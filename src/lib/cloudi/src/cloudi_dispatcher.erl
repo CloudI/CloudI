@@ -73,7 +73,6 @@
         job,             % job pid
         init_job,        % init job pid
         init_queue_msg = queue:new(),  % messages destine for the job pid
-        init_queue_fun = queue:new(),  % function calls destine for the job pid
         process_index,   % 0-based index of the Erlang process
         prefix,          % subscribe/unsubscribe name prefix
         timeout_async,   % default timeout for send_async
@@ -151,6 +150,14 @@ handle_call({self, Job}, _, #state{job = undefined} = State) ->
 handle_call({self, _}, _, #state{job = Job} = State) ->
     {reply, Job, State};
 
+handle_call({'subscribe', Pattern}, Client, State) ->
+    gen_server:reply(Client, ok),
+    handle_subscribe(Pattern, Client, State);
+
+handle_call({'unsubscribe', Pattern}, Client, State) ->
+    gen_server:reply(Client, ok),
+    handle_unsubscribe(Pattern, Client, State);
+
 handle_call({'get_pid', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'get_pid', Name, TimeoutSync}, Client, State);
@@ -204,12 +211,10 @@ handle_call({'send_async', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_async', Name, RequestInfo, Request,
-             Timeout, Priority, {Pattern, Pid}}, _,
-            #state{uuid_generator = UUID} = State) ->
-    TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, self()},
-    {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)};
+             Timeout, Priority, {Pattern, Pid}}, Client,
+            State) ->
+    handle_send_async(Name, Pattern, RequestInfo, Request,
+                      Timeout, Priority, Pid, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -250,13 +255,10 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
-             Timeout, Priority, {Pattern, Pid}}, _,
-            #state{uuid_generator = UUID} = State) ->
-    TransId = uuid:get_v1(UUID),
-    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, self()},
-    {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
-                                                           TransId, State)};
+             Timeout, Priority, {Pattern, Pid}}, Client,
+            State) ->
+    handle_send_async_active(Name, Pattern, RequestInfo, Request,
+                             Timeout, Priority, Pid, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -297,26 +299,10 @@ handle_call({'send_sync', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
-             Timeout, Priority, {Pattern, Pid}}, _,
-            #state{uuid_generator = UUID} = State) ->
-    TransId = uuid:get_v1(UUID),
-    Self = self(),
-    Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
-           Timeout - ?TIMEOUT_DELTA, Priority, TransId, Self},
-    receive
-        {'return_sync', _, _, ResponseInfo, Response, _, TransId, Self} ->
-            if
-                Response == <<>> ->
-                    {reply, {error, timeout}, State};
-                ResponseInfo == <<>> ->
-                    {reply, {ok, Response}, State};
-                true ->
-                    {reply, {ok, ResponseInfo, Response}, State}
-            end
-    after
-        Timeout ->
-            {reply, {error, timeout}, State}
-    end;
+             Timeout, Priority, {Pattern, Pid}}, Client,
+            State) ->
+    handle_send_sync(Name, Pattern, RequestInfo, Request,
+                     Timeout, Priority, Pid, Client, State);
 
 handle_call({'mcast_async', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -409,44 +395,13 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
-handle_cast({'subscribe', Pattern},
-            #state{job = Job,
-                   init_queue_fun = FunctionCallsQueued,
-                   prefix = Prefix} = State) ->
-    if
-        Job =:= undefined ->
-            NewFunctionCallsQueued = queue:in(fun(P) ->
-                list_pg:join(Prefix ++ Pattern, P)
-            end, FunctionCallsQueued),
-            {noreply, State#state{init_queue_fun = NewFunctionCallsQueued}};
-        true ->
-            list_pg:join(Prefix ++ Pattern, Job),
-            {noreply, State}
-    end;
-
-handle_cast({'unsubscribe', Pattern},
-            #state{job = Job,
-                   init_queue_fun = FunctionCallsQueued,
-                   prefix = Prefix} = State) ->
-    if
-        Job =:= undefined ->
-            NewFunctionCallsQueued = queue:in(fun(P) ->
-                list_pg:leave(Prefix ++ Pattern, P)
-            end, FunctionCallsQueued),
-            {noreply, State#state{init_queue_fun = NewFunctionCallsQueued}};
-        true ->
-            list_pg:leave(Prefix ++ Pattern, Job),
-            {noreply, State}
-    end;
-
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
 handle_info({init_job_done, Result},
             #state{job = undefined,
-                   init_queue_msg = MessagesQueued,
-                   init_queue_fun = FunctionCallsQueued} = State) ->
+                   init_queue_msg = MessagesQueued} = State) ->
     case Result of
         {ok, Job} ->
             erlang:link(Job),
@@ -454,13 +409,9 @@ handle_info({init_job_done, Result},
             lists:foreach(fun(Message) ->
                 Job ! Message
             end, queue:to_list(MessagesQueued)),
-            lists:foreach(fun(F) ->
-                F(Job)
-            end, queue:to_list(FunctionCallsQueued)),
             {noreply, State#state{job = Job,
                                   init_job = undefined,
-                                  init_queue_msg = undefined,
-                                  init_queue_fun = undefined}};
+                                  init_queue_msg = undefined}};
         ignore ->
             {stop, ignore, State};
         {error, Reason} ->
@@ -609,41 +560,21 @@ handle_info({'recv_async', Timeout, TransId, Client},
     end;
 
 handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
-             Timeout, TransId, Pid},
-            #state{job = Job,
-                   init_queue_msg = MessagesQueued} = State) ->
-    true = Pid == self(),
+             Timeout, TransId, Job},
+            State) ->
     case send_timeout_check(TransId, State) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
         {ok, {active, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
-            Message = {'timeout_async_active', TransId},
-            NewMessagesQueued = if
-                Job =:= undefined ->
-                    queue:in(Message, MessagesQueued);
-                true ->
-                    Job ! Message,
-                    undefined
-            end,
-            {noreply,
-             send_timeout_end(TransId,
-                              State#state{init_queue_msg = NewMessagesQueued})};
+            Job ! {'timeout_async_active', TransId},
+            {noreply, send_timeout_end(TransId, State)};
         {ok, {active, Tref}} ->
             erlang:cancel_timer(Tref),
-            Message = {'return_async_active', Name, Pattern,
-                       ResponseInfo, Response, Timeout, TransId},
-            NewMessagesQueued = if
-                Job =:= undefined ->
-                    queue:in(Message, MessagesQueued);
-                true ->
-                    Job ! Message,
-                    undefined
-            end,
-            {noreply,
-             send_timeout_end(TransId,
-                              State#state{init_queue_msg = NewMessagesQueued})};
+            Job ! {'return_async_active', Name, Pattern,
+                   ResponseInfo, Response, Timeout, TransId},
+            {noreply, send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
             {noreply, send_timeout_end(TransId, State)};
@@ -656,7 +587,7 @@ handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
     end;
 
 handle_info({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
-             _Timeout, _TransId, _Pid},
+             _Timeout, _TransId, _Job},
             State) ->
     % a response after a timeout is discarded
     {noreply, State};
@@ -703,6 +634,32 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+handle_subscribe(Pattern, {Job, _},
+                 #state{job = undefined} = State) ->
+    handle_subscribe_job(Pattern, Job, State);
+
+handle_subscribe(Pattern, _,
+                 #state{job = Job} = State) ->
+    handle_subscribe_job(Pattern, Job, State).
+
+handle_subscribe_job(Pattern, Job,
+                     #state{prefix = Prefix} = State) ->
+    list_pg:join(Prefix ++ Pattern, Job),
+    {noreply, State}.
+
+handle_unsubscribe(Pattern, {Job, _},
+                   #state{job = undefined} = State) ->
+    handle_unsubscribe_job(Pattern, Job, State);
+
+handle_unsubscribe(Pattern, _,
+                   #state{job = Job} = State) ->
+    handle_unsubscribe_job(Pattern, Job, State).
+
+handle_unsubscribe_job(Pattern, Job,
+                       #state{prefix = Prefix} = State) ->
+    list_pg:leave(Prefix ++ Pattern, Job),
+    {noreply, State}.
 
 handle_get_pid(Name, Timeout, {Job, _} = Client,
                #state{job = undefined} = State) ->
@@ -761,10 +718,30 @@ handle_send_async_job(Name, RequestInfo, Request,
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, self()},
+                   Timeout, Priority, TransId, Job},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
     end.
+
+handle_send_async(Name, Pattern, RequestInfo, Request,
+                  Timeout, Priority, Pid, {Job, _},
+                  #state{job = undefined} = State) ->
+    handle_send_async_job(Name, Pattern, RequestInfo, Request,
+                          Timeout, Priority, Pid, Job, State);
+
+handle_send_async(Name, Pattern, RequestInfo, Request,
+                  Timeout, Priority, Pid, _,
+                  #state{job = Job} = State) ->
+    handle_send_async_job(Name, Pattern, RequestInfo, Request,
+                          Timeout, Priority, Pid, Job, State).
+
+handle_send_async_job(Name, Pattern, RequestInfo, Request,
+                      Timeout, Priority, Pid, Job,
+                      #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
+           Timeout, Priority, TransId, Job},
+    {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)}.
 
 handle_send_async_active(Name, RequestInfo, Request,
                          Timeout, Priority, {Job, _} = Client,
@@ -797,10 +774,31 @@ handle_send_async_active_job(Name, RequestInfo, Request,
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, self()},
+                   Timeout, Priority, TransId, Job},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
+
+handle_send_async_active(Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, Pid, {Job, _},
+                         #state{job = undefined} = State) ->
+    handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, Pid, Job, State);
+
+handle_send_async_active(Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, Pid, _,
+                         #state{job = Job} = State) ->
+    handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, Pid, Job, State).
+
+handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
+                             Timeout, Priority, Pid, Job,
+                             #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
+           Timeout, Priority, TransId, Job},
+    {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
+                                                           TransId, State)}.
 
 handle_send_sync(Name, RequestInfo, Request,
                  Timeout, Priority, {Job, _} = Client,
@@ -832,12 +830,11 @@ handle_send_sync_job(Name, RequestInfo, Request,
             {noreply, State};
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Self = self(),
             Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Self},
+                   Timeout, Priority, TransId, Job},
             receive
                 {'return_sync', _, _,
-                 ResponseInfo, Response, _, TransId, Self} ->
+                 ResponseInfo, Response, _, TransId, Job} ->
                     if
                         Response == <<>> ->
                             gen_server:reply(Client, {error, timeout});
@@ -852,6 +849,39 @@ handle_send_sync_job(Name, RequestInfo, Request,
                     gen_server:reply(Client, {error, timeout})
             end,
             {noreply, State}
+    end.
+
+handle_send_sync(Name, Pattern, RequestInfo, Request,
+                 Timeout, Priority, Pid, {Job, _},
+                 #state{job = undefined} = State) ->
+    handle_send_sync_job(Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, Pid, Job, State);
+
+handle_send_sync(Name, Pattern, RequestInfo, Request,
+                 Timeout, Priority, Pid, _,
+                 #state{job = Job} = State) ->
+    handle_send_sync_job(Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, Pid, Job, State).
+
+handle_send_sync_job(Name, Pattern, RequestInfo, Request,
+                     Timeout, Priority, Pid, Job,
+                     #state{uuid_generator = UUID} = State) ->
+    TransId = uuid:get_v1(UUID),
+    Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
+           Timeout - ?TIMEOUT_DELTA, Priority, TransId, Job},
+    receive
+        {'return_sync', _, _, ResponseInfo, Response, _, TransId, Job} ->
+            if
+                Response == <<>> ->
+                    {reply, {error, timeout}, State};
+                ResponseInfo == <<>> ->
+                    {reply, {ok, Response}, State};
+                true ->
+                    {reply, {ok, ResponseInfo, Response}, State}
+            end
+    after
+        Timeout ->
+            {reply, {error, timeout}, State}
     end.
 
 handle_mcast_async(Name, RequestInfo, Request,
@@ -871,10 +901,9 @@ handle_mcast_async_job(Name, RequestInfo, Request,
                        #state{uuid_generator = UUID,
                               dest_refresh = DestRefresh,
                               list_pg_data = Groups} = State) ->
-    Self = self(),
     case destination_all(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
-            erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
                               {'mcast_async', Name,
                                RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL,
@@ -887,7 +916,7 @@ handle_mcast_async_job(Name, RequestInfo, Request,
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
                 Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Self},
+                       Timeout, Priority, TransId, Job},
                 TransId
             end, PidList),
             gen_server:reply(Client, {ok, TransIdList}),

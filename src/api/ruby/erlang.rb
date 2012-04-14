@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -49,9 +49,11 @@ module Erlang
             if arity == 0
                 return TAG_NIL_EXT.chr
             else
-                return (TAG_LIST_EXT.chr + [arity].pack('N') +
-                    @value.map{ |element| term_to_binary_(element)}.join
-                )
+                arity_packed = [arity].pack('N')
+                list_packed = @value.map{ |element|
+                    term_to_binary_(element)
+                }.join
+                return "#{TAG_LIST_EXT.chr}#{arity_packed}#{list_packed}"
             end
         end
     end
@@ -62,13 +64,14 @@ module Erlang
         end
         def to_s
             if @value.kind_of?(Integer)
-                return TAG_ATOM_CACHE_REF.chr + @value.chr
+                return "#{TAG_ATOM_CACHE_REF.chr}#{@value.chr}"
             elsif @value.kind_of?(String)
                 size = @value.length
                 if size < 256
-                    return TAG_SMALL_ATOM_EXT.chr + size.chr + @value
+                    return "#{TAG_SMALL_ATOM_EXT.chr}#{size.chr}#{@value}"
                 else
-                    return TAG_ATOM_EXT.chr + [size].pack('n') + @value
+                    size_packed = [size].pack('n')
+                    return "#{TAG_ATOM_EXT.chr}#{size_packed}#{@value}"
                 end
             else
                 raise OutputException, 'unknown atom type', caller
@@ -83,11 +86,11 @@ module Erlang
         end
         def to_s
             size = @value.length
+            size_packed = [size].pack('N')
             if @bits != 8
-                return TAG_BIT_BINARY_EXT.chr + [size].pack('N') +
-                       @bits.chr + @value
+                return "#{TAG_BIT_BINARY_EXT.chr}#{size_packed}#{@bits.chr}#{@value}"
             else
-                return TAG_BINARY_EXT.chr + [size].pack('N') + @value
+                return "#{TAG_BINARY_EXT.chr}#{size_packed}#{@value}"
             end
         end
     end
@@ -98,7 +101,7 @@ module Erlang
             @value = value
         end
         def to_s
-            return @tag.chr + @value
+            return "#{@tag.chr}#{@value}"
         end
     end
     
@@ -111,10 +114,10 @@ module Erlang
         def to_s
             size = @id.length / 4
             if size > 1
-                return TAG_NEW_REFERENCE_EXT.chr + [size].pack('n') +
-                       @node.to_s + @creation + @id
+                size_packed = [size].pack('n')
+                return "#{TAG_NEW_REFERENCE_EXT.chr}#{size_packed}#{@node.to_s}#{@creation}#{@id}"
             else
-                return TAG_REFERENCE_EXT.chr + @node.to_s + @id + @creation
+                return "#{TAG_REFERENCE_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
             end
         end
     end
@@ -126,7 +129,7 @@ module Erlang
             @creation = creation
         end
         def to_s
-            return TAG_PORT_EXT.chr + @node.to_s + @id + @creation
+            return "#{TAG_PORT_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
         end
     end
     
@@ -138,7 +141,7 @@ module Erlang
             @creation = creation
         end
         def to_s
-            return TAG_PID_EXT.chr + @node.to_s + @id + @serial + @creation
+            return "#{TAG_PID_EXT.chr}#{@node.to_s}#{@id}#{@serial}#{@creation}"
         end
     end
     
@@ -154,7 +157,8 @@ module Erlang
     end
     
     def term_to_binary(term)
-        return TAG_VERSION.chr + term_to_binary_(term)
+        term_packed = term_to_binary_(term)
+        return "#{TAG_VERSION.chr}#{term_packed}"
     end
     
     private
@@ -414,34 +418,36 @@ module Erlang
         if arity == 0
             return TAG_NIL_EXT.chr
         elsif arity < 65536
-            return TAG_STRING_EXT.chr + [arity].pack('n') + term
+            arity_packed = [arity].pack('n')
+            return "#{TAG_STRING_EXT.chr}#{arity_packed}#{term}"
         else
-            return (TAG_LIST_EXT.chr + [arity].pack('N') +
-                term.unpack("C#{term.length}").map{ |c|
-                    TAG_SMALL_INTEGER_EXT.chr + c
-                }.join
-            )
+            arity_packed = [arity].pack('N')
+            term_packed = term.unpack("C#{term.length}").map{ |c|
+                "#{TAG_SMALL_INTEGER_EXT.chr}#{c}"
+            }.join
+            return "#{TAG_LIST_EXT.chr}#{arity_packed}#{term_packed}"
         end
     end
     
     def tuple_to_binary(term)
         arity = term.length
+        term_packed = term.map{ |element|
+            term_to_binary_(element)
+        }.join
         if arity < 256
-            return (TAG_SMALL_TUPLE_EXT.chr + arity.chr +
-                term.map{ |element| term_to_binary_(element)}.join
-            )
+            return "#{TAG_SMALL_TUPLE_EXT.chr}#{arity.chr}#{term_packed}"
         else
-            return (TAG_LARGE_TUPLE_EXT.chr + [arity].pack('N') +
-                term.map{ |element| term_to_binary_(element)}.join
-            )
+            arity_packed = [arity].pack('N')
+            return "#{TAG_LARGE_TUPLE_EXT.chr}#{arity_packed}#{term_packed}"
         end
     end
     
     def integer_to_binary(term)
         if 0 <= term and term <= 255
-            return TAG_SMALL_INTEGER_EXT.chr + term.chr
+            return "#{TAG_SMALL_INTEGER_EXT.chr}#{term.chr}"
         elsif -2147483648 <= term and term <= 2147483647
-            return TAG_INTEGER_EXT.chr + [term].pack('N')
+            term_packed = [term].pack('N')
+            return "#{TAG_INTEGER_EXT.chr}#{term_packed}"
         else
             bignum_to_binary(term)
         end
@@ -461,14 +467,16 @@ module Erlang
             bignum >>= 8
         end
         if size < 256
-            return TAG_SMALL_BIG_EXT.chr + size.chr + l.join
+            return "#{TAG_SMALL_BIG_EXT.chr}#{size.chr}#{l.join}"
         else
-            return TAG_LARGE_BIG_EXT.chr + [size].pack('N') + l.join
+            size_packed = [size].pack('N')
+            return "#{TAG_LARGE_BIG_EXT.chr}#{size_packed}#{l.join}"
         end
     end
     
     def float_to_binary(term)
-        return TAG_NEW_FLOAT_EXT.chr + [term].pack('G')
+        term_packed = [term].pack('G')
+        return "#{TAG_NEW_FLOAT_EXT.chr}#{term_packed}"
     end
 
     # exceptions
