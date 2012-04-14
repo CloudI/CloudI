@@ -322,7 +322,9 @@ tests-job_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
 
 tests-messaging-install: \
-        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence1.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence2.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence3.beam \
         $(top_builddir)/tests/messaging/jar/cloudi.jar \
         $(top_builddir)/tests/messaging/jar/messaging.jar \
         $(top_builddir)/tests/messaging/cxx_src/messaging
