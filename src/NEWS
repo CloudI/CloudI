@@ -1,3 +1,11 @@
+April 14, 2012
+  Version 0.2.0 rc2 (beta) released.
+
+  * many bugfixes
+  * messaging test is now implemented in Erlang, C++, Ruby, Java, and Python
+  * added alternative function pointer parameters for C++ CloudI API usage
+    so that there is no need to create std::string objects
+
 March 26, 2012
   Version 0.2.0 rc1 (beta) released.
 

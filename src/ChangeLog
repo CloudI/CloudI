@@ -3,6 +3,7 @@
 
 2012-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 0.2.0rc2 (beta) released
     * Fix bug with erlang CloudI API forward operations
     * Improve ruby erlang binary term format encoding, string concatenation
 
