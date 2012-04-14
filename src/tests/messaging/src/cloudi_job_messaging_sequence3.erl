@@ -123,7 +123,6 @@ cloudi_job_terminate(_, #state{}) ->
 
 sequence3(Dispatcher, Prefix) ->
     {ok, Test1Id} = cloudi_job:send_async(Dispatcher, Prefix ++ "f1", "0"),
-    receive after 5000 -> ok end,
     {ok, Test1Check} = cloudi_job:recv_async(Dispatcher, Test1Id),
     true = Test1Check == "done",
     {ok, Test2Check} = cloudi_job:send_sync(Dispatcher, Prefix ++ "g1",
