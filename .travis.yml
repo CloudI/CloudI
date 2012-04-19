@@ -1,0 +1,15 @@
+otp_release:
+  - R14B04
+  - R15B
+  - R15B01
+python:
+  - "2.7"
+rvm:
+  - 1.9.3
+before_script:
+  - cd src && ./autogen.sh
+  - mkdir build && cd build && ../configure --with-zeromq
+script: make
+after_script:
+  - make install
+
