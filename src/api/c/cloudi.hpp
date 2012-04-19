@@ -47,7 +47,7 @@
 #include <stdint.h>
 #include <string>
 
-#define CLOUDI_MAX_BUFFERSIZE 2147483648 /* 2GB */
+#define CLOUDI_MAX_BUFFERSIZE 2147483648U /* 2GB */
 
 typedef struct cloudi_instance_t cloudi_instance_t;
 
