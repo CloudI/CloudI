@@ -65,7 +65,7 @@ static void request(cloudi_instance_t * api,
     assert(request_size == MSG_SIZE);
     ::memcpy(buffer, request, request_size);
     unsigned int *i = reinterpret_cast<unsigned int *>(buffer);
-    if (*i == 4294967295)
+    if (*i == 4294967295U)
         *i = 0;
     else
         (*i)++;
