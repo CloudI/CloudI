@@ -12,7 +12,7 @@ before_install:
 before_script:
   - cd src && ./autogen.sh
   - mkdir build && cd build && ../configure --with-zeromq
-script: make
+script: ../make_dev
 after_script:
   - sudo make install
 branches:
