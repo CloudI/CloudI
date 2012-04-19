@@ -49,7 +49,7 @@ CloudI currently supports the following databases:
 * PostgreSQL (>= 7.4)
 * Tokyo Tyrant (>= 1.1.23)
 
-[To support CloudI development donate here.](http://pledgie.com/campaigns/9269)
+[![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
 ## CONFIGURATION
 
