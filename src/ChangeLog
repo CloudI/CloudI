@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix a few unsigned constants in the C/C++ CloudI API and the msg_size test
+    * Get CloudI building with Travis (http://travis-ci.org/#!/okeuday/CloudI)
+
 2012-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 0.2.0rc2 (beta) released
