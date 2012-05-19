@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid, so that newer MAC addresses are not an issue
+
 2012-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix a few unsigned constants in the C/C++ CloudI API and the msg_size test

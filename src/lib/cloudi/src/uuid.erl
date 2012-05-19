@@ -399,7 +399,8 @@ mac_address([{_, L} | Rest]) ->
             mac_address(Rest);
         {hwaddr, [0, 0, 0, 0, 0, 0]} ->
             mac_address(Rest);
-        {hwaddr, [0 | _] = MAC} ->
+        {hwaddr, [_, N2, N3, N4, N5, N6] = MAC}
+            when N2 /= 0, N3 /= 0, N4 /= 0, N5 /= 0, N6 /= 0 ->
             MAC;
         {hwaddr, _} ->
             mac_address(Rest)
