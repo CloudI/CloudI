@@ -31,7 +31,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 0.1.9<br />last updated on December 27, 2011</h3></center>
+  <center><h3>version 0.2.0b rc2<br />last updated on May 18 2012</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -46,9 +46,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_WhoDevelops"  >1.8 - Who develops CloudI?</a></li>
     <li><a href="#1_PrivateCloud" >1.9 - Can I use CloudI as a Private Cloud?</a></li>
     <li><a href="#1_OnlineService">1.10 - Can I use CloudI as an Online Service?</a></li>
-    <li><a href="#1_REST"         >1.11 - Does CloudI support REST?</a></li>
-    <li><a href="#1_PaaS"         >1.12 - Is CloudI a Platform as a Service (PaaS)?</a></li>
-    <li><a href="#1_HowAbout"     >1.13 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_CAP"          >1.11 - What CAP theorem guarantees does CloudI provide?</a></li>
+    <li><a href="#1_REST"         >1.12 - Does CloudI support REST?</a></li>
+    <li><a href="#1_PaaS"         >1.13 - Is CloudI a Platform as a Service (PaaS)?</a></li>
+    <li><a href="#1_HowAbout"     >1.14 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -79,6 +80,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_ACLs"       >4.6 - How do I use Access Control Lists (ACLs)?</a></li>
     <li><a href="#4_ServiceFail">4.7 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
     <li><a href="#4_URLregex"   >4.8 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
+    <li><a href="#4_ThreadSafe" >4.9 - Is the CloudI API thread-safe?</a></li>
+    <li><a href="#4_Speed"      >4.10 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -243,17 +246,17 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     and frameworks.  The CloudI API provides a light-weight interface for
     creating services in C/C++, Erlang, Java, Python, and Ruby.  By using
     CloudI, external software can become more scalable and fault-tolerant
-    by utilizing CloudI's load balancing of internal messaging.  CloudI
-    messaging enforces realtime constraints using timeouts, so that message
+    by utilizing CloudI's load balancing of CloudI requests.  CloudI
+    messaging enforces realtime constraints using timeouts, so that request
     failures can be handled locally within the service where they are most
     relevant.  ACL entries explicitly allow or deny communication between
     services and are a simple method of isolating critical services from
     potentially volatile services.  All CloudI API usage in languages other
-    than Erlang receives the isolation of Operating Systems processes
-    and is called an external service.  External services can utilize the
+    than Erlang receive the isolation of Operating System processes
+    and are called external services.  External services can utilize the
     CloudI API with any threading library to achieve greater scalability and
-    reduce internal latency.  CloudI API usage in Erlang creates
-    an internal service which utilizes light-weight Erlang processes.
+    reduce internal latency.  The Erlang CloudI API is used to create
+    internal services which utilize light-weight Erlang processes.
     <a href="#6_contents">Examples of using the CloudI API</a>
     are provided as integration tests or internal services.
   </p>
@@ -291,7 +294,6 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <ul>
       <li>Integration Development</li>
       <li>Operations Maintenance</li>
-      <li>Software License Agreements</li>
     </ul>
     Contact <a href="mailto:mjtruog@gmail.com">Michael Truog</a>
     if you are interested in commercial CloudI support.
@@ -339,8 +341,22 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
+  <a name="1_CAP"></a>
+  <h3>1.11 - What CAP theorem guarantees does CloudI provide?</h3>
+  <p class="paragraph">
+    CloudI is an <a href="http://en.wikipedia.org/wiki/CAP_theorem" target="_blank">AP-type distributed system</a>
+    (guarantees of Availability and Partition tolerance). A Consistency
+    guarantee (the guarantee not provided by CloudI) can be provided by
+    either a CloudI service interface to a database driver or a
+    CloudI service interface to a messaging bus (i.e., to a persistent
+    message queue).  In both cases, a request can be sent to the CloudI
+    service with the CloudI API (if the response is stored, the request
+    succeeded).
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
   <a name="1_REST"></a>
-  <h3>1.11 - Does CloudI support REST?</h3>
+  <h3>1.12 - Does CloudI support REST?</h3>
   <p class="paragraph">
     Yes!  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>.
     For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
@@ -348,7 +364,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_PaaS"></a>
-  <h3>1.12 - Is CloudI a Platform as a Service (PaaS)?</h3>
+  <h3>1.13 - Is CloudI a Platform as a Service (PaaS)?</h3>
   <p class="paragraph">
     Yes!  CloudI can be used as a <a href="http://en.wikipedia.org/wiki/Platform_as_a_service" target="_blank">Platform as a Service (PaaS)</a>
     and is the first <a href="#1_Clouds">fault-tolerant PaaS open source project</a>.
@@ -360,7 +376,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_HowAbout"></a>
-  <h3>1.13 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.14 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -415,7 +431,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Chat Room:
   </td><td>
-  #cloudi (#erlang can offer additional help, if necessary)
+  <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">#cloudi (#erlang can offer additional help, if necessary)</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -603,22 +619,22 @@ PREFIX/bin/cloudi stop
   <p class="paragraph">
     The CloudI API provides a light-weight interface for creating services
     in C/C++, Erlang, Java, Python, and Ruby.  Services subscribe to receive
-    messages from other services using the CloudI API "subscribe" function
+    requests from other services using the CloudI API "subscribe" function
     call.  The subscribe function call takes a suffix string that is expected to
     contain a path using a forward slash '/' (e.g., /cloudi/api/json_rpc/).
     However, the service configuration provides the prefix for the subscription
     function call, so "/cloudi/api/" is provided as a configuration prefix
     (for the Job API service) but the subscribe function call only needs to
     be called with the string "json_rpc/" so that a subscription takes place
-    for any services sending messages to "/cloudi/api/json_rpc/",
+    for any services sending requests to "/cloudi/api/json_rpc/",
     which is called a "name".
   </p>
   <p class="paragraph">
-    The messages are load balanced across all the services that have subscribed
-    to the same name during the lookup to find the message destination.
+    The requests are load balanced across all the services that have subscribed
+    to the same name during the lookup to find the request destination.
     There is a service configuration parameter called the "destination refresh"
     that determines how the internal CloudI load balancing occurs when a
-    message is sent from that service.  The possible destination refresh
+    request is sent from that service.  The possible destination refresh
     values are: 
     <ul>
       <li>lazy_closest</li>
@@ -628,8 +644,8 @@ PREFIX/bin/cloudi stop
       <li>none</li>
     </ul>
     The "none" destination refresh is used for services that never send
-    messages (i.e., only receives messages and returns a result) and creates
-    an error that terminates the service if the service does send a message.
+    requests (i.e., they only receives requests) and creates
+    an error that terminates the service if the service does send a request.
     The "lazy" prefix destination refresh methods use an older cached value
     for determining service destinations, so services that communicate
     primarily with long-lived services can use a "lazy" prefix destination
@@ -643,7 +659,7 @@ PREFIX/bin/cloudi stop
     across all services on all CloudI nodes.
   </p>
   <p class="paragraph">
-    The following functions exist in the CloudI API for sending a message:
+    The following functions exist in the CloudI API for sending a request:
     <ul>
       <li>send_async</li>
       <li>send_sync</li>
@@ -651,48 +667,48 @@ PREFIX/bin/cloudi stop
     </ul>
     The "send" prefix functions send a binary message (uninterpreted raw data)
     to a single service name (which is then load balanced among the available
-    services).  If the service name does not exist, the message will be retried
-    until the message timeout elapses and no binary data will be returned
+    services).  If the service name does not exist, the request will be retried
+    until the request timeout elapses and no binary data will be returned
     (i.e., returning no data is equivalent to a timeout).  
-    If a service receives a message while handling an older message, the
-    message is queued based on its priority, where -128 is the highest priority,
+    If a service receives a request while handling an older request, the
+    request is queued based on its priority, where -128 is the highest priority,
     0 is the default priority and 127 is the lowest priority.
     The "mcast" prefix
     function provides publish functionality, so a binary message is published
     to all services that have subscribed to a single service name.  However,
     the "mcast" prefix function is slightly different from other publish
     functionality because it returns all the transaction ids (UUIDs used
-    to uniquely identify a message among all CloudI nodes) so that responses
+    to uniquely identify a request among all CloudI nodes) so that responses
     (if any are returned) may be retrieved.  A service can utilize publish
     behavior that doesn't return data by simply returning no data
     (since returning no data is equivalent to a timeout).  The "async" suffix
     functions (i.e., asynchronous) only return the transaction id of the
-    sent message(s) so that the message response may be queried with the
+    sent request(s) so that the response may be queried with the
     "recv_async" function.  The "recv_async" function can also be used with a
-    null UUID to return the oldest message that was received.
+    null UUID to return the oldest response that was received.
     If no services are available for the name of
     the destination, the "async" suffix function will block until the
-    destination is found to send the message by retrying the send until
+    destination is found to send the request by retrying the send until
     the timeout elapses (i.e., the asynchronous sends are asynchronous after
     the send takes place).  The "sync" suffix function will block until
     a response is returned or the timeout elapses.  If a response is returned
-    with no data, a timeout will be returned instead.  If the message
+    with no data, a timeout will be returned instead.  If the request
     destination name is blocked by an Access Control List (ACL) entry, a
     timeout will be returned immediately from the send function.
   </p>
   <p class="paragraph">
-    When a service receives a message, it is passed as a parameter to the
+    When a service receives a request, it is passed as a parameter to the
     callback function.  The callback function was specified as an argument
-    to the "subscribe" function.  However, in Erlang all messages use the
-    same callback function which is cloudi_job_handle_request/10.
+    to the "subscribe" function.  However, in Erlang all requests use the
+    same callback function which is cloudi_job_handle_request/11.
     Within the callback function any send or receive operations can take place.
     When the callback function wants to terminate it can either return a result
     or forward the request to another service name by using the "return"
     function or the "forward" function, respectively.  If the service does not
     want to return a response, the service can simply call "return" with
     an empty binary response value and it will be interpreted as if the
-    message timeout elapsed.  Using the "forward" function will decrease the
-    message timeout slightly (by 100ms) to prevent messages from causing
+    request timeout elapsed.  Using the "forward" function will decrease the
+    request timeout slightly (by 100ms) to prevent requests from causing
     persistent traffic.
   </p>
   <p class="paragraph">
@@ -709,9 +725,9 @@ PREFIX/bin/cloudi stop
     though this usage of ACLs is uncommon.
   </p>
   <p class="paragraph">
-    The CloudI API external service messages are limited to 2GB when using
+    The CloudI API external service requests are limited to 2GB when using
     the tcp protocol.  Using the udp protocol for external services is
-    experimental (it limits service messages to the minimum of both the
+    experimental (it limits service requests to the minimum of both the
     loopback MTU and the buffer size).
     The buffer size for external services is typically set
     to 16384 bytes because that is a power of 2 closest to the MTU of the
@@ -778,7 +794,7 @@ PREFIX/bin/cloudi stop
      {outbound, {"zigzag_step3a", ["inproc://zigzagstep3"]}},
      {inbound, {"zigzag_finish", ["inproc://zigzagstep3"]}}],
     immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300}
+    5000, 5000, 5000, [api], undefined, 2, 5, 300, []}
     </pre>
   </p>
   <a name="4_API_HTTP"></a>
@@ -803,7 +819,7 @@ PREFIX/bin/cloudi stop
     All the supported databases can be accessed by CloudI services.
     The CloudI Erlang service that provides database support
     (e.g., cloudi_job_db_pgsql, cloudi_job_db_mysql, etc.) uses
-    the database name as the service name suffix.  Services can send messages
+    the database name as the service name suffix.  Services can send requests
     to the database service name in the appropriate format to
     interact with the database.  The format to send is either SQL for an
     SQL database or a command tuple if it is a NoSQL database
@@ -817,7 +833,7 @@ PREFIX/bin/cloudi stop
     CloudI's configuration can be changed dynamically while it is running
     by using the Job API.  The Job API can be used by any CloudI services.
     However, typical usage of the Job API would use raw HTTP requests or
-    JSON-RPC over HTTP.  An complex example of using the Job API through
+    JSON-RPC over HTTP.  A complex example of using the Job API through
     JSON-RPC over HTTP with python code can be found in <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/job_api/run.py" target="_blank">src/tests/job_api/run.py</a>.
     Some simpler examples of using the Job API can be found at
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/job_api/path.py" target="_blank">src/tests/job_api/path.py</a>,
@@ -838,9 +854,10 @@ PREFIX/bin/cloudi stop
   <a name="4_RPC"></a>
   <h3>4.4 - How do I use Remote Procedure Calls (RPC)?</h3>
   <p class="paragraph">
-    Remote procedure calls can easily be used within CloudI services by
-    using the procedure name as a service name suffix and putting the RPC
-    parameters into the request body.  The request body is simply uninterpreted
+    Remote procedure calls can easily be used within CloudI services with a
+    CloudI API "send_sync" function call.  The RPC procedure name is used
+    as a service name suffix and the RPC parameters are stored in the
+    request body.  The request body is simply uninterpreted
     binary data, so no format is imposed on the user of the CloudI API.
     Any request meta-data should be specified as key-value pairs within the
     "request info" parameter.  The "response info" parameter can be used
@@ -863,7 +880,7 @@ PREFIX/bin/cloudi stop
   <a name="4_ACLs"></a>
   <h3>4.6 - How do I use Access Control Lists (ACLs)?</h3>
   <p class="paragraph">
-    Access Control Lists (ACLs) are used to explicitly allow or deny messages
+    Access Control Lists (ACLs) are used to explicitly allow or deny requests
     from being sent to service name prefixes.  Two separate ACL parameters are
     specified for each service configuration to allow or deny destinations.
     If an ACL is not provided, the atom 'undefined' is used instead.  An ACL is
@@ -872,7 +889,7 @@ PREFIX/bin/cloudi stop
     configuration so that the service configuration is simpler and more
     consistent (i.e., without strings that are replicated among the service
     configuration entries).  A fake sample from a configuration file can
-    provide display how this works:
+    illustrate how this works:
 <pre>
 {acl, [
     {alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]},
@@ -888,15 +905,18 @@ PREFIX/bin/cloudi stop
      (DefaultAsynchronousTimeout),
      (DefaultSynchronousTimeout),
 
-     % ACL DENY LIST (e.g, valid values could be: [alias1] or undefined)
+     % ACL DENY LIST
+     % (e.g, valid values could be: undefined or [alias1] or [alias2] or etc.)
      (DestinationDenyList),
      
-     % ACL ALLOW LIST (e.g, valid values could be: [alias1] or undefined)
+     % ACL ALLOW LIST
+     % (e.g, valid values could be: undefined or [alias1] or [alias2] or etc.)
      (DestinationAllowList),
 
      (ProcessCount),
      (MaxR),
-     (MaxT}),
+     (MaxT),
+     (ServiceOptionsPropList)},
     {external,
      (ServiceNamePrefix),
      (ExecutableFilePath),
@@ -909,16 +929,19 @@ PREFIX/bin/cloudi stop
      (DefaultAsynchronousTimeout),
      (DefaultSynchronousTimeout),
 
-     % ACL DENY LIST (e.g, valid values could be: [alias1] or undefined)
+     % ACL DENY LIST
+     % (e.g, valid values could be: undefined or [alias1] or [alias2] or etc.)
      (DestinationDenyList),
 
-     % ACL ALLOW LIST (e.g, valid values could be: [alias1] or undefined)
+     % ACL ALLOW LIST
+     % (e.g, valid values could be: undefined or [alias1] or [alias2] or etc.)
      (DestinationAllowList),
 
      (ProcessCount),
      (ThreadCount),
      (MaxR),
-     (MaxT)}
+     (MaxT),
+     (ServiceOptionsPropList)},
 ]}.
 ...
 </pre>
@@ -940,7 +963,7 @@ PREFIX/bin/cloudi stop
     service implementation dictates that services will only cache data.
     All dynamic state a service uses should be accessed and/or stored by a
     database.  To communicate with a database, a service should use the
-    CloudI API to send messages to a configured CloudI database integration
+    CloudI API to send requests to a configured CloudI database integration
     service.  The implementation of services that avoids state-keeping within
     the service's data structures is required to make sure a service is
     scalable, fault-tolerant and can recover from a failure without losing
@@ -962,25 +985,51 @@ PREFIX/bin/cloudi stop
   <a name="4_URLregex"></a>
   <h3>4.8 - Can I use Regular Expressions with Service Names (URLs)?</h3>
   <p class="paragraph">
-    Currently, CloudI does not support using any regular expressions in
-    service names.  However, support for regular expressions is unlikely to
-    be necessary.  Often, regular expressions are used in URLs within a
-    web framework to support specifying an identifier.  With CloudI, all
-    valid identifiers can be specified in the service name (supplied to the
-    subscribe CloudI API function).  Handling identifiers with exact matches
-    provides efficiency your service would otherwise not have.
+    A simpler substitute for regular expressions is provided for matching
+    CloudI service names.  The "*" character (a wildcard character) is
+    used to match 1 or more character within a service name
+    (i.e., a regex of '.+').  However, the sequence "**" is invalid and
+    will cause the operation to fail.  Any number of wildcard characters can
+    be used with the subscribe and unsubscribe CloudI API functions
+    to create service names that match many patterns.  While this approach
+    may seem unusual, it helps keep service name lookups both efficient
+    and parallel (i.e., within the Erlang code, without any need to call an
+    external regex integration library).
   </p>
   <p class="paragraph">
-    The memory burden of handling identifiers with exact matches should not
-    be significant.  1 million integer identifiers (starting at 0) can
-    be stored in roughly 100 MB within the CloudI Erlang data structure.
-    All services that use a "lazy" destination refresh method will
-    replicate this service name data structure, so that will increase
-    the node's memory consumption.  However, with the proper configuration,
-    handling identifiers within CloudI should be very simple.  If a CloudI
-    installation needs to handle millions of unique identifiers in
-    service names, it is likely that the organization can afford a machine
-    with a sufficient amount of memory.
+    Another possibility is just using explicit service names, even when the
+    service name contains a dynamic parameter.  Using all possible service
+    names is bounded by the memory available.  To give an idea of the memory
+    consumption, on a 64-bit machine using service names that contain a
+    single dynamic integer, 1 million integers used within 1 million
+    subscribe CloudI API calls will consume roughly 100 MB of RAM when the
+    CloudI service is ran (i.e., the service that performs the subscribe
+    CloudI API calls).  All other CloudI services that use a "lazy"
+    destination refresh method will replicate the service name data
+    structure, so that will increase the node's memory consumption.
+    So, depending on your needs and your memory limitations, you may want to
+    use explicit service names or service names with wildcard characters.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_ThreadSafe"></a>
+  <h3>4.9 - Is the CloudI API thread-safe?</h3>
+  <p class="paragraph">
+    The CloudI API is not thread-safe (i.e., it is not reentrant)
+    because it is meant to be used by individual threads that are configured
+    within the CloudI job configuration (e.g., using the CloudI configuration
+    file or the CloudI Job API).  This approach avoids any lock contention
+    issues outside of the Erlang VM.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_Speed"></a>
+  <h3>4.10 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</h3>
+  <p class="paragraph">
+    To provide better computing node grouping, service names should uniquely
+    describe the context of the node.  If the context is provided, then there
+    is a natural grouping for CloudI requests with any CloudI API usage that
+    uses the associated service name(s).
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
@@ -1000,29 +1049,26 @@ PREFIX/bin/cloudi stop
     knows when data is available to a process while the Erlang VM is able to
     schedule based on message queue size.  So, the Erlang VM scheduling
     is able to intelligently schedule CloudI services more so than the
-    kernel scheduling.  However, the problem is unavoidable with current
-    OSes (<a href="http://en.wikipedia.org/wiki/Systemd" target="_blank">systemd</a>
-    is a Linux solution for the init process and <a href="http://www.gnu.org/software/hurd/hurd.html" target="_blank">GNU Hurd's</a>
-    Mach kernel may eventually provide better scalability...
-    not holding my breath)
+    kernel scheduling.  However, the problem is unavoidable with current OSes
     and can be minimized by having a sufficiently large number of non-Erlang
     CloudI service threads and/or processes created to handle the throughput.
     The mismatch between the kernel scheduler and the Erlang VM scheduler is
-    minimized by CloudI's management of CloudI messages, since an external
-    service thread is only provided a single message at a time (and the
+    minimized by CloudI's management of CloudI requests, since an external
+    service thread is only provided a single request at a time (and the
     mismatch is required to provide fault-tolerance by isolating the memory
     used by external services from the Erlang VM memory).
   </p>
   <p class="paragraph">
-    When the number of messages sent to a service name exceeds the number
-    of service processes, the services will begin to queue new messages while
-    handling older messages.  A priority parameter can be used if there
-    is differing importance for various service messages (priority is normally
-    used when there is a data dependency that needs to be solved).
-    The priority parameter is 0 by default, but -128 is the highest priority
-    and 127 is the lowest priority, so that provides much room for representing
-    asynchronous data dependencies (synchronous data dependencies would use a
-    pipe pattern) or simply processing time priority.
+    When the number of requests sent to a service name exceeds the number
+    of service processes, the services will begin to queue new requests while
+    handling older requests (roughly, the distribution of requests to processes
+    is random, so it may queue slightly early).  A priority parameter can be
+    used if there is differing importance for various service requests
+    (priority is normally used when there is a data dependency that needs to
+    be solved).  The priority parameter is 0 by default, but -128 is the
+    highest priority and 127 is the lowest priority, so that provides much
+    room for representing asynchronous data dependencies (synchronous data
+    dependencies would use a pipe pattern) or simply processing time priority.
   </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 
@@ -1046,14 +1092,14 @@ PREFIX/bin/cloudi stop
   <a name="5_Stability"></a>
   <h3>5.3 - Stability and Fault-Tolerance Considerations</h3>
   <p class="paragraph">
-    CloudI messages are not sent in a way that is meant to be persistent
+    CloudI requests are not sent in a way that is meant to be persistent
     to simplify error-handling.  Otherwise, fault-tolerant messaging would
-    preserve messages that are irrelevant and/or erroneous at a future time.
-    Instead, CloudI messages can cause a service to crash which means that
-    the message is not handled by another service since it is unclear whether
-    the message is erroneous or the service is buggy.  CloudI messages also
-    have a certain lifetime defined by the message timeout, so that the
-    relevance of the message data is limited by the timeout.  The message
+    preserve requests that are irrelevant and/or erroneous at a future time.
+    Instead, CloudI requests can cause a service to crash which means that
+    the request is not handled by another service since it is unclear whether
+    the request is erroneous or the service is buggy.  CloudI requests also
+    have a certain lifetime defined by the request timeout, so that the
+    relevance of the request data is limited by the timeout.  The request
     timeout acts to conserve processing time for the most relevant data and
     the services that require the data.  If data needs to be fault-tolerant,
     the data should be stored within a database.
@@ -1065,6 +1111,17 @@ PREFIX/bin/cloudi stop
     on its configuration parameters.  A service should never be allowed to
     function in a zombie-state since this would only complicate performance,
     testing, debugging and development.
+  </p>
+  <p class="paragraph">
+    The service must exit whenever an unrecoverable error occurs.  If a
+    CloudI request causes an exception, the request will fail but the service
+    will not be restarted.  So, services should always have proper exception
+    handling, to make sure the context of any errors is explicit
+    (otherwise, the service source code will become difficult to maintain
+    if any CloudI requests fail).  Without service exception handling,
+    the exception will cause exception information to be logged, however, the
+    information may be minimal (this depends on the limits of the programming
+    language used).
   </p>
   <p class="paragraph">
     The non-Erlang CloudI services receive their own Operating System (OS)
@@ -1124,7 +1181,7 @@ PREFIX/bin/cloudi stop
     behavior requires that the service implement the following functions:
     <ul>
       <li>cloudi_job_init/3</li>
-      <li>cloudi_job_handle_request/10</li>
+      <li>cloudi_job_handle_request/11</li>
       <li>cloudi_job_handle_info/3</li>
       <li>cloudi_job_terminate/2</li>
     </ul>
@@ -1184,7 +1241,7 @@ PREFIX/bin/cloudi stop
     "tests/http/service/service.py 4 tcp 16384",
     [],
     none, tcp, 16384,
-    5000, 5000, 5000, [api], undefined, 1, 4, 5, 300}
+    5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []}
     </pre>
   </p>
   <p>
@@ -1223,14 +1280,14 @@ PREFIX/bin/cloudi stop
     cloudi_job_filesystem,
     [{directory, "tests/http_req/public_html/"}],
     none,
-    5000, 5000, 5000, [api], undefined, 1, 5, 300}
+    5000, 5000, 5000, [api], undefined, 1, 5, 300, []}
     </pre>
     When CloudI is running with this service configuration, the files
     in the path tests/http_req/public_html/ are browsable at <a href="http://127.0.0.1:6464/tests/http_req/" target="_blank">http://127.0.0.1:6464/tests/http_req/</a>.
   </p>
   <p class="paragraph">
     The incoming HTTP traffic goes through the cloudi_job_http Erlang
-    CloudI service and simply uses the URL path to send a message to
+    CloudI service and simply uses the URL path to send a request to
     the subscribing CloudI service, where the prefix of the service name
     was set in the service configuration but the suffix of the service name
     was declared programmatically by calling the CloudI API subscribe function.
@@ -1314,7 +1371,7 @@ PREFIX/bin/cloudi stop
      {outbound, {"zigzag_step3a", ["inproc://zigzagstep3"]}},
      {inbound, {"zigzag_finish", ["inproc://zigzagstep3"]}}],
     immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300},
+    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
 % Chain inproc test (50 endpoints in a sequential call path)
 {internal,
     "/tests/zeromq/",
@@ -1329,7 +1386,7 @@ PREFIX/bin/cloudi stop
      {outbound, {"chain_inproc_step49", ["inproc://chainstep50"]}},
      {inbound, {"chain_inproc_finish", ["inproc://chainstep50"]}}],
     immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300},
+    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
 % Chain ipc test (25 endpoints in a sequential call path)
 {internal,
     "/tests/zeromq/",
@@ -1344,7 +1401,7 @@ PREFIX/bin/cloudi stop
      {outbound, {"chain_ipc_step24", ["ipc:///tmp/cloudichainstep25"]}},
      {inbound, {"chain_ipc_finish", ["ipc:///tmp/cloudichainstep25"]}}],
     immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300}
+    5000, 5000, 5000, [api], undefined, 2, 5, 300, []}
     </pre>
   </p>
   <p class="paragraph">
@@ -1362,7 +1419,7 @@ PREFIX/bin/cloudi stop
   <a name="7_CouchDB"></a>
   <h3>7.1 - CouchDB Integration</h3>
   <p class="paragraph">
-    The cloudi_job_db_couchdb internal service accepts messages from other
+    The cloudi_job_db_couchdb internal service accepts requests from other
     CloudI services.  The service expects database commands supplied as
     Erlang tuples or atoms.  When the service receives data from an external
     service the data received is binary and should be a string that contains
@@ -1385,7 +1442,7 @@ PREFIX/bin/cloudi stop
          {hostname, "127.0.0.1"},
          {port, 5984}],
         none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
@@ -1393,7 +1450,7 @@ PREFIX/bin/cloudi stop
   <a name="7_memcached"></a>
   <h3>7.2 - memcached Integration</h3>
   <p class="paragraph">
-    The cloudi_job_db_memcached internal service accepts messages from other
+    The cloudi_job_db_memcached internal service accepts requests from other
     CloudI services.  The service expects database commands supplied as
     Erlang tuples or atoms.  When the service receives data from an external
     service the data received is binary and should be a string that contains
@@ -1414,7 +1471,7 @@ PREFIX/bin/cloudi stop
         [{database, "cloudi_tests",
           [{"127.0.0.1", 11211, 1}]}],
         none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>
     The list of host-port-connection_count tuples is used for providing
     <a href="http://amarok.kde.org/blog/archives/363-libketama-a-consistent-hashing-algo-for-memcache-clients.html" target="_blank">continuum hashing</a>
@@ -1426,7 +1483,7 @@ PREFIX/bin/cloudi stop
   <a name="7_PostgreSQL"></a>
   <h3>7.3 - PostgreSQL Integration</h3>
   <p class="paragraph">
-    The cloudi_job_db_pgsql internal service accepts messages from other
+    The cloudi_job_db_pgsql internal service accepts requests from other
     CloudI services.  The service expects SQL input and provides the query
     result either as an Erlang tuple or as binary encoded data based on whether
     the input was binary or a list.  All data coming from external services
@@ -1452,7 +1509,7 @@ PREFIX/bin/cloudi stop
          {password, "XXXXXXXXX"},
          {port, 5432}],
         none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
@@ -1460,7 +1517,7 @@ PREFIX/bin/cloudi stop
   <a name="7_MySQL"></a>
   <h3>7.4 - MySQL Integration</h3>
   <p class="paragraph">
-    The cloudi_job_db_mysql internal service accepts messages from other
+    The cloudi_job_db_mysql internal service accepts requests from other
     CloudI services.  The service expects SQL input and provides the query
     result either as an Erlang tuple or as binary encoded data based on whether
     the input was binary or a list.  All data coming from external services
@@ -1487,7 +1544,7 @@ PREFIX/bin/cloudi stop
          {password, "XXXXXXXXX"},
          {port, 3306}],
         none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
@@ -1495,7 +1552,7 @@ PREFIX/bin/cloudi stop
   <a name="7_TokyoTyrant"></a>
   <h3>7.5 - Tokyo Tyrant Integration</h3>
   <p class="paragraph">
-    The cloudi_job_db_tokyotyrant internal service accepts messages from other
+    The cloudi_job_db_tokyotyrant internal service accepts requests from other
     CloudI services.  The service expects database commands supplied as
     Erlang tuples or atoms.  When the service receives data from an external
     service the data received is binary and should be a string that contains
@@ -1518,7 +1575,7 @@ PREFIX/bin/cloudi stop
          {hostname, "127.0.0.1"},
          {port, 1978}],
         none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300}
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>

@@ -48,16 +48,16 @@
         % prefixes.  if atoms are used within the list, they must exist as an
         % associative entry in the acl configuration list.
         % if the destination deny list is 'undefined' any destination is valid.
-        % a blocked message will just return a timeout
-        % (earlier than the timeout specified for the message).
+        % a blocked request will just return a timeout
+        % (earlier than the timeout specified for the request).
         undefined,
         % destination allow list is used as an ACL (Access Control List) that
         % allows the process to send to destinations with the specified
         % prefixes.  if atoms are used within the list, they must exist as an
         % associative entry in the acl configuration list.
         % if the destination allow list is 'undefined' any destination is valid.
-        % a blocked message will just return a timeout
-        % (earlier than the timeout specified for the message).
+        % a blocked request will just return a timeout
+        % (earlier than the timeout specified for the request).
         undefined,
         % specify how many processes should be created with this configuration
         1,
@@ -69,9 +69,9 @@
         300, % seconds
         % options, e.g.:
         % {queue_limit, 1024} % to limit the job's queue to a maximum
-        %                     % of 1024 messages (to prevent excessive memory
+        %                     % of 1024 requests (to prevent excessive memory
         %                     % consumption while the job is busy, handling a
-        %                     % previous message)
+        %                     % previous request)
         % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
         []},
 
@@ -118,16 +118,16 @@
         % prefixes.  if atoms are used within the list, they must exist as an
         % associative entry in the acl configuration list.
         % if the destination deny list is 'undefined' any destination is valid.
-        % a blocked message will just return a timeout
-        % (earlier than the timeout specified for the message).
+        % a blocked request will just return a timeout
+        % (earlier than the timeout specified for the request).
         [api],
         % destination allow list is used as an ACL (Access Control List) that
         % allows the process to send to destinations with the specified
         % prefixes.  if atoms are used within the list, they must exist as an
         % associative entry in the acl configuration list.
         % if the destination allow list is 'undefined' any destination is valid.
-        % a blocked message will just return a timeout
-        % (earlier than the timeout specified for the message).
+        % a blocked request will just return a timeout
+        % (earlier than the timeout specified for the request).
         undefined,
         % specify how many processes should be created with this configuration
         % (a float is a multiplier for the erlang VM scheduler count, i.e.,
@@ -146,9 +146,9 @@
         300, % seconds
         % options, e.g.:
         % {queue_limit, 1024} % to limit the job's queue to a maximum
-        %                     % of 1024 messages (to prevent excessive memory
+        %                     % of 1024 requests (to prevent excessive memory
         %                     % consumption while the job is busy, handling a
-        %                     % previous message)
+        %                     % previous request)
         % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
         []},
     % the job below provides a connection to the cloudi_tests PostgreSQL DB
