@@ -1,4 +1,6 @@
-#[CloudI 0.2.0 (beta)](http://cloudi.org)
+#[CloudI 0.2.0 rc2 (beta)](http://cloudi.org)
+
+[![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
 ## ABOUT
 
@@ -48,8 +50,6 @@ CloudI currently supports the following databases:
 * MySQL (>= 4.0)
 * PostgreSQL (>= 7.4)
 * Tokyo Tyrant (>= 1.1.23)
-
-[![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
 ## CONFIGURATION
 
