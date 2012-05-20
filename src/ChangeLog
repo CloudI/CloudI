@@ -4,6 +4,7 @@
 2012-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Updated FAQ
+    * Add the virtual host option ("use_host_prefix") to cloudi_job_http
 
 2012-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 

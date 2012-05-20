@@ -72,6 +72,7 @@
 -define(DEFAULT_WS_AUTOEXIT,            true).
 -define(DEFAULT_OUTPUT,               binary).
 -define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
+-define(DEFAULT_USE_HOST_PREFIX,       false). % for virtual hosts
 -define(DEFAULT_USE_METHOD_SUFFIX,      true). % get/post/etc. as a name suffix
 
 -record(state,
@@ -98,14 +99,16 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {ws_autoexit,            ?DEFAULT_WS_AUTOEXIT},
         {output,                 ?DEFAULT_OUTPUT},
         {content_type,           ?DEFAULT_CONTENT_TYPE},
+        {use_host_prefix,        ?DEFAULT_USE_HOST_PREFIX},
         {use_method_suffix,      ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
-     OutputType, DefaultContentType, UseMethodSuffix] =
+     OutputType, DefaultContentType, UseHostPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     ContentTypeLookup = content_type_lookup(),
     Loop = fun(HttpRequest) ->
         handle_http(HttpRequest, OutputType, DefaultContentType,
-                    UseMethodSuffix, ContentTypeLookup, Dispatcher)
+                    UseHostPrefix, UseMethodSuffix,
+                    ContentTypeLookup, Dispatcher)
     end,
     case misultin:start_link([{ip, Interface},
                               {port, Port},
@@ -140,9 +143,20 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 %%%------------------------------------------------------------------------
 
 handle_http(HttpRequest, OutputType, DefaultContentType,
-            UseMethodSuffix, ContentTypeLookup, Dispatcher) ->
+            UseHostPrefix, UseMethodSuffix, ContentTypeLookup, Dispatcher) ->
     Method = HttpRequest:get(method),
-    NameIncoming = HttpRequest:get(uri_unquoted),
+    HeadersIncoming = HttpRequest:get(headers),
+    NameIncoming = if
+        UseHostPrefix =:= false ->
+            HttpRequest:get(uri_unquoted);
+        true ->
+            case header_host(HeadersIncoming) of
+                undefined ->
+                    HttpRequest:get(uri_unquoted);
+                Host ->
+                    Host ++ HttpRequest:get(uri_unquoted)
+            end
+    end,
     NameOutgoing = if
         UseMethodSuffix =:= false ->
             NameIncoming;
@@ -164,7 +178,6 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             NameIncoming ++ "/connect"
         % more cases here than necessary probably
     end,
-    HeadersIncoming = HttpRequest:get(headers),
     RequestBinary = if
         Method =:= 'GET' ->
             erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
@@ -239,6 +252,19 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
         {error, Reason} ->
             ?LOG_ERROR("Request Failed: ~p", [Reason]),
             HttpRequest:respond(500)
+    end.
+
+header_host(Headers) ->
+    case misultin_utility:get_key_value('Host', Headers) of
+        undefined ->
+            undefined;
+        Host ->
+            case cloudi_string:beforel($:, Host, input) of
+                "" ->
+                    undefined;
+                HostName ->
+                    HostName
+            end
     end.
 
 header_content_type(Headers) ->
