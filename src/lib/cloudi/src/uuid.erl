@@ -64,6 +64,7 @@
 %% external interface
 -export([new/1,
          get_v1/1,
+         get_v1_time/0,
          get_v1_time/1,
          get_v3/1,
          get_v3/2,
@@ -152,9 +153,12 @@ get_v1(#uuid_state{node_id = NodeId,
       ClockSeqLow:8,
       NodeId/binary>>.
 
-get_v1_time(#uuid_state{}) ->
+get_v1_time() ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
+
+get_v1_time(#uuid_state{}) ->
+    get_v1_time();
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
