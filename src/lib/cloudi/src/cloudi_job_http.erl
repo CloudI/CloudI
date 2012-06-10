@@ -144,6 +144,7 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 
 handle_http(HttpRequest, OutputType, DefaultContentType,
             UseHostPrefix, UseMethodSuffix, ContentTypeLookup, Dispatcher) ->
+    RequestStartMicroSec = uuid:get_v1_time(),
     Method = HttpRequest:get(method),
     HeadersIncoming = HttpRequest:get(headers),
     NameIncoming = if
@@ -206,10 +207,7 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
             % need to use a special format for the headers data
             HeadersIncoming;
         OutputType =:= binary ->
-            erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
-                [erlang:list_to_binary(erlang:atom_to_list(K)), 0,
-                 erlang:list_to_binary(V), 0 | L]
-            end, [], HeadersIncoming))
+            headers_external(HeadersIncoming)
     end,
     case cloudi_job:send_sync(Dispatcher, NameOutgoing,
                               RequestInfo, Request,
@@ -246,11 +244,20 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                             end
                     end
             end,
+            ?LOG_DEBUG("200 ~s ~s ~p ms",
+                       [Method, NameOutgoing,
+                        (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0]),
             HttpRequest:ok(HeadersOutgoing, ResponseBinary);
         {error, timeout} ->
+            ?LOG_WARN("504 ~s ~s ~p ms",
+                      [Method, NameOutgoing,
+                       (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0]),
             HttpRequest:respond(504);
         {error, Reason} ->
-            ?LOG_ERROR("Request Failed: ~p", [Reason]),
+            ?LOG_ERROR("500 ~s ~s ~p ms: ~p",
+                       [Method, NameOutgoing,
+                        (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0,
+                        Reason]),
             HttpRequest:respond(500)
     end.
 
@@ -274,6 +281,19 @@ header_content_type(Headers) ->
         ContentType ->
             cloudi_string:beforel($;, ContentType, input)
     end.
+
+% format for external jobs, http headers passed as key-value pairs
+headers_external(L) ->
+    erlang:iolist_to_binary(lists:reverse(headers_external([], L))).
+
+headers_external(Result, []) ->
+    Result;
+headers_external(Result, [{K, V} | L]) when is_atom(K) ->
+    headers_external([[erlang:list_to_binary(erlang:atom_to_list(K)), 0,
+                       erlang:list_to_binary(V), 0] | Result], L);
+headers_external(Result, [{K, V} | L]) when is_list(K) ->
+    headers_external([[erlang:list_to_binary(K), 0,
+                       erlang:list_to_binary(V), 0] | Result], L).
 
 % static content type lookup (based on misultin_utility)
 content_type_lookup() ->
