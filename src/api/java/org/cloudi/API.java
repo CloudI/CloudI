@@ -943,7 +943,8 @@ public class API
         Constructor<FileDescriptor> c;
         try
         {
-            c = clazz.getDeclaredConstructor(new Class[] { Integer.TYPE });
+            Class[] intarg = { Integer.TYPE };
+            c = clazz.getDeclaredConstructor(intarg);
         }
         catch (SecurityException e)
         {
