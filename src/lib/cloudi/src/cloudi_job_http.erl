@@ -144,7 +144,7 @@ cloudi_job_terminate(_, #state{process = Process}) ->
 
 handle_http(HttpRequest, OutputType, DefaultContentType,
             UseHostPrefix, UseMethodSuffix, ContentTypeLookup, Dispatcher) ->
-    RequestStartMicroSec = uuid:get_v1_time(),
+    RequestStartMicroSec = uuid:get_v1_time(os),
     Method = HttpRequest:get(method),
     HeadersIncoming = HttpRequest:get(headers),
     NameIncoming = if
@@ -244,20 +244,22 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
                             end
                     end
             end,
-            ?LOG_DEBUG("200 ~s ~s ~p ms",
+            ?LOG_TRACE("200 ~s ~s ~p ms",
                        [Method, NameOutgoing,
-                        (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0]),
+                        (uuid:get_v1_time(os) -
+                         RequestStartMicroSec) / 1000.0]),
             HttpRequest:ok(HeadersOutgoing, ResponseBinary);
         {error, timeout} ->
             ?LOG_WARN("504 ~s ~s ~p ms",
                       [Method, NameOutgoing,
-                       (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0]),
+                       (uuid:get_v1_time(os) -
+                        RequestStartMicroSec) / 1000.0]),
             HttpRequest:respond(504);
         {error, Reason} ->
             ?LOG_ERROR("500 ~s ~s ~p ms: ~p",
                        [Method, NameOutgoing,
-                        (uuid:get_v1_time() - RequestStartMicroSec) / 1000.0,
-                        Reason]),
+                        (uuid:get_v1_time(os) -
+                         RequestStartMicroSec) / 1000.0, Reason]),
             HttpRequest:respond(500)
     end.
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid and switch to os:timestamp/0 to time HTTP requests
+
 2012-06-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix/Improvements for AWS deployment
