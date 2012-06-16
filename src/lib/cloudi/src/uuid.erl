@@ -63,6 +63,7 @@
 
 %% external interface
 -export([new/1,
+         new/2,
          get_v1/1,
          get_v1_time/0,
          get_v1_time/1,
@@ -82,7 +83,8 @@
         node_id,
         clock_seq,
         clock_seq_high,
-        clock_seq_low
+        clock_seq_low,
+        timestamp_type
     }).
 
 %%%------------------------------------------------------------------------
@@ -90,6 +92,11 @@
 %%%------------------------------------------------------------------------
 
 new(Pid) when is_pid(Pid) ->
+    new(Pid, erlang).
+
+new(Pid, TimestampType)
+    when is_pid(Pid), TimestampType =:= erlang;
+         is_pid(Pid), TimestampType =:= os ->
     % make the version 1 UUID specific to the Erlang node and pid
 
     % 48 bits for the first MAC address found is included with the
@@ -138,12 +145,19 @@ new(Pid) when is_pid(Pid) ->
                             PidByte3:8, PidByte4:8>>,
                 clock_seq = ClockSeq,
                 clock_seq_high = ClockSeqHigh,
-                clock_seq_low = ClockSeqLow}.
+                clock_seq_low = ClockSeqLow,
+                timestamp_type = TimestampType}.
 
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq_high = ClockSeqHigh,
-                   clock_seq_low = ClockSeqLow}) ->
-    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+                   clock_seq_low = ClockSeqLow,
+                   timestamp_type = TimestampType}) ->
+    {MegaSeconds, Seconds, MicroSeconds} = if
+        TimestampType =:= erlang ->
+            erlang:now();
+        TimestampType =:= os ->
+            os:timestamp()
+    end,
     Time = (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds,
     <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>> = <<Time:60>>,
     <<TimeLow:32, TimeMid:16, TimeHigh:12,
@@ -154,11 +168,18 @@ get_v1(#uuid_state{node_id = NodeId,
       NodeId/binary>>.
 
 get_v1_time() ->
-    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
+    get_v1_time(erlang).
 
-get_v1_time(#uuid_state{}) ->
-    get_v1_time();
+get_v1_time(erlang) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+
+get_v1_time(os) ->
+    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+
+get_v1_time(#uuid_state{timestamp_type = TimestampType}) ->
+    get_v1_time(TimestampType);
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
