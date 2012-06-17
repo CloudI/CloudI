@@ -33,6 +33,7 @@ AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
                     [AC_MSG_ERROR([boost::unordered_map not found])], )
 
 # java checks
+AC_SUBST(javadir, ["$datarootdir/java"])
 AC_ARG_VAR([JAVAC],[javac executable])
 AC_ARG_VAR([JAVA],[java executable])
 AC_ARG_VAR([JAR],[jar executable])
