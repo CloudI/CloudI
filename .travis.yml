@@ -9,7 +9,7 @@ rvm:
   - 1.9.3
 before_install:
   - sudo apt-get update
-  - sudo apt-get install libboost-thread-dev libboost-dev libgmp3-dev
+  - sudo apt-get install g++ default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev make autoconf automake libtool git
 before_script:
   - cd src && ./autogen.sh
   - mkdir build && cd build && ../configure --with-zeromq
