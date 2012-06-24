@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-06-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.0.0 (beta) released
+    * Add loadtest of http_req test to show language performance with
+      20k connections and 1 OS process
+    * Improvements to cloudi_job_http to handle heavy load
+
 2012-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update uuid and switch to os:timestamp/0 to time HTTP requests

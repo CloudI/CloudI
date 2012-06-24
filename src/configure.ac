@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [0.2.0],
+AC_INIT([CloudI], [1.0.0],
         [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)

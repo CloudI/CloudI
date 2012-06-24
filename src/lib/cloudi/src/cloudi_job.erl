@@ -200,7 +200,7 @@ behaviour_info(_) ->
 process_index(Dispatcher) ->
     gen_server:call(Dispatcher, process_index, infinity).
 
--spec self(Dispatcher :: pid()) -> pos_integer().
+-spec self(Dispatcher :: pid()) -> pid().
 
 self(Dispatcher) ->
     gen_server:call(Dispatcher, {self, self()}, infinity).

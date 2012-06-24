@@ -31,7 +31,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 0.2.0b rc2<br />last updated on May 18 2012</h3></center>
+  <center><h3>version 1.0.0b<br />last updated on June 24 2012</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -68,6 +68,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#3_Options"     >3.2 - Installation Options</a></li>
     <li><a href="#3_OSX"         >3.3 - OS X Installation</a></li>
     <li><a href="#3_Running"     >3.4 - Running CloudI</a></li>
+    <li><a href="#3_Config"      >3.5 - Configuration</a></li>
   </ul>
   <a name="4_contents"></a>
   <h2>4 - General Questions</h2>
@@ -90,6 +91,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#5_Scalability">5.2 - Scalability Considerations</a></li>
     <li><a href="#5_Stability"  >5.3 - Stability and Fault-Tolerance Considerations</a></li>
     <li><a href="#5_Integration">5.4 - Integration Considerations</a></li>
+    <li><a href="#5_LoadTesting">5.5 - Load Testing</a></li>
   </ul>
   <a name="6_contents"></a>
   <h2>6 - Services</h2>
@@ -589,6 +591,120 @@ PREFIX/bin/cloudi stop
     PREFIX/logs/cloudi.log (the installation will change in the future to
     put the log into /var/log/cloudi.log if CloudI is installed with sufficient
     permissions).
+  </p>
+  <div class="top"><a href="#3_contents">Top</a></div>
+
+  <a name="3_Config"></a>
+  <h3>3.5 - Configuration</h3>
+  <p class="paragraph">
+    The CloudI configuration provides all the initial parameters for startup.
+    It is also possible to do the same configuration with the CloudI Job API
+    (so, the configuration can also be done dynamically as described in
+    <a href="#4_JobAPI">"4.2 - How do I control CloudI dynamically?"</a>).
+  </p>
+  <p class="paragraph">
+    The configuration is organized into sections for the ACLs, Jobs, Nodes, and
+    Logging.  The ACLs provide a name which can be referenced by a Job to
+    either explicitly allow or deny communication between services
+    (based on service name prefixes, see 
+    <a href="#4_ACLs">"4.6 - How do I use Access Control Lists (ACLs)?"</a>
+    for more information).
+  </p>
+  <p class="paragraph">
+    The Jobs configuration specifies both the services that are ran
+    and the order in which the services should be started.  The "internal" Jobs
+    are Erlang modules that use the cloudi_job behavior.  The "external" Jobs
+    are all non-Erlang languages that use the CloudI API.  There is more
+    information about service integration in
+    <a href="#6_C">"6 - Services"</a> and
+    <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <p class="paragraph">
+    The Nodes configuration lists all CloudI nodes that should be connected.
+    This allows the CloudI node connections to reconnect after network failures.
+  </p>
+  <p class="paragraph">
+    The Logging configuration specifies the logging level and whether the
+    logging output should be directed to a different CloudI node
+    (which is present in the Nodes section).  If the logging is redirected to
+    a different CloudI node, it is possible to lose logging data when a network
+    outage occurs.  However, if the node has failed, the logging output will
+    be stored locally until the node reconnects (i.e., the logging output is
+    redirected to the CloudI node automatically, when it is connected).
+  </p>
+  <p>
+    Below is a summary of the layout of the CloudI configuration file.  The
+    ()s have been used to specify the configuration parameters that are
+    supplied.  You can find this file in
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">src/cloudi.conf.in</a>
+    within the source code repository (in its state before it gets modified
+    by the local operating system configuration parameters) or
+    PREFIX/var/log/cloudi/cloudi.log after the installation.
+<pre>
+{acl, [
+    {(AliasName), [(ServiceNamePrefix) or (AliasName), ...]}
+    ...
+]}.
+{jobs, [
+    {internal,
+     (ServiceNamePrefix),
+     (ErlangModuleName),
+     (ModuleInitializationList),
+     (DestinationRefreshMethod),
+     (InitializationTimeout),
+     (DefaultAsynchronousTimeout),
+     (DefaultSynchronousTimeout),
+     (DestinationDenyACL),
+     (DestinationAllowACL),
+     (ProcessCount),
+     (MaxR),
+     (MaxT),
+     (ServiceOptionsPropList)},
+    {external,
+     (ServiceNamePrefix),
+     (ExecutableFilePath),
+     (ExecutableCommandLineArguments),
+     (ExecutableEnvironmentalVariables),
+     (DestinationRefreshMethod),
+     (Protocol),
+     (ProtocolBufferSize),
+     (InitializationTimeout),
+     (DefaultAsynchronousTimeout),
+     (DefaultSynchronousTimeout),
+     (DestinationDenyACL),
+     (DestinationAllowACL),
+     (ProcessCount),
+     (ThreadCount),
+     (MaxR),
+     (MaxT),
+     (ServiceOptionsPropList)},
+    ...
+]}.
+{nodes, [
+    'cloudi@hostname1',
+    ...
+]}.
+{logging, [
+    {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
+    {redirect, undefined or (Node)}
+]}.
+</pre>
+  </p>
+  <p class="paragraph">
+    The default configuration runs a variety of integration tests
+    which are used to test CloudI:
+    <ul>
+      <li>hexpi</li>
+      <li>http</li>
+      <li>http_req</li>
+      <li>zeromq</li>
+      <li>msg_size</li>
+      <li>messaging</li>
+    </ul>
+    Some of the tests are explained within <a href="#6_C">"6 - Services"</a>.
+    All of the tests can be found within the source code repository in
+    <a href="https://github.com/okeuday/CloudI/tree/master/src/tests" target="_blank">src/tests</a>.  There is no reason to keep the tests within the
+    configuration once you start using CloudI for your own integration.
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -1145,6 +1261,24 @@ PREFIX/bin/cloudi stop
     stderr streams are unbuffered within an external CloudI job, so the output
     will be logged as quickly as possible within the CloudI log as error data
     (for stderr data) or as info data (for stdout data).
+  </p>
+  <div class="top"><a href="#5_contents">Top</a></div>
+
+  <a name="5_LoadTesting"></a>
+  <h3>5.5 - Load Testing</h3>
+  <p class="paragraph">
+    As part of the 1.0.0 CloudI release, the http_req test was used to do a
+    load test of CloudI incoming HTTP requests.  The loadtest shows how the
+    results vary when interacting with separate programming languages that
+    CloudI supports with the CloudI API.  20 thousand concurrent connections
+    were used with a dynamic XML request/response protocol.  All external
+    services (i.e., non-Erlang services) were only given a single OS process
+    with no thread usage.  All programming languages received the same amount
+    of load, so it helps provide a comparison for performance within the
+    CloudI framework.  To find out more, look at the raw results in
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results/201206_20k/" target="_blank">src/tests/http_req/loadtest/results/201206_20k/</a>
+    or the configuration in 
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/setup/" target="_blank">src/tests/http_req/loadtest/setup/</a>.
   </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 

@@ -1,3 +1,11 @@
+June 24, 2012
+  Version 1.0.0 (beta) released.
+
+  * loadtest to show performance of various languages under load
+    (results/config at src/tests/http_req/loadtest/)
+  * HTTP support is now improved after tweaks during loadtesting
+  * virtual host option in HTTP support
+
 April 14, 2012
   Version 0.2.0 rc2 (beta) released.
 
