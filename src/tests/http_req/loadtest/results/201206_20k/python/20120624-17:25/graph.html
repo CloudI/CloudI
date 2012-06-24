@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+  <head>
+    <title>Tsung  -  </title>
+	<meta http-equiv="content-type" content="text/html; charset=iso-8859-1"/>
+	<link rel="Index" href="/"/>
+    <style type="text/css">
+	  body { background-color: #EEEEEE;}
+      h1, h2, h3, h4 { color: #005A9C;  }
+      h1 { font: 175% sans-serif; padding: 5px; text-align: center;}
+      h2 { font: 130% sans-serif; padding: 5px; }
+      h2.main { text-align: center;
+          background-color: #DD8888;
+          }
+      h3 { font: 130% sans-serif; 
+          text-align: center;
+          background-color: #DDDDDD;
+          margin-left: 20px; 
+          border: 1px solid #CCCCCC;
+          margin-right: 20px; 
+          }
+      h4 { font: bold 100% sans-serif }
+      h5 { font: italic 100% sans-serif }
+      h6 { font: small-caps 100% sans-serif }
+      var {color: red; }
+      kbd {font-weight: bold;}
+      code {color: blue; }
+      samp {color: #5A009C; }
+      table.stats {
+          margin-left: 25px;
+          background-color: #DDDDDD;
+          border: 1px solid #000;
+          }
+      address { font-size: small; text-align: center;}
+      #footer {
+          position:              fixed;
+          bottom:                0px;
+          left:                  0;
+          right:                  0;
+          background-color: #fff; 
+          width: 100%;
+          padding: 2px;
+          border: 1px solid #999999;
+          }
+      #maincontent {     
+          margin-left:  190px;
+          padding: 5px;
+          }
+      #headerBox {
+          position:    fixed;
+          float:       left;
+          width:  190px;
+          height: 90%;
+          background-color: #FFFFFF; 
+          border: 1px solid #ffffff;
+             } 
+      th.stats {
+          border-bottom: 1px solid #005A9C;
+          border-top: 1px solid #005A9C;
+          } 
+      td.stats {
+          border-right: 1px solid #AAA;
+          text-align: right;
+          } 
+      #os_mon {text-align: center; } 
+      .version {
+          font: italic 80% sans-serif; 
+          color: #005A9C; 
+          text-align: center;
+          }
+      </style>
+  </head>
+<body>
+	<div id="headerBox">
+        <h1>Tsung </h1>
+      <p class="version"><em>version 1.3.3</em></p>
+
+      <h2><a class="subtitle" href="report.html">Stats Report </a></h2>
+      <ul>
+        <li><a href="report.html#stats">Main statistics</a></li>
+        <li><a href="report.html#transaction">Transactions</a></li>
+        <li><a href="report.html#network">Network Throughput</a></li>
+        <li><a href="report.html#count">Counters</a></li>
+        <li><a href="report.html#os_mon">Server monitoring</a></li>
+        <li><a href="report.html#http_status">HTTP status</a></li>
+      </ul>
+
+      <h2><a class="subtitle" href="graph.html">Graphs Report </a></h2>
+      <ul>
+        <li><a href="graph.html#response_time">Response times</a></li>
+        <li><a href="graph.html#throughput">Throughput graphs</a></li>
+        <li><a href="graph.html#users">Simultaneous Users</a></li>
+        <li><a href="graph.html#os_mon">Server monitoring</a></li>
+        <li><a href="graph.html#http_status">HTTP status</a></li>
+     </ul>
+      <h2><a class="subtitle" href="http_req_python.xml">XML Config file</a></h2>
+    </div>
+
+
+<div id="maincontent">
+ <h2 class="main">tsung - Graphical Reports</h2> 
+
+<div id="response_time">
+<h3>Response Time</h3> 
+<table>
+<tr><th>Transactions</th><th>Requests and connection establishment</th></tr>
+<tr>
+ <td>
+ <a href="images/graphes-Transactions-mean.ps">
+  <img class="graph" src="images/graphes-Transactions-mean.png" alt="transaction response time"/> 
+ </a>
+ </td>
+ <td>
+  <a href="images/graphes-Perfs-mean.ps">
+   <img class="graph" src="images/graphes-Perfs-mean.png" alt="mean request response time"/> 
+  </a>
+ </td>
+ </tr>
+</table>
+</div>
+
+<div id="throughput">
+<h3>Throughput</h3> 
+
+<table>
+<tr><th>Transactions</th><th>Requests</th>
+</tr>
+<tr>
+ <td>
+ <a href="images/graphes-Transactions-rate.ps">
+  <img class="graph" src="images/graphes-Transactions-rate.png" alt="transaction rate"/> 
+ </a>
+ </td>
+ <td>
+  <a href="images/graphes-Perfs-rate.ps">
+   <img class="graph" src="images/graphes-Perfs-rate.png" alt="req/sec"/>
+  </a>
+ </td>
+ </tr>
+<tr><th>Network traffic</th><th>New Users</th></tr>
+<tr>
+ <td>
+ <a href="images/graphes-Size-rate.ps">
+  <img class="graph" src="images/graphes-Size-rate.png" alt="Kb/sec"/>
+ </a>
+ </td>
+ <td>
+  <a href="images/graphes-Users_Arrival-rate.ps">
+   <img class="graph" src="images/graphes-Users_Arrival-rate.png" alt="visit/sec"/>
+  </a>
+ </td>
+ </tr>
+</table>
+</div>
+
+<div id="users">
+<h3>Simultaneous Users</h3> 
+<table>
+<tr><th>Simultaneous Users</th>
+</tr>
+<tr>
+ <td> <a href="images/graphes-Users-simultaneous.ps">
+  <img class="graph" src="images/graphes-Users-simultaneous.png" alt="Users"/> 
+ </a>
+ </td>
+ </tr>
+</table>
+</div>
+
+<div id="os_mon">
+<h3>Server OS monitoring</h3> 
+<table>
+<tr><th>CPU%</th><th>Free Memory</th></tr>
+<tr>
+ <td>
+ <a href="images/graphes-cpu-mean.ps">
+  <img class="graph" src="images/graphes-cpu-mean.png" alt="cpu"/>
+ </a>
+ </td>
+ <td>
+  <a href="images/graphes-freemem-mean.ps">
+   <img class="graph" src="images/graphes-freemem-mean.png" alt="free memory"/>
+  </a>
+ </td>
+ </tr>
+
+<tr><th>CPU Load</th></tr>
+<tr>
+ <td>
+ <a href="images/graphes-load-mean.ps">
+  <img class="graph" src="images/graphes-load-mean.png" alt="load"/>
+ </a>
+ </td>
+ </tr>
+
+</table>
+</div>
+
+<div id="http_status">
+<h3>HTTP return code Status (rate)</h3> 
+ <a href="images/graphes-HTTP_CODE-rate.ps">
+  <img class="graph" src="images/graphes-HTTP_CODE-rate.png" alt="HTTP_CODE-rate"/> 
+ </a>
+</div>
+
+
+
+
+</div>
+<hr/>
+<div id="footer">
+    <address>
+		<a href="http://tsung.erlang-projects.org">http://tsung.erlang-projects.org/</a>
+        Contact:   <a href="mailto:tsung-users@process-one.net">tsung-users@process-one.net</a>
+    </address>
+</div>
+  </body>
+</html>
+

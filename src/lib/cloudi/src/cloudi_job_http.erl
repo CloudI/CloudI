@@ -70,6 +70,7 @@
 -define(DEFAULT_SSL,                   false).
 -define(DEFAULT_COMPRESS,              false).
 -define(DEFAULT_WS_AUTOEXIT,            true).
+-define(DEFAULT_MAX_CONNECTIONS,        4096).
 -define(DEFAULT_OUTPUT,               binary).
 -define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
 -define(DEFAULT_USE_HOST_PREFIX,       false). % for virtual hosts
@@ -77,7 +78,20 @@
 
 -record(state,
     {
-        process
+        process,         % http server process
+        output_type,
+        default_content_type,
+        content_type_lookup = content_type_lookup(),
+        requests = dict:new()
+    }).
+
+-record(request_data,
+    {
+        name_incoming,
+        name_outgoing,
+        request_info,
+        request,
+        request_pid
     }).
 
 %%%------------------------------------------------------------------------
@@ -97,18 +111,19 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {ssl,                    ?DEFAULT_SSL},
         {compress,               ?DEFAULT_COMPRESS},
         {ws_autoexit,            ?DEFAULT_WS_AUTOEXIT},
+        {max_connections,        ?DEFAULT_MAX_CONNECTIONS},
         {output,                 ?DEFAULT_OUTPUT},
         {content_type,           ?DEFAULT_CONTENT_TYPE},
         {use_host_prefix,        ?DEFAULT_USE_HOST_PREFIX},
         {use_method_suffix,      ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
+     MaxConnections,
      OutputType, DefaultContentType, UseHostPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
-    ContentTypeLookup = content_type_lookup(),
+    Job = cloudi_job:self(Dispatcher),
     Loop = fun(HttpRequest) ->
-        handle_http(HttpRequest, OutputType, DefaultContentType,
-                    UseHostPrefix, UseMethodSuffix,
-                    ContentTypeLookup, Dispatcher)
+        http_request(OutputType, UseHostPrefix, UseMethodSuffix,
+                     HttpRequest, Job)
     end,
     case misultin:start_link([{ip, Interface},
                               {port, Port},
@@ -117,10 +132,13 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
                               {ssl, SSL},
                               {compress, Compress},
                               {ws_autoexit, WsAutoExit},
+                              {max_connections, MaxConnections},
                               {loop, Loop},
                               {name, false}]) of
         {ok, Process} ->
-            {ok, #state{process = Process}};
+            {ok, #state{process = Process,
+                        output_type = OutputType,
+                        default_content_type = DefaultContentType}};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -130,20 +148,7 @@ cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                           State, _Dispatcher) ->
     {reply, <<>>, State}.
 
-cloudi_job_handle_info(Request, State, _) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
-
-cloudi_job_terminate(_, #state{process = Process}) ->
-    misultin:stop(Process),
-    ok.
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
-
-handle_http(HttpRequest, OutputType, DefaultContentType,
-            UseHostPrefix, UseMethodSuffix, ContentTypeLookup, Dispatcher) ->
+http_request(OutputType, UseHostPrefix, UseMethodSuffix, HttpRequest, Job) ->
     RequestStartMicroSec = uuid:get_v1_time(os),
     Method = HttpRequest:get(method),
     HeadersIncoming = HttpRequest:get(headers),
@@ -182,7 +187,8 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
     RequestBinary = if
         Method =:= 'GET' ->
             erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
-                [erlang:list_to_binary(K), 0, erlang:list_to_binary(V), 0 | L]
+                [erlang:list_to_binary(K), 0,
+                 erlang:list_to_binary(V), 0 | L]
             end, [], HttpRequest:parse_qs()));
         Method =:= 'POST'; Method =:= 'PUT' ->
             % do not pass type information along with the request!
@@ -209,59 +215,112 @@ handle_http(HttpRequest, OutputType, DefaultContentType,
         OutputType =:= binary ->
             headers_external(HeadersIncoming)
     end,
-    case cloudi_job:send_sync(Dispatcher, NameOutgoing,
-                              RequestInfo, Request,
-                              undefined, undefined) of
-        {ok, Response} ->
-            ResponseBinary = if
-                OutputType =:= list ->
-                    erlang:list_to_binary(Response);
-                OutputType =:= binary ->
-                    Response
-            end,
-            FileName = cloudi_string:afterr($/, NameIncoming, input),
-            HeadersOutgoing = if
-                is_list(DefaultContentType) ->
-                    [{'Content-Type', DefaultContentType}];
-                true ->
-                    Extension = filename:extension(FileName),
-                    if
-                        Extension == [] ->
-                            [{'Content-Type', "text/html"}];
-                        true ->
-                            case trie:find(Extension, ContentTypeLookup) of
-                                error ->
-                                    [{'Content-Disposition',
-                                      "attachment; filename=" ++ NameIncoming},
-                                     {'Content-Type',
-                                      "application/octet-stream"}];
-                                {ok, {request, ContentType}} ->
-                                    [{'Content-Type', ContentType}];
-                                {ok, {attachment, ContentType}} ->
-                                    [{'Content-Disposition',
-                                      "attachment; filename=" ++ NameIncoming},
-                                     {'Content-Type', ContentType}]
-                            end
-                    end
-            end,
-            ?LOG_TRACE("200 ~s ~s ~p ms",
-                       [Method, NameOutgoing,
+    Job ! {http_request,
+           #request_data{name_incoming = NameIncoming,
+                         name_outgoing = NameOutgoing,
+                         request_info = RequestInfo,
+                         request = Request,
+                         request_pid = self()}},
+    receive
+        {ok, HttpCode, HeadersOutgoing, ResponseBinary} ->
+            ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
+                       [HttpCode, Method, NameIncoming, NameOutgoing,
                         (uuid:get_v1_time(os) -
                          RequestStartMicroSec) / 1000.0]),
             HttpRequest:ok(HeadersOutgoing, ResponseBinary);
-        {error, timeout} ->
-            ?LOG_WARN("504 ~s ~s ~p ms",
-                      [Method, NameOutgoing,
+        {error, HttpCode, Reason} ->
+            ?LOG_WARN("~w ~s ~s ~p ms: ~p",
+                      [HttpCode, Method, NameIncoming,
                        (uuid:get_v1_time(os) -
-                        RequestStartMicroSec) / 1000.0]),
-            HttpRequest:respond(504);
-        {error, Reason} ->
-            ?LOG_ERROR("500 ~s ~s ~p ms: ~p",
-                       [Method, NameOutgoing,
-                        (uuid:get_v1_time(os) -
-                         RequestStartMicroSec) / 1000.0, Reason]),
-            HttpRequest:respond(500)
+                        RequestStartMicroSec) / 1000.0, Reason]),
+            HttpRequest:respond(HttpCode)
     end.
+
+cloudi_job_handle_info({'http_request',
+                        #request_data{name_outgoing = NameOutgoing,
+                                      request_info = RequestInfo,
+                                      request = Request,
+                                      request_pid = RequestPid} = RequestData},
+                       #state{requests = Requests} = State,
+                       Dispatcher) ->
+    case cloudi_job:send_async_active(Dispatcher, NameOutgoing,
+                                      RequestInfo, Request,
+                                      undefined, undefined) of
+        {ok, TransId} ->
+            NewRequestData = RequestData#request_data{request_info = undefined,
+                                                      request = undefined},
+            {noreply, State#state{requests = dict:store(TransId, NewRequestData,
+                                                        Requests)}};
+        {error, timeout} ->
+            RequestPid ! {error, 504, timeout},
+            {noreply, State};
+        {error, Reason} ->
+            RequestPid ! {error, 500, Reason},
+            {noreply, State}
+    end;
+
+cloudi_job_handle_info({'return_async_active', _Name, _Pattern,
+                        _ResponseInfo, Response,
+                        _Timeout, TransId},
+                       #state{output_type = OutputType,
+                              default_content_type = DefaultContentType,
+                              content_type_lookup = ContentTypeLookup,
+                              requests = Requests} = State,
+                       _Dispatcher) ->
+    #request_data{name_incoming = NameIncoming,
+                  request_pid = RequestPid} = dict:fetch(TransId, Requests),
+    ResponseBinary = if
+        OutputType =:= list ->
+            erlang:list_to_binary(Response);
+        OutputType =:= binary ->
+            Response
+    end,
+    FileName = cloudi_string:afterr($/, NameIncoming, input),
+    HeadersOutgoing = if
+        is_list(DefaultContentType) ->
+            [{'Content-Type', DefaultContentType}];
+        true ->
+            Extension = filename:extension(FileName),
+            if
+                Extension == [] ->
+                    [{'Content-Type', "text/html"}];
+                true ->
+                    case trie:find(Extension, ContentTypeLookup) of
+                        error ->
+                            [{'Content-Disposition',
+                              "attachment; filename=" ++ NameIncoming},
+                             {'Content-Type',
+                              "application/octet-stream"}];
+                        {ok, {request, ContentType}} ->
+                            [{'Content-Type', ContentType}];
+                        {ok, {attachment, ContentType}} ->
+                            [{'Content-Disposition',
+                              "attachment; filename=" ++ NameIncoming},
+                             {'Content-Type', ContentType}]
+                    end
+            end
+    end,
+    RequestPid ! {ok, 200, HeadersOutgoing, ResponseBinary},
+    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
+
+cloudi_job_handle_info({'timeout_async_active', TransId},
+                       #state{requests = Requests} = State,
+                       _Dispatcher) ->
+    #request_data{request_pid = RequestPid} = dict:fetch(TransId, Requests),
+    RequestPid ! {error, 504, timeout},
+    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
+
+cloudi_job_handle_info(Request, State, _) ->
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
+    {noreply, State}.
+
+cloudi_job_terminate(_, #state{process = Process}) ->
+    misultin:stop(Process),
+    ok.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 
 header_host(Headers) ->
     case misultin_utility:get_key_value('Host', Headers) of

@@ -14,7 +14,7 @@
 +A 5
 
 ## Increase number of Erlang processes
-+P 32768
++P 65536
 
 ## Increase number of concurrent ports/sockets
 -env ERL_MAX_PORTS 32768

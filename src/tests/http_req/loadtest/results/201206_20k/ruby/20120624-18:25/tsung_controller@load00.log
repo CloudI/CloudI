@@ -1,0 +1,125 @@
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_config_server:(5:<0.52.0>) Config server started, logdir is "/home/ubuntu/./20120624-18:25"
+ 
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+              ts_mon:(5:<0.51.0>) starting monitor, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+              ts_mon:(5:<0.53.0>) Init, log dir is "/home/ubuntu/./20120624-18:25"
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+              ts_mon:(5:<0.53.0>) starting monitor
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.51.0>) starting stats server, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.55.0>) starting ts_stats_mon stats server
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.51.0>) starting request stats server, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.56.0>) starting dedicated stats server for request 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.51.0>) starting page stats server, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.57.0>) starting dedicated stats server for page 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.51.0>) starting connect stats server, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.58.0>) starting dedicated stats server for connect 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.51.0>) starting transaction stats server, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+        ts_stats_mon:(5:<0.59.0>) starting transaction stats server
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+     ts_match_logger:(5:<0.51.0>) starting match logger, global 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+     ts_match_logger:(5:<0.60.0>) starting match logger
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+     ts_match_logger:(5:<0.60.0>) starting match logger
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(5:<0.52.0>) Reading config file: http_req_ruby.xml
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(4:<0.52.0>) resolving host "192.168.2.10"
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(4:<0.52.0>) resolved host {192,168,2,10}
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(4:<0.52.0>) resolving host "192.168.2.11"
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(4:<0.52.0>) resolved host {192,168,2,11}
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+      ts_config_http:(4:<0.52.0>) Get user agent: 80 "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.7.8) Gecko/20050513 Galeon/1.3.21" 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+      ts_config_http:(4:<0.52.0>) Get user agent: 20 "Mozilla/5.0 (Windows; U; Windows NT 5.2; fr-FR; rv:1.7.8) Gecko/20050511 Firefox/1.0.4" 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(5:<0.52.0>) Session name for id 1 is "Ruby"
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+           ts_config:(5:<0.52.0>) Session type: persistent=true, bidi=false
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+      ts_config_http:(5:<0.52.0>) Relative URL, single server 
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_config_server:(5:<0.52.0>) SYSINFO:Erlang version: Erlang R14B03 (erts-5.8.4) [source] [smp:2:2] [rq:2] [async-threads:16] [kernel-poll:true]
+
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_config_server:(5:<0.52.0>) SYSINFO:System architecture i686-pc-linux-gnu
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_config_server:(5:<0.52.0>) SYSINFO:Current path: /usr/local/lib/tsung-1.3.3/lib/erlang/lib/tsung-1.3.3/ebin/tsung.beam
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_config_server:(5:<0.52.0>) Set max duration of test: 3600 s 
+
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+    ts_os_mon_erlang:(5:<0.66.0>) starting os_mon_erlang with args {"mc1",{},
+                                                                    10000,
+                                                                    {global,
+                                                                     ts_mon}}
+=INFO REPORT==== 24-Jun-2012::11:25:23 ===
+              ts_mon:(5:<0.53.0>) Activate clients with text backend
+
+=INFO REPORT==== 24-Jun-2012::11:25:24 ===
+    ts_config_server:(5:<0.76.0>) started newbeam on node tsung1@load00 
+
+=INFO REPORT==== 24-Jun-2012::11:25:24 ===
+    ts_config_server:(5:<0.76.0>) ping tsung1@load00 pong
+
+=INFO REPORT==== 24-Jun-2012::11:25:24 ===
+    ts_config_server:(5:<0.75.0>) started newbeam on node tsung0@load01 
+
+=INFO REPORT==== 24-Jun-2012::11:25:24 ===
+    ts_config_server:(5:<0.75.0>) ping tsung0@load01 pong
+
+=INFO REPORT==== 24-Jun-2012::11:25:24 ===
+    ts_config_server:(5:<0.52.0>) New arrival phase 1 for client "load01": will start 10344.827586206897 users
+
+=INFO REPORT==== 24-Jun-2012::11:25:25 ===
+    ts_os_mon_erlang:(5:<0.73.0>) loading tsung monitor on nodes [os_mon@mc1]
+
+=INFO REPORT==== 24-Jun-2012::11:25:26 ===
+    ts_config_server:(5:<0.52.0>) New arrival phase 1 for client "load00": will start 10344.827586206897 users
+
+=INFO REPORT==== 24-Jun-2012::12:21:29 ===
+              ts_mon:(5:<0.53.0>) stopping monitor (normal)
