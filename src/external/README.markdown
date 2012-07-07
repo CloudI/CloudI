@@ -1,8 +1,8 @@
 External Dependencies
 =====================
 
-ax_boost_base.m4, ax_boost_thread.m4
-------------------------------------
+m4/ax_boost_base.m4, m4/ax_boost_thread.m4
+------------------------------------------
 autoconf m4 macros for boost detection
 
 - http://www.gnu.org/software/autoconf-archive/ax_boost_base.html
@@ -10,7 +10,7 @@ autoconf m4 macros for boost detection
 - Thu Feb 17 18:34:44 PST 2011
 - BSD-like
 
-ax_check_class.m4, ax_check_rqrd_class.m4, ax_prog_jar.m4, ax_prog_javac.m4, ax_prog_javac_works.m4, ax_prog_java.m4, ax_prog_java_works.m4, ax_try_compile_java.m4
+m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4
 --------------------------------------------------------------------------------
 autoconf m4 macros for java detection
 
@@ -25,16 +25,16 @@ autoconf m4 macros for java detection
 - Fri Mar  4 00:01:29 PST 2011
 - GPL
 
-ax_prog_python_version.m4
--------------------------
+m4/ax_prog_python_version.m4
+----------------------------
 autoconf m4 macros for python detection
 
 - http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html
 - Sun Mar  6 13:31:11 PST 2011
 - BSD-like
 
-ax_prog_ruby_version.m4, ax_compare_version.m4
-----------------------------------------------
+m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4
+----------------------------------------------------
 autoconf m4 macros for ruby detection
 
 - http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html
@@ -64,25 +64,26 @@ emysql (erlang_mysql)
 ---------------------
 Erlang MySQL (native) Driver
 
-- http://github.com/ngerakines/erlang_mysql (should take from other repo (below))
+- http://github.com/ngerakines/erlang_mysql
+- alternatives are: https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl, https://github.com/dizzyd/erlang-mysql-driver
 - commit 712f8ead7585e6d3736a
 - October 14, 2009
-- BSD (https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl)
+- BSD
 
 epgsql
 ------
 Erlang PostgreSQL (native) Driver
 
 - https://github.com/wg/epgsql
-- commit 817b1258106587207e46
-- Thu Feb 10 10:34:54 PST 2011
+- commit 3318bd5d646cad0623ae9dcc6df015bb85258a63
+- Fri Jul  6 19:45:00 PDT 2012
 - BSD
 
-erlzmq
-------
+zeromq/v?/erlzmq
+----------------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 
-- https://github.com/zeromq/erlzmq2
+- https://github.com/zeromq/erlzmq2 (branch master and 3.x)
 - commit 0471f082685f17c6f9633ce9cfe4bec0c73cfd58
 - Sat Feb 18 17:05:03 PST 2012
 - BSD
@@ -124,12 +125,21 @@ Erlang JSON Parsing
 
 misultin
 --------
-Fast Erlang HTTP Server
+Fast Erlang HTTP Server (version 0.9 final)
 
 - http://github.com/ostinelli/misultin
 - commit b9fe3125cf17f4415a6d7fc60642b670f5e18eb8
 - Sat Feb 18 17:11:31 PST 2012
 - BSD
+
+nodefinder
+----------
+Strategies for automatic node discovery in Erlang
+
+- http://code.google.com/p/nodefinder/
+- r84
+- 2012-06-16 23:10:00 PST
+- New BSD
 
 rebar
 -----
@@ -140,11 +150,12 @@ Erlang OTP-compliant build tool
 - Sat May 14 03:35:34 PDT 2011
 - Apache License
 
-zeromq
-------
-ZeroMQ 3.1.0 beta
+zeromq/v?/zeromq
+----------------
+ZeroMQ 2.2.0 and 3.2.0-rc1
 
-- http://download.zeromq.org/zeromq-3.1.0-beta.tar.gz
-- Sat Feb 18 17:03:40 PST 2012
+- http://download.zeromq.org/zeromq-2.2.0.tar.gz
+- http://download.zeromq.org/zeromq-3.2.0-rc1.tar.gz
+- Fri Jul  6 18:42:15 PDT 2012
 - LGPL
 

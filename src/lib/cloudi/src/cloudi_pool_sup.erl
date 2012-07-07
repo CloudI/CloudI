@@ -53,7 +53,8 @@
 -behaviour(supervisor).
 
 %% external interface
--export([start_link/3]).
+-export([start_link/3, start_link_done/1,
+         start_children/2, which_children/1]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -72,26 +73,76 @@ start_link(Name, Count, {_, StartFunc, Restart, Shutdown, Type, Modules})
     ChildSpecs = lists:foldl(fun(Id, L) ->
         [{Id, StartFunc, Restart, Shutdown, Type, Modules} | L]
     end, [], lists:seq(1, Count)),
-    start_link(Name, ChildSpecs).
+    Result = supervisor:start_link(?MODULE, [Name, ChildSpecs, self()]),
+    case Result of
+        {ok, _} ->
+            % make the startup synchronous to avoid causing problems for
+            % supervisor dependencies listed sequentially
+            % (i.e., within the same supervisor)
+            receive startup_done -> ok end,
+            Result;
+        _ ->
+            Result
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
+
+start_link_done(Parent)
+    when is_pid(Parent) ->
+    Parent ! startup_done,
+    ok.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
+
+start_children(Supervisor, ChildSpecs)
+    when is_pid(Supervisor), is_list(ChildSpecs) ->
+    cloudi_lists:itera(fun(Child, L, F) ->
+        case supervisor:start_child(Supervisor, Child) of
+            {ok, Pid} ->
+                F([Pid | L]);
+            {ok, Pid, _} ->
+                F([Pid | L]);
+            {error, _} = Error ->
+                Error
+        end
+    end, [], ChildSpecs).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
+
+which_children(Supervisor)
+    when is_pid(Supervisor) ->
+    lists:foldl(fun
+        ({cloudi_pool, _, _, _}, L) ->
+            L;
+        ({_, undefined, _, _}, L) ->
+            L;
+        ({_, Pid, _, _}, L) ->
+            [Pid | L]
+    end, [], supervisor:which_children(Supervisor)).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
 
-init([Name, ChildSpecs]) ->
+init([Name, ChildSpecs, Parent]) ->
     MaxRestarts = 5,
     MaxTime = 60, % seconds (1 minute)
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{one_for_one, MaxRestarts, MaxTime}, 
           [{cloudi_pool,
-            {cloudi_pool, start_link, [Name, ChildSpecs, self()]},
+            {cloudi_pool, start_link, [Name, ChildSpecs, self(), Parent]},
             permanent, Shutdown, worker, [cloudi_pool]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-start_link(Name, ChildSpecs)
-    when is_atom(Name), is_list(ChildSpecs) ->
-    supervisor:start_link(?MODULE, [Name, ChildSpecs]).
 

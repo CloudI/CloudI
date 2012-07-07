@@ -54,7 +54,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/3,
+-export([start_link/4,
          get/1]).
 
 %% gen_server callbacks
@@ -75,9 +75,11 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Name, ChildSpecs, Supervisor)
-    when is_atom(Name), is_list(ChildSpecs), is_pid(Supervisor) ->
-    gen_server:start_link({local, Name}, ?MODULE, [ChildSpecs, Supervisor], []).
+start_link(Name, ChildSpecs, Supervisor, Parent)
+    when is_atom(Name), is_list(ChildSpecs), is_pid(Supervisor),
+         is_pid(Parent) ->
+    gen_server:start_link({local, Name}, ?MODULE,
+                          [ChildSpecs, Supervisor, Parent], []).
 
 get(Name)
     when is_atom(Name) ->
@@ -87,7 +89,8 @@ get(Name)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ChildSpecs, Supervisor]) ->
+init([ChildSpecs, Supervisor, Parent]) ->
+    cloudi_pool_sup:start_link_done(Parent),
     self() ! {start, ChildSpecs},
     {ok, #state{supervisor = Supervisor}}.
 
@@ -120,25 +123,15 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
-    Pids = cloudi_lists:itera(fun(Child, L, F) ->
-        case supervisor:start_child(Supervisor, Child) of
-            {ok, Pid} ->
-                F([Pid | L]);
-            {ok, Pid, _} ->
-                F([Pid | L]);
-            {error, _} = Error ->
-                {stop, Error, State}
-        end
-    end, [], ChildSpecs),
-    if
-        Pids == [] ->
+    case cloudi_pool_sup:start_children(Supervisor, ChildSpecs) of
+        [] ->
             {stop, {error, noproc}, State};
-        is_list(Pids) ->
+        Pids when is_list(Pids) ->
             erlang:put(current, 1),
             {noreply, State#state{pool = erlang:list_to_tuple(Pids),
                                   count = erlang:length(Pids)}};
-        true ->
-            Pids
+        {error, _} = Error ->
+            Error
     end;
 
 handle_info(Request, State) ->
@@ -156,14 +149,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 update(I, #state{supervisor = Supervisor} = State) ->
-    Pids = lists:foldl(fun
-        ({cloudi_pool, _, _, _}, L) ->
-            L;
-        ({_, undefined, _, _}, L) ->
-            L;
-        ({_, Pid, _, _}, L) ->
-            [Pid | L]
-    end, [], supervisor:which_children(Supervisor)),
+    Pids = cloudi_pool_sup:which_children(Supervisor),
     Count = erlang:length(Pids),
     NewState = State#state{pool = erlang:list_to_tuple(Pids),
                            count = Count},

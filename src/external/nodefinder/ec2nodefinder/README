@@ -1,0 +1,1 @@
+ec2nodefinder is a node discovery service based upon ec2-describe-instances.

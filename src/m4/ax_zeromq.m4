@@ -13,10 +13,13 @@
 #   This macro sets:
 #
 #     ZEROMQ_CFLAGS
+#     ZEROMQ_LDFLAGS
+#     ZEROMQ_VERSION_MAJOR
+#     ZEROMQ_ROOT_DIR
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog
+# Copyright (c) 2011-2012, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -71,9 +74,23 @@ AC_DEFUN([AX_ZEROMQ],
             fi
             ],
             [want_zeromq="no"])
+    AC_ARG_WITH([zeromq_version],
+        [AS_HELP_STRING([--with-zeromq-version@<:@=ARG@:>@],
+            [specify the version of the ZeroMQ library (ARG=2|3)
+             @<:@ARG=2@:>@ ])],
+            [
+            if test "$withval" = "2"; then
+                want_zeromq_version="2"
+            elif test "$withval" = "3"; then
+                want_zeromq_version="3"
+            else
+                AC_MSG_ERROR([ZeroMQ version 2 or 3, not $withval])
+            fi
+            ],
+            [want_zeromq_version="2"])
 
     if test "x$want_zeromq" = "xyes"; then
-        local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq"
+        local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq/v$want_zeromq_version"
         if test "x$ac_zeromq_path" != "x"; then
             ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
             ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
@@ -93,7 +110,7 @@ AC_DEFUN([AX_ZEROMQ],
                 ZEROMQ_LDFLAGS=""
             fi
         fi
-        AC_MSG_CHECKING(for ZeroMQ)
+        AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
 
         CFLAGS_SAVED="$CFLAGS"
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
@@ -101,9 +118,11 @@ AC_DEFUN([AX_ZEROMQ],
 
         dnl check ZeroMQ installation
         AC_LANG_PUSH(C)
+        AC_DEFINE([VERSION_MAJOR_MIN], [$want_zeromq_version],
+                  [Requested ZeroMQ major version])
         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
             @%:@include <zmq.h>]], [[
-            #if ZMQ_VERSION_MAJOR >= 2
+            #if ZMQ_VERSION_MAJOR >= VERSION_MAJOR_MIN
             /* ok */
             #else
             #error ZeroMQ version is too old
@@ -121,27 +140,31 @@ AC_DEFUN([AX_ZEROMQ],
           LDFLAGS="$LDFLAGS_SAVED"
           export LDFLAGS
         fi
-        AC_SUBST(ZEROMQ_LDFLAGS)
-        AC_SUBST(ZEROMQ_CFLAGS)
         CFLAGS="$CFLAGS_SAVED"
         export CFLAGS
 
         if test "x$build_zeromq" = "xyes"; then
             abs_top_srcdir=`cd $srcdir; pwd`
             AC_CONFIG_COMMANDS([zeromq],
-                [(cd $SRCDIR/external/zeromq/ && \
+                [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/zeromq/ && \
                   ./configure --prefix=$PREFIX --enable-static \
                               --with-pic && \
                   make && make install && \
                   echo "ZeroMQ locally installed" || exit 1)],
                 [PREFIX=$local_zeromq_path
-                 SRCDIR=$abs_top_srcdir])
+                 SRCDIR=$abs_top_srcdir
+                 ZEROMQ_VERSION_MAJOR=$want_zeromq_version])
 
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+            ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
             ac_zeromq_path="$local_zeromq_path"
             AC_MSG_RESULT(building)
         fi
+        AC_SUBST(ZEROMQ_LDFLAGS)
+        AC_SUBST(ZEROMQ_CFLAGS)
 
+        ZEROMQ_VERSION_MAJOR="$want_zeromq_version"
+        AC_SUBST(ZEROMQ_VERSION_MAJOR)
         ZEROMQ_ROOT_DIR="$ac_zeromq_path"
         AC_SUBST(ZEROMQ_ROOT_DIR)
     fi

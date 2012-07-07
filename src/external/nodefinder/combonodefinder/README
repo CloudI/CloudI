@@ -1,0 +1,2 @@
+An Erlang application which includes ec2nodefinder and nodefinder and
+invokes the former on EC2 and the latter everywhere else.
