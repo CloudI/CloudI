@@ -1,0 +1,22 @@
+=Version 0.2.1=
+  * rerelease with upgraded fw-template-erlang
+  * dialyzer doesn't know about undocumented arguments to gen_udp:open/2
+
+=Version 0.2.0=
+  * Incorporate suggestions from Matthew Dempsky <matthew@mochimedia.com>
+  	- multicast ttl
+	- seperate send and recv sockets
+	- prevent list_to_atom flood
+
+=Version 0.1.2=
+  * Build with latest framewerk (erlrc hooks).
+
+=Version 0.1.1=
+  * Cleanup documentation.
+  * Fix make dist.
+
+=Version 0.1.0=
+  * Add discover call in nodefinder.erl
+
+=Version 0.0.0=
+  * Initial version

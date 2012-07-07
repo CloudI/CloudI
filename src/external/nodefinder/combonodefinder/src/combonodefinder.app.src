@@ -1,0 +1,19 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
+{application, combonodefinder, 
+  [{description, "combonodefinder Application"},
+   {vsn, "0.0.5"},
+   {modules, [
+        combonodefinder
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        crypto,
+        stdlib,
+        kernel
+        ]},
+   {mod, {combonodefinder,[]}},
+   {start_phases, []}]}.
+

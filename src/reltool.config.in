@@ -1,17 +1,25 @@
 {sys,
  [
-  {lib_dirs, ["lib", "external"]},
+  {lib_dirs,
+   [
+    "lib",
+    "external",
+    "external/nodefinder",
+    "external/zeromq/v@ZEROMQ_VERSION_MAJOR@"
+   ]},
   {rel, "cloudi", "1",
    [
     kernel,
     stdlib,
     sasl,
     misultin,
+    jsx,
     etokyotyrant,
+    epgsql,
     ememcached,
     emysql,
     ecouchdb,
-    epgsql,
+    combonodefinder,
     cloudi
    ]},
   {rel, "start_clean", "",
@@ -24,13 +32,16 @@
   {excl_sys_filters, ["^bin/.*",
                       "^erts.*/bin/(dialyzer|typer)"]},
   @ZEROMQ_ERLZMQ_RELTOOL@
-  {app, jsx, [{incl_cond, include}]},
+  {app, nodefinder, [{incl_cond, include}]},
   {app, misultin, [{incl_cond, include}]},
+  {app, jsx, [{incl_cond, include}]},
   {app, etokyotyrant, [{incl_cond, include}]},
-  {app, ememcached, [{incl_cond, include}]},
   {app, emysql, [{incl_cond, include}]},
-  {app, ecouchdb, [{incl_cond, include}]},
+  {app, ememcached, [{incl_cond, include}]},
   {app, epgsql, [{incl_cond, include}]},
+  {app, ecouchdb, [{incl_cond, include}]},
+  {app, ec2nodefinder, [{incl_cond, include}]},
+  {app, combonodefinder, [{incl_cond, include}]},
   {app, cloudi, [{incl_cond, include}]},
   {app, sasl, [{incl_cond, include}]}
  ]}.

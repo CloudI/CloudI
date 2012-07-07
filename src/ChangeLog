@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-07-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update epgsql to latest version
+    * Add ZeroMQ 3 along with a configuration parameter to specify which 
+      version of ZeroMQ to use and compile the proper version of erlzmq to
+      provide the same ZeroMQ interface
+    * Add nodefinder as a dependency
+    * Make cloudi_pool_sup startup synchronous to prevent any problems with
+      supervisor dependencies (at the same supervisor level)
+
 2012-06-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.0.0 (beta) released

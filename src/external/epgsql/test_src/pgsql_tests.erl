@@ -3,11 +3,13 @@
 -export([run_tests/0]).
 
 -include_lib("eunit/include/eunit.hrl").
--include_lib("ssl/include/OTP-PKIX.hrl").
+-include_lib("public_key/include/public_key.hrl").
 -include("pgsql.hrl").
 
 -define(host, "localhost").
 -define(port, 5432).
+
+-define(ssl_apps, [crypto, public_key, ssl]).
 
 connect_test() ->
     connect_only([]).
@@ -48,7 +50,7 @@ connect_with_invalid_password_test() ->
 
 
 connect_with_ssl_test() ->
-    lists:foreach(fun application:start/1, [crypto, ssl]),
+    lists:foreach(fun application:start/1, ?ssl_apps),
     with_connection(
       fun(C) ->
               {ok, _Cols, [{true}]} = pgsql:equery(C, "select ssl_is_used()")
@@ -57,12 +59,12 @@ connect_with_ssl_test() ->
       [{ssl, true}]).
 
 connect_with_client_cert_test() ->
-    lists:foreach(fun application:start/1, [crypto, ssl]),
-
+    lists:foreach(fun application:start/1, ?ssl_apps),
     Dir = filename:join(filename:dirname(code:which(pgsql_tests)), "../test_data"),
     File = fun(Name) -> filename:join(Dir, Name) end,
-    {ok, [{cert, Der, _}]} = public_key:pem_to_der(File("epgsql.crt")),
-    {ok, Cert} = public_key:pkix_decode_cert(Der, plain),
+    {ok, Pem} = file:read_file(File("epgsql.crt")),
+    [{'Certificate', Der, not_encrypted}] = public_key:pem_decode(Pem),
+    Cert = public_key:pkix_decode_cert(Der, plain),
     #'TBSCertificate'{serialNumber = Serial} = Cert#'Certificate'.tbsCertificate,
     Serial2 = list_to_binary(integer_to_list(Serial)),
 
@@ -425,19 +427,26 @@ misc_type_test() ->
 array_type_test() ->
     with_connection(
       fun(C) ->
-          Select = fun(Type, V) ->
-                       Query = "select $1::" ++ Type,
-                       {ok, _Cols, [{V}]} = pgsql:equery(C, Query, [V])
+          {ok, _, [{[1, 2]}]} = pgsql:equery(C, "select ($1::int[])[1:2]", [[1, 2, 3]]),
+          Select = fun(Type, A) ->
+                       Query = "select $1::" ++ atom_to_list(Type) ++ "[]",
+                       {ok, _Cols, [{A2}]} = pgsql:equery(C, Query, [A]),
+                       case lists:all(fun({V, V2}) -> compare(Type, V, V2) end, lists:zip(A, A2)) of
+                           true  -> ok;
+                           false -> ?assertMatch(A, A2)
+                       end
                    end,
-          Select("int2[]", []),
-          Select("int2[]", [1, 2, 3, 4]),
-          Select("int2[]", [[1], [2], [3], [4]]),
-          Select("int2[]", [[[[[[1, 2]]]]]]),
-          Select("bool[]", [true]),
-          Select("char[]", [$a, $b, $c]),
-          Select("int4[]", [[1, 2]]),
-          Select("int8[]", [[[[1, 2]], [[3, 4]]]]),
-          Select("text[]", [<<"one">>, <<"two>">>])
+          Select(int2,   []),
+          Select(int2,   [1, 2, 3, 4]),
+          Select(int2,   [[1], [2], [3], [4]]),
+          Select(int2,   [[[[[[1, 2]]]]]]),
+          Select(bool,   [true]),
+          Select(char,   [$a, $b, $c]),
+          Select(int4,   [[1, 2]]),
+          Select(int8,   [[[[1, 2]], [[3, 4]]]]),
+          Select(text,   [<<"one">>, <<"two>">>]),
+          Select(float4, [0.0, 1.0, 0.123]),
+          Select(float8, [0.0, 1.0, 0.123])
       end).
 
 text_format_test() ->
@@ -518,9 +527,15 @@ active_connection_closed_test() ->
 warning_notice_test() ->
     with_connection(
       fun(C) ->
-          {ok, _, _} = pgsql:squery(C, "select 'test\\n'"),
+          Q = "create function pg_temp.raise() returns void as $$
+               begin
+                 raise warning 'oops';
+               end;
+               $$ language plpgsql;
+               select pg_temp.raise()",
+          [{ok, _, _}, _] = pgsql:squery(C, Q),
           receive
-              {pgsql, C, {notice, #error{code = <<"22P06">>}}} -> ok
+              {pgsql, C, {notice, #error{message = <<"oops">>}}} -> ok
           after
               100 -> erlang:error(didnt_receive_notice)
           end
@@ -557,7 +572,7 @@ listen_notify_payload_test() ->
       [{async, self()}]).
 
 application_test() ->
-    lists:foreach(fun application:start/1, [crypto, ssl]),
+    lists:foreach(fun application:start/1, ?ssl_apps),
     ok = application:start(epgsql).
 
 %% -- run all tests --

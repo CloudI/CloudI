@@ -1,0 +1,1 @@
+use net_kernel:connect_node/1, not net_adm:ping/1

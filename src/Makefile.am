@@ -13,43 +13,59 @@ all-local: rebar \
            rel/files/app.config
 	$(MKDIR_P) external
 	$(MKDIR_P) lib/cloudi/ebin
-	$(MKDIR_P) external/epgsql/ebin
-	$(MKDIR_P) external/etokyotyrant/ebin
-	$(MKDIR_P) external/ememcached/ebin
-	$(MKDIR_P) external/emysql/ebin
-	$(MKDIR_P) external/ecouchdb/ebin
+	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
+	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
+	$(MKDIR_P) external/nodefinder/nodefinder/ebin
 	$(MKDIR_P) external/misultin/ebin
 	$(MKDIR_P) external/jsx/ebin
-	(cd $(top_builddir)/external; \
-        test ! -e erlzmq && \
-        $(LN_S) $(abs_top_srcdir)/external/erlzmq || exit 0)
+	$(MKDIR_P) external/etokyotyrant/ebin
+	$(MKDIR_P) external/epgsql/ebin
+	$(MKDIR_P) external/emysql/ebin
+	$(MKDIR_P) external/ememcached/ebin
+	$(MKDIR_P) external/ecouchdb/ebin
+	$(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR)
 	(cd $(top_srcdir)/lib/cloudi/src; \
         test ! -e cloudi.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
-	(cd $(top_srcdir)/external/epgsql; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
-	(cd $(top_srcdir)/external/etokyotyrant; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
-	(cd $(top_srcdir)/external/ememcached; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
-	(cd $(top_srcdir)/external/ecouchdb; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
-	(cd $(top_srcdir)/external/emysql; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
+	(cd $(top_srcdir)/external/nodefinder/nodefinder; \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/nodefinder/nodefinder/ebin || \
+        exit 0)
+	(cd $(top_srcdir)/external/nodefinder/ec2nodefinder; \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/nodefinder/ec2nodefinder/ebin || \
+        exit 0)
+	(cd $(top_srcdir)/external/nodefinder/combonodefinder; \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/nodefinder/combonodefinder/ebin || \
+        exit 0)
 	(cd $(top_srcdir)/external/misultin; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/misultin/ebin || exit 0)
 	(cd $(top_srcdir)/external/jsx; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
+	(cd $(top_srcdir)/external/etokyotyrant; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
+	(cd $(top_srcdir)/external/epgsql; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
+	(cd $(top_srcdir)/external/emysql; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
+	(cd $(top_srcdir)/external/ememcached; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
+	(cd $(top_srcdir)/external/ecouchdb; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
+	(cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
+        test ! -e erlzmq && \
+        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config compile || exit 0)
@@ -60,25 +76,33 @@ clean-local: rebar
                 -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
 	rmdir $(top_builddir)/lib/cloudi/ebin \
-          $(top_builddir)/external/epgsql/ebin \
+          $(top_builddir)/external/nodefinder/nodefinder/ebin \
+          $(top_builddir)/external/nodefinder/ec2nodefinder/ebin \
+          $(top_builddir)/external/nodefinder/combonodefinder/ebin \
+          $(top_builddir)/external/misultin/ebin \
           $(top_builddir)/external/etokyotyrant/ebin \
+          $(top_builddir)/external/epgsql/ebin \
+          $(top_builddir)/external/emysql/ebin \
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
-          $(top_builddir)/external/emysql/ebin \
-          $(top_builddir)/external/misultin/ebin \
-          $(top_builddir)/external/jsx/ebin || exit 0
+          $(top_builddir)/external/jsx/ebin \
+          || exit 0
 	rm -f $(top_srcdir)/lib/cloudi/ebin \
-          $(top_srcdir)/external/epgsql/ebin \
+          $(top_srcdir)/external/nodefinder/nodefinder/ebin \
+          $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin \
+          $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
+          $(top_srcdir)/external/misultin/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
+          $(top_srcdir)/external/epgsql/ebin \
+          $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
-          $(top_srcdir)/external/emysql/ebin \
-          $(top_srcdir)/external/misultin/ebin \
           $(top_srcdir)/external/jsx/ebin
 
 clean-configure: config.log
-	(cd $(top_srcdir)/external/zeromq && make clean || exit 0)
-	(cd $(top_srcdir)/external/erlzmq && \
+	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
+     make clean || exit 0)
+	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
      $(abs_top_builddir)/rebar -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
 	rm -f $(top_srcdir)/aclocal.m4 \
@@ -135,8 +159,7 @@ dialyze: all-local dialyzer.plt
                 external/ecouchdb/ebin \
                 external/emysql/ebin \
                 external/misultin/ebin \
-                external/jsx/ebin \
-                external/erlzmq/ebin/
+                external/jsx/ebin
 
 dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
