@@ -57,6 +57,10 @@ class _Task(threading.Thread):
         self.__index = thread_index
 
     def run(self):
+        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
+        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
+        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
+
         # sends outside of a callback function must occur before the
         # subscriptions so that the incoming requests do not interfere with
         # the outgoing sends (i.e., without subscriptions there will be no
@@ -68,9 +72,6 @@ class _Task(threading.Thread):
             self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
             print 'zeromq chain_ipc start'
             self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
-        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
-        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
-        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
 
         result = self.__api.poll()
         print 'exited thread:', result
