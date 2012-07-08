@@ -3,6 +3,8 @@
 
 2012-07-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix the ZeroMQ CloudI job termination so that sockets are always closed
+    * Fix an error in the ZeroMQ tests configuration
     * Update epgsql to latest version
     * Add ZeroMQ 3 along with a configuration parameter to specify which 
       version of ZeroMQ to use and compile the proper version of erlzmq to

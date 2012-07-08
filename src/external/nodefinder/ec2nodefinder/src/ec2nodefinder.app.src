@@ -17,5 +17,13 @@
         kernel
         ]},
    {mod, {ec2nodefinder,[]}},
-   {start_phases, []}]}.
+   {start_phases, []},
+   {env, [
+        {group, "PUT group-name here"},
+        {private_key, "PUT private-key-filepath here"},
+        {cert, "PUT cert-filepath here"},
+        {ping_timeout_sec, 60},
+        {ec2_home, "/usr"},
+        {ec2_home, "/usr/lib/jvm/java-6-openjdk-amd64/jre"}
+        ]}]}.
 

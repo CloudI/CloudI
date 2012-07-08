@@ -270,7 +270,25 @@ cloudi_job_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_job_terminate(_, #state{context = Context}) ->
+cloudi_job_terminate(_, #state{context = Context,
+                               publish = Publish,
+                               request = Request,
+                               push = Push,
+                               receives = ReceivesZMQ}) ->
+    trie:foreach(fun(_, L) ->
+        lists:foreach(fun({_, S}) ->
+            erlzmq:close(S)
+        end, L)
+    end, Publish),
+    trie:foreach(fun(_, S) ->
+        erlzmq:close(S)
+    end, Request),
+    trie:foreach(fun(_, S) ->
+        erlzmq:close(S)
+    end, Push),
+    dict:map(fun(S, _) ->
+        erlzmq:close(S)
+    end, ReceivesZMQ),
     erlzmq:term(Context),
     ok.
 
