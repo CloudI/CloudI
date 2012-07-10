@@ -388,7 +388,6 @@ new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
 new([{'nodes', automatic} | Terms], Config) ->
     application:start(combonodefinder),
     new(Terms, Config);
-new([{'nodes', [A | _] = Value} | Terms], Config)
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'nodes', [A | _] = Value} | Terms], Config)
