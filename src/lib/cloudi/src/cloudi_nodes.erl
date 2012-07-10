@@ -241,7 +241,8 @@ handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
                    logger_redirect = NodeLogger,
-                   timer_reconnect = TimerReconnect} = State) ->
+                   timer_reconnect = TimerReconnect,
+                   nodes = Nodes} = State) ->
     if
         Node == NodeLogger ->
             cloudi_logger:redirect(undefined);
@@ -250,7 +251,7 @@ handle_info({'nodedown', Node, InfoList},
     end,
     ?LOG_INFO("nodedown ~p ~p", [Node, InfoList]),
     NewTimerReconnect = if
-        TimerReconnect == undefined ->
+        TimerReconnect == undefined, Nodes /= [] ->
             erlang:send_after(?NODE_RECONNECT, self(), reconnect);
         true ->
             TimerReconnect
@@ -259,9 +260,10 @@ handle_info({'nodedown', Node, InfoList},
                           nodes_dead = [Node | NodesDead],
                           timer_reconnect = NewTimerReconnect}};
 
-handle_info(reconnect, #state{nodes_dead = NodesDead} = State) ->
+handle_info(reconnect, #state{nodes_dead = NodesDead,
+                              nodes = Nodes} = State) ->
     if
-        NodesDead /= [] ->
+        NodesDead /= [], Nodes /= [] ->
             ?LOG_INFO("currently dead nodes ~p", [NodesDead]),
             lists:foreach(fun(Node) ->
                 net_kernel:connect_node(Node)

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add nodefinder configuration for further testing
+
 2012-07-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix the ZeroMQ CloudI job termination so that sockets are always closed

@@ -19,7 +19,6 @@
     ememcached,
     emysql,
     ecouchdb,
-    combonodefinder,
     cloudi
    ]},
   {rel, "start_clean", "",
