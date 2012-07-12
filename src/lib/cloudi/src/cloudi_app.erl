@@ -70,8 +70,8 @@ start(_, _) ->
     cloudi_random:seed(),
     {ok, Path} = application:get_env(configuration),
     case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
-        {ok, Pid} ->
-            {ok, Pid};
+        {ok, _} = Success ->
+            Success;
         {error, _} = Error ->
             Error
     end.

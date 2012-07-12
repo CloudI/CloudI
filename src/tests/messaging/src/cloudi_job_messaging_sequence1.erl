@@ -165,7 +165,7 @@ cloudi_job_terminate(_, #state{}) ->
 
 sequence1(Dispatcher, Prefix) ->
     % n.b., depends on cloudi_constants.hrl having
-    % SERVICE_NAME_PATTERN_MATCHING defined
+    % GROUP_NAME_PATTERN_MATCHING defined
     cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/d", <<"test1">>),
     cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/z", <<"test2">>),
     cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/dd", <<"test3">>),

@@ -225,12 +225,12 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 
 'HANDLE'({'subscribe', Pattern},
          #state{prefix = Prefix} = StateData) ->
-    list_pg:join(Prefix ++ Pattern, self()),
+    list_pg:join(Prefix ++ Pattern),
     {next_state, 'HANDLE', StateData};
 
 'HANDLE'({'unsubscribe', Pattern},
          #state{prefix = Prefix} = StateData) ->
-    list_pg:leave(Prefix ++ Pattern, self()),
+    list_pg:leave(Prefix ++ Pattern),
     {next_state, 'HANDLE', StateData};
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
