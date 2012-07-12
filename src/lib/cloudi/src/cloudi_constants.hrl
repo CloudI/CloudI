@@ -24,12 +24,6 @@
 -define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).
 %-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
 
-% service name pattern matching, i.e.,
-% should the strings supplied to subscribe/unsubscribe be matched as patterns
-% with the "*" wildcard character when routing service name messages?
-% (service name message sends do not use the wildcard character)
--define(SERVICE_NAME_PATTERN_MATCHING, undefined).
-
 % decrement the timeout of each successful forward, to prevent infinite messages
 % (i.e., this is the timeout penalty a request takes when forwarding a request)
 -define(FORWARD_DELTA, 100). % milliseconds
