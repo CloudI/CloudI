@@ -122,6 +122,7 @@ join(Scope, GroupName)
 
 -spec join(scope(), name(), pid()) -> 'ok'.
 
+% Pid must have a one-to-one relationship with self()
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid),
          node(Pid) =:= node() ->
@@ -153,6 +154,7 @@ leave(Scope, GroupName)
 
 -spec leave(scope(), name(), pid()) -> 'ok'.
 
+% Pid must have a one-to-one relationship with self()
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_list(GroupName), is_pid(Pid),
          node(Pid) =:= node() ->
