@@ -84,7 +84,7 @@
                          % lazy_closest |
                          % immediate_random |
                          % lazy_random, destination pid refresh
-        list_pg_data = list_pg_data:get_empty_groups(), % dest_refresh lazy
+        cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
         dest_allow,      % is the socket allowed to send to a destination
         options          % #config_job_options{} from configuration
@@ -418,11 +418,11 @@ handle_info({init_job_done, Result},
             {stop, Reason, State}
     end;
 
-handle_info({list_pg_data, Groups},
+handle_info({cpg_data, Groups},
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),
-    {noreply, State#state{list_pg_data = Groups}};
+    {noreply, State#state{cpg_data = Groups}};
 
 handle_info({'get_pid', Name, Timeout, Client}, State) ->
     handle_get_pid(Name, Timeout, Client, State);
@@ -450,7 +450,7 @@ handle_info({'mcast_async', Name, RequestInfo, Request,
 handle_info({'forward_async', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid},
             #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups,
+                   cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
@@ -481,7 +481,7 @@ handle_info({'forward_async', Name, RequestInfo, Request,
 handle_info({'forward_sync', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid},
             #state{dest_refresh = DestRefresh,
-                   list_pg_data = Groups,
+                   cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
@@ -645,7 +645,7 @@ handle_subscribe(Pattern, _,
 
 handle_subscribe_job(Pattern, Job,
                      #state{prefix = Prefix} = State) ->
-    list_pg:join(Prefix ++ Pattern, Job),
+    cpg:join(Prefix ++ Pattern, Job),
     {noreply, State}.
 
 handle_unsubscribe(Pattern, {Job, _},
@@ -658,7 +658,7 @@ handle_unsubscribe(Pattern, _,
 
 handle_unsubscribe_job(Pattern, Job,
                        #state{prefix = Prefix} = State) ->
-    list_pg:leave(Prefix ++ Pattern, Job),
+    cpg:leave(Prefix ++ Pattern, Job),
     {noreply, State}.
 
 handle_get_pid(Name, Timeout, {Job, _} = Client,
@@ -671,7 +671,7 @@ handle_get_pid(Name, Timeout, Client,
 
 handle_get_pid_job(Name, Timeout, Client, Job,
                    #state{dest_refresh = DestRefresh,
-                          list_pg_data = Groups} = State) ->
+                          cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
@@ -703,7 +703,7 @@ handle_send_async_job(Name, RequestInfo, Request,
                       Timeout, Priority, Client, Job,
                       #state{uuid_generator = UUID,
                              dest_refresh = DestRefresh,
-                             list_pg_data = Groups} = State) ->
+                             cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
@@ -759,7 +759,7 @@ handle_send_async_active_job(Name, RequestInfo, Request,
                              Timeout, Priority, Client, Job,
                              #state{uuid_generator = UUID,
                                     dest_refresh = DestRefresh,
-                                    list_pg_data = Groups} = State) ->
+                                    cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
@@ -816,7 +816,7 @@ handle_send_sync_job(Name, RequestInfo, Request,
                      Timeout, Priority, Client, Job,
                      #state{uuid_generator = UUID,
                             dest_refresh = DestRefresh,
-                            list_pg_data = Groups} = State) ->
+                            cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
@@ -900,7 +900,7 @@ handle_mcast_async_job(Name, RequestInfo, Request,
                        Timeout, Priority, Client, Job,
                        #state{uuid_generator = UUID,
                               dest_refresh = DestRefresh,
-                              list_pg_data = Groups} = State) ->
+                              cpg_data = Groups} = State) ->
     case destination_all(DestRefresh, Name, Job, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
@@ -949,11 +949,11 @@ destination_allowed(Name, DestDeny, DestAllow) ->
 
 destination_refresh_first(lazy_closest,
                           #config_job_options{dest_refresh_start = Delay}) ->
-    list_pg_data:get_groups(Delay);
+    cpg_data:get_groups(Delay);
 
 destination_refresh_first(lazy_random,
                           #config_job_options{dest_refresh_start = Delay}) ->
-    list_pg_data:get_groups(Delay);
+    cpg_data:get_groups(Delay);
 
 destination_refresh_first(immediate_closest, _) ->
     ok;
@@ -966,11 +966,11 @@ destination_refresh_first(none, _) ->
 
 destination_refresh_start(lazy_closest,
                           #config_job_options{dest_refresh_delay = Delay}) ->
-    list_pg_data:get_groups(Delay);
+    cpg_data:get_groups(Delay);
 
 destination_refresh_start(lazy_random,
                           #config_job_options{dest_refresh_delay = Delay}) ->
-    list_pg_data:get_groups(Delay);
+    cpg_data:get_groups(Delay);
 
 destination_refresh_start(immediate_closest, _) ->
     ok;
@@ -983,19 +983,19 @@ destination_refresh_start(none, _) ->
 
 destination_get(lazy_closest, Name, Pid, Groups)
     when is_list(Name) ->
-    list_pg_data:get_closest_pid(Name, Pid, Groups);
+    cpg_data:get_closest_pid(Name, Pid, Groups);
 
 destination_get(lazy_random, Name, Pid, Groups)
     when is_list(Name) ->
-    list_pg_data:get_random_pid(Name, Pid, Groups);
+    cpg_data:get_random_pid(Name, Pid, Groups);
 
 destination_get(immediate_closest, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_closest_pid(Name, Pid);
+    cpg:get_closest_pid(Name, Pid);
 
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_random_pid(Name, Pid);
+    cpg:get_random_pid(Name, Pid);
 
 destination_get(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
@@ -1004,19 +1004,19 @@ destination_get(DestRefresh, _, _, _) ->
 
 destination_all(lazy_closest, Name, Pid, Groups)
     when is_list(Name) ->
-    list_pg_data:get_members(Name, Pid, Groups);
+    cpg_data:get_members(Name, Pid, Groups);
 
 destination_all(lazy_random, Name, Pid, Groups)
     when is_list(Name) ->
-    list_pg_data:get_members(Name, Pid, Groups);
+    cpg_data:get_members(Name, Pid, Groups);
 
 destination_all(immediate_closest, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_members(Name, Pid);
+    cpg:get_members(Name, Pid);
 
 destination_all(immediate_random, Name, Pid, _)
     when is_list(Name) ->
-    list_pg:get_members(Name, Pid);
+    cpg:get_members(Name, Pid);
 
 destination_all(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",

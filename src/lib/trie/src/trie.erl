@@ -11,8 +11,8 @@
 %%%  Coded in Alphanumeric, D.R.Morrison (1968)).
 %%%
 %%% This Erlang trie implementation uses string (list of integers) keys and
-%%% is able to get performance close to the process dictionary when doing
-%%% key lookups (find or fetch, see http://okeuday.livejournal.com/16941.html).
+%%% is able to get performance close to the process dictionary when doing key
+%%% lookups (find or fetch, see [http://okeuday.livejournal.com/16941.html]).
 %%% Utilizing this trie, it is possible to avoid generating dynamic atoms
 %%% in various contexts.  Also, an added benefit to using this trie is that
 %%% the traversals preserve alphabetical ordering.
@@ -56,7 +56,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.0.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -602,6 +602,13 @@ find_similar_element(Key, Node) ->
 fold(F, A, Node) when is_function(F, 3) ->
     foldl(F, A, Node).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the trie.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec foldl(F :: fun((string(), any(), any()) -> any()),
             A :: any(),
             Node :: trie()) -> any().
@@ -919,6 +926,13 @@ fold_match_element_N([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
 
 fold_similar(Similar, F, A, Node) ->
     foldl_similar(Similar, F, A, Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the keys within a trie that share a common prefix.===
+%% Traverses in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec foldl_similar(Similar :: string(),
                     F :: fun((string(), any(), any()) -> any()),
@@ -1457,6 +1471,17 @@ merge(F, Node1, Node2) when is_function(F, 3) ->
 new() ->
     [].
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a new trie instance from a list.===
+%% The list may contain either: strings, 2 element tuples with a string as the
+%% first tuple element, or tuples with more than 2 elements (including records)
+%% with a string as the first element (second element if it is a record).
+%% If a list of records (or tuples larger than 2 elements) is provided,
+%% the whole record/tuple is stored as the value.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec new(L :: list()) -> trie().
 
 new(L) ->
@@ -1560,7 +1585,7 @@ size(Node) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Store a value in a trie instance.===
+%% ===Store only a key in a trie instance.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1569,6 +1594,12 @@ size(Node) ->
 
 store(Key, Node) ->
     store(Key, empty, Node).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a key/value pair in a trie instance.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec store(Key :: string(),
             NewValue :: any(),
@@ -1793,6 +1824,7 @@ update_counter(Key, Increment, Node) ->
     update(Key, fun(I) -> I + Increment end, Increment, Node).
 
 %%-------------------------------------------------------------------------
+%% @private
 %% @doc
 %% ===Regression test.===
 %% @end
