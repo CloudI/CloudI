@@ -1,0 +1,465 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module trie</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module trie</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="A_trie_data_structure_implementation.">A trie data structure implementation.</a></h3><p>   
+The trie (i.e., from "retrieval") data structure was invented by   
+Edward Fredkin (it is a form of radix sort).  The implementation stores   
+string suffixes as a list because it is a PATRICIA trie   
+(PATRICIA - Practical Algorithm to Retrieve Information    
+Coded in Alphanumeric, D.R.Morrison (1968)).</p>
+  
+   This Erlang trie implementation uses string (list of integers) keys and
+   is able to get performance close to the process dictionary when doing key
+   lookups (find or fetch, see <a href="http://okeuday.livejournal.com/16941.html" target="_top"><tt>http://okeuday.livejournal.com/16941.html</tt></a>).
+<p>Copyright © 2010-2012 Michael Truog</p>
+
+<p><b>Version:</b> 1.0.0 Jul 18 2012 15:52:44
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="A_trie_data_structure_implementation.">A trie data structure implementation.</a></h3><p>   
+The trie (i.e., from "retrieval") data structure was invented by   
+Edward Fredkin (it is a form of radix sort).  The implementation stores   
+string suffixes as a list because it is a PATRICIA trie   
+(PATRICIA - Practical Algorithm to Retrieve Information    
+Coded in Alphanumeric, D.R.Morrison (1968)).</p>
+  
+   This Erlang trie implementation uses string (list of integers) keys and
+   is able to get performance close to the process dictionary when doing key
+   lookups (find or fetch, see <a href="http://okeuday.livejournal.com/16941.html" target="_top"><tt>http://okeuday.livejournal.com/16941.html</tt></a>).
+   Utilizing this trie, it is possible to avoid generating dynamic atoms
+   in various contexts.  Also, an added benefit to using this trie is that
+   the traversals preserve alphabetical ordering.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-trie">trie()</a></h3>
+<p><tt>trie() = [] | <a href="#type-trie_return">trie_return()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-trie_return">trie_return()</a></h3>
+<p><tt>trie_return() = {integer(), integer(), tuple()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#append-3">append/3</a></td><td>
+  <h4><a name="Append_a_value_as_a_list_element_in_a_trie_instance.">Append a value as a list element in a trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#append_list-3">append_list/3</a></td><td>
+  <h4><a name="Append_a_list_of_values_as_a_list_element_in_a_trie_instance.">Append a list of values as a list element in a trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#erase-2">erase/2</a></td><td>
+  <h4><a name="Erase_a_value_in_a_trie.">Erase a value in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>
+  <h4><a name="Fetch_a_value_from_a_trie.">Fetch a value from a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fetch_keys-1">fetch_keys/1</a></td><td>
+  <h4><a name="Fetch_all_the_keys_in_a_trie.">Fetch all the keys in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fetch_keys_similar-2">fetch_keys_similar/2</a></td><td>
+  <h4><a name="Fetch_the_keys_within_a_trie_that_share_a_common_prefix.">Fetch the keys within a trie that share a common prefix.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#filter-2">filter/2</a></td><td>
+  <h4><a name="Filter_a_trie_with_a_predicate_function.">Filter a trie with a predicate function.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#find-2">find/2</a></td><td>
+  <h4><a name="Find_a_value_in_a_trie.">Find a value in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#find_match-2">find_match/2</a></td><td>
+  <h4><a name="Find_a_match_with_patterns_held_within_a_trie.">Find a match with patterns held within a trie.</a></h4>
+  All patterns held within the trie use a wildcard character "*" to represent
+  a regex of ".+".</td></tr>
+<tr><td valign="top"><a href="#find_prefix-2">find_prefix/2</a></td><td>
+  <h4><a name="Find_a_value_in_a_trie_by_prefix.">Find a value in a trie by prefix.</a></h4>
+  The atom 'prefix' is returned if the string supplied is a prefix
+  for a key that has previously been stored within the trie, but no
+  value was found, since there was no exact match for the string supplied.</td></tr>
+<tr><td valign="top"><a href="#find_similar-2">find_similar/2</a></td><td>
+  <h4><a name="Find_the_first_key/value_pair_in_a_trie_where_the_key_shares_a_common_prefix.">Find the first key/value pair in a trie where the key shares a common prefix.</a></h4>
+  The first match is found based on alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#fold-3">fold/3</a></td><td>
+  <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#fold_match-4">fold_match/4</a></td><td>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_matches_a_pattern.">Fold a function over the keys within a trie that matches a pattern.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#fold_similar-4">fold_similar/4</a></td><td>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#foldl-3">foldl/3</a></td><td>
+  <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#foldl_similar-4">foldl_similar/4</a></td><td>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#foldr-3">foldr/3</a></td><td>
+  <h4><a name="Fold_a_function_over_the_trie_in_reverse.">Fold a function over the trie in reverse.</a></h4>
+  Traverses in reverse alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#foldr_similar-4">foldr_similar/4</a></td><td>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix_in_reverse.">Fold a function over the keys within a trie that share a common prefix in reverse.</a></h4>
+  Traverses in reverse alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#foreach-2">foreach/2</a></td><td>
+  <h4><a name="Call_a_function_for_each_element.">Call a function for each element.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#from_list-1">from_list/1</a></td><td>
+  <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_key-2">is_key/2</a></td><td>
+  <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_prefix-2">is_prefix/2</a></td><td>
+  <h4><a name="Determine_if_the_prefix_provided_has_existed_within_a_trie.">Determine if the prefix provided has existed within a trie.</a></h4>
+  The function returns true if the string supplied is a prefix
+  for a key that has previously been stored within the trie.</td></tr>
+<tr><td valign="top"><a href="#is_prefixed-2">is_prefixed/2</a></td><td>
+  <h4><a name="Determine_if_the_provided_string_has_a_prefix_within_a_trie.">Determine if the provided string has a prefix within a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_prefixed-3">is_prefixed/3</a></td><td>
+  <h4><a name="Determine_if_the_provided_string_has_an_acceptable_prefix_within_a_trie.">Determine if the provided string has an acceptable prefix within a trie.</a></h4>
+  The prefix within the trie must match at least 1 character that is not
+  within the excluded list of characters.</td></tr>
+<tr><td valign="top"><a href="#iter-2">iter/2</a></td><td>
+  <h4><a name="Iterate_over_a_trie.">Iterate over a trie.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#itera-3">itera/3</a></td><td>
+  <h4><a name="Iterate_over_a_trie_with_an_accumulator.">Iterate over a trie with an accumulator.</a></h4>
+  Traverses in alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#map-2">map/2</a></td><td>
+  <h4><a name="Map_a_function_over_a_trie.">Map a function over a trie.</a></h4>
+  Traverses in reverse alphabetical order.</td></tr>
+<tr><td valign="top"><a href="#merge-3">merge/3</a></td><td>
+  <h4><a name="Merge_two_trie_instance.">Merge two trie instance.</a></h4>
+  Update the second trie parameter with all of the elements
+  found within the first trie parameter.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_a_new_trie_instance.">Create a new trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_a_new_trie_instance_from_a_list.">Create a new trie instance from a list.</a></h4>
+  The list may contain either: strings, 2 element tuples with a string as the
+  first tuple element, or tuples with more than 2 elements (including records)
+  with a string as the first element (second element if it is a record).</td></tr>
+<tr><td valign="top"><a href="#pattern_parse-2">pattern_parse/2</a></td><td>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
+  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "**" is forbidden.</td></tr>
+<tr><td valign="top"><a href="#prefix-3">prefix/3</a></td><td>
+  <h4><a name="Insert_a_value_as_the_first_list_element_in_a_trie_instance.">Insert a value as the first list element in a trie instance.</a></h4>
+  The reverse of append/3.</td></tr>
+<tr><td valign="top"><a href="#size-1">size/1</a></td><td>
+  <h4><a name="Size_of_a_trie_instance.">Size of a trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#store-2">store/2</a></td><td>
+  <h4><a name="Store_only_a_key_in_a_trie_instance.">Store only a key in a trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#store-3">store/3</a></td><td>
+  <h4><a name="Store_a_key/value_pair_in_a_trie_instance.">Store a key/value pair in a trie instance.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#to_list-1">to_list/1</a></td><td>
+  <h4><a name="Convert_all_entries_in_a_trie_to_a_list.">Convert all entries in a trie to a list.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-3">update/3</a></td><td>
+  <h4><a name="Update_a_value_in_a_trie.">Update a value in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-4">update/4</a></td><td>
+  <h4><a name="Update_or_add_a_value_in_a_trie.">Update or add a value in a trie.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update_counter-3">update_counter/3</a></td><td>
+  <h4><a name="Update_a_counter_in_a_trie.">Update a counter in a trie.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="append-3">append/3</a></h3>
+<div class="spec">
+<p><tt>append(Key::string(), Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Append_a_value_as_a_list_element_in_a_trie_instance.">Append a value as a list element in a trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="append_list-3">append_list/3</a></h3>
+<div class="spec">
+<p><tt>append_list(Key::string(), ValueList::list(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Append_a_list_of_values_as_a_list_element_in_a_trie_instance.">Append a list of values as a list element in a trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="erase-2">erase/2</a></h3>
+<div class="spec">
+<p><tt>erase(Key::string(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Erase_a_value_in_a_trie.">Erase a value in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="fetch-2">fetch/2</a></h3>
+<div class="spec">
+<p><tt>fetch(T::string(), X2::<a href="#type-trie_return">trie_return()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fetch_a_value_from_a_trie.">Fetch a value from a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="fetch_keys-1">fetch_keys/1</a></h3>
+<div class="spec">
+<p><tt>fetch_keys(Node::<a href="#type-trie">trie()</a>) -&gt; [string()]</tt><br></p>
+</div><p>
+  <h4><a name="Fetch_all_the_keys_in_a_trie.">Fetch all the keys in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="fetch_keys_similar-2">fetch_keys_similar/2</a></h3>
+<div class="spec">
+<p><tt>fetch_keys_similar(Similar::string(), Node::<a href="#type-trie">trie()</a>) -&gt; [string()]</tt><br></p>
+</div><p>
+  <h4><a name="Fetch_the_keys_within_a_trie_that_share_a_common_prefix.">Fetch the keys within a trie that share a common prefix.</a></h4>
+</p>
+
+<h3 class="function"><a name="filter-2">filter/2</a></h3>
+<div class="spec">
+<p><tt>filter(F::fun((string(), any()) -&gt; boolean()), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Filter_a_trie_with_a_predicate_function.">Filter a trie with a predicate function.</a></h4>
+</p>
+
+<h3 class="function"><a name="find-2">find/2</a></h3>
+<div class="spec">
+<p><tt>find(T::string(), X2::<a href="#type-trie">trie()</a>) -&gt; {ok, any()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Find_a_value_in_a_trie.">Find a value in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="find_match-2">find_match/2</a></h3>
+<div class="spec">
+<p><tt>find_match(Match::string(), Node::<a href="#type-trie">trie()</a>) -&gt; {ok, any(), any()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Find_a_match_with_patterns_held_within_a_trie.">Find a match with patterns held within a trie.</a></h4>
+  All patterns held within the trie use a wildcard character "*" to represent
+  a regex of ".+".  "**" within the trie will result in undefined behavior
+  (the pattern is malformed).  The function will search for the most specific
+  match possible, given the input string and the trie contents.  The input
+  string must not contain wildcard characters, otherwise badarg is thrown.
+  If you instead want to supply a pattern string to match the contents of
+  the trie, see fold_match/4.</p>
+
+<h3 class="function"><a name="find_prefix-2">find_prefix/2</a></h3>
+<div class="spec">
+<p><tt>find_prefix(T::string(), X2::<a href="#type-trie">trie()</a>) -&gt; {ok, any()} | prefix | error</tt><br></p>
+</div><p>
+  <h4><a name="Find_a_value_in_a_trie_by_prefix.">Find a value in a trie by prefix.</a></h4>
+  The atom 'prefix' is returned if the string supplied is a prefix
+  for a key that has previously been stored within the trie, but no
+  value was found, since there was no exact match for the string supplied.</p>
+
+<h3 class="function"><a name="find_similar-2">find_similar/2</a></h3>
+<div class="spec">
+<p><tt>find_similar(Similar::string(), Node::<a href="#type-trie">trie()</a>) -&gt; {ok, string(), any()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Find_the_first_key/value_pair_in_a_trie_where_the_key_shares_a_common_prefix.">Find the first key/value pair in a trie where the key shares a common prefix.</a></h4>
+  The first match is found based on alphabetical order.</p>
+
+<h3 class="function"><a name="fold-3">fold/3</a></h3>
+<div class="spec">
+<p><tt>fold(F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="fold_match-4">fold_match/4</a></h3>
+<div class="spec">
+<p><tt>fold_match(Match::string(), F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_matches_a_pattern.">Fold a function over the keys within a trie that matches a pattern.</a></h4>
+  Traverses in alphabetical order.  Uses "*" as a wildcard character
+  within the pattern (it acts like a ".+" regex, and "**" is forbidden).
+  The trie keys must not contain wildcard characters, otherwise badarg
+  is thrown. If you want to match a specific string without wildcards
+  on trie values that contain wildcard characters, see find_match/2.</p>
+
+<h3 class="function"><a name="fold_similar-4">fold_similar/4</a></h3>
+<div class="spec">
+<p><tt>fold_similar(Similar::string(), F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="foldl-3">foldl/3</a></h3>
+<div class="spec">
+<p><tt>foldl(F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="foldl_similar-4">foldl_similar/4</a></h3>
+<div class="spec">
+<p><tt>foldl_similar(Similar::string(), F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="foldr-3">foldr/3</a></h3>
+<div class="spec">
+<p><tt>foldr(F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_trie_in_reverse.">Fold a function over the trie in reverse.</a></h4>
+  Traverses in reverse alphabetical order.</p>
+
+<h3 class="function"><a name="foldr_similar-4">foldr_similar/4</a></h3>
+<div class="spec">
+<p><tt>foldr_similar(Similar::string(), F::fun((string(), any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix_in_reverse.">Fold a function over the keys within a trie that share a common prefix in reverse.</a></h4>
+  Traverses in reverse alphabetical order.</p>
+
+<h3 class="function"><a name="foreach-2">foreach/2</a></h3>
+<div class="spec">
+<p><tt>foreach(F::fun((string(), any()) -&gt; any()), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Call_a_function_for_each_element.">Call a function for each element.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="from_list-1">from_list/1</a></h3>
+<div class="spec">
+<p><tt>from_list(L::list()) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_key-2">is_key/2</a></h3>
+<div class="spec">
+<p><tt>is_key(T::string(), X2::<a href="#type-trie">trie()</a>) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_prefix-2">is_prefix/2</a></h3>
+<div class="spec">
+<p><tt>is_prefix(T::string(), X2::<a href="#type-trie">trie()</a>) -&gt; true | false</tt><br></p>
+</div><p>
+  <h4><a name="Determine_if_the_prefix_provided_has_existed_within_a_trie.">Determine if the prefix provided has existed within a trie.</a></h4>
+  The function returns true if the string supplied is a prefix
+  for a key that has previously been stored within the trie.
+  If no values with the prefix matching key(s) were removed from the trie,
+  then the prefix currently exists within the trie.</p>
+
+<h3 class="function"><a name="is_prefixed-2">is_prefixed/2</a></h3>
+<div class="spec">
+<p><tt>is_prefixed(T::string(), X2::<a href="#type-trie">trie()</a>) -&gt; true | false</tt><br></p>
+</div><p>
+  <h4><a name="Determine_if_the_provided_string_has_a_prefix_within_a_trie.">Determine if the provided string has a prefix within a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_prefixed-3">is_prefixed/3</a></h3>
+<div class="spec">
+<p><tt>is_prefixed(Key::string(), Exclude::string(), Node::<a href="#type-trie">trie()</a>) -&gt; true | false</tt><br></p>
+</div><p>
+  <h4><a name="Determine_if_the_provided_string_has_an_acceptable_prefix_within_a_trie.">Determine if the provided string has an acceptable prefix within a trie.</a></h4>
+  The prefix within the trie must match at least 1 character that is not
+  within the excluded list of characters.</p>
+
+<h3 class="function"><a name="iter-2">iter/2</a></h3>
+<div class="spec">
+<p><tt>iter(F::fun((string(), any(), fun(() -&gt; any())) -&gt; any()), Node::<a href="#type-trie">trie()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Iterate_over_a_trie.">Iterate over a trie.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="itera-3">itera/3</a></h3>
+<div class="spec">
+<p><tt>itera(F::fun((string(), any(), any(), fun((any()) -&gt; any())) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Iterate_over_a_trie_with_an_accumulator.">Iterate over a trie with an accumulator.</a></h4>
+  Traverses in alphabetical order.</p>
+
+<h3 class="function"><a name="map-2">map/2</a></h3>
+<div class="spec">
+<p><tt>map(F::fun((string(), any()) -&gt; any()), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Map_a_function_over_a_trie.">Map a function over a trie.</a></h4>
+  Traverses in reverse alphabetical order.</p>
+
+<h3 class="function"><a name="merge-3">merge/3</a></h3>
+<div class="spec">
+<p><tt>merge(F::fun((string(), any(), any()) -&gt; any()), Node1::<a href="#type-trie">trie()</a>, Node2::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Merge_two_trie_instance.">Merge two trie instance.</a></h4>
+  Update the second trie parameter with all of the elements
+  found within the first trie parameter.</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; []</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_new_trie_instance.">Create a new trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(L::list()) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+</div><p>
+  <h4><a name="Create_a_new_trie_instance_from_a_list.">Create a new trie instance from a list.</a></h4>
+  The list may contain either: strings, 2 element tuples with a string as the
+  first tuple element, or tuples with more than 2 elements (including records)
+  with a string as the first element (second element if it is a record).
+  If a list of records (or tuples larger than 2 elements) is provided,
+  the whole record/tuple is stored as the value.</p>
+
+<h3 class="function"><a name="pattern_parse-2">pattern_parse/2</a></h3>
+<div class="spec">
+<p><tt>pattern_parse(Pattern::string(), L::string()) -&gt; [string()] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
+  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "**" is forbidden.</p>
+
+<h3 class="function"><a name="prefix-3">prefix/3</a></h3>
+<div class="spec">
+<p><tt>prefix(Key::string(), Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Insert_a_value_as_the_first_list_element_in_a_trie_instance.">Insert a value as the first list element in a trie instance.</a></h4>
+  The reverse of append/3.</p>
+
+<h3 class="function"><a name="size-1">size/1</a></h3>
+<div class="spec">
+<p><tt>size(Node::<a href="#type-trie">trie()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Size_of_a_trie_instance.">Size of a trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="store-2">store/2</a></h3>
+<div class="spec">
+<p><tt>store(Key::string(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Store_only_a_key_in_a_trie_instance.">Store only a key in a trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="store-3">store/3</a></h3>
+<div class="spec">
+<p><tt>store(Key::string(), NewValue::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Store_a_key/value_pair_in_a_trie_instance.">Store a key/value pair in a trie instance.</a></h4>
+</p>
+
+<h3 class="function"><a name="to_list-1">to_list/1</a></h3>
+<div class="spec">
+<p><tt>to_list(Node::<a href="#type-trie">trie()</a>) -&gt; [{string(), any()}]</tt><br></p>
+</div><p>
+  <h4><a name="Convert_all_entries_in_a_trie_to_a_list.">Convert all entries in a trie to a list.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-3">update/3</a></h3>
+<div class="spec">
+<p><tt>update(T::string(), F::fun((any()) -&gt; any()), X3::<a href="#type-trie_return">trie_return()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Update_a_value_in_a_trie.">Update a value in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-4">update/4</a></h3>
+<div class="spec">
+<p><tt>update(Key::string(), F::fun((any()) -&gt; any()), Initial::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Update_or_add_a_value_in_a_trie.">Update or add a value in a trie.</a></h4>
+</p>
+
+<h3 class="function"><a name="update_counter-3">update_counter/3</a></h3>
+<div class="spec">
+<p><tt>update_counter(Key::string(), Increment::number(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+</div><p>
+  <h4><a name="Update_a_counter_in_a_trie.">Update a counter in a trie.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jul 18 2012, 15:52:44.</i></p>
+</body>
+</html>

@@ -8,7 +8,10 @@
             "external/nodefinder/nodefinder",
             "external/nodefinder/ec2nodefinder",
             "external/nodefinder/combonodefinder",
-            "lib/cloudi"]}.
+            "lib/cloudi",
+            "lib/cpg",
+            "lib/uuid",
+            "lib/trie"]}.
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
             {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
             warnings_as_errors,
