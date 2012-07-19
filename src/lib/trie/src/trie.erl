@@ -16,6 +16,7 @@
 %%% Utilizing this trie, it is possible to avoid generating dynamic atoms
 %%% in various contexts.  Also, an added benefit to using this trie is that
 %%% the traversals preserve alphabetical ordering.
+%%%
 %%% @end
 %%%
 %%% BSD LICENSE
