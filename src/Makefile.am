@@ -13,6 +13,9 @@ all-local: rebar \
            rel/files/app.config
 	$(MKDIR_P) external
 	$(MKDIR_P) lib/cloudi/ebin
+	$(MKDIR_P) lib/cpg/ebin
+	$(MKDIR_P) lib/uuid/ebin
+	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
@@ -27,6 +30,15 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/cloudi/src; \
         test ! -e cloudi.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cpg/src; \
+        test ! -e cpg.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cpg/src/cpg.app.src || exit 0)
+	(cd $(top_srcdir)/lib/uuid/src; \
+        test ! -e uuid.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/uuid/src/uuid.app.src || exit 0)
+	(cd $(top_srcdir)/lib/trie/src; \
+        test ! -e trie.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/trie/src/trie.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
@@ -76,6 +88,9 @@ clean-local: rebar
                 -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
 	rmdir $(top_builddir)/lib/cloudi/ebin \
+          $(top_builddir)/lib/cpg/ebin \
+          $(top_builddir)/lib/uuid/ebin \
+          $(top_builddir)/lib/trie/ebin \
           $(top_builddir)/external/nodefinder/nodefinder/ebin \
           $(top_builddir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
@@ -88,6 +103,9 @@ clean-local: rebar
           $(top_builddir)/external/jsx/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi/ebin \
+          $(top_srcdir)/lib/cpg/ebin \
+          $(top_srcdir)/lib/uuid/ebin \
+          $(top_srcdir)/lib/trie/ebin \
           $(top_srcdir)/external/nodefinder/nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
@@ -153,6 +171,9 @@ dialyze: all-local dialyzer.plt
 	$(DIALYZER) --plt dialyzer.plt \
                 -I lib/cloudi/include/ \
                 lib/cloudi/ebin/ \
+                lib/cpg/ebin/ \
+                lib/uuid/ebin/ \
+                lib/trie/ebin/ \
                 external/epgsql/ebin \
                 external/etokyotyrant/ebin \
                 external/ememcached/ebin \
