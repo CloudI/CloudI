@@ -81,9 +81,9 @@ class OtpErlangAtom(object):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        if type(self.value) == types.IntType:
+        if type(self.value) == int:
             return chr(_TAG_ATOM_CACHE_REF) + chr(self.value)
-        elif type(self.value) == types.StringType:
+        elif type(self.value) == bytes:
             size = len(self.value)
             if size < 256:
                 return chr(_TAG_SMALL_ATOM_EXT) + chr(size) + self.value
@@ -220,7 +220,7 @@ def _binary_to_term(i, data):
         i += 4
         i, tmp = _binary_to_term_sequence(i, arity, data)
         i, tail = _binary_to_term(i, data)
-        if tail <> []: 
+        if tail != []: 
             tmp.append(tail)
         return (i, tmp)
     elif tag == _TAG_BINARY_EXT:
@@ -236,12 +236,12 @@ def _binary_to_term(i, data):
             i += 4
         sign = ord(data[i])
         i += 1
-        bignum = 0L
+        bignum = 0
         for bignum_index in range(j):
             digit = ord(data[i + j - bignum_index])
-            bignum = bignum * 256L + long(digit)
+            bignum = bignum * 256 + int(digit)
         if sign:
-            bignum *= -1L
+            bignum *= -1
         return (i + j, bignum)
     elif tag == _TAG_NEW_FUN_EXT:
         size = struct.unpack('>I', data[i:i + 4])[0]
@@ -334,19 +334,17 @@ def term_to_binary(term):
     return chr(_TAG_VERSION) + _term_to_binary(term)
 
 def _term_to_binary(term):
-    if type(term) == types.StringType:
+    if type(term) == bytes:
         return _string_to_binary(term)
-    elif type(term) == types.ListType:
+    elif type(term) == list:
         return _list_to_binary(term)
-    elif type(term) == types.TupleType:
+    elif type(term) == tuple:
         return _tuple_to_binary(term)
-    elif type(term) == types.LongType:
+    elif type(term) == int or type(term) == types.LongType:
         return _long_to_binary(term)
-    elif type(term) == types.FloatType:
+    elif type(term) == float:
         return _float_to_binary(term)
-    elif type(term) == types.IntType:
-        return _integer_to_binary(term)
-    elif type(term) == types.BooleanType:
+    elif type(term) == bool:
         return str(OtpErlangAtom(term and "true" or "false"))
     elif isinstance(term, OtpErlangAtom):
         return str(term)
@@ -371,7 +369,7 @@ def _string_to_binary(term):
         return chr(_TAG_STRING_EXT) + struct.pack('>H', arity) + term
     else:
         return (chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
-            ''.join(map(lambda c: chr(_TAG_SMALL_INTEGER_EXT) + c, term))
+            ''.join([chr(_TAG_SMALL_INTEGER_EXT) + c for c in term])
         )
 
 def _list_to_binary(term):
@@ -401,10 +399,10 @@ def _integer_to_binary(term):
         return chr(_TAG_INTEGER_EXT) + struct.pack('>i', term)
 
 def _long_to_binary(term):
-    if -2147483648L <= term <= 2147483647L:
-        _integer_to_binary(term)
+    if -2147483648 <= term <= 2147483647:
+        return _integer_to_binary(term)
     else:
-        _bignum_to_binary(term)
+        return _bignum_to_binary(term)
 
 def _bignum_to_binary(term):
     bignum = abs(term)
