@@ -39,13 +39,12 @@
  */
 
 #include <Python.h>
-#include "cloudi.h"
-
-static PyObject *python_cloudi_error;
+#include "cloudi.hpp"
+#include <string>
 
 typedef struct {
     PyObject_HEAD;
-    cloudi_instance_t * p;
+    CloudI::API * api;
 } python_cloudi_instance_object;
 
 static void
@@ -53,11 +52,8 @@ python_cloudi_instance_object_dealloc(PyObject* self)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    if (object->p != 0)
-    {
-        cloudi_destroy(object->p);
-        free(object->p);
-    }
+    if (object->api != 0)
+        delete object->api;
     PyObject_Del(self);
 }
 
@@ -79,17 +75,43 @@ static PyTypeObject python_cloudi_instance_type = {
     0,                                       // tp_hash 
 };
 
-static PyMethodDef python_cloudi_methods[];
+static PyObject *
+python_cloudi_initialize(PyObject * self, PyObject * args);
+static PyObject *
+python_cloudi_destroy(PyObject * self, PyObject * args);
+static PyObject *
+python_cloudi_subscribe(PyObject * self, PyObject * args);
+static PyObject *
+python_cloudi_unsubscribe(PyObject * self, PyObject * args);
+
+static PyMethodDef python_cloudi_methods[] = {
+    {"initialize",
+     python_cloudi_initialize, METH_VARARGS,
+     "Initialize a new CloudI API thread instance."},
+    {"destroy",
+     python_cloudi_destroy, METH_VARARGS,
+     "Destroy a CloudI API thread instance."},
+    {"subscribe",
+     python_cloudi_subscribe, METH_VARARGS,
+     "Subscribe to a service name with a callback function."},
+    {"unsubscribe",
+     python_cloudi_unsubscribe, METH_VARARGS,
+     "Completely unsubscribe from a service name."},
+    {NULL, NULL, 0, NULL} // Sentinel
+};
+
+static PyObject *python_cloudi_error;
 
 PyMODINIT_FUNC
-initcloudi_c(void)
+initlibcloudi_py(void)
 {
     PyObject * m;
-    m = Py_InitModule("cloudi_c", python_cloudi_methods);
+    m = Py_InitModule("libcloudi_py", python_cloudi_methods);
     if (m == NULL)
         return;
 
-    python_cloudi_error = PyErr_NewException("cloudi_c.error", NULL, NULL);
+    python_cloudi_error = PyErr_NewException(
+        const_cast<char *>("libcloudi_py.error"), NULL, NULL);
     Py_INCREF(python_cloudi_error);
     PyModule_AddObject(m, "error", python_cloudi_error);
 }
@@ -99,118 +121,118 @@ python_error(int value)
 {
     switch (value)
     {
-        case cloudi_timeout:
+        case CloudI::API::return_value::timeout:
             PyErr_SetString(python_cloudi_error, "timeout");
             return;
-        case cloudi_error_function_parameter:
+        case CloudI::API::return_value::error_function_parameter:
             PyErr_SetString(python_cloudi_error, "function_parameter");
             return;
-        case cloudi_error_read_underflow:
+        case CloudI::API::return_value::error_read_underflow:
             PyErr_SetString(python_cloudi_error, "read_underflow");
             return;
-        case cloudi_error_ei_decode:
+        case CloudI::API::return_value::error_ei_decode:
             PyErr_SetString(python_cloudi_error, "ei_decode");
             return;
-        case cloudi_invalid_input:
+        case CloudI::API::return_value::invalid_input:
             PyErr_SetString(python_cloudi_error, "cloudi_invalid_input");
             return;
-        case cloudi_out_of_memory:
+        case CloudI::API::return_value::out_of_memory:
             PyErr_SetString(python_cloudi_error, "cloudi_out_of_memory");
             return;
-        case cloudi_error_read_EAGAIN:
+        case CloudI::API::return_value::error_read_EAGAIN:
             PyErr_SetString(python_cloudi_error, "read_EAGAIN");
             return;
-        case cloudi_error_read_EBADF:
+        case CloudI::API::return_value::error_read_EBADF:
             PyErr_SetString(python_cloudi_error, "read_EBADF");
             return;
-        case cloudi_error_read_EFAULT:
+        case CloudI::API::return_value::error_read_EFAULT:
             PyErr_SetString(python_cloudi_error, "read_EFAULT");
             return;
-        case cloudi_error_read_EINTR:
+        case CloudI::API::return_value::error_read_EINTR:
             PyErr_SetString(python_cloudi_error, "read_EINTR");
             return;
-        case cloudi_error_read_EINVAL:
+        case CloudI::API::return_value::error_read_EINVAL:
             PyErr_SetString(python_cloudi_error, "read_EINVAL");
             return;
-        case cloudi_error_read_EIO:
+        case CloudI::API::return_value::error_read_EIO:
             PyErr_SetString(python_cloudi_error, "read_EIO");
             return;
-        case cloudi_error_read_EISDIR:
+        case CloudI::API::return_value::error_read_EISDIR:
             PyErr_SetString(python_cloudi_error, "read_EISDIR");
             return;
-        case cloudi_error_read_null:
+        case CloudI::API::return_value::error_read_null:
             PyErr_SetString(python_cloudi_error, "read_null");
             return;
-        case cloudi_error_read_overflow:
+        case CloudI::API::return_value::error_read_overflow:
             PyErr_SetString(python_cloudi_error, "read_overflow");
             return;
-        case cloudi_error_read_unknown:
+        case CloudI::API::return_value::error_read_unknown:
             PyErr_SetString(python_cloudi_error, "read_unknown");
             return;
-        case cloudi_error_write_EAGAIN:
+        case CloudI::API::return_value::error_write_EAGAIN:
             PyErr_SetString(python_cloudi_error, "write_EAGAIN");
             return;
-        case cloudi_error_write_EBADF:
+        case CloudI::API::return_value::error_write_EBADF:
             PyErr_SetString(python_cloudi_error, "write_EBADF");
             return;
-        case cloudi_error_write_EFAULT:
+        case CloudI::API::return_value::error_write_EFAULT:
             PyErr_SetString(python_cloudi_error, "write_EFAULT");
             return;
-        case cloudi_error_write_EFBIG:
+        case CloudI::API::return_value::error_write_EFBIG:
             PyErr_SetString(python_cloudi_error, "write_EFBIG");
             return;
-        case cloudi_error_write_EINTR:
+        case CloudI::API::return_value::error_write_EINTR:
             PyErr_SetString(python_cloudi_error, "write_EINTR");
             return;
-        case cloudi_error_write_EINVAL:
+        case CloudI::API::return_value::error_write_EINVAL:
             PyErr_SetString(python_cloudi_error, "write_EINVAL");
             return;
-        case cloudi_error_write_EIO:
+        case CloudI::API::return_value::error_write_EIO:
             PyErr_SetString(python_cloudi_error, "write_EIO");
             return;
-        case cloudi_error_write_ENOSPC:
+        case CloudI::API::return_value::error_write_ENOSPC:
             PyErr_SetString(python_cloudi_error, "write_ENOSPC");
             return;
-        case cloudi_error_write_EPIPE:
+        case CloudI::API::return_value::error_write_EPIPE:
             PyErr_SetString(python_cloudi_error, "write_EPIPE");
             return;
-        case cloudi_error_write_null:
+        case CloudI::API::return_value::error_write_null:
             PyErr_SetString(python_cloudi_error, "write_null");
             return;
-        case cloudi_error_write_overflow:
+        case CloudI::API::return_value::error_write_overflow:
             PyErr_SetString(python_cloudi_error, "write_overflow");
             return;
-        case cloudi_error_write_unknown:
+        case CloudI::API::return_value::error_write_unknown:
             PyErr_SetString(python_cloudi_error, "write_unknown");
             return;
-        case cloudi_error_ei_encode:
+        case CloudI::API::return_value::error_ei_encode:
             PyErr_SetString(python_cloudi_error, "ei_encode");
             return;
-        case cloudi_error_poll_EBADF:
+        case CloudI::API::return_value::error_poll_EBADF:
             PyErr_SetString(python_cloudi_error, "poll_EBADF");
             return;
-        case cloudi_error_poll_EFAULT:
+        case CloudI::API::return_value::error_poll_EFAULT:
             PyErr_SetString(python_cloudi_error, "poll_EFAULT");
             return;
-        case cloudi_error_poll_EINTR:
+        case CloudI::API::return_value::error_poll_EINTR:
             PyErr_SetString(python_cloudi_error, "poll_EINTR");
             return;
-        case cloudi_error_poll_EINVAL:
+        case CloudI::API::return_value::error_poll_EINVAL:
             PyErr_SetString(python_cloudi_error, "poll_EINVAL");
             return;
-        case cloudi_error_poll_ENOMEM:
+        case CloudI::API::return_value::error_poll_ENOMEM:
             PyErr_SetString(python_cloudi_error, "poll_ENOMEM");
             return;
-        case cloudi_error_poll_ERR:
+        case CloudI::API::return_value::error_poll_ERR:
             PyErr_SetString(python_cloudi_error, "poll_ERR");
             return;
-        case cloudi_error_poll_HUP:
+        case CloudI::API::return_value::error_poll_HUP:
             PyErr_SetString(python_cloudi_error, "poll_HUP");
             return;
-        case cloudi_error_poll_NVAL:
+        case CloudI::API::return_value::error_poll_NVAL:
             PyErr_SetString(python_cloudi_error, "poll_NVAL");
             return;
-        case cloudi_error_poll_unknown:
+        case CloudI::API::return_value::error_poll_unknown:
             PyErr_SetString(python_cloudi_error, "poll_unknown");
             return;
         default:
@@ -224,17 +246,18 @@ python_cloudi_initialize(PyObject * self, PyObject * args)
 {
     unsigned int thread_index;
     python_cloudi_instance_object * object;
-    int result;
 
-    if (! PyArg_ParseTuple(args, "I", &thread_index))
+    if (! PyArg_ParseTuple(args, "I:initialize", &thread_index))
         return NULL;
     object = PyObject_New(python_cloudi_instance_object,
                           &python_cloudi_instance_type);
-    object->p = (cloudi_instance_t *) malloc(sizeof(cloudi_instance_t));
-    result = cloudi_initialize(object->p, thread_index);
-    if (result != 0)
+    try
     {
-        python_error(result);
+        object->api = new CloudI::API(thread_index);
+    }
+    catch (CloudI::API::invalid_input_exception const *)
+    {
+        python_error(CloudI::API::return_value::invalid_input);
         return NULL;
     }
     return (PyObject *) object;
@@ -245,22 +268,90 @@ python_cloudi_destroy(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    cloudi_destroy(object->p);
-    free(object->p);
-    object->p = 0;
+    delete object->api;
+    object->api = 0;
+    Py_XDECREF(object);
+    Py_RETURN_NONE;
+}
+
+class callback_function : public CloudI::API::function_object2
+{
+    public:
+        callback_function(PyObject * f) : m_f(f)
+        {
+            Py_XINCREF(m_f);
+        }
+        virtual ~callback_function() throw()
+        {
+            Py_XDECREF(m_f);
+        }
+        callback_function(callback_function const & o) : m_f(o.m_f)
+        {
+            Py_XINCREF(m_f);
+        }
+        virtual void operator () (CloudI::API const &,
+                                  int const,
+                                  char const * const,
+                                  char const * const,
+                                  void const * const,
+                                  uint32_t const,
+                                  void const * const,
+                                  uint32_t const,
+                                  uint32_t,
+                                  int8_t,
+                                  char const * const,
+                                  char const * const,
+                                  uint32_t const) const
+        {
+            //Py_BEGIN_BLOCK_THREADS;
+            // XXX do stuff here
+            //Py_BEGIN_UNBLOCK_THREADS;
+        }
+
+    private:
+        PyObject * const m_f;
+};
+
+static PyObject *
+python_cloudi_subscribe(PyObject * self, PyObject * args)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    char const * pattern;
+    PyObject * f;
+    if (! PyArg_ParseTuple(args, "sO:subscribe", &pattern, &f))
+        return NULL;
+    if (! PyCallable_Check(f))
+    {
+        PyErr_SetString(python_cloudi_error, "subscribe: not_callable");
+        return NULL;
+    }
+    int result = object->api->subscribe(pattern, callback_function(f));
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+python_cloudi_unsubscribe(PyObject * self, PyObject * args)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    char const * pattern;
+    if (! PyArg_ParseTuple(args, "s:unsubscribe", &pattern))
+        return NULL;
+    int result = object->api->unsubscribe(pattern);
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
     Py_RETURN_NONE;
 }
 
 // Py_BEGIN_ALLOW_THREADS
 // Py_END_ALLOW_THREADS
-
-static PyMethodDef python_cloudi_methods[] = {
-    {"initialize",
-     python_cloudi_initialize, METH_VARARGS,
-     "Initialize a new CloudI API thread instance."},
-    {"destroy",
-     python_cloudi_destroy, METH_VARARGS,
-     "Destroy a CloudI API thread instance."},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
-};
 

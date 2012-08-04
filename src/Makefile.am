@@ -154,6 +154,7 @@ clean-configure: config.log
           $(top_builddir)/cloudi.conf
 	rm -rf $(top_srcdir)/autom4te.cache
 	rm -rf $(top_builddir)/api/c/.deps/ \
+           $(top_builddir)/api/python/.deps/ \
            $(top_builddir)/lib/cloudi/cxx_src/.deps/ \
            $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
            $(top_builddir)/tests/http_req/c_src/.deps/ \
@@ -265,6 +266,8 @@ install-exec-hook: cloudi-prefix-install \
               "$(DESTDIR)$(cloudi_prefix)/lib/" || exit 0; \
     done
 	rm -rf $(top_builddir)/rel/cloudi/
+	$(LIBTOOL) --finish "$(DESTDIR)$(cloudi_prefix)/api/c"
+	$(LIBTOOL) --finish --quiet "$(DESTDIR)$(cloudi_prefix)/api/python"
 
 cloudi-prefix-install:
 	$(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -439,6 +442,8 @@ api-python-install:
 	$(INSTALL_DATA) "$(top_srcdir)/api/python/erlang.py" \
                     "$(DESTDIR)$(cloudi_prefix)/api/python/"
 	$(INSTALL_DATA) "$(top_srcdir)/api/python/cloudi.py" \
+                    "$(DESTDIR)$(cloudi_prefix)/api/python/"
+	$(INSTALL_DATA) "$(top_srcdir)/api/python/cloudi_c.py" \
                     "$(DESTDIR)$(cloudi_prefix)/api/python/"
 
 api-ruby-install:

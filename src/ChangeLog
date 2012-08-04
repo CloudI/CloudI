@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add function objects to the C++ CloudI API
+    * Fix python CloudI API c integration linking issues
+    * Fix various build issues related the the C/C++ CloudI API
+
 2012-07-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update python CloudI API for python version 3
