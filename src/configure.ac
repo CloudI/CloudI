@@ -50,8 +50,9 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
 # python check
 AC_ARG_VAR([PYTHON],[python executable])
 AC_PATH_PROG([PYTHON],[python])
-AX_PROG_PYTHON_VERSION([2.5.0], ,
-                       [AC_MSG_ERROR([Python >= 2.5.0 not found])])
+AX_PROG_PYTHON_VERSION([2.7.0],
+                       [AX_PYTHON_C],
+                       [AC_MSG_ERROR([Python >= 2.7.0 not found])])
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
@@ -102,6 +103,7 @@ AC_CONFIG_FILES([cloudi.conf
                  api/java/com/ericsson/otp/Makefile
                  api/java/com/ericsson/otp/erlang/Makefile
                  api/java/jar/Makefile
+                 api/python/Makefile
                  lib/Makefile
                  lib/cloudi/Makefile
                  lib/cloudi/cxx_src/Makefile
