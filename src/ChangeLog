@@ -5,6 +5,12 @@
 
     * Update python CloudI API for python version 3
 
+2012-07-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cpg, uuid, and trie applications instead of using modules within
+      the CloudI application (this includes making cpg more abstract based on
+      the list_pg source code)
+
 2012-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Tweaks to list_pg to support external usage

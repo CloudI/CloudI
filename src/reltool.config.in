@@ -9,9 +9,7 @@
    ]},
   {rel, "cloudi", "1",
    [
-    kernel,
-    stdlib,
-    sasl,
+    % external dependencies
     misultin,
     jsx,
     etokyotyrant,
@@ -19,7 +17,15 @@
     ememcached,
     emysql,
     ecouchdb,
-    cloudi
+    % CloudI
+    cloudi,
+    cpg,
+    uuid,
+    trie,
+    % Erlang
+    sasl,
+    stdlib,
+    kernel
    ]},
   {rel, "start_clean", "",
    [
@@ -30,6 +36,7 @@
   {profile, embedded},
   {excl_sys_filters, ["^bin/.*",
                       "^erts.*/bin/(dialyzer|typer)"]},
+  % external dependencies
   @ZEROMQ_ERLZMQ_RELTOOL@
   {app, nodefinder, [{incl_cond, include}]},
   {app, misultin, [{incl_cond, include}]},
@@ -41,7 +48,12 @@
   {app, ecouchdb, [{incl_cond, include}]},
   {app, ec2nodefinder, [{incl_cond, include}]},
   {app, combonodefinder, [{incl_cond, include}]},
+  % CloudI
   {app, cloudi, [{incl_cond, include}]},
+  {app, cpg, [{incl_cond, include}]},
+  {app, uuid, [{incl_cond, include}]},
+  {app, trie, [{incl_cond, include}]},
+  % Erlang
   {app, sasl, [{incl_cond, include}]}
  ]}.
 

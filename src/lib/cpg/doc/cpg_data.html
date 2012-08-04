@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module cpg_data</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cpg_data</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CPG_Groups_Handling.">CPG Groups Handling.</a></h3>
+   Method of using cpg instead of pg2.
+<p>Copyright © 2011-2012 Michael Truog</p>
+
+<p><b>Version:</b> 1.0.1 Jul 19 2012 13:06:03
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CPG_Groups_Handling.">CPG Groups Handling.</a></h3>
+   Method of using cpg instead of pg2.  The resulting process group
+   handling is more scalable and more efficient.  However, usage is limited
+   to string (list of integers) group names (unless the GROUP_STORAGE macro
+   is changed and pattern matching is disabled).  The groups state is
+   obtained from the cpg process for a specific scope and is then used with
+   the functions provided here, so that contention for the cpg process
+   can be avoided.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_closest_pid-2">get_closest_pid/2</a></td><td>
+  <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
+  Remote pids are selected randomly since the distributed Erlang connections
+  create a fully connected network.</td></tr>
+<tr><td valign="top"><a href="#get_closest_pid-3">get_closest_pid/3</a></td><td>
+  <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member, with local pids given priority while excluding a specific pid.</a></h4>
+  Remote pids are selected randomly since the distributed Erlang connections
+  create a fully connected network.</td></tr>
+<tr><td valign="top"><a href="#get_empty_groups-0">get_empty_groups/0</a></td><td>
+  <h4><a name="Get_empty_group_storage.">Get empty group storage.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_groups-0">get_groups/0</a></td><td>
+  <h4><a name="Get_the_group_storage.">Get the group storage.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</td></tr>
+<tr><td valign="top"><a href="#get_groups-1">get_groups/1</a></td><td>
+  <h4><a name="Get_the_group_storage_for_a_particular_scope_or_after_a_period_of_time.">Get the group storage for a particular scope or after a period of time.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</td></tr>
+<tr><td valign="top"><a href="#get_groups-2">get_groups/2</a></td><td>
+  <h4><a name="Get_the_group_storage_for_a_particular_scope_after_a_period_of_time.">Get the group storage for a particular scope after a period of time.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</td></tr>
+<tr><td valign="top"><a href="#get_local_members-2">get_local_members/2</a></td><td>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_members-2">get_members/2</a></td><td>
+  <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_members-3">get_members/3</a></td><td>
+  <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_random_pid-2">get_random_pid/2</a></td><td>
+  <h4><a name="Get_a_group_member.">Get a group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_random_pid-3">get_random_pid/3</a></td><td>
+  <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#which_groups-1">which_groups/1</a></td><td>
+  <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_closest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
+  Remote pids are selected randomly since the distributed Erlang connections
+  create a fully connected network.</p>
+
+<h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_closest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member, with local pids given priority while excluding a specific pid.</a></h4>
+  Remote pids are selected randomly since the distributed Erlang connections
+  create a fully connected network.  Usually the self() pid is excluded
+  with this function call.</p>
+
+<h3 class="function"><a name="get_empty_groups-0">get_empty_groups/0</a></h3>
+<div class="spec">
+<p><tt>get_empty_groups() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_empty_group_storage.">Get empty group storage.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_groups-0">get_groups/0</a></h3>
+<div class="spec">
+<p><tt>get_groups() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_group_storage.">Get the group storage.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</p>
+
+<h3 class="function"><a name="get_groups-1">get_groups/1</a></h3>
+<div class="spec">
+<p><tt>get_groups(Scope) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_group_storage_for_a_particular_scope_or_after_a_period_of_time.">Get the group storage for a particular scope or after a period of time.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</p>
+
+<h3 class="function"><a name="get_groups-2">get_groups/2</a></h3>
+<div class="spec">
+<p><tt>get_groups(Scope, Time) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_group_storage_for_a_particular_scope_after_a_period_of_time.">Get the group storage for a particular scope after a period of time.</a></h4>
+  This provides the internal representation of process groups so that
+  requests will not be blocked by the single process managing the scope
+  of the process groups.</p>
+
+<h3 class="function"><a name="get_local_members-2">get_local_members/2</a></h3>
+<div class="spec">
+<p><tt>get_local_members(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_members-2">get_members/2</a></h3>
+<div class="spec">
+<p><tt>get_members(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_members-3">get_members/3</a></h3>
+<div class="spec">
+<p><tt>get_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_random_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_group_member.">Get a group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_random_pid-3">get_random_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_random_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="which_groups-1">which_groups/1</a></h3>
+<div class="spec">
+<p><tt>which_groups(Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jul 19 2012, 13:06:03.</i></p>
+</body>
+</html>

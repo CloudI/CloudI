@@ -8,7 +8,11 @@
             "external/misultin",
             "external/nodefinder/nodefinder",
             "external/nodefinder/ec2nodefinder",
-            "external/nodefinder/combonodefinder"]}.
+            "external/nodefinder/combonodefinder",
+            "lib/cloudi",
+            "lib/cpg",
+            "lib/uuid",
+            "lib/trie"]}.
 {edoc_opts, [{preprocess, true}]}.
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
             {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
