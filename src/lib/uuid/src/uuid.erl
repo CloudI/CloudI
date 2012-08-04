@@ -4,7 +4,7 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==Erlang UUID Generation==
-%%% http://www.ietf.org/rfc/rfc4122.txt is the reference for official UUIDs.
+%%% [http://www.ietf.org/rfc/rfc4122.txt] is the reference for official UUIDs.
 %%% This implementation provides a version 1 UUID that includes both the
 %%% Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang
 %%% node name within the 48 bit node ID.  To make room for the Erlang pid
@@ -55,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.0.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -91,8 +91,24 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create new UUID state for v1 UUID generation.===
+%% @end
+%%-------------------------------------------------------------------------
+
 new(Pid) when is_pid(Pid) ->
     new(Pid, erlang).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create new UUID state for v1 UUID generation using a specific type of timestamp.===
+%% The timestamp can either be based on erlang:now/0 with erlang or
+%% os:timestamp/0 with os.  erlang:now/0 will make sure all time values are
+%% increasing, even if the system clock changes.  os:timestamp/0 will get the
+%% system clock quickly without modifying the result.
+%% @end
+%%-------------------------------------------------------------------------
 
 new(Pid, TimestampType)
     when is_pid(Pid), TimestampType =:= erlang;
@@ -148,6 +164,12 @@ new(Pid, TimestampType)
                 clock_seq_low = ClockSeqLow,
                 timestamp_type = TimestampType}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v1 UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq_high = ClockSeqHigh,
                    clock_seq_low = ClockSeqLow,
@@ -167,8 +189,22 @@ get_v1(#uuid_state{node_id = NodeId,
       ClockSeqLow:8,
       NodeId/binary>>.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current time value in a manner consistent with the v1 UUID.===
+%% The result is an integer in microseconds.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v1_time() ->
     get_v1_time(erlang).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current time value in a manner consistent with the v1 UUID.===
+%% The result is an integer in microseconds.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_v1_time(erlang) ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
@@ -181,6 +217,13 @@ get_v1_time(os) ->
 get_v1_time(#uuid_state{timestamp_type = TimestampType}) ->
     get_v1_time(TimestampType);
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the time value from a v1 UUID.===
+%% The result is an integer in microseconds.
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<TimeLow:32, TimeMid:16, TimeHigh:12,
@@ -191,6 +234,12 @@ get_v1_time(Value)
     <<Time:60>> = <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>>,
     Time. % microseconds since epoch
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v3 UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v3(Name) ->
     <<B1:60, B2a:6, B2b:6, B3:56>> = crypto:md5(Name),
     B2 = B2a bxor B2b,
@@ -199,6 +248,12 @@ get_v3(Name) ->
       B2:6,
       0:1, 1:1,            % reserved bits
       B3:56>>.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v3 UUID in a particular namespace.===
+%% @end
+%%-------------------------------------------------------------------------
 
 get_v3(Namespace, Name) when is_binary(Namespace) ->
     NameBin = if
@@ -209,16 +264,22 @@ get_v3(Namespace, Name) when is_binary(Namespace) ->
     end,
     get_v3(<<Namespace/binary, NameBin/binary>>).
 
-% crypto:rand_bytes/1 repeats in the same way as
-% RAND_pseudo_bytes within OpenSSL.
-% if OpenSSL is configured to use the MD PRNG (default) with SHA1
-% (in openssl/crypto/rand/md_rand.c),
-% the collisions are between 2^80 and 2^51
-% (http://eprint.iacr.org/2008/469.pdf).  So, that means this would
-% repeat ideally every 1.21e24 and at worst every 2.25e15.
-% if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
-% and would have collisions based on 3DES (which is a black-box algorithm,
-% i.e., the DES S-boxes used within the cipher were never published).
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v4 UUID (using crypto/openssl).===
+%% crypto:rand_bytes/1 repeats in the same way as
+%% RAND_pseudo_bytes within OpenSSL.
+%% if OpenSSL is configured to use the MD PRNG (default) with SHA1
+%% (in openssl/crypto/rand/md_rand.c),
+%% the collisions are between 2^80 and 2^51
+%% ([http://eprint.iacr.org/2008/469.pdf]).  So, that means this would
+%% repeat ideally every 1.21e24 and at worst every 2.25e15.
+%% if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
+%% and would have collisions based on 3DES (which is a black-box algorithm,
+%% i.e., the DES S-boxes used within the cipher were never published).
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v4() ->
     <<Rand1:60, _:4, Rand2:6, _:2, Rand3:56>> = crypto:rand_bytes(16),
     <<Rand1:60,
@@ -227,13 +288,18 @@ get_v4() ->
       0:1, 1:1,            % reserved bits
       Rand3:56>>.
 
-% random:uniform/1 repeats every 2.78e13
-% (see B.A. Wichmann and I.D.Hill, in 
-%  'An efficient and portable pseudo-random number generator',
-%  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
-% a single random:uniform/1 call can provide a maximum of 45 bits
-% (currently this is not significantly faster
-%  because multiple function calls are necessary)
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v4 UUID (using Wichmann-Hill 1982).===
+%% random:uniform/1 repeats every 2.78e13
+%% (see B.A. Wichmann and I.D.Hill, in 
+%%  'An efficient and portable pseudo-random number generator',
+%%  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
+%% a single random:uniform/1 call can provide a maximum of 45 bits
+%% (currently this is not significantly faster
+%%  because multiple function calls are necessary)
+%% @end
+%%-------------------------------------------------------------------------
 
 get_v4_urandom_bigint() ->
     Rand1 = random:uniform(2199023255552) - 1, % random 41 bits
@@ -246,7 +312,13 @@ get_v4_urandom_bigint() ->
       0:1, 1:1, % reserved bits
       Rand2c:16, Rand3:40>>.
 
-% Erlang only allows 27 bits to be used for a native integer
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v4 UUID (using Wichmann-Hill 1982).===
+%% Attempt to only use native integers (Erlang limits integers to 27 bits
+%% before using bigints) to investigate the speed when using HiPE.
+%% @end
+%%-------------------------------------------------------------------------
 
 get_v4_urandom_native() ->
     Rand1 = random:uniform(134217727) - 1, % random 27 bits
@@ -261,6 +333,12 @@ get_v4_urandom_native() ->
       0:1, 1:1, % reserved bits
       Rand3c:6, Rand4:27, Rand5:27>>.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v5 UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
 get_v5(Name) ->
     <<B1:60, B2:6, B3a:56, B3b:38>> = crypto:sha(Name),
     B3 = B3a bxor B3b,
@@ -269,6 +347,12 @@ get_v5(Name) ->
       B2:6,
       0:1, 1:1,            % reserved bits
       B3:56>>.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v5 UUID in a particular namespace.===
+%% @end
+%%-------------------------------------------------------------------------
 
 get_v5(Namespace, Name) when is_binary(Namespace) ->
     NameBin = if
@@ -279,6 +363,12 @@ get_v5(Namespace, Name) when is_binary(Namespace) ->
     end,
     get_v5(<<Namespace/binary, NameBin/binary>>).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a UUID to a string representation.===
+%% @end
+%%-------------------------------------------------------------------------
+
 uuid_to_string(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<B1:32/unsigned-integer,
@@ -288,6 +378,12 @@ uuid_to_string(Value)
       B5:48/unsigned-integer>> = Value,
     lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
                                 [B1, B2, B3, B4, B5])).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a string representation to a UUID.===
+%% @end
+%%-------------------------------------------------------------------------
 
 string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08, $-,
                 N09, N10, N11, N12, $-,
@@ -366,22 +462,28 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
     <<B01, B02, B03, B04, B05, B06, B07, B08,
       B09, B10, B11, B12, B13, B14, B15, B16>>.
 
-% The RFC said to increment the clock sequence counter
-% if the system clock was set backwards.  However, erlang:now/0 always
-% provides increasing time values, so this function is not necessary
-% when the system clock changes.  Since the version 1 node id contains the
-% Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
-% bitwise-xor operation, the node id is specific to both the Erlang node
-% and the Erlang node lifetime (the PID Creation is different after a node 
-% crash). Therefore, it is unclear why this function would be necessary
-% within this Erlang implementation of v1 UUID generation (if the system
-% is always running). The only event that seems to require this function's
-% usage is if the v1 UUID has been stored and retrieved where both actions
-% occurred at a point with a system clock change inbetween or possibly
-% on different machines with a large difference in system clocks
-% (i.e., in some situation that isn't handled by the Erlang VM, so
-%  possibly if an external distribution mechanism was used between
-%  Erlang VMs, not connected with distributed Erlang).
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Increment the clock sequence of v1 UUID state.===
+%% The RFC said to increment the clock sequence counter
+%% if the system clock was set backwards.  However, erlang:now/0 always
+%% provides increasing time values, so this function is not necessary
+%% when the system clock changes.  Since the version 1 node id contains the
+%% Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
+%% bitwise-xor operation, the node id is specific to both the Erlang node
+%% and the Erlang node lifetime (the PID Creation is different after a node 
+%% crash). Therefore, it is unclear why this function would be necessary
+%% within this Erlang implementation of v1 UUID generation (if the system
+%% is always running). The only event that seems to require this function's
+%% usage is if the v1 UUID has been stored and retrieved where both actions
+%% occurred at a point with a system clock change inbetween or possibly
+%% on different machines with a large difference in system clocks
+%% (i.e., in some situation that isn't handled by the Erlang VM, so
+%%  possibly if an external distribution mechanism was used between
+%%  Erlang VMs, not connected with distributed Erlang).
+%% @end
+%%-------------------------------------------------------------------------
+
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
     NewClockSeq = if
@@ -430,3 +532,4 @@ mac_address([{_, L} | Rest]) ->
         {hwaddr, _} ->
             mac_address(Rest)
     end.
+

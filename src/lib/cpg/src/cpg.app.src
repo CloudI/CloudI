@@ -1,0 +1,28 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
+{application, cpg, 
+  [{description, "CloudI Process Groups"},
+   {vsn, "1.0.1"},
+   {modules, [
+        cpg,
+        cpg_app,
+        cpg_data,
+        cpg_sup
+        ]},
+   {registered,[
+        % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
+        cloudi_process_group
+        ]},
+   {applications, [
+        trie,
+        stdlib,
+        kernel
+        ]},
+   {mod, {cpg_app, []}},
+   {start_phases, []},
+   {env, [
+        {scope, [
+            ]}
+        ]}]}.
+

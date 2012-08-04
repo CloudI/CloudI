@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module uuid</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module uuid</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
+   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
+<p>Copyright © 2011-2012 Michael Truog</p>
+
+<p><b>Version:</b> 0.2.0 Jul 19 2012 10:05:15
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
+   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
+   This implementation provides a version 1 UUID that includes both the
+   Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang
+   node name within the 48 bit node ID.  To make room for the Erlang pid
+   identifier, the 48 bits from the MAC address
+   (i.e., 3 OCI (Organizationally Unique Identifier) bytes and
+   3 NIC (Network Interface Controller) specific bytes) and
+   the distributed Erlang node name are bitwise-XORed down to 16 bits.
+   The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
+   The version 3 (MD5), version 4 (random), and version 5 (SHA)
+   methods are provided as specified within the RFC.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_v1-1">get_v1/1</a></td><td>
+  <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v1_time-0">get_v1_time/0</a></td><td>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in microseconds.</td></tr>
+<tr><td valign="top"><a href="#get_v1_time-1">get_v1_time/1</a></td><td>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in microseconds.</td></tr>
+<tr><td valign="top"><a href="#get_v3-1">get_v3/1</a></td><td>
+  <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v3-2">get_v3/2</a></td><td>
+  <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v4-0">get_v4/0</a></td><td>
+  <h4><a name="Get_a_v4_UUID_(using_crypto/openssl).">Get a v4 UUID (using crypto/openssl).</a></h4>
+  crypto:rand_bytes/1 repeats in the same way as
+  RAND_pseudo_bytes within OpenSSL.</td></tr>
+<tr><td valign="top"><a href="#get_v4_urandom_bigint-0">get_v4_urandom_bigint/0</a></td><td>
+  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_1982).">Get a v4 UUID (using Wichmann-Hill 1982).</a></h4>
+  random:uniform/1 repeats every 2.78e13
+  (see B.A.</td></tr>
+<tr><td valign="top"><a href="#get_v4_urandom_native-0">get_v4_urandom_native/0</a></td><td>
+  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_1982).">Get a v4 UUID (using Wichmann-Hill 1982).</a></h4>
+  Attempt to only use native integers (Erlang limits integers to 27 bits
+  before using bigints) to investigate the speed when using HiPE.</td></tr>
+<tr><td valign="top"><a href="#get_v5-1">get_v5/1</a></td><td>
+  <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v5-2">get_v5/2</a></td><td>
+  <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#increment-1">increment/1</a></td><td>
+  <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state.">Increment the clock sequence of v1 UUID state.</a></h4>
+  The RFC said to increment the clock sequence counter
+  if the system clock was set backwards.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-2">new/2</a></td><td>
+  <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
+  The timestamp can either be based on erlang:now/0 with erlang or
+  os:timestamp/0 with os.</td></tr>
+<tr><td valign="top"><a href="#string_to_uuid-1">string_to_uuid/1</a></td><td>
+  <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#uuid_to_string-1">uuid_to_string/1</a></td><td>
+  <h4><a name="Convert_a_UUID_to_a_string_representation.">Convert a UUID to a string representation.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="get_v1-1">get_v1/1</a></h3>
+<div class="spec">
+<p><tt>get_v1(Uuid_state) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_v1_time-0">get_v1_time/0</a></h3>
+<div class="spec">
+<p><tt>get_v1_time() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in microseconds.</p>
+
+<h3 class="function"><a name="get_v1_time-1">get_v1_time/1</a></h3>
+<div class="spec">
+<p><tt>get_v1_time(Uuid_state) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in microseconds.</p>
+
+<h3 class="function"><a name="get_v3-1">get_v3/1</a></h3>
+<div class="spec">
+<p><tt>get_v3(Name) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_v3-2">get_v3/2</a></h3>
+<div class="spec">
+<p><tt>get_v3(Namespace, Name) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_v4-0">get_v4/0</a></h3>
+<div class="spec">
+<p><tt>get_v4() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v4_UUID_(using_crypto/openssl).">Get a v4 UUID (using crypto/openssl).</a></h4>
+  crypto:rand_bytes/1 repeats in the same way as
+  RAND_pseudo_bytes within OpenSSL.
+  if OpenSSL is configured to use the MD PRNG (default) with SHA1
+  (in openssl/crypto/rand/md_rand.c),
+  the collisions are between 2^80 and 2^51
+  (<a href="http://eprint.iacr.org/2008/469.pdf" target="_top"><tt>http://eprint.iacr.org/2008/469.pdf</tt></a>).  So, that means this would
+  repeat ideally every 1.21e24 and at worst every 2.25e15.
+  if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
+  and would have collisions based on 3DES (which is a black-box algorithm,
+  i.e., the DES S-boxes used within the cipher were never published).</p>
+
+<h3 class="function"><a name="get_v4_urandom_bigint-0">get_v4_urandom_bigint/0</a></h3>
+<div class="spec">
+<p><tt>get_v4_urandom_bigint() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_1982).">Get a v4 UUID (using Wichmann-Hill 1982).</a></h4>
+  random:uniform/1 repeats every 2.78e13
+  (see B.A. Wichmann and I.D.Hill, in
+   'An efficient and portable pseudo-random number generator',
+   Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
+  a single random:uniform/1 call can provide a maximum of 45 bits
+  (currently this is not significantly faster
+   because multiple function calls are necessary)</p>
+
+<h3 class="function"><a name="get_v4_urandom_native-0">get_v4_urandom_native/0</a></h3>
+<div class="spec">
+<p><tt>get_v4_urandom_native() -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_1982).">Get a v4 UUID (using Wichmann-Hill 1982).</a></h4>
+  Attempt to only use native integers (Erlang limits integers to 27 bits
+  before using bigints) to investigate the speed when using HiPE.</p>
+
+<h3 class="function"><a name="get_v5-1">get_v5/1</a></h3>
+<div class="spec">
+<p><tt>get_v5(Name) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_v5-2">get_v5/2</a></h3>
+<div class="spec">
+<p><tt>get_v5(Namespace, Name) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>
+</p>
+
+<h3 class="function"><a name="increment-1">increment/1</a></h3>
+<div class="spec">
+<p><tt>increment(Uuid_state) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state.">Increment the clock sequence of v1 UUID state.</a></h4>
+  The RFC said to increment the clock sequence counter
+  if the system clock was set backwards.  However, erlang:now/0 always
+  provides increasing time values, so this function is not necessary
+  when the system clock changes.  Since the version 1 node id contains the
+  Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
+  bitwise-xor operation, the node id is specific to both the Erlang node
+  and the Erlang node lifetime (the PID Creation is different after a node
+  crash). Therefore, it is unclear why this function would be necessary
+  within this Erlang implementation of v1 UUID generation (if the system
+  is always running). The only event that seems to require this function's
+  usage is if the v1 UUID has been stored and retrieved where both actions
+  occurred at a point with a system clock change inbetween or possibly
+  on different machines with a large difference in system clocks
+  (i.e., in some situation that isn't handled by the Erlang VM, so
+   possibly if an external distribution mechanism was used between
+   Erlang VMs, not connected with distributed Erlang).</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Pid) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-2">new/2</a></h3>
+<div class="spec">
+<p><tt>new(Pid, TimestampType) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
+  The timestamp can either be based on erlang:now/0 with erlang or
+  os:timestamp/0 with os.  erlang:now/0 will make sure all time values are
+  increasing, even if the system clock changes.  os:timestamp/0 will get the
+  system clock quickly without modifying the result.</p>
+
+<h3 class="function"><a name="string_to_uuid-1">string_to_uuid/1</a></h3>
+<div class="spec">
+<p><tt>string_to_uuid(X1) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="uuid_to_string-1">uuid_to_string/1</a></h3>
+<div class="spec">
+<p><tt>uuid_to_string(Value) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Convert_a_UUID_to_a_string_representation.">Convert a UUID to a string representation.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jul 19 2012, 10:05:15.</i></p>
+</body>
+</html>

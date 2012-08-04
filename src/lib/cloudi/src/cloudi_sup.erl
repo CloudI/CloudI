@@ -85,7 +85,6 @@ init([Config]) when is_record(Config, config) ->
     {ok,
      {{rest_for_one, MaxRestarts, MaxTime},
       [child_specification(cloudi_logger, Config),
-       child_specification(list_pg),
        child_specification(cloudi_nodes, Config),
        child_specification(cloudi_services),
        child_specification(cloudi_socket_sup),
@@ -117,12 +116,6 @@ child_specification(cloudi_configurator, Config)
     {cloudi_configurator,
      {cloudi_configurator, start_link, [Config]},
      transient, Shutdown, worker, [cloud_configurator]}.
-
-child_specification(list_pg) ->
-    Shutdown = 2000, % milliseconds
-    {list_pg,
-     {list_pg, start_link, []},
-     permanent, Shutdown, worker, [list_pg]};
 
 child_specification(cloudi_services) ->
     Shutdown = 2000, % milliseconds

@@ -1,0 +1,3 @@
+{application,cpg}.
+{packages,[]}.
+{modules,[cpg,cpg_app,cpg_data,cpg_sup,trie]}.

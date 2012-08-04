@@ -44,11 +44,7 @@
         cloudi_tuple,
         dynamic_compile,
         key2value,
-        list_pg_data,
-        list_pg,
-        pqueue4,
-        trie,
-        uuid
+        pqueue4
         ]},
    {registered,[
         list_pg,
@@ -68,6 +64,9 @@
         epgsql,
         etokyotyrant,
         misultin,
+        trie,
+        uuid,
+        cpg,
         sasl,
         stdlib,
         kernel
