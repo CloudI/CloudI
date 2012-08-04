@@ -1,1 +1,1 @@
-SUBDIRS = c java
+SUBDIRS = c java python

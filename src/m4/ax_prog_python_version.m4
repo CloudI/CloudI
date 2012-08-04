@@ -29,6 +29,7 @@
 # LICENSE
 #
 #   Copyright (c) 2009 Francesco Salvestrini <salvestrini@users.sourceforge.net>
+#   Copyright (c) 2012 Michael Truog
 #
 #   Copying and distribution of this file, with or without modification, are
 #   permitted in any medium without royalty provided the copyright notice
@@ -47,10 +48,12 @@ AC_DEFUN([AX_PROG_PYTHON_VERSION],[
         AC_MSG_CHECKING([for python version])
         changequote(<<,>>)
         python_version=`$PYTHON -V 2>&1 | $GREP "^Python " | $SED -e 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\)/\1/'`
+        python_version_release=`echo $python_version | $SED -e 's/^\([0-9]*\.[0-9]*\)\.[0-9]*/\1/'`
         changequote([,])
         AC_MSG_RESULT($python_version)
 
-    AC_SUBST([PYTHON_VERSION],[$python_version])
+        AC_SUBST([PYTHON_VERSION],[$python_version])
+        AC_SUBST([PYTHON_VERSION_RELEASE],[$python_version_release])
 
         AX_COMPARE_VERSION([$ax_python_version],[le],[$python_version],[
         :

@@ -412,6 +412,8 @@ static void exit_handler()
 int cloudi_initialize(cloudi_instance_t * p,
                       unsigned int const thread_index)
 {
+    if (p == 0)
+        return cloudi_out_of_memory;
     char const * const protocol = ::getenv("CLOUDI_API_INIT_PROTOCOL");
     if (protocol == 0)
         return cloudi_invalid_input;
@@ -456,6 +458,8 @@ int cloudi_initialize(cloudi_instance_t * p,
 
 void cloudi_destroy(cloudi_instance_t * p)
 {
+    if (p == 0)
+        return;
     if (p->fd != 0)
     {
         ::close(p->fd);

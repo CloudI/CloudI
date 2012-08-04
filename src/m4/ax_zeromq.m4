@@ -56,6 +56,8 @@
 
 AC_DEFUN([AX_ZEROMQ],
 [
+    AC_REQUIRE([AX_CHECK_PRIVATE_LIB])
+
     AC_ARG_WITH([zeromq],
         [AS_HELP_STRING([--with-zeromq@<:@=ARG@:>@],
             [use ZeroMQ library from a standard location (ARG=yes),

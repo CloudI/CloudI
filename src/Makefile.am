@@ -404,19 +404,8 @@ tests-zeromq-install:
 api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api"
 
-api-c-install: $(top_srcdir)/api/c/cloudi.h \
-               $(top_srcdir)/api/c/cloudi.hpp
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c/include"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c/lib"
-	$(INSTALL_DATA) "$(top_srcdir)/api/c/cloudi.h" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/c/include/"
-	$(INSTALL_DATA) "$(top_srcdir)/api/c/cloudi.hpp" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/c/include/"
-	list=`ls "$(top_builddir)/api/c/" | grep '^libcloudi'`; \
-    for f in $$list; do \
-        $(INSTALL_DATA) "$(top_builddir)/api/c/$$f" \
-                        "$(DESTDIR)$(cloudi_prefix)/api/c/lib/"; \
-    done
+api-c-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c"
 
 api-java-install: $(top_builddir)/api/java/jar/cloudi.jar
 	rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0

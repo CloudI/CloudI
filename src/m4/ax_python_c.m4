@@ -3,28 +3,19 @@
 #
 # SYNOPSIS
 #
-#   AX_ZEROMQ_ERLZMQ
+#   AX_PYTHON_C
 #
 # DESCRIPTION
 #
-#   Build the Erlang ZeroMQ bindings
-#
-#   Depends on AC_ERLANG_SUBST_ROOT_DIR, AX_ERLANG_REQUIRE_OTP_VER, and
-#              AX_ZEROMQ.
-#
-#   This macro sets:
-#
-#     ZEROMQ_ERLZMQ_RELTOOL
-#     ZEROMQ_ERLZMQ_APPCONF
 #
 # BSD LICENSE
-# 
-# Copyright (c) 2011, Michael Truog
+#
+# Copyright (c) 2012, Michael Truog
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -37,7 +28,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -54,32 +45,14 @@
 # DAMAGE.
 #
 
-AC_DEFUN([AX_ZEROMQ_ERLZMQ],
-[
-    AC_REQUIRE([AX_ERLANG_REQUIRE_OTP_VER])
-    
-    if test "x$ZEROMQ_ROOT_DIR" = "x"; then
-        dnl ZeroMQ will not be used
-        ZEROMQ_ERLZMQ_RELTOOL=""
-        ZEROMQ_ERLZMQ_APPCONF=""
-    elif test "x$ERLANG_ROOT_DIR" = "x"; then
-        AC_MSG_ERROR([Erlang location undefined])
-    else
-        AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
-                                  [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
-        abs_top_srcdir=`cd $srcdir; pwd`
-        AC_CONFIG_COMMANDS([zeromq_erlzmq],
-            [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/erlzmq/ && \
-              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR $BUILDDIR/rebar compile && \
-              echo "ZeroMQ erlzmq built" || exit 1)],
-            [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
-             ZEROMQ_VERSION_MAJOR=$ZEROMQ_VERSION_MAJOR
-             ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
-             SRCDIR=$abs_top_srcdir
-             BUILDDIR=$abs_top_builddir])
-        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
-        ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
-    fi
-    AC_SUBST(ZEROMQ_ERLZMQ_RELTOOL)
-    AC_SUBST(ZEROMQ_ERLZMQ_APPCONF)
+AC_DEFUN([AX_PYTHON_C],[
+    AC_PATH_PROGS([PYTHON_CONFIG],
+                  [python$PYTHON_VERSION_RELEASE-config python-config],
+                  [AC_MSG_ERROR([python-config not found])],
+                  [`AS_DIRNAME("$PYTHON")`])
+    PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
+    AC_SUBST(PYTHON_CFLAGS)
+    PYTHON_LDFLAGS=`$PYTHON_CONFIG --ldflags`
+    AC_SUBST(PYTHON_LDFLAGS)
 ])
+
