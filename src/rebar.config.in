@@ -1,4 +1,5 @@
-{sub_dirs, ["external/jsx",
+{sub_dirs, ["lib/cloudi",
+            "external/jsx",
             "external/ecouchdb",
             "external/ememcached",
             "external/emysql",
@@ -12,6 +13,7 @@
             "lib/cpg",
             "lib/uuid",
             "lib/trie"]}.
+{edoc_opts, [{preprocess, true}]}.
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
             {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
             warnings_as_errors,
