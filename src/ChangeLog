@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-07-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update python CloudI API for python version 3
+
 2012-07-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cpg, uuid, and trie applications instead of using modules within

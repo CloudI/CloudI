@@ -46,6 +46,8 @@ import sys, os, types, struct, socket, select, threading, inspect, \
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
 
+assert sys.version >= '2.7'
+
 _MESSAGE_INIT           = 1
 _MESSAGE_SEND_ASYNC     = 2
 _MESSAGE_SEND_SYNC      = 3
@@ -248,15 +250,17 @@ class API(object):
                 response = function(API.ASYNC, name, pattern,
                                     requestInfo, request,
                                     timeout, priority, transId, pid)
-                if type(response) == types.TupleType:
+                if type(response) == tuple:
                     responseInfo, response = response
-                    if not (type(responseInfo) == types.StringType or
-                            type(responseInfo) == types.UnicodeType):
+                    if not (type(responseInfo) == bytes or
+                            type(responseInfo) == str or
+                            type(responseInfo) == unicode):
                         responseInfo = ''
                 else:
                     responseInfo = ''
-                if not (type(response) == types.StringType or
-                        type(response) == types.UnicodeType):
+                if not (type(response) == bytes or
+                        type(response) == str or
+                        type(response) == unicode):
                     response = ''
             except return_async_exception:
                 return
@@ -276,15 +280,17 @@ class API(object):
                 response = function(API.SYNC, name, pattern,
                                     requestInfo, request,
                                     timeout, priority, transId, pid)
-                if type(response) == types.TupleType:
+                if type(response) == tuple:
                     responseInfo, response = response
-                    if not (type(responseInfo) == types.StringType or
-                            type(responseInfo) == types.UnicodeType):
+                    if not (type(responseInfo) == bytes or
+                            type(responseInfo) == str or
+                            type(responseInfo) == unicode):
                         responseInfo = ''
                 else:
                     responseInfo = ''
-                if not (type(response) == types.StringType or
-                        type(response) == types.UnicodeType):
+                if not (type(response) == bytes or
+                        type(response) == str or
+                        type(response) == unicode):
                     response = ''
             except return_sync_exception:
                 return
@@ -413,12 +419,12 @@ class API(object):
     def __binary_key_value_parse(self, binary):
         result = {}
         data = binary.split(chr(0))
-        for i in xrange(0, len(data) - 1, 2):
+        for i in range(0, len(data) - 1, 2):
             key = data[i]
             current = result.get(key, None)
             if current is None:
                 result[key] = data[i + 1]
-            elif type(current) == types.ListType:
+            elif type(current) == list:
                 current.append(data[i + 1])
             else:
                 result[key] = [current, data[i + 1]]

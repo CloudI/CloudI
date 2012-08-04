@@ -449,7 +449,7 @@ module Erlang
             term_packed = [term].pack('N')
             return "#{TAG_INTEGER_EXT.chr}#{term_packed}"
         else
-            bignum_to_binary(term)
+            return bignum_to_binary(term)
         end
     end
     
