@@ -57,6 +57,45 @@ namespace CloudI
 class API
 {
     public:
+        class function_object1
+        {
+            public:
+                virtual ~function_object1() throw() {}
+                virtual void operator() (API const &,
+                                         int const,
+                                         std::string const &,
+                                         std::string const &,
+                                         void const * const,
+                                         uint32_t const,
+                                         void const * const,
+                                         uint32_t const,
+                                         uint32_t,
+                                         int8_t,
+                                         char const * const,
+                                         char const * const,
+                                         uint32_t const) const = 0;
+        };
+
+        class function_object2
+        {
+            public:
+                virtual ~function_object2() throw() {}
+                virtual void operator() (API const &,
+                                         int const,
+                                         char const * const,
+                                         char const * const,
+                                         void const * const,
+                                         uint32_t const,
+                                         void const * const,
+                                         uint32_t const,
+                                         uint32_t,
+                                         int8_t,
+                                         char const * const,
+                                         char const * const,
+                                         uint32_t const) const = 0;
+        };
+
+    public:
         class callback_function_generic
         {
             public:
@@ -76,6 +115,92 @@ class API
         };
 
     private:
+        class callback_function_cxx_o1 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_o1(function_object1 const & object,
+                                         API const * api) :
+                    m_object(object), m_api(api) {}
+                virtual ~callback_function_cxx_o1() throw()
+                {
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    m_object(*m_api,
+                             command,
+                             std::string(name),
+                             std::string(pattern),
+                             request_info,
+                             request_info_size,
+                             request,
+                             request_size,
+                             timeout,
+                             priority,
+                             trans_id,
+                             pid,
+                             pid_size);
+                }
+            private:
+                function_object1 const & m_object;
+                API const * m_api;
+        };
+
+        class callback_function_cxx_o2 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_o2(function_object2 const & object,
+                                         API const * api) :
+                    m_object(object), m_api(api) {}
+                virtual ~callback_function_cxx_o2() throw()
+                {
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    m_object(*m_api,
+                             command,
+                             name,
+                             pattern,
+                             request_info,
+                             request_info_size,
+                             request,
+                             request_size,
+                             timeout,
+                             priority,
+                             trans_id,
+                             pid,
+                             pid_size);
+                }
+            private:
+                function_object2 const & m_object;
+                API const * m_api;
+        };
+
         template <typename T>
         class callback_function_cxx_m1 : public callback_function_generic
         {
@@ -360,6 +485,22 @@ class API
         API(API const & object);
 
         static unsigned int thread_count();
+
+        int subscribe(std::string const & pattern,
+                      function_object1 const & object) const
+        {
+            return subscribe(pattern.c_str(),
+                             new callback_function_cxx_o1(object,
+                                                          new API(*this)));
+        }
+
+        int subscribe(char const * const pattern,
+                      function_object2 const & object) const
+        {
+            return subscribe(pattern,
+                             new callback_function_cxx_o2(object,
+                                                          new API(*this)));
+        }
 
         template <typename T>
         int subscribe(std::string const & pattern,
