@@ -73,6 +73,47 @@ static PyTypeObject python_cloudi_instance_type = {
     0,                                       // tp_as_sequence
     0,                                       // tp_as_mapping
     0,                                       // tp_hash 
+    0,                                       // tp_call
+    0,                                       // tp_str
+    0,                                       // tp_getattro
+    0,                                       // tp_setattro
+    0,                                       // tp_as_buffer
+    Py_TPFLAGS_DEFAULT,                      // tp_flags
+    0,                                       // tp_doc
+    0,                                       // tp_traverse
+    0,                                       // tp_clear
+    0,                                       // tp_richcompare
+    0,                                       // tp_weaklistoffset
+    0,                                       // tp_iter
+    0,                                       // tp_iternext
+    0,                                       // tp_methods
+    0,                                       // tp_members
+    0,                                       // tp_getset
+    0,                                       // tp_base
+    0,                                       // tp_dict
+    0,                                       // tp_descr_get
+    0,                                       // tp_descr_set
+    0,                                       // tp_dictoffset
+    0,                                       // tp_init
+    0,                                       // tp_alloc
+    0,                                       // tp_new
+    0,                                       // tp_free
+    0,                                       // tp_is_gc
+    0,                                       // tp_bases
+    0,                                       // tp_mro
+    0,                                       // tp_cache
+    0,                                       // tp_subclasses
+    0,                                       // tp_weaklist
+    0,                                       // tp_del
+    0                                        // tp_version_tag
+#ifdef COUNT_ALLOCS
+     ,
+    0,                                       // tp_allocs
+    0,                                       // tp_frees
+    0,                                       // tp_maxalloc
+    0,                                       // tp_prev
+    0                                        // tp_next
+#endif 
 };
 
 static PyObject *
@@ -242,7 +283,7 @@ python_error(int value)
 }
 
 static PyObject *
-python_cloudi_initialize(PyObject * self, PyObject * args)
+python_cloudi_initialize(PyObject *, PyObject * args)
 {
     unsigned int thread_index;
     python_cloudi_instance_object * object;
@@ -264,7 +305,7 @@ python_cloudi_initialize(PyObject * self, PyObject * args)
 }
 
 static PyObject *
-python_cloudi_destroy(PyObject * self, PyObject * args)
+python_cloudi_destroy(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
