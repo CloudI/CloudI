@@ -1035,6 +1035,8 @@ class API
 
         uint32_t timeout_sync() const;
 
+        int8_t priority_default() const;
+
         int poll(int timeout = -1) const;
 
         char const ** request_http_qs_parse(void const * const request,

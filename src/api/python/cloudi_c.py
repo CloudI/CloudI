@@ -39,7 +39,7 @@
 # DAMAGE.
 #
 
-__all__ = ["API"]
+__all__ = ['API', 'invalid_input_exception']
 
 import sys, os
 import libcloudi_py
@@ -49,8 +49,8 @@ class API(object):
         self.__api = None
         try:
             self.__api = libcloudi_py.initialize(thread_index)
-        except libcloudi_py.error as e:
-            raise API.__exception(e)
+        except libcloudi_py.invalid_input as e:
+            raise invalid_input_exception(e)
 
     @staticmethod
     def __exception(e):
@@ -76,6 +76,17 @@ class API(object):
 
     def unsubscribe(self, pattern):
         self.__api.unsubscribe(pattern)
+
+    def send_async(self, name, request,
+                   timeout=None, request_info=None, priority=None):
+        kwargs = {}
+        if timeout is not None:
+            kwargs['timeout'] = timeout
+        if request_info is not None:
+            kwargs['request_info'] = request_info
+        if priority is not None:
+            kwargs['priority'] = priority
+        self.__api.send_async(name, request, **kwargs)
 
     #def send_async(self, name, request,
     #               timeout=None, request_info=None, priority=None):
@@ -429,8 +440,8 @@ class API(object):
     #    return data
 
 class invalid_input_exception(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'Invalid Input')
+    def __init__(self, e):
+        Exception.__init__(self, str(e))
 
 #class return_sync_exception(Exception):
 #    def __init__(self):

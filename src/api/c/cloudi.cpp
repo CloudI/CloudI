@@ -1676,6 +1676,11 @@ uint32_t API::timeout_sync() const
     return m_api->timeout_sync;
 }
 
+int8_t API::priority_default() const
+{
+    return m_api->priority_default;
+}
+
 int API::poll(int timeout) const
 {
     return cloudi_poll(m_api,

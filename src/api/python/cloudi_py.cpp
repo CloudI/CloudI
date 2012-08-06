@@ -124,6 +124,8 @@ static PyObject *
 python_cloudi_subscribe(PyObject * self, PyObject * args);
 static PyObject *
 python_cloudi_unsubscribe(PyObject * self, PyObject * args);
+static PyObject *
+python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs);
 
 static PyMethodDef python_cloudi_methods[] = {
     {"initialize",
@@ -138,10 +140,14 @@ static PyMethodDef python_cloudi_methods[] = {
     {"unsubscribe",
      python_cloudi_unsubscribe, METH_VARARGS,
      "Completely unsubscribe from a service name."},
+    {"send_async",
+     (PyCFunction) python_cloudi_send_async, METH_VARARGS | METH_KEYWORDS,
+     "Send a request asynchronously."},
     {NULL, NULL, 0, NULL} // Sentinel
 };
 
 static PyObject *python_cloudi_error;
+static PyObject *python_cloudi_invalid_input;
 
 PyMODINIT_FUNC
 initlibcloudi_py(void)
@@ -149,12 +155,19 @@ initlibcloudi_py(void)
     PyObject * m;
     m = Py_InitModule("libcloudi_py", python_cloudi_methods);
     if (m == NULL)
+    {
         return;
+    }
 
     python_cloudi_error = PyErr_NewException(
         const_cast<char *>("libcloudi_py.error"), NULL, NULL);
     Py_INCREF(python_cloudi_error);
     PyModule_AddObject(m, "error", python_cloudi_error);
+
+    python_cloudi_invalid_input = PyErr_NewException(
+        const_cast<char *>("libcloudi_py.invalid_input"), NULL, NULL);
+    Py_INCREF(python_cloudi_invalid_input);
+    PyModule_AddObject(m, "invalid_input", python_cloudi_invalid_input);
 }
 
 static void
@@ -289,7 +302,9 @@ python_cloudi_initialize(PyObject *, PyObject * args)
     python_cloudi_instance_object * object;
 
     if (! PyArg_ParseTuple(args, "I:initialize", &thread_index))
+    {
         return NULL;
+    }
     object = PyObject_New(python_cloudi_instance_object,
                           &python_cloudi_instance_type);
     try
@@ -298,7 +313,7 @@ python_cloudi_initialize(PyObject *, PyObject * args)
     }
     catch (CloudI::API::invalid_input_exception const *)
     {
-        python_error(CloudI::API::return_value::invalid_input);
+        PyErr_SetString(python_cloudi_invalid_input, "Invalid Input");
         return NULL;
     }
     return (PyObject *) object;
@@ -361,7 +376,9 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
     char const * pattern;
     PyObject * f;
     if (! PyArg_ParseTuple(args, "sO:subscribe", &pattern, &f))
+    {
         return NULL;
+    }
     if (! PyCallable_Check(f))
     {
         PyErr_SetString(python_cloudi_error, "subscribe: not_callable");
@@ -383,7 +400,9 @@ python_cloudi_unsubscribe(PyObject * self, PyObject * args)
         (python_cloudi_instance_object *) self;
     char const * pattern;
     if (! PyArg_ParseTuple(args, "s:unsubscribe", &pattern))
+    {
         return NULL;
+    }
     int result = object->api->unsubscribe(pattern);
     if (result != 0)
     {
@@ -393,6 +412,44 @@ python_cloudi_unsubscribe(PyObject * self, PyObject * args)
     Py_RETURN_NONE;
 }
 
-// Py_BEGIN_ALLOW_THREADS
-// Py_END_ALLOW_THREADS
+static PyObject *
+python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    char const * name;
+    char const * request;
+    uint32_t request_size = 0;
+    uint32_t timeout = object->api->timeout_async();
+    char const * request_info = NULL;
+    uint32_t request_info_size = 0;
+    int8_t priority = object->api->priority_default();
+    static char const * kwlist[] = {
+        "timeout", "request_info", "priority", NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ss#|Is#B",
+                                      const_cast<char**>(kwlist),
+                                      &name, &request, &request_size, &timeout,
+                                      &request_info, &request_info_size,
+                                      &priority))
+    {
+        return NULL;
+    }
+    int result = object->api->send_async(name, request_info, request_info_size,
+                                         request, request_size,
+                                         timeout, priority);
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
+    Py_BEGIN_ALLOW_THREADS;
+    result = object->api->poll();
+    Py_END_ALLOW_THREADS;
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
+    return Py_BuildValue("s", object->api->get_trans_id(0));
+}
 
