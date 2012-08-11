@@ -342,6 +342,8 @@ tests-http_req-install: \
                        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req_c.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/cloudi.jar" \

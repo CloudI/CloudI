@@ -46,6 +46,7 @@
 #
 
 AC_DEFUN([AX_PYTHON_C],[
+    AC_ARG_VAR([PYTHON_CONFIG],[python-config executable])
     AC_PATH_PROGS([PYTHON_CONFIG],
                   [python$PYTHON_VERSION_RELEASE-config python-config],
                   [AC_MSG_ERROR([python-config not found])],
