@@ -182,7 +182,7 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"poll",
      python_cloudi_poll, METH_VARARGS,
      "Handle incoming requests."},
-    {NULL} // Sentinel
+    {NULL, NULL, 0, NULL} // Sentinel
 };
 
 static PyTypeObject python_cloudi_instance_type = {
@@ -245,7 +245,7 @@ static PyTypeObject python_cloudi_instance_type = {
 };
 
 static PyMethodDef python_cloudi_methods[] = {
-    {NULL} // Sentinel
+    {NULL, NULL, 0, NULL} // Sentinel
 };
 
 PyMODINIT_FUNC
