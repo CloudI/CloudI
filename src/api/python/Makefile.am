@@ -2,8 +2,8 @@ instdir=$(DESTDIR)$(cloudi_prefix)/api/python/
 inst_LTLIBRARIES = libcloudi_py.la
 
 libcloudi_py_la_SOURCES = cloudi_py.cpp
-libcloudi_py_la_CPPFLAGS = -DNDEBUG -g -Wall \
-                           $(PYTHON_CFLAGS) \
+libcloudi_py_la_CPPFLAGS = -g -Wall \
+                           $(PYTHON_CFLAGS) -O0 \
                            -I$(top_srcdir)/api/c/ \
                            $(CXXFLAGS)
 libcloudi_py_la_LDFLAGS = $(PYTHON_LDFLAGS) -shared \

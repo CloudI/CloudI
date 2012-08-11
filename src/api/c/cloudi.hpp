@@ -57,10 +57,10 @@ namespace CloudI
 class API
 {
     public:
-        class function_object1
+        class function_object_cxx_const
         {
             public:
-                virtual ~function_object1() throw() {}
+                virtual ~function_object_cxx_const() throw() {}
                 virtual void operator() (API const &,
                                          int const,
                                          std::string const &,
@@ -76,10 +76,10 @@ class API
                                          uint32_t const) const = 0;
         };
 
-        class function_object2
+        class function_object_c_const
         {
             public:
-                virtual ~function_object2() throw() {}
+                virtual ~function_object_c_const() throw() {}
                 virtual void operator() (API const &,
                                          int const,
                                          char const * const,
@@ -93,6 +93,44 @@ class API
                                          char const * const,
                                          char const * const,
                                          uint32_t const) const = 0;
+        };
+
+        class function_object_cxx
+        {
+            public:
+                virtual ~function_object_cxx() throw() {}
+                virtual void operator() (API const &,
+                                         int const,
+                                         std::string const &,
+                                         std::string const &,
+                                         void const * const,
+                                         uint32_t const,
+                                         void const * const,
+                                         uint32_t const,
+                                         uint32_t,
+                                         int8_t,
+                                         char const * const,
+                                         char const * const,
+                                         uint32_t const) = 0;
+        };
+
+        class function_object_c
+        {
+            public:
+                virtual ~function_object_c() throw() {}
+                virtual void operator() (API const &,
+                                         int const,
+                                         char const * const,
+                                         char const * const,
+                                         void const * const,
+                                         uint32_t const,
+                                         void const * const,
+                                         uint32_t const,
+                                         uint32_t,
+                                         int8_t,
+                                         char const * const,
+                                         char const * const,
+                                         uint32_t const) = 0;
         };
 
     public:
@@ -115,13 +153,14 @@ class API
         };
 
     private:
-        class callback_function_cxx_o1 : public callback_function_generic
+        class callback_function_cxx_or1 : public callback_function_generic
         {
             public:
-                callback_function_cxx_o1(function_object1 const & object,
-                                         API const * api) :
+                callback_function_cxx_or1(function_object_cxx_const const &
+                                          object,
+                                          API const * api) :
                     m_object(object), m_api(api) {}
-                virtual ~callback_function_cxx_o1() throw()
+                virtual ~callback_function_cxx_or1() throw()
                 {
                     delete m_api;
                 }
@@ -154,17 +193,18 @@ class API
                              pid_size);
                 }
             private:
-                function_object1 const & m_object;
+                function_object_cxx_const const & m_object;
                 API const * m_api;
         };
 
-        class callback_function_cxx_o2 : public callback_function_generic
+        class callback_function_cxx_or2 : public callback_function_generic
         {
             public:
-                callback_function_cxx_o2(function_object2 const & object,
-                                         API const * api) :
+                callback_function_cxx_or2(function_object_c_const const &
+                                          object,
+                                          API const * api) :
                     m_object(object), m_api(api) {}
-                virtual ~callback_function_cxx_o2() throw()
+                virtual ~callback_function_cxx_or2() throw()
                 {
                     delete m_api;
                 }
@@ -197,7 +237,95 @@ class API
                              pid_size);
                 }
             private:
-                function_object2 const & m_object;
+                function_object_c_const const & m_object;
+                API const * m_api;
+        };
+
+        class callback_function_cxx_op1 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_op1(function_object_cxx * object,
+                                          API const * api) :
+                    m_object(object), m_api(api) {}
+                virtual ~callback_function_cxx_op1() throw()
+                {
+                    delete m_object;
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    (*m_object)(*m_api,
+                                command,
+                                std::string(name),
+                                std::string(pattern),
+                                request_info,
+                                request_info_size,
+                                request,
+                                request_size,
+                                timeout,
+                                priority,
+                                trans_id,
+                                pid,
+                                pid_size);
+                }
+            private:
+                function_object_cxx * m_object;
+                API const * m_api;
+        };
+
+        class callback_function_cxx_op2 : public callback_function_generic
+        {
+            public:
+                callback_function_cxx_op2(function_object_c * object,
+                                          API const * api) :
+                    m_object(object), m_api(api) {}
+                virtual ~callback_function_cxx_op2() throw()
+                {
+                    delete m_object;
+                    delete m_api;
+                }
+
+                virtual void operator () (int const command,
+                                          char const * const name,
+                                          char const * const pattern,
+                                          void const * const request_info,
+                                          uint32_t const request_info_size,
+                                          void const * const request,
+                                          uint32_t const request_size,
+                                          uint32_t timeout,
+                                          int8_t priority,
+                                          char const * const trans_id,
+                                          char const * const pid,
+                                          uint32_t const pid_size)
+                {
+                    (*m_object)(*m_api,
+                                command,
+                                name,
+                                pattern,
+                                request_info,
+                                request_info_size,
+                                request,
+                                request_size,
+                                timeout,
+                                priority,
+                                trans_id,
+                                pid,
+                                pid_size);
+                }
+            private:
+                function_object_c * m_object;
                 API const * m_api;
         };
 
@@ -487,19 +615,35 @@ class API
         static unsigned int thread_count();
 
         int subscribe(std::string const & pattern,
-                      function_object1 const & object) const
+                      function_object_cxx_const const & object) const
         {
             return subscribe(pattern.c_str(),
-                             new callback_function_cxx_o1(object,
-                                                          new API(*this)));
+                             new callback_function_cxx_or1(object,
+                                                           new API(*this)));
         }
 
         int subscribe(char const * const pattern,
-                      function_object2 const & object) const
+                      function_object_c_const const & object) const
         {
             return subscribe(pattern,
-                             new callback_function_cxx_o2(object,
-                                                          new API(*this)));
+                             new callback_function_cxx_or2(object,
+                                                           new API(*this)));
+        }
+
+        int subscribe(std::string const & pattern,
+                      function_object_cxx * object) const
+        {
+            return subscribe(pattern.c_str(),
+                             new callback_function_cxx_op1(object,
+                                                           new API(*this)));
+        }
+
+        int subscribe(char const * const pattern,
+                      function_object_c * object) const
+        {
+            return subscribe(pattern,
+                             new callback_function_cxx_op2(object,
+                                                           new API(*this)));
         }
 
         template <typename T>

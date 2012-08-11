@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@ sys.path.append(
 )
 
 import threading, types, traceback
-from cloudi import API
+from cloudi_c import API
 
 class _Task(threading.Thread):
     def __init__(self, thread_index):
@@ -57,7 +57,7 @@ class _Task(threading.Thread):
 
     def run(self):
         try:
-            self.__api.subscribe('python.xml/get', self.request)
+            self.__api.subscribe('python_c.xml/get', self.request)
 
             result = self.__api.poll()
             print 'exited thread:', result

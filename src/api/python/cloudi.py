@@ -39,7 +39,11 @@
 # DAMAGE.
 #
 
-__all__ = ['API', 'invalid_input_exception', 'message_decoding_exception']
+__all__ = [
+    'API',
+    'invalid_input_exception',
+    'message_decoding_exception',
+]
 
 import sys, os, types, struct, socket, select, threading, inspect, \
        collections, traceback
