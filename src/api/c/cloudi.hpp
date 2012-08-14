@@ -281,7 +281,7 @@ class API
                                 pid_size);
                 }
             private:
-                function_object_cxx * m_object;
+                function_object_cxx * const m_object;
                 API const * m_api;
         };
 
@@ -325,7 +325,7 @@ class API
                                 pid_size);
                 }
             private:
-                function_object_c * m_object;
+                function_object_c * const m_object;
                 API const * m_api;
         };
 

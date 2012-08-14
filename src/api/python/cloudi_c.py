@@ -45,7 +45,7 @@ __all__ = [
     'message_decoding_exception',
 ]
 
-import sys, os
+import sys, os, socket
 import libcloudi_py
 
 class API(object):
