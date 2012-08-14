@@ -419,7 +419,7 @@ class callback_function : public CloudI::API::function_object_c
         {
             Py_INCREF(m_f);
         }
-        static PyThreadState * thread_state_save;
+
         virtual void operator () (CloudI::API const & api,
                                   int const command,
                                   char const * const name,
@@ -442,39 +442,20 @@ class callback_function : public CloudI::API::function_object_c
                                             trans_id, 16, pid, pid_size);
             if (! args)
                 return;
-            PyObject * result;
-            {
-                PyThreadState * _save = callback_function::thread_state_save;
-                Py_BLOCK_THREADS;
-                result = PyObject_CallObject(m_f, args);
-                Py_UNBLOCK_THREADS;
-            }
+            PyObject * result = PyObject_CallObject(m_f, args);
             bool done = (result == NULL);
             Py_XDECREF(result);
             Py_DECREF(args);
-            if (! done)
+            PyErr_Clear();
+            if (done)
             {
                 if (command == CloudI::API::ASYNC)
                 {
-                    try
-                    {
-                        api.return_async(name, pattern, "", 0, "", 0,
-                                         timeout, trans_id, pid, pid_size);
-                    }
-                    catch (CloudI::API::return_async_exception const &)
-                    {
-                    }
+                    throw CloudI::API::return_async_exception();
                 }
                 else if (command == CloudI::API::SYNC)
                 {
-                    try
-                    {
-                        api.return_sync(name, pattern, "", 0, "", 0,
-                                        timeout, trans_id, pid, pid_size);
-                    }
-                    catch (CloudI::API::return_sync_exception const &)
-                    {
-                    }
+                    throw CloudI::API::return_sync_exception();
                 }
             }
         }
@@ -482,7 +463,6 @@ class callback_function : public CloudI::API::function_object_c
     private:
         PyObject * const m_f;
 };
-PyThreadState * callback_function::thread_state_save = 0;
 
 static PyObject *
 python_cloudi_subscribe(PyObject * self, PyObject * args)
@@ -550,13 +530,9 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
     {
         return NULL;
     }
-    int result;
-    Py_BEGIN_ALLOW_THREADS;
-    callback_function::thread_state_save = _save;
-    result = object->api->send_async(name, request_info, request_info_size,
-                                     request, request_size, timeout, priority);
-    Py_END_ALLOW_THREADS;
-    callback_function::thread_state_save = 0;
+    int result = object->api->send_async(name, request_info, request_info_size,
+                                         request, request_size,
+                                         timeout, priority);
     if (result != 0)
     {
         if (result == CloudI::API::return_value::timeout)
@@ -592,14 +568,9 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
     {
         return NULL;
     }
-    int result;
-    Py_BEGIN_ALLOW_THREADS;
-    callback_function::thread_state_save = _save;
-    result = object->api->send_sync(name, request_info, request_info_size,
-                                    request, request_size,
-                                    timeout, priority);
-    Py_END_ALLOW_THREADS;
-    callback_function::thread_state_save = 0;
+    int result = object->api->send_sync(name, request_info, request_info_size,
+                                        request, request_size,
+                                        timeout, priority);
     if (result != 0)
     {
         if (result == CloudI::API::return_value::timeout)
@@ -640,14 +611,9 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
     {
         return NULL;
     }
-    int result;
-    Py_BEGIN_ALLOW_THREADS;
-    callback_function::thread_state_save = _save;
-    result = object->api->mcast_async(name, request_info, request_info_size,
-                                      request, request_size,
-                                      timeout, priority);
-    Py_END_ALLOW_THREADS;
-    callback_function::thread_state_save = 0;
+    int result = object->api->mcast_async(name, request_info, request_info_size,
+                                          request, request_size,
+                                          timeout, priority);
     if (result != 0)
     {
         if (result == CloudI::API::return_value::timeout)
@@ -850,12 +816,7 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
         return NULL;
     }
     PY_ASSERT(trans_id_size == 16);
-    int result;
-    Py_BEGIN_ALLOW_THREADS;
-    callback_function::thread_state_save = _save;
-    result = object->api->recv_async(timeout, trans_id);
-    Py_END_ALLOW_THREADS;
-    callback_function::thread_state_save = 0;
+    int result = object->api->recv_async(timeout, trans_id);
     if (result != 0)
     {
         if (result == CloudI::API::return_value::timeout)
@@ -903,12 +864,7 @@ python_cloudi_poll(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    int result;
-    Py_BEGIN_ALLOW_THREADS;
-    callback_function::thread_state_save = _save;
-    result = object->api->poll();
-    Py_END_ALLOW_THREADS;
-    callback_function::thread_state_save = 0;
+    int result = object->api->poll();
     if (result != 0)
     {
         python_error(result);
