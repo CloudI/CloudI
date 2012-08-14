@@ -420,7 +420,7 @@ class callback_function : public CloudI::API::function_object_c
             Py_INCREF(m_f);
         }
 
-        virtual void operator () (CloudI::API const & api,
+        virtual void operator () (CloudI::API const &,
                                   int const command,
                                   char const * const name,
                                   char const * const pattern,
