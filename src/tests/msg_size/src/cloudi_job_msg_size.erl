@@ -61,7 +61,7 @@
 -include("cloudi_logger.hrl").
 
 -record(state, {
-        suffixes = ["cxx", "java", "python", "ruby"]
+        suffixes = ["cxx", "java", "python", "python_c", "ruby"]
     }).
 
 %%%------------------------------------------------------------------------
