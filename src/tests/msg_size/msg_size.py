@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, struct
+import threading, struct
 from cloudi import API
 
 _DESTINATION = '/tests/msg_size/erlang'

@@ -417,6 +417,8 @@ tests-msg_size-install: \
                     "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size_c.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
