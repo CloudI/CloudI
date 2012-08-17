@@ -463,7 +463,7 @@ class API(object):
                 ready = (len(fragment) == self.__size)
                 if ready:
                     IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                    ready == (len(IN) > 0)
+                    ready = (len(IN) > 0)
         return data
 
 class invalid_input_exception(Exception):
