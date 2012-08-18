@@ -5,6 +5,7 @@
 
     * Fix exception handling within the callback functions of the
       Python CloudI API C++ integration
+    * Simplify cpg process lookup
 
 2012-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 

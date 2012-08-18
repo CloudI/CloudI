@@ -329,47 +329,36 @@ pick(N, L, Pattern) ->
     #cpg_data_pid{pid = Pid} = lists:nth(random(N), L),
     {ok, Pattern, Pid}.
 
-pick_i_exclude(_, _, [], [], _, GroupName, _) ->
+pick_i(I, I, _, [], [], _, GroupName, _) ->
     {error, {'no_process', GroupName}};
 
-pick_i_exclude(I, Count, Filtered, [], _, _, Pattern) ->
-    {ok, Pattern, lists:nth((I rem Count) + 1, Filtered)};
+pick_i(I, I, Length, Filtered, [], _, _, Pattern) ->
+    {ok, Pattern, lists:nth((I rem Length) + 1, Filtered)};
 
-pick_i_exclude(I, Count, Filtered,
-               [#cpg_data_pid{pid = Exclude} | L],
-               Exclude, GroupName, Pattern) ->
-    pick_i_exclude(I, Count, Filtered, L, Exclude, GroupName, Pattern);
-    
-pick_i_exclude(I, Count, Filtered,
-               [#cpg_data_pid{pid = Pid} | L],
-               Exclude, GroupName, Pattern) ->
-    pick_i_exclude(I, Count + 1, [Pid | Filtered], L,
-                   Exclude, GroupName, Pattern).
-
-pick_i(I, I, Filtered,
+pick_i(I, I, Length, Filtered,
        [#cpg_data_pid{pid = Exclude} | L],
        Exclude, GroupName, Pattern) ->
-    pick_i_exclude(I, erlang:length(Filtered), Filtered, L,
-                   Exclude, GroupName, Pattern);
+    pick_i(I, I, Length, Filtered, L, Exclude, GroupName, Pattern);
 
-pick_i(I, I, _, [#cpg_data_pid{pid = Pid} | _], _, _, Pattern) ->
+pick_i(I, I, _, _, [#cpg_data_pid{pid = Pid} | _], _, _, Pattern) ->
     {ok, Pattern, Pid};
 
-pick_i(I, Random, Filtered,
+pick_i(I, Random, Length, Filtered,
        [#cpg_data_pid{pid = Exclude} | L],
        Exclude, GroupName, Pattern) ->
-    pick_i(I + 1, Random, Filtered, L, Exclude, GroupName, Pattern);
+    pick_i(I + 1, Random, Length, Filtered, L, Exclude, GroupName, Pattern);
 
-pick_i(I, Random, Filtered,
+pick_i(I, Random, Length, Filtered,
        [#cpg_data_pid{pid = Pid} | L],
        Exclude, GroupName, Pattern) ->
-    pick_i(I + 1, Random, [Pid | Filtered], L, Exclude, GroupName, Pattern).
+    pick_i(I + 1, Random, Length + 1, [Pid | Filtered],
+           L, Exclude, GroupName, Pattern).
 
 pick(0, [], _, GroupName, _) ->
     {error, {'no_process', GroupName}};
 
 pick(N, L, Exclude, GroupName, Pattern) ->
-    pick_i(1, random(N), [], L, Exclude, GroupName, Pattern).
+    pick_i(1, random(N), 0, [], L, Exclude, GroupName, Pattern).
 
 pick(0, [], N2, L2, Exclude, GroupName, Pattern) ->
     pick(N2, L2, Exclude, GroupName, Pattern);
