@@ -378,7 +378,8 @@ def _list_to_binary(term):
         return chr(_TAG_NIL_EXT)
     else:
         return (chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
-            ''.join([_term_to_binary(element) for element in term])
+            ''.join([_term_to_binary(element) for element in term]) +
+            chr(_TAG_NIL_EXT)
         )
 
 def _tuple_to_binary(term):
