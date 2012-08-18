@@ -55,7 +55,7 @@ class API(object):
     def __init__(self, thread_index):
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
-        except libcloudi_py.invalid_input as e:
+        except libcloudi_py.invalid_input_exception as e:
             raise invalid_input_exception(e)
 
     @staticmethod
@@ -130,13 +130,13 @@ class API(object):
                       timeout, priority, transId, pid):
         self.__api.forward_async(name, request_info, request,
                                  timeout, priority, transId, pid)
-        raise return_async_exception()
+        raise libcloudi_py.return_async_exception()
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, transId, pid):
         self.__api.forward_sync(name, request_info, request,
                                 timeout, priority, transId, pid)
-        raise return_sync_exception()
+        raise libcloudi_py.return_sync_exception()
 
     def return_(self, command, name, pattern, response_info, response,
                 timeout, transId, pid):
@@ -153,13 +153,13 @@ class API(object):
                      timeout, transId, pid):
         self.__api.return_async(name, pattern, response_info, response,
                                 timeout, transId, pid)
-        raise return_async_exception()
+        raise libcloudi_py.return_async_exception()
 
     def return_sync(self, name, pattern, response_info, response,
                     timeout, transId, pid):
         self.__api.return_sync(name, pattern, response_info, response,
                                timeout, transId, pid)
-        raise return_sync_exception()
+        raise libcloudi_py.return_sync_exception()
 
     def recv_async(self, timeout=None, transId=None):
         kwargs = {}
@@ -187,7 +187,7 @@ class API(object):
     def poll(self):
         try:
             self.__api.poll()
-        except libcloudi_py.error as e:
+        except libcloudi_py.error_exception as e:
             raise message_decoding_exception(e)
 
     def __binary_key_value_parse(self, binary):
@@ -217,14 +217,6 @@ class invalid_input_exception(Exception):
         else:
             message = 'c: ' + str(e)
         Exception.__init__(self, message)
-
-class return_sync_exception(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'Synchronous Call Return Invalid')
-
-class return_async_exception(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'Asynchronous Call Return Invalid')
 
 class message_decoding_exception(Exception):
     def __init__(self, e):
