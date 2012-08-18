@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix exception handling within the callback functions of the
+      Python CloudI API C++ integration
+
 2012-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Added better thread handling and callback usage to the
