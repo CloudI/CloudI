@@ -7,6 +7,12 @@
       Python CloudI API C++ integration
     * Simplify cpg process lookup
 
+2012-08-17 Hardy Jones   <jones3.hardy [at] gmail (dot) com>
+
+	* Fix assignment statement in Python API cloudi.py
+	* Fix list conversion to binary in Python API erlang.py
+	* Add unit tests (string, list to binary) in Python API erlang.py
+
 2012-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Added better thread handling and callback usage to the
