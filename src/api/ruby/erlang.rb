@@ -53,7 +53,7 @@ module Erlang
                 list_packed = @value.map{ |element|
                     term_to_binary_(element)
                 }.join
-                return "#{TAG_LIST_EXT.chr}#{arity_packed}#{list_packed}"
+                return "#{TAG_LIST_EXT.chr}#{arity_packed}#{list_packed}#{TAG_NIL_EXT.chr}"
             end
         end
     end
@@ -425,7 +425,7 @@ module Erlang
             term_packed = term.unpack("C#{term.length}").map{ |c|
                 "#{TAG_SMALL_INTEGER_EXT.chr}#{c}"
             }.join
-            return "#{TAG_LIST_EXT.chr}#{arity_packed}#{term_packed}"
+            return "#{TAG_LIST_EXT.chr}#{arity_packed}#{term_packed}#{TAG_NIL_EXT.chr}"
         end
     end
     
