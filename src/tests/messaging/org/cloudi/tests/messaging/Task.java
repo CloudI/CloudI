@@ -42,6 +42,7 @@ package org.cloudi.tests.messaging;
 
 import java.util.List;
 import java.util.Iterator;
+import java.util.Arrays;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import com.ericsson.otp.erlang.OtpErlangPid;
@@ -238,6 +239,10 @@ public class Task implements Runnable
                                  API.InvalidInputException,
                                  API.MessageDecodingException
     {
+        while (! Arrays.equals(this.api.recv_async(1000).id, API.TransIdNull))
+        {
+            // consume "end" and sleep
+        }
         API.out.println("messaging sequence1 start java");
         assert new String(request) == "start";
         // n.b., depends on cloudi_constants.hrl having
@@ -567,6 +572,9 @@ public class Task implements Runnable
                                                       ("prefix_").getBytes());
         assert new String(test2_check.response) == "prefix_suffix";
         API.out.println("messaging sequence3 end java");
+        // loop to find any infrequent problems, restart sequence1
+        this.api.send_async(this.api.prefix() + "sequence1",
+                            ("start").getBytes());
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
                          timeout, trans_id, pid);

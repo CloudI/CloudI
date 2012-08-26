@@ -491,6 +491,12 @@ public class API
         return recv_async(this.timeout_sync, TransIdNull, true);
     }
 
+    public Response recv_async(Integer timeout)
+                               throws MessageDecodingException
+    {
+        return recv_async(timeout, TransIdNull, true);
+    }
+
     public Response recv_async(byte[] transId)
                                throws MessageDecodingException
     {
