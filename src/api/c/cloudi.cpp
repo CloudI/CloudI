@@ -1502,6 +1502,14 @@ char const * API::get_trans_id(unsigned int const i) const
     return &(m_api->trans_id[i * 16]);
 }
 
+bool API::get_trans_id_null(unsigned int const i) const
+{
+    char const * const null = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+    char const * const trans_id = get_trans_id(i);
+    assert(trans_id != 0);
+    return (memcmp(null, trans_id, 16) == 0);
+}
+
 int API::forward_(int const command,
                   char const * const name,
                   void const * const request_info,
@@ -1654,6 +1662,14 @@ int API::recv_async() const
 {
     return cloudi_recv_async(m_api,
                              m_api->timeout_sync,
+                             0,
+                             1);
+}
+
+int API::recv_async(uint32_t timeout) const
+{
+    return cloudi_recv_async(m_api,
+                             timeout,
                              0,
                              1);
 }

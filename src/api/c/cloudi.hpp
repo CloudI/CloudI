@@ -948,6 +948,7 @@ class API
 
         uint32_t get_trans_id_count() const;
         char const * get_trans_id(unsigned int const i = 0) const;
+        bool get_trans_id_null(unsigned int const i = 0) const;
 
         int forward_(int const command,
                      char const * const name,
@@ -1160,6 +1161,8 @@ class API
         }
 
         int recv_async() const;
+
+        int recv_async(uint32_t timeout) const;
 
         int recv_async(char const * const trans_id) const;
 
