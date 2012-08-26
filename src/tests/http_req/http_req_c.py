@@ -47,43 +47,14 @@ sys.path.append(
     )
 )
 
-import threading, types, traceback
 from cloudi_c import API
-
-class _Task(threading.Thread):
-    def __init__(self, thread_index):
-        threading.Thread.__init__(self)
-        self.__api = API(thread_index)
-
-    def run(self):
-        try:
-            self.__api.subscribe('python_c.xml/get', self.request)
-
-            result = self.__api.poll()
-            print 'exited thread:', result
-        except:
-            traceback.print_exc(file=sys.stdout)
-
-    def request(self, command, name, pattern, requestInfo, request,
-                timeout, priority, transId, pid):
-        http_qs = self.__api.request_http_qs_parse(request)
-        value = http_qs.get('value', None)
-        if value is None:
-            response = """\
-<http_test><error>no value specified</error></http_test>"""
-        else:
-            if type(value) == types.ListType:
-                value = value[0]
-            response = """\
-<http_test><value>%d</value></http_test>""" % (int(value),)
-        self.__api.return_(command, name, pattern,
-                           '', response, timeout, transId, pid)
+from http_req import Task
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [_Task(i) for i in range(thread_count)]
+    threads = [Task(API(i)) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

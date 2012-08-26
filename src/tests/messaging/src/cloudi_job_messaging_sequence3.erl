@@ -87,9 +87,9 @@ cloudi_job_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
     Suffix = string:substr(Pattern, erlang:length(Prefix) + 1),
     case Suffix of
         "sequence3" ->
-            ?LOG_INFO("messaging sequence3 start erlang", []),
+            ?LOG_INFO(" messaging sequence3 start erlang", []),
             sequence3(Dispatcher, Prefix),
-            ?LOG_INFO("messaging sequence3 end erlang", []),
+            ?LOG_INFO(" messaging sequence3 end erlang", []),
             {reply, "end", State};
         "f1" ->
             RequestI = erlang:list_to_integer(Request),
@@ -128,4 +128,6 @@ sequence3(Dispatcher, Prefix) ->
     {ok, Test2Check} = cloudi_job:send_sync(Dispatcher, Prefix ++ "g1",
                                             "prefix_"),
     true = Test2Check == "prefix_suffix",
+    % loop to find any infrequent problems, restart sequence1
+    cloudi_job:send_async(Dispatcher, Prefix ++ "sequence1", "start"),
     ok.

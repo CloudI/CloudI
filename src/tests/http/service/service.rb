@@ -68,12 +68,12 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield # if $DEBUG
             end
 
-            def text(command, name, pattern, requestInfo, request,
-                     timeout, priority, transId, pid)
+            def text(command, name, pattern, request_info, request,
+                     timeout, priority, trans_id, pid)
                 $stdout.puts "(#{request})"
                 assert{"Test Text" == request}
                 @api.return_(command, name, pattern, "", "Test Response",
-                             timeout, transId, pid)
+                             timeout, trans_id, pid)
             end
         end
         begin

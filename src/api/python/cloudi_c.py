@@ -116,57 +116,57 @@ class API(object):
         ])
 
     def forward_(self, command, name, request_info, request,
-                 timeout, priority, transId, pid):
+                 timeout, priority, trans_id, pid):
         if command == API.ASYNC:
             self.forward_async(name, request_info, request,
-                               timeout, priority, transId, pid)
+                               timeout, priority, trans_id, pid)
         elif command == API.SYNC:
             self.forward_sync(name, request_info, request,
-                              timeout, priority, transId, pid)
+                              timeout, priority, trans_id, pid)
         else:
             raise invalid_input_exception()
 
     def forward_async(self, name, request_info, request,
-                      timeout, priority, transId, pid):
+                      timeout, priority, trans_id, pid):
         self.__api.forward_async(name, request_info, request,
-                                 timeout, priority, transId, pid)
+                                 timeout, priority, trans_id, pid)
         raise libcloudi_py.return_async_exception()
 
     def forward_sync(self, name, request_info, request,
-                     timeout, priority, transId, pid):
+                     timeout, priority, trans_id, pid):
         self.__api.forward_sync(name, request_info, request,
-                                timeout, priority, transId, pid)
+                                timeout, priority, trans_id, pid)
         raise libcloudi_py.return_sync_exception()
 
     def return_(self, command, name, pattern, response_info, response,
-                timeout, transId, pid):
+                timeout, trans_id, pid):
         if command == API.ASYNC:
             self.return_async(name, pattern, response_info, response,
-                              timeout, transId, pid)
+                              timeout, trans_id, pid)
         elif command == API.SYNC:
             self.return_sync(name, pattern, response_info, response,
-                             timeout, transId, pid)
+                             timeout, trans_id, pid)
         else:
             raise invalid_input_exception()
 
     def return_async(self, name, pattern, response_info, response,
-                     timeout, transId, pid):
+                     timeout, trans_id, pid):
         self.__api.return_async(name, pattern, response_info, response,
-                                timeout, transId, pid)
+                                timeout, trans_id, pid)
         raise libcloudi_py.return_async_exception()
 
     def return_sync(self, name, pattern, response_info, response,
-                    timeout, transId, pid):
+                    timeout, trans_id, pid):
         self.__api.return_sync(name, pattern, response_info, response,
-                               timeout, transId, pid)
+                               timeout, trans_id, pid)
         raise libcloudi_py.return_sync_exception()
 
-    def recv_async(self, timeout=None, transId=None):
+    def recv_async(self, timeout=None, trans_id=None):
         kwargs = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
-        if transId is not None:
-            kwargs['trans_id'] = transId
+        if trans_id is not None:
+            kwargs['trans_id'] = trans_id
         response = self.__api.recv_async(**kwargs)
         if response is None:
             return None

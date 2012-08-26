@@ -142,90 +142,90 @@ module CloudI
         end
 
         def forward_(command, name, request_info, request,
-                     timeout, priority, transId, pid)
+                     timeout, priority, trans_id, pid)
             case command
             when ASYNC
                 forward_async(name, request_info, request,
-                              timeout, priority, transId, pid)
+                              timeout, priority, trans_id, pid)
             when SYNC
                 forward_sync(name, request_info, request,
-                             timeout, priority, transId, pid)
+                             timeout, priority, trans_id, pid)
             end
         end
 
         def forward_async(name, request_info, request,
-                          timeout, priority, transId, pid)
+                          timeout, priority, trans_id, pid)
             send(term_to_binary([:forward_async, name,
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
                                   timeout, priority,
-                                  OtpErlangBinary.new(transId), pid]))
+                                  OtpErlangBinary.new(trans_id), pid]))
             raise ReturnAsyncException
         end
 
         def forward_sync(name, request_info, request,
-                         timeout, priority, transId, pid)
+                         timeout, priority, trans_id, pid)
             send(term_to_binary([:forward_sync, name, 
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
                                   timeout, priority,
-                                  OtpErlangBinary.new(transId), pid]))
+                                  OtpErlangBinary.new(trans_id), pid]))
             raise ReturnSyncException
         end
 
         def return_(command, name, pattern, response_info, response,
-                    timeout, transId, pid)
+                    timeout, trans_id, pid)
             case command
             when ASYNC
                 return_async(name, pattern, response_info, response,
-                             timeout, transId, pid)
+                             timeout, trans_id, pid)
             when SYNC
                 return_sync(name, pattern, response_info, response,
-                            timeout, transId, pid)
+                            timeout, trans_id, pid)
             end
         end
 
         def return_async(name, pattern, response_info, response,
-                         timeout, transId, pid)
+                         timeout, trans_id, pid)
             return_async_nothrow(name, pattern, response_info, response,
-                                 timeout, transId, pid)
+                                 timeout, trans_id, pid)
             raise ReturnAsyncException
         end
 
         def return_async_nothrow(name, pattern, response_info, response,
-                                 timeout, transId, pid)
+                                 timeout, trans_id, pid)
             send(term_to_binary([:return_async, name, pattern,
                                   OtpErlangBinary.new(response_info),
                                   OtpErlangBinary.new(response),
                                   timeout,
-                                  OtpErlangBinary.new(transId), pid]))
+                                  OtpErlangBinary.new(trans_id), pid]))
         end
 
         def return_sync(name, pattern, response_info, response,
-                        timeout, transId, pid)
+                        timeout, trans_id, pid)
             return_sync_nothrow(name, pattern, response_info, response,
-                                timeout, transId, pid)
+                                timeout, trans_id, pid)
             raise ReturnSyncException
         end
 
         def return_sync_nothrow(name, pattern, response_info, response,
-                                timeout, transId, pid)
+                                timeout, trans_id, pid)
             send(term_to_binary([:return_sync, name, pattern,
                                   OtpErlangBinary.new(response_info),
                                   OtpErlangBinary.new(response),
                                   timeout,
-                                  OtpErlangBinary.new(transId), pid]))
+                                  OtpErlangBinary.new(trans_id), pid]))
         end
 
-        def recv_async(timeout=nil, transId=nil)
+        def recv_async(timeout=nil, trans_id=nil, consume=true)
             if timeout.nil?
                 timeout = @timeoutSync
             end
-            if transId.nil?
-                transId = 0.chr * 16
+            if trans_id.nil?
+                trans_id = 0.chr * 16
             end
             send(term_to_binary([:recv_async, timeout,
-                                  OtpErlangBinary.new(transId)]))
+                                  OtpErlangBinary.new(trans_id), consume]))
             return poll
         end
 
@@ -241,8 +241,8 @@ module CloudI
             return @timeoutSync
         end
 
-        def callback(command, name, pattern, requestInfo, request,
-                     timeout, priority, transId, pid)
+        def callback(command, name, pattern, request_info, request,
+                     timeout, priority, trans_id, pid)
             function_queue = @callbacks.fetch(pattern, nil)
             API.assert{function_queue != nil}
             function = function_queue.shift
@@ -251,17 +251,17 @@ module CloudI
             when MESSAGE_SEND_ASYNC
                 begin
                     response = function.call(ASYNC, name, pattern,
-                                             requestInfo, request,
-                                             timeout, priority, transId, pid)
+                                             request_info, request,
+                                             timeout, priority, trans_id, pid)
                     if response.kind_of?(Array)
                         API.assert{response.length == 2}
-                        responseInfo = response[0]
+                        response_info = response[0]
                         response = response[1]
-                        if not responseInfo.kind_of?(String)
-                            responseInfo = ''
+                        if not response_info.kind_of?(String)
+                            response_info = ''
                         end
                     else
-                        responseInfo = ''
+                        response_info = ''
                     end
                     if not response.kind_of?(String)
                         response = ''
@@ -276,25 +276,25 @@ module CloudI
                 rescue
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
-                    responseInfo = ''
+                    response_info = ''
                     response = ''
                 end
-                return_async_nothrow(name, pattern, responseInfo, response,
-                                     timeout, transId, pid)
+                return_async_nothrow(name, pattern, response_info, response,
+                                     timeout, trans_id, pid)
             when MESSAGE_SEND_SYNC
                 begin
                     response = function.call(SYNC, name, pattern,
-                                             requestInfo, request,
-                                             timeout, priority, transId, pid)
+                                             request_info, request,
+                                             timeout, priority, trans_id, pid)
                     if response.kind_of?(Array)
                         API.assert{response.length == 2}
-                        responseInfo = response[0]
+                        response_info = response[0]
                         response = response[1]
-                        if not responseInfo.kind_of?(String)
-                            responseInfo = ''
+                        if not response_info.kind_of?(String)
+                            response_info = ''
                         end
                     else
-                        responseInfo = ''
+                        response_info = ''
                     end
                     if not response.kind_of?(String)
                         response = ''
@@ -309,11 +309,11 @@ module CloudI
                 rescue
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
-                    responseInfo = ''
+                    response_info = ''
                     response = ''
                 end
-                return_sync_nothrow(name, pattern, responseInfo, response,
-                                    timeout, transId, pid)
+                return_sync_nothrow(name, pattern, response_info, response,
+                                    timeout, trans_id, pid)
             else
                 raise MessageDecodingException
             end
@@ -367,14 +367,14 @@ module CloudI
                     requestInfoSize = tmp[1]
                     i += j; j = requestInfoSize + 1 + 4
                     tmp = data[i, j].unpack("a#{requestInfoSize}xL")
-                    requestInfo = tmp[0]
+                    request_info = tmp[0]
                     requestSize = tmp[1]
                     i += j; j = requestSize + 1 + 4 + 1 + 16 + 4
                     tmp = data[i, j].unpack("a#{requestSize}xLca16L")
                     request = tmp[0]
                     timeout = tmp[1]
                     priority = tmp[2]
-                    transId = tmp[3]
+                    trans_id = tmp[3]
                     pidSize = tmp[4]
                     i += j; j = pidSize
                     pid = data[i, j].unpack("a#{pidSize}")[0]
@@ -383,32 +383,32 @@ module CloudI
                         raise MessageDecodingException
                     end
                     data.clear()
-                    callback(command, name, pattern, requestInfo, request,
-                             timeout, priority, transId, binary_to_term(pid))
+                    callback(command, name, pattern, request_info, request,
+                             timeout, priority, trans_id, binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     responseInfoSize = data[i, j].unpack('L')[0]
                     i += j; j = responseInfoSize + 1 + 4
                     tmp = data[i, j].unpack("a#{responseInfoSize}xL")
-                    responseInfo = tmp[0]
+                    response_info = tmp[0]
                     responseSize = tmp[1]
                     i += j; j = responseSize + 1 + 16
                     tmp = data[i, j].unpack("a#{responseSize}xa16")
                     response = tmp[0]
-                    transId = tmp[1]
+                    trans_id = tmp[1]
                     i += j
                     if i != data.length
                         raise MessageDecodingException
                     end
-                    return [responseInfo, response, transId]
+                    return [response_info, response, trans_id]
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
-                    transId = data[i, j].unpack('a16')[0]
+                    trans_id = data[i, j].unpack('a16')[0]
                     i += j
                     if i != data.length
                         raise MessageDecodingException
                     end
-                    return transId
+                    return trans_id
                 when MESSAGE_RETURNS_ASYNC
                     i += j; j = 4
                     transIdCount = data[i, j].unpack('L')[0]
@@ -477,6 +477,10 @@ module CloudI
             binary_key_value_parse(message_info)
         end
 
+        def self.assert
+            raise 'Assertion failed !' unless yield # if $DEBUG
+        end
+
         private :return_async_nothrow
         private :return_sync_nothrow
         private :callback
@@ -527,10 +531,6 @@ module CloudI
         MESSAGE_KEEPALIVE      = 8
 
         NULL = 0
-
-        def self.assert
-            raise 'Assertion failed !' unless yield # if $DEBUG
-        end
 
         def self.getenv(key)
             ENV[key] or raise InvalidInputException

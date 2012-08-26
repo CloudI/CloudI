@@ -329,11 +329,11 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
             {reply, {error, timeout}, State}
     end;
 
-handle_call({'recv_async', TransId}, Client,
+handle_call({'recv_async', TransId, Consume}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
-    handle_call({'recv_async', TimeoutSync, TransId}, Client, State);
+    handle_call({'recv_async', TimeoutSync, TransId, Consume}, Client, State);
 
-handle_call({'recv_async', Timeout, TransId}, Client,
+handle_call({'recv_async', Timeout, TransId, Consume}, Client,
             #state{async_responses = AsyncResponses} = State) ->
     if
         TransId == <<0:128>> ->
@@ -342,11 +342,11 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Client}),
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 [] ->
                     {reply, {error, timeout}, State};
-                L ->
+                L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
@@ -358,6 +358,16 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                         true ->
                             {reply, {ok, ResponseInfo, Response},
                              State#state{async_responses = NewAsyncResponses}}
+                    end;
+                L when Consume =:= false ->
+                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    if
+                        ResponseInfo == <<>> ->
+                            {reply, {ok, Response}, State};
+                        true ->
+                            {reply, {ok, ResponseInfo, Response}, State}
                     end
             end;
         true ->
@@ -366,18 +376,22 @@ handle_call({'recv_async', Timeout, TransId}, Client,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Client}),
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 error ->
                     {reply, {error, timeout}, State};
-                {ok, {<<>>, Response}} ->
+                {ok, {<<>>, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     {reply, {ok, Response},
                      State#state{async_responses = NewAsyncResponses}};
-                {ok, {ResponseInfo, Response}} ->
+                {ok, {<<>>, Response}} when Consume =:= false ->
+                    {reply, {ok, Response}, State};
+                {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     {reply, {ok, ResponseInfo, Response},
-                     State#state{async_responses = NewAsyncResponses}}
+                     State#state{async_responses = NewAsyncResponses}};
+                {ok, {ResponseInfo, Response}} when Consume =:= false ->
+                    {reply, {ok, ResponseInfo, Response}, State}
             end
     end;
 
@@ -509,7 +523,7 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
     end,
     {noreply, State};
 
-handle_info({'recv_async', Timeout, TransId, Client},
+handle_info({'recv_async', Timeout, TransId, Consume, Client},
             #state{async_responses = AsyncResponses} = State) ->
     if
         TransId == <<0:128>> ->
@@ -518,12 +532,12 @@ handle_info({'recv_async', Timeout, TransId, Client},
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Client}),
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 [] ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                L ->
+                L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
@@ -535,7 +549,19 @@ handle_info({'recv_async', Timeout, TransId, Client},
                             gen_server:reply(Client, {ok, ResponseInfo,
                                                       Response})
                     end,
-                    {noreply, State#state{async_responses = NewAsyncResponses}}
+                    {noreply, State#state{async_responses = NewAsyncResponses}};
+                L when Consume =:= false ->
+                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    if
+                        ResponseInfo == <<>> ->
+                            gen_server:reply(Client, {ok, Response});
+                        true ->
+                            gen_server:reply(Client, {ok, ResponseInfo,
+                                                      Response})
+                    end,
+                    {noreply, State}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -543,19 +569,25 @@ handle_info({'recv_async', Timeout, TransId, Client},
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Client}),
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 error ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                {ok, {<<>>, Response}} ->
+                {ok, {<<>>, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     gen_server:reply(Client, {ok, Response}),
                     {noreply, State#state{async_responses = NewAsyncResponses}};
-                {ok, {ResponseInfo, Response}} ->
+                {ok, {<<>>, Response}} when Consume =:= false ->
+                    gen_server:reply(Client, {ok, Response}),
+                    {noreply, State};
+                {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     gen_server:reply(Client, {ok, ResponseInfo, Response}),
-                    {noreply, State#state{async_responses = NewAsyncResponses}}
+                    {noreply, State#state{async_responses = NewAsyncResponses}};
+                {ok, {ResponseInfo, Response}} when Consume =:= false ->
+                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
+                    {noreply, State}
             end
     end;
 

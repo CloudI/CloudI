@@ -93,6 +93,7 @@
          recv_async/1,
          recv_async/2,
          recv_async/3,
+         recv_async/4,
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
@@ -236,7 +237,7 @@ get_pid(Dispatcher, Name)
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'get_pid', Name,
                                     Timeout - ?TIMEOUT_DELTA}, Timeout)).
@@ -266,7 +267,7 @@ send_async(Dispatcher, Name, Request, undefined)
 
 send_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
@@ -320,7 +321,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  Timeout - ?TIMEOUT_DELTA,
@@ -411,7 +412,7 @@ send_async_active(Dispatcher, Name, Request, undefined)
 
 send_async_active(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
@@ -467,7 +468,7 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  Timeout - ?TIMEOUT_DELTA,
@@ -619,7 +620,7 @@ send_sync(Dispatcher, Name, Request, undefined)
 
 send_sync(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
@@ -674,7 +675,7 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  Timeout - ?TIMEOUT_DELTA,
@@ -766,7 +767,7 @@ mcast_async(Dispatcher, Name, Request, undefined)
 
 mcast_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name, <<>>, Request,
                                     Timeout - ?TIMEOUT_DELTA,
@@ -819,7 +820,7 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     gen_server:call(Dispatcher, {'mcast_async', Name,
                                  RequestInfo, Request,
                                  Timeout - ?TIMEOUT_DELTA,
@@ -974,10 +975,10 @@ recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'recv_async',
-                                    <<0:128>>}, infinity)).
+                                    <<0:128>>, true}, infinity)).
 
 -spec recv_async(Dispatcher :: pid(),
-                 TransId :: binary()) ->
+                 pos_integer() | binary()) ->
     {'ok', any(), any()} |
     {'ok', any()} |
     {'error', atom()}.
@@ -986,21 +987,56 @@ recv_async(Dispatcher, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'recv_async',
-                                    TransId}, infinity)).
+                                    TransId, true}, infinity));
+
+recv_async(Dispatcher, Timeout)
+    when is_pid(Dispatcher), is_integer(Timeout),
+         Timeout >= ?TIMEOUT_DELTA ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async', Timeout - ?TIMEOUT_DELTA,
+                                    <<0:128>>, true}, Timeout)).
 
 -spec recv_async(Dispatcher :: pid(),
-                 Timeout :: pos_integer(),
-                 TransId :: binary()) ->
+                 pos_integer() | binary(),
+                 binary() | boolean()) ->
     {'ok', any(), any()} |
     {'ok', any()} |
     {'error', atom()}.
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
-         Timeout > ?TIMEOUT_DELTA ->
+         Timeout >= ?TIMEOUT_DELTA ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'recv_async', Timeout - ?TIMEOUT_DELTA,
-                                    TransId}, Timeout)).
+                                    TransId, true}, Timeout));
+
+recv_async(Dispatcher, Timeout, Consume)
+    when is_pid(Dispatcher), is_integer(Timeout), is_boolean(Consume),
+         Timeout >= ?TIMEOUT_DELTA ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async', Timeout - ?TIMEOUT_DELTA,
+                                    <<0:128>>, Consume}, Timeout));
+
+recv_async(Dispatcher, TransId, Consume)
+    when is_pid(Dispatcher), is_binary(TransId), is_boolean(Consume) ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async',
+                                    TransId, Consume}, infinity)).
+
+-spec recv_async(Dispatcher :: pid(),
+                 Timeout :: pos_integer(),
+                 TransId :: binary(),
+                 Consume :: boolean()) ->
+    {'ok', any(), any()} |
+    {'ok', any()} |
+    {'error', atom()}.
+
+recv_async(Dispatcher, Timeout, TransId, Consume)
+    when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
+         is_boolean(Consume), Timeout >= ?TIMEOUT_DELTA ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_async', Timeout - ?TIMEOUT_DELTA,
+                                    TransId, Consume}, Timeout)).
 
 -spec prefix(Dispatcher :: pid()) -> pos_integer().
 

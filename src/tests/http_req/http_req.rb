@@ -68,8 +68,8 @@ if __FILE__ == $PROGRAM_NAME
                 raise "Assertion failed !" unless yield # if $DEBUG
             end
 
-            def request(command, name, pattern, requestInfo, request,
-                        timeout, priority, transId, pid)
+            def request(command, name, pattern, request_info, request,
+                        timeout, priority, trans_id, pid)
                 http_qs = @api.request_http_qs_parse(request)
                 value = http_qs.fetch('value', nil)
                 response = if value.nil?
@@ -82,7 +82,7 @@ if __FILE__ == $PROGRAM_NAME
                     "<http_test><value>#{value}</value></http_test>"
                 end
                 @api.return_(command, name, pattern,
-                             '', response, timeout, transId, pid)
+                             '', response, timeout, trans_id, pid)
             end
         end
         begin

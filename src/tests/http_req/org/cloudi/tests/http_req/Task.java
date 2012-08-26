@@ -57,9 +57,9 @@ public class Task implements Runnable
     }
 
     public void request(Integer command, String name, String pattern,
-                        byte[] requestInfo, byte[] request,
+                        byte[] request_info, byte[] request,
                         Integer timeout, Byte priority,
-                        byte[] transId, OtpErlangPid pid)
+                        byte[] trans_id, OtpErlangPid pid)
                         throws API.ReturnAsyncException,
                                API.ReturnSyncException,
                                API.InvalidInputException
@@ -83,7 +83,7 @@ public class Task implements Runnable
         }
         api.return_(command, name, pattern,
                     ("").getBytes(), response.getBytes(),
-                    timeout, transId, pid);
+                    timeout, trans_id, pid);
     }
  
     public void run()

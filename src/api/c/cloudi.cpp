@@ -941,7 +941,8 @@ int cloudi_return_sync(cloudi_instance_t * p,
 
 int cloudi_recv_async(cloudi_instance_t * p,
                       uint32_t timeout,
-                      char const * const trans_id)
+                      char const * const trans_id,
+                      int consume)
 {
     char const trans_id_null[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
                                     0, 0, 0, 0, 0, 0, 0, 0};
@@ -952,7 +953,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
         
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
-    if (ei_encode_tuple_header(buffer.get<char>(), &index, 3))
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 4))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "recv_async"))
         return cloudi_error_ei_encode;
@@ -968,6 +969,16 @@ int cloudi_recv_async(cloudi_instance_t * p,
     else
     {
         if (ei_encode_binary(buffer.get<char>(), &index, trans_id, 16))
+            return cloudi_error_ei_encode;
+    }
+    if (consume)
+    {
+        if (ei_encode_atom(buffer.get<char>(), &index, "true"))
+            return cloudi_error_ei_encode;
+    }
+    else
+    {
+        if (ei_encode_atom(buffer.get<char>(), &index, "false"))
             return cloudi_error_ei_encode;
     }
     int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
@@ -1643,14 +1654,16 @@ int API::recv_async() const
 {
     return cloudi_recv_async(m_api,
                              m_api->timeout_sync,
-                             0);
+                             0,
+                             1);
 }
 
 int API::recv_async(char const * const trans_id) const
 {
     return cloudi_recv_async(m_api,
                              m_api->timeout_sync,
-                             trans_id);
+                             trans_id,
+                             1);
 }
 
 int API::recv_async(uint32_t timeout,
@@ -1658,7 +1671,36 @@ int API::recv_async(uint32_t timeout,
 {
     return cloudi_recv_async(m_api,
                              timeout,
-                             trans_id);
+                             trans_id,
+                             1);
+}
+
+int API::recv_async(uint32_t timeout,
+                    bool consume) const
+{
+    return cloudi_recv_async(m_api,
+                             timeout,
+                             0,
+                             static_cast<int>(consume));
+}
+
+int API::recv_async(char const * const trans_id,
+                    bool consume) const
+{
+    return cloudi_recv_async(m_api,
+                             m_api->timeout_sync,
+                             trans_id,
+                             static_cast<int>(consume));
+}
+
+int API::recv_async(uint32_t timeout,
+                    char const * const trans_id,
+                    bool consume) const
+{
+    return cloudi_recv_async(m_api,
+                             timeout,
+                             trans_id,
+                             static_cast<int>(consume));
 }
 
 char const * API::prefix() const

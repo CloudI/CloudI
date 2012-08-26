@@ -524,6 +524,7 @@ class Input
 
             // n.b., depends on cloudi_constants.hrl having
             // RECV_ASYNC_STRATEGY == recv_async_select_oldest
+            api.recv_async(test1_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test1_check[6];
@@ -533,6 +534,7 @@ class Input
             ::memcpy(test1_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test1_check, "test1", 6) == 0);
             assert(::memcmp(test1_id_check, test1_id, 16) == 0);
+            api.recv_async(test2_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test2_check[6];
@@ -542,6 +544,7 @@ class Input
             ::memcpy(test2_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test2_check, "test2", 6) == 0);
             assert(::memcmp(test2_id_check, test2_id, 16) == 0);
+            api.recv_async(test3_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test3_check[6];
@@ -551,6 +554,7 @@ class Input
             ::memcpy(test3_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test3_check, "test3", 6) == 0);
             assert(::memcmp(test3_id_check, test3_id, 16) == 0);
+            api.recv_async(test4_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test4_check[6];
@@ -560,6 +564,7 @@ class Input
             ::memcpy(test4_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test4_check, "test4", 6) == 0);
             assert(::memcmp(test4_id_check, test4_id, 16) == 0);
+            api.recv_async(test5_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test5_check[6];
@@ -569,6 +574,7 @@ class Input
             ::memcpy(test5_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test5_check, "test5", 6) == 0);
             assert(::memcmp(test5_id_check, test5_id, 16) == 0);
+            api.recv_async(test6_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test6_check[6];
@@ -578,6 +584,7 @@ class Input
             ::memcpy(test6_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test6_check, "test6", 6) == 0);
             assert(::memcmp(test6_id_check, test6_id, 16) == 0);
+            api.recv_async(test7_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test7_check[6];
@@ -587,6 +594,7 @@ class Input
             ::memcpy(test7_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test7_check, "test7", 6) == 0);
             assert(::memcmp(test7_id_check, test7_id, 16) == 0);
+            api.recv_async(test8_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test8_check[6];
@@ -596,6 +604,7 @@ class Input
             ::memcpy(test8_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test8_check, "test8", 6) == 0);
             assert(::memcmp(test8_id_check, test8_id, 16) == 0);
+            api.recv_async(test9_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test9_check[6];
@@ -605,6 +614,7 @@ class Input
             ::memcpy(test9_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test9_check, "test9", 6) == 0);
             assert(::memcmp(test9_id_check, test9_id, 16) == 0);
+            api.recv_async(test10_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test10_check[7];
@@ -614,6 +624,7 @@ class Input
             ::memcpy(test10_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test10_check, "test10", 7) == 0);
             assert(::memcmp(test10_id_check, test10_id, 16) == 0);
+            api.recv_async(test11_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test11_check[7];
@@ -623,6 +634,7 @@ class Input
             ::memcpy(test11_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test11_check, "test11", 7) == 0);
             assert(::memcmp(test11_id_check, test11_id, 16) == 0);
+            api.recv_async(test12_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test12_check[7];
@@ -632,6 +644,7 @@ class Input
             ::memcpy(test12_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test12_check, "test12", 7) == 0);
             assert(::memcmp(test12_id_check, test12_id, 16) == 0);
+            api.recv_async(test13_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test13_check[7];
@@ -641,6 +654,7 @@ class Input
             ::memcpy(test13_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test13_check, "test13", 7) == 0);
             assert(::memcmp(test13_id_check, test13_id, 16) == 0);
+            api.recv_async(test14_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test14_check[7];
@@ -650,6 +664,7 @@ class Input
             ::memcpy(test14_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test14_check, "test14", 7) == 0);
             assert(::memcmp(test14_id_check, test14_id, 16) == 0);
+            api.recv_async(test15_id, false);
             result = api.recv_async();
             assert(result == CloudI::API::return_value::success);
             char test15_check[7];

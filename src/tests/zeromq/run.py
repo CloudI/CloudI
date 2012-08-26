@@ -77,26 +77,26 @@ class _Task(threading.Thread):
         print 'exited thread:', result
 
     def zigzag_finish(self, command, name, pattern,
-                      requestInfo, request,
-                      timeout, priority, transId, pid):
+                      request_info, request,
+                      timeout, priority, trans_id, pid):
         assert request == 'magic'
         print 'zeromq zigzag end'
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, transId, pid)
+                           '', 'done', timeout, trans_id, pid)
 
     def chain_inproc_finish(self, command, name, pattern,
-                            requestInfo, request,
-                            timeout, priority, transId, pid):
+                            request_info, request,
+                            timeout, priority, trans_id, pid):
         print 'zeromq chain_inproc end'
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, transId, pid)
+                           '', 'done', timeout, trans_id, pid)
 
     def chain_ipc_finish(self, command, name, pattern,
-                         requestInfo, request,
-                         timeout, priority, transId, pid):
+                         request_info, request,
+                         timeout, priority, trans_id, pid):
         print 'zeromq chain_ipc end'
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, transId, pid)
+                           '', 'done', timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

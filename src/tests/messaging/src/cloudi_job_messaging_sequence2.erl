@@ -92,9 +92,9 @@ cloudi_job_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     Prefix = cloudi_job:prefix(Dispatcher),
     if
         Request == "start" ->
-            ?LOG_INFO("messaging sequence2 start erlang", []),
+            ?LOG_INFO(" messaging sequence2 start erlang", []),
             sequence2(Dispatcher, Prefix),
-            ?LOG_INFO("messaging sequence2 end erlang", []),
+            ?LOG_INFO(" messaging sequence2 end erlang", []),
             cloudi_job:send_async(Dispatcher, Prefix ++ "sequence3", "start"),
             {reply, "end", State};
         CurrentState =:= state1 ->
