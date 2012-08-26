@@ -331,7 +331,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
     end,
     {next_state, 'HANDLE', process_queue(StateData)};
 
-'HANDLE'({'recv_async', Timeout, TransId},
+'HANDLE'({'recv_async', Timeout, TransId, Consume},
          #state{async_responses = AsyncResponses} = StateData) ->
     if
         TransId == <<0:128>> ->
@@ -340,12 +340,12 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId}),
+                                       TransId, Consume}),
                     {next_state, 'HANDLE', StateData};
                 [] ->
                     send('recv_async_out'(timeout, TransId), StateData),
                     {next_state, 'HANDLE', StateData};
-                L ->
+                L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
@@ -353,7 +353,14 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                     send('recv_async_out'(ResponseInfo, Response, TransIdPick),
                          StateData),
                     {next_state, 'HANDLE',
-                     StateData#state{async_responses = NewAsyncResponses}}
+                     StateData#state{async_responses = NewAsyncResponses}};
+                L when Consume =:= false ->
+                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                                                          AsyncResponses),
+                    send('recv_async_out'(ResponseInfo, Response, TransIdPick),
+                         StateData),
+                    {next_state, 'HANDLE', StateData}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -361,17 +368,21 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'recv_async',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId}),
+                                       TransId, Consume}),
                     {next_state, 'HANDLE', StateData};
                 error ->
                     send('recv_async_out'(timeout, TransId), StateData),
                     {next_state, 'HANDLE', StateData};
-                {ok, {ResponseInfo, Response}} ->
+                {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     send('recv_async_out'(ResponseInfo, Response, TransId),
                          StateData),
                     {next_state, 'HANDLE',
-                     StateData#state{async_responses = NewAsyncResponses}}
+                     StateData#state{async_responses = NewAsyncResponses}};
+                {ok, {ResponseInfo, Response}} when Consume =:= false ->
+                    send('recv_async_out'(ResponseInfo, Response, TransId),
+                         StateData),
+                    {next_state, 'HANDLE', StateData}
             end
     end;
 
@@ -554,7 +565,7 @@ handle_info({'forward_sync', Name, RequestInfo, Request,
     end,
     {next_state, StateName, StateData};
 
-handle_info({'recv_async', _, _} = T, StateName, StateData) ->
+handle_info({'recv_async', _, _, _} = T, StateName, StateData) ->
     ?MODULE:StateName(T, StateData);
 
 % incoming messages (from Erlang pids to the port socket)

@@ -69,9 +69,9 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def flood(command, name, pattern, request_info, request,
-                      timeout, priority, transId, pid)
+                      timeout, priority, trans_id, pid)
                 @api.return_(command, name, pattern,
-                             "", "ruby", timeout, transId, pid)
+                             "", "ruby", timeout, trans_id, pid)
             end
         end
         begin

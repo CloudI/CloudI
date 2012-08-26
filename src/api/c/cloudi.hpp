@@ -1173,6 +1173,32 @@ class API
                               trans_id.c_str());
         }
 
+        int recv_async(uint32_t timeout,
+                       bool consume) const;
+
+        int recv_async(char const * const trans_id,
+                       bool consume) const;
+
+        inline int recv_async(std::string const & trans_id,
+                              bool consume) const
+        {
+            return recv_async(trans_id.c_str(),
+                              consume);
+        }
+
+        int recv_async(uint32_t timeout,
+                       char const * const trans_id,
+                       bool consume) const;
+
+        inline int recv_async(uint32_t timeout,
+                              std::string const & trans_id,
+                              bool consume) const
+        {
+            return recv_async(timeout,
+                              trans_id.c_str(),
+                              consume);
+        }
+
         char const * prefix() const;
 
         uint32_t timeout_async() const;

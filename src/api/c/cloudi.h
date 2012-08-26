@@ -234,7 +234,8 @@ int cloudi_return_sync(cloudi_instance_t * p,
 
 int cloudi_recv_async(cloudi_instance_t * p,
                       uint32_t timeout,
-                      char const * const trans_id);
+                      char const * const trans_id,
+                      int consume);
 
 int cloudi_poll(cloudi_instance_t * p,
                 int timeout);

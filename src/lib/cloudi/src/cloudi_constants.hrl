@@ -1,6 +1,16 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Safe to tune without causing major internal problems
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% recv_async null UUID strategy
+-define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).
+%-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Reasonable constants that are unlikely to need modification.
 % Possibly, in different environments, tuning may be beneficial, though
 % it has not yet been necessary to modify these settings during testing.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % interval at which asynchronous messages are checked
 -define(RECV_ASYNC_INTERVAL, 500). % milliseconds
@@ -19,10 +29,6 @@
 
 % interval at which asynchronous forwarded messages are sent
 -define(FORWARD_ASYNC_INTERVAL, 500). % milliseconds
-
-% recv_async null UUID strategy
--define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).
-%-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
 
 % decrement the timeout of each successful forward, to prevent infinite messages
 % (i.e., this is the timeout penalty a request takes when forwarding a request)
@@ -50,6 +56,10 @@
 % used in a service/job (i.e., the maximum amount of time spent not responding
 % to incoming API calls).
 -define(KEEPALIVE_UDP, 5000). % milliseconds
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Constants that should never be changed
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).

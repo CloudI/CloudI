@@ -61,9 +61,9 @@ public class Task implements Runnable
     }
 
     public void sequence1_abcd(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -72,13 +72,13 @@ public class Task implements Runnable
         assert new String(request) == "test1";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_abc_(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -88,13 +88,13 @@ public class Task implements Runnable
                (new String(request) == "test3");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_ab_d(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -104,13 +104,13 @@ public class Task implements Runnable
                (new String(request) == "test5");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_a_cd(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -120,13 +120,13 @@ public class Task implements Runnable
                (new String(request) == "test7");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1__bcd(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -136,13 +136,13 @@ public class Task implements Runnable
                (new String(request) == "test9");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_ab__(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -151,13 +151,13 @@ public class Task implements Runnable
         assert new String(request) == "test10";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_a__d(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -166,13 +166,13 @@ public class Task implements Runnable
         assert new String(request) == "test11";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1___cd(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -181,13 +181,13 @@ public class Task implements Runnable
         assert new String(request) == "test12";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_a___(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -196,13 +196,13 @@ public class Task implements Runnable
         assert new String(request) == "test13";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1____d(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -211,13 +211,13 @@ public class Task implements Runnable
         assert new String(request) == "test14";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1_____(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -226,13 +226,13 @@ public class Task implements Runnable
         assert new String(request) == "test15";
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void sequence1(Integer command, String name, String pattern,
-                          byte[] requestInfo, byte[] request,
+                          byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
-                          byte[] transId, OtpErlangPid pid)
+                          byte[] trans_id, OtpErlangPid pid)
                           throws API.ReturnAsyncException,
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
@@ -274,48 +274,63 @@ public class Task implements Runnable
             this.api.prefix() + "azbzczd", ("test15").getBytes());
         // n.b., depends on cloudi_constants.hrl having
         // RECV_ASYNC_STRATEGY == recv_async_select_oldest
+        this.api.recv_async(test1_id.id, false);
         API.Response test1_check = this.api.recv_async();
         assert new String(test1_check.response) == "test1";
         assert test1_id.equals(test1_check.id);
+        this.api.recv_async(test2_id.id, false);
         API.Response test2_check = this.api.recv_async();
         assert new String(test2_check.response) == "test2";
         assert test2_id.equals(test2_check.id);
+        this.api.recv_async(test3_id.id, false);
         API.Response test3_check = this.api.recv_async();
         assert new String(test3_check.response) == "test3";
         assert test3_id.equals(test3_check.id);
+        this.api.recv_async(test4_id.id, false);
         API.Response test4_check = this.api.recv_async();
         assert new String(test4_check.response) == "test4";
         assert test4_id.equals(test4_check.id);
+        this.api.recv_async(test5_id.id, false);
         API.Response test5_check = this.api.recv_async();
         assert new String(test5_check.response) == "test5";
         assert test5_id.equals(test5_check.id);
+        this.api.recv_async(test6_id.id, false);
         API.Response test6_check = this.api.recv_async();
         assert new String(test6_check.response) == "test6";
         assert test6_id.equals(test6_check.id);
+        this.api.recv_async(test7_id.id, false);
         API.Response test7_check = this.api.recv_async();
         assert new String(test7_check.response) == "test7";
         assert test7_id.equals(test7_check.id);
+        this.api.recv_async(test8_id.id, false);
         API.Response test8_check = this.api.recv_async();
         assert new String(test8_check.response) == "test8";
         assert test8_id.equals(test8_check.id);
+        this.api.recv_async(test9_id.id, false);
         API.Response test9_check = this.api.recv_async();
         assert new String(test9_check.response) == "test9";
         assert test9_id.equals(test9_check.id);
+        this.api.recv_async(test10_id.id, false);
         API.Response test10_check = this.api.recv_async();
         assert new String(test10_check.response) == "test10";
         assert test10_id.equals(test10_check.id);
+        this.api.recv_async(test11_id.id, false);
         API.Response test11_check = this.api.recv_async();
         assert new String(test11_check.response) == "test11";
         assert test11_id.equals(test11_check.id);
+        this.api.recv_async(test12_id.id, false);
         API.Response test12_check = this.api.recv_async();
         assert new String(test12_check.response) == "test12";
         assert test12_id.equals(test12_check.id);
+        this.api.recv_async(test13_id.id, false);
         API.Response test13_check = this.api.recv_async();
         assert new String(test13_check.response) == "test13";
         assert test13_id.equals(test13_check.id);
+        this.api.recv_async(test14_id.id, false);
         API.Response test14_check = this.api.recv_async();
         assert new String(test14_check.response) == "test14";
         assert test14_id.equals(test14_check.id);
+        this.api.recv_async(test15_id.id, false);
         API.Response test15_check = this.api.recv_async();
         assert new String(test15_check.response) == "test15";
         assert test15_id.equals(test15_check.id);
@@ -325,117 +340,117 @@ public class Task implements Runnable
                             ("start").getBytes());
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e1(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("1").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e2(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("2").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e3(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("3").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e4(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("4").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e5(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("5").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e6(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("6").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e7(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("7").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2_e8(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("8").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence2(Integer command, String name, String pattern,
-                          byte[] requestInfo, byte[] request,
+                          byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
-                          byte[] transId, OtpErlangPid pid)
+                          byte[] trans_id, OtpErlangPid pid)
                           throws API.ReturnAsyncException,
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
@@ -480,13 +495,13 @@ public class Task implements Runnable
                             ("start").getBytes());
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public byte[] sequence3_f1(Integer command, String name, String pattern,
-                               byte[] requestInfo, byte[] request,
+                               byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
-                               byte[] transId, OtpErlangPid pid)
+                               byte[] trans_id, OtpErlangPid pid)
                                throws API.ReturnAsyncException,
                                       API.ReturnSyncException,
                                       API.InvalidInputException
@@ -498,15 +513,15 @@ public class Task implements Runnable
         }
         byte[] request_new = {(byte) (request_i + 2)}; // two steps forward
         this.api.forward_(command, this.api.prefix() + "f2",
-                          requestInfo, request_new,
-                          timeout, priority, transId, pid);
+                          request_info, request_new,
+                          timeout, priority, trans_id, pid);
         return ("").getBytes(); // execution never gets here
     }
 
     public void sequence3_f2(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
@@ -514,14 +529,14 @@ public class Task implements Runnable
         int request_i = (int) request[0];
         byte[] request_new = {(byte) (request_i - 1)}; // one step back
         this.api.forward_(command, this.api.prefix() + "f1",
-                          requestInfo, request_new,
-                          timeout, priority, transId, pid);
+                          request_info, request_new,
+                          timeout, priority, trans_id, pid);
     }
 
     public void sequence3_g1(Integer command, String name, String pattern,
-                             byte[] requestInfo, byte[] request,
+                             byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] transId, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid pid)
                              throws API.ReturnAsyncException,
                                     API.ReturnSyncException,
                                     API.InvalidInputException
@@ -529,13 +544,13 @@ public class Task implements Runnable
         String s = new String(request);
         this.api.return_(command, name, pattern,
                          ("").getBytes(), (s + "suffix").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
 
     public void sequence3(Integer command, String name, String pattern,
-                          byte[] requestInfo, byte[] request,
+                          byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
-                          byte[] transId, OtpErlangPid pid)
+                          byte[] trans_id, OtpErlangPid pid)
                           throws API.ReturnAsyncException,
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
@@ -554,7 +569,7 @@ public class Task implements Runnable
         API.out.println("messaging sequence3 end java");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
-                         timeout, transId, pid);
+                         timeout, trans_id, pid);
     }
  
     public void run()

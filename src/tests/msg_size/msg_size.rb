@@ -70,8 +70,8 @@ if __FILE__ == $PROGRAM_NAME
                 raise 'Assertion failed !' unless yield # if $DEBUG
             end
 
-            def request(command, name, pattern, requestInfo, request,
-                        timeout, priority, transId, pid)
+            def request(command, name, pattern, request_info, request,
+                        timeout, priority, trans_id, pid)
                 i = request[0,4].unpack('L')[0]
                 if i == 4294967295
                     i = 0
@@ -83,8 +83,8 @@ if __FILE__ == $PROGRAM_NAME
                 name_next = DESTINATION
                 $stdout.puts "forward ##{i} ruby to #{name_next} " \
                              "(with timeout #{timeout} ms)"
-                @api.forward_(command, name_next, requestInfo, request,
-                              timeout, priority, transId, pid)
+                @api.forward_(command, name_next, request_info, request,
+                              timeout, priority, trans_id, pid)
             end
         end
         begin

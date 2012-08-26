@@ -65,9 +65,9 @@ class _Task(threading.Thread):
             traceback.print_exc(file=sys.stdout)
 
     def flood(self, command, name, pattern, request_info, request,
-              timeout, priority, transId, pid):
+              timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', 'python', timeout, transId, pid)
+                           '', 'python', timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

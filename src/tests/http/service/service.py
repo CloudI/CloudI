@@ -65,12 +65,12 @@ class _Task(threading.Thread):
         except:
             traceback.print_exc(file=sys.stdout)
 
-    def text(self, command, name, pattern, requestInfo, request,
-             timeout, priority, transId, pid):
+    def text(self, command, name, pattern, request_info, request,
+             timeout, priority, trans_id, pid):
         print '(' + request + ')'
         assert 'Test Text' == request
         self.__api.return_(command, name, pattern, '', 'Test Response',
-                           timeout, transId, pid)
+                           timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

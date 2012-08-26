@@ -58,9 +58,9 @@ public class Task implements Runnable
     }
 
     public void request(Integer command, String name, String pattern,
-                        byte[] requestInfo, byte[] request,
+                        byte[] request_info, byte[] request,
                         Integer timeout, Byte priority,
-                        byte[] transId, OtpErlangPid pid)
+                        byte[] trans_id, OtpErlangPid pid)
                         throws API.ReturnAsyncException,
                                API.ReturnSyncException,
                                API.InvalidInputException
@@ -76,8 +76,8 @@ public class Task implements Runnable
         API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
                        i, Task.DESTINATION, timeout);
         api.forward_(command, Task.DESTINATION,
-                     requestInfo, request,
-                     timeout, priority, transId, pid);
+                     request_info, request,
+                     timeout, priority, trans_id, pid);
     }
  
     public void run()

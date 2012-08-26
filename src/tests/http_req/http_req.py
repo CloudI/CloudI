@@ -50,10 +50,10 @@ sys.path.append(
 import threading, types, traceback
 from cloudi import API
 
-class _Task(threading.Thread):
-    def __init__(self, thread_index):
+class Task(threading.Thread):
+    def __init__(self, api):
         threading.Thread.__init__(self)
-        self.__api = API(thread_index)
+        self.__api = api
 
     def run(self):
         try:
@@ -64,8 +64,8 @@ class _Task(threading.Thread):
         except:
             traceback.print_exc(file=sys.stdout)
 
-    def request(self, command, name, pattern, requestInfo, request,
-                timeout, priority, transId, pid):
+    def request(self, command, name, pattern, request_info, request,
+                timeout, priority, trans_id, pid):
         http_qs = self.__api.request_http_qs_parse(request)
         value = http_qs.get('value', None)
         if value is None:
@@ -77,13 +77,13 @@ class _Task(threading.Thread):
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
         self.__api.return_(command, name, pattern,
-                           '', response, timeout, transId, pid)
+                           '', response, timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [_Task(i) for i in range(thread_count)]
+    threads = [Task(API(i)) for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

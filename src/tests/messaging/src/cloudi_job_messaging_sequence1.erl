@@ -100,11 +100,13 @@ cloudi_job_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
     Prefix = cloudi_job:prefix(Dispatcher),
     case Request of
         "start" ->
-            ?LOG_INFO("messaging sequence1 start erlang", []),
+            cloudi_job:recv_async(Dispatcher, 100), % consume "end"
+            cloudi_job:recv_async(Dispatcher, 1100), % sleep
+            ?LOG_INFO(" messaging sequence1 start erlang", []),
             sequence1(Dispatcher, Prefix),
-            ?LOG_INFO("messaging sequence1 end erlang", []),
+            ?LOG_INFO(" messaging sequence1 end erlang", []),
             cloudi_job:send_async(Dispatcher, Prefix ++ "sequence2", "start"),
-            {reply, "end", State};
+            {reply, "end", State#state{}};
         <<"test1">> ->
             true = Pattern == (Prefix ++ "a/b/c/d"),
             {reply, Request, State};
@@ -166,52 +168,81 @@ cloudi_job_terminate(_, #state{}) ->
 sequence1(Dispatcher, Prefix) ->
     % n.b., depends on cloudi_constants.hrl having
     % GROUP_NAME_PATTERN_MATCHING defined
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/d", <<"test1">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/z", <<"test2">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/c/dd", <<"test3">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/z/d", <<"test4">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/cc/d", <<"test5">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/z/c/d", <<"test6">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/bb/c/d", <<"test7">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "z/b/c/d", <<"test8">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "aa/b/c/d", <<"test9">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/b/czd", <<"test10">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/bzc/d", <<"test11">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "azb/c/d", <<"test12">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "a/bzczd", <<"test13">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "azbzc/d", <<"test14">>),
-    cloudi_job:send_async(Dispatcher, Prefix ++ "azbzczd", <<"test15">>),
-    receive after 5000 -> ok end,
+    {ok, Test1Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/b/c/d", <<"test1">>),
+    {ok, Test2Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/b/c/z", <<"test2">>),
+    {ok, Test3Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/b/c/dd", <<"test3">>),
+    {ok, Test4Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/b/z/d", <<"test4">>),
+    {ok, Test5Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/b/cc/d", <<"test5">>),
+    {ok, Test6Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/z/c/d", <<"test6">>),
+    {ok, Test7Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "a/bb/c/d", <<"test7">>),
+    {ok, Test8Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "z/b/c/d", <<"test8">>),
+    {ok, Test9Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                          "aa/b/c/d", <<"test9">>),
+    {ok, Test10Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "a/b/czd", <<"test10">>),
+    {ok, Test11Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "a/bzc/d", <<"test11">>),
+    {ok, Test12Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "azb/c/d", <<"test12">>),
+    {ok, Test13Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "a/bzczd", <<"test13">>),
+    {ok, Test14Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "azbzc/d", <<"test14">>),
+    {ok, Test15Id} = cloudi_job:send_async(Dispatcher, Prefix ++
+                                           "azbzczd", <<"test15">>),
     % n.b., depends on cloudi_constants.hrl having
     % RECV_ASYNC_STRATEGY == recv_async_select_oldest
+    cloudi_job:recv_async(Dispatcher, Test1Id, false),
     {ok, Test1Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test1Response == <<"test1">>,
+    <<"test1">> = Test1Response,
+    cloudi_job:recv_async(Dispatcher, Test2Id, false),
     {ok, Test2Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test2Response == <<"test2">>,
+    <<"test2">> = Test2Response,
+    cloudi_job:recv_async(Dispatcher, Test3Id, false),
     {ok, Test3Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test3Response == <<"test3">>,
+    <<"test3">> = Test3Response,
+    cloudi_job:recv_async(Dispatcher, Test4Id, false),
     {ok, Test4Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test4Response == <<"test4">>,
+    <<"test4">> = Test4Response,
+    cloudi_job:recv_async(Dispatcher, Test5Id, false),
     {ok, Test5Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test5Response == <<"test5">>,
+    <<"test5">> = Test5Response,
+    cloudi_job:recv_async(Dispatcher, Test6Id, false),
     {ok, Test6Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test6Response == <<"test6">>,
+    <<"test6">> = Test6Response,
+    cloudi_job:recv_async(Dispatcher, Test7Id, false),
     {ok, Test7Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test7Response == <<"test7">>,
+    <<"test7">> = Test7Response,
+    cloudi_job:recv_async(Dispatcher, Test8Id, false),
     {ok, Test8Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test8Response == <<"test8">>,
+    <<"test8">> = Test8Response,
+    cloudi_job:recv_async(Dispatcher, Test9Id, false),
     {ok, Test9Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test9Response == <<"test9">>,
+    <<"test9">> = Test9Response,
+    cloudi_job:recv_async(Dispatcher, Test10Id, false),
     {ok, Test10Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test10Response == <<"test10">>,
+    <<"test10">> = Test10Response,
+    cloudi_job:recv_async(Dispatcher, Test11Id, false),
     {ok, Test11Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test11Response == <<"test11">>,
+    <<"test11">> = Test11Response,
+    cloudi_job:recv_async(Dispatcher, Test12Id, false),
     {ok, Test12Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test12Response == <<"test12">>,
+    <<"test12">> = Test12Response,
+    cloudi_job:recv_async(Dispatcher, Test13Id, false),
     {ok, Test13Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test13Response == <<"test13">>,
+    <<"test13">> = Test13Response,
+    cloudi_job:recv_async(Dispatcher, Test14Id, false),
     {ok, Test14Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test14Response == <<"test14">>,
+    <<"test14">> = Test14Response,
+    cloudi_job:recv_async(Dispatcher, Test15Id, false),
     {ok, Test15Response} = cloudi_job:recv_async(Dispatcher),
-    true = Test15Response == <<"test15">>,
+    <<"test15">> = Test15Response,
     ok.
