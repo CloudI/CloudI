@@ -265,6 +265,7 @@
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     % Zig-Zag test
+    % (separate configurations to avoid overwriting the ipc file)
     {internal,
         "/tests/zeromq/",
         % inbound/outbound message paths much be acyclic

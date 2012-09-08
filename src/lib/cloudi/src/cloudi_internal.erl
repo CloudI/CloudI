@@ -3,11 +3,11 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Job Dispatcher==
-%%% Parent process for each cloudi_job behaviour process.
-%%% The dispatcher handles all cloudi_job process outgoing requests to 
-%%% prevent undesirable synchronous function call paths that are prone to
-%%% deadlocks.
+%%% ==CloudI Internal Job Dispatcher Process==
+%%% Parent process for each cloudi_job behaviour process (i.e., native Erlang
+%%% CloudI job). The dispatcher handles all cloudi_job process outgoing
+%%% requests to prevent undesirable synchronous function call paths that
+%%% are prone to deadlocks.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -48,10 +48,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_dispatcher).
+-module(cloudi_internal).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -151,11 +151,9 @@ handle_call({self, _}, _, #state{job = Job} = State) ->
     {reply, Job, State};
 
 handle_call({'subscribe', Pattern}, Client, State) ->
-    gen_server:reply(Client, ok),
     handle_subscribe(Pattern, Client, State);
 
 handle_call({'unsubscribe', Pattern}, Client, State) ->
-    gen_server:reply(Client, ok),
     handle_unsubscribe(Pattern, Client, State);
 
 handle_call({'get_pid', Name}, Client,
@@ -678,7 +676,7 @@ handle_subscribe(Pattern, _,
 handle_subscribe_job(Pattern, Job,
                      #state{prefix = Prefix} = State) ->
     cpg:join(Prefix ++ Pattern, Job),
-    {noreply, State}.
+    {reply, ok, State}.
 
 handle_unsubscribe(Pattern, {Job, _},
                    #state{job = undefined} = State) ->
@@ -691,7 +689,7 @@ handle_unsubscribe(Pattern, _,
 handle_unsubscribe_job(Pattern, Job,
                        #state{prefix = Prefix} = State) ->
     cpg:leave(Prefix ++ Pattern, Job),
-    {noreply, State}.
+    {reply, ok, State}.
 
 handle_get_pid(Name, Timeout, {Job, _} = Client,
                #state{job = undefined} = State) ->

@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Job Supervisor==
+%%% ==CloudI Internal Job Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,17 +44,17 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_dispatcher_sup).
+-module(cloudi_internal_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
 
 %% external interface
 -export([start_link/0,
-         create_job/11]).
+         create_internal/11]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,9 +76,9 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_job(ProcessIndex, Module, Args, Timeout, Prefix,
-           TimeoutSync, TimeoutAsync,
-           DestRefresh, DestDeny, DestAllow, ConfigOptions)
+create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
+                TimeoutSync, TimeoutAsync,
+                DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
@@ -110,7 +110,7 @@ init([]) ->
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
-            {cloudi_dispatcher, start_link, []},
+            {cloudi_internal, start_link, []},
             temporary, Shutdown, worker, []}]}}.
 
 %%%------------------------------------------------------------------------

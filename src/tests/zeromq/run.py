@@ -57,14 +57,10 @@ class _Task(threading.Thread):
         self.__index = thread_index
 
     def run(self):
-        self.__api.subscribe('zigzag_finish', self.zigzag_finish)
-        self.__api.subscribe('chain_inproc_finish', self.chain_inproc_finish)
-        self.__api.subscribe('chain_ipc_finish', self.chain_ipc_finish)
-
-        # sends outside of a callback function must occur before the
-        # subscriptions so that the incoming requests do not interfere with
-        # the outgoing sends (i.e., without subscriptions there will be no
-        # incoming requests)
+        # Unable to receive messages in the 1st thread, because ZeroMQ usage
+        # removes the association between Erlang pids and CloudI API requests
+        # (i.e., otherwise the sending thread could receive the sent
+        #  message, with this test ZeroMQ configuration)
         if self.__index == 0:
             print 'zeromq zigzag start'
             self.__api.send_async('/tests/zeromq/zigzag_start', 'magic')
@@ -72,7 +68,13 @@ class _Task(threading.Thread):
             self.__api.send_async('/tests/zeromq/chain_inproc_start', 'inproc')
             print 'zeromq chain_ipc start'
             self.__api.send_async('/tests/zeromq/chain_ipc_start', 'ipc')
-
+        else:
+            self.__api.subscribe('zigzag_finish',
+                                 self.zigzag_finish)
+            self.__api.subscribe('chain_inproc_finish',
+                                 self.chain_inproc_finish)
+            self.__api.subscribe('chain_ipc_finish',
+                                 self.chain_ipc_finish)
         result = self.__api.poll()
         print 'exited thread:', result
 

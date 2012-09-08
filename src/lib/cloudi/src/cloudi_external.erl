@@ -3,7 +3,9 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Socket==
+%%% ==CloudI External==
+%%% Erlang process which provides the connection to a thread in an
+%%% external job.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,10 +46,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_socket).
+-module(cloudi_external).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_fsm).
@@ -696,7 +698,8 @@ handle_info({send_async_timeout, TransId}, StateName, StateData) ->
         error ->
             % should never happen, timer should have been cancelled
             % if the send_async already returned
-            ?LOG_WARN("send_async_timeout not found", []),
+            ?LOG_WARN("send_async_timeout not found (trans_id=~s)",
+                      [uuid:uuid_to_string(TransId)]),
             {next_state, StateName, StateData};
         {ok, _} ->
             {next_state, StateName, send_timeout_end(TransId, StateData)}
@@ -707,7 +710,8 @@ handle_info({send_sync_timeout, TransId}, StateName, StateData) ->
         error ->
             % should never happen, timer should have been cancelled
             % if the send_sync already returned
-            ?LOG_WARN("send_sync_timeout not found", []),
+            ?LOG_WARN("send_sync_timeout not found (trans_id=~s)",
+                      [uuid:uuid_to_string(TransId)]),
             {next_state, StateName, StateData};
         {ok, _} ->
             send('return_sync_out'(timeout, TransId), StateData),
