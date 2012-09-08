@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Socket Supervisor==
+%%% ==CloudI External Job Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,17 +44,17 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_socket_sup).
+-module(cloudi_external_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
 
 %% external interface
 -export([start_link/0,
-         create_socket/10]).
+         create_external/10]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,8 +76,9 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_socket(Protocol, BufferSize, Timeout, Prefix, TimeoutSync, TimeoutAsync,
-              DestRefresh, DestDeny, DestAllow, ConfigOptions)
+create_external(Protocol, BufferSize, Timeout, Prefix,
+                TimeoutSync, TimeoutAsync, DestRefresh,
+                DestDeny, DestAllow, ConfigOptions)
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (Protocol == tcp) or (Protocol == udp),
@@ -91,9 +92,9 @@ create_socket(Protocol, BufferSize, Timeout, Prefix, TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions]) of
         {ok, Pid} ->
-            {ok, Pid, cloudi_socket:port(Pid)};
+            {ok, Pid, cloudi_external:port(Pid)};
         {ok, Pid, _} ->
-            {ok, Pid, cloudi_socket:port(Pid)};
+            {ok, Pid, cloudi_external:port(Pid)};
         {error, _} = Error ->
             Error
     end.
@@ -108,8 +109,8 @@ init([]) ->
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
-            {cloudi_socket, start_link, []},
-            temporary, Shutdown, worker, [cloudi_socket]}]}}.
+            {cloudi_external, start_link, []},
+            temporary, Shutdown, worker, [cloudi_external]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

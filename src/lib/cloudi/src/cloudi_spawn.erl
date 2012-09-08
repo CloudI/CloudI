@@ -93,11 +93,12 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
         false ->
             {error, not_loaded};
         {file, _} ->
-            cloudi_dispatcher_sup:create_job(ProcessIndex, Module, Args,
-                                             Timeout, Prefix,
-                                             TimeoutAsync, TimeoutSync,
-                                             DestRefresh, DestDeny, DestAllow,
-                                             ConfigOptions)
+            cloudi_internal_sup:create_internal(ProcessIndex, Module, Args,
+                                                Timeout, Prefix,
+                                                TimeoutAsync, TimeoutSync,
+                                                DestRefresh,
+                                                DestDeny, DestAllow,
+                                                ConfigOptions)
     end.
 
 start_external(ThreadsPerProcess,
@@ -129,10 +130,12 @@ start_external(ThreadsPerProcess,
             trie:new(DestAllowList)
     end,
     {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
-        case cloudi_socket_sup:create_socket(Protocol, BufferSize, Timeout,
-                                             Prefix, TimeoutAsync, TimeoutSync,
-                                             DestRefresh, DestDeny, DestAllow,
-                                             ConfigOptions) of
+        case cloudi_external_sup:create_external(Protocol, BufferSize,
+                                                 Timeout, Prefix,
+                                                 TimeoutAsync, TimeoutSync,
+                                                 DestRefresh,
+                                                 DestDeny, DestAllow,
+                                                 ConfigOptions) of
             {ok, Pid, Port} ->
                 F([Pid | L1], [Port | L2]);
             {error, _} = Error ->
@@ -146,7 +149,7 @@ start_external(ThreadsPerProcess,
                                         BufferSize),
     if
         Pids == error ->
-            % an error occurred in cloudi_socket_sup:create_socket
+            % an error occurred in cloudi_external_sup:create_external
             {error, Ports};
         true ->
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),

@@ -51,13 +51,14 @@ import threading, types, traceback
 from cloudi import API
 
 class Task(threading.Thread):
-    def __init__(self, api):
+    def __init__(self, api, name):
         threading.Thread.__init__(self)
         self.__api = api
+        self.__name = name
 
     def run(self):
         try:
-            self.__api.subscribe('python.xml/get', self.request)
+            self.__api.subscribe(self.__name + '.xml/get', self.request)
 
             result = self.__api.poll()
             print 'exited thread:', result
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [Task(API(i)) for i in range(thread_count)]
+    threads = [Task(API(i), 'python') for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

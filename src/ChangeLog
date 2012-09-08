@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Rename some Erlang modules to be more intuitive
+    * Fix bug in the python/python_c http_req test
+    * Fix bug in the ZeroMQ test
+
 2012-08-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the consume parameter to the recv_async CloudI API function

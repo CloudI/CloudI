@@ -9,8 +9,10 @@
         cloudi_array,
         cloudi_configuration,
         cloudi_configurator,
-        cloudi_dispatcher,
-        cloudi_dispatcher_sup,
+        cloudi_external,
+        cloudi_external_sup,
+        cloudi_internal,
+        cloudi_internal_sup,
         cloudi_job_db_couchdb,
         cloudi_job_db_memcached,
         cloudi_job_db_mysql,
@@ -35,8 +37,6 @@
         cloudi_random,
         cloudi_response,
         cloudi_services,
-        cloudi_socket,
-        cloudi_socket_sup,
         cloudi_spawn,
         cloudi_string,
         cloudi_sup,
@@ -49,12 +49,13 @@
    {registered,[
         list_pg,
         cloudi_configurator,
+        cloudi_external_sup,
         cloudi_logger,
+        cloudi_internal_sup,
         cloudi_job_sup,
         cloudi_nodes,
         cloudi_os_spawn,
-        cloudi_services,
-        cloudi_socket_sup
+        cloudi_services
         ]},
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
