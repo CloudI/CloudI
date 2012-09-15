@@ -198,6 +198,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 % outgoing messages (from the port socket to other Erlang pids)
 
 'CONNECT'({'pid', OsPid}, StateData) ->
+    ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
 
 'CONNECT'('init', #state{protocol = Protocol,

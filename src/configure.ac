@@ -48,8 +48,25 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
                     [AC_MSG_ERROR([java reflection not found])])
 
 # python check
+AC_ARG_WITH([python-debug],
+    [AS_HELP_STRING([--with-python-debug@<:@=ARG@:>@],
+        [use the debug version of python libraries and the
+         python executable (ARG=yes), or use the normal version (ARG=no)
+         @<:@ARG=no@:>@ ])],
+        [
+        if test "x$withval" = "xno"; then
+            PYTHON_DEBUG="no"
+        elif test "x$withval" = "xyes"; then
+            PYTHON_DEBUG="yes"
+        else
+            PYTHON_DEBUG="yes"
+        fi
+        ],
+        [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
-AC_PATH_PROG([PYTHON],[python])
+AS_IF([test "x$PYTHON_DEBUG" == "xno"],
+      [AC_PATH_PROG([PYTHON],[python])],
+      [AC_PATH_PROG([PYTHON],[python-dbg])])
 AX_PROG_PYTHON_VERSION([2.7.0],
                        [AX_PYTHON_C],
                        [AC_MSG_ERROR([Python >= 2.7.0 not found])])

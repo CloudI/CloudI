@@ -395,6 +395,8 @@ tests-messaging-install: \
                     "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging_c.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 	$(INSTALL_PROGRAM) "$(top_builddir)/tests/messaging/cxx_src/messaging" \
