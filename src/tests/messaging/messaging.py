@@ -50,11 +50,12 @@ sys.path.append(
 import threading, socket, types, traceback, time
 from cloudi import API
 
-class _Task(threading.Thread):
-    def __init__(self, thread_index):
+class Task(threading.Thread):
+    def __init__(self, api, thread_index, name):
         threading.Thread.__init__(self)
-        self.__api = API(thread_index)
+        self.__api = api
         self.__index = thread_index
+        self.__name = name
 
     def run(self):
         try:
@@ -179,7 +180,7 @@ class _Task(threading.Thread):
                     timeout, priority, trans_id, pid):
         while self.__api.recv_async(timeout=1000)[2] != (chr(0) * 16):
             pass # consume "end" and sleep
-        print 'messaging sequence1 start python'
+        print 'messaging sequence1 start ' + self.__name
         assert request == 'start'
         # n.b., depends on cloudi_constants.hrl having
         # SERVICE_NAME_PATTERN_MATCHING defined
@@ -290,7 +291,7 @@ class _Task(threading.Thread):
         (tmp, test15_check, test15_id_check) = self.__api.recv_async()
         assert test15_check == 'test15'
         assert test15_id_check == test15_id
-        print 'messaging sequence1 end python'
+        print 'messaging sequence1 end ' + self.__name
         # start sequence2
         self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
         self.__api.return_(command, name, pattern,
@@ -338,7 +339,7 @@ class _Task(threading.Thread):
 
     def __sequence2(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
-        print 'messaging sequence2 start python'
+        print 'messaging sequence2 start ' + self.__name
         assert request == 'start'
         time.sleep(0.5)
         # the sending process is excluded from the services that receive
@@ -357,7 +358,7 @@ class _Task(threading.Thread):
             e_check_list.append(e_check)
         e_check_list.sort()
         assert ''.join(e_check_list) == '111222333444555666777888'
-        print 'messaging sequence2 end python'
+        print 'messaging sequence2 end ' + self.__name
         # start sequence3
         self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
         self.__api.return_(command, name, pattern,
@@ -388,7 +389,7 @@ class _Task(threading.Thread):
 
     def __sequence3(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
-        print 'messaging sequence3 start python'
+        print 'messaging sequence3 start ' + self.__name
         assert request == 'start'
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'f1',  '0'
@@ -402,7 +403,7 @@ class _Task(threading.Thread):
             self.__api.prefix() + 'g1',  'prefix_'
         )
         assert test2_check == 'prefix_suffix'
-        print 'messaging sequence3 end python'
+        print 'messaging sequence3 end ' + self.__name
         # loop to find any infrequent problems, restart sequence1
         self.__api.send_async(
             self.__api.prefix() + 'sequence1', 'start',
@@ -414,7 +415,7 @@ if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [_Task(i) for i in range(thread_count)]
+    threads = [Task(API(i), i, 'python') for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

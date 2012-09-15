@@ -1,21 +1,15 @@
-# -*- coding: utf-8; Mode: m4; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+#!/usr/bin/env python
+# -*- coding: utf-8; Mode: python; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 # ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 #
-# SYNOPSIS
-#
-#   AX_PYTHON_C
-#
-# DESCRIPTION
-#
-#
 # BSD LICENSE
-#
-# Copyright (c) 2012, Michael Truog
+# 
+# Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
-#
+# 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-#
+# 
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -28,7 +22,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-#
+# 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -45,20 +39,24 @@
 # DAMAGE.
 #
 
-AC_DEFUN([AX_PYTHON_C],[
-    AC_ARG_VAR([PYTHON_CONFIG],[python-config executable])
-    AS_IF([test "x$PYTHON_DEBUG" == "xno"],
-        [AC_PATH_PROGS([PYTHON_CONFIG],
-            [python$PYTHON_VERSION_RELEASE-config python-config],
-            [AC_MSG_ERROR([python-config not found])],
-            [`AS_DIRNAME("$PYTHON")`])],
-        [AC_PATH_PROGS([PYTHON_CONFIG],
-            [python$PYTHON_VERSION_RELEASE-dbg-config python-dbg-config],
-            [AC_MSG_ERROR([python-dbg-config not found])],
-            [`AS_DIRNAME("$PYTHON")`])])
-    PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
-    AC_SUBST(PYTHON_CFLAGS)
-    PYTHON_LDFLAGS=`$PYTHON_CONFIG --ldflags`
-    AC_SUBST(PYTHON_LDFLAGS)
-])
+import sys, os
+sys.path.append(
+    os.path.sep.join(
+        os.path.dirname(os.path.abspath(__file__))
+               .split(os.path.sep)[:-2] + ['api', 'python']
+    )
+)
 
+from cloudi_c import API
+from messaging import Task
+
+if __name__ == '__main__':
+    thread_count = API.thread_count()
+    assert thread_count >= 1
+    
+    threads = [Task(API(i), i, 'python_c') for i in range(thread_count)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    

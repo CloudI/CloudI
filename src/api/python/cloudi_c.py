@@ -91,13 +91,7 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        response = self.__api.send_sync(name, request, **kwargs)
-        if response is None:
-            return None
-        elif response[0] == '':
-            return response[1:]
-        else:
-            return response
+        return self.__api.send_sync(name, request, **kwargs)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -161,19 +155,15 @@ class API(object):
                                timeout, trans_id, pid)
         raise libcloudi_py.return_sync_exception()
 
-    def recv_async(self, timeout=None, trans_id=None):
+    def recv_async(self, timeout=None, trans_id=None, consume=None):
         kwargs = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
         if trans_id is not None:
             kwargs['trans_id'] = trans_id
-        response = self.__api.recv_async(**kwargs)
-        if response is None:
-            return None
-        elif response[0] == '':
-            return response[1:]
-        else:
-            return response
+        if consume is not None:
+            kwargs['consume'] = consume
+        return self.__api.recv_async(**kwargs)
 
     def prefix(self):
         return self.__api.prefix()

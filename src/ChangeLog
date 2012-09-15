@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix python threading issues with the Python CloudI API C++ integration
+    * Add the send_async consume parameter to the
+      Python CloudI API C++ integration
+    * Add the python_c variation of the messaging test
+
 2012-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Rename some Erlang modules to be more intuitive

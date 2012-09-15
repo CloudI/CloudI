@@ -61,3 +61,8 @@ Settings added to /etc/sysctl.conf
 Setting added to /etc/security/limits.conf
 
     *                -       nofile          65535
+
+##INFORMATION
+
+http://www.mnot.net/blog/2011/05/18/http_benchmark_rules
+
