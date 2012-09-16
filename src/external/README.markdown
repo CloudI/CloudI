@@ -1,6 +1,86 @@
 External Dependencies
 =====================
 
+cowboy
+-------
+Erlang HTTP Server
+- https://github.com/extend/cowboy
+- commit af07e048e3b3dcda1c1b80e5b664b9939100a7dd
+- Sat Sep 15 13:42:26 PDT 2012
+- MIT
+
+ecouchdb (erlang_couchdb)
+-------------------------
+Erlang CouchDB (native) Driver
+
+- http://github.com/ngerakines/erlang_couchdb
+- commit e8b1a107d05f5e886de9
+- October 14, 2009
+- BSD
+
+ememcached (previously mcerlang)
+--------------------------------
+Erlang memcached Driver
+
+- modified from http://github.com/JacobVorreuter/mcerlang
+- commit (repository was removed)
+- October 14, 2009
+- BSD
+
+emysql (erlang_mysql)
+---------------------
+Erlang MySQL (native) Driver
+
+- http://github.com/ngerakines/erlang_mysql
+- alternatives are: https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl, https://github.com/dizzyd/erlang-mysql-driver
+- commit 712f8ead7585e6d3736a
+- October 14, 2009
+- BSD
+
+epgsql
+------
+Erlang PostgreSQL (native) Driver
+
+- https://github.com/wg/epgsql
+- commit 3318bd5d646cad0623ae9dcc6df015bb85258a63
+- Fri Jul  6 19:45:00 PDT 2012
+- BSD
+
+etokyotyrant (medici)
+---------------------
+Erlang TokyoTyrant (native) Driver
+
+- https://github.com/mccoy/medici
+- commit d4eafd6dd402d0c3bc42
+- October 14, 2009
+- Erlang Public License
+
+jinterface
+----------
+Binary Erlang Term Encoding Java Source Code
+
+- http://www.erlang.org/download/otp_src_R14B01.tar.gz
+- Wed Feb  9 12:31:54 PST 2011
+- Erlang Public License
+
+jsonrpclib
+----------
+Python JSON-RPC library
+
+- https://github.com/joshmarshall/jsonrpclib
+- commit efcf5eee0e12ef8a148c
+- Tue Apr 12 18:07:44 PDT 2011
+- Apache License
+
+jsx
+---
+Erlang JSON Parsing
+
+- https://github.com/talentdeficit/jsx
+- commit 26acdc29eecdcdad63530398e86eae7fa651ad13
+- Sun Mar 25 22:40:36 PDT 2012
+- MIT
+
 m4/ax_boost_base.m4, m4/ax_boost_thread.m4
 ------------------------------------------
 autoconf m4 macros for boost detection
@@ -42,87 +122,6 @@ autoconf m4 macros for ruby detection
 - Fri Mar  4 00:19:03 PST 2011
 - BSD-like
 
-ecouchdb (erlang_couchdb)
--------------------------
-Erlang CouchDB (native) Driver
-
-- http://github.com/ngerakines/erlang_couchdb
-- commit e8b1a107d05f5e886de9
-- October 14, 2009
-- BSD
-
-ememcached (previously mcerlang)
---------------------------------
-Erlang memcached Driver
-
-- modified from http://github.com/JacobVorreuter/mcerlang
-- commit (repository was removed)
-- October 14, 2009
-- BSD
-
-emysql (erlang_mysql)
----------------------
-Erlang MySQL (native) Driver
-
-- http://github.com/ngerakines/erlang_mysql
-- alternatives are: https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl, https://github.com/dizzyd/erlang-mysql-driver
-- commit 712f8ead7585e6d3736a
-- October 14, 2009
-- BSD
-
-epgsql
-------
-Erlang PostgreSQL (native) Driver
-
-- https://github.com/wg/epgsql
-- commit 3318bd5d646cad0623ae9dcc6df015bb85258a63
-- Fri Jul  6 19:45:00 PDT 2012
-- BSD
-
-zeromq/v?/erlzmq
-----------------
-ZeroMQ (http://www.zeromq.org/) Erlang Driver
-
-- https://github.com/zeromq/erlzmq2 (branch master and 3.x)
-- commit 0471f082685f17c6f9633ce9cfe4bec0c73cfd58
-- Sat Feb 18 17:05:03 PST 2012
-- BSD
-
-etokyotyrant (medici)
----------------------
-Erlang TokyoTyrant (native) Driver
-
-- https://github.com/mccoy/medici
-- commit d4eafd6dd402d0c3bc42
-- October 14, 2009
-- Erlang Public License
-
-jinterface
-----------
-Binary Erlang Term Encoding Java Source Code
-
-- http://www.erlang.org/download/otp_src_R14B01.tar.gz
-- Wed Feb  9 12:31:54 PST 2011
-- Erlang Public License
-
-jsonrpclib
-----------
-Python JSON-RPC library
-
-- https://github.com/joshmarshall/jsonrpclib
-- commit efcf5eee0e12ef8a148c
-- Tue Apr 12 18:07:44 PDT 2011
-- Apache License
-
-jsx
----
-Erlang JSON Parsing
-
-- https://github.com/talentdeficit/jsx
-- commit 26acdc29eecdcdad63530398e86eae7fa651ad13
-- Sun Mar 25 22:40:36 PDT 2012
-- MIT
-
 misultin
 --------
 Fast Erlang HTTP Server (version 0.9 final)
@@ -149,6 +148,15 @@ Erlang OTP-compliant build tool
 - commit 096e56d61c4841afad0c
 - Sat May 14 03:35:34 PDT 2011
 - Apache License
+
+zeromq/v?/erlzmq
+----------------
+ZeroMQ (http://www.zeromq.org/) Erlang Driver
+
+- https://github.com/zeromq/erlzmq2 (branch master and 3.x)
+- commit 0471f082685f17c6f9633ce9cfe4bec0c73cfd58
+- Sat Feb 18 17:05:03 PST 2012
+- BSD
 
 zeromq/v?/zeromq
 ----------------

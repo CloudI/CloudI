@@ -20,7 +20,9 @@
         cloudi_job_db_tokyotyrant,
         cloudi_job,
         cloudi_job_filesystem,
-        cloudi_job_http,
+        cloudi_job_http_cowboy,
+        cloudi_job_http_cowboy_handler,
+        cloudi_job_http_misultin,
         cloudi_job_timers,
         cloudi_job_work_manager,
         cloudi_job_zeromq,
@@ -47,18 +49,17 @@
         pqueue4
         ]},
    {registered,[
-        list_pg,
         cloudi_configurator,
         cloudi_external_sup,
         cloudi_logger,
         cloudi_internal_sup,
-        cloudi_job_sup,
         cloudi_nodes,
         cloudi_os_spawn,
         cloudi_services
         ]},
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
+        cowboy,
         ecouchdb,
         ememcached,
         emysql,

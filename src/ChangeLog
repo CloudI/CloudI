@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cowboy http server integration
+    * Fix http use of misultin with Content-Disposition
+    * Fix external request_info requirement (binary-only)
+
 2012-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix python threading issues with the Python CloudI API C++ integration

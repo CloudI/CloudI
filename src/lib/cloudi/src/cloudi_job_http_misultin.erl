@@ -4,6 +4,7 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI HTTP Integration==
+%%% Uses the misultin Erlang HTTP Server.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -44,10 +45,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_http).
+-module(cloudi_job_http_misultin).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_job).
@@ -69,7 +70,6 @@
 -define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds
 -define(DEFAULT_SSL,                   false).
 -define(DEFAULT_COMPRESS,              false).
--define(DEFAULT_WS_AUTOEXIT,            true).
 -define(DEFAULT_MAX_CONNECTIONS,        4096).
 -define(DEFAULT_OUTPUT,               binary).
 -define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
@@ -85,7 +85,7 @@
         requests = dict:new()
     }).
 
--record(request_data,
+-record(request_state,
     {
         name_incoming,
         name_outgoing,
@@ -110,13 +110,12 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
         {recv_timeout,           ?DEFAULT_RECV_TIMEOUT},
         {ssl,                    ?DEFAULT_SSL},
         {compress,               ?DEFAULT_COMPRESS},
-        {ws_autoexit,            ?DEFAULT_WS_AUTOEXIT},
         {max_connections,        ?DEFAULT_MAX_CONNECTIONS},
         {output,                 ?DEFAULT_OUTPUT},
         {content_type,           ?DEFAULT_CONTENT_TYPE},
         {use_host_prefix,        ?DEFAULT_USE_HOST_PREFIX},
         {use_method_suffix,      ?DEFAULT_USE_METHOD_SUFFIX}],
-    [Interface, Port, Backlog, RecvTimeout, SSL, Compress, WsAutoExit,
+    [Interface, Port, Backlog, RecvTimeout, SSL, Compress,
      MaxConnections,
      OutputType, DefaultContentType, UseHostPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
@@ -131,7 +130,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
                               {recv_timeout, RecvTimeout},
                               {ssl, SSL},
                               {compress, Compress},
-                              {ws_autoexit, WsAutoExit},
+                              {ws_autoexit, true},
                               {max_connections, MaxConnections},
                               {loop, Loop},
                               {name, false}]) of
@@ -204,23 +203,22 @@ http_request(OutputType, UseHostPrefix, UseMethodSuffix, HttpRequest, Job) ->
     Request = if
         OutputType =:= list ->
             erlang:binary_to_list(RequestBinary);
+        OutputType =:= internal; OutputType =:= external;
         OutputType =:= binary ->
             RequestBinary
     end,
     RequestInfo = if
-        OutputType =:= list ->
-            % list data will only be handled by erlang jobs, so there is no
-            % need to use a special format for the headers data
+        OutputType =:= internal; OutputType =:= list ->
             HeadersIncoming;
-        OutputType =:= binary ->
+        OutputType =:= external; OutputType =:= binary ->
             headers_external(HeadersIncoming)
     end,
     Job ! {http_request,
-           #request_data{name_incoming = NameIncoming,
-                         name_outgoing = NameOutgoing,
-                         request_info = RequestInfo,
-                         request = Request,
-                         request_pid = self()}},
+           #request_state{name_incoming = NameIncoming,
+                          name_outgoing = NameOutgoing,
+                          request_info = RequestInfo,
+                          request = Request,
+                          request_pid = self()}},
     receive
         {ok, HttpCode, HeadersOutgoing, ResponseBinary} ->
             ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
@@ -237,18 +235,18 @@ http_request(OutputType, UseHostPrefix, UseMethodSuffix, HttpRequest, Job) ->
     end.
 
 cloudi_job_handle_info({'http_request',
-                        #request_data{name_outgoing = NameOutgoing,
-                                      request_info = RequestInfo,
-                                      request = Request,
-                                      request_pid = RequestPid} = RequestData},
+                        #request_state{name_outgoing = NameOutgoing,
+                                       request_info = RequestInfo,
+                                       request = Request,
+                                       request_pid = RequestPid} = RequestData},
                        #state{requests = Requests} = State,
                        Dispatcher) ->
     case cloudi_job:send_async_active(Dispatcher, NameOutgoing,
                                       RequestInfo, Request,
                                       undefined, undefined) of
         {ok, TransId} ->
-            NewRequestData = RequestData#request_data{request_info = undefined,
-                                                      request = undefined},
+            NewRequestData = RequestData#request_state{request_info = undefined,
+                                                       request = undefined},
             {noreply, State#state{requests = dict:store(TransId, NewRequestData,
                                                         Requests)}};
         {error, timeout} ->
@@ -267,11 +265,12 @@ cloudi_job_handle_info({'return_async_active', _Name, _Pattern,
                               content_type_lookup = ContentTypeLookup,
                               requests = Requests} = State,
                        _Dispatcher) ->
-    #request_data{name_incoming = NameIncoming,
-                  request_pid = RequestPid} = dict:fetch(TransId, Requests),
+    #request_state{name_incoming = NameIncoming,
+                   request_pid = RequestPid} = dict:fetch(TransId, Requests),
     ResponseBinary = if
         OutputType =:= list ->
             erlang:list_to_binary(Response);
+        OutputType =:= internal; OutputType =:= external;
         OutputType =:= binary ->
             Response
     end,
@@ -288,14 +287,16 @@ cloudi_job_handle_info({'return_async_active', _Name, _Pattern,
                     case trie:find(Extension, ContentTypeLookup) of
                         error ->
                             [{'Content-Disposition',
-                              "attachment; filename=" ++ NameIncoming},
+                              "attachment; filename=\"" ++
+                              NameIncoming ++ "\""},
                              {'Content-Type',
                               "application/octet-stream"}];
                         {ok, {request, ContentType}} ->
                             [{'Content-Type', ContentType}];
                         {ok, {attachment, ContentType}} ->
                             [{'Content-Disposition',
-                              "attachment; filename=" ++ NameIncoming},
+                              "attachment; filename=\"" ++
+                              NameIncoming ++ "\""},
                              {'Content-Type', ContentType}]
                     end
             end
@@ -306,7 +307,7 @@ cloudi_job_handle_info({'return_async_active', _Name, _Pattern,
 cloudi_job_handle_info({'timeout_async_active', TransId},
                        #state{requests = Requests} = State,
                        _Dispatcher) ->
-    #request_data{request_pid = RequestPid} = dict:fetch(TransId, Requests),
+    #request_state{request_pid = RequestPid} = dict:fetch(TransId, Requests),
     RequestPid ! {error, 504, timeout},
     {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
