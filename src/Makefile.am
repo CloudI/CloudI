@@ -16,6 +16,7 @@ all-local: rebar \
 	$(MKDIR_P) lib/cpg/ebin
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
+	$(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR)
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
@@ -26,7 +27,7 @@ all-local: rebar \
 	$(MKDIR_P) external/emysql/ebin
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
-	$(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR)
+	$(MKDIR_P) external/cowboy/ebin
 	(cd $(top_srcdir)/lib/cloudi/src; \
         test ! -e cloudi.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
@@ -42,6 +43,9 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/cloudi; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
+	(cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
+        test ! -e erlzmq && \
+        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0)
 	(cd $(top_srcdir)/external/nodefinder/nodefinder; \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/nodefinder/ebin || \
@@ -75,12 +79,12 @@ all-local: rebar \
 	(cd $(top_srcdir)/external/ecouchdb; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
-	(cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
-        test ! -e erlzmq && \
-        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0)
+	(cd $(top_srcdir)/external/cowboy; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
-                -C $(abs_top_builddir)/rebar.config compile || exit 0)
+                -C $(abs_top_builddir)/rebar.config compile)
 
 clean-local: rebar
 	(cd $(top_srcdir) && \
@@ -95,12 +99,13 @@ clean-local: rebar
           $(top_builddir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
           $(top_builddir)/external/misultin/ebin \
+          $(top_builddir)/external/jsx/ebin \
           $(top_builddir)/external/etokyotyrant/ebin \
           $(top_builddir)/external/epgsql/ebin \
           $(top_builddir)/external/emysql/ebin \
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
-          $(top_builddir)/external/jsx/ebin \
+          $(top_builddir)/external/cowboy/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi/ebin \
           $(top_srcdir)/lib/cpg/ebin \
@@ -110,12 +115,13 @@ clean-local: rebar
           $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
           $(top_srcdir)/external/misultin/ebin \
+          $(top_srcdir)/external/jsx/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
-          $(top_srcdir)/external/jsx/ebin
+          $(top_srcdir)/external/cowboy/ebin
 
 clean-configure: config.log
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
@@ -175,13 +181,14 @@ dialyze: all-local dialyzer.plt
                 lib/cpg/ebin/ \
                 lib/uuid/ebin/ \
                 lib/trie/ebin/ \
+                external/cowboy/ebin \
                 external/epgsql/ebin \
                 external/etokyotyrant/ebin \
                 external/ememcached/ebin \
                 external/ecouchdb/ebin \
                 external/emysql/ebin \
-                external/misultin/ebin \
-                external/jsx/ebin
+                external/jsx/ebin \
+                external/misultin/ebin
 
 dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
