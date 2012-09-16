@@ -62,8 +62,7 @@
          cloudi_job_terminate/2]).
 
 -include("cloudi_logger.hrl").
-%-include("cloudi_constants.hrl").
--include("cloudi_job_http_cowboy_handler.hrl").
+-include("cloudi_http_cowboy_handler.hrl").
 
 -define(DEFAULT_INTERFACE,       {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                   8080).
@@ -129,7 +128,7 @@ cloudi_job_init(Args, _Prefix, Dispatcher) ->
     Job = cloudi_job:self(Dispatcher),
     Dispatch = [
         %% {Host, list({Path, Handler, Opts})}
-        {'_', [{'_', cloudi_job_http_cowboy_handler,
+        {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{job = Job,
                               output_type = OutputType,
                               use_host_prefix = UseHostPrefix,

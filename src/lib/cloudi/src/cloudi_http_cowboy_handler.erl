@@ -47,7 +47,7 @@
 %%% @version 1.1.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_job_http_cowboy_handler).
+-module(cloudi_http_cowboy_handler).
 -author('mjtruog [at] gmail (dot) com').
 
 %-behaviour(cowboy_http_handler).
@@ -60,8 +60,7 @@
          terminate/2]).
 
 -include("cloudi_logger.hrl").
-%-include("cloudi_constants.hrl").
--include("cloudi_job_http_cowboy_handler.hrl").
+-include("cloudi_http_cowboy_handler.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
