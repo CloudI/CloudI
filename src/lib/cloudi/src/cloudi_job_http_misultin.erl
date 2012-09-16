@@ -62,7 +62,6 @@
          cloudi_job_terminate/2]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
 
 -define(DEFAULT_INTERFACE,       {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                   8080).
