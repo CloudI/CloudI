@@ -17,6 +17,7 @@
     ememcached,
     emysql,
     ecouchdb,
+    cowboy,
     % CloudI
     cloudi,
     cpg,
@@ -47,6 +48,7 @@
   {app, epgsql, [{incl_cond, include}]},
   {app, ecouchdb, [{incl_cond, include}]},
   {app, ec2nodefinder, [{incl_cond, include}]},
+  {app, cowboy, [{incl_cond, include}]},
   {app, combonodefinder, [{incl_cond, include}]},
   % CloudI
   {app, cloudi, [{incl_cond, include}]},

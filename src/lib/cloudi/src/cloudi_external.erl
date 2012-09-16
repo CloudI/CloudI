@@ -573,8 +573,9 @@ handle_info({'recv_async', _, _, _} = T, StateName, StateData) ->
 
 % incoming messages (from Erlang pids to the port socket)
 
-handle_info({'send_async', _, _, _, Request, _, _, _, _}, StateName, StateData)
-    when is_binary(Request) =:= false ->
+handle_info({'send_async', _, _, RequestInfo, Request, _, _, _, _},
+            StateName, StateData)
+    when is_binary(RequestInfo) =:= false; is_binary(Request) =:= false ->
     {next_state, StateName, StateData};
 
 handle_info({'send_async', Name, Pattern, RequestInfo, Request,
@@ -604,8 +605,9 @@ handle_info({'send_async', _, _, _, _,
             {next_state, StateName, StateData}
     end;
 
-handle_info({'send_sync', _, _, _, Request, _, _, _, _}, StateName, StateData)
-    when is_binary(Request) =:= false ->
+handle_info({'send_sync', _, _, RequestInfo, Request, _, _, _, _},
+            StateName, StateData)
+    when is_binary(RequestInfo) =:= false; is_binary(Request) =:= false ->
     {next_state, StateName, StateData};
 
 handle_info({'send_sync', Name, Pattern, RequestInfo, Request,

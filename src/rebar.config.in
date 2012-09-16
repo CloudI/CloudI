@@ -1,5 +1,6 @@
 {sub_dirs, ["lib/cloudi",
             "external/jsx",
+            "external/cowboy",
             "external/ecouchdb",
             "external/ememcached",
             "external/emysql",
