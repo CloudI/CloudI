@@ -7,18 +7,20 @@ http://localhost:8080/tests/http_req/erlang.xml?value=42
 http://localhost:8080/tests/http_req/c.xml?value=42
 http://localhost:8080/tests/http_req/java.xml?value=42
 http://localhost:8080/tests/http_req/python.xml?value=42
+http://localhost:8080/tests/http_req/python_c.xml?value=42
 http://localhost:8080/tests/http_req/ruby.xml?value=42
 
 Which all give the following response, from the associated programming language:
 <http_test><value>42</value></http_test>
 
-The loadtest is test data is based on the testing in
-http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .
-Misultin is used within CloudI currently, but the results of the previous
-misultin testing is only loosely related to CloudI loadtesting.
-The CloudI loadtesting is using Tsung instead of httperf, so that it is
-easier to get more formalized loadtest information.
-(see loadtest/setup/http_req_*.xml).
+The loadtest's test data is based on the testing in
+http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .  The test's task is simple usage of an XML response to a
+HTTP GET request, which requires minimal processing in each programming
+language.  The CloudI HTTP jobs that currently exist are
+cloudi_job_http_misultin and cloudi_job_http_cowboy.
+The loadtest results from the version 1.0.0 release only used
+cloudi_job_http_misultin.  The CloudI loadtesting is using Tsung to receive
+more formalized loadtest results (see loadtest/setup/http_req_*.xml).
 
 ##CONFIGURATION
 
@@ -66,3 +68,7 @@ Setting added to /etc/security/limits.conf
 
 http://www.mnot.net/blog/2011/05/18/http_benchmark_rules
 
+(interesting historical loadtest, only localhost usage... need more interfaces)
+http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
+http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2
+http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3

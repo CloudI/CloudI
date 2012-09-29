@@ -28,8 +28,12 @@ function (e.g., "/db/pgsql/" is a prefix for the Erlang service code
 cloudi_job_db_pgsql which creates the service name "cloudi_tests"
 (also, the database name) so that all messages can reference the service with
 "/db/pgsql/cloudi_tests" and ACLs can allow or deny prefixes like "/db/pgsql/").
-More features are currently explained in the configuration file
-(src/cloudi.conf), but proper documentation will be added soon.
+Please see the [FAQ](http://cloudi.org/faq.html) for more details.
+
+The default configuration runs many tests which should generate significant
+CPU consumption after startup.  If you want to see the details of the
+default configuration, look in [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in).
+
 
 The default configuration runs the hexadecimal PI test using the
 Bailey-Borwein-Plouffe formula and verifies that the digits are correct
@@ -64,19 +68,22 @@ Build Requirements:
 
 Optional:
 
-* ZeroMQ >= 2.x.x (however, 3.x.x is not yet supported)
+* ZeroMQ >= 2.x.x (or) 3.x.x
 
 On OSX, to run configure with the OSX ports paths, use:
+(macports)
 CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+(homebrew)
+CXXFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure
+(A better solution is forthcoming)
 
 To build with ZeroMQ integration, use the "--with-zeromq" configure flag.
 If ZeroMQ is not installed, it will be installed locally and linked into a
-NIF statically, so it is not a runtime dependency.
+NIF statically, so it is not a runtime dependency.  The ZeroMQ version
+defaults to 2.x.x, but can use 3.x.x with "--with-zeromq-version=3".
 The ZeroMQ NIF requires Erlang >= R14B02.
 
 See [src/README](https://github.com/okeuday/CloudI/tree/master/src#readme) for basic build information
-
-See [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in) for system configuration information
 
 ## RUNNING
 
