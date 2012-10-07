@@ -1,0 +1,27 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
+{application, cloudi_services_databases, 
+  [{description, "Cloudi Services Databases Integration"},
+   {vsn, "@VERSION@"},
+   {modules, [
+        cloudi_job_db_couchdb,
+        cloudi_job_db_memcached,
+        cloudi_job_db_mysql,
+        cloudi_job_db_pgsql,
+        cloudi_job_db_tokyotyrant
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        ecouchdb,
+        ememcached,
+        emysql,
+        epgsql,
+        etokyotyrant,
+        cloudi_core,
+        stdlib,
+        kernel
+        ]},
+   {start_phases, []}]}.
+

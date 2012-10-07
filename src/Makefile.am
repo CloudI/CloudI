@@ -12,7 +12,10 @@ rel/files/app.config: rel/files/app.config.in
 all-local: rebar \
            rel/files/app.config
 	$(MKDIR_P) external
-	$(MKDIR_P) lib/cloudi/ebin
+	$(MKDIR_P) lib/cloudi_core/ebin
+	$(MKDIR_P) lib/cloudi_services_internal/ebin
+	$(MKDIR_P) lib/cloudi_services_databases/ebin
+	$(MKDIR_P) lib/cloudi_services_messaging/ebin
 	$(MKDIR_P) lib/cpg/ebin
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
@@ -28,9 +31,18 @@ all-local: rebar \
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
-	(cd $(top_srcdir)/lib/cloudi/src; \
-        test ! -e cloudi.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi/src/cloudi.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_core/src; \
+        test ! -e cloudi_core.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_internal/src; \
+        test ! -e cloudi_services_internal.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_databases/src; \
+        test ! -e cloudi_services_databases.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_messaging/src; \
+        test ! -e cloudi_services_messaging.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cpg/src; \
         test ! -e cpg.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cpg/src/cpg.app.src || exit 0)
@@ -40,9 +52,18 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/trie/src; \
         test ! -e trie.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/trie/src/trie.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi; \
+	(cd $(top_srcdir)/lib/cloudi_core; \
         test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi/ebin || exit 0)
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_internal; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_databases; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_services_messaging; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/ebin || exit 0)
 	(cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
         test ! -e erlzmq && \
         $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0)
@@ -91,7 +112,10 @@ clean-local: rebar
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
-	rmdir $(top_builddir)/lib/cloudi/ebin \
+	rmdir $(top_builddir)/lib/cloudi_core/ebin \
+	        $(top_builddir)/lib/cloudi_services_internal/ebin \
+	        $(top_builddir)/lib/cloudi_services_databases/ebin \
+	        $(top_builddir)/lib/cloudi_services_messaging/ebin \
           $(top_builddir)/lib/cpg/ebin \
           $(top_builddir)/lib/uuid/ebin \
           $(top_builddir)/lib/trie/ebin \
@@ -107,7 +131,10 @@ clean-local: rebar
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
           || exit 0
-	rm -f $(top_srcdir)/lib/cloudi/ebin \
+	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
+	        $(top_srcdir)/lib/cloudi_services_internal/ebin \
+	        $(top_srcdir)/lib/cloudi_services_databases/ebin \
+	        $(top_srcdir)/lib/cloudi_services_messaging/ebin \
           $(top_srcdir)/lib/cpg/ebin \
           $(top_srcdir)/lib/uuid/ebin \
           $(top_srcdir)/lib/trie/ebin \
@@ -153,7 +180,10 @@ clean-configure: config.log
           $(top_srcdir)/m4/ltversion.m4 \
           $(top_srcdir)/m4/lt~obsolete.m4 \
           $(top_srcdir)/external/rebar/ebin/*.beam \
-          $(top_builddir)/lib/cloudi/src/cloudi.app.src \
+          $(top_builddir)/lib/cloudi_core/src/cloudi_core.app.src \
+          $(top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
+          $(top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
+          $(top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src \
           $(top_builddir)/rel/files/app.config \
           $(top_builddir)/rebar.config \
           $(top_builddir)/reltool.config \
@@ -161,7 +191,7 @@ clean-configure: config.log
 	rm -rf $(top_srcdir)/autom4te.cache
 	rm -rf $(top_builddir)/api/c/.deps/ \
            $(top_builddir)/api/python/.deps/ \
-           $(top_builddir)/lib/cloudi/cxx_src/.deps/ \
+           $(top_builddir)/lib/cloudi_core/cxx_src/.deps/ \
            $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
            $(top_builddir)/tests/http_req/c_src/.deps/ \
            $(top_builddir)/tests/flood/service/.deps/ \
@@ -176,8 +206,11 @@ clean-configure: config.log
 
 dialyze: all-local dialyzer.plt
 	$(DIALYZER) --plt dialyzer.plt \
-                -I lib/cloudi/include/ \
-                lib/cloudi/ebin/ \
+                -I lib/cloudi_core/include/ \
+                lib/cloudi_core/ebin/ \
+                lib/cloudi_services_internal/ebin/ \
+                lib/cloudi_services_databases/ebin/ \
+                lib/cloudi_services_messaging/ebin/ \
                 lib/cpg/ebin/ \
                 lib/uuid/ebin/ \
                 lib/trie/ebin/ \

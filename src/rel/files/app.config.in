@@ -24,7 +24,7 @@
     {port, 4475},
     {multicast_ttl, 1}
 ]},
-{cloudi, [
+{cloudi_core, [
     {configuration, "@cloudi_confdir@/cloudi.conf"}
 ]}].
 

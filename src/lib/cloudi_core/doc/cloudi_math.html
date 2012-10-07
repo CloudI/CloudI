@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module cloudi_math</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_math</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Math_operations">Math operations</a></h3>.
+<p>Copyright © 2009-2012 Michael Truog</p>
+
+<p><b>Version:</b> 0.2.0 Oct 6 2012 20:30:19
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Math_operations">Math operations</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#ceil-1">ceil/1</a></td><td>
+  <h4><a name="Provide_a_ceiling_function.">Provide a ceiling function.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#floor-1">floor/1</a></td><td>
+  <h4><a name="Provide_a_floor_function_(for_readability).">Provide a floor function (for readability).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#frac-1">frac/1</a></td><td>
+  <h4><a name="Fractional_part_of_a_number.">Fractional part of a number.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#immediate_stddev-1">immediate_stddev/1</a></td><td>
+  <h4><a name="Calculate_the_standard_deviation_using_the_compensated-summation_Two-pass_algorithm">Calculate the standard deviation using the compensated-summation Two-pass algorithm</a></h4>
+  Immediately calculate the standard deviation of the list.</td></tr>
+<tr><td valign="top"><a href="#product-1">product/1</a></td><td>
+  <h4><a name="Find_the_product_of_a_list_of_numbers.">Find the product of a list of numbers.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#round-2">round/2</a></td><td>
+  <h4><a name="Round_to_a_decimal_place.">Round to a decimal place.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#stddev-0">stddev/0</a></td><td>
+  <h4><a name="Calculate_the_standard_deviation_using_the_On-line_algorithm.">Calculate the standard deviation using the On-line algorithm.</a></h4>
+  B.</td></tr>
+<tr><td valign="top"><a href="#stddev-1">stddev/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stddev-2">stddev/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stddev-4">stddev/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sum-1">sum/1</a></td><td>
+  <h4><a name="Find_the_sum_of_a_list_of_numbers.">Find the sum of a list of numbers.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="ceil-1">ceil/1</a></h3>
+<div class="spec">
+<p><tt>ceil(X::number()) -&gt; integer()</tt><br></p>
+</div><p>
+  <h4><a name="Provide_a_ceiling_function.">Provide a ceiling function.</a></h4>
+</p>
+
+<h3 class="function"><a name="floor-1">floor/1</a></h3>
+<div class="spec">
+<p><tt>floor(X::number()) -&gt; integer()</tt><br></p>
+</div><p>
+  <h4><a name="Provide_a_floor_function_(for_readability).">Provide a floor function (for readability).</a></h4>
+</p>
+
+<h3 class="function"><a name="frac-1">frac/1</a></h3>
+<div class="spec">
+<p><tt>frac(X::number()) -&gt; number()</tt><br></p>
+</div><p>
+  <h4><a name="Fractional_part_of_a_number.">Fractional part of a number.</a></h4>
+</p>
+
+<h3 class="function"><a name="immediate_stddev-1">immediate_stddev/1</a></h3>
+<div class="spec">
+<p><tt>immediate_stddev(L::[number()]) -&gt; float()</tt><br></p>
+</div><p>
+  <h4><a name="Calculate_the_standard_deviation_using_the_compensated-summation_Two-pass_algorithm">Calculate the standard deviation using the compensated-summation Two-pass algorithm</a></h4>
+  Immediately calculate the standard deviation of the list.</p>
+
+<h3 class="function"><a name="product-1">product/1</a></h3>
+<div class="spec">
+<p><tt>product(L::[number()]) -&gt; number()</tt><br></p>
+</div><p>
+  <h4><a name="Find_the_product_of_a_list_of_numbers.">Find the product of a list of numbers.</a></h4>
+</p>
+
+<h3 class="function"><a name="round-2">round/2</a></h3>
+<div class="spec">
+<p><tt>round(X::float(), N::integer()) -&gt; float()</tt><br></p>
+</div><p>
+  <h4><a name="Round_to_a_decimal_place.">Round to a decimal place.</a></h4>
+</p>
+
+<h3 class="function"><a name="stddev-0">stddev/0</a></h3>
+<div class="spec">
+<p><tt>stddev() -&gt; {pos_integer(), float(), float()}</tt><br></p>
+</div><p>
+  <h4><a name="Calculate_the_standard_deviation_using_the_On-line_algorithm.">Calculate the standard deviation using the On-line algorithm.</a></h4>
+  B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420</p>
+
+<h3 class="function"><a name="stddev-1">stddev/1</a></h3>
+<div class="spec">
+<p><tt>stddev(Input::[number()] | {pos_integer(), float(), float()}) -&gt; {pos_integer(), float(), float()} | {float(), float()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="stddev-2">stddev/2</a></h3>
+<div class="spec">
+<p><tt>stddev(Input::[number()], X2::{pos_integer(), float(), float()}) -&gt; {pos_integer(), float(), float()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="stddev-4">stddev/4</a></h3>
+<div class="spec">
+<p><tt>stddev(Input::[number()], Count::pos_integer(), Mean::float(), Q::float()) -&gt; {pos_integer(), float(), float()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sum-1">sum/1</a></h3>
+<div class="spec">
+<p><tt>sum(L::[number()]) -&gt; number()</tt><br></p>
+</div><p>
+  <h4><a name="Find_the_sum_of_a_list_of_numbers.">Find the sum of a list of numbers.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 6 2012, 20:30:19.</i></p>
+</body>
+</html>

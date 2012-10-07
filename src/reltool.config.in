@@ -19,7 +19,10 @@
     ecouchdb,
     cowboy,
     % CloudI
-    cloudi,
+    cloudi_core,
+    cloudi_services_internal,
+    cloudi_services_databases,
+    cloudi_services_messaging,
     cpg,
     uuid,
     trie,
@@ -51,7 +54,10 @@
   {app, cowboy, [{incl_cond, include}]},
   {app, combonodefinder, [{incl_cond, include}]},
   % CloudI
-  {app, cloudi, [{incl_cond, include}]},
+  {app, cloudi_core, [{incl_cond, include}]},
+  {app, cloudi_services_internal, [{incl_cond, include}]},
+  {app, cloudi_services_databases, [{incl_cond, include}]},
+  {app, cloudi_services_messaging, [{incl_cond, include}]},
   {app, cpg, [{incl_cond, include}]},
   {app, uuid, [{incl_cond, include}]},
   {app, trie, [{incl_cond, include}]},
