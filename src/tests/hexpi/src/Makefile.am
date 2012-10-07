@@ -1,5 +1,6 @@
 beamdir = ../ebin
 beam_DATA = cloudi_job_hexpi.beam
+
 CLEANFILES = $(beam_DATA) \
              $(beamdir)/cloudi_job_hexpi.beam
 

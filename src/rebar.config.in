@@ -10,7 +10,6 @@
             "external/nodefinder/nodefinder",
             "external/nodefinder/ec2nodefinder",
             "external/nodefinder/combonodefinder",
-            "lib/cloudi",
             "lib/cpg",
             "lib/uuid",
             "lib/trie"]}.

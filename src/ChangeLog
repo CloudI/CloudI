@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 tabstop=4:
 
+2012-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the CloudI Map-Reduce Service/Behaviour and
+      use it to simplify the hexpi test
+
 2012-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cowboy http server integration
