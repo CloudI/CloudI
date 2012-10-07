@@ -180,13 +180,12 @@
     % the job below manages the Hexidecimal PI test
     {internal,
         "/tests/",
-        cloudi_job_hexpi,
-        [1,       % starting index
-         65536,   % ending index
-         1.5],    % concurrent tasks
+        cloudi_job_map_reduce,
+        [{map_reduce, cloudi_job_hexpi}, % map-reduce module
+         {map_reduce_args, [1, 65536]},  % index start, index end
+         {concurrency, 1.5}],
         immediate_closest, % recover from failures (process deaths) immediately
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
-
     % tests/http/ services
     {internal,
         "/tests/http/",
