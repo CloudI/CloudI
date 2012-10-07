@@ -1,0 +1,30 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
+{application, cloudi_services_internal, 
+  [{description, "Cloudi Services Internal Integration"},
+   {vsn, "@VERSION@"},
+   {modules, [
+        cloudi_http_cowboy_handler,
+        cloudi_job_api,
+        cloudi_job_filesystem,
+        cloudi_job_http_cowboy,
+        cloudi_job_http_misultin,
+        cloudi_job_map_reduce,
+        cloudi_job_timers,
+        cloudi_job_work_manager,
+        cloudi_json_rpc,
+        cloudi_task_size
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        cowboy,
+        misultin,
+        jsx,
+        cloudi_core,
+        stdlib,
+        kernel
+        ]},
+   {start_phases, []}]}.
+

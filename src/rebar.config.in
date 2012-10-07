@@ -1,4 +1,7 @@
-{sub_dirs, ["lib/cloudi",
+{sub_dirs, ["lib/cloudi_core",
+            "lib/cloudi_services_internal",
+            "lib/cloudi_services_databases",
+            "lib/cloudi_services_messaging",
             "external/jsx",
             "external/cowboy",
             "external/ecouchdb",

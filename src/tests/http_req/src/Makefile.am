@@ -8,8 +8,8 @@ all-local: $(beam_DATA)
 	cp -f $(beam_DATA) $(beamdir)
 
 .erl.beam:
-	@ERLC@ -b beam -I $(top_srcdir)/lib/cloudi/include \
-           -pz $(top_builddir)/lib/cloudi/ebin \
+	@ERLC@ -b beam -I $(top_srcdir)/lib/cloudi_core/include \
+           -pz $(top_builddir)/lib/cloudi_core/ebin \
            -o $@ $<
 
 

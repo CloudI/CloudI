@@ -1,0 +1,19 @@
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+
+{application, cloudi_services_messaging, 
+  [{description, "Cloudi Services Messaging Integration"},
+   {vsn, "@VERSION@"},
+   {modules, [
+        cloudi_job_zeromq
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        @ZEROMQ_ERLZMQ_APPCONF@
+        cloudi_core,
+        stdlib,
+        kernel
+        ]},
+   {start_phases, []}]}.
+

@@ -1,0 +1,352 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module cloudi_job</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_job</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_(Internal)_Job_Behavior">CloudI (Internal) Job Behavior</a></h3>.
+<p>Copyright © 2011-2012 Michael Truog</p>
+
+<p><b>Version:</b> 1.1.0 Oct 6 2012 20:30:19
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_(Internal)_Job_Behavior">CloudI (Internal) Job Behavior</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#forward-9">forward/9</a></td><td></td></tr>
+<tr><td valign="top"><a href="#forward_async-8">forward_async/8</a></td><td></td></tr>
+<tr><td valign="top"><a href="#forward_sync-8">forward_sync/8</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_pid-2">get_pid/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_pid-3">get_pid/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_request-13">handle_request/13</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mcast_async-3">mcast_async/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mcast_async-4">mcast_async/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mcast_async-5">mcast_async/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mcast_async-6">mcast_async/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#prefix-1">prefix/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#process_index-1">process_index/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async-1">recv_async/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async-2">recv_async/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async-3">recv_async/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async-4">recv_async/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#request_http_qs_parse-1">request_http_qs_parse/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#request_info_key_value_parse-1">request_info_key_value_parse/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return-9">return/9</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return_async-8">return_async/8</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return_nothrow-9">return_nothrow/9</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return_sync-8">return_sync/8</a></td><td></td></tr>
+<tr><td valign="top"><a href="#self-1">self/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async-3">send_async/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async-4">send_async/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async-5">send_async/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async-6">send_async/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async-7">send_async/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_active-3">send_async_active/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_active-4">send_async_active/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_active-5">send_async_active/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_active-6">send_async_active/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_active-7">send_async_active/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-3">send_async_passive/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-4">send_async_passive/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-5">send_async_passive/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-6">send_async_passive/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-7">send_async_passive/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync-3">send_sync/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync-4">send_sync/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync-5">send_sync/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync-6">send_sync/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync-7">send_sync/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#subscribe-2">subscribe/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#timeout_async-1">timeout_async/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#timeout_sync-1">timeout_sync/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#unsubscribe-2">unsubscribe/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="forward-9">forward/9</a></h3>
+<div class="spec">
+<p><tt>forward(Dispatcher::pid(), X2::send_async | send_sync, Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer(), Priority::integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="forward_async-8">forward_async/8</a></h3>
+<div class="spec">
+<p><tt>forward_async(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer(), Priority::integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="forward_sync-8">forward_sync/8</a></h3>
+<div class="spec">
+<p><tt>forward_sync(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer(), Priority::integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="get_pid-2">get_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_pid(Dispatcher::pid(), Name::string()) -&gt; {ok, {string(), pid()}} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="get_pid-3">get_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_pid(Dispatcher::pid(), Name::string(), Timeout::pos_integer()) -&gt; {ok, {string(), pid()}} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(T, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_request-13">handle_request/13</a></h3>
+<div class="spec">
+<p><tt>handle_request(X1, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, Module, Dispatcher, JobState, Parent) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="mcast_async-3">mcast_async/3</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::pid(), Name::string(), Request::any()) -&gt; {ok, [binary()]} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="mcast_async-4">mcast_async/4</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined) -&gt; {ok, [binary()]} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="mcast_async-5">mcast_async/5</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, [binary()]} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="mcast_async-6">mcast_async/6</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, [binary()]} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="prefix-1">prefix/1</a></h3>
+<div class="spec">
+<p><tt>prefix(Dispatcher::pid()) -&gt; pos_integer()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="process_index-1">process_index/1</a></h3>
+<div class="spec">
+<p><tt>process_index(Dispatcher::pid()) -&gt; pos_integer()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="recv_async-1">recv_async/1</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::pid()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="recv_async-2">recv_async/2</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::pid(), TransId::pos_integer() | binary()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="recv_async-3">recv_async/3</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer() | binary(), TransId::binary() | boolean()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="recv_async-4">recv_async/4</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer(), TransId::binary(), Consume::boolean()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="request_http_qs_parse-1">request_http_qs_parse/1</a></h3>
+<div class="spec">
+<p><tt>request_http_qs_parse(Request::binary()) -&gt; dict()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="request_info_key_value_parse-1">request_info_key_value_parse/1</a></h3>
+<div class="spec">
+<p><tt>request_info_key_value_parse(RequestInfo::binary() | list()) -&gt; dict()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="return-9">return/9</a></h3>
+<div class="spec">
+<p><tt>return(Dispatcher::pid(), Type::send_async | send_sync, Name::string(), Pattern::string(), ResponseInfo::any(), Response::any(), Timeout::pos_integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="return_async-8">return_async/8</a></h3>
+<div class="spec">
+<p><tt>return_async(Dispatcher::pid(), Name::string(), Pattern::string(), ResponseInfo::any(), Response::any(), Timeout::pos_integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="return_nothrow-9">return_nothrow/9</a></h3>
+<div class="spec">
+<p><tt>return_nothrow(Dispatcher::pid(), X2::send_async | send_sync, Name::string(), Pattern::string(), ResponseInfo::any(), Response::any(), Timeout::pos_integer(), TransId::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="return_sync-8">return_sync/8</a></h3>
+<div class="spec">
+<p><tt>return_sync(Dispatcher::pid(), Name::string(), Pattern::string(), ResponseInfo::any(), Response::any(), Timeout::pos_integer(), TransId::binary(), Pid::pid()) -&gt; none()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="self-1">self/1</a></h3>
+<div class="spec">
+<p><tt>self(Dispatcher::pid()) -&gt; pid()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async-3">send_async/3</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::pid(), Name::string(), Request::any()) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async-4">send_async/4</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async-5">send_async/5</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async-6">send_async/6</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async-7">send_async/7</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_active-3">send_async_active/3</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::pid(), Name::string(), Request::any()) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_active-4">send_async_active/4</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_active-5">send_async_active/5</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_active-6">send_async_active/6</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_active-7">send_async_active/7</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_passive-3">send_async_passive/3</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::pid(), Name::string(), Request::any()) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_passive-4">send_async_passive/4</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_passive-5">send_async_passive/5</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_passive-6">send_async_passive/6</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_async_passive-7">send_async_passive/7</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_sync-3">send_sync/3</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::pid(), Name::string(), Request::any()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_sync-4">send_sync/4</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_sync-5">send_sync/5</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::pid(), Name::string(), Request::any(), Timeout::pos_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_sync-6">send_sync/6</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="send_sync-7">send_sync/7</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::pid(), Name::string(), RequestInfo::any(), Request::any(), Timeout::pos_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="subscribe-2">subscribe/2</a></h3>
+<div class="spec">
+<p><tt>subscribe(Dispatcher::pid(), Pattern::string()) -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="timeout_async-1">timeout_async/1</a></h3>
+<div class="spec">
+<p><tt>timeout_async(Dispatcher::pid()) -&gt; pos_integer()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="timeout_sync-1">timeout_sync/1</a></h3>
+<div class="spec">
+<p><tt>timeout_sync(Dispatcher::pid()) -&gt; pos_integer()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="unsubscribe-2">unsubscribe/2</a></h3>
+<div class="spec">
+<p><tt>unsubscribe(Dispatcher::pid(), Pattern::string()) -&gt; ok</tt><br></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 6 2012, 20:30:19.</i></p>
+</body>
+</html>

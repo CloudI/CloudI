@@ -1,1 +1,1 @@
-SUBDIRS = cloudi
+SUBDIRS = cloudi_core

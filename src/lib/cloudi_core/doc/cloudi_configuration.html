@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module cloudi_configuration</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_configuration</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Configuration">CloudI Configuration</a></h3>.
+<p>Copyright © 2009-2012 Michael Truog</p>
+
+<p><b>Version:</b> 0.2.0 Oct 6 2012 20:30:19
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Configuration">CloudI Configuration</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#acl_add-2">acl_add/2</a></td><td>
+  <h4><a name="Add_Access_Control_List_(ACL)_aliases_(atom_->_service_name_prefixes).">Add Access Control List (ACL) aliases (atom -&gt; service name prefixes).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#acl_remove-2">acl_remove/2</a></td><td>
+  <h4><a name="Remove_Access_Control_List_(ACL)_aliases.">Remove Access Control List (ACL) aliases.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jobs-1">jobs/1</a></td><td>
+  <h4><a name="Display_the_currently_running_jobs_(services)_(including_their_UUID).">Display the currently running jobs (services) (including their UUID).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jobs_add-2">jobs_add/2</a></td><td>
+  <h4><a name="Add_jobs_(services)_based_on_the_configuration_format.">Add jobs (services) based on the configuration format.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jobs_remove-2">jobs_remove/2</a></td><td>
+  <h4><a name="Remove_jobs_(services)_based_on_their_UUID.">Remove jobs (services) based on their UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jobs_restart-2">jobs_restart/2</a></td><td>
+  <h4><a name="Restart_jobs_(services)_based_on_their_UUID.">Restart jobs (services) based on their UUID.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#nodes_add-2">nodes_add/2</a></td><td>
+  <h4><a name="Add_CloudI_nodes.">Add CloudI nodes.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#nodes_remove-2">nodes_remove/2</a></td><td>
+  <h4><a name="Remove_CloudI_nodes.">Remove CloudI nodes.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#open-0">open/0</a></td><td>
+  <h4><a name="Parse_the_CloudI_configuration_file.">Parse the CloudI configuration file.</a></h4>
+  <h5><a name="logging:">logging:</a></h5><p>
+    <code>{logging, [{file, "path/to/log/file"}, {level, Level}]}</code></p>.</td></tr>
+<tr><td valign="top"><a href="#open-1">open/1</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="acl_add-2">acl_add/2</a></h3>
+<div class="spec">
+<p><tt>acl_add(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Add_Access_Control_List_(ACL)_aliases_(atom_->_service_name_prefixes).">Add Access Control List (ACL) aliases (atom -&gt; service name prefixes).</a></h4>
+</p>
+
+<h3 class="function"><a name="acl_remove-2">acl_remove/2</a></h3>
+<div class="spec">
+<p><tt>acl_remove(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_Access_Control_List_(ACL)_aliases.">Remove Access Control List (ACL) aliases.</a></h4>
+</p>
+
+<h3 class="function"><a name="jobs-1">jobs/1</a></h3>
+<div class="spec">
+<p><tt>jobs(Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Display_the_currently_running_jobs_(services)_(including_their_UUID).">Display the currently running jobs (services) (including their UUID).</a></h4>
+</p>
+
+<h3 class="function"><a name="jobs_add-2">jobs_add/2</a></h3>
+<div class="spec">
+<p><tt>jobs_add(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Add_jobs_(services)_based_on_the_configuration_format.">Add jobs (services) based on the configuration format.</a></h4>
+</p>
+
+<h3 class="function"><a name="jobs_remove-2">jobs_remove/2</a></h3>
+<div class="spec">
+<p><tt>jobs_remove(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_jobs_(services)_based_on_their_UUID.">Remove jobs (services) based on their UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="jobs_restart-2">jobs_restart/2</a></h3>
+<div class="spec">
+<p><tt>jobs_restart(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Restart_jobs_(services)_based_on_their_UUID.">Restart jobs (services) based on their UUID.</a></h4>
+</p>
+
+<h3 class="function"><a name="nodes_add-2">nodes_add/2</a></h3>
+<div class="spec">
+<p><tt>nodes_add(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Add_CloudI_nodes.">Add CloudI nodes.</a></h4>
+</p>
+
+<h3 class="function"><a name="nodes_remove-2">nodes_remove/2</a></h3>
+<div class="spec">
+<p><tt>nodes_remove(Value, Config) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Remove_CloudI_nodes.">Remove CloudI nodes.</a></h4>
+</p>
+
+<h3 class="function"><a name="open-0">open/0</a></h3>
+<div class="spec">
+<p><tt>open() -&gt; #config{}</tt><br></p>
+</div><p>
+  <h4><a name="Parse_the_CloudI_configuration_file.">Parse the CloudI configuration file.</a></h4>
+  <h5><a name="logging:">logging:</a></h5><p>
+    <code>{logging, [{file, "path/to/log/file"}, {level, Level}]}</code></p>
+ 
+    <p>The logging level is specified as an atom:</p>
+ 
+    <p><code>off, fatal, error, warn, info, debug, trace</code></p>
+ 
+  <h5><a name="jobs:">jobs:</a></h5><p>
+    <code>{jobs, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT}]}</code></p>
+ 
+    <p>Job configuration defines all the necessary information for the lifetime    
+of running the job, which may be a service or a short-lived task.    
+Every job defines a service name prefix which provides scope for the job    
+(ServiceNamePrefix) and typically uses the forward slash ('/')    
+character as a path delimiter (though this convention is not required    
+for service functionality). An internal job is an Erlang module that    
+exists in the code search path and is started with a list of    
+initialization arguments (ErlangModuleName and ModuleInitializationList).    
+An external job is an executable that has integrated with the CloudI API    
+and is provided as the executable file path (ExecutableFilePath).    
+An external job also specifies the command line arguments and the    
+environmental variables (ExecutableCommandLineArguments and    
+ExecutableEnvironmentalVariables) that are used when executing the job.    
+Currently, the ThreadCount, Protocol, and ProtocolBufferSize are    
+typically provided as command line arguments to the executable, though    
+they could be provided as environmental variables or be hard-coded    
+within the job (least desirable choice).</p>
+ 
+    <p>Each job configuration then defines the destination refresh method    
+(DestinationRefreshMethod) which may be set to: lazy_closest, lazy_random,    
+immediate_closest, immediate_random, or none. A "lazy" destination refresh    
+method prefix is used by services that send messages to only    
+long-lived services and will avoid contention for doing service name    
+lookups (i.e., the most scalable choice).  An "immediate" destination    
+refresh method prefix is used by services that send messages to    
+short-lived services.  A "closest" destination refresh method suffix    
+always prefers to send to a service (with the same service name) on the    
+local machine rather than send to a remote machine.  A "random"    
+destination refresh method suffix always selects a service randomly,    
+so the service message is uniformly distributed among all services that    
+have subscribed to the same service name.</p>
+ 
+    <p>The InitializationTimeout timeout specifies how long an internal service    
+can spend in its cloudi_job_init/3 function or how long an external    
+service may take to instantiate the CloudI API data structure (for all    
+of the configured threads). The DefaultAsynchronousTimeout and the    
+DefaultSynchronousTimeout provide timeouts for any service function calls    
+that do not specify a timeout.  The DestinationDenyList and the    
+DestinationAllowList both accept an Access Control List (ACL) which    
+explicitly denies or allows sending service messages to destinations    
+that match based on the service name prefix.  Both parameters may be    
+either "undefined" or a list of service name prefixes (the service name    
+prefixes may also be supplied as aliases defined in the ACL configuration).</p>
+ 
+    <p>The ProcessCount for an internal service determines how many services with    
+the configuration will run as Erlang processes. The ProcessCount for an    
+external service determines how many Operating System processes will be    
+created with the configuration information. The ThreadCount determines    
+how many external service threads will be expected to create CloudI API    
+objects (i.e., to become initialized). The MaxR and MaxT are parameters    
+to manage the fault-tolerance of the service in the same way as an    
+Erlang OTP Supervisor manages Erlang processes. The MaxR parameters is the    
+number of restarts.  The MaxT parameter is the amount of time in seconds    
+the restarts must occur in, for the service to be considered failed.</p>
+ 
+  <h5><a name="Access_Control_List_(ACL):">Access Control List (ACL):</a></h5>
+ 
+    <p><code>{acl, [{alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]}]}</code></p>
+ 
+    <p>The DestinationDenyList and DestinationAllowList are both lists that    
+explicitly deny or allow sending messages from a service (respectively).    
+The ACL configuration provides a simple way to condense service    
+configuration based on common service name prefixes.  The ACL atoms    
+provide short aliases for the literal service name prefixes and may be    
+used to define other ACLs (in a way that is both acyclic and unordered).</p>
+ 
+  <h5><a name="nodes:">nodes:</a></h5><p>
+    <code>{nodes, [cloudi@hostname1, cloudi@hostname2]}</code></p>
+ 
+    Remote CloudI nodes that are started separately
+    (CloudI operates as a master-less system).
+ </p>
+
+<h3 class="function"><a name="open-1">open/1</a></h3>
+<div class="spec">
+<p><tt>open(Path::string()) -&gt; #config{}</tt><br></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 6 2012, 20:30:19.</i></p>
+</body>
+</html>

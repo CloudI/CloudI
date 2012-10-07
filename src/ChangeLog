@@ -3,6 +3,8 @@
 
 2012-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Create a separate cloudi_core application to provide
+      better encapsulation of the core CloudI functionality
     * Add the CloudI Map-Reduce Service/Behaviour and
       use it to simplify the hexpi test
 
@@ -39,9 +41,9 @@
 
 2012-08-17 Hardy Jones   <jones3.hardy [at] gmail (dot) com>
 
-	* Fix assignment statement in Python API cloudi.py
-	* Fix list conversion to binary in Python API erlang.py
-	* Add unit tests (string, list to binary) in Python API erlang.py
+    * Fix assignment statement in Python API cloudi.py
+    * Fix list conversion to binary in Python API erlang.py
+    * Add unit tests (string, list to binary) in Python API erlang.py
 
 2012-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
@@ -509,118 +511,118 @@
 
 2010-04-10	Michael Truog	<mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.10 (alpha)
-	    * add a JSON RPC server for the Cloudi API function calls
-		  based on the LShift JSON RPC implementation
-		  (http://www.lshift.net/blog/2007/02/17/json-and-json-rpc-for-erlang)
-		* add abstract code generation for automatic
-		  JSON RPC function call integration
-		* update referenced Erlang version to R13B02
-		  (to reflect the version currently deployed by faxien)
+    * CloudI version 0.0.10 (alpha)
+        * add a JSON RPC server for the Cloudi API function calls
+          based on the LShift JSON RPC implementation
+          (http://www.lshift.net/blog/2007/02/17/json-and-json-rpc-for-erlang)
+        * add abstract code generation for automatic
+          JSON RPC function call integration
+        * update referenced Erlang version to R13B02
+          (to reflect the version currently deployed by faxien)
 
-2010-03-06	Michael Truog   <mjtruog [at] gmail (dot) com>
+2010-03-06    Michael Truog   <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.9 (alpha)
-		* bug fixes
-			* do not purge the cloud_logger_interface module when
-			  changing the logging level
-			* prevent a crash when jobs ignore the task size parameter
-			  (though the database may die after a severe timeout
-			  if results are generated faster than the database can store them,
-			  when ignoring the task size and not using load balancing or the
-			  task time target to reduce the load on the database)
-			* fixed a cloud scheduler bug for running multiple jobs
-			  that use the 'all' process count configuration setting
-		* added a N dimensional index (Erlang) iterator
-		  (src/lib/cloud_stdlib/src/nd_index.erl)
-		* added useful cloud job source code in src/lib/cloud_job_stdlib/
-		* make gcc and boost versions build configuration items
-		* update g++ to 4.4.2 and boost to 1.42
+    * CloudI version 0.0.9 (alpha)
+        * bug fixes
+            * do not purge the cloud_logger_interface module when
+              changing the logging level
+            * prevent a crash when jobs ignore the task size parameter
+              (though the database may die after a severe timeout
+              if results are generated faster than the database can store them,
+              when ignoring the task size and not using load balancing or the
+              task time target to reduce the load on the database)
+            * fixed a cloud scheduler bug for running multiple jobs
+              that use the 'all' process count configuration setting
+        * added a N dimensional index (Erlang) iterator
+          (src/lib/cloud_stdlib/src/nd_index.erl)
+        * added useful cloud job source code in src/lib/cloud_job_stdlib/
+        * make gcc and boost versions build configuration items
+        * update g++ to 4.4.2 and boost to 1.42
 
-2009-10-29	Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-29    Michael Truog   <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.8 (alpha)
-		* add CouchDB database module
-		* add ememcached functionality for creating a cluster
-		* add workInstance as a parameter to the do_work function
-		  in the work library (i.e., changed cloud_work_interface.hpp).
-		  The combination of the workInstance with the id will be unique
-		  for all work processed by the work module within a Cloudi instance.
+    * CloudI version 0.0.8 (alpha)
+        * add CouchDB database module
+        * add ememcached functionality for creating a cluster
+        * add workInstance as a parameter to the do_work function
+          in the work library (i.e., changed cloud_work_interface.hpp).
+          The combination of the workInstance with the id will be unique
+          for all work processed by the work module within a Cloudi instance.
 
-2009-10-14	Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-14    Michael Truog   <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.7 (alpha)
-		* add Tokyo Tyrant database module
-		* cleanup the memcached interface a little
-		* add cloud_job_latency work module for testing
-		  system latency with machines that have their clocks
-		  synchronized
-		* add to the Erlang work module behavior the callback
-		  "handle_drain_binary_output" for handling the
-		  "binary" data title which is automatically routed to the
-		  Erlang work module that created the work
-		  (in the same order the work was created)
+    * CloudI version 0.0.7 (alpha)
+        * add Tokyo Tyrant database module
+        * cleanup the memcached interface a little
+        * add cloud_job_latency work module for testing
+          system latency with machines that have their clocks
+          synchronized
+        * add to the Erlang work module behavior the callback
+          "handle_drain_binary_output" for handling the
+          "binary" data title which is automatically routed to the
+          Erlang work module that created the work
+          (in the same order the work was created)
 
-2009-10-10	Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-10    Michael Truog   <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.6 (alpha)
-		* cleanup other parts of the WorkerController code in the
-		  cloud_worker_port process
-		* add a wait for the ThreadPool exit
-		* add PostgreSQL "?" parameter substitution with
-		  expression operators
-		* automatically download g++ and boost from mirrors instead
-		  of requiring their presence within the source repository
+    * CloudI version 0.0.6 (alpha)
+        * cleanup other parts of the WorkerController code in the
+          cloud_worker_port process
+        * add a wait for the ThreadPool exit
+        * add PostgreSQL "?" parameter substitution with
+          expression operators
+        * automatically download g++ and boost from mirrors instead
+          of requiring their presence within the source repository
 
-2009-10-09	Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-09    Michael Truog   <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.5 (alpha)
-		* make the cloud_worker_port process thread pool stable
-			* rewrite of ThreadPool
-			* reference count object pool allocator to avoid
-			  deletion order problems (with safe_shared_ptr)
-		* add MySQL support with emysql and cloud_data_mysql
-		* add (optional) usage of cloud_data_mysql in cloud_job_tests
-		* provide the same parameter substitution as MySQL for the PostgreSQL
-		  interface ("?" instead of "$1", "$2", "$3", etc., so that queries
-		  can be as similar as possible when using the equery/3 function
-		  for either PostgreSQL or MySQL
-			* currently handles punctuation but not operators
-			  (so spaces are currently required on either side of the "?")
-		* disable ptmalloc for now because of problems with gmp taking the
-		  libc malloc
-		* update g++ to 4.4.1 and boost to 1.40
+    * CloudI version 0.0.5 (alpha)
+        * make the cloud_worker_port process thread pool stable
+            * rewrite of ThreadPool
+            * reference count object pool allocator to avoid
+              deletion order problems (with safe_shared_ptr)
+        * add MySQL support with emysql and cloud_data_mysql
+        * add (optional) usage of cloud_data_mysql in cloud_job_tests
+        * provide the same parameter substitution as MySQL for the PostgreSQL
+          interface ("?" instead of "$1", "$2", "$3", etc., so that queries
+          can be as similar as possible when using the equery/3 function
+          for either PostgreSQL or MySQL
+            * currently handles punctuation but not operators
+              (so spaces are currently required on either side of the "?")
+        * disable ptmalloc for now because of problems with gmp taking the
+          libc malloc
+        * update g++ to 4.4.1 and boost to 1.40
 
-2009-10-03	Michael Truog	<mjtruog [at] gmail (dot) com>
+2009-10-03    Michael Truog    <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.4 (alpha)
-		* shortnames are currently the only supported node names
-		* fix problems when storing work data in the data repository
-		* create the cloud_interface application, for easier development
-		  of dependent cloud_data applications
-		* create the cloud_data_memcached application so that memcached
-		  commands can be issued as an Erlang tuple passed as a list
-		  (for the query text)
+    * CloudI version 0.0.4 (alpha)
+        * shortnames are currently the only supported node names
+        * fix problems when storing work data in the data repository
+        * create the cloud_interface application, for easier development
+          of dependent cloud_data applications
+        * create the cloud_data_memcached application so that memcached
+          commands can be issued as an Erlang tuple passed as a list
+          (for the query text)
 
-2009-09-29	Michael Truog	<mjtruog [at] gmail (dot) com>
+2009-09-29    Michael Truog    <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.3 (alpha)
-		* fix logger so that remote nodes can log properly
-		* solve some fault-tolerance problems when a process or VM dies
-		* make sure to not have cloud_worker_port exit
-		  if the controlling VM exists
-		* use monitors for remote nodes and remote processes
+    * CloudI version 0.0.3 (alpha)
+        * fix logger so that remote nodes can log properly
+        * solve some fault-tolerance problems when a process or VM dies
+        * make sure to not have cloud_worker_port exit
+          if the controlling VM exists
+        * use monitors for remote nodes and remote processes
 
-2009-09-24	Michael Truog	<mjtruog [at] gmail (dot) com>
+2009-09-24    Michael Truog    <mjtruog [at] gmail (dot) com>
 
-	* CloudI version 0.0.2 (alpha)
-		* added arguments to work modules
-		* added tags to work titles
-		* fixed errors in the cloud_worker_port thread pool
-		* cleaned up the cloud_worker_nodes and cloud_worker_scheduler
-		* fix thread stop timeout problem in cloud_worker_port
+    * CloudI version 0.0.2 (alpha)
+        * added arguments to work modules
+        * added tags to work titles
+        * fixed errors in the cloud_worker_port thread pool
+        * cleaned up the cloud_worker_nodes and cloud_worker_scheduler
+        * fix thread stop timeout problem in cloud_worker_port
 
-2009-09-01	Michael Truog	<mjtruog [at] gmail (dot) com>
+2009-09-01    Michael Truog    <mjtruog [at] gmail (dot) com>
 
-	* initial public release of CloudI version 0.0.1 (alpha)
+    * initial public release of CloudI version 0.0.1 (alpha)
 
