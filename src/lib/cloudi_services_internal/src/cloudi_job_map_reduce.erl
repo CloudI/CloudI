@@ -4,6 +4,8 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI (Abstract) Map-Reduce Job==
+%%% This module provides an Erlang behaviour for fault-tolerant,
+%%% database agnostic map-reduce.  See the hexpi test for example usage.
 %%% @end
 %%%
 %%% BSD LICENSE
