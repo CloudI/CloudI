@@ -27,7 +27,7 @@ C++/C, Java, Python, and Ruby all use the same function names that exist within
 the cloudi_job Erlang behavior, but each language makes function calls into
 its own native CloudI library.  The external languages are ran as separate
 OS processes with separate threads (using any native threading library) that
-initialize the CloudI library and call its event-loop (in the "poll" function).
+initialize the CloudI API and call its event-loop (in the "poll" function).
 
 ### Examples exist within the tests:
 
