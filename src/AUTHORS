@@ -1,7 +1,10 @@
-CloudI        Michael Truog <mjtruog at gmail dot com>
+CloudI Contributors (chronological order):
+Michael Truog       <mjtruog [at] gmail (dot) com>
+Michael T. Richter  <ttmrichter [at] gmail (dot) com>
+Hardy Jones         <jones3.hardy [at] gmail (dot) com>
 
-Dependencies:
-
+CloudI Integration Dependencies:
+cowboy        Loïc Hoguin <essen@ninenines.eu>
 ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
 ememcached    Nick Gerakines <nick@gerakines.net>
 emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
