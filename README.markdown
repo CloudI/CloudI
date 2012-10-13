@@ -43,7 +43,7 @@ Service-Oriented Architecture (SOA) development in any supported language
 * recv_async
 * return, forward
 
-External communication that needs to scale (beyond 10K requests/sec)
+External communication that needs to scale (beyond 10,000 connections)
 can use an internal CloudI service (implemented in Erlang) which may do
 processing for one or more external CloudI services
 (implemented C++/C, Java, Python, and/or Ruby)
@@ -65,12 +65,12 @@ examples of CloudI integration
 ### Requirements
 
 * Erlang >= R14B02
-* C++ (libstdcxx/macports)
-* Java (
-* Python >= 2.7.0
+* C++ (g++/Ubuntu, libstdcxx/macports)
+* Java (default-jdk/Ubuntu)
+* Python >= 2.7.0 (python/Ubuntu)
 * Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)
 * GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)
-* boost >= 1.36.0 (boost/macports)
+* boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)
 
 Optional (installed/linked statically, automatically):
 
@@ -78,7 +78,9 @@ Optional (installed/linked statically, automatically):
 
 ### Building
 
-    ./configure [ARGS](http://cloudi.org/faq.html#3_Options)
+For configuration options, see [FAQ: 3.2 - Installation Options](http://cloudi.org/faq.html#3_Options).
+
+    ./configure
     make
     make install
 
