@@ -1,4 +1,4 @@
-#[CloudI 1.0.0 (beta)](http://cloudi.org)
+#[CloudI 1.1.0 (beta)](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
@@ -85,6 +85,7 @@ For configuration options, see [FAQ: 3.2 - Installation Options](http://cloudi.o
     make install
 
 On OSX, to run configure with the OSX ports paths, use:
+
 (macports)
 
     CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
