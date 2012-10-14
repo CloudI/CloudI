@@ -3,18 +3,16 @@
 #
 # SYNOPSIS
 #
-# AX_CHECK_PRIVATE_LIB(LIBRARY, FUNCTION,
-#                      [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
-#                      [OTHER-LIBRARIES], [OTHER-PATHS])
+#   AX_BOOST_CHECK_HEADER([HEADER],[ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND])
 #
 # DESCRIPTION
 #
-#   AC_CHECK_LIB functionality that does not modify the LIBS variable and
-#   can utilize additional system paths
+#   Provide a way of checking for Boost C++ header files to avoid problems with
+#   AC_CHECK_HEADER using a C compiler and the Boost include path.
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog
+# Copyright (c) 2012, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -49,39 +47,12 @@
 # DAMAGE.
 #
 
-AC_DEFUN([AX_CHECK_PRIVATE_LIB],
+AC_DEFUN([AX_BOOST_CHECK_HEADER],
 [
-    m4_ifval([$3], , [AH_CHECK_LIB([$1])])
-    AS_LITERAL_IF([$1],
-                  [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1_$2])],
-                  [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1''_$2])])
-    AC_CACHE_CHECK(
-        [for $2 in -l$1], ac_Lib,
-        [ac_check_lib_save_LDFLAGS=$LDFLAGS
-         ac_check_lib_save_LIBS=$LIBS
-         ldflags_prefix=""
-         LIBS="-l$1 $5 $LIBS"
-         AC_LINK_IFELSE(
-             [AC_LANG_CALL([], [$2])],
-             [AS_VAR_SET(ac_Lib, yes)],
-             [AS_VAR_SET(ac_Lib, no)
-              for path in $6 ; do
-                  ldflags_prefix="-L$path"
-                  LDFLAGS="$ldflags_prefix $ac_check_lib_save_LDFLAGS"
-                  AC_LINK_IFELSE([AC_LANG_CALL([], [$2])],
-                                 [AS_VAR_SET(ac_Lib, yes)
-                                  break],
-                                 [])
-              done])
-         LIBS=$ac_check_lib_save_LIBS
-         LDFLAGS=$ac_check_lib_save_LDFLAGS])
-    AS_IF([test AS_VAR_GET(ac_Lib) = yes],
-          [m4_toupper($1_LDFLAGS)=$ldflags_prefix
-           AC_SUBST(m4_toupper($1_LDFLAGS))
-           m4_toupper($1_LIB)="-l$1"
-           AC_SUBST(m4_toupper($1_LIB))
-           m4_default([$3], [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_LIB$1))])],
-          [$4])
-    AS_VAR_POPDEF([ac_Lib])
+    CPPFLAGS_SAVED="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+    export CPPFLAGS
+    AX_CXX_CHECK_HEADER($1, $2, $3)
+    CPPFLAGS="$CPPFLAGS_SAVED"
 ])
 

@@ -11,7 +11,8 @@ AC_PROG_SED
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
-                     [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])])
+                     [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])],
+                     ,/opt/local/lib /usr/local/lib)
 AX_CLOCK_GETTIME
 
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -26,10 +27,11 @@ AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 AX_BOOST_BASE([1.36], ,
               [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
 AX_BOOST_THREAD
-AX_CXX_CHECK_HEADER(boost/preprocessor.hpp, ,
-                    [AC_MSG_ERROR([boost::preprocessor not found])], )
-AX_CXX_CHECK_HEADER(boost/unordered_map.hpp, ,
-                    [AC_MSG_ERROR([boost::unordered_map not found])], )
+AX_BOOST_SYSTEM
+AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
+                      [AC_MSG_ERROR([boost::preprocessor not found])], )
+AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
+                      [AC_MSG_ERROR([boost::unordered_map not found])], )
 
 # java checks
 AC_SUBST(javadir, ["$datarootdir/java"])
@@ -65,8 +67,8 @@ AC_ARG_WITH([python-debug],
         [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
 AS_IF([test "x$PYTHON_DEBUG" == "xno"],
-      [AC_PATH_PROG([PYTHON],[python])],
-      [AC_PATH_PROG([PYTHON],[python-dbg])])
+      [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
+      [AC_PATH_PROGS([PYTHON],[python2-dbg python2.7-dbg python-dbg])])
 AX_PROG_PYTHON_VERSION([2.7.0],
                        [AX_PYTHON_C],
                        [AC_MSG_ERROR([Python >= 2.7.0 not found])])
