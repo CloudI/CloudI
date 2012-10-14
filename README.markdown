@@ -10,7 +10,7 @@
 
 ### What is CloudI?
 
-(long answer) "An application server that efficiently integrates with many
+(short answer) "An application server that efficiently integrates with many
 languages, many databases, and many messaging buses in a way that is both
 scalable and fault-tolerant."
 
@@ -64,10 +64,10 @@ examples of CloudI integration
 
 ### Requirements
 
-* Erlang >= R14B02
+* Erlang >= R14B02 (erlang/Ubuntu)
 * C++ (g++/Ubuntu, libstdcxx/macports)
 * Java (default-jdk/Ubuntu)
-* Python >= 2.7.0 (python/Ubuntu)
+* Python >= 2.7.0 (python+python-dev/Ubuntu)
 * Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)
 * GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)
 * boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)

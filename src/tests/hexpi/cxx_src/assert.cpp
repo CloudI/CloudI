@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,33 @@
 
 namespace boost
 {
+    void assertion_failed_msg(char const * expr, char const * function,        
+                              char const * file, char const * mm, long line)
+    {  
+        class assert_exception_msg : public std::exception
+        {
+            public:
+                assert_exception_msg(std::string const & message) throw () :
+                    m_message(message)
+                {
+                }
+                virtual ~assert_exception_msg() throw ()
+                {
+                }
+                virtual char const * what() const throw ()
+                {
+                    return m_message.c_str();
+                }
+            private:
+                std::string m_message;
+        };
+        std::ostringstream stream;
+        stream << file << ":" << line <<
+            " (" << function << ") failure: " << expr << ": " << mm;
+        throw assert_exception_msg(stream.str());
+    }                                                                          
+   
+
     void assertion_failed(char const * expr,
                           char const * function,
                           char const * file,

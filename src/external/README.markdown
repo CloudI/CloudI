@@ -81,13 +81,14 @@ Erlang JSON Parsing
 - Sun Mar 25 22:40:36 PDT 2012
 - MIT
 
-m4/ax_boost_base.m4, m4/ax_boost_thread.m4
-------------------------------------------
+m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4
+-----------------------------------------------------------------
 autoconf m4 macros for boost detection
 
 - http://www.gnu.org/software/autoconf-archive/ax_boost_base.html
 - http://www.gnu.org/software/autoconf-archive/ax_boost_thread.html
-- Thu Feb 17 18:34:44 PST 2011
+- http://www.gnu.org/software/autoconf-archive/ax_boost_system.html
+- Mon Oct 15 23:13:23 PDT 2012
 - BSD-like
 
 m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4
