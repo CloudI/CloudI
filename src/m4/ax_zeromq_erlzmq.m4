@@ -7,10 +7,7 @@
 #
 # DESCRIPTION
 #
-#   Build the Erlang ZeroMQ bindings
-#
-#   Depends on AC_ERLANG_SUBST_ROOT_DIR, AX_ERLANG_REQUIRE_OTP_VER, and
-#              AX_ZEROMQ.
+#   Build the ZeroMQ Erlang bindings
 #
 #   This macro sets:
 #
@@ -19,7 +16,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog
+# Copyright (c) 2011-2012, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -56,23 +53,30 @@
 
 AC_DEFUN([AX_ZEROMQ_ERLZMQ],
 [
+    AC_REQUIRE([AC_ERLANG_SUBST_ROOT_DIR])
     AC_REQUIRE([AX_ERLANG_REQUIRE_OTP_VER])
-    
-    if test "x$ZEROMQ_ROOT_DIR" = "x"; then
-        dnl ZeroMQ will not be used
+    AC_REQUIRE([AX_ZEROMQ])
+
+    AC_MSG_CHECKING(for ZeroMQ's Erlang interface)
+    if test "x$ZEROMQ_VERSION_MAJOR" = "x"; then
+        AC_MSG_RESULT(no)
         ZEROMQ_ERLZMQ_RELTOOL=""
         ZEROMQ_ERLZMQ_APPCONF=""
-    elif test "x$ERLANG_ROOT_DIR" = "x"; then
-        AC_MSG_ERROR([Erlang location undefined])
     else
+        AC_MSG_RESULT(building)
         AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
-                                  [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
+            [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
         abs_top_srcdir=`cd $srcdir; pwd`
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/erlzmq/ && \
-              ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR $BUILDDIR/rebar compile && \
-              echo "ZeroMQ erlzmq built" || exit 1)],
-            [ZEROMQ_ROOT_DIR=$ZEROMQ_ROOT_DIR
+              ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS \
+              ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS \
+              ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH \
+              $BUILDDIR/rebar compile && \
+              echo "erlzmq locally installed" || exit 1)],
+            [ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS
+             ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS
+             ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH
              ZEROMQ_VERSION_MAJOR=$ZEROMQ_VERSION_MAJOR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
              SRCDIR=$abs_top_srcdir

@@ -40,6 +40,7 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
+#include "config.h"
 #if HAVE_CLOCK_GETTIME_MONOTONIC
 #include <time.h>
 #else

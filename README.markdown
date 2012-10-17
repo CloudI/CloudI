@@ -64,10 +64,10 @@ examples of CloudI integration
 
 ### Requirements
 
-* Erlang >= R14B02 (erlang/Ubuntu)
+* Erlang >= R14B02 (erlang/Ubuntu, erlang/macports)
 * C++ (g++/Ubuntu, libstdcxx/macports)
-* Java (default-jdk/Ubuntu)
-* Python >= 2.7.0 (python+python-dev/Ubuntu)
+* Java (default-jdk/Ubuntu, (built-in)/OSX)
+* Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)
 * Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)
 * GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)
 * boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)
@@ -83,18 +83,6 @@ For configuration options, see [FAQ: 3.2 - Installation Options](http://cloudi.o
     ./configure
     make
     make install
-
-On OSX, to run configure with the OSX ports paths, use:
-
-(macports)
-
-    CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
-
-(homebrew)
-
-    CXXFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure
-
-(A better solution is forthcoming)
 
 ### Running
 

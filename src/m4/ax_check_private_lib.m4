@@ -60,6 +60,7 @@ AC_DEFUN([AX_CHECK_PRIVATE_LIB],
         [ac_check_lib_save_LDFLAGS=$LDFLAGS
          ac_check_lib_save_LIBS=$LIBS
          ldflags_prefix=""
+         lib_path=""
          LIBS="-l$1 $5 $LIBS"
          AC_LINK_IFELSE(
              [AC_LANG_CALL([], [$2])],
@@ -67,7 +68,8 @@ AC_DEFUN([AX_CHECK_PRIVATE_LIB],
              [AS_VAR_SET(ac_Lib, no)
               for path in $6 ; do
                   ldflags_prefix="-L$path"
-                  LDFLAGS="$ldflags_prefix $ac_check_lib_save_LDFLAGS"
+                  lib_path=$path
+                  LDFLAGS="$ac_check_lib_save_LDFLAGS $ldflags_prefix"
                   AC_LINK_IFELSE([AC_LANG_CALL([], [$2])],
                                  [AS_VAR_SET(ac_Lib, yes)
                                   break],
@@ -80,6 +82,9 @@ AC_DEFUN([AX_CHECK_PRIVATE_LIB],
            AC_SUBST(m4_toupper($1_LDFLAGS))
            m4_toupper($1_LIB)="-l$1"
            AC_SUBST(m4_toupper($1_LIB))
+           dnl only set if searched for
+           m4_toupper($1_PATH)=$lib_path
+           AC_SUBST(m4_toupper($1_PATH))
            m4_default([$3], [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_LIB$1))])],
           [$4])
     AS_VAR_POPDEF([ac_Lib])
