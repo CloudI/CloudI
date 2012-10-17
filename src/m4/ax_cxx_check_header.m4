@@ -3,7 +3,9 @@
 #
 # SYNOPSIS
 #
-#   AX_CXX_CHECK_HEADER([HEADER],[ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND],[INC])
+#   AX_CXX_CHECK_HEADER([HEADER],
+#                       [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
+#                       [INC], [OTHER-PATHS])
 #
 # DESCRIPTION
 #
@@ -12,7 +14,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog
+# Copyright (c) 2011-2012, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,7 +53,7 @@ AC_DEFUN([AX_CXX_CHECK_HEADER],
 [
     AC_LANG_SAVE
     AC_LANG_CPLUSPLUS
-    AC_CHECK_HEADER($1, $2, $3, $4)
+    AX_CHECK_PRIVATE_HEADER($1, $2, $3, $4, $5)
     AC_LANG_RESTORE
 ])
 

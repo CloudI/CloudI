@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2012-10-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Finalize configuration and compilation fixes
+    * Added fixes to the ZeroMQ configuration and the erlzmq compilation
+    * Fix clock_gettime configuration check
+
 2012-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix configuration and compilation on OSX

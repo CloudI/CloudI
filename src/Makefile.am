@@ -19,7 +19,6 @@ all-local: rebar \
 	$(MKDIR_P) lib/cpg/ebin
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
-	$(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR)
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
@@ -64,9 +63,12 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/cloudi_services_messaging; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/ebin || exit 0)
-	(cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
+	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
+       $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
+       cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
         test ! -e erlzmq && \
-        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0)
+        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0; \
+   fi)
 	(cd $(top_srcdir)/external/nodefinder/nodefinder; \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/nodefinder/ebin || \
@@ -306,8 +308,8 @@ install-exec-hook: cloudi-prefix-install \
               "$(DESTDIR)$(cloudi_prefix)/lib/" || exit 0; \
     done
 	rm -rf $(top_builddir)/rel/cloudi/
-	$(LIBTOOL) --finish "$(DESTDIR)$(cloudi_prefix)/api/c"
-	$(LIBTOOL) --finish --quiet "$(DESTDIR)$(cloudi_prefix)/api/python"
+	$(LIBTOOL) --mode=finish "$(DESTDIR)$(cloudi_prefix)/api/c"
+	$(LIBTOOL) --mode=finish --quiet "$(DESTDIR)$(cloudi_prefix)/api/python"
 
 cloudi-prefix-install:
 	$(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -325,8 +327,9 @@ tests-flood-install: $(top_builddir)/tests/flood/service/flood \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar"
 	$(INSTALL_DATA) "$(top_builddir)/tests/flood/ebin/cloudi_job_flood.beam" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/ebin/"
-	$(INSTALL_PROGRAM) "$(top_builddir)/tests/flood/service/flood" \
-                       "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
+             "$(top_builddir)/tests/flood/service/flood" \
+             "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/flood.jar" \
@@ -342,8 +345,9 @@ tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv"
 	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
-	$(INSTALL_PROGRAM) "$(top_builddir)/tests/hexpi/cxx_src/hexpi" \
-                       "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv/"
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
+             "$(top_builddir)/tests/hexpi/cxx_src/hexpi" \
+             "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv/"
 
 tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
                     $(top_builddir)/tests/http/service/jar/service.jar
@@ -378,8 +382,9 @@ tests-http_req-install: \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin"
-	$(INSTALL_PROGRAM) "$(top_builddir)/tests/http_req/c_src/http_req" \
-                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
+             "$(top_builddir)/tests/http_req/c_src/http_req" \
+             "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req_c.py" \
@@ -439,8 +444,9 @@ tests-messaging-install: \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
-	$(INSTALL_PROGRAM) "$(top_builddir)/tests/messaging/cxx_src/messaging" \
-                       "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv/"
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
+             "$(top_builddir)/tests/messaging/cxx_src/messaging" \
+             "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv/"
 
 tests-msg_size-install: \
         $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
@@ -463,8 +469,9 @@ tests-msg_size-install: \
                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size.rb" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
-	$(INSTALL_PROGRAM) "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
-                       "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
+             "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
+             "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"

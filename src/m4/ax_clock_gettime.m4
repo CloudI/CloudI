@@ -17,7 +17,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog
+# Copyright (c) 2011-2012, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -54,27 +54,30 @@
 
 AC_DEFUN([AX_CLOCK_GETTIME],
 [
+    RT_LIB=""
     clock_gettime=no
     AC_CHECK_LIB(rt, clock_gettime,
-                 [AC_DEFINE([HAVE_CLOCK_GETTIME_RT], [1],
-                            [Define if librt clock_gettime exists])
-                 clock_gettime=yes])
-    AM_CONDITIONAL([HAVE_CLOCK_GETTIME_RT],
-                   [test "x$ac_cv_lib_rt_clock_gettime" = xtrue])
-    if test $clock_gettime = no; then
-        AC_CHECK_FUNC([clock_gettime],
-                      [AC_DEFINE([HAVE_CLOCK_GETTIME_NONRT], [1],
-                                 [Define if non-librt clock_gettime exists])
-                      clock_gettime=yes])
-    fi
+        [AC_DEFINE([HAVE_CLOCK_GETTIME_RT], [1],
+            [Define if librt clock_gettime exists])
+         RT_LIB="-lrt"
+         clock_gettime=yes],
+        [AC_CHECK_FUNC([clock_gettime],
+            [AC_DEFINE([HAVE_CLOCK_GETTIME_NONRT], [1],
+                [Define if non-librt clock_gettime exists])
+             clock_gettime=yes])])
+    AC_SUBST(RT_LIB)
     if test $clock_gettime != no; then
+        AC_MSG_CHECKING(clock_gettime CLOCK_MONOTONIC usability)
         AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
+#include <unistd.h>
 #include <time.h>
 #if !defined(CLOCK_MONOTONIC) || !defined(_POSIX_MONOTONIC_CLOCK) || (_POSIX_MONOTONIC_CLOCK < 0)
 #error
 #endif
-                          ]], [[]])],
-        [AC_DEFINE([HAVE_CLOCK_GETTIME_MONOTONIC], [1],
-                    [Define if clock_gettime supports CLOCK_MONOTONIC])])
+             ]], [[]])],
+            [AC_DEFINE([HAVE_CLOCK_GETTIME_MONOTONIC], [1],
+                [Define if clock_gettime supports CLOCK_MONOTONIC])
+             AC_MSG_RESULT(yes)],
+            [AC_MSG_RESULT(no)])
     fi
 ])

@@ -1,18 +1,28 @@
-AC_INIT([CloudI], [1.1.0],
-        [mjtruog at gmail dot com], [cloudi], [http://cloudi.org/])
+AC_INIT([CloudI], [1.1.0], [mjtruog at gmail dot com],
+    [cloudi], [http://cloudi.org/])
+
+# paths to check for installations that are not standard but typically used
+# (for any libraries that don't depend on executables for paths)
+PATHS_NONSYSTEM_INC="/opt/local/include /usr/local/include"
+PATHS_NONSYSTEM_LIB="/opt/local/lib /usr/local/lib"
+
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.10 no-define])
+AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_SED
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
+AX_CHECK_PRIVATE_HEADER(gmp.h, ,
+    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
+    $PATHS_NONSYSTEM_INC)
 AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
-                     [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])],
-                     ,/opt/local/lib /usr/local/lib)
+    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
+    $PATHS_NONSYSTEM_LIB)
 AX_CLOCK_GETTIME
 
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -25,13 +35,15 @@ AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
-              [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
+    [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
 AX_BOOST_THREAD
 AX_BOOST_SYSTEM
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
-                      [AC_MSG_ERROR([boost::preprocessor not found])], )
+    [AC_MSG_ERROR([boost::preprocessor not found])], ,
+    $PATHS_NONSYSTEM_INC)
 AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
-                      [AC_MSG_ERROR([boost::unordered_map not found])], )
+    [AC_MSG_ERROR([boost::unordered_map not found])], ,
+    $PATHS_NONSYSTEM_INC)
 
 # java checks
 AC_SUBST(javadir, ["$datarootdir/java"])
@@ -45,9 +57,9 @@ AX_PROG_JAVA
 AC_PATH_PROG([JAR],[jar])
 AX_PROG_JAR
 AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer, ,
-                    [AC_MSG_ERROR([java nio not found])])
+    [AC_MSG_ERROR([java nio not found])])
 AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
-                    [AC_MSG_ERROR([java reflection not found])])
+    [AC_MSG_ERROR([java reflection not found])])
 
 # python check
 AC_ARG_WITH([python-debug],
@@ -67,23 +79,23 @@ AC_ARG_WITH([python-debug],
         [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
 AS_IF([test "x$PYTHON_DEBUG" == "xno"],
-      [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
-      [AC_PATH_PROGS([PYTHON],[python2-dbg python2.7-dbg python-dbg])])
+    [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
+    [AC_PATH_PROGS([PYTHON],[python2-dbg python2.7-dbg python-dbg])])
 AX_PROG_PYTHON_VERSION([2.7.0],
-                       [AX_PYTHON_C],
-                       [AC_MSG_ERROR([Python >= 2.7.0 not found])])
+    [AX_PYTHON_C],
+    [AC_MSG_ERROR([Python >= 2.7.0 not found])])
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
 AC_PATH_PROGS([RUBY],[ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
-                     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
+    [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
 AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
-                          [AC_MSG_ERROR([Erlang >= R14B01 not found])])
+    [AC_MSG_ERROR([Erlang >= R14B01 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AX_ERLANG_SUBST_OTP_VER
@@ -95,16 +107,16 @@ AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 
 # rebar dependency
 AC_CONFIG_COMMANDS([rebar],
-                   [(cd $SRCDIR/external/rebar/ && \
-                     $ESCRIPT bootstrap && \
-                     mv ./rebar $BUILDDIR && \
-                     echo "Rebar built" || exit 1)],
-                   [ESCRIPT=$ESCRIPT
-                    SRCDIR=$abs_top_srcdir
-                    BUILDDIR=$abs_top_builddir])
+    [(cd $SRCDIR/external/rebar/ && \
+      $ESCRIPT bootstrap && \
+      mv ./rebar $BUILDDIR && \
+      echo "Rebar built" || exit 1)],
+    [ESCRIPT=$ESCRIPT
+     SRCDIR=$abs_top_srcdir
+     BUILDDIR=$abs_top_builddir])
 
 # ZeroMQ dependency
-AX_ZEROMQ
+AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([

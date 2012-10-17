@@ -3,7 +3,7 @@
 #
 # SYNOPSIS
 #
-#   AX_ZEROMQ
+#   AX_ZEROMQ([OTHER-INC_PATHS], [OTHER-LIB_PATHS])
 #
 # DESCRIPTION
 #
@@ -15,7 +15,6 @@
 #     ZEROMQ_CFLAGS
 #     ZEROMQ_LDFLAGS
 #     ZEROMQ_VERSION_MAJOR
-#     ZEROMQ_ROOT_DIR
 #
 # BSD LICENSE
 # 
@@ -56,8 +55,6 @@
 
 AC_DEFUN([AX_ZEROMQ],
 [
-    AC_REQUIRE([AX_CHECK_PRIVATE_LIB])
-
     AC_ARG_WITH([zeromq],
         [AS_HELP_STRING([--with-zeromq@<:@=ARG@:>@],
             [use ZeroMQ library from a standard location (ARG=yes),
@@ -103,16 +100,20 @@ AC_DEFUN([AX_ZEROMQ],
         else
             AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
             if test "x$zeromq_path_bin_queue" != "x"; then
+                dnl old v2 installation
                 zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
                 ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
                 ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
                 ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
             else
-                ZEROMQ_CFLAGS=""
-                ZEROMQ_LDFLAGS=""
+                AX_CHECK_PRIVATE_HEADER(zmq.h,
+                    [ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
+                     ZEROMQ_LDFLAGS=""
+                    ],
+                    [ZEROMQ_CFLAGS=""
+                     ZEROMQ_LDFLAGS=""], , $1)
             fi
         fi
-        AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
 
         CFLAGS_SAVED="$CFLAGS"
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
@@ -130,22 +131,23 @@ AC_DEFUN([AX_ZEROMQ],
             #error ZeroMQ version is too old
             #endif
             ]])],[
-            AC_MSG_RESULT($ac_zeromq_path)
             build_zeromq="no"],[
             build_zeromq="yes"])
         AC_LANG_POP([C])
         if test "x$build_zeromq" = "xno"; then
-          LDFLAGS_SAVED="$LDFLAGS"
-          LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
-          export LDFLAGS
-          AX_CHECK_PRIVATE_LIB(zmq, zmq_init, , [build_zeromq="yes"])
-          LDFLAGS="$LDFLAGS_SAVED"
-          export LDFLAGS
+            LDFLAGS_SAVED="$LDFLAGS"
+            LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
+            export LDFLAGS
+            AX_CHECK_PRIVATE_LIB(zmq, zmq_init, , [build_zeromq="yes"], $2)
+            LDFLAGS="$LDFLAGS_SAVED"
+            export LDFLAGS
         fi
         CFLAGS="$CFLAGS_SAVED"
         export CFLAGS
 
         if test "x$build_zeromq" = "xyes"; then
+            AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
+            AC_MSG_RESULT(local installation)
             abs_top_srcdir=`cd $srcdir; pwd`
             AC_CONFIG_COMMANDS([zeromq],
                 [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/zeromq/ && \
@@ -159,15 +161,19 @@ AC_DEFUN([AX_ZEROMQ],
 
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
             ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
-            ac_zeromq_path="$local_zeromq_path"
-            AC_MSG_RESULT(building)
+            ZEROMQ_LIB_PATH="$local_zeromq_path/lib"
+        else
+            AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
+            AC_MSG_RESULT(system installation)
+            ZEROMQ_LDFLAGS=$ZMQ_LDFLAGS
+            dnl empty if not in one of $2
+            ZEROMQ_LIB_PATH=$ZMQ_PATH
         fi
         AC_SUBST(ZEROMQ_LDFLAGS)
         AC_SUBST(ZEROMQ_CFLAGS)
+        AC_SUBST(ZEROMQ_LIB_PATH)
 
         ZEROMQ_VERSION_MAJOR="$want_zeromq_version"
         AC_SUBST(ZEROMQ_VERSION_MAJOR)
-        ZEROMQ_ROOT_DIR="$ac_zeromq_path"
-        AC_SUBST(ZEROMQ_ROOT_DIR)
     fi
 ])

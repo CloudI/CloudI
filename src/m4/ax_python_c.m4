@@ -7,6 +7,12 @@
 #
 # DESCRIPTION
 #
+#   Determine the location of the Python C API.
+#
+#   This macro sets:
+#
+#     PYTHON_CFLAGS
+#     PYTHON_LDFLAGS
 #
 # BSD LICENSE
 #
