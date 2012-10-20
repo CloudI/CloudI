@@ -1,0 +1,27 @@
+Items waiting for after the release of version 1.1.0
+----------------------------------------------------
+update jinterface
+    * make sure it is current
+EC2 automatic node configuration
+    * working with external/nodefinder/ec2nodefinder/
+      but with sane ec2 integration
+ATOM_CACHE_REF change
+    * binary erlang term format, effects python/ruby CloudI API serialization
+      (the ATOM_CACHE_REF will/is not be used by the CloudI API, the change
+       is just for completeness)
+Add more features to the HTTP integration
+    * websockets integration
+Lua CloudI API
+    * can base this on the Python-C CloudI API integration
+      (within api/python/cloudi_py.cpp)
+Perl CloudI API
+    * all-Perl implementation using updated code for the
+      binary erlang binary term format, similar to
+      http://search.cpan.org/~hio/Erlang-Port-0.04/lib/Erlang/Port.pm
+R CloudI API
+    * R w/C integration(?)
+Ocaml CloudI API
+    * all-Ocaml implementation
+Haskell CloudI API
+    * all-Haskell implementation
+

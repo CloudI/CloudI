@@ -2,29 +2,32 @@
 
 ## ABOUT
 
-The following requests are available (see loadtest/setup/cloudi.conf):
-http://localhost:8080/tests/http_req/erlang.xml?value=42
-http://localhost:8080/tests/http_req/c.xml?value=42
-http://localhost:8080/tests/http_req/java.xml?value=42
-http://localhost:8080/tests/http_req/python.xml?value=42
-http://localhost:8080/tests/http_req/python_c.xml?value=42
-http://localhost:8080/tests/http_req/ruby.xml?value=42
+The following requests are available (see `loadtest/results/*/setup/cloudi.conf`):
+
+    http://localhost:8080/tests/http_req/erlang.xml?value=42
+    http://localhost:8080/tests/http_req/c.xml?value=42
+    http://localhost:8080/tests/http_req/java.xml?value=42
+    http://localhost:8080/tests/http_req/python.xml?value=42
+    http://localhost:8080/tests/http_req/python_c.xml?value=42
+    http://localhost:8080/tests/http_req/ruby.xml?value=42
 
 Which all give the following response, from the associated programming language:
-<http_test><value>42</value></http_test>
+
+    <http_test><value>42</value></http_test>
 
 The loadtest's test data is based on the testing in
 http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .  The test's task is simple usage of an XML response to a
 HTTP GET request, which requires minimal processing in each programming
-language.  The CloudI HTTP jobs that currently exist are
-cloudi_job_http_misultin and cloudi_job_http_cowboy.
-The loadtest results from the version 1.0.0 release only used
-cloudi_job_http_misultin.  The CloudI loadtesting is using Tsung to receive
-more formalized loadtest results (see loadtest/setup/http_req_*.xml).
+language.  The CloudI HTTP jobs that currently exist
+are `cloudi_job_http_misultin` and `cloudi_job_http_cowboy`.
+The loadtest results from the version 1.0.0 release only
+used `cloudi_job_http_misultin`.  The CloudI loadtesting uses Tsung to
+produce dependable loadtesting results
+(see `loadtest/results/*/setup/http_req_*.xml`).
 
 ##CONFIGURATION
 
-The general software configuration files are in loadtest/setup/
+The general software configuration files are in `loadtest/results/*/setup/`
 
 ###Hardware
 
@@ -64,11 +67,21 @@ Setting added to /etc/security/limits.conf
 
     *                -       nofile          65535
 
+##RESULTS
+
+[loadtest/results/201206_20k/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results/201206_20k):
+* 20,000 concurrent connections open
+* 10,000 requests/second maintained for 10 minutes
+* each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
+* used Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64) with Erlang R15B01
+
 ##INFORMATION
 
-http://www.mnot.net/blog/2011/05/18/http_benchmark_rules
+Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
+* http://www.mnot.net/blog/2011/05/18/http_benchmark_rules
 
-(interesting historical loadtest, only localhost usage... need more interfaces)
-http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
-http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2
-http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3
+interesting historical loadtest, only localhost usage... need more interfaces:
+* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
+* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2
+* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3
+
