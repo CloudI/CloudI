@@ -69,7 +69,7 @@ Setting added to /etc/security/limits.conf
 
 ##RESULTS
 
-[loadtest/results/201206_20k/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results/201206_20k):
+[loadtest/results/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results/201206_20k_10kreqs):
 * 20,000 concurrent connections open
 * 10,000 requests/second maintained for 10 minutes
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
