@@ -23,11 +23,11 @@ are `cloudi_job_http_misultin` and `cloudi_job_http_cowboy`.
 The loadtest results from the version 1.0.0 release only
 used `cloudi_job_http_misultin`.  The CloudI loadtesting uses Tsung to
 produce dependable loadtesting results
-(see `loadtest/results/*/setup/http_req_*.xml`).
+(see `loadtest/results_v*/*/setup/http_req_*.xml`).
 
 ##CONFIGURATION
 
-The general software configuration files are in `loadtest/results/*/setup/`
+The general software configuration files are in `loadtest/results_v*/*/setup/`
 
 ###Hardware
 
@@ -69,11 +69,17 @@ Setting added to /etc/security/limits.conf
 
 ##RESULTS
 
-[loadtest/results/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results/201206_20k_10kreqs):
+[loadtest/results_v1_0_0/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs):
 * 20,000 concurrent connections open
 * 10,000 requests/second maintained for 10 minutes
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
 * used Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64) with Erlang R15B01
+[loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
+* same test as [loadtest/results_v1_0_0/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
+[loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy):
+* used to compare [cowboy with misultin](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
+[loadtest/results_v1_1_0/201210_40k_10kreqs_misultin/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_misultin) and [loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy):
+* shows more latency with 40,000 concurrent connections open ( [summary](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf) )
 
 ##INFORMATION
 

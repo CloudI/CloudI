@@ -1,0 +1,35 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-Size-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "Kbits/sec"
+show title
+set key left top
+plot  "data/size_sent.txt" using  1:2 title "size_sent", "data/size_rcv.txt" using  1:2 title "size_rcv"
+set output "images/graphes-Size-total.ps"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total Kbits"
+show title
+set key left top
+plot  "data/size_sent.txt" using  1:3 title "size_sent", "data/size_rcv.txt" using  1:3 title "size_rcv"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-Size-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "Kbits/sec"
+show title
+set key left top
+plot  "data/size_sent.txt" using  1:2 title "size_sent", "data/size_rcv.txt" using  1:2 title "size_rcv"
+set output "images/graphes-Size-total.png"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total Kbits"
+show title
+set key left top
+plot  "data/size_sent.txt" using  1:3 title "size_sent", "data/size_rcv.txt" using  1:3 title "size_rcv"

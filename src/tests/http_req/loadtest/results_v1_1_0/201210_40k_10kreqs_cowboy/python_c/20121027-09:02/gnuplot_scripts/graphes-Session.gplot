@@ -1,0 +1,69 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-Session-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "sessions/sec"
+show title
+set key left top
+plot  "data/session.txt" using  1:2 title "session"
+set output "images/graphes-Session-mean.ps"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:3 title "session"
+set output "images/graphes-Session-stdvar.ps"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:4 title "session"
+set output "images/graphes-Session-max_sample.ps"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:5 title "session"
+set output "images/graphes-Session-min_sample.ps"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:6 title "session"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-Session-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "sessions/sec"
+show title
+set key left top
+plot  "data/session.txt" using  1:2 title "session"
+set output "images/graphes-Session-mean.png"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:3 title "session"
+set output "images/graphes-Session-stdvar.png"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:4 title "session"
+set output "images/graphes-Session-max_sample.png"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:5 title "session"
+set output "images/graphes-Session-min_sample.png"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/session.txt" using  1:6 title "session"

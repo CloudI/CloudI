@@ -1,0 +1,69 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-freemem-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "freemem"
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:2 title "freemem@mc1"
+set output "images/graphes-freemem-mean.ps"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:3 title "freemem@mc1"
+set output "images/graphes-freemem-stdvar.ps"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:4 title "freemem@mc1"
+set output "images/graphes-freemem-max_sample.ps"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:5 title "freemem@mc1"
+set output "images/graphes-freemem-min_sample.ps"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:6 title "freemem@mc1"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-freemem-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "freemem"
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:2 title "freemem@mc1"
+set output "images/graphes-freemem-mean.png"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:3 title "freemem@mc1"
+set output "images/graphes-freemem-stdvar.png"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:4 title "freemem@mc1"
+set output "images/graphes-freemem-max_sample.png"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:5 title "freemem@mc1"
+set output "images/graphes-freemem-min_sample.png"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/freemem:os_mon@mc1.txt" using  1:6 title "freemem@mc1"

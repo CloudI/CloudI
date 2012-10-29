@@ -1,0 +1,308 @@
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty x range [2090:2090], adjusting to [2069.1:2110.9]
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+Warning: empty x range [2090:2090], adjusting to [2069.1:2110.9]
+Warning: empty y range [1:1], adjusting to [0.99:1.01]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty x range [2090:2090], adjusting to [2069.1:2110.9]
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+Warning: empty x range [2090:2090], adjusting to [2069.1:2110.9]
+Warning: empty y range [1:1], adjusting to [0.99:1.01]
+
+	title is " simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " maximum_simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " maximum_simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.910906:0.910906], adjusting to [0.901797:0.920015]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.910906:0.910906], adjusting to [0.901797:0.920015]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [6367.97:6367.97], adjusting to [6304.29:6431.65]
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [6367.97:6367.97], adjusting to [6304.29:6431.65]
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.0898438:0.0898438], adjusting to [0.0889453:0.0907422]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.0898438:0.0898438], adjusting to [0.0889453:0.0907422]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [2432:2432], adjusting to [2407.68:2456.32]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [2432:2432], adjusting to [2407.68:2456.32]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [2455:2455], adjusting to [2430.45:2479.55]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [2455:2455], adjusting to [2430.45:2479.55]

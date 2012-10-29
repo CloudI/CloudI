@@ -1,0 +1,314 @@
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " maximum_simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " maximum_simultaneous", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+
+	title is " total", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [6356.28:6356.28], adjusting to [6292.72:6419.84]
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [6356.28:6356.28], adjusting to [6292.72:6419.84]
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [66:66], adjusting to [65.34:66.66]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [66:66], adjusting to [65.34:66.66]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [70:70], adjusting to [69.3:70.7]
+
+	title is " rate", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0.1:0.1], adjusting to [0.099:0.101]
+
+	title is " mean", offset at ((character units) 0, 0, 0)
+
+
+	title is " stdvar", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [0:0], adjusting to [-1:1]
+
+	title is " max_sample", offset at ((character units) 0, 0, 0)
+
+
+	title is " min_sample", offset at ((character units) 0, 0, 0)
+
+Warning: empty y range [70:70], adjusting to [69.3:70.7]

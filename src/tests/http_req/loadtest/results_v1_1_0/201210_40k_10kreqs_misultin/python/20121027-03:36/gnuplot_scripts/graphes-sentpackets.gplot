@@ -1,0 +1,69 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-sentpackets-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "sentpackets"
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:2 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-mean.ps"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:3 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-stdvar.ps"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:4 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-max_sample.ps"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:5 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-min_sample.ps"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:6 title "sentpackets@mc1"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-sentpackets-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "sentpackets"
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:2 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-mean.png"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:3 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-stdvar.png"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:4 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-max_sample.png"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:5 title "sentpackets@mc1"
+set output "images/graphes-sentpackets-min_sample.png"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/sentpackets:os_mon@mc1.txt" using  1:6 title "sentpackets@mc1"

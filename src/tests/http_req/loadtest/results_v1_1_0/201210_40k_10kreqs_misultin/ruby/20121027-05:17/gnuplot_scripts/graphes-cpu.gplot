@@ -1,0 +1,69 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-cpu-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "cpu"
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:2 title "cpu@mc1"
+set output "images/graphes-cpu-mean.ps"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:3 title "cpu@mc1"
+set output "images/graphes-cpu-stdvar.ps"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:4 title "cpu@mc1"
+set output "images/graphes-cpu-max_sample.ps"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:5 title "cpu@mc1"
+set output "images/graphes-cpu-min_sample.ps"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:6 title "cpu@mc1"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-cpu-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "cpu"
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:2 title "cpu@mc1"
+set output "images/graphes-cpu-mean.png"
+set title " mean"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:3 title "cpu@mc1"
+set output "images/graphes-cpu-stdvar.png"
+set title " stdvar"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:4 title "cpu@mc1"
+set output "images/graphes-cpu-max_sample.png"
+set title " max_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:5 title "cpu@mc1"
+set output "images/graphes-cpu-min_sample.png"
+set title " min_sample"
+set xlabel "unit = sec "
+show title
+set key left top
+plot  "data/cpu:os_mon@mc1.txt" using  1:6 title "cpu@mc1"

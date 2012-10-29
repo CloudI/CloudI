@@ -1,0 +1,35 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-Users_Arrival-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "number of users/sec"
+show title
+set key left top
+plot  "data/users_count.txt" using  1:2 title "users_count", "data/finish_users_count.txt" using  1:2 title "finish_users_count"
+set output "images/graphes-Users_Arrival-total.ps"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total"
+show title
+set key left top
+plot  "data/users_count.txt" using  1:3 title "users_count", "data/finish_users_count.txt" using  1:3 title "finish_users_count"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-Users_Arrival-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "number of users/sec"
+show title
+set key left top
+plot  "data/users_count.txt" using  1:2 title "users_count", "data/finish_users_count.txt" using  1:2 title "finish_users_count"
+set output "images/graphes-Users_Arrival-total.png"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total"
+show title
+set key left top
+plot  "data/users_count.txt" using  1:3 title "users_count", "data/finish_users_count.txt" using  1:3 title "finish_users_count"

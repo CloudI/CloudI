@@ -1,0 +1,93 @@
+
+=INFO REPORT==== 26-Oct-2012::21:26:07 ===
+  ts_launcher_static:(5:<0.60.0>) Launch msg receive ("load01")
+
+=INFO REPORT==== 26-Oct-2012::21:26:07 ===
+         ts_launcher:(5:<0.61.0>) Launch msg receive ("load01")
+
+=INFO REPORT==== 26-Oct-2012::21:26:07 ===
+     ts_launcher_mgr:(4:<0.56.0>) No registered processes ! syncing ...
+
+=INFO REPORT==== 26-Oct-2012::21:26:07 ===
+         ts_launcher:(5:<0.61.0>) Expected duration of first phase: 599.984 sec 
+
+=INFO REPORT==== 26-Oct-2012::21:26:07 ===
+         ts_launcher:(5:<0.61.0>) Activate launcher (10714 users) in 11746 msec 
+
+=INFO REPORT==== 26-Oct-2012::21:36:16 ===
+         ts_launcher:(5:<0.61.0>) This was the last phase, wait for connected users to finish their session
+
+=INFO REPORT==== 26-Oct-2012::21:36:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:37:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:38:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:39:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:40:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:41:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:42:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:43:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:44:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:45:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:46:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:47:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10714 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:48:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10712 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:49:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10689 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:50:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 10502 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:51:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 9922 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:52:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 9053 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:53:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 8025 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:54:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 6944 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:55:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 5863 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:56:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 4773 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:57:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 3721 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:58:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 2674 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::21:59:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 1498 active client(s)
+
+=INFO REPORT==== 26-Oct-2012::22:00:16 ===
+     ts_launcher_mgr:(5:<0.56.0>) Still 480 active client(s)

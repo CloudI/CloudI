@@ -1,0 +1,35 @@
+set style data  linespoint
+set terminal postscript color 
+set grid
+set output "images/graphes-HTTP_CODE-rate.ps"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "number/sec"
+show title
+set key left top
+plot  "data/200.txt" using  1:2 title "200"
+set output "images/graphes-HTTP_CODE-total.ps"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total"
+show title
+set key left top
+plot  "data/200.txt" using  1:3 title "200"
+set size 0.5,0.5
+set style data  linespoint
+set terminal png
+set grid
+set output "images/graphes-HTTP_CODE-rate.png"
+set title " rate"
+set xlabel "unit = sec "
+set ylabel "number/sec"
+show title
+set key left top
+plot  "data/200.txt" using  1:2 title "200"
+set output "images/graphes-HTTP_CODE-total.png"
+set title " total"
+set xlabel "unit = sec "
+set ylabel "total"
+show title
+set key left top
+plot  "data/200.txt" using  1:3 title "200"
