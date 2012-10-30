@@ -31,7 +31,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.0.0b<br />last updated on June 24 2012</h3></center>
+  <center><h3>version 1.1.0b<br />last updated on October 30 2012</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -83,6 +83,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_URLregex"   >4.8 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
     <li><a href="#4_ThreadSafe" >4.9 - Is the CloudI API thread-safe?</a></li>
     <li><a href="#4_Speed"      >4.10 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
+    <li><a href="#4_Erlang"      >4.11 - Why not just use Erlang directly?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -96,7 +97,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="6_contents"></a>
   <h2>6 - Services</h2>
   <ul class="faq">
-    <li><a href="#6_C"       >6.1 - C/C++ Service Implementation</a></li>
+    <li><a href="#6_C"       >6.1 - C++/C Service Implementation</a></li>
     <li><a href="#6_Erlang"  >6.2 - Erlang Service Implementation</a></li>
     <li><a href="#6_Java"    >6.3 - Java Service Implementation</a></li>
     <li><a href="#6_Python"  >6.4 - Python Service Implementation</a></li>
@@ -231,6 +232,15 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     many databases, and many messaging buses in a way that is both scalable
     and fault-tolerant.
   </p>
+  <h4>Shorter Answer</h4>
+  <p class="paragraph">
+    A rock-solid transaction processing system for
+    flexible software development.
+  </p>
+  <h4>Shortest Answer</h4>
+  <p class="paragraph">
+    A Cloud at the lowest level.
+  </p>
   <h4>Long Answer</h4>
   <p class="paragraph">
     CloudI is an implementation of <a href="#1_Name">Cloud functionality</a>
@@ -246,7 +256,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <p class="paragraph">
     CloudI was architected to easily integrate with other services, software,
     and frameworks.  The CloudI API provides a light-weight interface for
-    creating services in C/C++, Erlang, Java, Python, and Ruby.  By using
+    creating services in C++/C, Erlang, Java, Python, and Ruby.  By using
     CloudI, external software can become more scalable and fault-tolerant
     by utilizing CloudI's load balancing of CloudI requests.  CloudI
     messaging enforces realtime constraints using timeouts, so that request
@@ -308,7 +318,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
     which permits reuse for personal or commercial purposes.  Small amounts of
     source code is included that is under the <a href="http://www.erlang.org/EPLICENSE" target="_blank">Erlang Public License</a>
-    (e.g., part of the <a href="https://github.com/okeuday/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/list_pg.erl" target="_blank">list_pg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
+    (e.g., part of the <a href="https://github.com/okeuday/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cpg/src/cpg.erl" target="_blank">cpg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
     itself.  All external source code dependencies are also under a
     BSD license.  Some conditional external source code dependencies
     (not included by default) are under other licenses
@@ -442,7 +452,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   Development:
   </td><td>
-  <a href="https://github.com/feeds/okeuday/commits/CloudI/master" target="_blank">https://github.com/feeds/okeuday/commits/CloudI/master</a>
+  <a href="https://github.com/feeds/okeuday/commits/CloudI/develop" target="_blank">https://github.com/feeds/okeuday/commits/CloudI/develop</a>
   </td></tr><tr><td>
   Releases:
   </td><td>
@@ -453,6 +463,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="2_Presentations"></a>
   <h3>2.5 - Presentations</h3>
   <table><tr><td>
+  Version 1.0.0
+  </td><td>
+  2012 Open Source Bridge Unconference
+  </td></tr><tr><td>
   Version 0.1.6
   </td><td>
   <a href="docs/cloudi_erlounge_vancouver2011.pdf" target="_blank">2011 ErLounge Meetup Vancouver BC (slides)</a>
@@ -484,8 +498,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr></table>
   <p class="paragraph">
     If you are unsure whether you have found a bug, please send an email to the
-    mailing list.  Otherwise, you can easily enter a bug report for the problem
-    by using the online form.
+    mailing list or utilize the <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">IRC chat room</a>.
+    Otherwise, you can easily enter a bug report for the problem by using the
+    <a href="https://github.com/okeuday/CloudI/issues/new" target="_blank">online form</a>.
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -502,14 +517,6 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>make</li>
       <li>make install</li>
     </ol>
-    Currently, it is best to install into a local directory with a command like:
-    <pre>
-./configure --prefix=`pwd`/../cloudi_install
-    </pre>
-    More work will be occurring on the build system (autoconf/automake/rebar)
-    to make sure the deployment is more typical for UNIX systems
-    (i.e., all configuration in "etc" and all logs in "/var/logs")
-    but this work is not yet complete.
   </p>
   <p class="paragraph">
     All the supported languages
@@ -517,7 +524,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     configuration uses valid paths and the integration tests can be run.
     So, that means that the configuration will expect a C compiler,
     a C++ compiler, Java Development Kit (JDK), Python, Ruby (&ge; 1.9), and
-    Erlang (&ge; R14B01, <a href="http://www.erlang.org/download.html" target="_blank">preferably R14B02 or later</a>).
+    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R14B02</a>).  CloudI is tested on each release of Erlang (currently R15B02).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -528,11 +535,13 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     Ubuntu<br />(apt-get install &lt;package(s)&gt;)
     </td><td>
     <ul>
+      <li>erlang</li>
       <li>g++</li>
       <li>libboost-thread-dev</li>
       <li>libboost-dev</li>
       <li>default-jdk</li>
       <li>python</li>
+      <li>python-dev</li>
       <li>ruby1.9</li>
       <li>libgmp3-dev</li>
     </ul>
@@ -553,6 +562,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     --with-zeromq
     </td><td>
     Include <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a> support
+    </td></tr><tr><td>
+    --with-zeromq-version=[2|3]
+    </td><td>
+    ZeroMQ major version (2 is the default)
     </td></tr></table>
   </p>
   <p class="paragraph">
@@ -734,7 +747,7 @@ PREFIX/bin/cloudi stop
   <h4>CloudI API</h4>
   <p class="paragraph">
     The CloudI API provides a light-weight interface for creating services
-    in C/C++, Erlang, Java, Python, and Ruby.  Services subscribe to receive
+    in C++/C, Erlang, Java, Python, and Ruby.  Services subscribe to receive
     requests from other services using the CloudI API "subscribe" function
     call.  The subscribe function call takes a suffix string that is expected to
     contain a path using a forward slash '/' (e.g., /cloudi/api/json_rpc/).
@@ -1149,6 +1162,56 @@ PREFIX/bin/cloudi stop
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
+  <a name="4_Erlang"></a>
+  <h3>4.11 - Why not just use Erlang directly?</h3>
+  <p class="block">
+    Erlang does naturally support integration in the following ways:
+    <ul>
+      <li>NIF (Native Interface Function)</li>
+      <li>port drivers</li>
+      <li>port</li>
+      <li>cnode</li>
+    </ul>
+  </p>
+  <p class="paragraph">
+    NIFs and port drivers can integrate with external source code
+    (normally only C or C++) as a dynamic library that is loaded by the
+    Erlang VM.  This approach is the most efficient and the most
+    error-prone (any memory corruption impacts the Erlang VM to create new
+    and exciting system crashes, sabotaging the fault-tolerance the Erlang VM
+    provides).  A port is an external executable ran as a separate OS
+    process linked to the Erlang VM, communicating over pipes.  A cnode is
+    a separate executable communicating as an Erlang node with the
+    distributed Erlang protocol.
+  </p>
+  <p class="paragraph">
+    CloudI's external service execution is most similar to Erlang port
+    integration.  However, CloudI provides many additional features for
+    external services that are normally not present:
+    <ul>
+      <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development</li>
+      <li>Protocol agnostic transactional communication with a small consistent API (i.e., the CloudI API)</li>
+      <li>Service name grouping with <a href="#4_URLregex">pattern matching</a></li>
+      <li>Every service request receives a unique UUID (Universally Unique IDentifier)</li>
+      <li>All external services are managed with fault-tolerance constraints, in the same way as Erlang/OTP supervisors</li>
+      <li>Every service request can utilize 255 possible request priorities</li>
+      <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF))</li>
+      <li>stdout and stderr output is logged automatically to the single CloudI log</li>
+    </ul>
+  </p>
+  <p class="paragraph">
+    The CloudI API is consistent for all the supported programming languages,
+    which makes it easier to move service functionality inbetween programming
+    languages or inbetween services.  All external CloudI services communicate
+    in the same way and all service requests are processed in the same way,
+    to create a consistent integration framework.  Using CloudI naturally
+    reduces the complexity of integration source code so that errors are more
+    specific to the business logic being developed, because CloudI is
+    continuously tested to ensure it provides both a stable and dependable
+    integration framework.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
   <hr \>
   <h2>5 - Migrating to CloudI</h2>
 
@@ -1208,6 +1271,12 @@ PREFIX/bin/cloudi stop
   <a name="5_Stability"></a>
   <h3>5.3 - Stability and Fault-Tolerance Considerations</h3>
   <p class="paragraph">
+    CloudI software release and versioning utilizes
+    <a href="http://semver.org/" target="_blank">semantic versioning</a>
+    to make any upgrade considerations more explicit.  Any other stability
+    concerns are related to CloudI integration.
+  </p>
+  <p class="paragraph">
     CloudI requests are not sent in a way that is meant to be persistent
     to simplify error-handling.  Otherwise, fault-tolerant messaging would
     preserve requests that are irrelevant and/or erroneous at a future time.
@@ -1262,6 +1331,12 @@ PREFIX/bin/cloudi stop
     will be logged as quickly as possible within the CloudI log as error data
     (for stderr data) or as info data (for stdout data).
   </p>
+  <p class="paragraph">
+    Any Erlang CloudI services can utilize CloudI's logging
+    (ideally for information related to service problems or failures)
+    for asynchronous logging (logging that does not carry a performance
+    penalty).
+  </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 
   <a name="5_LoadTesting"></a>
@@ -1271,14 +1346,52 @@ PREFIX/bin/cloudi stop
     load test of CloudI incoming HTTP requests.  The loadtest shows how the
     results vary when interacting with separate programming languages that
     CloudI supports with the CloudI API.  20 thousand concurrent connections
-    were used with a dynamic XML request/response protocol.  All external
-    services (i.e., non-Erlang services) were only given a single OS process
+    were used with a dynamic XML request/response protocol sent at a frequency
+    of 10 thousand requests per second.  All external services
+    (i.e., non-Erlang services) were only given a single OS process
     with no thread usage.  All programming languages received the same amount
     of load, so it helps provide a comparison for performance within the
     CloudI framework.  To find out more, look at the raw results in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results/201206_20k/" target="_blank">src/tests/http_req/loadtest/results/201206_20k/</a>
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/</a>
     or the configuration in 
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/setup/" target="_blank">src/tests/http_req/loadtest/setup/</a>.
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/</a>:
+    <ul>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/c/20120624-07:47" target="_blank">
+        C++/C
+        <img src="images/201206_graphes-Transactions-mean_c.png" /><br />
+        <img src="images/201206_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_c.png" width="280" />
+        </a><br /><br />
+      </li>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/erlang/20120624-08:49" target="_blank">
+        Erlang
+        <img src="images/201206_graphes-Transactions-mean_erlang.png" /><br />
+        <img src="images/201206_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_erlang.png" width="280" />
+        </a><br /><br />
+      </li>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/java/20120624-16:22" target="_blank">
+        Java
+        <img src="images/201206_graphes-Transactions-mean_java.png" /><br />
+        <img src="images/201206_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_java.png" width="280" />
+        </a><br /><br />
+      </li>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/python/20120624-17:25" target="_blank">
+        Python
+        <img src="images/201206_graphes-Transactions-mean_python.png" /><br />
+        <img src="images/201206_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_python.png" width="280" />
+        </a><br /><br />
+      </li>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/ruby/20120624-18:25" target="_blank">
+        Ruby
+        <img src="images/201206_graphes-Transactions-mean_ruby.png" /><br />
+        <img src="images/201206_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_ruby.png" width="280" />
+        </a><br /><br />
+      </li>
+    </ul>
   </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 
@@ -1286,7 +1399,7 @@ PREFIX/bin/cloudi stop
   <h2>6 - Services</h2>
 
   <a name="6_C"></a>
-  <h3>6.1 - C/C++ Service Implementation</h3>
+  <h3>6.1 - C++/C Service Implementation</h3>
   <p class="paragraph">
     There are separate header files that provide both a C CloudI API
     (<a href="https://github.com/okeuday/CloudI/blob/master/src/api/c/cloudi.h" target="_blank">cloudi.h</a>)
@@ -1294,7 +1407,7 @@ PREFIX/bin/cloudi stop
     (<a href="https://github.com/okeuday/CloudI/blob/master/src/api/c/cloudi.hpp" target="_blank">cloudi.hpp</a>) which are mutually exclusive.  The header
     files do not bring in external dependencies but both require the standard
     C++ library as a link-time dependency.  Some of the integration
-    tests that provide example usage of the C/C++ CloudI API are:
+    tests that provide example usage of the C++/C CloudI API are:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++ example with threads)</a>
           <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/" target="_blank">Hexadecimal PI Test</a></li>
