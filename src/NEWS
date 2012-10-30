@@ -1,3 +1,22 @@
+October 30, 2012
+  Version 1.1.0 (beta) released.
+
+  * multiple loadtests to show the performance of all supported programming
+    languages with the two supported HTTP servers, receiving 10,000 requests/sec
+  * support for the cowboy HTTP server was added, which provides a
+    significant reduction in HTTP request latency for Erlang services
+    (based on the loadtest results)
+  * Python with C integration provides a more efficient Python CloudI API
+    (at least a 400% speedup, based on the loadtest results when using the
+     Python module "cloudi_c" instead of "cloudi")
+  * OSX configuration and compilation now works without problems
+  * recv_async within the CloudI API can now choose whether to consume the
+    response it returns
+  * the hexpi test was abstracted to create the cloudi_job_map_reduce
+    Erlang behaviour for fault-tolerant processing of iterative algorithms
+  * various bug fixes for the tests
+  * source code organizational improvements
+
 June 24, 2012
   Version 1.0.0 (beta) released.
 
