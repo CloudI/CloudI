@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2012-10-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.1.0 (beta) released
+
 2012-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add loadtest results
@@ -35,7 +39,7 @@
 2012-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix python threading issues with the Python CloudI API C++ integration
-    * Add the send_async consume parameter to the
+    * Add the recv_async consume parameter to the
       Python CloudI API C++ integration
     * Add the python_c variation of the messaging test
 
