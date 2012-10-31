@@ -44,6 +44,11 @@
         cloudi_services
         ]},
    {applications, [
+        % external dependencies for CloudI configuration
+        cloudi_services_databases,
+        cloudi_services_messaging,
+        cloudi_services_internal,
+        % internal dependencies
         trie,
         uuid,
         cpg,

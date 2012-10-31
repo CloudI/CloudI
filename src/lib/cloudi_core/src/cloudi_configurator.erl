@@ -131,11 +131,19 @@ nodes_remove(L, Timeout) ->
 
 job_start(Job)
     when is_record(Job, config_job_internal) ->
-    case code:is_loaded(Job#config_job_internal.module) of
-        false ->
-            code:load_file(Job#config_job_internal.module);
-        _ ->
-            ok
+    case application:load(Job#config_job_internal.module) of
+        ok ->
+            % prefer application files to load internal jobs
+            % (so that application dependencies can be clearly specified, etc.)
+            application:start(Job#config_job_internal.module, temporary);
+        {error, _} ->
+            % if no application file can be loaded, load it as a simple module
+            case code:is_loaded(Job#config_job_internal.module) of
+                false ->
+                    code:load_file(Job#config_job_internal.module);
+                _ ->
+                    ok
+            end
     end,
     job_start_internal(concurrency(Job#config_job_internal.count_process), Job);
 
