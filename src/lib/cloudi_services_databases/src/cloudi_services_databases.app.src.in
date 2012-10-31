@@ -19,7 +19,6 @@
         emysql,
         epgsql,
         etokyotyrant,
-        cloudi_core,
         stdlib,
         kernel
         ]},
