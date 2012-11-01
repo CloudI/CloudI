@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -59,4 +59,39 @@
 -define(LOG_TRACE(Format, Args),
     cloudi_logger_interface:trace(?MODULE, ?LINE, Format, Args)).
 
+-define(LOG_FATAL_APPLY(F, A),
+    cloudi_logger_interface:fatal_apply(F, A)).
+
+-define(LOG_ERROR_APPLY(F, A),
+    cloudi_logger_interface:error_apply(F, A)).
+
+-define(LOG_WARN_APPLY(F, A),
+    cloudi_logger_interface:warn_apply(F, A)).
+
+-define(LOG_INFO_APPLY(F, A),
+    cloudi_logger_interface:info_apply(F, A)).
+
+-define(LOG_DEBUG_APPLY(F, A),
+    cloudi_logger_interface:debug_apply(F, A)).
+
+-define(LOG_TRACE_APPLY(F, A),
+    cloudi_logger_interface:trace_apply(F, A)).
+
+-define(LOG_FATAL_APPLY(M, F, A),
+    cloudi_logger_interface:fatal_apply(M, F, A)).
+
+-define(LOG_ERROR_APPLY(M, F, A),
+    cloudi_logger_interface:error_apply(M, F, A)).
+
+-define(LOG_WARN_APPLY(M, F, A),
+    cloudi_logger_interface:warn_apply(M, F, A)).
+
+-define(LOG_INFO_APPLY(M, F, A),
+    cloudi_logger_interface:info_apply(M, F, A)).
+
+-define(LOG_DEBUG_APPLY(M, F, A),
+    cloudi_logger_interface:debug_apply(M, F, A)).
+
+-define(LOG_TRACE_APPLY(M, F, A),
+    cloudi_logger_interface:trace_apply(M, F, A)).
 
