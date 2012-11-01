@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2012-11-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add loglevel-based apply macro functionality to CloudI logging
+    * Fix small dialyzer issues in cowboy integration
+    * Added more summary data based on loadtest results
+
 2012-10-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.1.0 (beta) released
