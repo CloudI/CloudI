@@ -31,7 +31,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.1.0b<br />last updated on October 30 2012</h3></center>
+  <center><h3>version 1.1.0b<br />last updated on October 31 2012</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -58,8 +58,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_MailingList"   >2.2 - Mailing List</a></li>
     <li><a href="#2_IRC"           >2.3 - Internet Relay Chat (IRC)</a></li>
     <li><a href="#2_RSS"           >2.4 - RSS Feeds</a></li>
-    <li><a href="#2_Presentations" >2.5 - Presentations</a></li>
-    <li><a href="#2_Reporting Bugs">2.6 - Reporting Bugs</a></li>
+    <li><a href="#2_Twitter"       >2.5 - Twitter</a></li>
+    <li><a href="#2_Presentations" >2.6 - Presentations</a></li>
+    <li><a href="#2_Reporting Bugs">2.7 - Reporting Bugs</a></li>
   </ul>
   <a name="3_contents"></a>
   <h2>3 - CloudI Installation Guide</h2>
@@ -460,8 +461,17 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
+  <a name="2_Twitter"></a>
+  <h3>2.5 - Twitter</h3>
+  <table><tr><td>
+  Development:
+  </td><td>
+  <a href="https://twitter.com/cloudi_org" target="_blank">@cloudi_org</a>
+  </td></tr></table>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
   <a name="2_Presentations"></a>
-  <h3>2.5 - Presentations</h3>
+  <h3>2.6 - Presentations</h3>
   <table><tr><td>
   Version 1.0.0
   </td><td>
@@ -486,7 +496,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#2_contents">Top</a></div>
 
   <a name="2_Reporting Bugs"></a>
-  <h3>2.6 - Reporting Bugs</h3>
+  <h3>2.7 - Reporting Bugs</h3>
   <table><tr><td>
   Bug Reports:
   </td><td>
@@ -523,8 +533,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     are currently required for the configuration, so that the generated
     configuration uses valid paths and the integration tests can be run.
     So, that means that the configuration will expect a C compiler,
-    a C++ compiler, Java Development Kit (JDK), Python, Ruby (&ge; 1.9), and
-    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R14B02</a>).  CloudI is tested on each release of Erlang (currently R15B02).
+    a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
+    Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R14B02</a>).
+    CloudI is tested on each release of Erlang (currently R15B02).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -544,6 +555,17 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>python-dev</li>
       <li>ruby1.9</li>
       <li>libgmp3-dev</li>
+    </ul>
+    </td></tr><tr><td>
+    OSX w/macports<br />(port install &lt;package(s)&gt;)
+    </td><td>
+    <ul>
+      <li>erlang</li>
+      <li>libstdcxx</li>
+      <li>boost</li>
+      <li>python27</li>
+      <li>ruby19</li>
+      <li>gmp</li>
     </ul>
     </td></tr></table>
   </p>
@@ -569,8 +591,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </td></tr></table>
   </p>
   <p class="paragraph">
-    For more installation configuration option details, please refer to
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>.
+    For more installation configuration option details, please execute
+    "./configure --help" (otherwise, you can refer to
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>
+    for basic configuration information).
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -579,10 +603,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <p class="paragraph">
     To install CloudI dependencies on OSX you either need <a href="http://www.macports.org/" target="_blank">macports</a> or
     <a href="https://mxcl.github.com/homebrew/" target="_blank">homebrew</a>.
-    With macports, CloudI configuration can be executed with:
-  </p>
-  <p style="font-family: monospace">
-    CXXFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib" ./configure
+    All configuration and build steps are the same as Linux.
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -601,9 +622,7 @@ PREFIX/bin/cloudi stop
   </p>
   <p class="paragraph">
     When CloudI is running, CloudI logging output will be appended to
-    PREFIX/logs/cloudi.log (the installation will change in the future to
-    put the log into /var/log/cloudi.log if CloudI is installed with sufficient
-    permissions).
+    PREFIX/var/logs/cloudi/cloudi.log (in a way that is friendly to logrotate).
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -652,7 +671,7 @@ PREFIX/bin/cloudi stop
     <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">src/cloudi.conf.in</a>
     within the source code repository (in its state before it gets modified
     by the local operating system configuration parameters) or
-    PREFIX/var/log/cloudi/cloudi.log after the installation.
+    PREFIX/etc/cloudi/cloudi.conf after the installation.
 <pre>
 {acl, [
     {(AliasName), [(ServiceNamePrefix) or (AliasName), ...]}
@@ -696,7 +715,8 @@ PREFIX/bin/cloudi stop
 {nodes, [
     'cloudi@hostname1',
     ...
-]}.
+] % or 'automatic' for automatic LAN node configuration
+}.
 {logging, [
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     {redirect, undefined or (Node)}
@@ -1440,9 +1460,9 @@ PREFIX/bin/cloudi stop
     the supported messaging (HTTP, ZeroMQ, etc.), and the Job API
     functionality.  Some example usage of the Erlang CloudI API includes:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem Service for Caching Static File Data</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_work_manager.erl" target="_blank">cloudi_job_work_manager Service For Caching Database Updates</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_timers.erl" target="_blank">cloudi_job_timers service for Sending Service Messages On Timers</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem Service for Caching Static File Data</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_work_manager.erl" target="_blank">cloudi_job_work_manager Service For Caching Database Updates</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_timers.erl" target="_blank">cloudi_job_timers service for Sending Service Messages On Timers</a></li>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/src/cloudi_job_hexpi.erl" target="_blank">Hexadecimal PI Test Load Balancer</a></li>
     </ul>
   </p>
@@ -1492,7 +1512,13 @@ PREFIX/bin/cloudi stop
     </pre>
   </p>
   <p>
-    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+    There are two implementations of the Python CloudI API: a pure-Python
+    CloudI API (module "cloudi") and a Python/C CloudI API (module "cloudi_c").
+    Just specify the Python library by the module imported, since the same
+    interface is provided within both choices.  The "cloudi_c" module has
+    been shown to provide a <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">speedup greater than 400%</a>
+    when compared with the "cloudi" module, with both under a load of 10,000
+    requests/second.  For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
@@ -1520,7 +1546,7 @@ PREFIX/bin/cloudi stop
     caches static filesystem files recursively so that the file path is
     the service name suffix (with the "/get" HTTP method suffix at the end,
     e.g., "index.html/get").  The example can be found in the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
-    usage of the <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem</a> which is shown below:
+    usage of the <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_filesystem.erl" target="_blank">cloudi_job_filesystem</a> which is shown below:
     <pre>
 {internal,
     "/tests/http_req/",
@@ -1849,6 +1875,11 @@ PREFIX/bin/cloudi stop
 
 </div>
 
+<br />
+<br />
+<br />
+<br />
+<br />
 <div id="footer">
 Copyright &#169; 2009-2012 Michael Truog
 </div>
