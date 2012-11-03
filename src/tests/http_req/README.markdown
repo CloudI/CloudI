@@ -40,7 +40,7 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 
     Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)
 
-    Erlang R15B01 configuration:
+    Erlang R15B01/R15B02 configuration:
     ./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe
 
 Settings added to /etc/sysctl.conf
@@ -74,6 +74,7 @@ Setting added to /etc/security/limits.conf
 * 10,000 requests/second maintained for 10 minutes
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
 * used Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64) with Erlang R15B01
+
 [loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
 * same test as [loadtest/results_v1_0_0/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
 

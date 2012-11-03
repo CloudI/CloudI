@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,13 +45,17 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2012 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger_interface).
 -author('mjtruog [at] gmail (dot) com').
--export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4]).
+-export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
+         fatal_apply/2, error_apply/2, warn_apply/2,
+         info_apply/2, debug_apply/2, trace_apply/2,
+         fatal_apply/3, error_apply/3, warn_apply/3,
+         info_apply/3, debug_apply/3, trace_apply/3]).
 fatal(Module, Line, Format, Arguments) ->
     cloudi_logger:fatal(cloudi_logger, Module, Line, Format, Arguments).
 error(Module, Line, Format, Arguments) ->
@@ -64,4 +68,28 @@ debug(Module, Line, Format, Arguments) ->
     cloudi_logger:debug(cloudi_logger, Module, Line, Format, Arguments).
 trace(Module, Line, Format, Arguments) ->
     cloudi_logger:trace(cloudi_logger, Module, Line, Format, Arguments).
+fatal_apply(F, A) ->
+    erlang:apply(F, A).
+error_apply(F, A) ->
+    erlang:apply(F, A).
+warn_apply(F, A) ->
+    erlang:apply(F, A).
+info_apply(F, A) ->
+    erlang:apply(F, A).
+debug_apply(F, A) ->
+    erlang:apply(F, A).
+trace_apply(F, A) ->
+    erlang:apply(F, A).
+fatal_apply(M, F, A) ->
+    erlang:apply(M, F, A).
+error_apply(M, F, A) ->
+    erlang:apply(M, F, A).
+warn_apply(M, F, A) ->
+    erlang:apply(M, F, A).
+info_apply(M, F, A) ->
+    erlang:apply(M, F, A).
+debug_apply(M, F, A) ->
+    erlang:apply(M, F, A).
+trace_apply(M, F, A) ->
+    erlang:apply(M, F, A).
 

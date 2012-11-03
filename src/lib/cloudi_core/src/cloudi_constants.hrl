@@ -44,7 +44,7 @@
 % time to wait before the first reconnect is attempted with a node
 -define(NODE_RECONNECT_START, 300000). % milliseconds
 
-% minimum average time inbetween CloudI logger calls during 10 seconds
+% maximum average time inbetween CloudI logger calls during 10 seconds
 % to trigger logger flooding prevention, so that logging messages are discarded
 % since they are coming from source code that is misbehaving that has already
 % logged enough
