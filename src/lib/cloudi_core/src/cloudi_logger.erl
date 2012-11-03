@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -572,7 +572,11 @@ level_to_string(trace) ->
     "
     -module(cloudi_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
-    -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4]).").
+    -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
+             fatal_apply/2, error_apply/2, warn_apply/2,
+             info_apply/2, debug_apply/2, trace_apply/2,
+             fatal_apply/3, error_apply/3, warn_apply/3,
+             info_apply/3, debug_apply/3, trace_apply/3]).").
 interface(off, _) ->
     ?INTERFACE_MODULE_HEADER
     "
@@ -582,6 +586,18 @@ interface(off, _) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_apply(_, _) -> undefined.
+    error_apply(_, _) -> undefined.
+    warn_apply(_, _) -> undefined.
+    info_apply(_, _) -> undefined.
+    debug_apply(_, _) -> undefined.
+    trace_apply(_, _) -> undefined.
+    fatal_apply(_, _, _) -> undefined.
+    error_apply(_, _, _) -> undefined.
+    warn_apply(_, _, _) -> undefined.
+    info_apply(_, _, _) -> undefined.
+    debug_apply(_, _, _) -> undefined.
+    trace_apply(_, _, _) -> undefined.
     ";
 interface(fatal, Process) ->
     cloudi_string:format(
@@ -594,6 +610,20 @@ interface(fatal, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(_, _) -> undefined.
+    warn_apply(_, _) -> undefined.
+    info_apply(_, _) -> undefined.
+    debug_apply(_, _) -> undefined.
+    trace_apply(_, _) -> undefined.
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(_, _, _) -> undefined.
+    warn_apply(_, _, _) -> undefined.
+    info_apply(_, _, _) -> undefined.
+    debug_apply(_, _, _) -> undefined.
+    trace_apply(_, _, _) -> undefined.
     ", [Process]);
 interface(error, Process) ->
     cloudi_string:format(
@@ -607,6 +637,22 @@ interface(error, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(F, A) ->
+        erlang:apply(F, A).
+    warn_apply(_, _) -> undefined.
+    info_apply(_, _) -> undefined.
+    debug_apply(_, _) -> undefined.
+    trace_apply(_, _) -> undefined.
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    warn_apply(_, _, _) -> undefined.
+    info_apply(_, _, _) -> undefined.
+    debug_apply(_, _, _) -> undefined.
+    trace_apply(_, _, _) -> undefined.
     ", [Process, Process]);
 interface(warn, Process) ->
     cloudi_string:format(
@@ -621,6 +667,24 @@ interface(warn, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(F, A) ->
+        erlang:apply(F, A).
+    warn_apply(F, A) ->
+        erlang:apply(F, A).
+    info_apply(_, _) -> undefined.
+    debug_apply(_, _) -> undefined.
+    trace_apply(_, _) -> undefined.
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    warn_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    info_apply(_, _, _) -> undefined.
+    debug_apply(_, _, _) -> undefined.
+    trace_apply(_, _, _) -> undefined.
     ", [Process, Process, Process]);
 interface(info, Process) ->
     cloudi_string:format(
@@ -636,6 +700,26 @@ interface(info, Process) ->
         cloudi_logger:info(~p, Module, Line, Format, Arguments).
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(F, A) ->
+        erlang:apply(F, A).
+    warn_apply(F, A) ->
+        erlang:apply(F, A).
+    info_apply(F, A) ->
+        erlang:apply(F, A).
+    debug_apply(_, _) -> undefined.
+    trace_apply(_, _) -> undefined.
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    warn_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    info_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    debug_apply(_, _, _) -> undefined.
+    trace_apply(_, _, _) -> undefined.
     ", [Process, Process, Process, Process]);
 interface(debug, Process) ->
     cloudi_string:format(
@@ -652,6 +736,28 @@ interface(debug, Process) ->
     debug(Module, Line, Format, Arguments) ->
         cloudi_logger:debug(~p, Module, Line, Format, Arguments).
     trace(_, _, _, _) -> ok.
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(F, A) ->
+        erlang:apply(F, A).
+    warn_apply(F, A) ->
+        erlang:apply(F, A).
+    info_apply(F, A) ->
+        erlang:apply(F, A).
+    debug_apply(F, A) ->
+        erlang:apply(F, A).
+    trace_apply(_, _) -> undefined.
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    warn_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    info_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    debug_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    trace_apply(_, _, _) -> undefined.
     ", [Process, Process, Process, Process, Process]);
 interface(trace, Process) ->
     cloudi_string:format(
@@ -669,6 +775,30 @@ interface(trace, Process) ->
         cloudi_logger:debug(~p, Module, Line, Format, Arguments).
     trace(Module, Line, Format, Arguments) ->
         cloudi_logger:trace(~p, Module, Line, Format, Arguments).
+    fatal_apply(F, A) ->
+        erlang:apply(F, A).
+    error_apply(F, A) ->
+        erlang:apply(F, A).
+    warn_apply(F, A) ->
+        erlang:apply(F, A).
+    info_apply(F, A) ->
+        erlang:apply(F, A).
+    debug_apply(F, A) ->
+        erlang:apply(F, A).
+    trace_apply(F, A) ->
+        erlang:apply(F, A).
+    fatal_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    error_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    warn_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    info_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    debug_apply(M, F, A) ->
+        erlang:apply(M, F, A).
+    trace_apply(M, F, A) ->
+        erlang:apply(M, F, A).
     ", [Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(Level, Destination) when is_atom(Level) ->

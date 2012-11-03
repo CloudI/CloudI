@@ -107,21 +107,22 @@ handle(Req0, #cowboy_state{job = Job,
         Method =:= 'TRACE' ->
             NameIncoming ++ "/trace";
         Method =:= 'OPTIONS' ->
-            NameIncoming ++ "/options";
-        Method =:= 'CONNECT' ->
-            NameIncoming ++ "/connect"
-        % more cases here than necessary probably
+            NameIncoming ++ "/options"%;
+        %Method =:= 'CONNECT' ->
+        %    NameIncoming ++ "/connect"
     end,
     RequestBinary = if
         Method =:= 'GET' ->
             if
-                QsVals =:= undefined ->
+                QsVals =:= [] ->
                     <<>>;
                 true ->
                     erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
                         if
                             V =:= true ->
                                 [K, 0, <<"true">>, 0 | L];
+                            V =:= false ->
+                                [K, 0, <<"false">>, 0 | L];
                             true ->
                                 [K, 0, V, 0 | L]
                         end

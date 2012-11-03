@@ -22,7 +22,6 @@
         cowboy,
         misultin,
         jsx,
-        cloudi_core,
         stdlib,
         kernel
         ]},
