@@ -26,7 +26,6 @@ package com.ericsson.otp.erlang;
  * @see OtpInputStream
  */
 public class OtpErlangDecodeException extends OtpErlangException {
-    static final long serialVersionUID = 0;
     /**
      * Provides a detailed message.
      */

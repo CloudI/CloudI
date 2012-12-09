@@ -40,7 +40,7 @@ public class OtpErlangUInt extends OtpErlangLong implements Serializable,
     public OtpErlangUInt(final int i) throws OtpErlangRangeException {
 	super(i);
 
-	uIntValue();
+	final int j = uIntValue();
     }
 
     /**
@@ -62,6 +62,6 @@ public class OtpErlangUInt extends OtpErlangLong implements Serializable,
 	    throws OtpErlangRangeException, OtpErlangDecodeException {
 	super(buf);
 
-	uIntValue();
+	final int j = uIntValue();
     }
 }

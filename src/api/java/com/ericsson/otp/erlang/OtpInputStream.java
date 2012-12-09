@@ -1016,7 +1016,7 @@ public class OtpInputStream extends ByteArrayInputStream {
 	    }
 	    return new OtpErlangFun(pid, module, index, uniq, freeVars);
 	} else if (tag == OtpExternal.newFunTag) {
-	    read4BE(); // ignore size
+	    final int n = read4BE();
 	    final int arity = read1();
 	    final byte[] md5 = new byte[16];
 	    readN(md5);

@@ -1,7 +1,7 @@
 {application, uuid,
   [{description, "Native UUID Generation"},
-   {vsn, "1.0.0"},
-   {modules, [uuid]},
+   {vsn, "1.1.1"},
+   {modules, [uuid, random_wh06_int]},
    {registered, []},
    {applications, [crypto, stdlib]},
    {start_phases, []}]}.

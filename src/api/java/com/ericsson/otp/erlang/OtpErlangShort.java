@@ -57,7 +57,7 @@ public class OtpErlangShort extends OtpErlangLong implements Serializable,
 	    throws OtpErlangRangeException, OtpErlangDecodeException {
 	super(buf);
 
-	shortValue();
+	final short j = shortValue();
     }
 
 }

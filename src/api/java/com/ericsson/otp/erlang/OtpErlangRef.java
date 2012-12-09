@@ -38,6 +38,23 @@ public class OtpErlangRef extends OtpErlangObject implements Serializable,
     private int ids[] = null;
 
     /**
+     * Create a unique Erlang ref belonging to the local node.
+     * 
+     * @param self
+     *                the local node.
+     * 
+     * @deprecated use OtpLocalNode:createRef() instead
+     */
+    @Deprecated
+    public OtpErlangRef(final OtpLocalNode self) {
+	final OtpErlangRef r = self.createRef();
+
+	ids = r.ids;
+	creation = r.creation;
+	node = r.node;
+    }
+
+    /**
      * Create an Erlang ref from a stream containing a ref encoded in Erlang
      * external format.
      * 

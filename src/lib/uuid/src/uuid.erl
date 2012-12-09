@@ -55,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2012 Michael Truog
-%%% @version 1.0.0 {@date} {@time}
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -70,13 +70,16 @@
          get_v3/1,
          get_v3/2,
          get_v4/0,
+         get_v4/1,
+         get_v4_urandom/0,
          get_v4_urandom_bigint/0,
          get_v4_urandom_native/0,
          get_v5/1,
          get_v5/2,
          uuid_to_string/1,
          string_to_uuid/1,
-         increment/1]).
+         increment/1,
+         test/0]).
 
 -record(uuid_state,
     {
@@ -87,6 +90,8 @@
         timestamp_type
     }).
 
+-include("uuid.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -96,6 +101,9 @@
 %% ===Create new UUID state for v1 UUID generation.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec new(Pid :: pid()) ->
+    #uuid_state{}.
 
 new(Pid) when is_pid(Pid) ->
     new(Pid, erlang).
@@ -109,6 +117,9 @@ new(Pid) when is_pid(Pid) ->
 %% system clock quickly without modifying the result.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec new(Pid :: pid(), TimestampType :: 'os' | 'erlang') ->
+    #uuid_state{}.
 
 new(Pid, TimestampType)
     when is_pid(Pid), TimestampType =:= erlang;
@@ -170,6 +181,9 @@ new(Pid, TimestampType)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v1(#uuid_state{}) ->
+    <<_:128>>.
+
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq_high = ClockSeqHigh,
                    clock_seq_low = ClockSeqLow,
@@ -180,12 +194,16 @@ get_v1(#uuid_state{node_id = NodeId,
         TimestampType =:= os ->
             os:timestamp()
     end,
-    Time = (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds,
-    <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>> = <<Time:60>>,
-    <<TimeLow:32, TimeMid:16, TimeHigh:12,
+    % 16#01b21dd213814000 is the number of 100-ns intervals between the
+    % UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
+    Time = ((MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds) * 10 +
+           16#01b21dd213814000,
+    <<TimeHigh:12, TimeMid:16, TimeLow:32>> = <<Time:60>>,
+    <<TimeLow:32, TimeMid:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      TimeHigh:12,
       ClockSeqHigh:6,
-      0:1, 1:1,            % reserved bits
+      0:1, 0:1,            % reserved, NCS backward compatibility
       ClockSeqLow:8,
       NodeId/binary>>.
 
@@ -196,6 +214,9 @@ get_v1(#uuid_state{node_id = NodeId,
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v1_time() ->
+    non_neg_integer().
+
 get_v1_time() ->
     get_v1_time(erlang).
 
@@ -205,6 +226,9 @@ get_v1_time() ->
 %% The result is an integer in microseconds.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_v1_time('os' | 'erlang' | #uuid_state{} | <<_:128>>) ->
+    non_neg_integer().
 
 get_v1_time(erlang) ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
@@ -226,13 +250,14 @@ get_v1_time(#uuid_state{timestamp_type = TimestampType}) ->
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
-    <<TimeLow:32, TimeMid:16, TimeHigh:12,
+    <<TimeLow:32, TimeMid:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      TimeHigh:12,
       _:6,
-      0:1, 1:1,            % reserved bits
+      0:1, 0:1,            % reserved, NCS backward compatibility
       _:8, _:48>> = Value,
-    <<Time:60>> = <<TimeHigh:12/little, TimeMid:16/little, TimeLow:32/little>>,
-    Time. % microseconds since epoch
+    <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
+    erlang:trunc((Time - 16#01b21dd213814000) / 10). % microseconds since epoch
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -240,13 +265,16 @@ get_v1_time(Value)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v3(Name :: binary()) ->
+    <<_:128>>.
+
 get_v3(Name) ->
-    <<B1:60, B2a:6, B2b:6, B3:56>> = crypto:md5(Name),
+    <<B1:48, B2a:18, B2b:6, B3:56>> = crypto:md5(Name),
     B2 = B2a bxor B2b,
-    <<B1:60,
+    <<B1:48,
       0:1, 0:1, 1:1, 1:1,  % version 3 bits
-      B2:6,
-      0:1, 1:1,            % reserved bits
+      B2:18,
+      0:1, 0:1,            % reserved, NCS backward compatibility
       B3:56>>.
 
 %%-------------------------------------------------------------------------
@@ -254,6 +282,9 @@ get_v3(Name) ->
 %% ===Get a v3 UUID in a particular namespace.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_v3(Namespace :: binary(), Name :: binary()) ->
+    <<_:128>>.
 
 get_v3(Namespace, Name) when is_binary(Namespace) ->
     NameBin = if
@@ -267,12 +298,14 @@ get_v3(Namespace, Name) when is_binary(Namespace) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a v4 UUID (using crypto/openssl).===
+%% crypto:strong_rand_bytes/1 repeats in the same way as
+%% RAND_bytes within OpenSSL.
 %% crypto:rand_bytes/1 repeats in the same way as
 %% RAND_pseudo_bytes within OpenSSL.
 %% if OpenSSL is configured to use the MD PRNG (default) with SHA1
 %% (in openssl/crypto/rand/md_rand.c),
 %% the collisions are between 2^80 and 2^51
-%% ([http://eprint.iacr.org/2008/469.pdf]).  So, that means this would
+%% ([http://eprint.iacr.org/2008/469.pdf]).  So, that means "weak" would
 %% repeat ideally every 1.21e24 and at worst every 2.25e15.
 %% if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
 %% and would have collisions based on 3DES (which is a black-box algorithm,
@@ -280,12 +313,54 @@ get_v3(Namespace, Name) when is_binary(Namespace) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v4() ->
+    <<_:128>>.
+
 get_v4() ->
-    <<Rand1:60, _:4, Rand2:6, _:2, Rand3:56>> = crypto:rand_bytes(16),
-    <<Rand1:60,
+    get_v4(strong).
+
+-spec get_v4('strong' | 'weak') ->
+    <<_:128>>.
+
+get_v4(strong) ->
+    <<Rand1:48, _:4, Rand2:18, _:2, Rand3:56>> = crypto:strong_rand_bytes(16),
+    <<Rand1:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      Rand2:6,
-      0:1, 1:1,            % reserved bits
+      Rand2:18,
+      1:1, 0:1,            % RFC 4122 variant bits
+      Rand3:56>>;
+
+get_v4(weak) ->
+    <<Rand1:48, _:4, Rand2:18, _:2, Rand3:56>> = crypto:rand_bytes(16),
+    <<Rand1:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      Rand2:18,
+      1:1, 0:1,            % RFC 4122 variant bits
+      Rand3:56>>.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v4 UUID (using Wichmann-Hill 2006).===
+%% random_wh06_int:uniform/1 repeats every 2.66e36 (2^121) approx.
+%% (see B.A. Wichmann and I.D.Hill, in 
+%%  'Generating good pseudo-random numbers',
+%%  Computational Statistics and Data Analysis 51 (2006) 1614-1622)
+%% a single random_wh06_int:uniform/1 call can provide a maximum of 124 bits
+%% (see random_wh06_int.erl for details)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v4_urandom() ->
+    <<_:128>>.
+
+get_v4_urandom() ->
+    % random 122 bits
+    Rand = random_wh06_int:uniform(5316911983139663491615228241121378304) - 1,
+    <<Rand1:48, Rand2:18, Rand3:56>> = <<Rand:122>>,
+    <<Rand1:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      Rand2:18,
+      1:1, 0:1,            % RFC 4122 variant bits
       Rand3:56>>.
 
 %%-------------------------------------------------------------------------
@@ -298,18 +373,41 @@ get_v4() ->
 %% a single random:uniform/1 call can provide a maximum of 45 bits
 %% (currently this is not significantly faster
 %%  because multiple function calls are necessary)
+%%
+%% explain the 45 bits of randomness:
+%%  random:uniform/0 code:
+%%   B1 = (A1*171) rem 30269,
+%%   B2 = (A2*172) rem 30307,
+%%   B3 = (A3*170) rem 30323,
+%%   put(random_seed, {B1,B2,B3}),
+%%   R = A1/30269 + A2/30307 + A3/30323,
+%%   R - trunc(R).
+%%
+%%  {B1, B2, B3} becomes the next seed value {A1, A2, A3}, so:
+%%    R = (918999161 * A1 + 917846887 * A2 + 917362583 * A3) / 27817185604309
+%%  Whatever the values for A1, A2, and A3,
+%%  (918999161 * A1 + 917846887 * A2 + 917362583 * A3) can not exceed
+%%  27817185604309 (30269 * 30307 * 30323) because of the previous modulus.
+%%  So, random:uniform/1 is unable to uniformly sample numbers beyond
+%%  a N of 27817185604309. The bits required to represent 27817185604309:
+%%   1> (math:log(27817185604309) / math:log(2)) + 1.
+%%   45.6610416965467
+%%
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_v4_urandom_bigint() ->
+    <<_:128>>.
 
 get_v4_urandom_bigint() ->
     Rand1 = random:uniform(2199023255552) - 1, % random 41 bits
     Rand2 = random:uniform(2199023255552) - 1, % random 41 bits
     Rand3 = random:uniform(1099511627776) - 1, % random 40 bits
-    <<Rand2a:19, Rand2b:6, Rand2c:16>> = <<Rand2:41>>,
-    <<Rand1:41, Rand2a:19,
-      0:1, 1:1, 0:1, 0:1, % version 4 bits
-      Rand2b:6,
-      0:1, 1:1, % reserved bits
+    <<Rand2a:7, Rand2b:18, Rand2c:16>> = <<Rand2:41>>,
+    <<Rand1:41, Rand2a:7,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      Rand2b:18,
+      1:1, 0:1,            % RFC 4122 variant bits
       Rand2c:16, Rand3:40>>.
 
 %%-------------------------------------------------------------------------
@@ -320,18 +418,21 @@ get_v4_urandom_bigint() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v4_urandom_native() ->
+    <<_:128>>.
+
 get_v4_urandom_native() ->
-    Rand1 = random:uniform(134217727) - 1, % random 27 bits
-    Rand2 = random:uniform(134217727) - 1, % random 27 bits
-    Rand3 = random:uniform(16383) - 1, % random 14 bits
-    Rand4 = random:uniform(134217727) - 1, % random 27 bits
-    Rand5 = random:uniform(134217727) - 1, % random 27 bits
-    <<Rand3a:2, Rand3b:6, Rand3c:6>> = <<Rand3:14>>,
-    <<Rand1:27, Rand2:27, Rand3a:2, 
-      0:1, 1:1, 0:1, 0:1, % version 4 bits
-      Rand3b:6,
-      0:1, 1:1, % reserved bits
-      Rand3c:6, Rand4:27, Rand5:27>>.
+    Rand1 = random:uniform(134217728) - 1, % random 27 bits
+    Rand2 = random:uniform(2097152) - 1,   % random 21 bits
+    Rand3 = random:uniform(1048576) - 1,   % random 20 bits
+    Rand4 = random:uniform(134217728) - 1, % random 27 bits
+    Rand5 = random:uniform(134217728) - 1, % random 27 bits
+    <<Rand3a:18, Rand3b:2>> = <<Rand3:20>>,
+    <<Rand1:27, Rand2:21,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      Rand3a:18, 
+      1:1, 0:1,            % RFC 4122 variant bits
+      Rand3b:2, Rand4:27, Rand5:27>>.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -339,13 +440,16 @@ get_v4_urandom_native() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_v5(Name :: binary()) ->
+    <<_:128>>.
+
 get_v5(Name) ->
-    <<B1:60, B2:6, B3a:56, B3b:38>> = crypto:sha(Name),
+    <<B1:48, B2:18, B3a:38, B3b:56>> = crypto:sha(Name),
     B3 = B3a bxor B3b,
-    <<B1:60,
+    <<B1:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
-      B2:6,
-      0:1, 1:1,            % reserved bits
+      B2:18,
+      1:1, 1:1,            % reserved, future bits
       B3:56>>.
 
 %%-------------------------------------------------------------------------
@@ -353,6 +457,9 @@ get_v5(Name) ->
 %% ===Get a v5 UUID in a particular namespace.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_v5(Namespace :: binary(), Name :: binary()) ->
+    <<_:128>>.
 
 get_v5(Namespace, Name) when is_binary(Namespace) ->
     NameBin = if
@@ -369,6 +476,9 @@ get_v5(Namespace, Name) when is_binary(Namespace) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec uuid_to_string(Value :: <<_:128>>) ->
+    string().
+
 uuid_to_string(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<B1:32/unsigned-integer,
@@ -384,6 +494,9 @@ uuid_to_string(Value)
 %% ===Convert a string representation to a UUID.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec string_to_uuid(string()) ->
+    <<_:128>>.
 
 string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08, $-,
                 N09, N10, N11, N12, $-,
@@ -484,6 +597,9 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec increment(State :: #uuid_state{}) ->
+    #uuid_state{}.
+
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
     NewClockSeq = if
@@ -496,6 +612,158 @@ increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     State#uuid_state{clock_seq = NewClockSeq,
                      clock_seq_high = ClockSeqHigh,
                      clock_seq_low = ClockSeqLow}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Regression test.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec test() ->
+    ok.
+
+test() ->
+    % version 1 tests
+    % uuidgen -t ; date
+    % "Fri Dec  7 19:13:58 PST 2012"
+    % (Sat Dec  8 03:13:58 UTC 2012)
+    V1uuid1 = uuid:string_to_uuid("4ea4b020-40e5-11e2-ac70-001fd0a5484e"),
+    <<V1TimeLow1:32, V1TimeMid1:16,
+      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      V1TimeHigh1:12,
+      V1ClockSeqHigh1:6,
+      0:1, 0:1,            % reserved, NCS backward compatibility
+      V1ClockSeqLow1:8,
+      V1NodeId1/binary>> = V1uuid1,
+    <<V1ClockSeq1:14>> = <<V1ClockSeqHigh1:6, V1ClockSeqLow1:8>>,
+    <<V1Time1:60>> = <<V1TimeHigh1:12, V1TimeMid1:16, V1TimeLow1:32>>,
+    V1Time1total = erlang:trunc((V1Time1 - 16#01b21dd213814000) / 10),
+    V1Time1mega = erlang:trunc(V1Time1total / 1000000000000),
+    V1Time1sec = erlang:trunc(V1Time1total / 1000000 - V1Time1mega * 1000000),
+    V1Time1micro = erlang:trunc(V1Time1total - 
+        (V1Time1mega * 1000000 + V1Time1sec) * 1000000),
+    {{2012, 12, 8}, {3, 13, 58}} =
+        calendar:now_to_datetime({V1Time1mega, V1Time1sec, V1Time1micro}),
+    % $ python
+    % >>> import uuid
+    % >>> import time
+    % >>> uuid.uuid1().hex;time.time()
+    % '50d15f5c40e911e2a0eb001fd0a5484e'
+    % 1354938160.1998589
+    V1uuid2 = uuid:string_to_uuid("50d15f5c40e911e2a0eb001fd0a5484e"),
+    <<V1TimeLow2:32, V1TimeMid2:16,
+      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      V1TimeHigh2:12,
+      V1ClockSeqHigh2:6,
+      0:1, 0:1,            % reserved, NCS backward compatibility
+      V1ClockSeqLow2:8,
+      V1NodeId2/binary>> = V1uuid2,
+    <<V1ClockSeq2:14>> = <<V1ClockSeqHigh2:6, V1ClockSeqLow2:8>>,
+    <<V1Time2:60>> = <<V1TimeHigh2:12, V1TimeMid2:16, V1TimeLow2:32>>,
+    V1Time2total = erlang:trunc((V1Time2 - 16#01b21dd213814000) / 10),
+    V1Time2Amega = erlang:trunc(V1Time2total / 1000000000000),
+    V1Time2Asec = erlang:trunc(V1Time2total / 1000000 - V1Time2Amega * 1000000),
+    V1Time2Amicro = erlang:trunc(V1Time2total - 
+        (V1Time2Amega * 1000000 + V1Time2Asec) * 1000000),
+    V1Time2B = 1354938160.1998589,
+    V1Time2Bmega = erlang:trunc(V1Time2B / 1000000),
+    V1Time2Bsec = erlang:trunc(V1Time2B - V1Time2Bmega * 1000000),
+    V1Time2Bmicro = erlang:trunc(V1Time2B * 1000000 -
+        (V1Time2Bmega * 1000000 + V1Time2Bsec) * 1000000),
+    true = (V1Time2Amega == V1Time2Bmega),
+    true = (V1Time2Asec == V1Time2Bsec),
+    true = (V1Time2Amicro < V1Time2Bmicro) and
+           ((V1Time2Amicro + 605) == V1Time2Bmicro),
+    true = V1ClockSeq1 /= V1ClockSeq2,
+    true = V1NodeId1 == V1NodeId2,
+    V1uuid3 = uuid:get_v1(uuid:new(self(), erlang)),
+    V1uuid3timeB = uuid:get_v1_time(erlang),
+    V1uuid3timeA = uuid:get_v1_time(V1uuid3),
+    true = (V1uuid3timeA < V1uuid3timeB) and
+           ((V1uuid3timeA + 1000) > V1uuid3timeB),
+
+    % version 3 tests
+    % $ python
+    % >>> import uuid
+    % >>> uuid.uuid3(uuid.NAMESPACE_DNS, 'test').hex
+    % '45a113acc7f230b090a5a399ab912716'
+    V3uuid1 = uuid:string_to_uuid("45a113acc7f230b090a5a399ab912716"),
+    <<V3uuid1A:48,
+      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      V3uuid1B:18,
+      0:1, 0:1,            % reserved, NCS backward compatibility
+      V3uuid1C:56>> = V3uuid1,
+    V3uuid2 = uuid:get_v3(?UUID_NAMESPACE_DNS, <<"test">>),
+    <<V3uuid2A:48,
+      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      V3uuid2B:18,
+      0:1, 0:1,            % reserved, NCS backward compatibility
+      V3uuid2C:56>> = V3uuid2,
+    true = (V3uuid1A == V3uuid2A) and
+           (V3uuid1C == V3uuid2C),
+    % check fails:
+    % since the python uuid throws bits from MD5 while this module
+    % bitwise xor the middle bits to utilize the whole checksum
+    false = V3uuid1B == V3uuid2B,
+
+    % version 4 tests
+    % uuidgen -r
+    V4uuid3 = uuid:string_to_uuid("ffe8b758-a5dc-4bf4-9eb0-878e010e8df7"),
+    <<V4Rand3A:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      V4Rand3B:18,
+      1:1, 0:1,            % RFC 4122 variant bits
+      V4Rand3C:56>> = V4uuid3,
+    V4uuid4 = uuid:get_v4(strong),
+    <<V4Rand4A:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      V4Rand4B:18,
+      1:1, 0:1,            % RFC 4122 variant bits
+      V4Rand4C:56>> = V4uuid4,
+    % $ python
+    % >>> import uuid
+    % >>> uuid.uuid4().hex
+    % 'cc9769818fe747398e2422e99fee2753'
+    V4uuid5 = uuid:string_to_uuid("cc9769818fe747398e2422e99fee2753"),
+    <<V4Rand5A:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      V4Rand5B:18,
+      1:1, 0:1,            % RFC 4122 variant bits
+      V4Rand5C:56>> = V4uuid5,
+    true = (V4Rand3A /= V4Rand4A) and
+           (V4Rand4A /= V4Rand5A) and
+           (V4Rand3A /= V4Rand5A),
+    true = (V4Rand3B /= V4Rand4B) and
+           (V4Rand4B /= V4Rand5B) and
+           (V4Rand3B /= V4Rand5B),
+    true = (V4Rand3C /= V4Rand4C) and
+           (V4Rand4C /= V4Rand5C) and
+           (V4Rand3C /= V4Rand5C),
+
+    % version 5 tests
+    % $ python
+    % >>> import uuid
+    % >>> uuid.uuid5(uuid.NAMESPACE_DNS, 'test').hex
+    % '4be0643f1d98573b97cdca98a65347dd'
+    V5uuid1 = uuid:string_to_uuid("4be0643f1d98573b97cdca98a65347dd"),
+    <<V5uuid1A:48,
+      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      V5uuid1B:18,
+      1:1, 1:1,            % reserved, future bits
+      V5uuid1C:56>> = V5uuid1,
+    V5uuid2 = uuid:get_v5(?UUID_NAMESPACE_DNS, <<"test">>),
+    <<V5uuid2A:48,
+      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      V5uuid2B:18,
+      1:1, 1:1,            % reserved, future bits
+      V5uuid2C:56>> = V5uuid2,
+    true = V5uuid1A == V5uuid2A,
+    % check fails:
+    % since the python uuid throws bits from SHA while this module
+    % bitwise xor the remaining bits to utilize the whole checksum
+    false = (V5uuid1B == V5uuid2B) or
+            (V5uuid1C == V5uuid2C),
+    ok.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -532,4 +800,14 @@ mac_address([{_, L} | Rest]) ->
         {hwaddr, _} ->
             mac_address(Rest)
     end.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+internal_test_() ->
+    [
+        {"internal tests", ?_assertEqual(ok, test())}
+    ].
+
+-endif.
 

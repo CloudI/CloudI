@@ -1,6 +1,15 @@
 
 JAVAROOT = $(top_builddir)/api/java/jar/
-java_JAVA = OtpErlangAtom.java \
+java_JAVA = AbstractConnection.java \
+            AbstractNode.java \
+            GenericQueue.java \
+            Link.java \
+            Links.java \
+            OtpAuthException.java \
+            OtpConnection.java \
+            OtpCookedConnection.java \
+            OtpEpmd.java \
+            OtpErlangAtom.java \
             OtpErlangBinary.java \
             OtpErlangBitstr.java \
             OtpErlangBoolean.java \
@@ -29,5 +38,15 @@ java_JAVA = OtpErlangAtom.java \
             OtpException.java \
             OtpExternal.java \
             OtpInputStream.java \
-            OtpOutputStream.java
+            OtpLocalNode.java \
+            OtpMD5.java \
+            OtpMbox.java \
+            OtpMsg.java \
+            OtpNode.java \
+            OtpNodeStatus.java \
+            OtpOutputStream.java \
+            OtpPeer.java \
+            OtpSelf.java \
+            OtpServer.java \
+            OtpSystem.java
 
