@@ -19,7 +19,7 @@
 package com.ericsson.otp.erlang;
 
 import java.io.Serializable;
-//import java.util.Arrays;
+import java.util.Arrays;
 
 public class OtpErlangFun extends OtpErlangObject implements Serializable {
     // don't change this!

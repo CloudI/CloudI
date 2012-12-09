@@ -19,20 +19,19 @@
 package com.ericsson.otp.erlang;
 
 /**
- * Base class for the other OTP exception classes.
+ * Exception raised when a node attempts to establish a communication channel
+ * when it is not authorized to do so, or when a node sends a message containing
+ * an invalid cookie on an established channel.
+ * 
+ * @see OtpConnection
  */
-public abstract class OtpException extends Exception {
-    /**
-     * Provides no message.
-     */
-    public OtpException() {
-	super();
-    }
+public class OtpAuthException extends OtpException {
+    private static final long serialVersionUID = 1L;
 
     /**
      * Provides a detailed message.
      */
-    public OtpException(final String msg) {
-	super(msg);
+    public OtpAuthException(final String s) {
+	super(s);
     }
 }

@@ -35,6 +35,24 @@ public class OtpErlangPid extends OtpErlangObject implements Serializable,
     private final int creation;
 
     /**
+     * Create a unique Erlang PID belonging to the local node.
+     * 
+     * @param self
+     *                the local node.
+     * 
+     * @deprecated use OtpLocalNode:createPid() instead
+     */
+    @Deprecated
+    public OtpErlangPid(final OtpLocalNode self) {
+	final OtpErlangPid p = self.createPid();
+
+	id = p.id;
+	serial = p.serial;
+	creation = p.creation;
+	node = p.node;
+    }
+
+    /**
      * Create an Erlang PID from a stream containing a PID encoded in Erlang
      * external format.
      * 

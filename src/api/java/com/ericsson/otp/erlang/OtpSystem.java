@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2000-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2004-2009. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -18,21 +18,36 @@
  */
 package com.ericsson.otp.erlang;
 
-/**
- * Base class for the other OTP exception classes.
- */
-public abstract class OtpException extends Exception {
-    /**
-     * Provides no message.
-     */
-    public OtpException() {
-	super();
+final class OtpSystem {
+
+    // Place status variables here
+
+    static {
+
+	final String rel = System.getProperty("OtpCompatRel", "0");
+
+	try {
+
+	    switch (Integer.parseInt(rel)) {
+	    case 1:
+	    case 2:
+	    case 3:
+	    case 4:
+	    case 5:
+	    case 6:
+	    case 7:
+	    case 8:
+	    case 9:
+	    case 0:
+	    default:
+		break;
+	    }
+	} catch (final NumberFormatException e) {
+	    /* Ignore ... */
+	}
+
     }
 
-    /**
-     * Provides a detailed message.
-     */
-    public OtpException(final String msg) {
-	super(msg);
-    }
+    // Place query functions here
+
 }

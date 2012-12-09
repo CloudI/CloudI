@@ -32,6 +32,22 @@ public class OtpErlangPort extends OtpErlangObject implements Serializable,
     private final int id;
     private final int creation;
 
+    /*
+     * Create a unique Erlang port belonging to the local node. Since it isn't
+     * meaninful to do so, this constructor is private...
+     * 
+     * @param self the local node.
+     * 
+     * @deprecated use OtpLocalNode:createPort() instead
+     */
+    private OtpErlangPort(final OtpSelf self) {
+	final OtpErlangPort p = self.createPort();
+
+	id = p.id;
+	creation = p.creation;
+	node = p.node;
+    }
+
     /**
      * Create an Erlang port from a stream containing a port encoded in Erlang
      * external format.

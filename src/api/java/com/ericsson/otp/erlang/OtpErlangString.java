@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2000-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2000-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -19,7 +19,7 @@
 package com.ericsson.otp.erlang;
 
 import java.io.Serializable;
-//import java.lang.Character;
+import java.lang.Character;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -154,19 +154,22 @@ public class OtpErlangString extends OtpErlangObject implements Serializable,
      *         Unicode code points
      */
 
-    public static int[] stringToCodePoints(final String s) {
-	final int m = s.codePointCount(0, s.length());
-	final int [] codePoints = new int[m];
-	for (int i = 0, j = 0;  j < m;  i = s.offsetByCodePoints(i, 1), j++) {
-	    codePoints[j] = s.codePointAt(i);
-	}
-	return codePoints;
+   public static int[] stringToCodePoints(final String s) {
+        final int m = s.codePointCount(0, s.length());
+        final int[] codePoints = new int[m];
+        int j = 0;
+        for (int offset = 0; offset < s.length();) {
+            final int codepoint = s.codePointAt(offset);
+            codePoints[j++] = codepoint;
+            offset += Character.charCount(codepoint);
+        }
+        return codePoints;
     }
 
     /**
      * Validate a code point according to Erlang definition; Unicode 3.0.
      * That is; valid in the range U+0..U+10FFFF, but not in the range
-     * U+D800..U+DFFF (surrogat pairs), nor U+FFFE..U+FFFF (non-characters).
+     * U+D800..U+DFFF (surrogat pairs).
      *
      * @param  cp
      *             the code point value to validate
@@ -179,8 +182,7 @@ public class OtpErlangString extends OtpErlangObject implements Serializable,
 	// Erlang definition of valid Unicode code points; 
 	// Unicode 3.0, XML, et.al.
 	return (cp>>>16) <= 0x10 // in 0..10FFFF; Unicode range
-	    && (cp & ~0x7FF) != 0xD800 // not in D800..DFFF; surrogate range
-	    && (cp & ~1) != 0xFFFE; // not in FFFE..FFFF; non-characters
+	    && (cp & ~0x7FF) != 0xD800; // not in D800..DFFF; surrogate range
     }
 
     /**
