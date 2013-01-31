@@ -56,6 +56,7 @@ class ThreadData
 class OutputData
 {
     public:
+        OutputData() : m_error(-1) {}
         OutputData & setError(int value)
         {
             m_error = value;
@@ -141,6 +142,12 @@ class Input
             OutputData resultObject;
             int value;
             m_stop = stop;
+            // a return from this Input object function, provides
+            // a single OutputData object (with the error value) to the
+            // single shared Output object, which will then cause the
+            // thread pool to use the exit() function
+            // (m_stop is set to true in all threads,
+            //  so all threads are asked to abort their processing)
             while (CloudI::API::return_value::timeout ==
                    (value = m_api.poll(1000)))
             {
