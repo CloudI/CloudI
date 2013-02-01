@@ -95,7 +95,7 @@
         send_timeouts = dict:new(),    % tracking for send timeouts
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         async_responses = dict:new(),  % tracking for async messages
-        queue_messages = false,        % is the external process busy?
+        queue_messages = true,         % is the external process busy?
         queued = pqueue4:new(),        % queued incoming messages
         uuid_generator,  % transaction id generator
         dest_refresh,    % immediate_closest |
@@ -198,6 +198,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 % outgoing messages (from the port socket to other Erlang pids)
 
 'CONNECT'({'pid', OsPid}, StateData) ->
+    % forked process has connected before CloudI API initialization
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
 
@@ -225,6 +226,13 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 
 'CONNECT'(Request, StateData) ->
     {stop, {'CONNECT', undefined_message, Request}, StateData}.
+
+'HANDLE'('polling', StateData) ->
+    % asynchronous CloudI API functions can be used within the
+    % external initialization, before calling poll(), but any incoming
+    % messages needed to be blocked during the external initialization
+    % (message received once, after external initialization is complete)
+    {next_state, 'HANDLE', process_queue(StateData)};
 
 'HANDLE'({'subscribe', Pattern},
          #state{prefix = Prefix} = StateData) ->

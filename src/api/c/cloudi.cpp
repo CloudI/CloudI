@@ -409,6 +409,10 @@ static void exit_handler()
     std::clog.flush();
 }
 
+static int poll_request(cloudi_instance_t * p,
+                        int timeout,
+                        int external);
+
 int cloudi_initialize(cloudi_instance_t * p,
                       unsigned int const thread_index)
 {
@@ -421,11 +425,22 @@ int cloudi_initialize(cloudi_instance_t * p,
     if (buffer_size_p == 0)
         return cloudi_invalid_input;
     uint32_t const buffer_size = ::atoi(buffer_size_p);
-    p->fd = thread_index + 3;
     if (::strcmp(protocol, "tcp") == 0)
+    {
+        p->fd_in = p->fd_out = thread_index + 3;
         p->use_header = 1;
-    else
+    }
+    else if (::strcmp(protocol, "udp") == 0)
+    {
+        p->fd_in = p->fd_out = thread_index + 3;
         p->use_header = 0;
+    }
+    else
+    {
+        p->fd_in = p->fd_out = 0; // uninitialized
+        return cloudi_invalid_input;
+    }
+    p->initialization_complete = 0;
     p->buffer_size = buffer_size;
     p->lookup = new lookup_t();
     p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
@@ -438,20 +453,19 @@ int cloudi_initialize(cloudi_instance_t * p,
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
-    int index;
+    int index = 0;
     if (p->use_header)
         index = 4;
-    else
-        index = 0;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "init"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
 
-    while (cloudi_timeout == (result = cloudi_poll(p, 1000)));
+    while (cloudi_timeout == (result = poll_request(p, 1000, 0)));
 
     return result;
 }
@@ -460,9 +474,11 @@ void cloudi_destroy(cloudi_instance_t * p)
 {
     if (p == 0)
         return;
-    if (p->fd != 0)
+    if (p->fd_in != 0)
     {
-        ::close(p->fd);
+        ::close(p->fd_in);
+        if (p->fd_in != p->fd_out)
+            ::close(p->fd_out);
         delete reinterpret_cast<lookup_t *>(p->lookup);
         delete reinterpret_cast<buffer_t *>(p->buffer_send);
         delete reinterpret_cast<buffer_t *>(p->buffer_recv);
@@ -505,7 +521,8 @@ static int cloudi_subscribe_(cloudi_instance_t * p,
         return cloudi_error_write_overflow;
     if (ei_encode_string(buffer.get<char>(), &index, pattern))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -542,7 +559,7 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
             return cloudi_error_write_overflow;
         if (ei_encode_string(buffer.get<char>(), &index, pattern))
             return cloudi_error_ei_encode;
-        int result = write_exact(p->fd, p->use_header,
+        int result = write_exact(p->fd_out, p->use_header,
                                  buffer.get<char>(), index);
         if (result)
             return result;
@@ -588,10 +605,11 @@ static int cloudi_send_(cloudi_instance_t * p,
         return cloudi_error_ei_encode;
     if (ei_encode_long(buffer.get<char>(), &index, priority))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p, -1);
+    result = poll_request(p, -1, 0);
     if (result)
         return result;
     return cloudi_success;
@@ -722,7 +740,8 @@ static int cloudi_forward_(cloudi_instance_t * p,
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
 
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -854,7 +873,8 @@ static int cloudi_return_(cloudi_instance_t * p,
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
 
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -981,10 +1001,29 @@ int cloudi_recv_async(cloudi_instance_t * p,
         if (ei_encode_atom(buffer.get<char>(), &index, "false"))
             return cloudi_error_ei_encode;
     }
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
-    result = cloudi_poll(p, -1);
+    result = poll_request(p, -1, 0);
+    if (result)
+        return result;
+    return cloudi_success;
+}
+
+static int polling(cloudi_instance_t * p)
+{
+    assert(! p->initialization_complete);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    int index = 0;
+    if (p->use_header)
+        index = 4;
+    if (ei_encode_version(buffer.get<char>(), &index))
+        return cloudi_error_ei_encode;
+    if (ei_encode_atom(buffer.get<char>(), &index, "polling"))
+        return cloudi_error_ei_encode;
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -1000,7 +1039,8 @@ static int keepalive(cloudi_instance_t * p)
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "keepalive"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header, buffer.get<char>(), index);
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
@@ -1123,21 +1163,32 @@ static void store_incoming_int8(buffer_t const & buffer,
     index += sizeof(int8_t);
 }
 
-int cloudi_poll(cloudi_instance_t * p,
-                int timeout)
+static int poll_request(cloudi_instance_t * p,
+                        int timeout,
+                        int external)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    int result;
+    if (external && ! p->initialization_complete)
+    {
+        result = polling(p);
+        if (result)
+            return result;
+        p->initialization_complete = 1;
+    }
+
+    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
     buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
-    struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
+
+    struct pollfd fds[1] = {{p->fd_in, POLLIN | POLLPRI, 0}};
     int count = ::poll(fds, 1, timeout);
     if (count == 0)
         return cloudi_timeout;
     else if (count < 0)
         return errno_poll();
 
-    int result = read_all(p->fd, p->use_header,
-                          buffer, p->buffer_recv_index,
-                          p->buffer_size);
+    result = read_all(p->fd_in, p->use_header,
+                      buffer_recv, p->buffer_recv_index,
+                      p->buffer_size);
     if (result)
         return result;
         
@@ -1149,15 +1200,15 @@ int cloudi_poll(cloudi_instance_t * p,
         fds[0].revents = 0;
         uint32_t index = 0;
         uint32_t command;
-        store_incoming_uint32(buffer, index, command);
+        store_incoming_uint32(buffer_recv, index, command);
         switch (command)
         {
             case MESSAGE_INIT:
             {
-                store_incoming_binary(buffer, index, p->prefix);
-                store_incoming_uint32(buffer, index, p->timeout_async);
-                store_incoming_uint32(buffer, index, p->timeout_sync);
-                store_incoming_int8(buffer, index, p->priority_default);
+                store_incoming_binary(buffer_recv, index, p->prefix);
+                store_incoming_uint32(buffer_recv, index, p->timeout_async);
+                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
+                store_incoming_int8(buffer_recv, index, p->priority_default);
                 if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
                 p->buffer_recv_index = 0;
@@ -1166,7 +1217,7 @@ int cloudi_poll(cloudi_instance_t * p,
             case MESSAGE_SEND_ASYNC:
             case MESSAGE_SEND_SYNC:
             {
-                buffer_call.copy(buffer);
+                buffer_call.copy(buffer_recv);
                 uint32_t name_size;
                 store_incoming_uint32(buffer_call, index, name_size);
                 char * name = &buffer_call[index];
@@ -1205,14 +1256,15 @@ int cloudi_poll(cloudi_instance_t * p,
             case MESSAGE_RECV_ASYNC:
             case MESSAGE_RETURN_SYNC:
             {
-                store_incoming_uint32(buffer, index, p->response_info_size);
-                p->response_info = &buffer[index];
+                store_incoming_uint32(buffer_recv, index,
+                                      p->response_info_size);
+                p->response_info = &buffer_recv[index];
                 index += p->response_info_size + 1;
-                store_incoming_uint32(buffer, index, p->response_size);
-                p->response = &buffer[index];
+                store_incoming_uint32(buffer_recv, index, p->response_size);
+                p->response = &buffer_recv[index];
                 index += p->response_size + 1;
                 p->trans_id_count = 1;
-                p->trans_id = &buffer[index];
+                p->trans_id = &buffer_recv[index];
                 index += 16;
                 if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
@@ -1222,7 +1274,7 @@ int cloudi_poll(cloudi_instance_t * p,
             case MESSAGE_RETURN_ASYNC:
             {
                 p->trans_id_count = 1;
-                p->trans_id = &buffer[index];
+                p->trans_id = &buffer_recv[index];
                 index += 16;
                 if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
@@ -1231,8 +1283,8 @@ int cloudi_poll(cloudi_instance_t * p,
             }
             case MESSAGE_RETURNS_ASYNC:
             {
-                store_incoming_uint32(buffer, index, p->trans_id_count);
-                p->trans_id = &buffer[index];
+                store_incoming_uint32(buffer_recv, index, p->trans_id_count);
+                p->trans_id = &buffer_recv[index];
                 index += 16 * p->trans_id_count;
                 if (index != p->buffer_recv_index)
                     ::exit(cloudi_error_read_underflow);
@@ -1246,9 +1298,10 @@ int cloudi_poll(cloudi_instance_t * p,
                 result = keepalive(p);
                 if (result)
                     ::exit(result);
-                if (index < p->buffer_recv_index) {
+                if (index < p->buffer_recv_index)
+                {
                     p->buffer_recv_index -= index;
-                    buffer.move(index, p->buffer_recv_index, 0);
+                    buffer_recv.move(index, p->buffer_recv_index, 0);
                     assert(p->use_header == false);
                     count = ::poll(fds, 1, 0);
                     if (count < 0)
@@ -1256,7 +1309,8 @@ int cloudi_poll(cloudi_instance_t * p,
                     else if (count == 0)
                         continue;
                 }
-                else {
+                else
+                {
                     p->buffer_recv_index = 0;
                 }
                 break;
@@ -1274,12 +1328,18 @@ int cloudi_poll(cloudi_instance_t * p,
         else if (count < 0)
             return errno_poll();
 
-        result = read_all(p->fd, p->use_header,
-                          buffer, p->buffer_recv_index,
+        result = read_all(p->fd_in, p->use_header,
+                          buffer_recv, p->buffer_recv_index,
                           p->buffer_size);
         if (result)
             return result;
     }
+}
+
+int cloudi_poll(cloudi_instance_t * p,
+                int timeout)
+{
+    return poll_request(p, timeout, 1);
 }
 
 static char const ** binary_key_value_parse(void const * const binary,

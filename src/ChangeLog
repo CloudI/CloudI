@@ -1,10 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-01-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix service message queuing during initialization for
+      external services
+    * Update the Java CloudI API to use jinterface-1.5.7 (from R16A)
+    * Tested with Erlang R16A (RELEASE CANDIDATE), no problems found
+    * tarball raw loadtest results so they are not part of
+      source code analysis
+
 2012-12-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update the uuid implementation, so all CloudI uuids can be used
-      within other systems (e.g., any databases)
+      within other systems (e.g., any databases using v1 UUIDs)
     * Update the Java CloudI API to use jinterface-1.5.6
     * Tested with Erlang R15B03, no problems with the current tests
 

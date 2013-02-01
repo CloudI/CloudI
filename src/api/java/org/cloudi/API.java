@@ -88,10 +88,12 @@ public class API
     private static final int MESSAGE_RETURNS_ASYNC   = 7;
     private static final int MESSAGE_KEEPALIVE       = 8;
 
-    private FileDescriptor socket;
+    private FileDescriptor fd_in;
+    private FileDescriptor fd_out;
     private boolean use_header;
     private FileOutputStream output;
     private FileInputStream input;
+    private boolean initialization_complete;
     private HashMap<String,
                     LinkedList< Function9<Integer,
                                           String,
@@ -118,11 +120,25 @@ public class API
             System.getenv("CLOUDI_API_INIT_BUFFER_SIZE");
         if (buffer_size_str == null)
             throw new InvalidInputException();
-        this.socket = API.storeFD(thread_index + 3);
-        assert this.socket != null : (thread_index + 3);
-        this.use_header = (protocol.compareTo("tcp") == 0);
-        this.output = new FileOutputStream(this.socket);
-        this.input = new FileInputStream(this.socket);
+        if (protocol.compareTo("tcp") == 0)
+        {
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.use_header = true;
+        }
+        else if (protocol.compareTo("udp") == 0)
+        {
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.use_header = false;
+        }
+        else
+        {
+            throw new InvalidInputException();
+        }
+        assert this.fd_in != null;
+        assert this.fd_out != null;
+        this.output = new FileOutputStream(this.fd_out);
+        this.input = new FileInputStream(this.fd_in);
+        this.initialization_complete = false;
         this.callbacks = new HashMap<String,
                                      LinkedList< Function9<Integer,
                                                            String,
@@ -143,7 +159,7 @@ public class API
         init.write(OtpExternal.versionTag);
         init.write_any(new OtpErlangAtom("init"));
         send(init);
-        poll();
+        poll_request(false);
     }
 
     public static int thread_count() throws InvalidInputException
@@ -248,7 +264,7 @@ public class API
                                              new OtpErlangInt(priority)};
             send_async.write_any(new OtpErlangTuple(tuple));
             send(send_async);
-            return (TransId) poll();
+            return (TransId) poll_request(false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -280,7 +296,7 @@ public class API
                                              new OtpErlangInt(priority)};
             send_sync.write_any(new OtpErlangTuple(tuple));
             send(send_sync);
-            return (Response) poll();
+            return (Response) poll_request(false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -314,7 +330,7 @@ public class API
                                              new OtpErlangInt(priority)};
             mcast_async.write_any(new OtpErlangTuple(tuple));
             send(mcast_async);
-            return (List<TransId>) poll();
+            return (List<TransId>) poll_request(false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -542,7 +558,7 @@ public class API
                                              new OtpErlangAtom("false")};
             recv_async.write_any(new OtpErlangTuple(tuple));
             send(recv_async);
-            return (Response) poll();
+            return (Response) poll_request(false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -692,8 +708,18 @@ public class API
         }
     }
 
-    public Object poll() throws MessageDecodingException
+    private Object poll_request(boolean external)
+                                throws MessageDecodingException
     {
+        if (external && ! this.initialization_complete)
+        {
+            OtpOutputStream polling = new OtpOutputStream();
+            polling.write(OtpExternal.versionTag);
+            polling.write_any(new OtpErlangAtom("polling"));
+            send(polling);
+            this.initialization_complete = true;
+        }
+
         ByteBuffer buffer = recv(null);
         if (buffer == null || buffer.remaining() == 0)
             return null;
@@ -801,6 +827,11 @@ public class API
                 return null;
             }
         }
+    }
+
+    public Object poll() throws MessageDecodingException
+    {
+        return poll_request(true);
     }
 
     private HashMap<String, List<String> > binary_key_value_parse(byte[] binary)

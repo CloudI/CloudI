@@ -55,8 +55,10 @@ extern "C"
 
 typedef struct cloudi_instance_t
 {
-    int fd;
+    int fd_in;
+    int fd_out;
     int use_header;
+    int initialization_complete;
     uint32_t buffer_size;
     void * lookup;
     void * buffer_send;

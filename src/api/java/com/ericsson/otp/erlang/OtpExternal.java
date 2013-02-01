@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2000-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2000-2013. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -87,6 +87,12 @@ public class OtpExternal {
 
     /** The tag used for old Funs */
     public static final int funTag = 117;
+
+    /** The tag used for unicode atoms */
+    public static final int atomUtf8Tag = 118;
+
+    /** The tag used for small unicode atoms */
+    public static final int smallAtomUtf8Tag = 119;
 
     /** The tag used for compressed terms */
     public static final int compressedTag = 80;

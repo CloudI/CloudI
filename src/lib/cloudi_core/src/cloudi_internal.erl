@@ -417,7 +417,7 @@ handle_info({init_job_done, Result},
     case Result of
         {ok, Job} ->
             erlang:link(Job),
-            gen_server:cast(Job, run),
+            gen_server:cast(Job, polling),
             lists:foreach(fun(Message) ->
                 Job ! Message
             end, queue:to_list(MessagesQueued)),
