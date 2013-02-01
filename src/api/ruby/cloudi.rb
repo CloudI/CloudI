@@ -57,13 +57,22 @@ module CloudI
         def initialize(thread_index)
             protocol = API.getenv('CLOUDI_API_INIT_PROTOCOL')
             buffer_size_str = API.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
-            @socket = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
-            @socket.sync = true
-            @use_header = (protocol == 'tcp')
+            if protocol == 'tcp'
+                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s.sync = true
+                @use_header = true
+            elsif protocol == 'udp'
+                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s.sync = true
+                @use_header = false
+            else
+                raise InvalidInputException
+            end
+            @initialization_complete = false
             @size = buffer_size_str.to_i
             @callbacks = Hash.new
             send(term_to_binary(:init))
-            poll
+            poll_request(false)
         end
 
         def self.thread_count
@@ -102,7 +111,7 @@ module CloudI
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
                                   timeout, priority]))
-            return poll
+            return poll_request(false)
         end
 
         def send_sync(name, request,
@@ -120,7 +129,7 @@ module CloudI
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
                                   timeout, priority]))
-            return poll
+            return poll_request(false)
         end
 
         def mcast_async(name, request,
@@ -138,7 +147,7 @@ module CloudI
                                   OtpErlangBinary.new(request_info),
                                   OtpErlangBinary.new(request),
                                   timeout, priority]))
-            return poll
+            return poll_request(false)
         end
 
         def forward_(command, name, request_info, request,
@@ -226,7 +235,7 @@ module CloudI
             end
             send(term_to_binary([:recv_async, timeout,
                                   OtpErlangBinary.new(trans_id), consume]))
-            return poll
+            return poll_request(false)
         end
 
         def prefix
@@ -319,10 +328,15 @@ module CloudI
             end
         end
 
-        def poll
+        def poll_request(external)
+            if external and not @initialization_complete
+                send(term_to_binary(:polling))
+                @initialization_complete = true
+            end
+
             ready = false
             while ready == false
-                result = IO.select([@socket], nil, [@socket])
+                result = IO.select([@s], nil, [@s])
                 if result[2].length > 0
                     return nil
                 end
@@ -427,7 +441,7 @@ module CloudI
                     end
                     data.slice!(0, i)
                     if data.length > 0
-                        if IO.select([@socket], nil, nil, 0).nil?
+                        if IO.select([@s], nil, nil, 0).nil?
                             next
                         end
                     end
@@ -437,7 +451,7 @@ module CloudI
 
                 ready = false
                 while ready == false
-                    result = IO.select([@socket], nil, [@socket])
+                    result = IO.select([@s], nil, [@s])
                     if result[2].length > 0
                         return nil
                     end
@@ -451,6 +465,10 @@ module CloudI
                     return nil
                 end
             end
+        end
+
+        def poll
+            poll_request(true)
         end
 
         def binary_key_value_parse(binary)
@@ -484,6 +502,7 @@ module CloudI
         private :return_async_nothrow
         private :return_sync_nothrow
         private :callback
+        private :poll_request
         private :binary_key_value_parse
         private
 
@@ -491,30 +510,30 @@ module CloudI
             if @use_header
                 data = [data.length].pack('N') + data
             end
-            @socket.write(data)
+            @s.write(data)
         end
 
         def recv(data)
             if @use_header
                 while data.length < 4
-                    fragment = @socket.readpartial(@size)
+                    fragment = @s.readpartial(@size)
                     data += fragment
                 end
                 total = data[0,4].unpack('N')[0]
                 data.slice!(0..3)
                 while data.length < total
-                    fragment = @socket.readpartial(@size)
+                    fragment = @s.readpartial(@size)
                     data += fragment
                 end
             else
                 ready = true
                 while ready == true
-                    fragment = @socket.readpartial(@size)
+                    fragment = @s.readpartial(@size)
                     data += fragment
                     ready = (fragment.bytesize == @size)
     
                     if ready
-                        ready = ! IO.select([@socket], nil, nil, 0).nil?
+                        ready = ! IO.select([@s], nil, nil, 0).nil?
                     end
                 end
             end

@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2000-2010. All Rights Reserved.
+ * Copyright Ericsson AB 2000-2013. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -358,7 +358,7 @@ public class OtpEpmd {
     }
 
     public static String[] lookupNames() throws IOException {
-	return lookupNames(InetAddress.getLocalHost());
+       return lookupNames(InetAddress.getByName(null));
     }
 
     public static String[] lookupNames(final InetAddress address)

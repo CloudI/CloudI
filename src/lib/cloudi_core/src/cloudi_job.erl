@@ -1096,7 +1096,7 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
-handle_cast(run,
+handle_cast(polling,
             #state{job_state = JobState,
                    queue_messages = true} = State) ->
     erlang:process_flag(trap_exit, true),
