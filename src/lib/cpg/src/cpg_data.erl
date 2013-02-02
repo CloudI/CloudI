@@ -15,7 +15,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -50,8 +50,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 1.0.1 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -67,8 +67,14 @@
          which_groups/1,
          get_closest_pid/2,
          get_closest_pid/3,
+         get_furthest_pid/2,
+         get_furthest_pid/3,
          get_random_pid/2,
-         get_random_pid/3]).
+         get_random_pid/3,
+         get_local_pid/2,
+         get_local_pid/3,
+         get_remote_pid/2,
+         get_remote_pid/3]).
 
 -include("cpg_data.hrl").
 -include("cpg_constants.hrl").
@@ -207,8 +213,6 @@ which_groups(Groups) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a group member, with local pids given priority.===
-%% Remote pids are selected randomly since the distributed Erlang connections
-%% create a fully connected network.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -231,9 +235,7 @@ get_closest_pid(GroupName, Groups) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a group member, with local pids given priority while excluding a specific pid.===
-%% Remote pids are selected randomly since the distributed Erlang connections
-%% create a fully connected network.  Usually the self() pid is excluded
-%% with this function call.
+%% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -248,12 +250,62 @@ get_closest_pid(GroupName, Exclude, Groups)
         {ok, Pattern, #cpg_data{local_count = 0,
                                 remote_count = RemoteCount,
                                 remote = Remote}} ->
-            pick(RemoteCount, Remote, Exclude, GroupName, Pattern);
+            pick(RemoteCount, Remote,
+                 Exclude, GroupName, Pattern);
         {ok, Pattern, #cpg_data{local_count = LocalCount,
                                 local = Local,
                                 remote_count = RemoteCount,
                                 remote = Remote}} ->
             pick(LocalCount, Local, RemoteCount, Remote,
+                 Exclude, GroupName, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with remote pids given priority.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_furthest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0,
+                          local_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote_count = 0,
+                                local_count = LocalCount,
+                                local = Local}} ->
+            pick(LocalCount, Local, Pattern);
+        {ok, Pattern, #cpg_data{remote_count = RemoteCount,
+                                remote = Remote}} ->
+            pick(RemoteCount, Remote, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with remote pids given priority while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_furthest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0,
+                          local_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote_count = 0,
+                                local_count = LocalCount,
+                                local = Local}} ->
+            pick(LocalCount, Local, Exclude, GroupName, Pattern);
+        {ok, Pattern, #cpg_data{remote_count = RemoteCount,
+                                remote = Remote,
+                                local_count = LocalCount,
+                                local = Local}} ->
+            pick(RemoteCount, Remote, LocalCount, Local,
                  Exclude, GroupName, Pattern)
     end.
 
@@ -298,6 +350,78 @@ get_random_pid(GroupName, Exclude, Groups)
                                 remote = Remote}} ->
             pick(LocalCount + RemoteCount, Local ++ Remote,
                  Exclude, GroupName, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local}} ->
+            pick(LocalCount, Local, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a local group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{local_count = LocalCount,
+                                local = Local}} ->
+            pick(LocalCount, Local, Exclude, GroupName, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote_count = RemoteCount,
+                                remote = Remote}} ->
+            pick(RemoteCount, Remote, Pattern)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a remote group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote_count = RemoteCount,
+                                remote = Remote}} ->
+            pick(RemoteCount, Remote, Exclude, GroupName, Pattern)
     end.
 
 %%%------------------------------------------------------------------------

@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 1.1.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_external).
@@ -98,10 +98,12 @@
         queue_messages = true,         % is the external process busy?
         queued = pqueue4:new(),        % queued incoming messages
         uuid_generator,  % transaction id generator
-        dest_refresh,    % immediate_closest |
-                         % lazy_closest |
-                         % immediate_random |
-                         % lazy_random, destination pid refresh
+        dest_refresh,    % immediate_closest | lazy_closest |
+                         % immediate_furthest | lazy_furthest |
+                         % immediate_random | lazy_random |
+                         % immediate_local | lazy_local |
+                         % immediate_remote | lazy_remote,
+                         % destination pid refresh
         cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
         dest_allow,      % is the socket allowed to send to a destination
@@ -123,8 +125,14 @@ start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
     true = (Protocol == tcp) or (Protocol == udp),
     true = (DestRefresh == immediate_closest) or
            (DestRefresh == lazy_closest) or
+           (DestRefresh == immediate_furthest) or
+           (DestRefresh == lazy_furthest) or
            (DestRefresh == immediate_random) or
            (DestRefresh == lazy_random) or
+           (DestRefresh == immediate_local) or
+           (DestRefresh == lazy_local) or
+           (DestRefresh == immediate_remote) or
+           (DestRefresh == lazy_remote) or
            (DestRefresh == none),
     gen_fsm:start_link(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                  TimeoutAsync, TimeoutSync, DestRefresh,
@@ -1013,35 +1021,41 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             trie:is_prefixed(Name, "/", DestAllow)
     end.
 
-destination_refresh_first(lazy_closest,
-                          #config_job_options{dest_refresh_start = Delay}) ->
+destination_refresh_first(DestRefresh,
+                          #config_job_options{dest_refresh_start = Delay})
+    when (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote) ->
     cpg_data:get_groups(Delay);
 
-destination_refresh_first(lazy_random,
-                          #config_job_options{dest_refresh_start = Delay}) ->
-    cpg_data:get_groups(Delay);
-
-destination_refresh_first(immediate_closest, _) ->
-    ok;
-
-destination_refresh_first(immediate_random, _) ->
+destination_refresh_first(DestRefresh, _)
+    when (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote) ->
     ok;
 
 destination_refresh_first(none, _) ->
     ok.
 
-destination_refresh_start(lazy_closest,
-                          #config_job_options{dest_refresh_delay = Delay}) ->
+destination_refresh_start(DestRefresh,
+                          #config_job_options{dest_refresh_delay = Delay})
+    when (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote) ->
     cpg_data:get_groups(Delay);
 
-destination_refresh_start(lazy_random,
-                          #config_job_options{dest_refresh_delay = Delay}) ->
-    cpg_data:get_groups(Delay);
-
-destination_refresh_start(immediate_closest, _) ->
-    ok;
-
-destination_refresh_start(immediate_random, _) ->
+destination_refresh_start(DestRefresh, _)
+    when (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote) ->
     ok;
 
 destination_refresh_start(none, _) ->
@@ -1051,37 +1065,63 @@ destination_get(lazy_closest, Name, Pid, Groups)
     when is_list(Name) ->
     cpg_data:get_closest_pid(Name, Pid, Groups);
 
+destination_get(lazy_furthest, Name, Pid, Groups)
+    when is_list(Name) ->
+    cpg_data:get_furthest_pid(Name, Pid, Groups);
+
 destination_get(lazy_random, Name, Pid, Groups)
     when is_list(Name) ->
     cpg_data:get_random_pid(Name, Pid, Groups);
+
+destination_get(lazy_local, Name, Pid, Groups)
+    when is_list(Name) ->
+    cpg_data:get_local_pid(Name, Pid, Groups);
+
+destination_get(lazy_remote, Name, Pid, Groups)
+    when is_list(Name) ->
+    cpg_data:get_remote_pid(Name, Pid, Groups);
 
 destination_get(immediate_closest, Name, Pid, _)
     when is_list(Name) ->
     cpg:get_closest_pid(Name, Pid);
 
+destination_get(immediate_furthest, Name, Pid, _)
+    when is_list(Name) ->
+    cpg:get_furthest_pid(Name, Pid);
+
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
     cpg:get_random_pid(Name, Pid);
+
+destination_get(immediate_local, Name, Pid, _)
+    when is_list(Name) ->
+    cpg:get_local_pid(Name, Pid);
+
+destination_get(immediate_remote, Name, Pid, _)
+    when is_list(Name) ->
+    cpg:get_remote_pid(Name, Pid);
 
 destination_get(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     throw(badarg).
 
-destination_all(lazy_closest, Name, Pid, Groups)
-    when is_list(Name) ->
+destination_all(DestRefresh, Name, Pid, Groups)
+    when is_list(Name),
+         (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote) ->
     cpg_data:get_members(Name, Pid, Groups);
 
-destination_all(lazy_random, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_members(Name, Pid, Groups);
-
-destination_all(immediate_closest, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_members(Name, Pid);
-
-destination_all(immediate_random, Name, Pid, _)
-    when is_list(Name) ->
+destination_all(DestRefresh, Name, Pid, _)
+    when is_list(Name),
+         (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote) ->
     cpg:get_members(Name, Pid);
 
 destination_all(DestRefresh, _, _, _) ->
