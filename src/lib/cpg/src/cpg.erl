@@ -6,10 +6,15 @@
 %%% ==CloudI Process Groups (CPG)==
 %%% Based on the pg2 module in the Erlang OTP kernel application
 %%% (lib/kernel-x.x.x/src/pg2.erl).
+%%% cpg relies on distributed Erlang for node communication, which means
+%%% a fully connected network topology is created.  With distributed Erlang
+%%% Erlang pids either exist on the local node or a remote node
+%%% (which shares a connection with the local node,
+%%%  so only 1 node hop is necessary in the worst case).
 %%% @end
 %%% The pg2 module copyright is below:
 %%%
-%%% Copyright (c) 2011-2012 Michael Truog. All Rights Reserved.
+%%% Copyright (c) 2011-2013 Michael Truog. All Rights Reserved.
 %%%
 %%% %CopyrightBegin%
 %%%
@@ -29,8 +34,8 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 1.0.1 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -72,9 +77,18 @@
          get_closest_pid/1,
          get_closest_pid/2,
          get_closest_pid/3,
+         get_furthest_pid/1,
+         get_furthest_pid/2,
+         get_furthest_pid/3,
          get_random_pid/1,
          get_random_pid/2,
-         get_random_pid/3]).
+         get_random_pid/3,
+         get_local_pid/1,
+         get_local_pid/2,
+         get_local_pid/3,
+         get_remote_pid/1,
+         get_remote_pid/2,
+         get_remote_pid/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -131,7 +145,7 @@ start_link(Scope) when is_atom(Scope) ->
 -spec join(name()) -> 'ok' | 'error'.
 
 join(GroupName) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
@@ -152,7 +166,7 @@ join(GroupName) ->
 
 join(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
@@ -162,7 +176,7 @@ join(GroupName, Pid)
 
 join(Scope, GroupName)
     when is_atom(Scope) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
@@ -184,7 +198,7 @@ join(Scope, GroupName)
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
@@ -202,7 +216,7 @@ join(Scope, GroupName, Pid)
 -spec leave(name()) -> 'ok' | 'error'.
 
 leave(GroupName) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
@@ -223,7 +237,7 @@ leave(GroupName) ->
 
 leave(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
@@ -233,7 +247,7 @@ leave(GroupName, Pid)
 
 leave(Scope, GroupName)
     when is_atom(Scope) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
         {[_ | _], _} ->
             ok;
@@ -255,7 +269,7 @@ leave(Scope, GroupName)
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
         {[_ | _], _} ->
             ok;
@@ -277,7 +291,7 @@ leave(Scope, GroupName, Pid)
 -spec create(name()) -> 'ok' | 'error'.
 
 create(GroupName) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
@@ -302,7 +316,7 @@ create(GroupName) ->
 
 create(Scope, GroupName)
     when is_atom(Scope) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(Scope,
@@ -326,7 +340,7 @@ create(Scope, GroupName)
 -spec delete(name()) -> 'ok' | 'error'.
 
 delete(GroupName) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
@@ -351,7 +365,7 @@ delete(GroupName) ->
 
 delete(Scope, GroupName)
     when is_atom(Scope) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(Scope,
@@ -376,7 +390,7 @@ delete(Scope, GroupName)
 
 join(GroupName, Pid)
     when is_pid(Pid) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
@@ -401,7 +415,7 @@ join(GroupName, Pid)
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(Scope,
@@ -426,7 +440,7 @@ join(Scope, GroupName, Pid)
 
 leave(GroupName, Pid)
     when is_pid(Pid) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{?DEFAULT_SCOPE, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
@@ -451,7 +465,7 @@ leave(GroupName, Pid)
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
-    group_name_validate_new(GroupName),
+    group_name_validate(GroupName),
     case global:trans({{Scope, GroupName}, self()},
                       fun() ->
                           gen_server:multi_call(Scope,
@@ -559,8 +573,6 @@ which_groups(Scope)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a group member, with local pids given priority.===
-%% Remote pids are selected randomly since the distributed Erlang connections
-%% create a fully connected network.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -572,9 +584,7 @@ get_closest_pid(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.===
-%% Remote pids are selected randomly since the distributed Erlang connections
-%% create a fully connected network.  Usually the self() pid is excluded
-%% with this function call.
+%% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -592,9 +602,7 @@ get_closest_pid(Scope, GroupName)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a group member within a specific scope, with local pids given priority while excluding a specific pid.===
-%% Remote pids are selected randomly since the distributed Erlang connections
-%% create a fully connected network.  Usually the self() pid is excluded
-%% with this function call.
+%% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -604,6 +612,49 @@ get_closest_pid(Scope, GroupName)
 get_closest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_closest_pid, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with remote pids given priority.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_furthest_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+
+get_furthest_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_furthest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_furthest_pid(name() | scope(), pid() | name()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_furthest_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_furthest_pid, GroupName, Exclude});
+
+get_furthest_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_furthest_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_furthest_pid(scope(), name(), pid()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_furthest_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_furthest_pid, GroupName, Exclude}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -647,6 +698,92 @@ get_random_pid(Scope, GroupName)
 get_random_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
     gen_server:call(Scope, {get_random_pid, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+
+get_local_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_local_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a local group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_pid(name() | scope(), pid() | name()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_local_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_local_pid, GroupName, Exclude});
+
+get_local_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_local_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a local group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_pid(scope(), name(), pid()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_local_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_local_pid, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_pid(name()) -> pid() | {'error', gcp_error_reason()}.
+
+get_remote_pid(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a remote group member while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_pid(name() | scope(), pid() | name()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_remote_pid(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_pid, GroupName, Exclude});
+
+get_remote_pid(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_remote_pid, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a remote group member within a specific scope, while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_pid(scope(), name(), pid()) ->
+    pid() | {'error', gcp_error_reason()}.
+
+get_remote_pid(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_remote_pid, GroupName, Exclude}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -723,8 +860,15 @@ handle_call({get_closest_pid, GroupName}, _,
 
 handle_call({get_closest_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_data:get_closest_pid(GroupName, Exclude, Groups),
-     State};
+    {reply, cpg_data:get_closest_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_furthest_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_furthest_pid(GroupName, Groups), State};
+
+handle_call({get_furthest_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_furthest_pid(GroupName, Exclude, Groups), State};
 
 handle_call({get_random_pid, GroupName}, _,
             #state{groups = Groups} = State) ->
@@ -733,6 +877,22 @@ handle_call({get_random_pid, GroupName}, _,
 handle_call({get_random_pid, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_random_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_local_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_pid(GroupName, Groups), State};
+
+handle_call({get_local_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_pid(GroupName, Exclude, Groups), State};
+
+handle_call({get_remote_pid, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_pid(GroupName, Groups), State};
+
+handle_call({get_remote_pid, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_pid(GroupName, Exclude, Groups), State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -1067,15 +1227,10 @@ member_died(Pid, #state{pids = Pids} = State) ->
     end.
 
 -ifdef(GROUP_NAME_PATTERN_MATCHING).
-% pattern matching occurs with a "*" character, but "**" is forbidden,
-% so, this makes sure all group names are valid, before creating a new group
-group_name_validate_new([]) ->
-    ok;
-group_name_validate_new([$*, $* | _]) ->
-    erlang:exit(badarg);
-group_name_validate_new([_ | L]) ->
-    group_name_validate_new(L).
+group_name_validate(Name) ->
+    trie:is_pattern(Name),
+    ok.
 -else.
-group_name_validate_new(_) ->
+group_name_validate(_) ->
     ok.
 -endif.
