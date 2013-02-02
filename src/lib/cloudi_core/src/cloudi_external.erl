@@ -122,18 +122,18 @@ start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_job_options) ->
-    true = (Protocol == tcp) or (Protocol == udp),
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_furthest) or
-           (DestRefresh == lazy_furthest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
-           (DestRefresh == immediate_local) or
-           (DestRefresh == lazy_local) or
-           (DestRefresh == immediate_remote) or
-           (DestRefresh == lazy_remote) or
-           (DestRefresh == none),
+    true = (Protocol =:= tcp) or (Protocol =:= udp),
+    true = (DestRefresh =:= immediate_closest) or
+           (DestRefresh =:= lazy_closest) or
+           (DestRefresh =:= immediate_furthest) or
+           (DestRefresh =:= lazy_furthest) or
+           (DestRefresh =:= immediate_random) or
+           (DestRefresh =:= lazy_random) or
+           (DestRefresh =:= immediate_local) or
+           (DestRefresh =:= lazy_local) or
+           (DestRefresh =:= immediate_remote) or
+           (DestRefresh =:= lazy_remote) or
+           (DestRefresh =:= none),
     gen_fsm:start_link(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                  TimeoutAsync, TimeoutSync, DestRefresh,
                                  DestDeny, DestAllow, ConfigOptions], []).
@@ -1008,17 +1008,32 @@ destination_allowed(_, undefined, undefined) ->
     true;
 
 destination_allowed(Name, undefined, DestAllow) ->
-    trie:is_prefixed(Name, "/", DestAllow);
+    case trie:find_match(Name, DestAllow) of
+        {ok, _, _} ->
+            true;
+        error ->
+            false
+    end;
 
 destination_allowed(Name, DestDeny, undefined) ->
-    not trie:is_prefixed(Name, "/", DestDeny);
+    case trie:find_match(Name, DestDeny) of
+        {ok, _, _} ->
+            false;
+        error ->
+            true
+    end;
 
 destination_allowed(Name, DestDeny, DestAllow) ->
-    case trie:is_prefixed(Name, "/", DestDeny) of
-        true ->
+    case trie:find_match(Name, DestDeny) of
+        {ok, _, _} ->
             false;
-        false ->
-            trie:is_prefixed(Name, "/", DestAllow)
+        error ->
+            case trie:find_match(Name, DestAllow) of
+                {ok, _, _} ->
+                    true;
+                error ->
+                    false
+            end
     end.
 
 destination_refresh_first(DestRefresh,

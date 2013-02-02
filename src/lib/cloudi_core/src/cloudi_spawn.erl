@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -72,19 +72,25 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_job_options) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
-           (DestRefresh == none),
+    true = (DestRefresh =:= immediate_closest) or
+           (DestRefresh =:= lazy_closest) or
+           (DestRefresh =:= immediate_furthest) or
+           (DestRefresh =:= lazy_furthest) or
+           (DestRefresh =:= immediate_random) or
+           (DestRefresh =:= lazy_random) or
+           (DestRefresh =:= immediate_local) or
+           (DestRefresh =:= lazy_local) or
+           (DestRefresh =:= immediate_remote) or
+           (DestRefresh =:= lazy_remote) or
+           (DestRefresh =:= none),
     DestDeny = if
-        DestDenyList == undefined ->
+        DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
             trie:new(DestDenyList)
     end,
     DestAllow = if
-        DestAllowList == undefined ->
+        DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
             trie:new(DestAllowList)
@@ -111,20 +117,26 @@ start_external(ThreadsPerProcess,
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_job_options) ->
-    true = (Protocol == tcp) or (Protocol == udp),
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
-           (DestRefresh == none),
+    true = (Protocol =:= tcp) or (Protocol =:= udp),
+    true = (DestRefresh =:= immediate_closest) or
+           (DestRefresh =:= lazy_closest) or
+           (DestRefresh =:= immediate_furthest) or
+           (DestRefresh =:= lazy_furthest) or
+           (DestRefresh =:= immediate_random) or
+           (DestRefresh =:= lazy_random) or
+           (DestRefresh =:= immediate_local) or
+           (DestRefresh =:= lazy_local) or
+           (DestRefresh =:= immediate_remote) or
+           (DestRefresh =:= lazy_remote) or
+           (DestRefresh =:= none),
     DestDeny = if
-        DestDenyList == undefined ->
+        DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
             trie:new(DestDenyList)
     end,
     DestAllow = if
-        DestAllowList == undefined ->
+        DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
             trie:new(DestAllowList)
@@ -153,7 +165,12 @@ start_external(ThreadsPerProcess,
             {error, Ports};
         true ->
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
-            ProtocolChar = if Protocol == tcp -> $t; Protocol == udp -> $u end,
+            ProtocolChar = if
+                Protocol =:= tcp ->
+                    $t;
+                Protocol =:= udp ->
+                    $u
+            end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,
                                        Ports,

@@ -3,6 +3,8 @@
 
 2013-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Use patterns for ACLs instead of prefixes
+      (patterns like service subscriptions with "*")
     * Add the destination refresh methods:
       immediate_furthest, lazy_furthest,
       immediate_local, lazy_local,
