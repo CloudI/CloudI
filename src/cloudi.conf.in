@@ -22,20 +22,33 @@
         % module arguments are supplied as a list for the
         % cloudi_job_init/2 function
         [],
-        % destination refresh controls how quickly services propogate
-        % any process that sends to long-lived processes can use
+        % destination refresh controls how quickly service membership propogates
+        % Any process that sends to long-lived processes can use
         % a 'lazy' prefix destination refresh (otherwise, if sending to
         % short-lived provesses, use an 'immediate' prefix destination refresh).
-        % a 'closest' suffix destination refresh always prefers local processes
-        % rather than using remote processes (processes on other nodes).  if a
-        % destination should be automatically load balanced across all connected
-        % nodes, the 'random' suffix destination refresh should be used.
-        % if the process doesn't send to any other processes, then 'none' can
+        % The 'lazy' prefix makes the service cache service name lookup data
+        % while the 'immediate' prefix uses a central local process to do 
+        % service name lookups.
+        % A 'closest' suffix destination refresh always prefers local
+        % processes rather than using remote processes
+        % (processes on other nodes).
+        % A 'furthest' suffix destination refresh always prefers remote
+        % processes rather than using local processes.
+        % A 'random' suffix load balances across all connected nodes.
+        % A 'local' suffix will only send to local processes, which will
+        % cause less request latency.
+        % A 'remote' suffix will always send to remote processes, which can
+        % provide more fault-tolerance guarantees.
+        % If the process doesn't send to any other processes, then 'none' can
         % be used and the process will die if it attempts to send to another
         % process (it is as if the destination deny list contains all services).
-        % (so the choices are:  'lazy_closest', 'lazy_random',
-        %                       'immediate_closest', 'immediate_random',
-        %                       'none')
+        % (so the choices are:
+        %  'lazy_closest', 'immediate_closest',
+        %  'lazy_furthest', 'immediate_furthest',
+        %  'lazy_random', 'immediate_random',
+        %  'lazy_local', 'immediate_local',
+        %  'lazy_remote', 'immediate_remote',
+        %  'none')
         none,
         % timeout for executing the cloudi_job_init/2 function
         5000,
@@ -88,20 +101,33 @@
         % {Key, Value} pairs to specify environment variables
         [{"LD_LIBRARY_PATH", "api/c/lib/"},
          {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
-        % destination refresh controls how quickly services propogate
-        % any process that sends to long-lived processes can use
+        % destination refresh controls how quickly service membership propogates
+        % Any process that sends to long-lived processes can use
         % a 'lazy' prefix destination refresh (otherwise, if sending to
         % short-lived provesses, use an 'immediate' prefix destination refresh).
-        % a 'closest' suffix destination refresh always prefers local processes
-        % rather than using remote processes (processes on other nodes).  if a
-        % destination should be automatically load balanced across all connected
-        % nodes, the 'random' suffix destination refresh should be used.
-        % if the process doesn't send to any other processes, then 'none' can
+        % The 'lazy' prefix makes the service cache service name lookup data
+        % while the 'immediate' prefix uses a central local process to do 
+        % service name lookups.
+        % A 'closest' suffix destination refresh always prefers local
+        % processes rather than using remote processes
+        % (processes on other nodes).
+        % A 'furthest' suffix destination refresh always prefers remote
+        % processes rather than using local processes.
+        % A 'random' suffix load balances across all connected nodes.
+        % A 'local' suffix will only send to local processes, which will
+        % cause less request latency.
+        % A 'remote' suffix will always send to remote processes, which can
+        % provide more fault-tolerance guarantees.
+        % If the process doesn't send to any other processes, then 'none' can
         % be used and the process will die if it attempts to send to another
         % process (it is as if the destination deny list contains all services).
-        % (so the choices are:  'lazy_closest', 'lazy_random',
-        %                       'immediate_closest', 'immediate_random',
-        %                       'none')
+        % (so the choices are:
+        %  'lazy_closest', 'immediate_closest',
+        %  'lazy_furthest', 'immediate_furthest',
+        %  'lazy_random', 'immediate_random',
+        %  'lazy_local', 'immediate_local',
+        %  'lazy_remote', 'immediate_remote',
+        %  'none')
         none,
         % protocol used for each socket
         tcp,

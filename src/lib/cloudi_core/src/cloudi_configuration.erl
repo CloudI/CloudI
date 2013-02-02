@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2009-2013 Michael Truog
+%%% @version 1.1.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -188,6 +188,10 @@
 %%   configuration based on common service name prefixes.  The ACL atoms
 %%   provide short aliases for the literal service name prefixes and may be
 %%   used to define other ACLs (in a way that is both acyclic and unordered).
+%%
+%%   The strings used are typically common service name prefixes, but can
+%%   also be patterns with "*" where "**" is forbidden, similar to
+%%   service subscriptions.
 %%
 %% ====nodes:====
 %%   `{nodes, [cloudi@hostname1, cloudi@hostname2]}'
@@ -441,7 +445,12 @@ jobs_acl_update_list(Output, [E | L], Lookup)
     jobs_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
 jobs_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    jobs_acl_update_list([E | Output], L, Lookup).
+    case trie:is_pattern(E) of
+        true ->
+            jobs_acl_update_list([E | Output], L, Lookup);
+        false ->
+            jobs_acl_update_list([E ++ "*" | Output], L, Lookup)
+    end.
 
 jobs_validate(Output, [], _) ->
     lists:reverse(Output);
@@ -458,18 +467,24 @@ jobs_validate(Output, [Job | L], UUID)
          is_integer(Job#internal.max_r),
          is_integer(Job#internal.max_t),
          is_list(Job#internal.options) ->
-    true = (Job#internal.dest_refresh == immediate_closest) orelse
-           (Job#internal.dest_refresh == lazy_closest) orelse
-           (Job#internal.dest_refresh == immediate_random) orelse
-           (Job#internal.dest_refresh == lazy_random) orelse
-           (Job#internal.dest_refresh == none),
+    true = (Job#internal.dest_refresh =:= immediate_closest) orelse
+           (Job#internal.dest_refresh =:= lazy_closest) orelse
+           (Job#internal.dest_refresh =:= immediate_furthest) orelse
+           (Job#internal.dest_refresh =:= lazy_furthest) orelse
+           (Job#internal.dest_refresh =:= immediate_random) orelse
+           (Job#internal.dest_refresh =:= lazy_random) orelse
+           (Job#internal.dest_refresh =:= immediate_local) orelse
+           (Job#internal.dest_refresh =:= lazy_local) orelse
+           (Job#internal.dest_refresh =:= immediate_remote) orelse
+           (Job#internal.dest_refresh =:= lazy_remote) orelse
+           (Job#internal.dest_refresh =:= none),
     true = Job#internal.timeout_init > 0,
     true = Job#internal.timeout_async > ?TIMEOUT_DELTA,
     true = Job#internal.timeout_sync > ?TIMEOUT_DELTA,
     true = is_list(Job#internal.dest_list_deny) orelse
-           (Job#internal.dest_list_deny == undefined),
+           (Job#internal.dest_list_deny =:= undefined),
     true = is_list(Job#internal.dest_list_allow) orelse
-           (Job#internal.dest_list_allow == undefined),
+           (Job#internal.dest_list_allow =:= undefined),
     true = Job#internal.max_r >= 0,
     true = Job#internal.max_t >= 0,
     C = #config_job_internal{prefix = Job#internal.prefix,
@@ -511,21 +526,27 @@ jobs_validate(Output, [Job | L], UUID)
            is_integer(erlang:hd(Job#external.prefix)),
     true = (Job#external.args == []) orelse
            is_integer(erlang:hd(Job#external.args)),
-    true = (Job#external.dest_refresh == immediate_closest) orelse
-           (Job#external.dest_refresh == lazy_closest) orelse
-           (Job#external.dest_refresh == immediate_random) orelse
-           (Job#external.dest_refresh == lazy_random) orelse
-           (Job#external.dest_refresh == none),
-    true = (Job#external.protocol == tcp) orelse
-           (Job#external.protocol == udp),
+    true = (Job#external.dest_refresh =:= immediate_closest) orelse
+           (Job#external.dest_refresh =:= lazy_closest) orelse
+           (Job#external.dest_refresh =:= immediate_furthest) orelse
+           (Job#external.dest_refresh =:= lazy_furthest) orelse
+           (Job#external.dest_refresh =:= immediate_random) orelse
+           (Job#external.dest_refresh =:= lazy_random) orelse
+           (Job#external.dest_refresh =:= immediate_local) orelse
+           (Job#external.dest_refresh =:= lazy_local) orelse
+           (Job#external.dest_refresh =:= immediate_remote) orelse
+           (Job#external.dest_refresh =:= lazy_remote) orelse
+           (Job#external.dest_refresh =:= none),
+    true = (Job#external.protocol =:= tcp) orelse
+           (Job#external.protocol =:= udp),
     true = Job#external.buffer_size >= 1024, % should be roughly 16436
     true = Job#external.timeout_init > 0,
     true = Job#external.timeout_async > ?TIMEOUT_DELTA,
     true = Job#external.timeout_sync > ?TIMEOUT_DELTA,
     true = is_list(Job#external.dest_list_deny) orelse
-           (Job#external.dest_list_deny == undefined),
+           (Job#external.dest_list_deny =:= undefined),
     true = is_list(Job#external.dest_list_allow) orelse
-           (Job#external.dest_list_allow == undefined),
+           (Job#external.dest_list_allow =:= undefined),
     true = Job#external.max_r >= 0,
     true = Job#external.max_t >= 0,
     C = #config_job_external{prefix = Job#external.prefix,
@@ -562,8 +583,8 @@ jobs_validate_options(OptionsList) ->
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
     true = (QueueLimit =:= undefined) orelse is_integer(QueueLimit),
-    true = is_integer(DestRefreshStart),
-    true = is_integer(DestRefreshDelay),
+    true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
+    true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
     Options#config_job_options{priority_default = PriorityDefault,
                                queue_limit = QueueLimit,
                                dest_refresh_start = DestRefreshStart,
