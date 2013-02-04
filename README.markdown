@@ -1,4 +1,4 @@
-#[CloudI 1.1.0 (beta)](http://cloudi.org)
+#[CloudI 1.1.1 (beta)](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
@@ -82,19 +82,19 @@ For configuration options, see [FAQ: 3.2 - Installation Options](http://cloudi.o
 
     ./configure
     make
-    make install
+    sudo make install
 
 ### Running
 
-Within the installation directory the "bin/cloudi" script controls CloudI.
+Within the installation directory the cloudi script controls CloudI.
 
 To start CloudI:
 
-    bin/cloudi start
+    sudo cloudi start
 
 To stop CloudI:
 
-    bin/cloudi stop
+    sudo cloudi stop
 
 ## INTEGRATION
 

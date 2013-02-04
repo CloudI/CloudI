@@ -9,7 +9,7 @@ To build CloudI from scratch, do the following steps:
     ./autogen.sh
     ./configure (--prefix=/path/to/installation/directory)
     make
-    make install
+    (sudo) make install
 
 ### Cleaning
 
@@ -20,13 +20,13 @@ There are two configuration targets to simplify CloudI development:
 
 ### Running
 
-Within the installation directory the "bin/cloudi" script controls CloudI.
+Within the installation directory the cloudi script controls CloudI.
 
 To start CloudI:
 
-    bin/cloudi start
+    (sudo or /path/to/installation/directory/bin/)cloudi start
 
 To stop CloudI:
 
-    bin/cloudi stop
+    (sudo or /path/to/installation/directory/bin/)cloudi stop
 

@@ -4,8 +4,8 @@
    [
     "lib",
     "external",
-    "external/nodefinder",
-    "external/zeromq/v@ZEROMQ_VERSION_MAJOR@"
+    "external/nodefinder"
+    @ZEROMQ_ERLZMQ_PATH@
    ]},
   {rel, "cloudi", "1",
    [

@@ -59,8 +59,8 @@ jinterface
 ----------
 Binary Erlang Term Encoding Java Source Code
 
-- http://www.erlang.org/download/otp_src_R14B01.tar.gz
-- Wed Feb  9 12:31:54 PST 2011
+- http://www.erlang.org/download/otp_src_R16A_RELEASE_CANDIDATE.tar.gz
+- Mon Feb  4 13:03:02 PST 2013
 - Erlang Public License
 
 jsonrpclib
@@ -77,8 +77,8 @@ jsx
 Erlang JSON Parsing
 
 - https://github.com/talentdeficit/jsx
-- commit 26acdc29eecdcdad63530398e86eae7fa651ad13
-- Sun Mar 25 22:40:36 PDT 2012
+- commit cb14b92a228e51f7bdcaa7eb17f035e4a5c0b47d (master, v1.3.3)
+- Mon Feb  4 12:57:40 PST 2013
 - MIT
 
 m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4

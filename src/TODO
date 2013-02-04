@@ -1,5 +1,8 @@
 Items waiting for after the release of version 1.1.0
 ----------------------------------------------------
+Ubuntu 12.04 installation instructions, update docs:
+    uuid-dev required
+    ruby1.9.1 required
 EC2 automatic node configuration
     * working with external/nodefinder/ec2nodefinder/
       but with sane ec2 integration

@@ -39,13 +39,13 @@
 -spec to_json(Source::any(), Opts::opts()) -> binary().
     
 to_json(Source, Opts) when is_list(Opts) ->
-    (jsx:encoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
+    (jsx:encoder(?MODULE, Opts, jsx_utils:extract_opts(Opts ++ [escaped_strings])))(Source).
 
 
 -spec format(Source::binary(), Opts::opts()) -> binary().
     
 format(Source, Opts) when is_binary(Source) andalso is_list(Opts) ->
-    (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
+    (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts ++ [escaped_strings])))(Source).
 
 
 parse_opts(Opts) -> parse_opts(Opts, #opts{}).
@@ -135,14 +135,14 @@ handle_event(Event, {[array|Stack], Acc, Opts = #opts{depth = Depth}}) ->
 handle_event(end_json, {[], Acc, _Opts}) -> unicode:characters_to_binary(Acc, utf8).
 
 
-encode(string, String, Opts) ->
-    [?quote, jsx_utils:json_escape(String, Opts), ?quote];
+encode(string, String, _Opts) ->
+    [?quote, String, ?quote];
 encode(literal, Literal, _Opts) ->
     erlang:atom_to_list(Literal);
 encode(integer, Integer, _Opts) ->
     erlang:integer_to_list(Integer);
 encode(float, Float, _Opts) ->
-    nicedecimal:format(Float).
+    [Output] = io_lib:format("~p", [Float]), Output.
 
 
 space(Opts) ->
@@ -176,186 +176,139 @@ indent_or_space(Opts) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-setup_nicedecimal_meck(Return) ->
-    ok = meck:new(nicedecimal),
-    ok = meck:expect(nicedecimal, format, fun(1.23) -> Return end).
-
-teardown_nicedecimal_meck(_) ->
-    ?assert(meck:validate(nicedecimal)),
-    ok = meck:unload(nicedecimal).
-
 basic_format_test_() ->
     [
-        {"empty object", ?_assert(format(<<"{}">>, []) =:= <<"{}">>)},
-        {"empty array", ?_assert(format(<<"[]">>, []) =:= <<"[]">>)},
-        {"naked integer", ?_assert(format(<<"123">>, []) =:= <<"123">>)},
-        {foreach,
-            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
-            fun(R) -> teardown_nicedecimal_meck(R) end,
-            [{"naked float", ?_assert(format(<<"1.23">>, []) =:= <<"1.23">>)}]
-        },
-        {"naked string", ?_assert(format(<<"\"hi\"">>, []) =:= <<"\"hi\"">>)},
-        {"naked literal", ?_assert(format(<<"true">>, []) =:= <<"true">>)},
-        {"simple object", 
-            ?_assert(format(<<"  { \"key\"  :\n\t \"value\"\r\r\r\n }  ">>, 
-                    []
-                ) =:= <<"{\"key\":\"value\"}">>
-            )
-        },
-        {"really simple object",
-            ?_assert(format(<<"{\"k\":\"v\"}">>, []) =:= <<"{\"k\":\"v\"}">>)
-        },
-        {"nested object",
-            ?_assert(format(<<"{\"k\":{\"k\":\"v\"}, \"j\":{}}">>, []
-                ) =:= <<"{\"k\":{\"k\":\"v\"},\"j\":{}}">>
-            )
-        },
-        {"simple array", 
-            ?_assert(format(<<" [\n\ttrue,\n\tfalse  ,  \n \tnull\n] ">>, 
-                    []
-                ) =:= <<"[true,false,null]">>
-            )
-        },
-        {"really simple array", ?_assert(format(<<"[1]">>, []) =:= <<"[1]">>)},
-        {"nested array", ?_assert(format(<<"[[[]]]">>, []) =:= <<"[[[]]]">>)},
-        {"nested structures", 
-            ?_assert(format(
-                    <<"[{\"key\":\"value\", 
-                            \"another key\": \"another value\",
-                            \"a list\": [true, false]
-                        }, 
-                        [[{}]]
-                    ]">>, []
-                ) =:= <<"[{\"key\":\"value\",\"another key\":\"another value\",\"a list\":[true,false]},[[{}]]]">>
-            )
-        },
+        {"empty object", ?_assertEqual(format(<<"{}">>, []), <<"{}">>)},
+        {"empty array", ?_assertEqual(format(<<"[]">>, []), <<"[]">>)},
+        {"naked integer", ?_assertEqual(format(<<"123">>, []), <<"123">>)},
+        {"naked float", ?_assertEqual(format(<<"1.23">>, []), <<"1.23">>)},
+        {"naked string", ?_assertEqual(format(<<"\"hi\"">>, []), <<"\"hi\"">>)},
+        {"naked string with control character", ?_assertEqual(
+            format(<<"\"hi\\n\"">>, []), <<"\"hi\\n\"">>
+        )},
+        {"naked literal", ?_assertEqual(format(<<"true">>, []), <<"true">>)},
+        {"simple object", ?_assertEqual(
+            format(<<"  { \"key\"  :\n\t \"value\"\r\r\r\n }  ">>, []),
+            <<"{\"key\":\"value\"}">>
+        )},
+        {"really simple object", ?_assertEqual(format(<<"{\"k\":\"v\"}">>, []) , <<"{\"k\":\"v\"}">>)},
+        {"nested object", ?_assertEqual(
+            format(<<"{\"k\":{\"k\":\"v\"}, \"j\":{}}">>, []),
+            <<"{\"k\":{\"k\":\"v\"},\"j\":{}}">>
+        )},
+        {"simple array", ?_assertEqual(
+            format(<<" [\n\ttrue,\n\tfalse  ,  \n \tnull\n] ">>, []),
+            <<"[true,false,null]">>
+        )},
+        {"really simple array", ?_assertEqual(format(<<"[1]">>, []), <<"[1]">>)},
+        {"nested array", ?_assertEqual(format(<<"[[[]]]">>, []), <<"[[[]]]">>)},
+        {"nested structures", ?_assertEqual(
+            format(<<"[
+                {
+                    \"key\":\"value\",
+                    \"another key\": \"another value\",
+                    \"a list\": [true, false]
+                },
+                [[{}]]
+            ]">>, []), 
+            <<"[{\"key\":\"value\",\"another key\":\"another value\",\"a list\":[true,false]},[[{}]]]">>
+        )},
         {"simple nested structure",
-            ?_assert(format(<<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>, []
-                ) =:= <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
+            ?_assertEqual(
+                format(<<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>, []),
+                <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
             )
         }
     ].
 
 basic_to_json_test_() ->
     [
-        {"empty object", ?_assert(to_json([{}], []) =:= <<"{}">>)},
-        {"empty array", ?_assert(to_json([], []) =:= <<"[]">>)},
-        {"naked integer", ?_assert(to_json(123, []) =:= <<"123">>)},
-        {foreach,
-            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
-            fun(R) -> teardown_nicedecimal_meck(R) end,
-            [{"naked float", ?_assert(to_json(1.23, []) =:= <<"1.23">>)}]
-        },
-        {"naked string", ?_assert(to_json(<<"hi">>, []) =:= <<"\"hi\"">>)},
-        {"naked literal", ?_assert(to_json(true, []) =:= <<"true">>)},
-        {"simple object", 
-            ?_assert(to_json(
-                    [{<<"key">>, <<"value">>}],
-                    []
-                ) =:= <<"{\"key\":\"value\"}">>
-            )
-        },
-        {"nested object",
-            ?_assert(to_json(
-                    [{<<"k">>,[{<<"k">>,<<"v">>}]},{<<"j">>,[{}]}],
-                    []
-                ) =:= <<"{\"k\":{\"k\":\"v\"},\"j\":{}}">>
-            )
-        },
-        {"simple array", 
-            ?_assert(to_json(
-                    [true, false, null], 
-                    []
-                ) =:= <<"[true,false,null]">>
-            )
-        },
-        {"really simple array", ?_assert(to_json([1], []) =:= <<"[1]">>)},
-        {"nested array", ?_assert(to_json([[[]]], []) =:= <<"[[[]]]">>)},
-        {"nested structures", 
-            ?_assert(to_json(
+        {"empty object", ?_assertEqual(to_json([{}], []), <<"{}">>)},
+        {"empty array", ?_assertEqual(to_json([], []), <<"[]">>)},
+        {"naked integer", ?_assertEqual(to_json(123, []), <<"123">>)},
+        {"naked float", ?_assertEqual(to_json(1.23, []) , <<"1.23">>)},
+        {"naked string", ?_assertEqual(to_json(<<"hi">>, []), <<"\"hi\"">>)},
+        {"naked string with control character", ?_assertEqual(
+            to_json(<<"hi\n">>, []), <<"\"hi\\n\"">>
+        )},
+        {"naked literal", ?_assertEqual(to_json(true, []), <<"true">>)},
+        {"simple object", ?_assertEqual(
+            to_json(
+                [{<<"key">>, <<"value">>}],
+                []
+            ), 
+            <<"{\"key\":\"value\"}">>
+        )},
+        {"nested object", ?_assertEqual(
+            to_json(
+                [{<<"k">>,[{<<"k">>,<<"v">>}]},{<<"j">>,[{}]}],
+                []
+            ),
+            <<"{\"k\":{\"k\":\"v\"},\"j\":{}}">>
+        )},
+        {"simple array", ?_assertEqual(to_json([true, false, null], []), <<"[true,false,null]">>)},
+        {"really simple array", ?_assertEqual(to_json([1], []), <<"[1]">>)},
+        {"nested array", ?_assertEqual(to_json([[[]]], []), <<"[[[]]]">>)},
+        {"nested structures", ?_assertEqual(
+            to_json(
+                [
                     [
-                        [
-                            {<<"key">>, <<"value">>},
-                            {<<"another key">>, <<"another value">>},
-                            {<<"a list">>, [true, false]}
-                        ],
-                        [[[{}]]]
+                        {<<"key">>, <<"value">>},
+                        {<<"another key">>, <<"another value">>},
+                        {<<"a list">>, [true, false]}
                     ],
-                    []
-                ) =:= <<"[{\"key\":\"value\",\"another key\":\"another value\",\"a list\":[true,false]},[[{}]]]">>
-            )
-        },
-        {"simple nested structure",
-            ?_assert(to_json(
-                    [[], [{<<"k">>, [[], [{}]]}, {<<"j">>, [{}]}], []],
-                    []
-                ) =:= <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
-            )
-        }
+                    [[[{}]]]
+                ],
+                []
+            ),
+            <<"[{\"key\":\"value\",\"another key\":\"another value\",\"a list\":[true,false]},[[{}]]]">>
+        )},
+        {"simple nested structure", ?_assertEqual(
+            to_json(
+                [[], [{<<"k">>, [[], [{}]]}, {<<"j">>, [{}]}], []],
+                []
+            ),
+            <<"[[],{\"k\":[[],{}],\"j\":{}},[]]">>
+        )}
     ].
 
 opts_test_() ->
     [
-        {"unspecified indent/space", 
-            ?_assert(format(<<" [\n\ttrue,\n\tfalse,\n\tnull\n] ">>, 
-                    [space, indent]
-                ) =:= <<"[\n true,\n false,\n null\n]">>
-            )
-        },
-        {"specific indent/space", 
-            ?_assert(format(
-                    <<"\n{\n\"key\"  :  [],\n\"another key\"  :  true\n}\n">>, 
-                    [{space, 2}, {indent, 3}]
-                ) =:= <<"{\n   \"key\":  [],\n   \"another key\":  true\n}">>
-            )
-        },
-        {"nested structures", 
-            ?_assert(format(
-                    <<"[{\"key\":\"value\", 
-                            \"another key\": \"another value\"
-                        }, 
-                        [[true, false, null]]
-                    ]">>, 
-                    [{space, 2}, {indent, 2}]
-                ) =:= <<"[\n  {\n    \"key\":  \"value\",\n    \"another key\":  \"another value\"\n  },\n  [\n    [\n      true,\n      false,\n      null\n    ]\n  ]\n]">>
-            )
-        },
-        {"array spaces", 
-            ?_assert(format(<<"[1,2,3]">>, 
-                    [{space, 2}]
-                ) =:= <<"[1,  2,  3]">>
-            )
-        },
-        {"object spaces",
-            ?_assert(format(<<"{\"a\":true,\"b\":true,\"c\":true}">>,
-                    [{space, 2}]
-                ) =:= <<"{\"a\":  true,  \"b\":  true,  \"c\":  true}">>
-            )
-        },
-        {foreach,
-            fun() -> setup_nicedecimal_meck(<<"1.23">>) end,
-            fun(R) -> teardown_nicedecimal_meck(R) end,
-            [{
-                "array indent",
-                ?_assert(format(<<"[1.23, 1.23, 1.23]">>, 
-                        [{indent, 2}]
-                    ) =:= <<"[\n  1.23,\n  1.23,\n  1.23\n]">>
-                )
-            }]
-        },
-        {"object indent",
-            ?_assert(format(<<"{\"a\":true,\"b\":true,\"c\":true}">>,
-                    [{indent, 2}]
-                ) =:= <<"{\n  \"a\":true,\n  \"b\":true,\n  \"c\":true\n}">>
-            )
-        }
-    ].
-
-ext_opts_test_() ->
-    [{"extopts", ?_assert(format(<<"[]">>, 
-                [loose_unicode, {escape_forward_slash, true}]
-            ) =:= <<"[]">>
+        {"unspecified indent/space", ?_assertEqual(
+            format(<<" [\n\ttrue,\n\tfalse,\n\tnull\n] ">>, [space, indent]),
+            <<"[\n true,\n false,\n null\n]">>
+        )},
+        {"specific indent/space", ?_assertEqual(
+            format(
+                <<"\n{\n\"key\"  :  [],\n\"another key\"  :  true\n}\n">>, 
+                [{space, 2}, {indent, 3}]
+            ),
+            <<"{\n   \"key\":  [],\n   \"another key\":  true\n}">>
+        )},
+        {"nested structures", ?_assertEqual(
+            format(
+                <<"[{\"key\":\"value\", \"another key\": \"another value\"}, [[true, false, null]]]">>, 
+                [{space, 2}, {indent, 2}]
+            ),
+            <<"[\n  {\n    \"key\":  \"value\",\n    \"another key\":  \"another value\"\n  },\n  [\n    [\n      true,\n      false,\n      null\n    ]\n  ]\n]">>
+        )},
+        {"array spaces", ?_assertEqual(
+            format(<<"[1,2,3]">>, [{space, 2}]),
+            <<"[1,  2,  3]">>
+        )},
+        {"object spaces", ?_assertEqual(
+            format(<<"{\"a\":true,\"b\":true,\"c\":true}">>, [{space, 2}]),
+            <<"{\"a\":  true,  \"b\":  true,  \"c\":  true}">>
+        )},
+        {"array indent", ?_assertEqual(
+            format(<<"[1.23, 1.23, 1.23]">>, [{indent, 2}]),
+            <<"[\n  1.23,\n  1.23,\n  1.23\n]">>
+        )},
+        {"object indent", ?_assertEqual(
+            format(<<"{\"a\":true,\"b\":true,\"c\":true}">>, [{indent, 2}]),
+            <<"{\n  \"a\":true,\n  \"b\":true,\n  \"c\":true\n}">>
         )}
     ].
+
     
 -endif.
