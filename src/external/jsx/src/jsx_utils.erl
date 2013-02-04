@@ -25,96 +25,107 @@
 
 -export([parse_opts/1]).
 -export([extract_opts/1]).
--export([json_escape/2]).
+-export([json_escape_sequence/1]).
 
 -include("jsx_opts.hrl").
 
 
 %% parsing of jsx opts
-
 parse_opts(Opts) ->
     parse_opts(Opts, #opts{}).
 
 parse_opts([], Opts) ->
     Opts;
-parse_opts([loose_unicode|Rest], Opts) ->
-    parse_opts(Rest, Opts#opts{loose_unicode=true});
-parse_opts([escape_forward_slash|Rest], Opts) ->
-    parse_opts(Rest, Opts#opts{escape_forward_slash=true});
+parse_opts([replaced_bad_utf8|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{replaced_bad_utf8=true});
+parse_opts([escaped_forward_slashes|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{escaped_forward_slashes=true});
 parse_opts([explicit_end|Rest], Opts) ->
     parse_opts(Rest, Opts#opts{explicit_end=true});
-parse_opts(_, _) ->
-    {error, badarg}.
+parse_opts([single_quoted_strings|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{single_quoted_strings=true});
+parse_opts([unescaped_jsonp|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{unescaped_jsonp=true});
+parse_opts([comments|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{comments=true});
+parse_opts([escaped_strings|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{escaped_strings=true});
+parse_opts([dirty_strings|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{dirty_strings=true});
+parse_opts([ignored_bad_escapes|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{ignored_bad_escapes=true});
+parse_opts([relax|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{
+        replaced_bad_utf8 = true,
+        single_quoted_strings = true,
+        comments = true,
+        ignored_bad_escapes = true
+    });
+parse_opts([{pre_encode, Encoder}|Rest] = Options, Opts) when is_function(Encoder, 1) ->
+    case Opts#opts.pre_encode of
+        false -> parse_opts(Rest, Opts#opts{pre_encode=Encoder})
+        ; _ -> erlang:error(badarg, [Options, Opts])
+    end;
+%% deprecated flags
+parse_opts([{pre_encoder, Encoder}|Rest] = Options, Opts) when is_function(Encoder, 1) ->
+    case Opts#opts.pre_encode of
+        false -> parse_opts(Rest, Opts#opts{pre_encode=Encoder})
+        ; _ -> erlang:error(badarg, [Options, Opts])
+    end;
+parse_opts([loose_unicode|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{replaced_bad_utf8=true});
+parse_opts([escape_forward_slash|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{escaped_forward_slashes=true});
+parse_opts([single_quotes|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{single_quoted_strings=true});
+parse_opts([no_jsonp_escapes|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{unescaped_jsonp=true});
+parse_opts([json_escape|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{escaped_strings=true});
+parse_opts([ignore_bad_escapes|Rest], Opts) ->
+    parse_opts(Rest, Opts#opts{ignored_bad_escapes=true});
+parse_opts(Options, Opts) ->
+    erlang:error(badarg, [Options, Opts]).
 
+
+valid_flags() ->
+    [
+        replaced_bad_utf8,
+        escaped_forward_slashes,
+        single_quoted_strings,
+        unescaped_jsonp,
+        comments,
+        escaped_strings,
+        dirty_strings,
+        ignored_bad_escapes,
+        explicit_end,
+        relax,
+        pre_encode,
+        %% deprecated flags
+        pre_encoder,            %% pre_encode
+        loose_unicode,          %% replaced_bad_utf8
+        escape_forward_slash,   %% escaped_forward_slashes
+        single_quotes,          %% single_quotes_strings
+        no_jsonp_escapes,       %% unescaped_jsonp
+        json_escape,            %% escaped_strings
+        ignore_bad_escapes      %% ignored_bad_escapes
+    ].
+ 
 
 extract_opts(Opts) ->
     extract_parser_opts(Opts, []).
 
 extract_parser_opts([], Acc) -> Acc;
 extract_parser_opts([{K,V}|Rest], Acc) ->
-    case lists:member(K, [loose_unicode, escape_forward_slash, explicit_end]) of
+    case lists:member(K, valid_flags()) of
         true -> extract_parser_opts(Rest, [{K,V}] ++ Acc)
         ; false -> extract_parser_opts(Rest, Acc)
     end;
 extract_parser_opts([K|Rest], Acc) ->
-    case lists:member(K, [loose_unicode, escape_forward_slash, explicit_end]) of
+    case lists:member(K, valid_flags()) of
         true -> extract_parser_opts(Rest, [K] ++ Acc)
         ; false -> extract_parser_opts(Rest, Acc)
     end.
-
-
-%% json string escaping, for utf8 binaries. escape the json control sequences to 
-%%  their json equivalent, escape other control characters to \uXXXX sequences, 
-%%  everything else should be a legal json string component
-
-json_escape(String, Opts) when is_binary(String) ->
-    json_escape(String, Opts, <<>>).
-
-%% double quote    
-json_escape(<<$\", Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $\">>);
-%% backslash \ reverse solidus
-json_escape(<<$\\, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $\\>>);
-%% backspace
-json_escape(<<$\b, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $b>>);
-%% form feed
-json_escape(<<$\f, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $f>>);
-%% newline
-json_escape(<<$\n, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $n>>);
-%% cr
-json_escape(<<$\r, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $r>>);
-%% tab
-json_escape(<<$\t, Rest/binary>>, Opts, Acc) -> 
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $t>>);
-%% other control characters
-json_escape(<<C/utf8, Rest/binary>>, Opts, Acc) when C >= 0, C < $\s -> 
-    json_escape(Rest,
-        Opts,
-        <<Acc/binary, (unicode:characters_to_binary(json_escape_sequence(C)))/binary>>
-    );
-%% escape forward slashes -- optionally -- to faciliate microsoft's retarded
-%%   date format
-json_escape(<<$/, Rest/binary>>, Opts=#opts{escape_forward_slash=true}, Acc) ->
-    json_escape(Rest, Opts, <<Acc/binary, $\\, $/>>);
-%% escape u+2028 and u+2029 to avoid problems with jsonp
-json_escape(<<C/utf8, Rest/binary>>, Opts, Acc)
-        when C == 16#2028; C == 16#2029 ->
-    json_escape(Rest,
-        Opts,
-        <<Acc/binary, (unicode:characters_to_binary(json_escape_sequence(C)))/binary>>
-    );
-%% any other legal codepoint
-json_escape(<<C/utf8, Rest/binary>>, Opts, Acc) ->
-    json_escape(Rest, Opts, <<Acc/binary, C/utf8>>);
-json_escape(<<>>, _Opts, Acc) ->
-    Acc;
-json_escape(Rest, Opts, Acc) ->
-    erlang:error(badarg, [Rest, Opts, Acc]).
 
 
 %% convert a codepoint to it's \uXXXX equiv.
@@ -132,38 +143,56 @@ to_hex(15) -> $f;
 to_hex(X) -> X + 48.    %% ascii "1" is [49], "2" is [50], etc...
 
 
-
 %% eunit tests
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
 
-binary_escape_test_() ->
+json_escape_sequence_test_() ->
     [
-        {"json string escaping", 
-            ?_assert(json_escape(
-                    <<"\"\\\b\f\n\r\t">>, #opts{}
-                ) =:= <<"\\\"\\\\\\b\\f\\n\\r\\t">>
+        {"json escape sequence test - 16#0000", ?_assertEqual(json_escape_sequence(16#0000), "\\u0000")},
+        {"json escape sequence test - 16#abc", ?_assertEqual(json_escape_sequence(16#abc), "\\u0abc")},
+        {"json escape sequence test - 16#def", ?_assertEqual(json_escape_sequence(16#def), "\\u0def")}
+    ].
+
+opts_test_() ->
+    [
+        {"all flags",
+            ?_assertEqual(
+                parse_opts([
+                    replaced_bad_utf8,
+                    escaped_forward_slashes,
+                    explicit_end,
+                    single_quoted_strings,
+                    unescaped_jsonp,
+                    comments,
+                    dirty_strings,
+                    ignored_bad_escapes
+                ]),
+                #opts{
+                    replaced_bad_utf8=true,
+                    escaped_forward_slashes=true,
+                    explicit_end=true,
+                    single_quoted_strings=true,
+                    unescaped_jsonp=true,
+                    comments=true,
+                    dirty_strings=true,
+                    ignored_bad_escapes=true
+                }
             )
         },
-        {"json string hex escape", 
-            ?_assert(json_escape(
-                    <<1, 2, 3, 11, 26, 30, 31>>, #opts{}
-                ) =:= <<"\\u0001\\u0002\\u0003\\u000b\\u001a\\u001e\\u001f">>
-            )
-        },
-        {"jsonp protection",
-            ?_assert(json_escape(
-                    <<226, 128, 168, 226, 128, 169>>, #opts{}
-                ) =:= <<"\\u2028\\u2029">>
-            )
-        },
-        {"microsoft i hate your date format",
-            ?_assert(json_escape(<<"/Date(1303502009425)/">>,
-                    #opts{escape_forward_slash=true}
-                ) =:= <<"\\/Date(1303502009425)\\/">>
+        {"relax flag",
+            ?_assertEqual(
+                parse_opts([relax]),
+                #opts{
+                    replaced_bad_utf8=true,
+                    single_quoted_strings=true,
+                    comments=true,
+                    ignored_bad_escapes=true
+                }
             )
         }
     ].
+
 
 -endif.

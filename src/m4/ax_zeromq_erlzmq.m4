@@ -13,10 +13,11 @@
 #
 #     ZEROMQ_ERLZMQ_RELTOOL
 #     ZEROMQ_ERLZMQ_APPCONF
+#     ZEROMQ_ERLZMQ_PATH
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog
+# Copyright (c) 2011-2013, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -83,7 +84,9 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
              BUILDDIR=$abs_top_builddir])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
+        ZEROMQ_ERLZMQ_PATH=',"external/zeromq/v$ZEROMQ_VERSION_MAJOR"'
     fi
     AC_SUBST(ZEROMQ_ERLZMQ_RELTOOL)
     AC_SUBST(ZEROMQ_ERLZMQ_APPCONF)
+    AC_SUBST(ZEROMQ_ERLZMQ_PATH)
 ])

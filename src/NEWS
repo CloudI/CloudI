@@ -1,3 +1,15 @@
+February 4, 2013
+  Version 1.1.1 (beta) released.
+
+  * use patterns instead of prefixes for ACL strings
+  * add the following destination refresh methods:
+    immediate_furthest, lazy_furthest,
+    immediate_local, lazy_local,
+    immediate_remote, and lazy_remote
+  * build system fixes and documentation fixes for installation
+  * fix CloudI API uuids to be completely standard v1
+  * fix external service queuing during initialization
+
 October 30, 2012
   Version 1.1.0 (beta) released.
 

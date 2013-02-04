@@ -28,24 +28,26 @@
 
 
 -record(opts, {
-    labels = binary
+    labels = binary,
+    post_decode = false
 }).
 
 -type opts() :: list().
 
-
--spec to_term(Source::binary(), Opts::opts()) -> list({binary(), any()})
-    | list(any())
+-type json_value() :: list({binary(), json_value()})
+    | list(json_value())
     | true
     | false
     | null
     | integer()
     | float()
     | binary().
+
+
+-spec to_term(Source::binary(), Opts::opts()) -> json_value().
     
 to_term(Source, Opts) when is_list(Opts) ->
     (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source).
-
 
 
 parse_opts(Opts) -> parse_opts(Opts, #opts{}).
@@ -55,42 +57,43 @@ parse_opts([{labels, Val}|Rest], Opts)
     parse_opts(Rest, Opts#opts{labels = Val});
 parse_opts([labels|Rest], Opts) ->
     parse_opts(Rest, Opts#opts{labels = binary});
+parse_opts([{post_decode, F}|Rest], Opts=#opts{post_decode=false}) when is_function(F, 1) ->
+    parse_opts(Rest, Opts#opts{post_decode=F});
+parse_opts([{post_decode, _}|_] = Options, Opts) ->
+    erlang:error(badarg, [Options, Opts]);
 parse_opts([_|Rest], Opts) ->
     parse_opts(Rest, Opts);
 parse_opts([], Opts) ->
     Opts.
 
 
-
 init(Opts) -> {[[]], parse_opts(Opts)}.
-
 
 
 handle_event(end_json, {[[Terms]], _Opts}) -> Terms;
 
 handle_event(start_object, {Terms, Opts}) -> {[[]|Terms], Opts};
 handle_event(end_object, {[[], {key, Key}, Last|Terms], Opts}) ->
-    {[[{Key, [{}]}] ++ Last] ++ Terms, Opts};
+    {[[{Key, post_decode([{}], Opts)}] ++ Last] ++ Terms, Opts};
 handle_event(end_object, {[Object, {key, Key}, Last|Terms], Opts}) ->
-    {[[{Key, lists:reverse(Object)}] ++ Last] ++ Terms, Opts};
+    {[[{Key, post_decode(lists:reverse(Object), Opts)}] ++ Last] ++ Terms, Opts};
 handle_event(end_object, {[[], Last|Terms], Opts}) ->
-    {[[[{}]] ++ Last] ++ Terms, Opts};
+    {[[post_decode([{}], Opts)] ++ Last] ++ Terms, Opts};
 handle_event(end_object, {[Object, Last|Terms], Opts}) ->
-    {[[lists:reverse(Object)] ++ Last] ++ Terms, Opts};
+    {[[post_decode(lists:reverse(Object), Opts)] ++ Last] ++ Terms, Opts};
     
 handle_event(start_array, {Terms, Opts}) -> {[[]|Terms], Opts};
 handle_event(end_array, {[List, {key, Key}, Last|Terms], Opts}) ->
-    {[[{Key, lists:reverse(List)}] ++ Last] ++ Terms, Opts};
+    {[[{Key, post_decode(lists:reverse(List), Opts)}] ++ Last] ++ Terms, Opts};
 handle_event(end_array, {[Current, Last|Terms], Opts}) ->
-    {[[lists:reverse(Current)] ++ Last] ++ Terms, Opts};
+    {[[post_decode(lists:reverse(Current), Opts)] ++ Last] ++ Terms, Opts};
 
 handle_event({key, Key}, {Terms, Opts}) -> {[{key, format_key(Key, Opts)}] ++ Terms, Opts};
 
 handle_event({_, Event}, {[{key, Key}, Last|Terms], Opts}) ->
-    {[[{Key, Event}] ++ Last] ++ Terms, Opts};
+    {[[{Key, post_decode(Event, Opts)}] ++ Last] ++ Terms, Opts};
 handle_event({_, Event}, {[Last|Terms], Opts}) ->
-    {[[Event] ++ Last] ++ Terms, Opts}.
-
+    {[[post_decode(Event, Opts)] ++ Last] ++ Terms, Opts}.
 
 
 format_key(Key, Opts) ->
@@ -101,6 +104,9 @@ format_key(Key, Opts) ->
     end.
 
 
+post_decode(Value, #opts{post_decode=false}) -> Value;
+post_decode(Value, Opts) -> (Opts#opts.post_decode)(Value).
+
 
 %% eunit tests
 
@@ -109,35 +115,29 @@ format_key(Key, Opts) ->
 
 basic_test_() ->
     [
-        {"empty object", ?_assert(to_term(<<"{}">>, []) =:= [{}])},
-        {"simple object", ?_assert(to_term(<<"{\"key\": true}">>, []) =:= [{<<"key">>, true}])},
-        {"less simple object",
-            ?_assert(to_term(<<"{\"a\": 1, \"b\": 2}">>, []) =:= [{<<"a">>, 1}, {<<"b">>, 2}])
-        },
-        {"nested object",
-            ?_assert(to_term(<<"{\"key\": {\"key\": true}}">>, []) =:= [{<<"key">>, [{<<"key">>, true}]}])
-        },
+        {"empty object", ?_assertEqual(to_term(<<"{}">>, []), [{}])},
+        {"simple object", ?_assertEqual(to_term(<<"{\"key\": true}">>, []), [{<<"key">>, true}])},
+        {"less simple object", ?_assertEqual(
+            to_term(<<"{\"a\": 1, \"b\": 2}">>, []),
+            [{<<"a">>, 1}, {<<"b">>, 2}]
+        )},
+        {"nested object", ?_assertEqual(
+            to_term(<<"{\"key\": {\"key\": true}}">>, []),
+            [{<<"key">>, [{<<"key">>, true}]}]
+        )},
         {"empty array", ?_assert(to_term(<<"[]">>, []) =:= [])},
-        {"list of lists",
-            ?_assert(to_term(<<"[[],[],[]]">>, []) =:= [[], [], []])
-        },
-        {"list of strings",
-            ?_assert(to_term(<<"[\"hi\", \"there\"]">>, []) =:= [<<"hi">>, <<"there">>])
-        },
-        {"list of numbers",
-            ?_assert(to_term(<<"[1, 2.0, 3e4, -5]">>, []) =:= [1, 2.0, 3.0e4, -5])
-        },
-        {"list of literals",
-            ?_assert(to_term(<<"[true,false,null]">>, []) =:= [true,false,null])
-        },
-        {"list of objects",
-            ?_assert(to_term(<<"[{}, {\"a\":1, \"b\":2}, {\"key\":[true,false]}]">>, [])
-                =:= [[{}], [{<<"a">>,1},{<<"b">>,2}], [{<<"key">>,[true,false]}]])
-        }
+        {"list of lists", ?_assertEqual(to_term(<<"[[],[],[]]">>, []), [[], [], []])},
+        {"list of strings", ?_assertEqual(to_term(<<"[\"hi\", \"there\"]">>, []), [<<"hi">>, <<"there">>])},
+        {"list of numbers", ?_assertEqual(to_term(<<"[1, 2.0, 3e4, -5]">>, []), [1, 2.0, 3.0e4, -5])},
+        {"list of literals", ?_assertEqual(to_term(<<"[true,false,null]">>, []), [true,false,null])},
+        {"list of objects", ?_assertEqual(
+            to_term(<<"[{}, {\"a\":1, \"b\":2}, {\"key\":[true,false]}]">>, []),
+            [[{}], [{<<"a">>,1},{<<"b">>,2}], [{<<"key">>,[true,false]}]]
+        )}
     ].
 
 comprehensive_test_() ->
-    {"comprehensive test", ?_assert(to_term(comp_json(), []) =:= comp_term())}.
+    {"comprehensive test", ?_assertEqual(to_term(comp_json(), []), comp_term())}.
 
 comp_json() ->
     <<"[
@@ -164,7 +164,7 @@ comp_term() ->
     ].
 
 atom_labels_test_() ->
-    {"atom labels test", ?_assert(to_term(comp_json(), [{labels, atom}]) =:= atom_term())}.
+    {"atom labels test", ?_assertEqual(to_term(comp_json(), [{labels, atom}]), atom_term())}.
 
 atom_term() ->
     [
@@ -180,10 +180,51 @@ atom_term() ->
 
 naked_test_() ->
     [
-        {"naked integer", ?_assert(to_term(<<"123">>, []) =:= 123)},
-        {"naked float", ?_assert(to_term(<<"-4.32e-17">>, []) =:= -4.32e-17)},
-        {"naked literal", ?_assert(to_term(<<"true">>, []) =:= true)},
-        {"naked string", ?_assert(to_term(<<"\"string\"">>, []) =:= <<"string">>)}
+        {"naked integer", ?_assertEqual(to_term(<<"123">>, []), 123)},
+        {"naked float", ?_assertEqual(to_term(<<"-4.32e-17">>, []), -4.32e-17)},
+        {"naked literal", ?_assertEqual(to_term(<<"true">>, []), true)},
+        {"naked string", ?_assertEqual(to_term(<<"\"string\"">>, []), <<"string">>)}
+    ].
+
+post_decoders_test_() ->
+    JSON = <<"{\"object\": {
+        \"literals\": [true, false, null],
+        \"strings\": [\"foo\", \"bar\", \"baz\"],
+        \"numbers\": [1, 1.0, 1e0]
+    }}">>,
+    [
+        {"no post_decode", ?_assertEqual(
+            to_term(JSON, []),
+            [{<<"object">>, [
+                {<<"literals">>, [true, false, null]},
+                {<<"strings">>, [<<"foo">>, <<"bar">>, <<"baz">>]},
+                {<<"numbers">>, [1, 1.0, 1.0]}
+            ]}]
+        )},
+        {"replace arrays with empty arrays", ?_assertEqual(
+            to_term(JSON, [{post_decode, fun([T|_] = V)  when is_tuple(T) -> V; (V) when is_list(V) -> []; (V) -> V end}]),
+            [{<<"object">>, [{<<"literals">>, []}, {<<"strings">>, []}, {<<"numbers">>, []}]}]
+        )},
+        {"replace objects with empty objects", ?_assertEqual(
+            to_term(JSON, [{post_decode, fun(V) when is_list(V) -> [{}]; (V) -> V end}]),
+            [{}]
+        )},
+        {"replace all non-list values with false", ?_assertEqual(
+            to_term(JSON, [{post_decode, fun(V) when is_list(V) -> V; (_) -> false end}]),
+            [{<<"object">>, [
+                {<<"literals">>, [false, false, false]},
+                {<<"strings">>, [false, false, false]},
+                {<<"numbers">>, [false, false, false]}
+            ]}]            
+        )},
+        {"atoms_to_strings", ?_assertEqual(
+            to_term(JSON, [{post_decode, fun(V) when is_atom(V) -> unicode:characters_to_binary(atom_to_list(V)); (V) -> V end}]),
+            [{<<"object">>, [
+                {<<"literals">>, [<<"true">>, <<"false">>, <<"null">>]},
+                {<<"strings">>, [<<"foo">>, <<"bar">>, <<"baz">>]},
+                {<<"numbers">>, [1, 1.0, 1.0]}
+            ]}]
+        )}
     ].
     
 -endif.
