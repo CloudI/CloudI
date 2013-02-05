@@ -84,7 +84,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
              BUILDDIR=$abs_top_builddir])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
-        ZEROMQ_ERLZMQ_PATH=',"external/zeromq/v$ZEROMQ_VERSION_MAJOR"'
+        ZEROMQ_ERLZMQ_PATH=',"external/zeromq/v'$ZEROMQ_VERSION_MAJOR'"'
     fi
     AC_SUBST(ZEROMQ_ERLZMQ_RELTOOL)
     AC_SUBST(ZEROMQ_ERLZMQ_APPCONF)
