@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2012 Michael Truog
+ * Copyright (c) 2009-2013 Michael Truog
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -117,8 +117,8 @@ pre {
 
 #footer {
     font-size: x-small;
+    width: 100%;
     position: fixed;
     bottom: 0px;
-    right: 10px;
 }
 

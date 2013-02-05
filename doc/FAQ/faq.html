@@ -31,7 +31,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.1.0b<br />last updated on October 31 2012</h3></center>
+  <center><h3>version 1.1.1b<br />last updated on February 4 2013</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -525,7 +525,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <ol style="font-family: monospace">
       <li>./configure</li>
       <li>make</li>
-      <li>make install</li>
+      <li>sudo make install</li>
     </ol>
   </p>
   <p class="paragraph">
@@ -535,7 +535,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     So, that means that the configuration will expect a C compiler,
     a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
     Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R14B02</a>).
-    CloudI is tested on each release of Erlang (currently R15B02).
+    CloudI is tested on each release of Erlang (currently R16A).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -543,7 +543,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </th><th>
     Packages
     </th></tr><tr><td>
-    Ubuntu<br />(apt-get install &lt;package(s)&gt;)
+    Ubuntu 12.04<br />(apt-get install &lt;package(s)&gt;)
     </td><td>
     <ul>
       <li>erlang</li>
@@ -553,8 +553,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>default-jdk</li>
       <li>python</li>
       <li>python-dev</li>
-      <li>ruby1.9</li>
+      <li>ruby1.9.1</li>
       <li>libgmp3-dev</li>
+      <li>uuid-dev</li>
     </ul>
     </td></tr><tr><td>
     OSX w/macports<br />(port install &lt;package(s)&gt;)
@@ -579,7 +580,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <table><tr><td>
     --prefix="/path/to/install/"
     </td><td>
-    Specify an Installation Path
+    Specify an Installation Path (default="/usr/local/")
     </td></tr><tr><td>
     --with-zeromq
     </td><td>
@@ -610,19 +611,18 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="3_Running"></a>
   <h3>3.4 - Running CloudI</h3>
   <p>
-    If CloudI is installed in PREFIX (set with the configure script --prefix=
-    command line argument), then CloudI can be started with:
+    To start CloudI, execute:
 <pre>
-PREFIX/bin/cloudi start
+sudo cloudi start
 </pre>
     To stop the running CloudI node, execute:
 <pre>
-PREFIX/bin/cloudi stop
+sudo cloudi stop
 </pre>
   </p>
   <p class="paragraph">
     When CloudI is running, CloudI logging output will be appended to
-    PREFIX/var/logs/cloudi/cloudi.log (in a way that is friendly to logrotate).
+    <a href="#3_Options">PREFIX</a>/var/logs/cloudi/cloudi.log.
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -862,16 +862,22 @@ PREFIX/bin/cloudi stop
   </p>
   <p class="paragraph">
     The Access Control List (ACL) is simply a list of strings that define
-    prefixes that must be explicitly allowed or denied when determining if a
-    service can send to the service name.  If a prefix is both allowed and
-    denied, the prefix is denied (deny takes precedence).  When defining ACLs,
-    it is possible to use Erlang atoms to represent lists of string prefixes
+    patterns that must be explicitly allowed or denied when determining if a
+    service can send to the service name.
+    A pattern uses "*" to represent a ".+" regex (one or more characters) while
+    "**" is forbidden, which is the same format used for service subscriptions.
+    Previous ACL usage in CloudI used prefixes, which is still valid, but a "*"
+    is appended to create a pattern.  This means that only patterns are accepted
+    and no exact service names will be valid ACL strings.
+  </p>
+  <p class="paragraph">
+    If an ACL pattern is both allowed and
+    denied, the pattern is denied (deny takes precedence).  When defining ACLs,
+    it is possible to use Erlang atoms to represent lists of string patterns
     so that logical groupings are created.  The ACL atoms are then able to
-    be specified anywhere a normal ACL string might be present.  So, it is
-    best to group ACL string prefixes based on context to simplify the
-    configuration specification.  A complete service name is also a valid
-    ACL string for explicitly blocking or allowing a single service name,
-    though this usage of ACLs is uncommon.
+    be specified anywhere an ACL string might be present.  So, it is
+    best to group ACL string patterns based on context to simplify the
+    configuration specification.
   </p>
   <p class="paragraph">
     The CloudI API external service requests are limited to 2GB when using
@@ -1030,10 +1036,13 @@ PREFIX/bin/cloudi stop
   <h3>4.6 - How do I use Access Control Lists (ACLs)?</h3>
   <p class="paragraph">
     Access Control Lists (ACLs) are used to explicitly allow or deny requests
-    from being sent to service name prefixes.  Two separate ACL parameters are
+    from being sent to service name patterns.
+    A pattern uses "*" to represent a ".+" regex (one or more characters) while
+    "**" is forbidden, which is the same format used for service subscriptions.
+    Two separate ACL parameters are
     specified for each service configuration to allow or deny destinations.
     If an ACL is not provided, the atom 'undefined' is used instead.  An ACL is
-    provided as a list of strings that are service name prefixes.  Instead of a
+    provided as a list of strings that are service name patterns.  Instead of a
     string, an atom alias may be provided that was defined in the 'acl'
     configuration so that the service configuration is simpler and more
     consistent (i.e., without strings that are replicated among the service
@@ -1041,8 +1050,8 @@ PREFIX/bin/cloudi stop
     illustrate how this works:
 <pre>
 {acl, [
-    {alias1, ["/service/name/prefix1", "/service/name/prefix2", alias2]},
-    {alias2, ["/subsystem1/prefix1", "/subsystem2/prefix1"]}
+    {alias1, ["/service/name/prefix1", "/service/name/prefix2*", alias2]},
+    {alias2, ["/subsystem1/prefix1*", "/subsystem2/prefix1"]}
 ]}.
 {jobs, [
     {internal,
@@ -1586,7 +1595,7 @@ PREFIX/bin/cloudi stop
     To prevent HTTP requests from going to internal services, Access Control
     List (ACL) entries can be added that prevent the cloudi_job_http Erlang
     CloudI service from sending to the internal services.  The ACL entries
-    would be service name prefixes that include the internal services in a
+    would be service name patterns that include the internal services in a
     list that is referenced directly (i.e., literally as a list of string) or
     indirectly by an atom that represents the list of strings.  The ACL
     entries would be specified for the cloudi_job_http service
@@ -1594,7 +1603,7 @@ PREFIX/bin/cloudi stop
     the service name represents a path which is a destination in a tree or
     hierarchy, then there should be no problems when adding or removing
     services dynamically (since the ACL entries will remain valid for the
-    consistent service name prefix usage).
+    consistent service name pattern usage).
   </p>
   <p>
     For more information, please refer to <a href="#4_API_HTTP">"4.1 - How do I integrate external software with CloudI?"</a>.
@@ -1881,7 +1890,7 @@ PREFIX/bin/cloudi stop
 <br />
 <br />
 <div id="footer">
-Copyright &#169; 2009-2012 Michael Truog
+Copyright &#169; 2009-2013 Michael Truog
 </div>
 
 </body>
