@@ -339,7 +339,7 @@ list_to_term(L) when is_list(L) ->
 %%-------------------------------------------------------------------------
 
 term_to_binary(T) ->
-    erlang:iolist_to_binary(io_lib:format("~w", [T])).
+    erlang:iolist_to_binary(io_lib:format("~p", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -350,7 +350,7 @@ term_to_binary(T) ->
 -spec term_to_list(T :: any()) -> string().
 
 term_to_list(T) ->
-    format("~w", [T]).
+    format("~p", [T]).
 
 %%-------------------------------------------------------------------------
 %% @doc
