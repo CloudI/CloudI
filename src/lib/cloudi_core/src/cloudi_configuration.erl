@@ -630,5 +630,10 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    acl_expand_values([E | Output], L, Path, Key, Lookup).
+    case trie:is_pattern(E) of
+        true ->
+            acl_expand_values([E | Output], L, Path, Key, Lookup);
+        false ->
+            acl_expand_values([E ++ "*" | Output], L, Path, Key, Lookup)
+    end.
 
