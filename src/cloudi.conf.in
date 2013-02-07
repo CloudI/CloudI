@@ -235,7 +235,7 @@
         "/tests/http/",
         cloudi_service_http_cowboy,
         [{port, 6467}, {output, internal}],
-        lazy_closest,
+        immediate_closest, % quickstart testing, to avoid false negatives
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     {external,
         "/tests/http/",

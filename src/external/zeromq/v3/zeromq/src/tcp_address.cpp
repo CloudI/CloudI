@@ -126,7 +126,7 @@ int zmq::tcp_address_t::resolve_nic_name (const char *nic_, bool ipv4only_)
     int sd = open_socket (AF_INET, SOCK_DGRAM, 0);
     errno_assert (sd != -1);
 
-    struct ifreq ifr; 
+    struct ifreq ifr;
 
     //  Copy interface name for ioctl get.
     strncpy (ifr.ifr_name, nic_, sizeof (ifr.ifr_name));
@@ -294,12 +294,12 @@ int zmq::tcp_address_t::resolve_interface (const char *interface_,
     }
 
     //  Use the first result.
+    zmq_assert (res != NULL);
     zmq_assert ((size_t) (res->ai_addrlen) <= sizeof (address));
     memcpy (&address, res->ai_addr, res->ai_addrlen);
 
     //  Cleanup getaddrinfo after copying the possibly referenced result.
-    if (res)
-        freeaddrinfo (res);
+    freeaddrinfo (res);
 
     return 0;
 }
@@ -371,12 +371,11 @@ zmq::tcp_address_t::tcp_address_t (const sockaddr *sa, socklen_t sa_len)
     zmq_assert(sa && sa_len > 0);
 
     memset (&address, 0, sizeof (address));
-    if (sa->sa_family == AF_INET && sa_len >= sizeof (address.ipv4)) {
+    if (sa->sa_family == AF_INET && sa_len >= (socklen_t) sizeof (address.ipv4))
         memcpy(&address.ipv4, sa, sizeof (address.ipv4));
-    }
-    else if (sa->sa_family == AF_INET6 && sa_len >= sizeof (address.ipv6)) {
+    else 
+    if (sa->sa_family == AF_INET6 && sa_len >= (socklen_t) sizeof (address.ipv6))
         memcpy(&address.ipv6, sa, sizeof (address.ipv6));
-    }
 }
 
 zmq::tcp_address_t::~tcp_address_t ()
@@ -489,7 +488,7 @@ zmq::tcp_address_mask_t::tcp_address_mask_t () :
     address_mask = -1;
 }
 
-const int zmq::tcp_address_mask_t::mask () const
+int zmq::tcp_address_mask_t::mask () const
 {
     return address_mask;
 }
@@ -575,9 +574,9 @@ int zmq::tcp_address_mask_t::to_string (std::string &addr_)
     return 0;
 }
 
-const bool zmq::tcp_address_mask_t::match_address (const struct sockaddr *ss, const socklen_t ss_len) const
+bool zmq::tcp_address_mask_t::match_address (const struct sockaddr *ss, const socklen_t ss_len) const
 {
-    zmq_assert (address_mask != -1 && ss != NULL && ss_len >= sizeof(struct sockaddr));
+    zmq_assert (address_mask != -1 && ss != NULL && ss_len >= (socklen_t) sizeof (struct sockaddr));
 
     if (ss->sa_family != address.generic.sa_family)
         return false;
@@ -599,11 +598,9 @@ const bool zmq::tcp_address_mask_t::match_address (const struct sockaddr *ss, co
         }
         if (address_mask < mask) mask = address_mask;
 
-        int full_bytes = mask / 8;
-        if (full_bytes) {
-            if (memcmp(our_bytes, their_bytes, full_bytes))
-                return false;
-        }
+        size_t full_bytes = mask / 8;
+        if (memcmp(our_bytes, their_bytes, full_bytes))
+            return false;
 
         uint8_t last_byte_bits = (0xffU << (8 - (mask % 8))) & 0xffU;
         if (last_byte_bits) {

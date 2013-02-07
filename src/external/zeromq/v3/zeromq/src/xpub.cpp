@@ -28,6 +28,7 @@
 
 zmq::xpub_t::xpub_t (class ctx_t *parent_, uint32_t tid_, int sid_) :
     socket_base_t (parent_, tid_, sid_),
+    verbose(false),
     more (false)
 {
     options.type = ZMQ_XPUB;
@@ -56,15 +57,11 @@ void zmq::xpub_t::xread_activated (pipe_t *pipe_)
 {
     //  There are some subscriptions waiting. Let's process them.
     msg_t sub;
-    while (true) {
-
-        //  Grab next subscription.
-        if (!pipe_->read (&sub))
-            return;
+    while (pipe_->read (&sub)) {
 
         //  Apply the subscription to the trie.
-        unsigned char *data = (unsigned char*) sub.data ();
-        size_t size = sub.size ();
+        unsigned char *const data = (unsigned char*) sub.data ();
+        const size_t size = sub.size ();
         if (size > 0 && (*data == 0 || *data == 1)) {
             bool unique;
             if (*data == 0)
@@ -73,19 +70,33 @@ void zmq::xpub_t::xread_activated (pipe_t *pipe_)
                 unique = subscriptions.add (data + 1, size - 1, pipe_);
 
             //  If the subscription is not a duplicate store it so that it can be
-            //  passed to used on next recv call.
-            if (unique && options.type != ZMQ_PUB)
-                pending.push_back (blob_t ((unsigned char*) sub.data (),
-                    sub.size ()));
+            //  passed to used on next recv call. (Unsubscribe is not verbose.)
+            if (options.type == ZMQ_XPUB && (unique || (*data && verbose)))
+                pending.push_back (blob_t (data, size));
         }
 
-        sub.close();
+        sub.close ();
     }
 }
 
 void zmq::xpub_t::xwrite_activated (pipe_t *pipe_)
 {
     dist.activated (pipe_);
+}
+
+int zmq::xpub_t::xsetsockopt (int option_, const void *optval_,
+    size_t optvallen_)
+{
+    if (option_ != ZMQ_XPUB_VERBOSE) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (optvallen_ != sizeof (int) || *static_cast <const int*> (optval_) < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    verbose = *static_cast <const int*> (optval_);
+    return 0;
 }
 
 void zmq::xpub_t::xterminated (pipe_t *pipe_)
@@ -136,6 +147,9 @@ bool zmq::xpub_t::xhas_out ()
 
 int zmq::xpub_t::xrecv (msg_t *msg_, int flags_)
 {
+    // flags_ is unused
+    (void)flags_;
+
     //  If there is at least one 
     if (pending.empty ()) {
         errno = EAGAIN;
@@ -166,7 +180,6 @@ void zmq::xpub_t::send_unsubscription (unsigned char *data_, size_t size_,
 
 		//  Place the unsubscription to the queue of pending (un)sunscriptions
 		//  to be retrived by the user later on.
-		xpub_t *self = (xpub_t*) arg_;
 		blob_t unsub (size_ + 1, 0);
 		unsub [0] = 0;
 		memcpy (&unsub [1], data_, size_);

@@ -233,6 +233,14 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
     return 0;
 
 #elif defined ZMQ_HAVE_WINDOWS
+    SECURITY_DESCRIPTOR sd = {0};
+    SECURITY_ATTRIBUTES sa = {0};
+
+    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorDacl(&sd, TRUE, 0, FALSE);
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = &sd;
 
     //  This function has to be in a system-wide critical section so that
     //  two instances of the library don't accidentally create signaler
@@ -241,9 +249,9 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
     //  Note that if the event object already exists, the CreateEvent requests
     //  EVENT_ALL_ACCESS access right. If this fails, we try to open
     //  the event object asking for SYNCHRONIZE access only.
-    HANDLE sync = CreateEvent (NULL, FALSE, TRUE, TEXT ("zmq-signaler-port-sync"));
+    HANDLE sync = CreateEvent (&sa, FALSE, TRUE, TEXT ("Global\\zmq-signaler-port-sync"));
     if (sync == NULL && GetLastError () == ERROR_ACCESS_DENIED)
-      sync = OpenEvent (SYNCHRONIZE, FALSE, TEXT ("zmq-signaler-port-sync"));
+      sync = OpenEvent (SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, TEXT ("Global\\zmq-signaler-port-sync"));
 
     win_assert (sync != NULL);
 
@@ -298,7 +306,7 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
     wsa_assert (rc != SOCKET_ERROR);
 
     //  Connect writer to the listener.
-    rc = connect (*w_, (sockaddr *) &addr, sizeof (addr));
+    rc = connect (*w_, (struct sockaddr*) &addr, sizeof (addr));
     wsa_assert (rc != SOCKET_ERROR);
 
     //  Accept connection from writer.
@@ -327,7 +335,7 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
     //
     //  The bug will be fixed in V5.6 ECO4 and beyond.  In the meantime, we'll
     //  create the socket pair manually.
-    sockaddr_in lcladdr;
+    struct sockaddr_in lcladdr;
     memset (&lcladdr, 0, sizeof (lcladdr));
     lcladdr.sin_family = AF_INET;
     lcladdr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);

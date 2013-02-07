@@ -24,10 +24,14 @@
 #define __ZMQ_SESSION_BASE_HPP_INCLUDED__
 
 #include <string>
+#include <stdarg.h>
 
 #include "own.hpp"
 #include "io_object.hpp"
 #include "pipe.hpp"
+#include "i_msg_source.hpp"
+#include "i_msg_sink.hpp"
+#include "socket_base.hpp"
 
 namespace zmq
 {
@@ -41,7 +45,9 @@ namespace zmq
     class session_base_t :
         public own_t,
         public io_object_t,
-        public i_pipe_events
+        public i_pipe_events,
+        public i_msg_source,
+        public i_msg_sink
     {
     public:
 
@@ -53,9 +59,13 @@ namespace zmq
         //  To be used once only, when creating the session.
         void attach_pipe (zmq::pipe_t *pipe_);
 
+        //  i_msg_source interface implementation.
+        virtual int pull_msg (msg_t *msg_);
+
+        //  i_msg_sink interface implementation.
+        virtual int push_msg (msg_t *msg_);
+
         //  Following functions are the interface exposed towards the engine.
-        virtual int read (msg_t *msg_);
-        virtual int write (msg_t *msg_);
         virtual void reset ();
         void flush ();
         void detach ();
@@ -66,8 +76,7 @@ namespace zmq
         void hiccuped (zmq::pipe_t *pipe_);
         void terminated (zmq::pipe_t *pipe_);
 
-        int get_address (std::string &addr_);
-        void monitor_event (int event_, ...);
+        socket_base_t *get_socket ();
 
     protected:
 
@@ -103,6 +112,9 @@ namespace zmq
 
         //  Pipe connecting the session to its socket.
         zmq::pipe_t *pipe;
+        
+        //  This set is added to with pipes we are disconnecting, but haven't yet completed
+        std::set<pipe_t *> terminating_pipes;
 
         //  This flag is true if the remainder of the message being processed
         //  is still in the in pipe.
@@ -128,9 +140,9 @@ namespace zmq
         //  True is linger timer is running.
         bool has_linger_timer;
 
-        //  If true, identity is to be sent/recvd from the network.
-        bool send_identity;
-        bool recv_identity;
+        //  If true, identity has been sent/received from the network.
+        bool identity_sent;
+        bool identity_received;
 
         //  Protocol and address to use when connecting.
         const address_t *addr;

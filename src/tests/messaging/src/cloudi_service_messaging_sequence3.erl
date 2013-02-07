@@ -123,7 +123,8 @@ cloudi_service_terminate(_, #state{}) ->
 
 sequence3(Dispatcher, Prefix) ->
     {ok, Test1Id} = cloudi_service:send_async(Dispatcher, Prefix ++ "f1", "0"),
-    {ok, Test1Check} = cloudi_service:recv_async(Dispatcher, Test1Id),
+    {ok, <<>>, Test1Check, Test1Id} =
+        cloudi_service:recv_async(Dispatcher, Test1Id),
     true = Test1Check == "done",
     {ok, Test2Check} = cloudi_service:send_sync(Dispatcher, Prefix ++ "g1",
                                             "prefix_"),

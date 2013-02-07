@@ -115,9 +115,9 @@ clean-local: rebar
                 -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
 	rmdir $(top_builddir)/lib/cloudi_core/ebin \
-	        $(top_builddir)/lib/cloudi_services_internal/ebin \
-	        $(top_builddir)/lib/cloudi_services_databases/ebin \
-	        $(top_builddir)/lib/cloudi_services_messaging/ebin \
+          $(top_builddir)/lib/cloudi_services_internal/ebin \
+          $(top_builddir)/lib/cloudi_services_databases/ebin \
+          $(top_builddir)/lib/cloudi_services_messaging/ebin \
           $(top_builddir)/lib/cpg/ebin \
           $(top_builddir)/lib/uuid/ebin \
           $(top_builddir)/lib/trie/ebin \
@@ -134,9 +134,9 @@ clean-local: rebar
           $(top_builddir)/external/cowboy/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
-	        $(top_srcdir)/lib/cloudi_services_internal/ebin \
-	        $(top_srcdir)/lib/cloudi_services_databases/ebin \
-	        $(top_srcdir)/lib/cloudi_services_messaging/ebin \
+          $(top_srcdir)/lib/cloudi_services_internal/ebin \
+          $(top_srcdir)/lib/cloudi_services_databases/ebin \
+          $(top_srcdir)/lib/cloudi_services_messaging/ebin \
           $(top_srcdir)/lib/cpg/ebin \
           $(top_srcdir)/lib/uuid/ebin \
           $(top_srcdir)/lib/trie/ebin \

@@ -161,10 +161,10 @@ ZeroMQ (http://www.zeromq.org/) Erlang Driver
 
 zeromq/v?/zeromq
 ----------------
-ZeroMQ 2.2.0 and 3.2.0-rc1
+ZeroMQ 2.2.0 and 3.2.2
 
 - http://download.zeromq.org/zeromq-2.2.0.tar.gz
-- http://download.zeromq.org/zeromq-3.2.0-rc1.tar.gz
-- Fri Jul  6 18:42:15 PDT 2012
+- http://download.zeromq.org/zeromq-3.2.2.tar.gz
+- Thu Feb  7 14:18:10 PST 2013
 - LGPL
 

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -239,9 +239,11 @@ public class Task implements Runnable
                                  API.InvalidInputException,
                                  API.MessageDecodingException
     {
-        while (! Arrays.equals(this.api.recv_async(1000).id, API.TransIdNull))
+        API.Response end_check = this.api.recv_async(1000);
+        while (new String(end_check.response) == "end")
         {
             // consume "end" and sleep
+            end_check = this.api.recv_async(1000);
         }
         API.out.println("messaging sequence1 start java");
         assert new String(request) == "start";
@@ -584,11 +586,6 @@ public class Task implements Runnable
     {
         try
         {
-            if (this.thread_index == 0)
-            {
-                this.api.send_async(this.api.prefix() + "sequence1",
-                                    ("start").getBytes());
-            }
             this.api.subscribe("a/b/c/d", this, "sequence1_abcd");
             this.api.subscribe("a/b/c/*", this, "sequence1_abc_");
             this.api.subscribe("a/b/*/d", this, "sequence1_ab_d");
@@ -614,6 +611,12 @@ public class Task implements Runnable
             this.api.subscribe("f2", this, "sequence3_f2");
             this.api.subscribe("g1", this, "sequence3_g1");
             this.api.subscribe("sequence3", this, "sequence3");
+
+            if (this.thread_index == 0)
+            {
+                this.api.send_async(this.api.prefix() + "sequence1",
+                                    ("start").getBytes());
+            }
 
             Object result = api.poll();
             API.err.println("exited thread: " + result);

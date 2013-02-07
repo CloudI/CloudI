@@ -31,6 +31,7 @@
 #include "config.hpp"
 #include "err.hpp"
 #include "ip.hpp"
+#include "tcp.hpp"
 #include "socket_base.hpp"
 
 #ifdef ZMQ_HAVE_WINDOWS
@@ -60,8 +61,7 @@ zmq::tcp_listener_t::tcp_listener_t (io_thread_t *io_thread_,
 
 zmq::tcp_listener_t::~tcp_listener_t ()
 {
-    if (s != retired_fd)
-        close ();
+    zmq_assert (s == retired_fd);
 }
 
 void zmq::tcp_listener_t::process_plug ()
@@ -85,7 +85,7 @@ void zmq::tcp_listener_t::in_event ()
     //  If connection was reset by the peer in the meantime, just ignore it.
     //  TODO: Handle specific errors like ENFILE/EMFILE etc.
     if (fd == retired_fd) {
-        socket->monitor_event (ZMQ_EVENT_ACCEPT_FAILED, endpoint.c_str(), zmq_errno());
+        socket->event_accept_failed (endpoint, zmq_errno());
         return;
     }
 
@@ -93,7 +93,7 @@ void zmq::tcp_listener_t::in_event ()
     tune_tcp_keepalives (fd, options.tcp_keepalive, options.tcp_keepalive_cnt, options.tcp_keepalive_idle, options.tcp_keepalive_intvl);
 
     //  Create the engine object for this connection.
-    stream_engine_t *engine = new (std::nothrow) stream_engine_t (fd, options);
+    stream_engine_t *engine = new (std::nothrow) stream_engine_t (fd, options, endpoint);
     alloc_assert (engine);
 
     //  Choose I/O thread to run connecter in. Given that we are already
@@ -108,7 +108,7 @@ void zmq::tcp_listener_t::in_event ()
     session->inc_seqnum ();
     launch_child (session);
     send_attach (session, engine, false);
-    socket->monitor_event (ZMQ_EVENT_ACCEPTED, endpoint.c_str(), fd);
+    socket->event_accepted (endpoint, fd);
 }
 
 void zmq::tcp_listener_t::close ()
@@ -116,16 +116,12 @@ void zmq::tcp_listener_t::close ()
     zmq_assert (s != retired_fd);
 #ifdef ZMQ_HAVE_WINDOWS
     int rc = closesocket (s);
-    if (unlikely (rc != SOCKET_ERROR))
-        socket->monitor_event (ZMQ_EVENT_CLOSE_FAILED, endpoint.c_str(), zmq_errno());
     wsa_assert (rc != SOCKET_ERROR);
 #else
     int rc = ::close (s);
-    if (unlikely (rc == 0))
-        socket->monitor_event (ZMQ_EVENT_CLOSE_FAILED, endpoint.c_str(), zmq_errno());
     errno_assert (rc == 0);
 #endif
-    socket->monitor_event (ZMQ_EVENT_CLOSED, endpoint.c_str(), s);
+    socket->event_closed (endpoint, s);
     s = retired_fd;
 }
 
@@ -133,7 +129,11 @@ int zmq::tcp_listener_t::get_address (std::string &addr_)
 {
     // Get the details of the TCP socket
     struct sockaddr_storage ss;
+#ifdef ZMQ_HAVE_HPUX
+    int sl = sizeof (ss);
+#else
     socklen_t sl = sizeof (ss);
+#endif
     int rc = getsockname (s, (struct sockaddr *) &ss, &sl);
 
     if (rc != 0) {
@@ -204,11 +204,11 @@ int zmq::tcp_listener_t::set_address (const char *addr_)
 #ifdef ZMQ_HAVE_WINDOWS
     if (rc == SOCKET_ERROR) {
         errno = wsa_error_to_errno (WSAGetLastError ());
-        return -1;
+        goto error;
     }
 #else
     if (rc != 0)
-        return -1;
+        goto error;
 #endif
 
     //  Listen for incomming connections.
@@ -216,30 +216,44 @@ int zmq::tcp_listener_t::set_address (const char *addr_)
 #ifdef ZMQ_HAVE_WINDOWS
     if (rc == SOCKET_ERROR) {
         errno = wsa_error_to_errno (WSAGetLastError ());
-        return -1;
+        goto error;
     }
 #else
     if (rc != 0)
-        return -1;
+        goto error;
 #endif
 
-    socket->monitor_event (ZMQ_EVENT_LISTENING, addr_, s);
+    socket->event_listening (endpoint, s);
     return 0;
+
+error:
+    int err = errno;
+    close ();
+    errno = err;
+    return -1;
 }
 
 zmq::fd_t zmq::tcp_listener_t::accept ()
 {
+    //  The situation where connection cannot be accepted due to insufficient
+    //  resources is considered valid and treated by ignoring the connection.
     //  Accept one connection and deal with different failure modes.
     zmq_assert (s != retired_fd);
 
-    struct sockaddr_storage ss = {0};
+    struct sockaddr_storage ss = {};
+#ifdef ZMQ_HAVE_HPUX
+    int ss_len = sizeof (ss);
+#else
     socklen_t ss_len = sizeof (ss);
+#endif
     fd_t sock = ::accept (s, (struct sockaddr *) &ss, &ss_len);
 
 #ifdef ZMQ_HAVE_WINDOWS
     if (sock == INVALID_SOCKET) {
         wsa_assert (WSAGetLastError () == WSAEWOULDBLOCK ||
-            WSAGetLastError () == WSAECONNRESET);
+            WSAGetLastError () == WSAECONNRESET ||
+            WSAGetLastError () == WSAEMFILE ||
+            WSAGetLastError () == WSAENOBUFS);
         return retired_fd;
     }
     //  On Windows, preventing sockets to be inherited by child processes.
@@ -249,7 +263,8 @@ zmq::fd_t zmq::tcp_listener_t::accept ()
     if (sock == -1) {
         errno_assert (errno == EAGAIN || errno == EWOULDBLOCK ||
             errno == EINTR || errno == ECONNABORTED || errno == EPROTO ||
-            errno == ENOBUFS);
+            errno == ENOBUFS || errno == ENOMEM || errno == EMFILE ||
+            errno == ENFILE);
         return retired_fd;
     }
 #endif

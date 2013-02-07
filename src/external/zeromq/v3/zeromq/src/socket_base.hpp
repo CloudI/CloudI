@@ -25,6 +25,7 @@
 
 #include <string>
 #include <map>
+#include <stdarg.h>
 
 #include "own.hpp"
 #include "array.hpp"
@@ -36,6 +37,11 @@
 #include "stdint.hpp"
 #include "clock.hpp"
 #include "pipe.hpp"
+
+extern "C"
+{
+    void zmq_free_event (void *data, void *hint);
+}
 
 namespace zmq
 {
@@ -101,7 +107,18 @@ namespace zmq
         void lock();
         void unlock();
 
-        void monitor_event (int event_, ...);
+        int monitor(const char *endpoint_, int events_);
+
+        void event_connected (std::string &addr_, int fd_);
+        void event_connect_delayed (std::string &addr_, int err_);
+        void event_connect_retried (std::string &addr_, int interval_);
+        void event_listening (std::string &addr_, int fd_);
+        void event_bind_failed (std::string &addr_, int err_);
+        void event_accepted (std::string &addr_, int fd_);
+        void event_accept_failed (std::string &addr_, int err_);
+        void event_closed (std::string &addr_, int fd_);
+        void event_close_failed (std::string &addr_, int fd_);
+        void event_disconnected (std::string &addr_, int fd_);
 
     protected:
 
@@ -135,6 +152,15 @@ namespace zmq
 
         //  Delay actual destruction of the socket.
         void process_destroy ();
+
+        // Socket event data dispath
+        void monitor_event (zmq_event_t data_);
+
+        // Copy monitor specific event endpoints to event messages
+        void copy_monitor_address (char *dest_, std::string &src_);
+
+        // Monitor socket cleanup
+        void stop_monitor ();
 
     private:
         //  Creates new endpoint ID and adds the endpoint to the map.
@@ -208,6 +234,12 @@ namespace zmq
         //  Improves efficiency of time measurement.
         clock_t clock;
 
+        // Monitor socket;
+        void *monitor_socket;
+
+        // Bitmask of events being monitored
+        int monitor_events;
+
         socket_base_t (const socket_base_t&);
         const socket_base_t &operator = (const socket_base_t&);
         mutex_t sync;
@@ -216,3 +248,4 @@ namespace zmq
 }
 
 #endif
+

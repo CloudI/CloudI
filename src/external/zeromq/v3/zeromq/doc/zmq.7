@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.1
 .\"  Language: English
 .\"
-.TH "ZMQ" "7" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ" "7" "11/23/2012" "0MQ 3\&.2\&.1" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -188,10 +188,10 @@ Establishing a message flow
 Sending and receiving messages
 .RS 4
 
+\fBzmq_msg_send\fR(3)
+\fBzmq_msg_recv\fR(3)
 \fBzmq_send\fR(3)
-\fBzmq_sendmsg\fR(3)
 \fBzmq_recv\fR(3)
-\fBzmq_recvmsg\fR(3)
 .RE
 .PP
 \fBInput/output multiplexing\fR. 0MQ provides a mechanism for applications to multiplex input/output events over a set containing both 0MQ sockets and standard sockets\&. This mechanism mirrors the standard
@@ -227,11 +227,9 @@ Local in\-process (inter\-thread) communication transport
 
 \fBzmq_inproc\fR(7)
 .RE
-.SS "Devices"
+.SS "Proxies"
 .sp
-0MQ provides \fIdevices\fR, which are building blocks that act as intermediate nodes in complex messaging topologies\&. Devices can act as brokers that other nodes connect to, proxies that connect through to other nodes, or any mix of these two models\&.
-.sp
-You can start a device in an application thread, see \fBzmq_device\fR(3)\&.
+0MQ provides \fIproxies\fR to create fanout and fan\-in topologies\&. A proxy connects a \fIfrontend\fR socket to a \fIbackend\fR socket and switches all messages between the two sockets, opaquely\&. A proxy may optionally capture all traffic to a third socket\&. To start a proxy in an application thread, use \fBzmq_proxy\fR(3)\&.
 .SH "ERROR HANDLING"
 .sp
 The 0MQ library functions handle errors using the standard conventions found on POSIX systems\&. Generally, this means that upon failure a 0MQ library function shall return either a NULL value (if returning a pointer) or a negative value (if returning an integer), and the actual error code shall be stored in the \fIerrno\fR variable\&.

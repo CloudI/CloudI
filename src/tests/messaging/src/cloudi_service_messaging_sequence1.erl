@@ -73,13 +73,6 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, Dispatcher) ->
-    case cloudi_service:process_index(Dispatcher) of
-        0 ->
-            cloudi_service:send_async(Dispatcher,
-                                      Prefix ++ "sequence1", "start");
-        _ ->
-            ok
-    end,
     cloudi_service:subscribe(Dispatcher, "a/b/c/d"),
     cloudi_service:subscribe(Dispatcher, "a/b/c/*"),
     cloudi_service:subscribe(Dispatcher, "a/b/*/d"),
@@ -92,6 +85,13 @@ cloudi_service_init(_Args, Prefix, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "*/d"),
     cloudi_service:subscribe(Dispatcher, "*"),
     cloudi_service:subscribe(Dispatcher, "sequence1"),
+    case cloudi_service:process_index(Dispatcher) of
+        0 ->
+            cloudi_service:send_async(Dispatcher,
+                                      Prefix ++ "sequence1", "start");
+        _ ->
+            ok
+    end,
     {ok, #state{}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
@@ -101,8 +101,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
     Prefix = cloudi_service:prefix(Dispatcher),
     case Request of
         "start" ->
-            cloudi_service:recv_async(Dispatcher, 100), % consume "end"
-            cloudi_service:recv_async(Dispatcher, 1100), % sleep
+            consume_end_and_sleep(Dispatcher),
             ?LOG_INFO(" messaging sequence1 start erlang", []),
             sequence1(Dispatcher, Prefix),
             ?LOG_INFO(" messaging sequence1 end erlang", []),
@@ -203,48 +202,72 @@ sequence1(Dispatcher, Prefix) ->
     % n.b., depends on cloudi_constants.hrl having
     % RECV_ASYNC_STRATEGY == recv_async_select_oldest
     cloudi_service:recv_async(Dispatcher, Test1Id, false),
-    {ok, Test1Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test1Response, Test1Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test1">> = Test1Response,
     cloudi_service:recv_async(Dispatcher, Test2Id, false),
-    {ok, Test2Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test2Response, Test2Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test2">> = Test2Response,
     cloudi_service:recv_async(Dispatcher, Test3Id, false),
-    {ok, Test3Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test3Response, Test3Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test3">> = Test3Response,
     cloudi_service:recv_async(Dispatcher, Test4Id, false),
-    {ok, Test4Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test4Response, Test4Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test4">> = Test4Response,
     cloudi_service:recv_async(Dispatcher, Test5Id, false),
-    {ok, Test5Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test5Response, Test5Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test5">> = Test5Response,
     cloudi_service:recv_async(Dispatcher, Test6Id, false),
-    {ok, Test6Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test6Response, Test6Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test6">> = Test6Response,
     cloudi_service:recv_async(Dispatcher, Test7Id, false),
-    {ok, Test7Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test7Response, Test7Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test7">> = Test7Response,
     cloudi_service:recv_async(Dispatcher, Test8Id, false),
-    {ok, Test8Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test8Response, Test8Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test8">> = Test8Response,
     cloudi_service:recv_async(Dispatcher, Test9Id, false),
-    {ok, Test9Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test9Response, Test9Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test9">> = Test9Response,
     cloudi_service:recv_async(Dispatcher, Test10Id, false),
-    {ok, Test10Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test10Response, Test10Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test10">> = Test10Response,
     cloudi_service:recv_async(Dispatcher, Test11Id, false),
-    {ok, Test11Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test11Response, Test11Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test11">> = Test11Response,
     cloudi_service:recv_async(Dispatcher, Test12Id, false),
-    {ok, Test12Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test12Response, Test12Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test12">> = Test12Response,
     cloudi_service:recv_async(Dispatcher, Test13Id, false),
-    {ok, Test13Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test13Response, Test13Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test13">> = Test13Response,
     cloudi_service:recv_async(Dispatcher, Test14Id, false),
-    {ok, Test14Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test14Response, Test14Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test14">> = Test14Response,
     cloudi_service:recv_async(Dispatcher, Test15Id, false),
-    {ok, Test15Response} = cloudi_service:recv_async(Dispatcher),
+    {ok, <<>>, Test15Response, Test15Id} =
+        cloudi_service:recv_async(Dispatcher),
     <<"test15">> = Test15Response,
     ok.
+
+consume_end_and_sleep(Dispatcher) ->
+    case cloudi_service:recv_async(Dispatcher, 1000) of
+        {ok, <<>>, "end", _} ->
+            consume_end_and_sleep(Dispatcher);
+        {error, timeout} ->
+            ok
+    end.
+

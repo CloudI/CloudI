@@ -96,6 +96,10 @@ namespace zmq
         //  possible to communicate with IPv6-only hosts. If 0, the socket can
         //  connect to and accept connections from both IPv4 and IPv6 hosts.
         int ipv4only;
+        
+        //  If 1, connecting pipes are not attached immediately, meaning a send()
+        //  on a socket with only connecting pipes would block
+        int delay_attach_on_connect;
 
         //  If true, session reads all the pending messages from the pipe and
         //  sends them to the network when socket is closed.
@@ -108,10 +112,7 @@ namespace zmq
         //  If 1, (X)SUB socket should filter the messages. If 0, it should not.
         bool filter;
 
-        //  Sends identity to all new connections.
-        bool send_identity;
-
-        //  Receivers identity from all new connections.
+        //  If true, the identity message is forwarded to the socket.
         bool recv_identity;
 
         //  TCP keep-alive settings.
