@@ -1,11 +1,11 @@
 beamdir = ../ebin
-beam_DATA = cloudi_job_messaging_sequence1.beam \
-            cloudi_job_messaging_sequence2.beam \
-            cloudi_job_messaging_sequence3.beam
+beam_DATA = cloudi_service_messaging_sequence1.beam \
+            cloudi_service_messaging_sequence2.beam \
+            cloudi_service_messaging_sequence3.beam
 CLEANFILES = $(beam_DATA) \
-             $(beamdir)/cloudi_job_messaging_sequence1.beam \
-             $(beamdir)/cloudi_job_messaging_sequence2.beam \
-             $(beamdir)/cloudi_job_messaging_sequence3.beam
+             $(beamdir)/cloudi_service_messaging_sequence1.beam \
+             $(beamdir)/cloudi_service_messaging_sequence2.beam \
+             $(beamdir)/cloudi_service_messaging_sequence3.beam
 
 all-local: $(beam_DATA)
 	$(MKDIR_P) $(beamdir) || exit 0

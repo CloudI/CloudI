@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI External Job Supervisor==
+%%% ==CloudI External Service Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 1.1.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_external_sup).
@@ -81,11 +81,17 @@ create_external(Protocol, BufferSize, Timeout, Prefix,
                 DestDeny, DestAllow, ConfigOptions)
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (Protocol == tcp) or (Protocol == udp),
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
+    true = (Protocol == tcp) orelse (Protocol == udp),
+    true = (DestRefresh == immediate_closest) orelse
+           (DestRefresh == lazy_closest) orelse
+           (DestRefresh == immediate_furthest) orelse
+           (DestRefresh == lazy_furthest) orelse
+           (DestRefresh == immediate_random) orelse
+           (DestRefresh == lazy_random) orelse
+           (DestRefresh == immediate_local) orelse
+           (DestRefresh == lazy_local) orelse
+           (DestRefresh == immediate_remote) orelse
+           (DestRefresh == lazy_remote) orelse
            (DestRefresh == none),
     case supervisor:start_child(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,

@@ -230,6 +230,9 @@ dialyzer.plt:
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
                        compiler debugger ssl tools
 
+doc:
+	$(ESCRIPT) $(abs_top_builddir)/rebar doc || exit 0
+
 run:
 	@echo
 	@echo "********************"
@@ -262,7 +265,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-hexpi-install \
                    tests-http-install \
                    tests-http_req-install \
-                   tests-job_api-install \
+                   tests-service_api-install \
                    tests-messaging-install \
                    tests-msg_size-install \
                    tests-zeromq-install \
@@ -271,8 +274,8 @@ install-exec-hook: cloudi-prefix-install \
                    api-java-install \
                    api-python-install \
                    api-ruby-install \
-                   job_api-install \
-                   job_api-python-install
+                   service_api-install \
+                   service_api-python-install
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_logdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"
@@ -319,13 +322,13 @@ tests-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests"
 
 tests-flood-install: $(top_builddir)/tests/flood/service/flood \
-                     $(top_builddir)/tests/flood/ebin/cloudi_job_flood.beam \
+                     $(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam \
                      $(top_builddir)/tests/flood/service/jar/cloudi.jar \
                      $(top_builddir)/tests/flood/service/jar/flood.jar
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/ebin"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/service"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar"
-	$(INSTALL_DATA) "$(top_builddir)/tests/flood/ebin/cloudi_job_flood.beam" \
+	$(INSTALL_DATA) "$(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/ebin/"
 	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
              "$(top_builddir)/tests/flood/service/flood" \
@@ -339,11 +342,11 @@ tests-flood-install: $(top_builddir)/tests/flood/service/flood \
 	$(INSTALL_DATA) "$(top_srcdir)/tests/flood/service/flood.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
 
-tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam \
+tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam \
                      $(top_builddir)/tests/hexpi/cxx_src/hexpi
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv"
-	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_job_hexpi.beam" \
+	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
 	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
              "$(top_builddir)/tests/hexpi/cxx_src/hexpi" \
@@ -377,7 +380,7 @@ tests-http_req-install: \
         $(top_builddir)/tests/http_req/c_src/http_req \
         $(top_builddir)/tests/http_req/jar/cloudi.jar \
         $(top_builddir)/tests/http_req/jar/http_req.jar \
-        $(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam
+        $(top_builddir)/tests/http_req/ebin/cloudi_service_http_req.beam
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
@@ -396,7 +399,7 @@ tests-http_req-install: \
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/http_req/ebin/cloudi_job_http_req.beam" \
+        "$(top_builddir)/tests/http_req/ebin/cloudi_service_http_req.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
@@ -404,21 +407,21 @@ tests-http_req-install: \
         "$(top_srcdir)/tests/http_req/public_html/800px-Juliadim2.png" \
         "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 
-tests-job_api-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/job_api"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/run.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/logging_on.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/logging_off.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/job_api/path.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/job_api/"
+tests-service_api-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/service_api"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/run.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/logging_on.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/logging_off.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/path.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
 
 tests-messaging-install: \
-        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence1.beam \
-        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence2.beam \
-        $(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence3.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam \
         $(top_builddir)/tests/messaging/jar/cloudi.jar \
         $(top_builddir)/tests/messaging/jar/messaging.jar \
         $(top_builddir)/tests/messaging/cxx_src/messaging
@@ -426,13 +429,13 @@ tests-messaging-install: \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence1.beam" \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence2.beam" \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_job_messaging_sequence3.beam" \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
@@ -449,7 +452,7 @@ tests-messaging-install: \
              "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv/"
 
 tests-msg_size-install: \
-        $(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam \
+        $(top_builddir)/tests/msg_size/ebin/cloudi_service_msg_size.beam \
         $(top_builddir)/tests/msg_size/jar/cloudi.jar \
         $(top_builddir)/tests/msg_size/jar/msg_size.jar \
         $(top_builddir)/tests/msg_size/cxx_src/msg_size
@@ -457,7 +460,7 @@ tests-msg_size-install: \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/msg_size/ebin/cloudi_job_msg_size.beam" \
+        "$(top_builddir)/tests/msg_size/ebin/cloudi_service_msg_size.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/msg_size/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
@@ -506,30 +509,30 @@ api-ruby-install:
 	$(INSTALL_DATA) "$(top_srcdir)/api/ruby/erlang.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/api/ruby/"
 
-job_api-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/job_api"
+service_api-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api"
 
-job_api-python-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib"
-	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/cloudi_job_api.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/job_api/python/"
-	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/jsonrpclib/LICENSE.txt" \
-                    "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/"
-	$(INSTALL_DATA) "$(top_srcdir)/job_api/python/jsonrpclib/README.md" \
-                    "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/"
+service_api-python-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib"
+	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/cloudi_service_api.py" \
+                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/"
+	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/jsonrpclib/LICENSE.txt" \
+                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/"
+	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/jsonrpclib/README.md" \
+                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/__init__.py" \
-        "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/__init__.py" \
+        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
-        "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
+        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/config.py" \
-        "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/config.py" \
+        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/history.py" \
-        "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/history.py" \
+        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 	$(INSTALL_DATA) \
-        "$(top_srcdir)/job_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
-        "$(DESTDIR)$(cloudi_prefix)/job_api/python/jsonrpclib/jsonrpclib/"
+        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
+        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 

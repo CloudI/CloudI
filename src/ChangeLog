@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update edoc documentation
+    * Change all references of "job" to "service" to avoid confusion
+    * Fix ACL atom usage bug
+    * Fix CloudI Job API output
+
 2013-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.1.1 (beta) released

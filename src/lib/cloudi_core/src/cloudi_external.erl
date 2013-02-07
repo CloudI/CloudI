@@ -3,9 +3,9 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI External==
+%%% ==CloudI External Service==
 %%% Erlang process which provides the connection to a thread in an
-%%% external job.
+%%% external service.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_external).
@@ -107,7 +107,7 @@
         cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
         dest_allow,      % is the socket allowed to send to a destination
-        options          % #config_job_options{} from configuration
+        options          % #config_service_options{} from configuration
     }).
 
 -compile({nowarn_unused_function, [{recv_async_select_random, 1},
@@ -121,7 +121,7 @@ start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
            DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_job_options) ->
+         is_record(ConfigOptions, config_service_options) ->
     true = (Protocol =:= tcp) or (Protocol =:= udp),
     true = (DestRefresh =:= immediate_closest) or
            (DestRefresh =:= lazy_closest) or
@@ -217,7 +217,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                          options = ConfigOptions} = StateData) ->
     % first message within the CloudI API received during
     % the object construction or init API function
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault),
          StateData),
     if
@@ -606,7 +606,7 @@ handle_info({'send_async', _, _, _, _,
             #state{queue_messages = true,
                    queued = Queue,
                    options = ConfigOptions} = StateData) ->
-    QueueLimit = ConfigOptions#config_job_options.queue_limit,
+    QueueLimit = ConfigOptions#config_service_options.queue_limit,
     QueueLimitOk = if
         QueueLimit /= undefined ->
             pqueue4:len(Queue) < QueueLimit;
@@ -638,7 +638,7 @@ handle_info({'send_sync', _, _, _, _,
             #state{queue_messages = true,
                    queued = Queue,
                    options = ConfigOptions} = StateData) ->
-    QueueLimit = ConfigOptions#config_job_options.queue_limit,
+    QueueLimit = ConfigOptions#config_service_options.queue_limit,
     QueueLimitOk = if
         QueueLimit /= undefined ->
             pqueue4:len(Queue) < QueueLimit;
@@ -1037,7 +1037,7 @@ destination_allowed(Name, DestDeny, DestAllow) ->
     end.
 
 destination_refresh_first(DestRefresh,
-                          #config_job_options{dest_refresh_start = Delay})
+                          #config_service_options{dest_refresh_start = Delay})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
@@ -1057,7 +1057,7 @@ destination_refresh_first(none, _) ->
     ok.
 
 destination_refresh_start(DestRefresh,
-                          #config_job_options{dest_refresh_delay = Delay})
+                          #config_service_options{dest_refresh_delay = Delay})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse

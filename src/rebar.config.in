@@ -16,9 +16,11 @@
             "lib/cpg",
             "lib/uuid",
             "lib/trie"]}.
-{edoc_opts, [{preprocess, true}]}.
+{edoc_opts, [{preprocess, true},
+             {includes, ["../../lib"]}]}.
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
             {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
+            {i, "lib"},
             warnings_as_errors,
             strict_validation,
             warn_bif_clash,

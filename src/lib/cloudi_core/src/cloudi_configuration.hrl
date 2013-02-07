@@ -48,7 +48,7 @@
         redirect = undefined
     }).
 
--record(config_job_options,
+-record(config_service_options,
     {
         % -128 (high) <= priority_default <= 127 (low)
         priority_default = 0,
@@ -68,8 +68,8 @@
         dest_refresh_delay = 300000 % milliseconds (5 minutes)
     }).
 
-% internal job parameters
--record(config_job_internal,
+% internal service parameters
+-record(config_service_internal,
     {
         prefix,
         module,
@@ -87,8 +87,8 @@
         uuid
     }).
 
-% external job parameters
--record(config_job_external,
+% external service parameters
+-record(config_service_external,
     {
         prefix,
         file_path,
@@ -115,7 +115,7 @@
         uuid_generator,
         logging = #config_logging{},
         acl = dict:new(),
-        jobs = [],
+        services = [],
         nodes = []
     }).
 

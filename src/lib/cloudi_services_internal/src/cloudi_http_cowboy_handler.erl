@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012 Michael Truog
-%%% @version 1.1.0 {@date} {@time}
+%%% @copyright 2012-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -74,7 +74,7 @@ init({tcp, http}, Req, Opts) ->
     State = #cowboy_state{} = Opts,
     {ok, Req, State}.
 
-handle(Req0, #cowboy_state{job = Job,
+handle(Req0, #cowboy_state{service = Service,
                            output_type = OutputType,
                            use_host_prefix = UseHostPrefix,
                            use_method_suffix = UseMethodSuffix} = State) ->
@@ -152,12 +152,12 @@ handle(Req0, #cowboy_state{job = Job,
         OutputType =:= external; OutputType =:= binary ->
             headers_external(HeadersIncoming)
     end,
-    Job ! {http_request,
-           #request_state{name_incoming = NameIncoming,
-                          name_outgoing = NameOutgoing,
-                          request_info = RequestInfo,
-                          request = Request,
-                          request_pid = self()}},
+    Service ! {http_request,
+               #request_state{name_incoming = NameIncoming,
+                              name_outgoing = NameOutgoing,
+                              request_info = RequestInfo,
+                              request = Request,
+                              request_pid = self()}},
     receive
         {ok, HttpCode, HeadersOutgoing, ResponseBinary} ->
             ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
@@ -194,7 +194,7 @@ header_content_type(Headers) ->
             hd(binary:split(Value, <<",">>))
     end.
 
-% format for external jobs, http headers passed as key-value pairs
+% format for external services, http headers passed as key-value pairs
 headers_external(L) ->
     erlang:iolist_to_binary(lists:reverse(headers_external([], L))).
 

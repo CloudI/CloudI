@@ -66,7 +66,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
     else
         AC_MSG_RESULT(building)
         AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
-            [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_job_zeromq])])
+            [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_service_zeromq])])
         abs_top_srcdir=`cd $srcdir; pwd`
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/erlzmq/ && \

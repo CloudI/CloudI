@@ -11,16 +11,16 @@
     {tests, ["/tests/"]},
     {api, ["/cloudi/api/"]}
 ]}.
-{jobs, [
-    % an internal job is a native Erlang job, using the cloudi_job behavior
-    % the job below provides a queue for specific database queries
+{services, [
+    % an internal service is a native Erlang service, using the cloudi_service behavior
+    % the service below provides a queue for specific database queries
     {internal,
         % prefix specified for all subscriptions
         "/cloudi/api/",
         % module name of a module in a reachable path
-        cloudi_job_api,
+        cloudi_service_api,
         % module arguments are supplied as a list for the
-        % cloudi_job_init/2 function
+        % cloudi_service_init/2 function
         [],
         % destination refresh controls how quickly service membership propogates
         % Any process that sends to long-lived processes can use
@@ -50,7 +50,7 @@
         %  'lazy_remote', 'immediate_remote',
         %  'none')
         none,
-        % timeout for executing the cloudi_job_init/2 function
+        % timeout for executing the cloudi_service_init/2 function
         5000,
         % default timeout for asynchronous calls
         5000,
@@ -81,16 +81,16 @@
         % MaxT (maximum time)
         300, % seconds
         % options, e.g.:
-        % {queue_limit, 1024} % to limit the job's queue to a maximum
+        % {queue_limit, 1024} % to limit the service's queue to a maximum
         %                     % of 1024 requests (to prevent excessive memory
-        %                     % consumption while the job is busy, handling a
+        %                     % consumption while the service is busy, handling a
         %                     % previous request)
-        % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
+        % (see config_service_options in lib/cloudi/src/cloudi_configuration.hrl)
         []},
 
-    % an external job is an OS process connected
+    % an external service is an OS process connected
     % with a socket to the loopback device for each thread
-    % the job below processes the Hexidecimal digits of PI (as a test)
+    % the service below processes the Hexidecimal digits of PI (as a test)
     {external,
         % prefix specified for all subscriptions
         "/tests/",
@@ -171,16 +171,16 @@
         % MaxT (maximum time)
         300, % seconds
         % options, e.g.:
-        % {queue_limit, 1024} % to limit the job's queue to a maximum
+        % {queue_limit, 1024} % to limit the service's queue to a maximum
         %                     % of 1024 requests (to prevent excessive memory
-        %                     % consumption while the job is busy, handling a
+        %                     % consumption while the service is busy, handling a
         %                     % previous request)
-        % (see config_job_options in lib/cloudi/src/cloudi_configuration.hrl)
+        % (see config_service_options in lib/cloudi/src/cloudi_configuration.hrl)
         []},
-    % the job below provides a connection to the cloudi_tests PostgreSQL DB
+    % the service below provides a connection to the cloudi_tests PostgreSQL DB
     %{internal,
     %    "/db/pgsql/",
-    %    cloudi_job_db_pgsql,
+    %    cloudi_service_db_pgsql,
     %    [{hostname, "192.168.2.4"},
     %     {username, "cloudi"},
     %     {password, "sdehmtr1g9qs"},
@@ -188,26 +188,26 @@
     %     {database, "cloudi_tests"}],
     %    none,
     %    5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
-    % the job below provides a queue for specific database queries
+    % the service below provides a queue for specific database queries
     {internal,
         "/db/pgsql/",
-        cloudi_job_work_manager,
+        cloudi_service_work_manager,
         [{destination, "/db/pgsql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     {internal,
         "/db/mysql/",
-        cloudi_job_work_manager,
+        cloudi_service_work_manager,
         [{destination, "/db/mysql/cloudi_tests"},
          {name, "cloudi_tests_proxy"}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
-    % the job below manages the Hexidecimal PI test
+    % the service below manages the Hexidecimal PI test
     {internal,
         "/tests/",
-        cloudi_job_map_reduce,
-        [{map_reduce, cloudi_job_hexpi}, % map-reduce module
+        cloudi_service_map_reduce,
+        [{map_reduce, cloudi_service_hexpi}, % map-reduce module
          {map_reduce_args, [1, 65536]},  % index start, index end
          {concurrency, 1.5}],
         immediate_closest, % recover from failures (process deaths) immediately
@@ -215,25 +215,25 @@
     % tests/http/ services
     {internal,
         "/tests/http/",
-        cloudi_job_http_misultin,
+        cloudi_service_http_misultin,
         [{compress, true}, {port, 6464}, {output, external}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     {internal,
         "/tests/http/",
-        cloudi_job_http_misultin,
+        cloudi_service_http_misultin,
         [{compress, true}, {port, 6465}, {output, internal}],
         lazy_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     {internal,
         "/tests/http/",
-        cloudi_job_http_cowboy,
+        cloudi_service_http_cowboy,
         [{port, 6466}, {output, external}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     {internal,
         "/tests/http/",
-        cloudi_job_http_cowboy,
+        cloudi_service_http_cowboy,
         [{port, 6467}, {output, internal}],
         lazy_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
@@ -291,13 +291,13 @@
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
     {internal,
         "/tests/http_req/",
-        cloudi_job_http_req,
+        cloudi_service_http_req,
         [],
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     {internal,
         "/tests/http_req/",
-        cloudi_job_filesystem,
+        cloudi_service_filesystem,
         [{directory, "tests/http_req/public_html/"}],
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
@@ -309,7 +309,7 @@
     %    % inbound/outbound message paths much be acyclic
     %    % (if they are not, you will receive a erlzmq EFSM error
     %    %  because the ZeroMQ REQ has received 2 zmq_send calls)
-    %    cloudi_job_zeromq,
+    %    cloudi_service_zeromq,
     %    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
     %    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstarta"]}},
     %    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
@@ -342,7 +342,7 @@
     %    % inbound/outbound message paths much be acyclic
     %    % (if they are not, you will receive a erlzmq EFSM error
     %    %  because the ZeroMQ REQ has received 2 zmq_send calls)
-    %    cloudi_job_zeromq,
+    %    cloudi_service_zeromq,
     %    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
     %    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstartb"]}},
     %    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
@@ -373,7 +373,7 @@
     %% Chain inproc test (50 endpoints in a sequential call path)
     %{internal,
     %    "/tests/zeromq/",
-    %    cloudi_job_zeromq,
+    %    cloudi_service_zeromq,
     %    [{outbound, {"chain_inproc_start", ["inproc://chainstep1"]}},
     %     {inbound, {"chain_inproc_step1", ["inproc://chainstep1"]}},
     %     {outbound, {"chain_inproc_step1", ["inproc://chainstep2"]}},
@@ -479,7 +479,7 @@
     %% Chain ipc test (25 endpoints in a sequential call path)
     %{internal,
     %    "/tests/zeromq/",
-    %    cloudi_job_zeromq,
+    %    cloudi_service_zeromq,
     %    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1a"]}},
     %     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1a"]}},
     %     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2a"]}},
@@ -534,7 +534,7 @@
     %    5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     %{internal,
     %    "/tests/zeromq/",
-    %    cloudi_job_zeromq,
+    %    cloudi_service_zeromq,
     %    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1b"]}},
     %     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1b"]}},
     %     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2b"]}},
@@ -596,7 +596,7 @@
     %    5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []},
     {internal,
         "/tests/msg_size/",
-        cloudi_job_msg_size,
+        cloudi_service_msg_size,
         [],
         immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
@@ -671,19 +671,19 @@
         5000, 10000, 10000, [api], undefined, 1, 4, 5, 300, []},
     {internal,
         "/tests/messaging/erlang/",
-        cloudi_job_messaging_sequence1,
+        cloudi_service_messaging_sequence1,
         [],
         immediate_closest,
         5000, 10000, 10000, [api], undefined, 4, 5, 300, []},
     {internal,
         "/tests/messaging/erlang/",
-        cloudi_job_messaging_sequence2,
+        cloudi_service_messaging_sequence2,
         [],
         immediate_closest,
         5000, 10000, 10000, [api], undefined, 4, 5, 300, []},
     {internal,
         "/tests/messaging/erlang/",
-        cloudi_job_messaging_sequence3,
+        cloudi_service_messaging_sequence3,
         [],
         immediate_closest,
         5000, 10000, 10000, [api], undefined, 4, 5, 300, []}
@@ -717,31 +717,31 @@
     %    5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
     %{internal,
     %    "/tests/flood/",
-    %    cloudi_job_flood,
+    %    cloudi_service_flood,
     %    [{flood, "/tests/flood/does_not_exist", <<"DATA">>, 1000}],
     %    lazy_closest,
     %    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
     %{internal,
     %    "/tests/flood/",
-    %    cloudi_job_flood,
+    %    cloudi_service_flood,
     %    [{flood, "/tests/flood/c", <<"DATA">>, 1000}],
     %    lazy_closest,
     %    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
     %{internal,
     %    "/tests/flood/",
-    %    cloudi_job_flood,
+    %    cloudi_service_flood,
     %    [{flood, "/tests/flood/java", <<"DATA">>, 1000}],
     %    lazy_closest,
     %    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
     %{internal,
     %    "/tests/flood/",
-    %    cloudi_job_flood,
+    %    cloudi_service_flood,
     %    [{flood, "/tests/flood/python", <<"DATA">>, 1000}],
     %    lazy_closest,
     %    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
     %{internal,
     %    "/tests/flood/",
-    %    cloudi_job_flood,
+    %    cloudi_service_flood,
     %    [{flood, "/tests/flood/ruby", <<"DATA">>, 1000}],
     %    lazy_closest,
     %    5000, 5000, 5000, [api], undefined, 2, 5, 300, []}

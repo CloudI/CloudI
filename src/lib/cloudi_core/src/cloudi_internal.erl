@@ -3,11 +3,11 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Internal Job Dispatcher Process==
-%%% Parent process for each cloudi_job behaviour process (i.e., native Erlang
-%%% CloudI job). The dispatcher handles all cloudi_job process outgoing
-%%% requests to prevent undesirable synchronous function call paths that
-%%% are prone to deadlocks.
+%%% ==CloudI Internal Service Dispatcher Process==
+%%% Parent process for each cloudi_service behaviour process
+%%% (i.e., native Erlang CloudI service). The dispatcher handles all
+%%% cloudi_service process outgoing requests to prevent undesirable
+%%% synchronous function call paths that are prone to deadlocks.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_internal).
@@ -70,9 +70,9 @@
 
 -record(state,
     {
-        job,             % job pid
-        init_job,        % init job pid
-        init_queue_msg = queue:new(),  % messages destine for the job pid
+        service,         % service pid
+        init_service,    % init service pid
+        init_queue_msg = queue:new(),  % messages destine for the service pid
         process_index,   % 0-based index of the Erlang process
         prefix,          % subscribe/unsubscribe name prefix
         timeout_async,   % default timeout for send_async
@@ -89,7 +89,7 @@
         cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,       % is the socket denied from sending to a destination
         dest_allow,      % is the socket allowed to send to a destination
-        options          % #config_job_options{} from configuration
+        options          % #config_service_options{} from configuration
     }).
 
 -compile({nowarn_unused_function, [{recv_async_select_random, 1},
@@ -105,7 +105,7 @@ start_link(ProcessIndex, Module, Args, Timeout, Prefix,
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_job_options) ->
+         is_record(ConfigOptions, config_service_options) ->
     true = (DestRefresh =:= immediate_closest) or
            (DestRefresh =:= lazy_closest) or
            (DestRefresh =:= immediate_furthest) or
@@ -128,17 +128,17 @@ start_link(ProcessIndex, Module, Args, Timeout, Prefix,
 init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
     Dispatcher = self(),
-    InitJob = erlang:spawn_link(fun() ->
-        Result = gen_server:start_link(cloudi_job,
+    InitService = erlang:spawn_link(fun() ->
+        Result = gen_server:start_link(cloudi_service,
                                        [Module, Args, Prefix, ConfigOptions,
                                         Dispatcher],
                                        [{timeout, Timeout}]),
-        Dispatcher ! {init_job_done, Result}
+        Dispatcher ! {init_service_done, Result}
     end),
     cloudi_random:seed(),
     destination_refresh_first(DestRefresh, ConfigOptions),
-    {ok, #state{job = undefined,
-                init_job = InitJob,
+    {ok, #state{service = undefined,
+                init_service = InitService,
                 process_index = ProcessIndex,
                 prefix = Prefix,
                 timeout_async = TimeoutAsync,
@@ -152,11 +152,11 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 handle_call(process_index, _, #state{process_index = ProcessIndex} = State) ->
     {reply, ProcessIndex, State};
 
-handle_call({self, Job}, _, #state{job = undefined} = State) ->
-    {reply, Job, State};
+handle_call({self, Service}, _, #state{service = undefined} = State) ->
+    {reply, Service, State};
 
-handle_call({self, _}, _, #state{job = Job} = State) ->
-    {reply, Job, State};
+handle_call({self, _}, _, #state{service = Service} = State) ->
+    {reply, Service, State};
 
 handle_call({'subscribe', Pattern}, Client, State) ->
     handle_subscribe(Pattern, Client, State);
@@ -187,7 +187,7 @@ handle_call({'send_async', Name, RequestInfo, Request,
 handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, undefined}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_async', Name, RequestInfo, Request,
                  Timeout, PriorityDefault}, Client, State);
 
@@ -212,7 +212,7 @@ handle_call({'send_async', Name, RequestInfo, Request,
 handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_async', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
@@ -231,7 +231,7 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, undefined}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_async_active', Name, RequestInfo, Request,
                  Timeout, PriorityDefault}, Client, State);
 
@@ -256,7 +256,7 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_async_active', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
@@ -275,7 +275,7 @@ handle_call({'send_sync', Name, RequestInfo, Request,
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, undefined}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_sync', Name, RequestInfo, Request,
                  Timeout, PriorityDefault}, Client, State);
 
@@ -300,7 +300,7 @@ handle_call({'send_sync', Name, RequestInfo, Request,
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, undefined, PatternPid}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'send_sync', Name, RequestInfo, Request,
                  Timeout, PriorityDefault, PatternPid}, Client, State);
 
@@ -319,7 +319,7 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
 handle_call({'mcast_async', Name, RequestInfo, Request,
              Timeout, undefined}, Client,
             #state{options = ConfigOptions} = State) ->
-    PriorityDefault = ConfigOptions#config_job_options.priority_default,
+    PriorityDefault = ConfigOptions#config_service_options.priority_default,
     handle_call({'mcast_async', Name, RequestInfo, Request,
                  Timeout, PriorityDefault}, Client, State);
 
@@ -419,18 +419,18 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
-handle_info({init_job_done, Result},
-            #state{job = undefined,
+handle_info({init_service_done, Result},
+            #state{service = undefined,
                    init_queue_msg = MessagesQueued} = State) ->
     case Result of
-        {ok, Job} ->
-            erlang:link(Job),
-            gen_server:cast(Job, polling),
+        {ok, Service} ->
+            erlang:link(Service),
+            gen_server:cast(Service, polling),
             lists:foreach(fun(Message) ->
-                Job ! Message
+                Service ! Message
             end, queue:to_list(MessagesQueued)),
-            {noreply, State#state{job = Job,
-                                  init_job = undefined,
+            {noreply, State#state{service = Service,
+                                  init_service = undefined,
                                   init_queue_msg = undefined}};
         ignore ->
             {stop, ignore, State};
@@ -598,7 +598,7 @@ handle_info({'recv_async', Timeout, TransId, Consume, Client},
     end;
 
 handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
-             Timeout, TransId, Job},
+             Timeout, TransId, Service},
             State) ->
     case send_timeout_check(TransId, State) of
         error ->
@@ -606,11 +606,11 @@ handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
             {noreply, State};
         {ok, {active, Tref}} when Response == <<>> ->
             erlang:cancel_timer(Tref),
-            Job ! {'timeout_async_active', TransId},
+            Service ! {'timeout_async_active', TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {active, Tref}} ->
             erlang:cancel_timer(Tref),
-            Job ! {'return_async_active', Name, Pattern,
+            Service ! {'return_async_active', Name, Pattern,
                    ResponseInfo, Response, Timeout, TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} when Response == <<>> ->
@@ -625,13 +625,13 @@ handle_info({'return_async', Name, Pattern, ResponseInfo, Response,
     end;
 
 handle_info({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
-             _Timeout, _TransId, _Job},
+             _Timeout, _TransId, _Service},
             State) ->
     % a response after a timeout is discarded
     {noreply, State};
 
 handle_info({'send_async_timeout', TransId},
-            #state{job = Job,
+            #state{service = Service,
                    init_queue_msg = MessagesQueued} = State) ->
     case send_timeout_check(TransId, State) of
         error ->
@@ -642,10 +642,10 @@ handle_info({'send_async_timeout', TransId},
         {ok, {active, _}} ->
             Message = {'timeout_async_active', TransId},
             NewMessagesQueued = if
-                Job =:= undefined ->
+                Service =:= undefined ->
                     queue:in(Message, MessagesQueued);
                 true ->
-                    Job ! Message,
+                    Service ! Message,
                     undefined
             end,
             {noreply,
@@ -673,44 +673,44 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-handle_subscribe(Pattern, {Job, _},
-                 #state{job = undefined} = State) ->
-    handle_subscribe_job(Pattern, Job, State);
+handle_subscribe(Pattern, {Service, _},
+                 #state{service = undefined} = State) ->
+    handle_subscribe_service(Pattern, Service, State);
 
 handle_subscribe(Pattern, _,
-                 #state{job = Job} = State) ->
-    handle_subscribe_job(Pattern, Job, State).
+                 #state{service = Service} = State) ->
+    handle_subscribe_service(Pattern, Service, State).
 
-handle_subscribe_job(Pattern, Job,
-                     #state{prefix = Prefix} = State) ->
-    cpg:join(Prefix ++ Pattern, Job),
+handle_subscribe_service(Pattern, Service,
+                         #state{prefix = Prefix} = State) ->
+    cpg:join(Prefix ++ Pattern, Service),
     {reply, ok, State}.
 
-handle_unsubscribe(Pattern, {Job, _},
-                   #state{job = undefined} = State) ->
-    handle_unsubscribe_job(Pattern, Job, State);
+handle_unsubscribe(Pattern, {Service, _},
+                   #state{service = undefined} = State) ->
+    handle_unsubscribe_service(Pattern, Service, State);
 
 handle_unsubscribe(Pattern, _,
-                   #state{job = Job} = State) ->
-    handle_unsubscribe_job(Pattern, Job, State).
+                   #state{service = Service} = State) ->
+    handle_unsubscribe_service(Pattern, Service, State).
 
-handle_unsubscribe_job(Pattern, Job,
-                       #state{prefix = Prefix} = State) ->
-    cpg:leave(Prefix ++ Pattern, Job),
+handle_unsubscribe_service(Pattern, Service,
+                           #state{prefix = Prefix} = State) ->
+    cpg:leave(Prefix ++ Pattern, Service),
     {reply, ok, State}.
 
-handle_get_pid(Name, Timeout, {Job, _} = Client,
-               #state{job = undefined} = State) ->
-    handle_get_pid_job(Name, Timeout, Client, Job, State);
+handle_get_pid(Name, Timeout, {Service, _} = Client,
+               #state{service = undefined} = State) ->
+    handle_get_pid_service(Name, Timeout, Client, Service, State);
 
 handle_get_pid(Name, Timeout, Client,
-               #state{job = Job} = State) ->
-    handle_get_pid_job(Name, Timeout, Client, Job, State).
+               #state{service = Service} = State) ->
+    handle_get_pid_service(Name, Timeout, Client, Service, State).
 
-handle_get_pid_job(Name, Timeout, Client, Job,
-                   #state{dest_refresh = DestRefresh,
-                          cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Job, Groups) of
+handle_get_pid_service(Name, Timeout, Client, Service,
+                       #state{dest_refresh = DestRefresh,
+                              cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Service, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'get_pid', Name,
@@ -726,23 +726,23 @@ handle_get_pid_job(Name, Timeout, Client, Job,
     end.
 
 handle_send_async(Name, RequestInfo, Request,
-                  Timeout, Priority, {Job, _} = Client,
-                  #state{job = undefined} = State) ->
-    handle_send_async_job(Name, RequestInfo, Request,
-                          Timeout, Priority, Client, Job, State);
+                  Timeout, Priority, {Service, _} = Client,
+                  #state{service = undefined} = State) ->
+    handle_send_async_service(Name, RequestInfo, Request,
+                              Timeout, Priority, Client, Service, State);
 
 handle_send_async(Name, RequestInfo, Request,
                   Timeout, Priority, Client,
-                  #state{job = Job} = State) ->
-    handle_send_async_job(Name, RequestInfo, Request,
-                          Timeout, Priority, Client, Job, State).
+                  #state{service = Service} = State) ->
+    handle_send_async_service(Name, RequestInfo, Request,
+                              Timeout, Priority, Client, Service, State).
 
-handle_send_async_job(Name, RequestInfo, Request,
-                      Timeout, Priority, Client, Job,
-                      #state{uuid_generator = UUID,
-                             dest_refresh = DestRefresh,
-                             cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Job, Groups) of
+handle_send_async_service(Name, RequestInfo, Request,
+                          Timeout, Priority, Client, Service,
+                          #state{uuid_generator = UUID,
+                                 dest_refresh = DestRefresh,
+                                 cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Service, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'send_async', Name,
@@ -756,49 +756,49 @@ handle_send_async_job(Name, RequestInfo, Request,
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Job},
+                   Timeout, Priority, TransId, Service},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
     end.
 
 handle_send_async(Name, Pattern, RequestInfo, Request,
-                  Timeout, Priority, Pid, {Job, _},
-                  #state{job = undefined} = State) ->
-    handle_send_async_job(Name, Pattern, RequestInfo, Request,
-                          Timeout, Priority, Pid, Job, State);
+                  Timeout, Priority, Pid, {Service, _},
+                  #state{service = undefined} = State) ->
+    handle_send_async_service(Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, Pid, Service, State);
 
 handle_send_async(Name, Pattern, RequestInfo, Request,
                   Timeout, Priority, Pid, _,
-                  #state{job = Job} = State) ->
-    handle_send_async_job(Name, Pattern, RequestInfo, Request,
-                          Timeout, Priority, Pid, Job, State).
+                  #state{service = Service} = State) ->
+    handle_send_async_service(Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, Pid, Service, State).
 
-handle_send_async_job(Name, Pattern, RequestInfo, Request,
-                      Timeout, Priority, Pid, Job,
-                      #state{uuid_generator = UUID} = State) ->
+handle_send_async_service(Name, Pattern, RequestInfo, Request,
+                          Timeout, Priority, Pid, Service,
+                          #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
     Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Job},
+           Timeout, Priority, TransId, Service},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)}.
 
 handle_send_async_active(Name, RequestInfo, Request,
-                         Timeout, Priority, {Job, _} = Client,
-                         #state{job = undefined} = State) ->
-    handle_send_async_active_job(Name, RequestInfo, Request,
-                                 Timeout, Priority, Client, Job, State);
+                         Timeout, Priority, {Service, _} = Client,
+                         #state{service = undefined} = State) ->
+    handle_send_async_active_service(Name, RequestInfo, Request,
+                                     Timeout, Priority, Client, Service, State);
 
 handle_send_async_active(Name, RequestInfo, Request,
                          Timeout, Priority, Client,
-                         #state{job = Job} = State) ->
-    handle_send_async_active_job(Name, RequestInfo, Request,
-                                 Timeout, Priority, Client, Job, State).
+                         #state{service = Service} = State) ->
+    handle_send_async_active_service(Name, RequestInfo, Request,
+                                     Timeout, Priority, Client, Service, State).
 
-handle_send_async_active_job(Name, RequestInfo, Request,
-                             Timeout, Priority, Client, Job,
-                             #state{uuid_generator = UUID,
-                                    dest_refresh = DestRefresh,
-                                    cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Job, Groups) of
+handle_send_async_active_service(Name, RequestInfo, Request,
+                                 Timeout, Priority, Client, Service,
+                                 #state{uuid_generator = UUID,
+                                        dest_refresh = DestRefresh,
+                                        cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Service, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'send_async_active', Name,
@@ -812,50 +812,50 @@ handle_send_async_active_job(Name, RequestInfo, Request,
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Job},
+                   Timeout, Priority, TransId, Service},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
 
 handle_send_async_active(Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, Pid, {Job, _},
-                         #state{job = undefined} = State) ->
-    handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
-                                 Timeout, Priority, Pid, Job, State);
+                         Timeout, Priority, Pid, {Service, _},
+                         #state{service = undefined} = State) ->
+    handle_send_async_active_service(Name, Pattern, RequestInfo, Request,
+                                     Timeout, Priority, Pid, Service, State);
 
 handle_send_async_active(Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, Pid, _,
-                         #state{job = Job} = State) ->
-    handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
-                                 Timeout, Priority, Pid, Job, State).
+                         #state{service = Service} = State) ->
+    handle_send_async_active_service(Name, Pattern, RequestInfo, Request,
+                                     Timeout, Priority, Pid, Service, State).
 
-handle_send_async_active_job(Name, Pattern, RequestInfo, Request,
-                             Timeout, Priority, Pid, Job,
-                             #state{uuid_generator = UUID} = State) ->
+handle_send_async_active_service(Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, Pid, Service,
+                                 #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
     Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Job},
+           Timeout, Priority, TransId, Service},
     {reply, {ok, TransId}, send_async_active_timeout_start(Timeout,
                                                            TransId, State)}.
 
 handle_send_sync(Name, RequestInfo, Request,
-                 Timeout, Priority, {Job, _} = Client,
-                 #state{job = undefined} = State) ->
-    handle_send_sync_job(Name, RequestInfo, Request,
-                         Timeout, Priority, Client, Job, State);
+                 Timeout, Priority, {Service, _} = Client,
+                 #state{service = undefined} = State) ->
+    handle_send_sync_service(Name, RequestInfo, Request,
+                             Timeout, Priority, Client, Service, State);
 
 handle_send_sync(Name, RequestInfo, Request,
                  Timeout, Priority, Client,
-                 #state{job = Job} = State) ->
-    handle_send_sync_job(Name, RequestInfo, Request,
-                         Timeout, Priority, Client, Job, State).
+                 #state{service = Service} = State) ->
+    handle_send_sync_service(Name, RequestInfo, Request,
+                             Timeout, Priority, Client, Service, State).
 
-handle_send_sync_job(Name, RequestInfo, Request,
-                     Timeout, Priority, Client, Job,
-                     #state{uuid_generator = UUID,
-                            dest_refresh = DestRefresh,
-                            cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Job, Groups) of
+handle_send_sync_service(Name, RequestInfo, Request,
+                         Timeout, Priority, Client, Service,
+                         #state{uuid_generator = UUID,
+                                dest_refresh = DestRefresh,
+                                cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, Service, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'send_sync', Name,
@@ -869,10 +869,10 @@ handle_send_sync_job(Name, RequestInfo, Request,
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
             Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Job},
+                   Timeout, Priority, TransId, Service},
             receive
                 {'return_sync', _, _,
-                 ResponseInfo, Response, _, TransId, Job} ->
+                 ResponseInfo, Response, _, TransId, Service} ->
                     if
                         Response == <<>> ->
                             gen_server:reply(Client, {error, timeout});
@@ -890,25 +890,25 @@ handle_send_sync_job(Name, RequestInfo, Request,
     end.
 
 handle_send_sync(Name, Pattern, RequestInfo, Request,
-                 Timeout, Priority, Pid, {Job, _},
-                 #state{job = undefined} = State) ->
-    handle_send_sync_job(Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, Pid, Job, State);
+                 Timeout, Priority, Pid, {Service, _},
+                 #state{service = undefined} = State) ->
+    handle_send_sync_service(Name, Pattern, RequestInfo, Request,
+                             Timeout, Priority, Pid, Service, State);
 
 handle_send_sync(Name, Pattern, RequestInfo, Request,
                  Timeout, Priority, Pid, _,
-                 #state{job = Job} = State) ->
-    handle_send_sync_job(Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, Pid, Job, State).
+                 #state{service = Service} = State) ->
+    handle_send_sync_service(Name, Pattern, RequestInfo, Request,
+                             Timeout, Priority, Pid, Service, State).
 
-handle_send_sync_job(Name, Pattern, RequestInfo, Request,
-                     Timeout, Priority, Pid, Job,
-                     #state{uuid_generator = UUID} = State) ->
+handle_send_sync_service(Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, Pid, Service,
+                         #state{uuid_generator = UUID} = State) ->
     TransId = uuid:get_v1(UUID),
     Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
-           Timeout - ?TIMEOUT_DELTA, Priority, TransId, Job},
+           Timeout - ?TIMEOUT_DELTA, Priority, TransId, Service},
     receive
-        {'return_sync', _, _, ResponseInfo, Response, _, TransId, Job} ->
+        {'return_sync', _, _, ResponseInfo, Response, _, TransId, Service} ->
             if
                 Response == <<>> ->
                     {reply, {error, timeout}, State};
@@ -923,23 +923,23 @@ handle_send_sync_job(Name, Pattern, RequestInfo, Request,
     end.
 
 handle_mcast_async(Name, RequestInfo, Request,
-                   Timeout, Priority, {Job, _} = Client,
-                   #state{job = undefined} = State) ->
-    handle_mcast_async_job(Name, RequestInfo, Request,
-                           Timeout, Priority, Client, Job, State);
+                   Timeout, Priority, {Service, _} = Client,
+                   #state{service = undefined} = State) ->
+    handle_mcast_async_service(Name, RequestInfo, Request,
+                               Timeout, Priority, Client, Service, State);
 
 handle_mcast_async(Name, RequestInfo, Request,
                    Timeout, Priority, Client,
-                   #state{job = Job} = State) ->
-    handle_mcast_async_job(Name, RequestInfo, Request,
-                           Timeout, Priority, Client, Job, State).
+                   #state{service = Service} = State) ->
+    handle_mcast_async_service(Name, RequestInfo, Request,
+                               Timeout, Priority, Client, Service, State).
 
-handle_mcast_async_job(Name, RequestInfo, Request,
-                       Timeout, Priority, Client, Job,
-                       #state{uuid_generator = UUID,
-                              dest_refresh = DestRefresh,
-                              cpg_data = Groups} = State) ->
-    case destination_all(DestRefresh, Name, Job, Groups) of
+handle_mcast_async_service(Name, RequestInfo, Request,
+                           Timeout, Priority, Client, Service,
+                           #state{uuid_generator = UUID,
+                                  dest_refresh = DestRefresh,
+                                  cpg_data = Groups} = State) ->
+    case destination_all(DestRefresh, Name, Service, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
                               {'mcast_async', Name,
@@ -954,7 +954,7 @@ handle_mcast_async_job(Name, RequestInfo, Request,
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
                 Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Job},
+                       Timeout, Priority, TransId, Service},
                 TransId
             end, PidList),
             gen_server:reply(Client, {ok, TransIdList}),
@@ -1001,7 +1001,7 @@ destination_allowed(Name, DestDeny, DestAllow) ->
     end.
 
 destination_refresh_first(DestRefresh,
-                          #config_job_options{dest_refresh_start = Delay})
+                          #config_service_options{dest_refresh_start = Delay})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
@@ -1021,7 +1021,7 @@ destination_refresh_first(none, _) ->
     ok.
 
 destination_refresh_start(DestRefresh,
-                          #config_job_options{dest_refresh_delay = Delay})
+                          #config_service_options{dest_refresh_delay = Delay})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
