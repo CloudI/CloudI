@@ -23,7 +23,6 @@
 #include <stdarg.h>
 
 #include "session_base.hpp"
-#include "socket_base.hpp"
 #include "i_engine.hpp"
 #include "err.hpp"
 #include "pipe.hpp"
@@ -117,8 +116,8 @@ zmq::session_base_t::session_base_t (class io_thread_t *io_thread_,
     socket (socket_),
     io_thread (io_thread_),
     has_linger_timer (false),
-    send_identity (options_.send_identity),
-    recv_identity (options_.recv_identity),
+    identity_sent (false),
+    identity_received (false),
     addr (addr_)
 {
 }
@@ -150,15 +149,15 @@ void zmq::session_base_t::attach_pipe (pipe_t *pipe_)
     pipe->set_event_sink (this);
 }
 
-int zmq::session_base_t::read (msg_t *msg_)
+int zmq::session_base_t::pull_msg (msg_t *msg_)
 {
-    //  First message to send is identity (if required).
-    if (send_identity) {
+    //  First message to send is identity
+    if (!identity_sent) {
         zmq_assert (!(msg_->flags () & msg_t::more));
         int rc = msg_->init_size (options.identity_size);
         errno_assert (rc == 0);
         memcpy (msg_->data (), options.identity, options.identity_size);
-        send_identity = false;
+        identity_sent = true;
         incomplete_in = false;
         return 0;
     }
@@ -172,12 +171,19 @@ int zmq::session_base_t::read (msg_t *msg_)
     return 0;
 }
 
-int zmq::session_base_t::write (msg_t *msg_)
+int zmq::session_base_t::push_msg (msg_t *msg_)
 {
-    //  First message to receive is identity (if required).
-    if (recv_identity) {
+    //  First message to receive is identity
+    if (!identity_received) {
         msg_->set_flags (msg_t::identity);
-        recv_identity = false;
+        identity_received = true;
+        if (!options.recv_identity) {
+            int rc = msg_->close ();
+            errno_assert (rc == 0);
+            rc = msg_->init ();
+            errno_assert (rc == 0);
+            return 0;
+        }
     }
 
     if (pipe && pipe->write (msg_)) {
@@ -193,8 +199,8 @@ int zmq::session_base_t::write (msg_t *msg_)
 void zmq::session_base_t::reset ()
 {
     //  Restore identity flags.
-    send_identity = options.send_identity;
-    recv_identity = options.recv_identity;
+    identity_sent = false;
+    identity_received = false;
 }
 
 void zmq::session_base_t::flush ()
@@ -217,7 +223,7 @@ void zmq::session_base_t::clean_pipes ()
             msg_t msg;
             int rc = msg.init ();
             errno_assert (rc == 0);
-            if (!read (&msg)) {
+            if (pull_msg (&msg) != 0) {
                 zmq_assert (!incomplete_in);
                 break;
             }
@@ -229,20 +235,30 @@ void zmq::session_base_t::clean_pipes ()
 
 void zmq::session_base_t::terminated (pipe_t *pipe_)
 {
-    //  Drop the reference to the deallocated pipe.
-    zmq_assert (pipe == pipe_);
-    pipe = NULL;
+    // Drop the reference to the deallocated pipe if required.
+    zmq_assert (pipe == pipe_ || terminating_pipes.count (pipe_) == 1);
 
-    //  If we are waiting for pending messages to be sent, at this point
-    //  we are sure that there will be no more messages and we can proceed
-    //  with termination safely.
-    if (pending)
+    if (pipe == pipe_)
+        // If this is our current pipe, remove it
+        pipe = NULL;
+    else
+        // Remove the pipe from the detached pipes set
+        terminating_pipes.erase (pipe_);
+
+    // If we are waiting for pending messages to be sent, at this point
+    // we are sure that there will be no more messages and we can proceed
+    // with termination safely.
+    if (pending && !pipe && terminating_pipes.size () == 0)
         proceed_with_term ();
 }
 
 void zmq::session_base_t::read_activated (pipe_t *pipe_)
 {
-    zmq_assert (pipe == pipe_);
+    // Skip activating if we're detaching this pipe
+    if (pipe != pipe_) {
+        zmq_assert (terminating_pipes.count (pipe_) == 1);
+        return;
+    }
 
     if (likely (engine != NULL))
         engine->activate_out ();
@@ -252,32 +268,26 @@ void zmq::session_base_t::read_activated (pipe_t *pipe_)
 
 void zmq::session_base_t::write_activated (pipe_t *pipe_)
 {
-    zmq_assert (pipe == pipe_);
+    // Skip activating if we're detaching this pipe
+    if (pipe != pipe_) {
+        zmq_assert (terminating_pipes.count (pipe_) == 1);
+        return;
+    }
 
     if (engine)
         engine->activate_in ();
 }
 
-void zmq::session_base_t::hiccuped (pipe_t *pipe_)
+void zmq::session_base_t::hiccuped (pipe_t *)
 {
     //  Hiccups are always sent from session to socket, not the other
     //  way round.
     zmq_assert (false);
 }
 
-int zmq::session_base_t::get_address (std::string &addr_)
+zmq::socket_base_t *zmq::session_base_t::get_socket ()
 {
-    if (addr)
-        return addr->to_string (addr_);
-    return -1;
-}
-
-void zmq::session_base_t::monitor_event (int event_, ...)
-{
-    va_list args;
-    va_start (args, event_);
-    socket->monitor_event (event_, args);
-    va_end (args);
+    return socket;
 }
 
 void zmq::session_base_t::process_plug ()
@@ -393,6 +403,16 @@ void zmq::session_base_t::detached ()
     if (!connect) {
         terminate ();
         return;
+    }
+
+    //  For delayed connect situations, terminate the pipe
+    //  and reestablish later on
+    if (pipe && options.delay_attach_on_connect == 1
+        && addr->protocol != "pgm" && addr->protocol != "epgm") {
+        pipe->hiccup ();
+        pipe->terminate (false);
+        terminating_pipes.insert (pipe);
+        pipe = NULL;
     }
 
     reset ();

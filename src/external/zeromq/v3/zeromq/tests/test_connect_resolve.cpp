@@ -18,14 +18,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#include <assert.h>
+#include "../include/zmq.h"
 #include <stdio.h>
 #include <errno.h>
 
-#include "../include/zmq.h"
+#undef NDEBUG
+#include <assert.h>
 
-int main (int argc, char *argv [])
+int main (void)
 {
     fprintf (stderr, "test_connect_resolve running...\n");
 
@@ -40,7 +40,7 @@ int main (int argc, char *argv [])
     int rc = zmq_connect (sock, "tcp://localhost:1234");
     assert (rc == 0);
 
-    rc = zmq_connect (sock, "tcp://foobar123xyz:1234");
+    rc = zmq_connect (sock, "tcp://0mq.is.teh.best:1234");
     assert (rc == -1);
     assert (errno == EINVAL);
 

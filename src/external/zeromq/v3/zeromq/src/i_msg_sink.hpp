@@ -1,6 +1,6 @@
 /*
-    Copyright (c) 2007-2011 iMatix Corporation
-    Copyright (c) 2007-2011 Other contributors as noted in the AUTHORS file
+    Copyright (c) 2007-2012 iMatix Corporation
+    Copyright (c) 2007-2012 Other contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
 
@@ -18,14 +18,25 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __ZMQ_DEVICE_HPP_INCLUDED__
-#define __ZMQ_DEVICE_HPP_INCLUDED__
+#ifndef __ZMQ_I_MSG_SINK_HPP_INCLUDED__
+#define __ZMQ_I_MSG_SINK_HPP_INCLUDED__
 
 namespace zmq
 {
 
-    int device (class socket_base_t *insocket_,
-        class socket_base_t *outsocket_);
+    //  Forward declaration
+    class msg_t;
+
+    //  Interface to be implemented by message sink.
+
+    struct i_msg_sink
+    {
+        virtual ~i_msg_sink () {}
+
+        //  Delivers a message. Returns 0 if successful; -1 otherwise.
+        //  The function takes ownership of the passed message.
+        virtual int push_msg (msg_t *msg_) = 0;
+    };
 
 }
 

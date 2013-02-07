@@ -19,11 +19,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <assert.h>
 #include <stdio.h>
 #include "testutil.hpp"
 
-int main (int argc, char *argv [])
+int main (void)
 {
     fprintf (stderr, "test_reqrep_tcp running...\n");
 

@@ -18,13 +18,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <assert.h>
-#include <string.h>
-#include <pthread.h>
-#include <stdio.h>
-
 #include "../include/zmq.h"
 #include "../include/zmq_utils.h"
+#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+
+#undef NDEBUG
+#include <assert.h>
 
 extern "C"
 {
@@ -44,7 +45,7 @@ extern "C"
     }
 }
 
-int main (int argc, char *argv [])
+int main (void)
 {
     fprintf (stderr, "test_timeo running...\n");
 

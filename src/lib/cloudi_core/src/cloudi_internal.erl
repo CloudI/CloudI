@@ -357,24 +357,14 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
                     NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
-                    if
-                        ResponseInfo == <<>> ->
-                            {reply, {ok, Response},
-                             State#state{async_responses = NewAsyncResponses}};
-                        true ->
-                            {reply, {ok, ResponseInfo, Response},
-                             State#state{async_responses = NewAsyncResponses}}
-                    end;
+                    {reply, {ok, ResponseInfo, Response, TransIdPick},
+                     State#state{async_responses = NewAsyncResponses}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
-                    if
-                        ResponseInfo == <<>> ->
-                            {reply, {ok, Response}, State};
-                        true ->
-                            {reply, {ok, ResponseInfo, Response}, State}
-                    end
+                    {reply, {ok, ResponseInfo, Response, TransIdPick},
+                     State}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
@@ -386,18 +376,13 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
                     {noreply, State};
                 error ->
                     {reply, {error, timeout}, State};
-                {ok, {<<>>, Response}} when Consume =:= true ->
-                    NewAsyncResponses = dict:erase(TransId, AsyncResponses),
-                    {reply, {ok, Response},
-                     State#state{async_responses = NewAsyncResponses}};
-                {ok, {<<>>, Response}} when Consume =:= false ->
-                    {reply, {ok, Response}, State};
                 {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
-                    {reply, {ok, ResponseInfo, Response},
+                    {reply, {ok, ResponseInfo, Response, TransId},
                      State#state{async_responses = NewAsyncResponses}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
-                    {reply, {ok, ResponseInfo, Response}, State}
+                    {reply, {ok, ResponseInfo, Response, TransId},
+                     State}
             end
     end;
 
@@ -548,25 +533,15 @@ handle_info({'recv_async', Timeout, TransId, Consume, Client},
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
                     NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
-                    if
-                        ResponseInfo == <<>> ->
-                            gen_server:reply(Client, {ok, Response});
-                        true ->
-                            gen_server:reply(Client, {ok, ResponseInfo,
-                                                      Response})
-                    end,
+                    gen_server:reply(Client,
+                                     {ok, ResponseInfo, Response, TransIdPick}),
                     {noreply, State#state{async_responses = NewAsyncResponses}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
-                    if
-                        ResponseInfo == <<>> ->
-                            gen_server:reply(Client, {ok, Response});
-                        true ->
-                            gen_server:reply(Client, {ok, ResponseInfo,
-                                                      Response})
-                    end,
+                    gen_server:reply(Client,
+                                     {ok, ResponseInfo, Response, TransIdPick}),
                     {noreply, State}
             end;
         true ->
@@ -580,19 +555,14 @@ handle_info({'recv_async', Timeout, TransId, Consume, Client},
                 error ->
                     gen_server:reply(Client, {error, timeout}),
                     {noreply, State};
-                {ok, {<<>>, Response}} when Consume =:= true ->
-                    NewAsyncResponses = dict:erase(TransId, AsyncResponses),
-                    gen_server:reply(Client, {ok, Response}),
-                    {noreply, State#state{async_responses = NewAsyncResponses}};
-                {ok, {<<>>, Response}} when Consume =:= false ->
-                    gen_server:reply(Client, {ok, Response}),
-                    {noreply, State};
                 {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
-                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
+                    gen_server:reply(Client,
+                                     {ok, ResponseInfo, Response, TransId}),
                     {noreply, State#state{async_responses = NewAsyncResponses}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
-                    gen_server:reply(Client, {ok, ResponseInfo, Response}),
+                    gen_server:reply(Client,
+                                     {ok, ResponseInfo, Response, TransId}),
                     {noreply, State}
             end
     end;

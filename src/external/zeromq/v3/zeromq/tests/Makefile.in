@@ -39,8 +39,9 @@ noinst_PROGRAMS = test_pair_inproc$(EXEEXT) test_pair_tcp$(EXEEXT) \
 	test_hwm$(EXEEXT) test_reqrep_device$(EXEEXT) \
 	test_sub_forward$(EXEEXT) test_invalid_rep$(EXEEXT) \
 	test_msg_flags$(EXEEXT) test_connect_resolve$(EXEEXT) \
-	test_last_endpoint$(EXEEXT) test_term_endpoint$(EXEEXT) \
-	test_monitor$(EXEEXT) $(am__EXEEXT_1)
+	test_connect_delay$(EXEEXT) test_last_endpoint$(EXEEXT) \
+	test_term_endpoint$(EXEEXT) test_monitor$(EXEEXT) \
+	test_router_mandatory$(EXEEXT) $(am__EXEEXT_1)
 @ON_MINGW_FALSE@am__append_1 = test_shutdown_stress \
 @ON_MINGW_FALSE@                   test_pair_ipc \
 @ON_MINGW_FALSE@                   test_reqrep_ipc \
@@ -65,13 +66,17 @@ CONFIG_CLEAN_VPATH_FILES =
 @ON_MINGW_FALSE@	test_pair_ipc$(EXEEXT) \
 @ON_MINGW_FALSE@	test_reqrep_ipc$(EXEEXT) test_timeo$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
+am_test_connect_delay_OBJECTS = test_connect_delay.$(OBJEXT)
+test_connect_delay_OBJECTS = $(am_test_connect_delay_OBJECTS)
+test_connect_delay_LDADD = $(LDADD)
+test_connect_delay_DEPENDENCIES = $(top_builddir)/src/libzmq.la
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
 am_test_connect_resolve_OBJECTS = test_connect_resolve.$(OBJEXT)
 test_connect_resolve_OBJECTS = $(am_test_connect_resolve_OBJECTS)
 test_connect_resolve_LDADD = $(LDADD)
 test_connect_resolve_DEPENDENCIES = $(top_builddir)/src/libzmq.la
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
 am_test_hwm_OBJECTS = test_hwm.$(OBJEXT)
 test_hwm_OBJECTS = $(am_test_hwm_OBJECTS)
 test_hwm_LDADD = $(LDADD)
@@ -123,6 +128,10 @@ am_test_reqrep_tcp_OBJECTS = test_reqrep_tcp.$(OBJEXT)
 test_reqrep_tcp_OBJECTS = $(am_test_reqrep_tcp_OBJECTS)
 test_reqrep_tcp_LDADD = $(LDADD)
 test_reqrep_tcp_DEPENDENCIES = $(top_builddir)/src/libzmq.la
+am_test_router_mandatory_OBJECTS = test_router_mandatory.$(OBJEXT)
+test_router_mandatory_OBJECTS = $(am_test_router_mandatory_OBJECTS)
+test_router_mandatory_LDADD = $(LDADD)
+test_router_mandatory_DEPENDENCIES = $(top_builddir)/src/libzmq.la
 am__test_shutdown_stress_SOURCES_DIST = test_shutdown_stress.cpp
 @ON_MINGW_FALSE@am_test_shutdown_stress_OBJECTS =  \
 @ON_MINGW_FALSE@	test_shutdown_stress.$(OBJEXT)
@@ -184,22 +193,25 @@ am__v_CCLD_0 = @echo "  CCLD  " $@;
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(test_connect_resolve_SOURCES) $(test_hwm_SOURCES) \
+SOURCES = $(test_connect_delay_SOURCES) \
+	$(test_connect_resolve_SOURCES) $(test_hwm_SOURCES) \
 	$(test_invalid_rep_SOURCES) $(test_last_endpoint_SOURCES) \
 	$(test_monitor_SOURCES) $(test_msg_flags_SOURCES) \
 	$(test_pair_inproc_SOURCES) $(test_pair_ipc_SOURCES) \
 	$(test_pair_tcp_SOURCES) $(test_reqrep_device_SOURCES) \
 	$(test_reqrep_inproc_SOURCES) $(test_reqrep_ipc_SOURCES) \
-	$(test_reqrep_tcp_SOURCES) $(test_shutdown_stress_SOURCES) \
-	$(test_sub_forward_SOURCES) $(test_term_endpoint_SOURCES) \
-	$(test_timeo_SOURCES)
-DIST_SOURCES = $(test_connect_resolve_SOURCES) $(test_hwm_SOURCES) \
+	$(test_reqrep_tcp_SOURCES) $(test_router_mandatory_SOURCES) \
+	$(test_shutdown_stress_SOURCES) $(test_sub_forward_SOURCES) \
+	$(test_term_endpoint_SOURCES) $(test_timeo_SOURCES)
+DIST_SOURCES = $(test_connect_delay_SOURCES) \
+	$(test_connect_resolve_SOURCES) $(test_hwm_SOURCES) \
 	$(test_invalid_rep_SOURCES) $(test_last_endpoint_SOURCES) \
 	$(test_monitor_SOURCES) $(test_msg_flags_SOURCES) \
 	$(test_pair_inproc_SOURCES) $(am__test_pair_ipc_SOURCES_DIST) \
 	$(test_pair_tcp_SOURCES) $(test_reqrep_device_SOURCES) \
 	$(test_reqrep_inproc_SOURCES) \
 	$(am__test_reqrep_ipc_SOURCES_DIST) $(test_reqrep_tcp_SOURCES) \
+	$(test_router_mandatory_SOURCES) \
 	$(am__test_shutdown_stress_SOURCES_DIST) \
 	$(test_sub_forward_SOURCES) $(test_term_endpoint_SOURCES) \
 	$(am__test_timeo_SOURCES_DIST)
@@ -359,9 +371,11 @@ test_sub_forward_SOURCES = test_sub_forward.cpp
 test_invalid_rep_SOURCES = test_invalid_rep.cpp
 test_msg_flags_SOURCES = test_msg_flags.cpp
 test_connect_resolve_SOURCES = test_connect_resolve.cpp
+test_connect_delay_SOURCES = test_connect_delay.cpp
 test_last_endpoint_SOURCES = test_last_endpoint.cpp
 test_term_endpoint_SOURCES = test_term_endpoint.cpp
 test_monitor_SOURCES = test_monitor.cpp
+test_router_mandatory_SOURCES = test_router_mandatory.cpp
 @ON_MINGW_FALSE@test_shutdown_stress_SOURCES = test_shutdown_stress.cpp
 @ON_MINGW_FALSE@test_pair_ipc_SOURCES = test_pair_ipc.cpp testutil.hpp
 @ON_MINGW_FALSE@test_reqrep_ipc_SOURCES = test_reqrep_ipc.cpp testutil.hpp
@@ -410,6 +424,9 @@ clean-noinstPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+test_connect_delay$(EXEEXT): $(test_connect_delay_OBJECTS) $(test_connect_delay_DEPENDENCIES) $(EXTRA_test_connect_delay_DEPENDENCIES) 
+	@rm -f test_connect_delay$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(test_connect_delay_OBJECTS) $(test_connect_delay_LDADD) $(LIBS)
 test_connect_resolve$(EXEEXT): $(test_connect_resolve_OBJECTS) $(test_connect_resolve_DEPENDENCIES) $(EXTRA_test_connect_resolve_DEPENDENCIES) 
 	@rm -f test_connect_resolve$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(test_connect_resolve_OBJECTS) $(test_connect_resolve_LDADD) $(LIBS)
@@ -449,6 +466,9 @@ test_reqrep_ipc$(EXEEXT): $(test_reqrep_ipc_OBJECTS) $(test_reqrep_ipc_DEPENDENC
 test_reqrep_tcp$(EXEEXT): $(test_reqrep_tcp_OBJECTS) $(test_reqrep_tcp_DEPENDENCIES) $(EXTRA_test_reqrep_tcp_DEPENDENCIES) 
 	@rm -f test_reqrep_tcp$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(test_reqrep_tcp_OBJECTS) $(test_reqrep_tcp_LDADD) $(LIBS)
+test_router_mandatory$(EXEEXT): $(test_router_mandatory_OBJECTS) $(test_router_mandatory_DEPENDENCIES) $(EXTRA_test_router_mandatory_DEPENDENCIES) 
+	@rm -f test_router_mandatory$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(test_router_mandatory_OBJECTS) $(test_router_mandatory_LDADD) $(LIBS)
 test_shutdown_stress$(EXEEXT): $(test_shutdown_stress_OBJECTS) $(test_shutdown_stress_DEPENDENCIES) $(EXTRA_test_shutdown_stress_DEPENDENCIES) 
 	@rm -f test_shutdown_stress$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(test_shutdown_stress_OBJECTS) $(test_shutdown_stress_LDADD) $(LIBS)
@@ -468,6 +488,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_delay.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_resolve.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_hwm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_invalid_rep.Po@am__quote@
@@ -481,6 +502,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_reqrep_inproc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_reqrep_ipc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_reqrep_tcp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_router_mandatory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_shutdown_stress.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sub_forward.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_term_endpoint.Po@am__quote@

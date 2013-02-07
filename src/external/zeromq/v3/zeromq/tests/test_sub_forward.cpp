@@ -19,13 +19,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <assert.h>
-#include <stdio.h>
-
 #include "../include/zmq.h"
 #include "../include/zmq_utils.h"
+#include <stdio.h>
 
-int main (int argc, char *argv [])
+#undef NDEBUG
+#include <assert.h>
+
+int main (void)
 {
     fprintf (stderr, "test_sub_forward running...\n");
 

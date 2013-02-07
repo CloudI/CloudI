@@ -20,10 +20,12 @@
 */
 
 #include "../include/zmq.h"
-#include <assert.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
+
+#undef NDEBUG
+#include <assert.h>
 
 #define THREAD_COUNT 100
 
@@ -44,7 +46,7 @@ extern "C"
     }
 }
 
-int main (int argc, char *argv [])
+int main (void)
 {
     void *ctx;
     void *s1;

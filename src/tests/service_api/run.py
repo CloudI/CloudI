@@ -76,13 +76,13 @@ if __name__ == '__main__':
     [{"LD_LIBRARY_PATH", "api/c/lib/"},
     {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
     none, tcp, 16384,
-    5000, 5000, 5000, [api], undefined, 1, 1, 5, 300},
+    5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
  {internal,
      "/tests/flood/",
      cloudi_service_flood,
      [{flood, "/tests/flood/c", <<"DATA">>, 1000}],
      lazy_closest,
-     5000, 5000, 5000, [api], undefined, 2, 5, 300}]""") == 'ok'
+     5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]""") == 'ok'
 
     print 'waiting 20 seconds...'
     time.sleep(20)

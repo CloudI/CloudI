@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq_socket
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.2
 .\"  Language: English
 .\"
-.TH "ZMQ_SOCKET" "3" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ_SOCKET" "3" "11/23/2012" "0MQ 3\&.2\&.2" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -59,7 +59,7 @@ thread safe\&. Applications MUST NOT use a socket from multiple threads except a
 which is built from related socket types\&.
 .SS "Request\-reply pattern"
 .sp
-The request\-reply pattern is used for sending requests from a \fIclient\fR to one or more instances of a \fIservice\fR, and receiving subsequent replies to each request sent\&.
+The request\-reply pattern is used for sending requests from a ZMQ_REQ \fIclient\fR to one or more ZMQ_REP \fIservices\fR, and receiving subsequent replies to each request sent\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -71,7 +71,7 @@ The request\-reply pattern is used for sending requests from a \fIclient\fR to o
 .sp
 A socket of type \fIZMQ_REQ\fR is used by a \fIclient\fR to send requests to and receive replies from a \fIservice\fR\&. This socket type allows only an alternating sequence of \fIzmq_send(request)\fR and subsequent \fIzmq_recv(reply)\fR calls\&. Each request sent is round\-robined among all \fIservices\fR, and each reply received is matched with the last issued request\&.
 .sp
-When a \fIZMQ_REQ\fR socket enters an exceptional state due to having reached the high water mark for all \fIservices\fR, or if there are no \fIservices\fR at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the exceptional state ends or at least one \fIservice\fR becomes available for sending; messages are not discarded\&.
+When a \fIZMQ_REQ\fR socket enters the \fImute\fR state due to having reached the high water mark for all \fIservices\fR, or if there are no \fIservices\fR at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the \fImute\fR state ends or at least one \fIservice\fR becomes available for sending; messages are not discarded\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -123,7 +123,7 @@ Last peer
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Block
@@ -142,7 +142,7 @@ T}
 .sp
 A socket of type \fIZMQ_REP\fR is used by a \fIservice\fR to receive requests from and send replies to a \fIclient\fR\&. This socket type allows only an alternating sequence of \fIzmq_recv(request)\fR and subsequent \fIzmq_send(reply)\fR calls\&. Each request received is fair\-queued from among all \fIclients\fR, and each reply sent is routed to the \fIclient\fR that issued the last request\&. If the original requester doesn\(cqt exist any more the reply is silently discarded\&.
 .sp
-When a \fIZMQ_REP\fR socket enters an exceptional state due to having reached the high water mark for a \fIclient\fR, then any replies sent to the \fIclient\fR in question shall be dropped until the exceptional state ends\&.
+When a \fIZMQ_REP\fR socket enters the \fImute\fR state due to having reached the high water mark for a \fIclient\fR, then any replies sent to the \fIclient\fR in question shall be dropped until the mute state ends\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -194,7 +194,7 @@ Last peer
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -213,7 +213,7 @@ T}
 .sp
 A socket of type \fIZMQ_DEALER\fR is an advanced pattern used for extending request/reply sockets\&. Each message sent is round\-robined among all connected peers, and each message received is fair\-queued from all connected peers\&.
 .sp
-When a \fIZMQ_DEALER\fR socket enters an exceptional state due to having reached the high water mark for all peers, or if there are no peers at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the exceptional state ends or at least one peer becomes available for sending; messages are not discarded\&.
+When a \fIZMQ_DEALER\fR socket enters the \fImute\fR state due to having reached the high water mark for all peers, or if there are no peers at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the mute state ends or at least one peer becomes available for sending; messages are not discarded\&.
 .sp
 When a \fIZMQ_DEALER\fR socket is connected to a \fIZMQ_REP\fR socket each message sent must consist of an empty message part, the \fIdelimiter\fR, followed by one or more \fIbody parts\fR\&.
 .sp
@@ -237,7 +237,7 @@ T{
 Compatible peer sockets
 T}:T{
 .sp
-\fIZMQ_ROUTER\fR, \fIZMQ_REP\fR
+\fIZMQ_ROUTER\fR, \fIZMQ_REP\fR, \fIZMQ_DEALER\fR
 T}
 T{
 .sp
@@ -269,7 +269,7 @@ Fair\-queued
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Block
@@ -286,9 +286,9 @@ T}
 \fBZMQ_ROUTER\fR
 .RS 4
 .sp
-A socket of type \fIZMQ_ROUTER\fR is an advanced socket type used for extending request/reply sockets\&. When receiving messages a \fIZMQ_ROUTER\fR socket shall prepend a message part containing the \fIidentity\fR of the originating peer to the message before passing it to the application\&. Messages received are fair\-queued from among all connected peers\&. When sending messages a \fIZMQ_ROUTER\fR socket shall remove the first part of the message and use it to determine the \fIidentity\fR of the peer the message shall be routed to\&. If the peer does not exist anymore the message shall be silently discarded\&.
+A socket of type \fIZMQ_ROUTER\fR is an advanced socket type used for extending request/reply sockets\&. When receiving messages a \fIZMQ_ROUTER\fR socket shall prepend a message part containing the \fIidentity\fR of the originating peer to the message before passing it to the application\&. Messages received are fair\-queued from among all connected peers\&. When sending messages a \fIZMQ_ROUTER\fR socket shall remove the first part of the message and use it to determine the \fIidentity\fR of the peer the message shall be routed to\&. If the peer does not exist anymore the message shall be silently discarded by default, unless \fIZMQ_ROUTER_BEHAVIOR\fR socket option is set to \fI1\fR\&.
 .sp
-When a \fIZMQ_ROUTER\fR socket enters an exceptional state due to having reached the high water mark for all peers, or if there are no peers at all, then any messages sent to the socket shall be dropped until the exceptional state ends\&. Likewise, any messages routed to a non\-existent peer or a peer for which the individual high water mark has been reached shall also be dropped\&.
+When a \fIZMQ_ROUTER\fR socket enters the \fImute\fR state due to having reached the high water mark for all peers, then any messages sent to the socket shall be dropped until the mute state ends\&. Likewise, any messages routed to a peer for which the individual high water mark has been reached shall also be dropped\&.
 .sp
 When a \fIZMQ_REQ\fR socket is connected to a \fIZMQ_ROUTER\fR socket, in addition to the \fIidentity\fR of the originating peer each message received shall contain an empty \fIdelimiter\fR message part\&. Hence, the entire structure of each received message as seen by the application becomes: one or more \fIidentity\fR parts, \fIdelimiter\fR part, one or more \fIbody parts\fR\&. When sending replies to a \fIZMQ_REQ\fR socket the application must include the \fIdelimiter\fR part\&.
 .sp
@@ -312,7 +312,7 @@ T{
 Compatible peer sockets
 T}:T{
 .sp
-\fIZMQ_DEALER\fR, \*(AqZMQ_REQ
+\fIZMQ_DEALER\fR, \fIZMQ_REQ\fR, \fIZMQ_ROUTER\fR
 T}
 T{
 .sp
@@ -344,7 +344,7 @@ Fair\-queued
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -366,7 +366,7 @@ The publish\-subscribe pattern is used for one\-to\-many distribution of data fr
 .sp
 A socket of type \fIZMQ_PUB\fR is used by a \fIpublisher\fR to distribute data\&. Messages sent are distributed in a fan out fashion to all connected peers\&. The \fBzmq_recv\fR(3) function is not implemented for this socket type\&.
 .sp
-When a \fIZMQ_PUB\fR socket enters an exceptional state due to having reached the high water mark for a \fIsubscriber\fR, then any messages that would be sent to the \fIsubscriber\fR in question shall instead be dropped until the exceptional state ends\&. The \fIzmq_send()\fR function shall never block for this socket type\&.
+When a \fIZMQ_PUB\fR socket enters the \fImute\fR state due to having reached the high water mark for a \fIsubscriber\fR, then any messages that would be sent to the \fIsubscriber\fR in question shall instead be dropped until the mute state ends\&. The \fIzmq_send()\fR function shall never block for this socket type\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -418,7 +418,7 @@ Fan out
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -487,7 +487,7 @@ N/A
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -556,7 +556,7 @@ Fan out
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -625,7 +625,7 @@ N/A
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Drop
@@ -647,7 +647,7 @@ The pipeline pattern is used for distributing data to \fInodes\fR arranged in a 
 .sp
 A socket of type \fIZMQ_PUSH\fR is used by a pipeline \fInode\fR to send messages to downstream pipeline \fInodes\fR\&. Messages are round\-robined to all connected downstream \fInodes\fR\&. The \fIzmq_recv()\fR function is not implemented for this socket type\&.
 .sp
-When a \fIZMQ_PUSH\fR socket enters an exceptional state due to having reached the high water mark for all downstream \fInodes\fR, or if there are no downstream \fInodes\fR at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the exceptional state ends or at least one downstream \fInode\fR becomes available for sending; messages are not discarded\&.
+When a \fIZMQ_PUSH\fR socket enters the \fImute\fR state due to having reached the high water mark for all downstream \fInodes\fR, or if there are no downstream \fInodes\fR at all, then any \fBzmq_send\fR(3) operations on the socket shall block until the mute state ends or at least one downstream \fInode\fR becomes available for sending; messages are not discarded\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -699,7 +699,7 @@ Round\-robin
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Block
@@ -768,10 +768,10 @@ N/A
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
-N/A
+Block
 T}
 .TE
 .sp 1
@@ -790,7 +790,7 @@ The exclusive pair pattern is used to connect a peer to precisely one other peer
 .sp
 A socket of type \fIZMQ_PAIR\fR can only be connected to a single peer at any one time\&. No message routing or filtering is performed on messages sent over a \fIZMQ_PAIR\fR socket\&.
 .sp
-When a \fIZMQ_PAIR\fR socket enters an exceptional state due to having reached the high water mark for the connected peer, or if no peer is connected, then any \fBzmq_send\fR(3) operations on the socket shall block until the peer becomes available for sending; messages are not discarded\&.
+When a \fIZMQ_PAIR\fR socket enters the \fImute\fR state due to having reached the high water mark for the connected peer, or if no peer is connected, then any \fBzmq_send\fR(3) operations on the socket shall block until the peer becomes available for sending; messages are not discarded\&.
 .if n \{\
 .sp
 .\}
@@ -858,7 +858,7 @@ N/A
 T}
 T{
 .sp
-ZMQ_HWM option action
+Action in mute state
 T}:T{
 .sp
 Block

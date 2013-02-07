@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Configuration API==
+%%% ==CloudI Service API==
 %%% A service that exposes dynamic configuration of CloudI.
 %%% @end
 %%%

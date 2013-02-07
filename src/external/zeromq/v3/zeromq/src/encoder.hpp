@@ -22,6 +22,12 @@
 #ifndef __ZMQ_ENCODER_HPP_INCLUDED__
 #define __ZMQ_ENCODER_HPP_INCLUDED__
 
+#if defined(_MSC_VER)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,17 +35,18 @@
 
 #include "err.hpp"
 #include "msg.hpp"
+#include "i_encoder.hpp"
 
 namespace zmq
 {
 
-    class session_base_t;
+    class i_msg_source;
 
     //  Helper base class for encoders. It implements the state machine that
     //  fills the outgoing buffer. Derived classes should implement individual
     //  state machine actions.
 
-    template <typename T> class encoder_base_t
+    template <typename T> class encoder_base_t : public i_encoder
     {
     public:
 
@@ -168,14 +175,14 @@ namespace zmq
         encoder_t (size_t bufsize_);
         ~encoder_t ();
 
-        void set_session (zmq::session_base_t *session_);
+        void set_msg_source (i_msg_source *msg_source_);
 
     private:
 
         bool size_ready ();
         bool message_ready ();
 
-        zmq::session_base_t *session;
+        i_msg_source *msg_source;
         msg_t in_progress;
         unsigned char tmpbuf [10];
 

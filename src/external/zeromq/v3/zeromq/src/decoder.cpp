@@ -29,14 +29,14 @@
 #endif
 
 #include "decoder.hpp"
-#include "session_base.hpp"
+#include "i_msg_sink.hpp"
 #include "likely.hpp"
 #include "wire.hpp"
 #include "err.hpp"
 
 zmq::decoder_t::decoder_t (size_t bufsize_, int64_t maxmsgsize_) :
     decoder_base_t <decoder_t> (bufsize_),
-    session (NULL),
+    msg_sink (NULL),
     maxmsgsize (maxmsgsize_)
 {
     int rc = in_progress.init ();
@@ -52,14 +52,9 @@ zmq::decoder_t::~decoder_t ()
     errno_assert (rc == 0);
 }
 
-void zmq::decoder_t::set_session (session_base_t *session_)
+void zmq::decoder_t::set_msg_sink (i_msg_sink *msg_sink_)
 {
-    session = session_;
-}
-
-bool zmq::decoder_t::stalled () const
-{
-    return next == &decoder_t::message_ready;
+    msg_sink = msg_sink_;
 }
 
 bool zmq::decoder_t::one_byte_size_ready ()
@@ -145,7 +140,7 @@ bool zmq::decoder_t::eight_byte_size_ready ()
 bool zmq::decoder_t::flags_ready ()
 {
     //  Store the flags from the wire into the message structure.
-    in_progress.set_flags (tmpbuf [0]);
+    in_progress.set_flags (tmpbuf [0] & msg_t::more);
 
     next_step (in_progress.data (), in_progress.size (),
         &decoder_t::message_ready);
@@ -157,9 +152,9 @@ bool zmq::decoder_t::message_ready ()
 {
     //  Message is completely read. Push it further and start reading
     //  new message. (in_progress is a 0-byte message after this point.)
-    if (unlikely (!session))
+    if (unlikely (!msg_sink))
         return false;
-    int rc = session->write (&in_progress);
+    int rc = msg_sink->push_msg (&in_progress);
     if (unlikely (rc != 0)) {
         if (errno != EAGAIN)
             decoding_error ();

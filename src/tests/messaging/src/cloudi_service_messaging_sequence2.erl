@@ -135,18 +135,34 @@ sequence2(Dispatcher, Prefix) ->
     {ok, TransIds} = cloudi_service:mcast_async(Dispatcher, Prefix ++ "e", " "),
     % 4 * 8 == 32, but only 3 out of 4 CloudI services can receive messages,
     % since 1 CloudI service is sending the mcast_async, so 3 * 8 == 24
-    true = erlang:length(TransIds) == 24,
-    L = lists:foldl(fun(TransId, Results) ->
-        {ok, Result} = cloudi_service:recv_async(Dispatcher, TransId),
-        lists:merge(Results, [Result])
-    end, [], TransIds),
-    true = L == [<<"1">>, <<"1">>, <<"1">>,
-                 <<"2">>, <<"2">>, <<"2">>,
-                 <<"3">>, <<"3">>, <<"3">>,
-                 <<"4">>, <<"4">>, <<"4">>,
-                 <<"5">>, <<"5">>, <<"5">>,
-                 <<"6">>, <<"6">>, <<"6">>,
-                 <<"7">>, <<"7">>, <<"7">>,
-                 <<"8">>, <<"8">>, <<"8">>],
-    ok.
+    if
+        erlang:length(TransIds) == 24 ->
+            % all service processes have finished initialization
+            L = lists:foldl(fun(TransId, Results) ->
+                {ok, <<>>, Result, _} =
+                    cloudi_service:recv_async(Dispatcher, TransId),
+                lists:merge(Results, [Result])
+            end, [], TransIds),
+            true = L == [<<"1">>, <<"1">>, <<"1">>,
+                         <<"2">>, <<"2">>, <<"2">>,
+                         <<"3">>, <<"3">>, <<"3">>,
+                         <<"4">>, <<"4">>, <<"4">>,
+                         <<"5">>, <<"5">>, <<"5">>,
+                         <<"6">>, <<"6">>, <<"6">>,
+                         <<"7">>, <<"7">>, <<"7">>,
+                         <<"8">>, <<"8">>, <<"8">>],
+            ok;
+        true ->
+            % service processes have not finished initialization
+            ?LOG_WARN("Waiting for ~p services to initialize",
+                      [4 - (erlang:length(TransIds) / 8)]),
+            lists:foreach(fun(TransId) ->
+                {ok, <<>>, _, _} =
+                    cloudi_service:recv_async(Dispatcher, TransId)
+            end, [], TransIds),
+            % sleep
+            {error, timeout} = cloudi_service:recv_async(Dispatcher, 1000),
+            % retry
+            sequence2(Dispatcher, Prefix)
+    end.
 
