@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Internal Job Supervisor==
+%%% ==CloudI Internal Service Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 1.1.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_internal_sup).
@@ -82,10 +82,16 @@ create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (DestRefresh == immediate_closest) or
-           (DestRefresh == lazy_closest) or
-           (DestRefresh == immediate_random) or
-           (DestRefresh == lazy_random) or
+    true = (DestRefresh == immediate_closest) orelse
+           (DestRefresh == lazy_closest) orelse
+           (DestRefresh == immediate_furthest) orelse
+           (DestRefresh == lazy_furthest) orelse
+           (DestRefresh == immediate_random) orelse
+           (DestRefresh == lazy_random) orelse
+           (DestRefresh == immediate_local) orelse
+           (DestRefresh == lazy_local) orelse
+           (DestRefresh == immediate_remote) orelse
+           (DestRefresh == lazy_remote) orelse
            (DestRefresh == none),
     case supervisor:start_child(?MODULE, [ProcessIndex, Module, Args,
                                           Timeout, Prefix,

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -71,17 +71,17 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_job_options) ->
-    true = (DestRefresh =:= immediate_closest) or
-           (DestRefresh =:= lazy_closest) or
-           (DestRefresh =:= immediate_furthest) or
-           (DestRefresh =:= lazy_furthest) or
-           (DestRefresh =:= immediate_random) or
-           (DestRefresh =:= lazy_random) or
-           (DestRefresh =:= immediate_local) or
-           (DestRefresh =:= lazy_local) or
-           (DestRefresh =:= immediate_remote) or
-           (DestRefresh =:= lazy_remote) or
+         is_record(ConfigOptions, config_service_options) ->
+    true = (DestRefresh =:= immediate_closest) orelse
+           (DestRefresh =:= lazy_closest) orelse
+           (DestRefresh =:= immediate_furthest) orelse
+           (DestRefresh =:= lazy_furthest) orelse
+           (DestRefresh =:= immediate_random) orelse
+           (DestRefresh =:= lazy_random) orelse
+           (DestRefresh =:= immediate_local) orelse
+           (DestRefresh =:= lazy_local) orelse
+           (DestRefresh =:= immediate_remote) orelse
+           (DestRefresh =:= lazy_remote) orelse
            (DestRefresh =:= none),
     DestDeny = if
         DestDenyList =:= undefined ->
@@ -116,18 +116,18 @@ start_external(ThreadsPerProcess,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_job_options) ->
-    true = (Protocol =:= tcp) or (Protocol =:= udp),
-    true = (DestRefresh =:= immediate_closest) or
-           (DestRefresh =:= lazy_closest) or
-           (DestRefresh =:= immediate_furthest) or
-           (DestRefresh =:= lazy_furthest) or
-           (DestRefresh =:= immediate_random) or
-           (DestRefresh =:= lazy_random) or
-           (DestRefresh =:= immediate_local) or
-           (DestRefresh =:= lazy_local) or
-           (DestRefresh =:= immediate_remote) or
-           (DestRefresh =:= lazy_remote) or
+         is_record(ConfigOptions, config_service_options) ->
+    true = (Protocol =:= tcp) orelse (Protocol =:= udp),
+    true = (DestRefresh =:= immediate_closest) orelse
+           (DestRefresh =:= lazy_closest) orelse
+           (DestRefresh =:= immediate_furthest) orelse
+           (DestRefresh =:= lazy_furthest) orelse
+           (DestRefresh =:= immediate_random) orelse
+           (DestRefresh =:= lazy_random) orelse
+           (DestRefresh =:= immediate_local) orelse
+           (DestRefresh =:= lazy_local) orelse
+           (DestRefresh =:= immediate_remote) orelse
+           (DestRefresh =:= lazy_remote) orelse
            (DestRefresh =:= none),
     DestDeny = if
         DestDenyList =:= undefined ->

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Module cloudi_configurator</title>
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="CloudI_Configurator">CloudI Configurator</a></h3>
    Use the configuration information to start CloudI processes.
-<p>Copyright © 2011-2012 Michael Truog</p>
+<p>Copyright Â© 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 0.2.0 Oct 6 2012 20:30:19
+<p><b>Version:</b> 1.2.0 Feb 6 2013 20:50:04
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -32,15 +32,15 @@
 <tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#job_restart-1">job_restart/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#job_start-1">job_start/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#job_stop-1">job_stop/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#jobs-1">jobs/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#jobs_add-2">jobs_add/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#jobs_remove-2">jobs_remove/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#jobs_restart-2">jobs_restart/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#nodes_add-2">nodes_add/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#nodes_remove-2">nodes_remove/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_restart-1">service_restart/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_start-1">service_start/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_stop-1">service_stop/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#services-1">services/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#services_add-2">services_add/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#services_remove-2">services_remove/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#services_restart-2">services_restart/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
 </table>
@@ -87,41 +87,6 @@
 <p><tt>init(X1) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="job_restart-1">job_restart/1</a></h3>
-<div class="spec">
-<p><tt>job_restart(Job) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="job_start-1">job_start/1</a></h3>
-<div class="spec">
-<p><tt>job_start(Job) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="job_stop-1">job_stop/1</a></h3>
-<div class="spec">
-<p><tt>job_stop(Job) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="jobs-1">jobs/1</a></h3>
-<div class="spec">
-<p><tt>jobs(Timeout) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="jobs_add-2">jobs_add/2</a></h3>
-<div class="spec">
-<p><tt>jobs_add(L, Timeout) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="jobs_remove-2">jobs_remove/2</a></h3>
-<div class="spec">
-<p><tt>jobs_remove(L, Timeout) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="jobs_restart-2">jobs_restart/2</a></h3>
-<div class="spec">
-<p><tt>jobs_restart(L, Timeout) -&gt; any()</tt></p>
-</div>
-
 <h3 class="function"><a name="nodes_add-2">nodes_add/2</a></h3>
 <div class="spec">
 <p><tt>nodes_add(L, Timeout) -&gt; any()</tt></p>
@@ -130,6 +95,41 @@
 <h3 class="function"><a name="nodes_remove-2">nodes_remove/2</a></h3>
 <div class="spec">
 <p><tt>nodes_remove(L, Timeout) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="service_restart-1">service_restart/1</a></h3>
+<div class="spec">
+<p><tt>service_restart(Service) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="service_start-1">service_start/1</a></h3>
+<div class="spec">
+<p><tt>service_start(Service) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="service_stop-1">service_stop/1</a></h3>
+<div class="spec">
+<p><tt>service_stop(Service) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="services-1">services/1</a></h3>
+<div class="spec">
+<p><tt>services(Timeout) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="services_add-2">services_add/2</a></h3>
+<div class="spec">
+<p><tt>services_add(L, Timeout) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="services_remove-2">services_remove/2</a></h3>
+<div class="spec">
+<p><tt>services_remove(L, Timeout) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="services_restart-2">services_restart/2</a></h3>
+<div class="spec">
+<p><tt>services_restart(L, Timeout) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="start_link-1">start_link/1</a></h3>
@@ -144,6 +144,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 6 2012, 20:30:19.</i></p>
+<p><i>Generated by EDoc, Feb 6 2013, 20:50:04.</i></p>
 </body>
 </html>

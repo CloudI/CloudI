@@ -5,11 +5,11 @@
   [{description, "Cloudi Services Databases Integration"},
    {vsn, "@VERSION@"},
    {modules, [
-        cloudi_job_db_couchdb,
-        cloudi_job_db_memcached,
-        cloudi_job_db_mysql,
-        cloudi_job_db_pgsql,
-        cloudi_job_db_tokyotyrant
+        cloudi_service_db_couchdb,
+        cloudi_service_db_memcached,
+        cloudi_service_db_mysql,
+        cloudi_service_db_pgsql,
+        cloudi_service_db_tokyotyrant
         ]},
    {registered,[
         ]},

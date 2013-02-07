@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Module cpg</title>
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
@@ -14,9 +14,9 @@
    <h3><a name="CloudI_Process_Groups_(CPG)">CloudI Process Groups (CPG)</a></h3>
    Based on the pg2 module in the Erlang OTP kernel application
    (lib/kernel-x.x.x/src/pg2.erl).
-<p>Copyright © 2011-2012 Michael Truog</p>
+<p>Copyright Â© 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.0.1 Jul 19 2012 13:06:04
+<p><b>Version:</b> 1.1.1 Feb 6 2013 20:45:31
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -25,6 +25,11 @@
    <h3><a name="CloudI_Process_Groups_(CPG)">CloudI Process Groups (CPG)</a></h3>
    Based on the pg2 module in the Erlang OTP kernel application
    (lib/kernel-x.x.x/src/pg2.erl).
+   cpg relies on distributed Erlang for node communication, which means
+   a fully connected network topology is created.  With distributed Erlang
+   Erlang pids either exist on the local node or a remote node
+   (which shares a connection with the local node,
+    so only 1 node hop is necessary in the worst case).
 <h2><a name="types">Data Types</a></h2>
 
 <h3 class="typedecl"><a name="type-gcp_error_reason">gcp_error_reason()</a></h3>
@@ -65,21 +70,33 @@
   with self() (this function uses a distributed transaction to enforce
   consistency).</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-1">get_closest_pid/1</a></td><td>
-  <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.</td></tr>
+  <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-2">get_closest_pid/2</a></td><td>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.</td></tr>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-3">get_closest_pid/3</a></td><td>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.</td></tr>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_furthest_pid-1">get_furthest_pid/1</a></td><td>
+  <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_furthest_pid-2">get_furthest_pid/2</a></td><td>
+  <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_furthest_pid-3">get_furthest_pid/3</a></td><td>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-1">get_local_members/1</a></td><td>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-2">get_local_members/2</a></td><td>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope.">Get only the local members of a specific group within a specific scope.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_pid-1">get_local_pid/1</a></td><td>
+  <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_pid-2">get_local_pid/2</a></td><td>
+  <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_pid-3">get_local_pid/3</a></td><td>
+  <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_members-1">get_members/1</a></td><td>
   <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_members-2">get_members/2</a></td><td>
@@ -95,6 +112,14 @@
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-3">get_random_pid/3</a></td><td>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_pid-1">get_remote_pid/1</a></td><td>
+  <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_pid-2">get_remote_pid/2</a></td><td>
+  <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_pid-3">get_remote_pid/3</a></td><td>
+  <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#join-1">join/1</a></td><td>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
@@ -191,26 +216,42 @@
 <p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.</p>
+</p>
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
 <p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.  Usually the self() pid is excluded
-  with this function call.</p>
+  Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
 <div class="spec">
 <p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
-  Remote pids are selected randomly since the distributed Erlang connections
-  create a fully connected network.  Usually the self() pid is excluded
-  with this function call.</p>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_furthest_pid-1">get_furthest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_furthest_pid-3">get_furthest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_members-1">get_local_members/1</a></h3>
 <div class="spec">
@@ -225,6 +266,27 @@
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope.">Get only the local members of a specific group within a specific scope.</a></h4>
 </p>
+
+<h3 class="function"><a name="get_local_pid-1">get_local_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_pid-3">get_local_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_members-1">get_members/1</a></h3>
 <div class="spec">
@@ -266,6 +328,27 @@
 <p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_pid-1">get_remote_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_pid-3">get_remote_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="join-1">join/1</a></h3>
@@ -384,6 +467,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jul 19 2012, 13:06:04.</i></p>
+<p><i>Generated by EDoc, Feb 6 2013, 20:45:31.</i></p>
 </body>
 </html>

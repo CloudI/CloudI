@@ -76,7 +76,9 @@
          get_v4_urandom_native/0,
          get_v5/1,
          get_v5/2,
+         uuid_to_list/1,
          uuid_to_string/1,
+         uuid_to_string/2,
          string_to_uuid/1,
          increment/1,
          test/0]).
@@ -265,11 +267,11 @@ get_v1_time(Value)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v3(Name :: binary()) ->
+-spec get_v3(Data :: binary() | iolist()) ->
     <<_:128>>.
 
-get_v3(Name) ->
-    <<B1:48, B2a:18, B2b:6, B3:56>> = crypto:md5(Name),
+get_v3(Data) ->
+    <<B1:48, B2a:18, B2b:6, B3:56>> = crypto:md5(Data),
     B2 = B2a bxor B2b,
     <<B1:48,
       0:1, 0:1, 1:1, 1:1,  % version 3 bits
@@ -283,17 +285,17 @@ get_v3(Name) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v3(Namespace :: binary(), Name :: binary()) ->
+-spec get_v3(Namespace :: binary(), Data :: binary() | list()) ->
     <<_:128>>.
 
-get_v3(Namespace, Name) when is_binary(Namespace) ->
-    NameBin = if
-        is_binary(Name) ->
-            Name;
-        is_list(Name) ->
-            erlang:list_to_binary(Name)
+get_v3(Namespace, Data) when is_binary(Namespace) ->
+    DataBin = if
+        is_binary(Data) ->
+            Data;
+        is_list(Data) ->
+            erlang:list_to_binary(Data)
     end,
-    get_v3(<<Namespace/binary, NameBin/binary>>).
+    get_v3(<<Namespace/binary, DataBin/binary>>).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -440,11 +442,11 @@ get_v4_urandom_native() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v5(Name :: binary()) ->
+-spec get_v5(Data :: binary() | iolist()) ->
     <<_:128>>.
 
-get_v5(Name) ->
-    <<B1:48, B2:18, B3a:38, B3b:56>> = crypto:sha(Name),
+get_v5(Data) ->
+    <<B1:48, B2:18, B3a:38, B3b:56>> = crypto:sha(Data),
     B3 = B3a bxor B3b,
     <<B1:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
@@ -458,17 +460,35 @@ get_v5(Name) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v5(Namespace :: binary(), Name :: binary()) ->
+-spec get_v5(Namespace :: binary(), Data :: binary() | list()) ->
     <<_:128>>.
 
-get_v5(Namespace, Name) when is_binary(Namespace) ->
-    NameBin = if
-        is_binary(Name) ->
-            Name;
-        is_list(Name) ->
-            erlang:list_to_binary(Name)
+get_v5(Namespace, Data) when is_binary(Namespace) ->
+    DataBin = if
+        is_binary(Data) ->
+            Data;
+        is_list(Data) ->
+            erlang:list_to_binary(Data)
     end,
-    get_v5(<<Namespace/binary, NameBin/binary>>).
+    get_v5(<<Namespace/binary, DataBin/binary>>).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a UUID to a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uuid_to_list(Value :: <<_:128>>) ->
+    iolist().
+
+uuid_to_list(Value) 
+    when is_binary(Value), byte_size(Value) == 16 ->
+    <<B1:32/unsigned-integer,
+      B2:16/unsigned-integer,
+      B3:16/unsigned-integer,
+      B4:16/unsigned-integer,
+      B5:48/unsigned-integer>> = Value,
+    [B1, B2, B3, B4, B5].
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -479,15 +499,19 @@ get_v5(Namespace, Name) when is_binary(Namespace) ->
 -spec uuid_to_string(Value :: <<_:128>>) ->
     string().
 
-uuid_to_string(Value)
-    when is_binary(Value), byte_size(Value) == 16 ->
-    <<B1:32/unsigned-integer,
-      B2:16/unsigned-integer,
-      B3:16/unsigned-integer,
-      B4:16/unsigned-integer,
-      B5:48/unsigned-integer>> = Value,
+uuid_to_string(Value) ->
+    uuid_to_string(Value, standard).
+
+uuid_to_string(Value, standard) ->
+    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
     lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+                                [B1, B2, B3, B4, B5]));
+
+uuid_to_string(Value, nodash) ->
+    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
+    lists:flatten(io_lib:format("~8.16.0b~4.16.0b~4.16.0b~4.16.0b~12.16.0b",
                                 [B1, B2, B3, B4, B5])).
+
 
 %%-------------------------------------------------------------------------
 %% @doc
