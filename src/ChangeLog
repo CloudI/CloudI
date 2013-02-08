@@ -1,6 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change internal service code to utilize the single dispatcher
+      Erlang process with temporary Erlang processes for
+      service requests and info messages
+      (so only 1 long-lived Erlang process used by
+       internal services instead of 2)
+    * Moved common internal service code to
+      lib/cloudi_core/src/cloudi_services_common.erl
+    * Changed the service code to have better filename scoping and
+      better info message scoping
+      (so internal service info messages will not be accidentally
+       used by modules implementing a cloudi_service behavior)
+    * Fix cloudi_core OTP application dependencies
+
 2013-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service timeout usage bugs so that the

@@ -56,6 +56,9 @@
 
 -include("cloudi_configuration.hrl").
 
+-define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
+-define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
+
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
 -define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
@@ -99,12 +102,10 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
         false ->
             {error, not_loaded};
         {file, _} ->
-            cloudi_internal_sup:create_internal(ProcessIndex, Module, Args,
-                                                Timeout, Prefix,
-                                                TimeoutAsync, TimeoutSync,
-                                                DestRefresh,
-                                                DestDeny, DestAllow,
-                                                ConfigOptions)
+            ?CREATE_INTERNAL(ProcessIndex, Module, Args, Timeout,
+                             Prefix, TimeoutAsync, TimeoutSync,
+                             DestRefresh, DestDeny, DestAllow,
+                             ConfigOptions)
     end.
 
 start_external(ThreadsPerProcess,
@@ -142,12 +143,10 @@ start_external(ThreadsPerProcess,
             trie:new(DestAllowList)
     end,
     {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
-        case cloudi_external_sup:create_external(Protocol, BufferSize,
-                                                 Timeout, Prefix,
-                                                 TimeoutAsync, TimeoutSync,
-                                                 DestRefresh,
-                                                 DestDeny, DestAllow,
-                                                 ConfigOptions) of
+        case ?CREATE_EXTERNAL(Protocol, BufferSize, Timeout,
+                              Prefix, TimeoutAsync, TimeoutSync,
+                              DestRefresh, DestDeny, DestAllow,
+                              ConfigOptions) of
             {ok, Pid, Port} ->
                 F([Pid | L1], [Port | L2]);
             {error, _} = Error ->
@@ -161,7 +160,7 @@ start_external(ThreadsPerProcess,
                                         BufferSize),
     if
         Pids == error ->
-            % an error occurred in cloudi_external_sup:create_external
+            % an error occurred within ?CREATE_EXTERNAL
             {error, Ports};
         true ->
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),

@@ -9,10 +9,6 @@
         cloudi_array,
         cloudi_configuration,
         cloudi_configurator,
-        cloudi_external,
-        cloudi_external_sup,
-        cloudi_internal,
-        cloudi_internal_sup,
         cloudi_lists,
         cloudi_logger,
         cloudi_logger_interface,
@@ -25,6 +21,11 @@
         cloudi_random,
         cloudi_response,
         cloudi_service,
+        cloudi_services_common,
+        cloudi_services_external,
+        cloudi_services_external_sup,
+        cloudi_services_internal,
+        cloudi_services_internal_sup,
         cloudi_services,
         cloudi_spawn,
         cloudi_string,
@@ -36,19 +37,19 @@
         ]},
    {registered,[
         cloudi_configurator,
-        cloudi_external_sup,
         cloudi_logger,
-        cloudi_internal_sup,
         cloudi_nodes,
         cloudi_os_spawn,
+        cloudi_services_external_sup,
+        cloudi_services_internal_sup,
         cloudi_services
         ]},
-   {applications, [
-        % external dependencies for CloudI configuration
+   {included_applications, [
         cloudi_services_databases,
         cloudi_services_messaging,
-        cloudi_services_internal,
-        % internal dependencies
+        cloudi_services_internal
+        ]},
+   {applications, [
         trie,
         uuid,
         cpg,
