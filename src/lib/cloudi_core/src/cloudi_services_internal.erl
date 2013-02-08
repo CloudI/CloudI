@@ -3,11 +3,9 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Internal Service Dispatcher Process==
-%%% Parent process for each cloudi_service behaviour process
-%%% (i.e., native Erlang CloudI service). The dispatcher handles all
-%%% cloudi_service process outgoing requests to prevent undesirable
-%%% synchronous function call paths that are prone to deadlocks.
+%%% ==CloudI Internal Service==
+%%% Erlang process which manages internal service requests and info messages
+%%% for modules that implement the cloudi_service behavior.
 %%% @end
 %%%
 %%% BSD LICENSE

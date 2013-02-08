@@ -3,7 +3,8 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI (Internal) Service Behavior==
+%%% ==CloudI Internal Service Behavior==
+%%% The interface which all internal services must implement.
 %%% @end
 %%%
 %%% BSD LICENSE
