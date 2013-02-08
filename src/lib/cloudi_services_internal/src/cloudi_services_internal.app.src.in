@@ -19,6 +19,7 @@
    {registered,[
         ]},
    {applications, [
+        cloudi_core,
         cowboy,
         misultin,
         jsx,

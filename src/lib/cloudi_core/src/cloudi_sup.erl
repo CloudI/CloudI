@@ -87,8 +87,8 @@ init([Config]) when is_record(Config, config) ->
       [child_specification(cloudi_logger, Config),
        child_specification(cloudi_nodes, Config),
        child_specification(cloudi_services),
-       child_specification(cloudi_external_sup),
-       child_specification(cloudi_internal_sup),
+       child_specification(cloudi_services_external_sup),
+       child_specification(cloudi_services_internal_sup),
        child_specification(cloudi_os_spawn_pool),
        child_specification(cloudi_configurator, Config)]}}.
 
@@ -123,10 +123,10 @@ child_specification(cloudi_services) ->
      {cloudi_services, start_link, []},
      permanent, Shutdown, worker, [cloudi_services]};
 
-child_specification(cloudi_internal_sup) ->
-    {cloudi_internal_sup,
-     {cloudi_internal_sup, start_link, []},
-     permanent, infinity, supervisor, [cloudi_internal_sup]};
+child_specification(cloudi_services_internal_sup) ->
+    {cloudi_services_internal_sup,
+     {cloudi_services_internal_sup, start_link, []},
+     permanent, infinity, supervisor, [cloudi_services_internal_sup]};
 
 child_specification(cloudi_os_spawn_pool) ->
     Shutdown = 2000, % milliseconds
@@ -137,10 +137,10 @@ child_specification(cloudi_os_spawn_pool) ->
         permanent, Shutdown, worker, [cloudi_os_spawn]}]},
      permanent, infinity, supervisor, [cloudi_pool_sup]};
 
-child_specification(cloudi_external_sup) ->
-    {cloudi_external_sup,
-     {cloudi_external_sup, start_link, []},
-     permanent, infinity, supervisor, [cloudi_external_sup]}.
+child_specification(cloudi_services_external_sup) ->
+    {cloudi_services_external_sup,
+     {cloudi_services_external_sup, start_link, []},
+     permanent, infinity, supervisor, [cloudi_services_external_sup]}.
 
 % determine the number of cloudi_os_spawn child processes within the
 % cloudi_pool_sup, referenced by a cloudi_pool process with a

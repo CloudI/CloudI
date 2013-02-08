@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI External Service Supervisor==
+%%% ==CloudI Internal Service Supervisor==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -47,14 +47,14 @@
 %%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_external_sup).
+-module(cloudi_services_internal_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
 
 %% external interface
 -export([start_link/0,
-         create_external/10]).
+         create_internal/11]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,12 +76,12 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_external(Protocol, BufferSize, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync, DestRefresh,
-                DestDeny, DestAllow, ConfigOptions)
-    when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
+create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
+                TimeoutSync, TimeoutAsync,
+                DestRefresh, DestDeny, DestAllow, ConfigOptions)
+    when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
+         is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (Protocol == tcp) orelse (Protocol == udp),
     true = (DestRefresh == immediate_closest) orelse
            (DestRefresh == lazy_closest) orelse
            (DestRefresh == immediate_furthest) orelse
@@ -93,14 +93,15 @@ create_external(Protocol, BufferSize, Timeout, Prefix,
            (DestRefresh == immediate_remote) orelse
            (DestRefresh == lazy_remote) orelse
            (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
+    case supervisor:start_child(?MODULE, [ProcessIndex, Module, Args,
+                                          Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions]) of
         {ok, Pid} ->
-            {ok, Pid, cloudi_external:port(Pid)};
+            {ok, Pid};
         {ok, Pid, _} ->
-            {ok, Pid, cloudi_external:port(Pid)};
+            {ok, Pid};
         {error, _} = Error ->
             Error
     end.
@@ -115,8 +116,8 @@ init([]) ->
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
-            {cloudi_external, start_link, []},
-            temporary, Shutdown, worker, [cloudi_external]}]}}.
+            {cloudi_services_internal, start_link, []},
+            temporary, Shutdown, worker, [cloudi_services_internal]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

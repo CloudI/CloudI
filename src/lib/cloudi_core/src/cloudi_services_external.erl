@@ -49,7 +49,7 @@
 %%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_external).
+-module(cloudi_services_external).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_fsm).
@@ -81,37 +81,51 @@
 
 -record(state,
     {
-        protocol,        % tcp or udp
-        port,            % port number used
-        incoming_port,   % udp incoming port
-        listener,        % tcp listener
-        acceptor,        % tcp acceptor
-        socket,          % data socket
-        prefix,          % subscribe/unsubscribe name prefix
-        timeout_async,   % default timeout for send_async
-        timeout_sync,    % default timeout for send_sync
+        dispatcher,                    % self()
+        protocol,                      % tcp or udp
+        port,                          % port number used
+        incoming_port,                 % udp incoming port
+        listener,                      % tcp listener
+        acceptor,                      % tcp acceptor
+        socket,                        % data socket
+        prefix,                        % subscribe/unsubscribe name prefix
+        timeout_async,                 % default timeout for send_async
+        timeout_sync,                  % default timeout for send_sync
         os_pid = undefined,            % os_pid reported by the socket
         keepalive = undefined,         % stores if a keepalive succeeded
+        init_timeout,                  % init timeout handler
         send_timeouts = dict:new(),    % tracking for send timeouts
         recv_timeouts = dict:new(),    % tracking for recv timeouts
-        async_responses = dict:new(),  % tracking for async messages
-        queue_messages = true,         % is the external process busy?
-        queued = pqueue4:new(),        % queued incoming messages
-        uuid_generator,  % transaction id generator
-        dest_refresh,    % immediate_closest | lazy_closest |
-                         % immediate_furthest | lazy_furthest |
-                         % immediate_random | lazy_random |
-                         % immediate_local | lazy_local |
-                         % immediate_remote | lazy_remote,
-                         % destination pid refresh
+        async_responses = dict:new(),  % tracking for async requests
+        queue_requests = true,         % is the external process busy?
+        queued = pqueue4:new(),        % queued incoming requests
+        uuid_generator,                % transaction id generator
+        dest_refresh,                  % immediate_closest | lazy_closest |
+                                       % immediate_furthest | lazy_furthest |
+                                       % immediate_random | lazy_random |
+                                       % immediate_local | lazy_local |
+                                       % immediate_remote | lazy_remote,
+                                       % destination pid refresh
         cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
-        dest_deny,       % is the socket denied from sending to a destination
-        dest_allow,      % is the socket allowed to send to a destination
-        options          % #config_service_options{} from configuration
+        dest_deny,                     % denied from sending to a destination
+        dest_allow,                    % allowed to send to a destination
+        options                        % #config_service_options{}
     }).
 
--compile({nowarn_unused_function, [{recv_async_select_random, 1},
-                                   {recv_async_select_oldest, 1}]}).
+-import(cloudi_services_common,
+        [destination_allowed/3,
+         destination_refresh_first/2,
+         destination_refresh_start/2,
+         destination_get/4,
+         destination_all/4,
+         send_async_timeout_start/4,
+         send_sync_timeout_start/5,
+         send_timeout_check/2,
+         send_timeout_end/2,
+         recv_timeout_start/7,
+         async_response_timeout_start/6,
+         async_response_timeout_end/2,
+         ?RECV_ASYNC_STRATEGY/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -147,6 +161,9 @@ port(Process) when is_pid(Process) ->
 
 init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
+    Dispatcher = self(),
+    InitTimeout = erlang:send_after(Timeout, Dispatcher,
+                                    'cloudi_service_init_timeout'),
     process_flag(trap_exit, true),
     Opts = [binary, {ip, {127,0,0,1}},
             {recbuf, BufferSize}, {sndbuf, BufferSize},
@@ -161,24 +178,29 @@ init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
             cloudi_random:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             destination_refresh_start(DestRefresh, ConfigOptions),
-            {ok, 'CONNECT', #state{protocol = tcp,
+            {ok, 'CONNECT', #state{dispatcher = Dispatcher,
+                                   protocol = tcp,
                                    port = Port,
                                    listener = Listener,
                                    acceptor = Acceptor,
                                    prefix = Prefix,
                                    timeout_async = TimeoutAsync,
                                    timeout_sync = TimeoutSync,
-                                   uuid_generator = uuid:new(self()),
+                                   init_timeout = InitTimeout,
+                                   uuid_generator = uuid:new(Dispatcher),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
                                    dest_allow = DestAllow,
-                                   options = ConfigOptions}, Timeout};
+                                   options = ConfigOptions}};
         {error, Reason} ->
             {stop, Reason}
     end;
 
 init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
+    Dispatcher = self(),
+    InitTimeout = erlang:send_after(Timeout, Dispatcher,
+                                    'cloudi_service_init_timeout'),
     process_flag(trap_exit, true),
     Opts = [binary, {ip, {127,0,0,1}},
             {recbuf, BufferSize}, {sndbuf, BufferSize},
@@ -188,126 +210,130 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
             {ok, Port} = inet:port(Socket),
             cloudi_random:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
-            {ok, 'CONNECT', #state{protocol = udp,
+            {ok, 'CONNECT', #state{dispatcher = Dispatcher,
+                                   protocol = udp,
                                    port = Port,
                                    socket = Socket,
                                    prefix = Prefix,
                                    timeout_async = TimeoutAsync,
                                    timeout_sync = TimeoutSync,
-                                   uuid_generator = uuid:new(self()),
+                                   init_timeout = InitTimeout,
+                                   uuid_generator = uuid:new(Dispatcher),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
                                    dest_allow = DestAllow,
-                                   options = ConfigOptions}, Timeout};
+                                   options = ConfigOptions}};
         {error, Reason} ->
             {stop, Reason}
     end.
 
-% outgoing messages (from the port socket to other Erlang pids)
+% incoming messages (from the port socket)
 
-'CONNECT'({'pid', OsPid}, StateData) ->
+'CONNECT'({'pid', OsPid}, State) ->
     % forked process has connected before CloudI API initialization
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
-    {next_state, 'CONNECT', StateData#state{os_pid = OsPid}};
+    {next_state, 'CONNECT', State#state{os_pid = OsPid}};
 
-'CONNECT'('init', #state{protocol = Protocol,
+'CONNECT'('init', #state{dispatcher = Dispatcher,
+                         protocol = Protocol,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
                          timeout_sync = TimeoutSync,
-                         options = ConfigOptions} = StateData) ->
+                         options = ConfigOptions} = State) ->
     % first message within the CloudI API received during
     % the object construction or init API function
     PriorityDefault = ConfigOptions#config_service_options.priority_default,
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault),
-         StateData),
+         State),
     if
         Protocol =:= udp ->
-            send('keepalive_out'(), StateData),
-            erlang:send_after(?KEEPALIVE_UDP, self(), keepalive_udp);
+            send('keepalive_out'(), State),
+            erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp);
         true ->
             ok
     end,
-    {next_state, 'HANDLE', StateData};
+    {next_state, 'HANDLE', State};
 
-'CONNECT'(timeout, StateData) ->
-    {stop, timeout, StateData};
+'CONNECT'(Request, State) ->
+    {stop, {'CONNECT', undefined_message, Request}, State}.
 
-'CONNECT'(Request, StateData) ->
-    {stop, {'CONNECT', undefined_message, Request}, StateData}.
-
-'HANDLE'('polling', StateData) ->
-    % asynchronous CloudI API functions can be used within the
-    % external initialization, before calling poll(), but any incoming
-    % messages needed to be blocked during the external initialization
-    % (message received once, after external initialization is complete)
-    {next_state, 'HANDLE', process_queue(StateData)};
+'HANDLE'('polling', #state{init_timeout = InitTimeout} = State) ->
+    % initialization is now complete because the CloudI API poll function
+    % has been called for the first time (i.e., by the service code)
+    erlang:cancel_timer(InitTimeout),
+    {next_state, 'HANDLE',
+     process_queue(State#state{init_timeout = undefined})};
 
 'HANDLE'({'subscribe', Pattern},
-         #state{prefix = Prefix} = StateData) ->
-    cpg:join(Prefix ++ Pattern),
-    {next_state, 'HANDLE', StateData};
+         #state{dispatcher = Dispatcher,
+                prefix = Prefix} = State) ->
+    ok = cpg:join(Prefix ++ Pattern, Dispatcher),
+    {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
-         #state{prefix = Prefix} = StateData) ->
-    cpg:leave(Prefix ++ Pattern),
-    {next_state, 'HANDLE', StateData};
+         #state{dispatcher = Dispatcher,
+                prefix = Prefix} = State) ->
+    ok = cpg:leave(Prefix ++ Pattern, Dispatcher),
+    {next_state, 'HANDLE', State};
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
-                dest_allow = DestAllow} = StateData) ->
+                dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async(Name, RequestInfo, Request,
-                              Timeout, Priority, 'HANDLE', StateData);
+                              Timeout, Priority, 'HANDLE', State);
         false ->
-            send('return_async_out'(), StateData),
-            {next_state, 'HANDLE', StateData}
+            send('return_async_out'(), State),
+            {next_state, 'HANDLE', State}
     end;
 
 'HANDLE'({'send_sync', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
-                dest_allow = DestAllow} = StateData) ->
+                dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_sync(Name, RequestInfo, Request,
-                             Timeout, Priority, 'HANDLE', StateData);
+                             Timeout, Priority, 'HANDLE', State);
         false ->
-            send('return_sync_out'(), StateData),
-            {next_state, 'HANDLE', StateData}
+            send('return_sync_out'(), State),
+            {next_state, 'HANDLE', State}
     end;
 
 'HANDLE'({'mcast_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
-                dest_allow = DestAllow} = StateData) ->
+                dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_mcast_async(Name, RequestInfo, Request,
-                               Timeout, Priority, 'HANDLE', StateData);
+                               Timeout, Priority, 'HANDLE', State);
         false ->
-            send('returns_async_out'(), StateData),
-            {next_state, 'HANDLE', StateData}
+            send('returns_async_out'(), State),
+            {next_state, 'HANDLE', State}
     end;
 
 'HANDLE'({'forward_async', Name, RequestInfo, Request,
           Timeout, Priority, TransId, Pid},
-         #state{dest_refresh = DestRefresh,
+         #state{dispatcher = Dispatcher,
+                dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
-                dest_allow = DestAllow} = StateData) ->
+                dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Name, Pid, Groups) of
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
-                    erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
-                                      {'forward_async', Name,
-                                       RequestInfo, Request,
+                    erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
+                                      {'cloudi_service_forward_async_retry',
+                                       Name, RequestInfo, Request,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
                                        Priority, TransId, Pid}),
                     ok;
                 {error, _} ->
                     ok;
                 {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_async', Name, NextPattern,
+                    NextPid ! {'cloudi_service_send_async',
+                               Name, NextPattern,
                                RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
@@ -317,28 +343,30 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         false ->
             ok
     end,
-    {next_state, 'HANDLE', process_queue(StateData)};
+    {next_state, 'HANDLE', process_queue(State)};
 
 'HANDLE'({'forward_sync', Name, RequestInfo, Request,
           Timeout, Priority, TransId, Pid},
-         #state{dest_refresh = DestRefresh,
+         #state{dispatcher = Dispatcher,
+                dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
-                dest_allow = DestAllow} = StateData) ->
+                dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Name, Pid, Groups) of
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
-                    erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
-                                      {'forward_sync', Name,
-                                       RequestInfo, Request,
+                    erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
+                                      {'cloudi_service_forward_sync_retry',
+                                       Name, RequestInfo, Request,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
                                        Priority, TransId, Pid}),
                     ok;
                 {error, _} ->
                     ok;
                 {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'send_sync', Name, NextPattern,
+                    NextPid ! {'cloudi_service_send_sync',
+                               Name, NextPattern,
                                RequestInfo, Request,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Pid};
@@ -348,296 +376,292 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         false ->
             ok
     end,
-    {next_state, 'HANDLE', process_queue(StateData)};
+    {next_state, 'HANDLE', process_queue(State)};
 
 'HANDLE'({'recv_async', Timeout, TransId, Consume},
-         #state{async_responses = AsyncResponses} = StateData) ->
+         #state{dispatcher = Dispatcher,
+                async_responses = AsyncResponses} = State) ->
     if
         TransId == <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'recv_async',
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                                      {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume}),
-                    {next_state, 'HANDLE', StateData};
+                    {next_state, 'HANDLE', State};
                 [] ->
-                    send('recv_async_out'(timeout, TransId), StateData),
-                    {next_state, 'HANDLE', StateData};
+                    send('recv_async_out'(timeout, TransId), State),
+                    {next_state, 'HANDLE', State};
                 L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
                     NewAsyncResponses = dict:erase(TransIdPick, AsyncResponses),
                     send('recv_async_out'(ResponseInfo, Response, TransIdPick),
-                         StateData),
+                         State),
                     {next_state, 'HANDLE',
-                     StateData#state{async_responses = NewAsyncResponses}};
+                     State#state{async_responses = NewAsyncResponses}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
                     send('recv_async_out'(ResponseInfo, Response, TransIdPick),
-                         StateData),
-                    {next_state, 'HANDLE', StateData}
+                         State),
+                    {next_state, 'HANDLE', State}
             end;
         true ->
             case dict:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'recv_async',
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                                      {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume}),
-                    {next_state, 'HANDLE', StateData};
+                    {next_state, 'HANDLE', State};
                 error ->
-                    send('recv_async_out'(timeout, TransId), StateData),
-                    {next_state, 'HANDLE', StateData};
+                    send('recv_async_out'(timeout, TransId), State),
+                    {next_state, 'HANDLE', State};
                 {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     NewAsyncResponses = dict:erase(TransId, AsyncResponses),
                     send('recv_async_out'(ResponseInfo, Response, TransId),
-                         StateData),
+                         State),
                     {next_state, 'HANDLE',
-                     StateData#state{async_responses = NewAsyncResponses}};
+                     State#state{async_responses = NewAsyncResponses}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
                     send('recv_async_out'(ResponseInfo, Response, TransId),
-                         StateData),
-                    {next_state, 'HANDLE', StateData}
+                         State),
+                    {next_state, 'HANDLE', State}
             end
     end;
 
-'HANDLE'({'return_async', _Name, _Pattern, _ResponseInfo, _Response,
-          _Timeout, _TransId, Pid} = T,
-         StateData) ->
-    Pid ! T,
-    {next_state, 'HANDLE', process_queue(StateData)};
+'HANDLE'({'return_async', Name, Pattern, ResponseInfo, Response,
+          Timeout, TransId, Pid},
+         State) ->
+    Pid ! {'cloudi_service_return_async', Name, Pattern,
+           ResponseInfo, Response,
+           Timeout, TransId, Pid},
+    {next_state, 'HANDLE', process_queue(State)};
 
-'HANDLE'({'return_sync', _Name, _Pattern, _ResponseInfo, _Response,
-          _Timeout, _TransId, Pid} = T,
-         StateData) ->
-    Pid ! T,
-    {next_state, 'HANDLE', process_queue(StateData)};
+'HANDLE'({'return_sync', Name, Pattern, ResponseInfo, Response,
+          Timeout, TransId, Pid},
+         State) ->
+    Pid ! {'cloudi_service_return_sync', Name, Pattern,
+           ResponseInfo, Response,
+           Timeout, TransId, Pid},
+    {next_state, 'HANDLE', process_queue(State)};
 
-'HANDLE'('keepalive', StateData) ->
-    {next_state, 'HANDLE', StateData#state{keepalive = received}};
+'HANDLE'('keepalive', State) ->
+    {next_state, 'HANDLE', State#state{keepalive = received}};
 
-'HANDLE'(Request, StateData) ->
-    {stop, {'HANDLE', undefined_message, Request}, StateData}.
+'HANDLE'(Request, State) ->
+    {stop, {'HANDLE', undefined_message, Request}, State}.
 
-handle_sync_event(port, _, StateName, #state{port = Port} = StateData) ->
-    {reply, Port, StateName, StateData};
+handle_sync_event(port, _, StateName, #state{port = Port} = State) ->
+    {reply, Port, StateName, State};
 
-handle_sync_event(Event, _From, StateName, StateData) ->
+handle_sync_event(Event, _From, StateName, State) ->
     ?LOG_WARN("Unknown event \"~p\"", [Event]),
-    {stop, {StateName, undefined_event, Event}, StateData}.
+    {stop, {StateName, undefined_event, Event}, State}.
 
-handle_event(Event, StateName, StateData) ->
+handle_event(Event, StateName, State) ->
     ?LOG_WARN("Unknown event \"~p\"", [Event]),
-    {stop, {StateName, undefined_event, Event}, StateData}.
+    {stop, {StateName, undefined_event, Event}, State}.
 
 handle_info({udp, Socket, _, Port, Data}, StateName,
             #state{protocol = udp,
                    incoming_port = Port,
-                   socket = Socket} = StateData) ->
+                   socket = Socket} = State) ->
     inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), StateData)
+    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, StateData}
+            {stop, {error, protocol}, State}
     end;
 
 handle_info({udp, Socket, _, Port, Data}, StateName,
             #state{protocol = udp,
-                   socket = Socket} = StateData) ->
+                   socket = Socket} = State) ->
     inet:setopts(Socket, [{active, once}]),
     try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]),
-                          StateData#state{incoming_port = Port})
+                          State#state{incoming_port = Port})
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, StateData}
+            {stop, {error, protocol}, State}
     end;
 
 handle_info(keepalive_udp, StateName,
-            #state{keepalive = undefined,
-                   socket = Socket} = StateData) ->
-    self() ! {udp_closed, Socket},
-    {next_state, StateName, StateData};
+            #state{dispatcher = Dispatcher,
+                   keepalive = undefined,
+                   socket = Socket} = State) ->
+    Dispatcher ! {udp_closed, Socket},
+    {next_state, StateName, State};
 
 handle_info(keepalive_udp, StateName,
-            #state{keepalive = received} = StateData) ->
-    send('keepalive_out'(), StateData),
-    erlang:send_after(?KEEPALIVE_UDP, self(), keepalive_udp),
-    {next_state, StateName, StateData#state{keepalive = undefined}};
+            #state{dispatcher = Dispatcher,
+                   keepalive = received} = State) ->
+    send('keepalive_out'(), State),
+    erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp),
+    {next_state, StateName, State#state{keepalive = undefined}};
 
 handle_info({udp_closed, Socket}, _,
             #state{protocol = udp,
-                   socket = Socket} = StateData) ->
-    {stop, normal, StateData};
+                   socket = Socket} = State) ->
+    {stop, normal, State};
 
 handle_info({tcp, Socket, Data}, StateName,
             #state{protocol = tcp,
-                   socket = Socket} = StateData) ->
+                   socket = Socket} = State) ->
     inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), StateData)
+    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, StateData}
+            {stop, {error, protocol}, State}
     end;
 
 handle_info({tcp_closed, Socket}, _,
             #state{protocol = tcp,
-                   socket = Socket} = StateData) ->
-    {stop, normal, StateData};
+                   socket = Socket} = State) ->
+    {stop, normal, State};
 
 handle_info({tcp_error, Socket, Reason}, _,
             #state{protocol = tcp,
-                   socket = Socket} = StateData) ->
-    {stop, Reason, StateData};
+                   socket = Socket} = State) ->
+    {stop, Reason, State};
 
 handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
             #state{protocol = tcp,
                    listener = Listener,
-                   acceptor = Acceptor} = StateData) ->
+                   acceptor = Acceptor} = State) ->
     true = inet_db:register_socket(Socket, inet_tcp),
     CopyOpts = [recbuf, sndbuf, nodelay, keepalive, delay_send, priority, tos],
     {ok, Opts} = prim_inet:getopts(Listener, CopyOpts),
     ok = prim_inet:setopts(Socket, [{active, once} | Opts]),
     catch gen_tcp:close(Listener),
-    {next_state, StateName, StateData#state{listener = undefined,
-                                            acceptor = undefined,
-                                            socket = Socket}};
+    {next_state, StateName, State#state{listener = undefined,
+                                        acceptor = undefined,
+                                        socket = Socket}};
 
 handle_info({inet_async, Listener, Acceptor, Error}, StateName,
             #state{protocol = tcp,
                    listener = Listener,
-                   acceptor = Acceptor} = StateData) ->
-    {stop, {StateName, inet_async, Error}, StateData};
+                   acceptor = Acceptor} = State) ->
+    {stop, {StateName, inet_async, Error}, State};
 
 handle_info({cpg_data, Groups}, StateName,
             #state{dest_refresh = DestRefresh,
-                   options = ConfigOptions} = StateData) ->
+                   options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),
-    {next_state, StateName, StateData#state{cpg_data = Groups}};
+    {next_state, StateName, State#state{cpg_data = Groups}};
 
-handle_info({'send_async', Name, RequestInfo, Request,
-             Timeout, Priority}, StateName, StateData) ->
+handle_info('cloudi_service_init', _, State) ->
+    {stop, timeout, State};
+
+handle_info({'cloudi_service_send_async_retry', Name, RequestInfo, Request,
+             Timeout, Priority}, StateName, State) ->
     handle_send_async(Name, RequestInfo, Request,
-                      Timeout, Priority, StateName, StateData);
+                      Timeout, Priority, StateName, State);
 
-handle_info({'send_sync', Name, RequestInfo, Request,
-             Timeout, Priority}, StateName, StateData) ->
+handle_info({'cloudi_service_send_sync_retry', Name, RequestInfo, Request,
+             Timeout, Priority}, StateName, State) ->
     handle_send_sync(Name, RequestInfo, Request,
-                     Timeout, Priority, StateName, StateData);
+                     Timeout, Priority, StateName, State);
 
-handle_info({'mcast_async', Name, RequestInfo, Request,
-             Timeout, Priority}, StateName, StateData) ->
+handle_info({'cloudi_service_mcast_async_retry', Name, RequestInfo, Request,
+             Timeout, Priority}, StateName, State) ->
     handle_mcast_async(Name, RequestInfo, Request,
-                       Timeout, Priority, StateName, StateData);
+                       Timeout, Priority, StateName, State);
 
-handle_info({'forward_async', Name, RequestInfo, Request,
+handle_info({'cloudi_service_forward_async_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{dest_refresh = DestRefresh,
-                   cpg_data = Groups} = StateData) ->
+            #state{dispatcher = Dispatcher,
+                   dest_refresh = DestRefresh,
+                   cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Pid, Groups) of
         {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
-                              {'forward_async', Name,
-                               RequestInfo, Request,
+            erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
+                              {'cloudi_service_forward_async_retry',
+                               Name, RequestInfo, Request,
                                Timeout - ?FORWARD_ASYNC_INTERVAL,
                                Priority, TransId, Pid}),
             ok;
         {error, _} ->
             ok;
         {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'send_async', Name, Pattern,
+            NextPid ! {'cloudi_service_send_async', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Pid};
         _ ->
             ok
     end,
-    {next_state, StateName, StateData};
+    {next_state, StateName, State};
 
-handle_info({'forward_sync', Name, RequestInfo, Request,
+handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{dest_refresh = DestRefresh,
-                   cpg_data = Groups} = StateData) ->
+            #state{dispatcher = Dispatcher,
+                   dest_refresh = DestRefresh,
+                   cpg_data = Groups} = State) ->
     case destination_get(DestRefresh, Name, Pid, Groups) of
         {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
-                              {'forward_sync', Name,
-                               RequestInfo, Request,
+            erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
+                              {'cloudi_service_forward_sync_retry',
+                               Name, RequestInfo, Request,
                                Timeout - ?FORWARD_SYNC_INTERVAL,
                                Priority, TransId, Pid}),
             ok;
         {error, _} ->
             ok;
         {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'send_sync', Name, Pattern,
+            NextPid ! {'cloudi_service_send_sync', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Pid};
         _ ->
             ok
     end,
-    {next_state, StateName, StateData};
+    {next_state, StateName, State};
 
-handle_info({'recv_async', _, _, _} = T, StateName, StateData) ->
-    ?MODULE:StateName(T, StateData);
+handle_info({'cloudi_service_recv_async_retry', Timeout, TransId, Consume},
+            StateName, State) ->
+    ?MODULE:StateName({'recv_async', Timeout, TransId, Consume}, State);
 
-% incoming messages (from Erlang pids to the port socket)
+% incoming requests (from other Erlang pids that are CloudI services)
 
-handle_info({'send_async', _, _, RequestInfo, Request, _, _, _, _},
-            StateName, StateData)
+handle_info({'cloudi_service_send_async', _, _,
+             RequestInfo, Request, _, _, _, _}, StateName, State)
     when is_binary(RequestInfo) =:= false; is_binary(Request) =:= false ->
-    {next_state, StateName, StateData};
+    {next_state, StateName, State};
 
-handle_info({'send_async', Name, Pattern, RequestInfo, Request,
+handle_info({'cloudi_service_send_async', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{queue_messages = false} = StateData) ->
+            #state{queue_requests = false} = State) ->
     send('send_async_out'(Name, Pattern, RequestInfo, Request,
-                          Timeout, Priority, TransId, Pid), StateData),
-    {next_state, StateName, StateData#state{queue_messages = true}};
+                          Timeout, Priority, TransId, Pid), State),
+    {next_state, StateName, State#state{queue_requests = true}};
 
-handle_info({'send_async', _, _, _, _,
-             Timeout, Priority, TransId, _} = T, StateName,
-            #state{queue_messages = true,
-                   queued = Queue,
-                   options = ConfigOptions} = StateData) ->
-    QueueLimit = ConfigOptions#config_service_options.queue_limit,
-    QueueLimitOk = if
-        QueueLimit /= undefined ->
-            pqueue4:len(Queue) < QueueLimit;
-        true ->
-            true
-    end,
-    if
-        QueueLimitOk ->
-            {next_state, StateName,
-             recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
-        true ->
-            {next_state, StateName, StateData}
-    end;
-
-handle_info({'send_sync', _, _, RequestInfo, Request, _, _, _, _},
-            StateName, StateData)
+handle_info({'cloudi_service_send_sync', _, _,
+             RequestInfo, Request, _, _, _, _}, StateName, State)
     when is_binary(RequestInfo) =:= false; is_binary(Request) =:= false ->
-    {next_state, StateName, StateData};
+    {next_state, StateName, State};
 
-handle_info({'send_sync', Name, Pattern, RequestInfo, Request,
+handle_info({'cloudi_service_send_sync', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{queue_messages = false} = StateData) ->
+            #state{queue_requests = false} = State) ->
     send('send_sync_out'(Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, TransId, Pid), StateData),
-    {next_state, StateName, StateData#state{queue_messages = true}};
+                         Timeout, Priority, TransId, Pid), State),
+    {next_state, StateName, State#state{queue_requests = true}};
 
-handle_info({'send_sync', _, _, _, _,
-             Timeout, Priority, TransId, _} = T, StateName,
-            #state{queue_messages = true,
+handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T, StateName,
+            #state{dispatcher = Dispatcher,
+                   recv_timeouts = RecvTimeouts,
+                   queue_requests = true,
                    queued = Queue,
-                   options = ConfigOptions} = StateData) ->
+                   options = ConfigOptions} = State)
+    when Type =:= 'cloudi_service_send_async';
+         Type =:= 'cloudi_service_send_sync' ->
     QueueLimit = ConfigOptions#config_service_options.queue_limit,
     QueueLimitOk = if
         QueueLimit /= undefined ->
@@ -647,61 +671,22 @@ handle_info({'send_sync', _, _, _, _,
     end,
     if
         QueueLimitOk ->
+            {NewRecvTimeouts,
+             NewQueue} = recv_timeout_start(Timeout, Priority, TransId, T,
+                                            RecvTimeouts, Queue, Dispatcher),
             {next_state, StateName,
-             recv_timeout_start(Timeout, Priority, TransId, T, StateData)};
+             State#state{recv_timeouts = NewRecvTimeouts,
+                         queued = NewQueue}};
         true ->
-            {next_state, StateName, StateData}
+            {next_state, StateName, State}
     end;
 
-handle_info({'return_async', _, _, ResponseInfo, Response,
-             _, _, _}, StateName, StateData)
-    when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
-    {next_state, StateName, StateData};
-
-handle_info({'return_async', _Name, _Pattern, ResponseInfo, Response,
-             Timeout, TransId, Pid},
-            StateName, StateData) ->
-    true = Pid == self(),
-    case send_timeout_check(TransId, StateData) of
-        error ->
-            % send_async timeout already occurred
-            {next_state, StateName, StateData};
-        {ok, Tref} when Response == <<>> ->
-            erlang:cancel_timer(Tref),
-            {next_state, StateName, send_timeout_end(TransId, StateData)};
-        {ok, Tref} ->
-            erlang:cancel_timer(Tref),
-            {next_state, StateName,
-             async_response_timeout_start(ResponseInfo, Response,
-                                          Timeout, TransId,
-                                          send_timeout_end(TransId, StateData))}
-    end;
-
-handle_info({'return_sync', _, _, ResponseInfo, Response,
-             _, _, _}, StateName, StateData)
-    when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
-    {next_state, StateName, StateData};
-
-handle_info({'return_sync', _Name, _Pattern, ResponseInfo, Response,
-             _Timeout, TransId, Pid},
-            StateName, StateData) ->
-    true = Pid == self(),
-    case send_timeout_check(TransId, StateData) of
-        error ->
-            % send_sync timeout already occurred
-            {next_state, StateName, StateData};
-        {ok, Tref} ->
-            erlang:cancel_timer(Tref),
-            send('return_sync_out'(ResponseInfo, Response, TransId), StateData),
-            {next_state, StateName, send_timeout_end(TransId, StateData)}
-    end;
-
-handle_info({recv_timeout, Priority, TransId}, StateName,
-            #state{recv_timeouts = Ids,
-                   queue_messages = QueueMessages,
-                   queued = Queue} = StateData) ->
+handle_info({'cloudi_service_recv_timeout', Priority, TransId}, StateName,
+            #state{recv_timeouts = RecvTimeouts,
+                   queue_requests = QueueRequests,
+                   queued = Queue} = State) ->
     NewQueue = if
-        QueueMessages =:= true ->
+        QueueRequests =:= true ->
             pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
                 Id /= TransId
             end, Priority, Queue);
@@ -709,43 +694,113 @@ handle_info({recv_timeout, Priority, TransId}, StateName,
             Queue
     end,
     {next_state, StateName,
-     StateData#state{recv_timeouts = dict:erase(TransId, Ids),
-                     queued = NewQueue}};
+     State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
+                 queued = NewQueue}};
 
-handle_info({send_async_timeout, TransId}, StateName, StateData) ->
-    case send_timeout_check(TransId, StateData) of
+handle_info({'cloudi_service_return_async', _, _, ResponseInfo, Response,
+             _, _, _}, StateName, State)
+    when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
+    {next_state, StateName, State};
+
+handle_info({'cloudi_service_return_async', _Name, _Pattern,
+             ResponseInfo, Response, _, TransId, Pid}, StateName,
+            #state{dispatcher = Dispatcher,
+                   send_timeouts = SendTimeouts,
+                   async_responses = AsyncResponses} = State) ->
+    true = Pid =:= Dispatcher,
+    case send_timeout_check(TransId, SendTimeouts) of
+        error ->
+            % send_async timeout already occurred
+            {next_state, StateName, State};
+        {ok, {passive, Tref}} when Response == <<>> ->
+            erlang:cancel_timer(Tref),
+            NewSendTimeouts = send_timeout_end(TransId, SendTimeouts),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}};
+        {ok, {passive, Tref}} ->
+            Timeout = case erlang:cancel_timer(Tref) of
+                false ->
+                    1;
+                V ->
+                    V
+            end,
+            NewSendTimeouts = send_timeout_end(TransId, SendTimeouts),
+            NewAsyncResponses = async_response_timeout_start(ResponseInfo,
+                                                             Response,
+                                                             Timeout,
+                                                             TransId,
+                                                             AsyncResponses,
+                                                             Dispatcher),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts,
+                         async_responses = NewAsyncResponses}}
+    end;
+
+handle_info({'cloudi_service_return_sync', _, _, ResponseInfo, Response,
+             _, _, _}, StateName, State)
+    when is_binary(ResponseInfo) =:= false; is_binary(Response) =:= false ->
+    {next_state, StateName, State};
+
+handle_info({'cloudi_service_return_sync', _Name, _Pattern,
+             ResponseInfo, Response, _Timeout, TransId, Pid}, StateName,
+            #state{dispatcher = Dispatcher,
+                   send_timeouts = SendTimeouts} = State) ->
+    true = Pid =:= Dispatcher,
+    case send_timeout_check(TransId, SendTimeouts) of
+        error ->
+            % send_sync timeout already occurred
+            {next_state, StateName, State};
+        {ok, {_, Tref}} ->
+            erlang:cancel_timer(Tref),
+            NewSendTimeouts = send_timeout_end(TransId, SendTimeouts),
+            send('return_sync_out'(ResponseInfo, Response, TransId), State),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
+    end;
+
+handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
+            #state{send_timeouts = SendTimeouts} = State) ->
+    case send_timeout_check(TransId, SendTimeouts) of
         error ->
             % should never happen, timer should have been cancelled
             % if the send_async already returned
-            ?LOG_WARN("send_async_timeout not found (trans_id=~s)",
+            ?LOG_WARN("send timeout not found (trans_id=~s)",
                       [uuid:uuid_to_string(TransId)]),
-            {next_state, StateName, StateData};
+            {next_state, StateName, State};
         {ok, _} ->
-            {next_state, StateName, send_timeout_end(TransId, StateData)}
+            NewSendTimeouts = send_timeout_end(TransId, SendTimeouts),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
     end;
 
-handle_info({send_sync_timeout, TransId}, StateName, StateData) ->
-    case send_timeout_check(TransId, StateData) of
+handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
+            #state{send_timeouts = SendTimeouts} = State) ->
+    case send_timeout_check(TransId, SendTimeouts) of
         error ->
             % should never happen, timer should have been cancelled
             % if the send_sync already returned
-            ?LOG_WARN("send_sync_timeout not found (trans_id=~s)",
+            ?LOG_WARN("send timeout not found (trans_id=~s)",
                       [uuid:uuid_to_string(TransId)]),
-            {next_state, StateName, StateData};
+            {next_state, StateName, State};
         {ok, _} ->
-            send('return_sync_out'(timeout, TransId), StateData),
-            {next_state, StateName, send_timeout_end(TransId, StateData)}
+            NewSendTimeouts = send_timeout_end(TransId, SendTimeouts),
+            send('return_sync_out'(timeout, TransId), State),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
     end;
 
-handle_info({recv_async_timeout, TransId}, StateName, StateData) ->
-    {next_state, StateName, async_response_timeout_end(TransId, StateData)};
+handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
+            #state{async_responses = AsyncResponses} = State) ->
+    NewAsyncResponses = async_response_timeout_end(TransId, AsyncResponses),
+    {next_state, StateName,
+     State#state{async_responses = NewAsyncResponses}};
 
-handle_info({'EXIT', _, Reason}, _, StateData) ->
-    {stop, Reason, StateData};
+handle_info({'EXIT', _, Reason}, _, State) ->
+    {stop, Reason, State};
 
-handle_info(Request, StateName, StateData) ->
+handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {next_state, StateName, StateData}.
+    {next_state, StateName, State}.
 
 terminate(_, _, #state{protocol = tcp,
                        listener = Listener,
@@ -763,8 +818,8 @@ terminate(_, _, #state{protocol = udp,
     os_pid_kill(OsPid),
     ok.
 
-code_change(_, StateName, StateData, _) ->
-    {ok, StateName, StateData}.
+code_change(_, StateName, State, _) ->
+    {ok, StateName, State}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -780,78 +835,95 @@ os_pid_kill(OsPid) ->
     os:cmd(cloudi_string:format("kill -9 ~w", [OsPid])).
 
 handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
-                  #state{uuid_generator = UUID,
+                  #state{dispatcher = Dispatcher,
+                         uuid_generator = UUID,
                          dest_refresh = DestRefresh,
-                         cpg_data = Groups} = StateData) ->
-    Self = self(),
-    case destination_get(DestRefresh, Name, Self, Groups) of
+                         cpg_data = Groups,
+                         send_timeouts = SendTimeouts} = State) ->
+    case destination_get(DestRefresh, Name, Dispatcher, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
-            erlang:send_after(?SEND_ASYNC_INTERVAL, Self,
-                              {'send_async', Name, RequestInfo, Request,
+            erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
+                              {'cloudi_service_send_async_retry',
+                               Name, RequestInfo, Request,
                                Timeout - ?SEND_ASYNC_INTERVAL, Priority}),
-            {next_state, StateName, StateData};
+            {next_state, StateName, State};
         {error, _} ->
-            send('return_async_out'(), StateData),
-            {next_state, StateName, StateData};
+            send('return_async_out'(), State),
+            {next_state, StateName, State};
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Self},
-            send('return_async_out'(TransId), StateData),
-            {next_state, StateName, send_async_timeout_start(Timeout,
-                                                             TransId,
-                                                             StateData)}
+            Pid ! {'cloudi_service_send_async',
+                   Name, Pattern, RequestInfo, Request,
+                   Timeout, Priority, TransId, Dispatcher},
+            send('return_async_out'(TransId), State),
+            NewSendTimeouts = send_async_timeout_start(Timeout,
+                                                       TransId,
+                                                       SendTimeouts,
+                                                       Dispatcher),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
     end.
 
 handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
-                 #state{uuid_generator = UUID,
+                 #state{dispatcher = Dispatcher,
+                        uuid_generator = UUID,
                         dest_refresh = DestRefresh,
-                        cpg_data = Groups} = StateData) ->
-    Self = self(),
-    case destination_get(DestRefresh, Name, Self, Groups) of
+                        cpg_data = Groups,
+                        send_timeouts = SendTimeouts} = State) ->
+    case destination_get(DestRefresh, Name, Dispatcher, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-            erlang:send_after(?SEND_SYNC_INTERVAL, Self,
-                              {'send_sync', Name, RequestInfo, Request,
+            erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
+                              {'cloudi_service_send_sync_retry',
+                               Name, RequestInfo, Request,
                                Timeout - ?SEND_SYNC_INTERVAL, Priority}),
-            {next_state, StateName, StateData};
+            {next_state, StateName, State};
         {error, _} ->
-            send('return_sync_out'(), StateData),
-            {next_state, StateName, StateData};
+            send('return_sync_out'(), State),
+            {next_state, StateName, State};
         {ok, Pattern, Pid} ->
             TransId = uuid:get_v1(UUID),
-            Pid ! {'send_sync', Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Self},
-            {next_state, StateName, send_sync_timeout_start(Timeout,
-                                                            TransId,
-                                                            StateData)}
+            Pid ! {'cloudi_service_send_sync',
+                   Name, Pattern, RequestInfo, Request,
+                   Timeout, Priority, TransId, Dispatcher},
+            NewSendTimeouts = send_sync_timeout_start(Timeout,
+                                                      TransId,
+                                                      undefined,
+                                                      SendTimeouts,
+                                                      Dispatcher),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
     end.
 
 handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
-                   #state{uuid_generator = UUID,
+                   #state{dispatcher = Dispatcher,
+                          uuid_generator = UUID,
                           dest_refresh = DestRefresh,
-                          cpg_data = Groups} = StateData) ->
-    Self = self(),
-    case destination_all(DestRefresh, Name, Self, Groups) of
+                          cpg_data = Groups,
+                          send_timeouts = SendTimeouts} = State) ->
+    case destination_all(DestRefresh, Name, Dispatcher, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
-            erlang:send_after(?MCAST_ASYNC_INTERVAL, Self,
-                              {'mcast_async', Name, RequestInfo, Request,
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, Dispatcher,
+                              {'cloudi_service_mcast_async_retry',
+                               Name, RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL, Priority}),
-            {next_state, StateName, StateData};
+            {next_state, StateName, State};
         {error, _} ->
-            send('returns_async_out'(), StateData),
-            {next_state, StateName, StateData};
+            send('returns_async_out'(), State),
+            {next_state, StateName, State};
         {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = uuid:get_v1(UUID),
-                Pid ! {'send_async', Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Self},
+                Pid ! {'cloudi_service_send_async',
+                       Name, Pattern, RequestInfo, Request,
+                       Timeout, Priority, TransId, Dispatcher},
                 TransId
             end, PidList),
-            send('returns_async_out'(TransIdList), StateData),
-            NewStateData = lists:foldl(fun(Id, S) ->
-                send_async_timeout_start(Timeout, Id, S)
-            end, StateData, TransIdList),
-            {next_state, StateName, NewStateData}
+            send('returns_async_out'(TransIdList), State),
+            NewSendTimeouts = lists:foldl(fun(Id, S) ->
+                send_async_timeout_start(Timeout, Id, S, Dispatcher)
+            end, SendTimeouts, TransIdList),
+            {next_state, StateName,
+             State#state{send_timeouts = NewSendTimeouts}}
     end.
 
 'init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault)
@@ -1001,219 +1073,17 @@ send(Data, #state{protocol = Protocol,
             ok = gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
 
-destination_allowed([], _, _) ->
-    false;
-
-destination_allowed(_, undefined, undefined) ->
-    true;
-
-destination_allowed(Name, undefined, DestAllow) ->
-    case trie:find_match(Name, DestAllow) of
-        {ok, _, _} ->
-            true;
-        error ->
-            false
-    end;
-
-destination_allowed(Name, DestDeny, undefined) ->
-    case trie:find_match(Name, DestDeny) of
-        {ok, _, _} ->
-            false;
-        error ->
-            true
-    end;
-
-destination_allowed(Name, DestDeny, DestAllow) ->
-    case trie:find_match(Name, DestDeny) of
-        {ok, _, _} ->
-            false;
-        error ->
-            case trie:find_match(Name, DestAllow) of
-                {ok, _, _} ->
-                    true;
-                error ->
-                    false
-            end
-    end.
-
-destination_refresh_first(DestRefresh,
-                          #config_service_options{dest_refresh_start = Delay})
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
-    cpg_data:get_groups(Delay);
-
-destination_refresh_first(DestRefresh, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
-    ok;
-
-destination_refresh_first(none, _) ->
-    ok.
-
-destination_refresh_start(DestRefresh,
-                          #config_service_options{dest_refresh_delay = Delay})
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
-    cpg_data:get_groups(Delay);
-
-destination_refresh_start(DestRefresh, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
-    ok;
-
-destination_refresh_start(none, _) ->
-    ok.
-
-destination_get(lazy_closest, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_closest_pid(Name, Pid, Groups);
-
-destination_get(lazy_furthest, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_furthest_pid(Name, Pid, Groups);
-
-destination_get(lazy_random, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_random_pid(Name, Pid, Groups);
-
-destination_get(lazy_local, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_local_pid(Name, Pid, Groups);
-
-destination_get(lazy_remote, Name, Pid, Groups)
-    when is_list(Name) ->
-    cpg_data:get_remote_pid(Name, Pid, Groups);
-
-destination_get(immediate_closest, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_closest_pid(Name, Pid);
-
-destination_get(immediate_furthest, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_furthest_pid(Name, Pid);
-
-destination_get(immediate_random, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_random_pid(Name, Pid);
-
-destination_get(immediate_local, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_local_pid(Name, Pid);
-
-destination_get(immediate_remote, Name, Pid, _)
-    when is_list(Name) ->
-    cpg:get_remote_pid(Name, Pid);
-
-destination_get(DestRefresh, _, _, _) ->
-    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
-               [DestRefresh]),
-    throw(badarg).
-
-destination_all(DestRefresh, Name, Pid, Groups)
-    when is_list(Name),
-         (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
-    cpg_data:get_members(Name, Pid, Groups);
-
-destination_all(DestRefresh, Name, Pid, _)
-    when is_list(Name),
-         (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
-    cpg:get_members(Name, Pid);
-
-destination_all(DestRefresh, _, _, _) ->
-    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
-               [DestRefresh]),
-    throw(badarg).
-
-send_async_timeout_start(Timeout, TransId,
-                         #state{send_timeouts = Ids} = StateData)
-    when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, self(), {send_async_timeout, TransId}),
-    StateData#state{send_timeouts = dict:store(TransId, Tref, Ids)}.
-
-send_sync_timeout_start(Timeout, TransId,
-                        #state{send_timeouts = Ids} = StateData)
-    when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, self(), {send_sync_timeout, TransId}),
-    StateData#state{send_timeouts = dict:store(TransId, Tref, Ids)}.
-
-send_timeout_check(TransId, #state{send_timeouts = Ids})
-    when is_binary(TransId) ->
-    dict:find(TransId, Ids).
-
-send_timeout_end(TransId, #state{send_timeouts = Ids} = StateData)
-    when is_binary(TransId) ->
-    StateData#state{send_timeouts = dict:erase(TransId, Ids)}.
-
-recv_timeout_start(Timeout, Priority, TransId, T,
-                   #state{recv_timeouts = Ids,
-                          queued = Queue} = StateData)
-    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, self(),
-                             {recv_timeout, Priority, TransId}),
-    StateData#state{recv_timeouts = dict:store(TransId, Tref, Ids),
-                    queued = pqueue4:in(T, Priority, Queue)}.
-
-async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                             #state{async_responses = Ids} = StateData)
-    when is_binary(Response), is_integer(Timeout), is_binary(TransId) ->
-    erlang:send_after(Timeout, self(), {recv_async_timeout, TransId}),
-    StateData#state{async_responses = dict:store(TransId,
-                                                 {ResponseInfo, Response},
-                                                 Ids)}.
-
-async_response_timeout_end(TransId,
-                           #state{async_responses = Ids} = StateData)
-    when is_binary(TransId) ->
-    StateData#state{async_responses = dict:erase(TransId, Ids)}.
-
-recv_async_select_random([{TransId, _} | _]) ->
-    TransId.
-
-recv_async_select_oldest([{TransId, _} | L]) ->
-    recv_async_select_oldest(L, uuid:get_v1_time(TransId), TransId).
-
-recv_async_select_oldest([], _, TransIdCurrent) ->
-    TransIdCurrent;
-
-recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
-    Time1 = uuid:get_v1_time(TransId),
-    if
-        Time1 < Time0 ->
-            recv_async_select_oldest(L, Time1, TransId);
-        true ->
-            recv_async_select_oldest(L, Time0, TransIdCurrent)
-    end.
-            
-process_queue(#state{recv_timeouts = Ids,
-                     queue_messages = true,
-                     queued = Queue} = StateData) ->
+process_queue(#state{recv_timeouts = RecvTimeouts,
+                     queue_requests = true,
+                     queued = Queue} = State) ->
     case pqueue4:out(Queue) of
         {empty, NewQueue} ->
-            StateData#state{queue_messages = false,
-                            queued = NewQueue};
-        {{value, {'send_async', Name, Pattern, RequestInfo, Request,
+            State#state{queue_requests = false,
+                        queued = NewQueue};
+        {{value, {'cloudi_service_send_async',
+                  Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
-            Tref = dict:fetch(TransId, Ids),
+            Tref = dict:fetch(TransId, RecvTimeouts),
             Timeout = case erlang:cancel_timer(Tref) of
                 false ->
                     1;
@@ -1222,12 +1092,13 @@ process_queue(#state{recv_timeouts = Ids,
             end,
             send('send_async_out'(Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Pid),
-                 StateData),
-            StateData#state{recv_timeouts = dict:erase(TransId, Ids),
-                            queued = NewQueue};
-        {{value, {'send_sync', Name, Pattern, RequestInfo, Request,
+                 State),
+            State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
+                        queued = NewQueue};
+        {{value, {'cloudi_service_send_sync',
+                  Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
-            Tref = dict:fetch(TransId, Ids),
+            Tref = dict:fetch(TransId, RecvTimeouts),
             Timeout = case erlang:cancel_timer(Tref) of
                 false ->
                     1;
@@ -1236,8 +1107,8 @@ process_queue(#state{recv_timeouts = Ids,
             end,
             send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Pid),
-                 StateData),
-            StateData#state{recv_timeouts = dict:erase(TransId, Ids),
-                            queued = NewQueue}
+                 State),
+            State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
+                        queued = NewQueue}
     end.
 
