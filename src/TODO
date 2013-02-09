@@ -1,7 +1,7 @@
 Items waiting for after the release of version 1.1.1
 ----------------------------------------------------
-User Tutorial
-    * get this done for 1.1.2
+Quick Start
+    * get this done for 1.2.0 (next release)
 EC2 automatic node configuration
     * working with external/nodefinder/ec2nodefinder/
       but with sane ec2 integration
