@@ -93,7 +93,8 @@ context(Threads) when is_integer(Threads) ->
 -spec socket(Context :: erlzmq_context(),
              Type :: erlzmq_socket_type() |
                      list(erlzmq_socket_type() |
-                          {active, boolean()})) ->
+                          {active, boolean()} |
+                          {active_pid, pid()})) ->
                     {ok, erlzmq_socket()} |
                     erlzmq_error().
 socket(Context, Type) when is_atom(Type) ->
@@ -112,14 +113,18 @@ socket(Context, [H | [Type]]) when is_tuple(H) ->
 
 -spec socket(Context :: erlzmq_context(),
              Type :: erlzmq_socket_type(),
-             {active, boolean()}) ->
+             {active, boolean()} | {active_pid, pid()}) ->
                     {ok, erlzmq_socket()} |
                     erlzmq_error().
 socket(Context, Type, {active, true}) ->
     true = (Type =/= pub) and (Type =/= push) and (Type =/= xpub),
-    erlzmq_nif:socket(Context, socket_type(Type), 1);
+    erlzmq_nif:socket(Context, socket_type(Type), 1, self());
+socket(Context, Type, {active_pid, Pid})
+    when is_pid(Pid), node(Pid) =:= node() ->
+    true = (Type =/= pub) and (Type =/= push) and (Type =/= xpub),
+    erlzmq_nif:socket(Context, socket_type(Type), 1, Pid);
 socket(Context, Type, {active, false}) ->
-    erlzmq_nif:socket(Context, socket_type(Type), 0).
+    erlzmq_nif:socket(Context, socket_type(Type), 0, self()).
 
 
 %% @doc Accept connections on a socket.

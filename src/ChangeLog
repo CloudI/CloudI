@@ -3,6 +3,9 @@
 
 2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix erlzmq2 based on recent changes by adding the
+      {active_pid, pid()} option to erlzmq2:socket/2
+      (to fix cloudi_service_zeromq.erl after recent changes)
     * Change internal service code to utilize the single dispatcher
       Erlang process with temporary Erlang processes for
       service requests and info messages

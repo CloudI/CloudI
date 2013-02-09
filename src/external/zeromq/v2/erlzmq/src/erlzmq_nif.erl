@@ -2,7 +2,7 @@
 -module(erlzmq_nif).
 
 -export([context/1,
-         socket/3,
+         socket/4,
          bind/2,
          connect/2,
          send/3,
@@ -37,7 +37,7 @@ init() ->
 context(_Threads) ->
     erlang:nif_error(not_loaded).
 
-socket(_Context, _Type, _Active) ->
+socket(_Context, _Type, _Active, _ActivePid) ->
     erlang:nif_error(not_loaded).
 
 bind(_Socket, _Endpoint) ->
