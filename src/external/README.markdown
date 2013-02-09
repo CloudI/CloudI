@@ -154,9 +154,9 @@ zeromq/v?/erlzmq
 ----------------
 ZeroMQ (http://www.zeromq.org/) Erlang Driver
 
-- https://github.com/zeromq/erlzmq2 (branch master and 3.x)
-- commit 0471f082685f17c6f9633ce9cfe4bec0c73cfd58
-- Sat Feb 18 17:05:03 PST 2012
+- https://github.com/okeuday/erlzmq2 (branch master and 3.x)
+- commit 9171c69d94b2af72dbe74cfce8f4b61266026e33
+- Fri Feb  8 19:12:47 PST 2013
 - BSD
 
 zeromq/v?/zeromq
