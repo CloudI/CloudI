@@ -57,6 +57,7 @@ The Quick Start guide below shows how to create both an internal (Erlang) CloudI
         ok.
     EOF
     $ erlc -pz /usr/local/lib/cloudi-1.2.0/lib/cloudi_core-1.2.0 hello_world.erl
+    ./hello_world.erl:2: Warning: behaviour cloudi_service undefined
 
 You now have a compiled internal CloudI service which is ready to run.  You can also provide an OTP application file with the same name, if the internal CloudI service has application dependencies.
 
@@ -124,11 +125,11 @@ You can get the same behavior with an external CloudI service, which is written 
       none, tcp, 16384,
       5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world_python.conf http://localhost:6466/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6466/quickstart/hello/hello_world_python
     Hello World!
 
-You may notice the port number 6466 is different from what was used for the internal CloudI service.  This is a different instance of the `cloudi_service_http_cowboy` internal CloudI service which forces all outgoing CloudI requests to be binary.  All external CloudI services handle `request` data and `request_info` data as binary data, to simplify integration efforts and make service runtime more efficient.
+You may notice the port number 6466 is different from what was used for the internal CloudI service.  This is a different instance of the `cloudi_service_http_cowboy` internal CloudI service which forces all outgoing CloudI requests to be binary.  All external CloudI services handle `request` data and `request_info` data as binary data, to simplify integration efforts and make service runtime more efficient.  If you had tried to use the port number 6466 for the CloudI Services API, you would have received a timeout, not because binary requests are not accepted, but rather because the `cloudi_service_http_cowboy` ACL (Access Control List) prevents API requests (with a service name pattern, referred to as `api`).  Please refer to the default CloudI configuration in `/usr/local/etc/cloudi/cloudi.conf` for more information.
 
 You now have an external CloudI service written in Python which is able to perform the same task as your internal CloudI service (written in Erlang).  You can use the same techniques to create other external CloudI services with new or pre-existing source code to gain fault-tolerance and scalability.  Creating CloudI services makes integration tasks simpler and allows your software to grow without limitations!
 

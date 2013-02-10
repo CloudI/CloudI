@@ -4,6 +4,7 @@
 2013-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add quick start guide to doc/README.markdown
+    * Change the configuration to use ZeroMQ version 3 by default
 
 2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
