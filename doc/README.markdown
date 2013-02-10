@@ -2,8 +2,8 @@
 
 ### Install Quick Start Tools
 
-* Ubuntu: apt-get install wget curl
-* OSX: port install wget curl
+* `Ubuntu: sudo apt-get install wget curl`
+* `OSX:    sudo port install wget curl`
 
 ### Get CloudI Running
 
@@ -56,7 +56,7 @@ The Quick Start guide below shows how to create both an internal (Erlang) CloudI
     cloudi_service_terminate(_, #state{}) ->
         ok.
     EOF
-    $ erlc -pz /usr/local/lib/cloudi-1.1.1/lib/cloudi_core-1.1.1 hello_world.erl
+    $ erlc -pz /usr/local/lib/cloudi-1.2.0/lib/cloudi_core-1.2.0 hello_world.erl
 
 You now have a compiled internal CloudI service which is ready to run.  You can also provide an OTP application file with the same name, if the internal CloudI service has application dependencies.
 
@@ -75,7 +75,7 @@ While you are still in the cloudi-quickstart directory, use the CloudI Service A
     EOF
     $ curl -X POST -d @hello_world.conf http://localhost:6467/cloudi/api/erlang/services_add
 
-These HTTP requests communicate with `src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl` which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at `/usr/local/etc/cloudi/cloudi.conf`).  The request becomes a CloudI request, within the `cloudi_service_http_cowboy` internal CloudI service, which is sent to `lib/cloudi_services_internal/src/cloudi_service_api.erl`.  The `cloudi_service_api` internal CloudI service provides runtime configuration of CloudI.
+These HTTP requests communicate with `src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl` which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at `/usr/local/etc/cloudi/cloudi.conf`).  The request becomes a CloudI request, within the `cloudi_service_http_cowboy` internal CloudI service, which is sent to `src/lib/cloudi_services_internal/src/cloudi_service_api.erl`.  The `cloudi_service_api` internal CloudI service provides runtime configuration of CloudI.
 
 You will notice that the syntax used to start the CloudI service in the `hello_world.conf` file is the same as what is specified in the "services" section of `/usr/local/etc/cloudi/cloudi.conf`.
 
@@ -90,6 +90,50 @@ You can get the same behavior with an external CloudI service, which is written 
 
 ### Use an External (Python) CloudI Service
 
-    $ cat << EOF > hello_world.py
-    EOF
+While you are still in the cloudi-quickstart directory:
 
+    $ cat << EOF > hello_world.py
+    import sys
+    sys.path.append('/usr/local/lib/cloudi-1.2.0/api/python/')
+    
+    import traceback
+    from cloudi_c import API
+    
+    class Task(object):
+        def __init__(self):
+            self.__api = API(0) # first/only thread == 0
+    
+        def run(self):
+            try:
+                self.__api.subscribe("hello_world_python/get", self.__hello_world)
+    
+                result = self.__api.poll()
+                print 'exited:', result
+            except:
+                traceback.print_exc(file=sys.stdout)
+    
+        def __hello_world(self, command, name, pattern, request_info, request,
+                          timeout, priority, trans_id, pid):
+            return 'Hello World!'
+    
+    if __name__ == '__main__':
+        assert API.thread_count() == 1 # simple example, without threads
+        task = Task()
+        task.run()
+    EOF
+    $ PYTHON_PATH=`which python`
+    $ PWD=`pwd`
+    $ cat << EOF > hello_world_python.conf
+    [{external,
+      "/quickstart/hello/",
+      "$PYTHON_PATH",
+      "$PWD/hello_world.py",
+      [],
+      none, tcp, 16384,
+      5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/quickstart/hello/hello_world_python
+    Hello World!
+
+You now have an external CloudI service written in Python which is able to perform the same task as your internal CloudI service (written in Erlang).  You can use the same techniques to create other external CloudI services with new or pre-existing source code to gain fault-tolerance and scalability.  Creating CloudI services makes integration tasks simpler and allows your software to grow without limitations!
