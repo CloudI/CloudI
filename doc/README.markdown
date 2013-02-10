@@ -95,8 +95,6 @@ While you are still in the cloudi-quickstart directory:
     $ cat << EOF > hello_world.py
     import sys
     sys.path.append('/usr/local/lib/cloudi-1.2.0/api/python/')
-    
-    import traceback
     from cloudi_c import API
     
     class Task(object):
@@ -104,13 +102,9 @@ While you are still in the cloudi-quickstart directory:
             self.__api = API(0) # first/only thread == 0
     
         def run(self):
-            try:
-                self.__api.subscribe("hello_world_python/get", self.__hello_world)
-    
-                result = self.__api.poll()
-                print 'exited:', result
-            except:
-                traceback.print_exc(file=sys.stdout)
+            self.__api.subscribe("hello_world_python/get", self.__hello_world)
+            result = self.__api.poll()
+            print 'exited:', result
     
         def __hello_world(self, command, name, pattern, request_info, request,
                           timeout, priority, trans_id, pid):
@@ -133,7 +127,10 @@ While you are still in the cloudi-quickstart directory:
       5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
     EOF
     $ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
-    $ curl http://localhost:6467/quickstart/hello/hello_world_python
+    $ curl http://localhost:6466/quickstart/hello/hello_world_python
     Hello World!
 
+You may notice the port number 6466 is different from what was used for the internal CloudI service.  This is a different instance of the `cloudi_service_http_cowboy` internal CloudI service which forces all CloudI requests to be binary.  All external CloudI services handle `request` data and `request_info` data as binary data, to simplify integration efforts and make service runtime more efficient.
+
 You now have an external CloudI service written in Python which is able to perform the same task as your internal CloudI service (written in Erlang).  You can use the same techniques to create other external CloudI services with new or pre-existing source code to gain fault-tolerance and scalability.  Creating CloudI services makes integration tasks simpler and allows your software to grow without limitations!
+
