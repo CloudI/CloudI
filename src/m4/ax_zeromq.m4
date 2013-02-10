@@ -18,7 +18,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog
+# Copyright (c) 2011-2013, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -55,6 +55,7 @@
 
 AC_DEFUN([AX_ZEROMQ],
 [
+    default_zeromq_version="3"
     AC_ARG_WITH([zeromq],
         [AS_HELP_STRING([--with-zeromq@<:@=ARG@:>@],
             [use ZeroMQ library from a standard location (ARG=yes),
@@ -76,7 +77,7 @@ AC_DEFUN([AX_ZEROMQ],
     AC_ARG_WITH([zeromq_version],
         [AS_HELP_STRING([--with-zeromq-version@<:@=ARG@:>@],
             [specify the version of the ZeroMQ library (ARG=2|3)
-             @<:@ARG=2@:>@ ])],
+             @<:@ARG=3@:>@ ])],
             [
             if test "$withval" = "2"; then
                 want_zeromq_version="2"
@@ -86,7 +87,7 @@ AC_DEFUN([AX_ZEROMQ],
                 AC_MSG_ERROR([ZeroMQ version 2 or 3, not $withval])
             fi
             ],
-            [want_zeromq_version="2"])
+            [want_zeromq_version=$default_zeromq_version])
 
     if test "x$want_zeromq" = "xyes"; then
         local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq/v$want_zeromq_version"
