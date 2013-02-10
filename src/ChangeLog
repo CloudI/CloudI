@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add quick start guide to doc/README.markdown
+
 2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix erlzmq2 based on recent changes by adding the
