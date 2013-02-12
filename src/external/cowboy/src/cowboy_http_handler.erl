@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2012, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -12,37 +12,41 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-%% @doc Handler for HTTP requests.
+%% @doc Behaviour for short-lived HTTP handlers.
 %%
-%% HTTP handlers must implement three callbacks: <em>init/3</em>,
-%% <em>handle/2</em> and <em>terminate/2</em>, called one after another in
-%% that order.
+%% <em>init/3</em> allows you to initialize a state for all subsequent
+%% callbacks, and indicate to Cowboy whether you accept to handle the
+%% request or want to shutdown without handling it, in which case the
+%% <em>handle/2</em> call will simply be skipped.
 %%
-%% <em>init/3</em> is meant for initialization. It receives information about
-%% the transport and protocol used, along with the handler options from the
-%% dispatch list, and allows you to upgrade the protocol if needed. You can
-%% define a request-wide state here.
+%% <em>handle/2</em> allows you to handle the request. It receives the
+%% state previously defined.
 %%
-%% <em>handle/2</em> is meant for handling the request. It receives the
-%% request and the state previously defined.
+%% <em>terminate/3</em> allows you to clean up. It receives the
+%% termination reason and the state previously defined.
 %%
-%% <em>terminate/2</em> is meant for cleaning up. It also receives the
-%% request and the state previously defined.
-%%
-%% You do not have to read the request body or even send a reply if you do
-%% not need to. Cowboy will properly handle these cases and clean-up afterwards.
-%% In doubt it'll simply close the connection.
-%%
-%% Note that when upgrading the connection to WebSocket you do not need to
-%% define the <em>handle/2</em> and <em>terminate/2</em> callbacks.
+%% There is no required operation to perform in any of these callbacks
+%% other than returning the proper values. Make sure you always return
+%% the last modified Req so that Cowboy has the up to date information
+%% about the request.
 -module(cowboy_http_handler).
 
--export([behaviour_info/1]).
+-type opts() :: any().
+-type state() :: any().
+-type terminate_reason() :: {normal, shutdown}
+	| {normal, timeout} %% Only occurs in loop handlers.
+	| {error, atom()}.
 
-%% @private
--spec behaviour_info(_)
-	-> undefined | [{handle, 2} | {init, 3} | {terminate, 2}, ...].
-behaviour_info(callbacks) ->
-	[{init, 3}, {handle, 2}, {terminate, 2}];
-behaviour_info(_Other) ->
-	undefined.
+-callback init({atom(), http}, Req, opts())
+	-> {ok, Req, state()}
+	| {loop, Req, state()}
+	| {loop, Req, state(), hibernate}
+	| {loop, Req, state(), timeout()}
+	| {loop, Req, state(), timeout(), hibernate}
+	| {shutdown, Req, state()}
+	| {upgrade, protocol, module()}
+	| {upgrade, protocol, module(), Req, opts()}
+	when Req::cowboy_req:req().
+-callback handle(Req, State) -> {ok, Req, State}
+	when Req::cowboy_req:req(), State::state().
+-callback terminate(terminate_reason(), cowboy_req:req(), state()) -> ok.

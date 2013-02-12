@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2012, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -13,13 +13,18 @@
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 {application, cowboy, [
+	{id, "Cowboy"},
 	{description, "Small, fast, modular HTTP server."},
-	{vsn, "0.6.1"},
+	{sub_description, "Cowboy is also a socket acceptor pool, "
+		"able to accept connections for any kind of TCP protocol."},
+	{vsn, "0.8.0"},
 	{modules, []},
 	{registered, [cowboy_clock, cowboy_sup]},
 	{applications, [
 		kernel,
-		stdlib
+		stdlib,
+		ranch,
+		crypto
 	]},
 	{mod, {cowboy_app, []}},
 	{env, []}

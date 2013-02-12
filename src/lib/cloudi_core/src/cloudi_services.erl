@@ -362,7 +362,9 @@ restart_stage2(#service{service_m = M,
             ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
-                                      restart_times = [Now | RestartTimes]}},
+                                      restart_times = [Now | RestartTimes]},
+                      ServiceId,
+                      OldPid},
             Services
     end,
     State#state{services = NewServices}.

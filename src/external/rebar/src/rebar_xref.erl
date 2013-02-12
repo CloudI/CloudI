@@ -28,7 +28,8 @@
 
 %% -------------------------------------------------------------------
 %% This module borrows heavily from http://github.com/etnt/exrefcheck project as
-%% written by Torbjorn Tornkvist <tobbe@kreditor.se>, Daniel Luna and others.
+%% written by Torbjorn Tornkvist <tobbe@kreditor.se>, Daniel Luna
+%% <daniel@lunas.se> and others.
 %% -------------------------------------------------------------------
 -module(rebar_xref).
 
@@ -43,17 +44,17 @@
 xref(Config, _) ->
     %% Spin up xref
     {ok, _} = xref:start(xref),
-    ok = xref:set_library_path(xref, code_path()),
+    ok = xref:set_library_path(xref, code_path(Config)),
 
     xref:set_default(xref, [{warnings,
                              rebar_config:get(Config, xref_warnings, false)},
-                            {verbose, rebar_config:is_verbose()}]),
+                            {verbose, rebar_config:is_verbose(Config)}]),
 
     {ok, _} = xref:add_directory(xref, "ebin"),
 
     %% Save the code path prior to doing anything
     OrigPath = code:get_path(),
-    true = code:add_path(filename:join(rebar_utils:get_cwd(), "ebin")),
+    true = code:add_path(rebar_utils:ebin_dir()),
 
     %% Get list of xref checks we want to run
     XrefChecks = rebar_config:get(Config, xref_checks,
@@ -77,17 +78,22 @@ xref(Config, _) ->
             false ->
                 true
         end,
+
+    %% Run custom queries
+    QueryChecks = rebar_config:get(Config, xref_queries, []),
+    QueryNoWarn = lists:all(fun check_query/1, QueryChecks),
+
     %% Restore the original code path
     true = code:set_path(OrigPath),
 
     %% Stop xref
     stopped = xref:stop(xref),
 
-    case lists:all(fun(NoWarn) -> NoWarn end, [ExportsNoWarn, UndefNoWarn]) of
+    case lists:member(false, [ExportsNoWarn, UndefNoWarn, QueryNoWarn]) of
         true ->
-            ok;
+            ?FAIL;
         false ->
-            ?FAIL
+            ok
     end.
 
 %% ===================================================================
@@ -115,9 +121,28 @@ check_undefined_function_calls() ->
       end, UndefinedCalls),
     UndefinedCalls =:= [].
 
-code_path() ->
-    [P || P <- code:get_path(),
-          filelib:is_dir(P)] ++ [filename:join(rebar_utils:get_cwd(), "ebin")].
+check_query({Query, Value}) ->
+    {ok, Answer} = xref:q(xref, Query),
+    case Answer =:= Value of
+        false ->
+            ?CONSOLE("Query ~s~n answer ~p~n did not match ~p~n",
+                     [Query, Answer, Value]),
+            false;
+        _     ->
+            true
+    end.
+
+code_path(Config) ->
+    %% Slight hack to ensure that sub_dirs get properly included
+    %% in code path for xref -- otherwise one gets a lot of undefined
+    %% functions, even though those functions are present as part
+    %% of compilation. H/t to @dluna. Long term we should tie more
+    %% properly into the overall compile code path if possible.
+    BaseDir = rebar_config:get_xconf(Config, base_dir),
+    [P || P <- code:get_path() ++
+              [filename:join(BaseDir, filename:join(SubDir, "ebin"))
+               || SubDir <- rebar_config:get(Config, sub_dirs, [])],
+          filelib:is_dir(P)].
 
 %%
 %% Ignore behaviour functions, and explicitly marked functions
@@ -130,10 +155,10 @@ filter_away_ignored(UnusedExports) ->
     %% any functions marked to ignore. We then use this list to mask any
     %% functions marked as unused exports by xref
     F = fun(Mod) ->
-                Attrs  = kf(attributes, Mod:module_info()),
-                Ignore = kf(ignore_xref, Attrs),
-                Callbacks =
-                    [B:behaviour_info(callbacks) || B <- kf(behaviour, Attrs)],
+                Attrs  = Mod:module_info(attributes),
+                Ignore = keyall(ignore_xref, Attrs),
+                Callbacks = [B:behaviour_info(callbacks)
+                             || B <- keyall(behaviour, Attrs)],
                 [{Mod, F, A} || {F, A} <- Ignore ++ lists:flatten(Callbacks)]
         end,
     AttrIgnore =
@@ -141,14 +166,8 @@ filter_away_ignored(UnusedExports) ->
           lists:map(F, lists:usort([M || {M, _, _} <- UnusedExports]))),
     [X || X <- UnusedExports, not lists:member(X, AttrIgnore)].
 
-
-kf(Key, List) ->
-    case lists:keyfind(Key, 1, List) of
-        {Key, Value} ->
-            Value;
-        false ->
-            []
-    end.
+keyall(Key, List) ->
+    lists:flatmap(fun({K, L}) when Key =:= K -> L; (_) -> [] end, List).
 
 display_mfas([], _Message) ->
     ok;
@@ -188,8 +207,14 @@ find_mfa_source({M, F, A}) ->
     %% Extract the original source filename from the abstract code
     [{attribute, 1, file, {Source, _}} | _] = Code,
     %% Extract the line number for a given function def
-    [{function, Line, F, _, _}] = [E || E <- Code,
-                                        safe_element(1, E) == function,
-                                        safe_element(3, E) == F,
-                                        safe_element(4, E) == A],
-    {Source, Line}.
+    Fn = [E || E <- Code,
+               safe_element(1, E) == function,
+               safe_element(3, E) == F,
+               safe_element(4, E) == A],
+    case Fn of
+        [{function, Line, F, _, _}] -> {Source, Line};
+        %% do not crash if functions are exported, even though they
+        %% are not in the source.
+        %% parameterized modules add new/1 and instance/1 for example.
+        [] -> {Source, function_not_found}
+    end.

@@ -32,7 +32,7 @@
 %%
 %% Global options:
 %% verbose=1 - show output from the common_test run as it goes
-%% suite="foo"" - runs <test>/foo_SUITE
+%% suites="foo,bar" - runs <test>/foo_SUITE and <test>/bar_SUITE
 %% case="mycase" - runs individual test case foo_SUITE:mycase
 %% -------------------------------------------------------------------
 -module(rebar_ct).
@@ -46,49 +46,50 @@
 %% ===================================================================
 
 ct(Config, File) ->
-    case rebar_config:get_global(app, undefined) of
-        undefined ->
-            %% No app parameter specified, run everything..
-            run_test_if_present("test", Config, File);
-        Apps ->
-            TargetApps = [list_to_atom(A) || A <- string:tokens(Apps, ",")],
-            ThisApp = rebar_app_utils:app_name(File),
-            case lists:member(ThisApp, TargetApps) of
-                true ->
-                    run_test_if_present("test", Config, File);
-                false ->
-                    ?DEBUG("Skipping common_test on app: ~p\n", [ThisApp])
-            end
-    end.
+    TestDir = rebar_config:get_local(Config, ct_dir, "test"),
+    LogDir = rebar_config:get_local(Config, ct_log_dir, "logs"),
+    run_test_if_present(TestDir, LogDir, Config, File).
 
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
-run_test_if_present(TestDir, Config, File) ->
+run_test_if_present(TestDir, LogDir, Config, File) ->
     case filelib:is_dir(TestDir) of
         false ->
             ?WARN("~s directory not present - skipping\n", [TestDir]),
             ok;
         true ->
-            run_test(TestDir, Config, File)
+            case filelib:wildcard(TestDir ++ "/*_SUITE.{beam,erl}") of
+                [] ->
+                    ?WARN("~s directory present, but no common_test"
+                          ++ " SUITES - skipping\n", [TestDir]),
+                    ok;
+                _ ->
+                    try
+                        run_test(TestDir, LogDir, Config, File)
+                    catch
+                        throw:skip ->
+                            ok
+                    end
+            end
     end.
 
-run_test(TestDir, Config, _File) ->
-    {Cmd, RawLog} = make_cmd(TestDir, Config),
-    clear_log(RawLog),
-    case rebar_config:get_global(verbose, "0") of
-        "0" ->
-            Output = " >> " ++ RawLog ++ " 2>&1";
-        _ ->
-            Output = " 2>&1 | tee -a " ++ RawLog
-    end,
+run_test(TestDir, LogDir, Config, _File) ->
+    {Cmd, RawLog} = make_cmd(TestDir, LogDir, Config),
+    ?DEBUG("ct_run cmd:~n~p~n", [Cmd]),
+    clear_log(LogDir, RawLog),
+    Output = case rebar_config:is_verbose(Config) of
+                 false ->
+                     " >> " ++ RawLog ++ " 2>&1";
+                 true ->
+                     " 2>&1 | tee -a " ++ RawLog
+             end,
 
     rebar_utils:sh(Cmd ++ Output, [{env,[{"TESTDIR", TestDir}]}]),
-    check_log(RawLog).
+    check_log(Config, RawLog).
 
-
-clear_log(RawLog) ->
-    case filelib:ensure_dir("logs/index.html") of
+clear_log(LogDir, RawLog) ->
+    case filelib:ensure_dir(filename:join(LogDir, "index.html")) of
         ok ->
             NowStr = rebar_utils:now_str(),
             LogHeader = "--- Test run on " ++ NowStr ++ " ---\n",
@@ -100,41 +101,41 @@ clear_log(RawLog) ->
 
 %% calling ct with erl does not return non-zero on failure - have to check
 %% log results
-check_log(RawLog) ->
+check_log(Config, RawLog) ->
     {ok, Msg} =
-        rebar_utils:sh("egrep -e 'TEST COMPLETE' -e '{error,make_failed}' "
+        rebar_utils:sh("grep -e 'TEST COMPLETE' -e '{error,make_failed}' "
                        ++ RawLog, [{use_stdout, false}]),
     MakeFailed = string:str(Msg, "{error,make_failed}") =/= 0,
     RunFailed = string:str(Msg, ", 0 failed") =:= 0,
     if
         MakeFailed ->
-            show_log(RawLog),
+            show_log(Config, RawLog),
             ?ERROR("Building tests failed\n",[]),
             ?FAIL;
 
         RunFailed ->
-            show_log(RawLog),
+            show_log(Config, RawLog),
             ?ERROR("One or more tests failed\n",[]),
             ?FAIL;
 
         true ->
-            ?CONSOLE("DONE. ~s\n", [Msg])
+            ?CONSOLE("DONE.\n~s\n", [Msg])
     end.
 
 %% Show the log if it hasn't already been shown because verbose was on
-show_log(RawLog) ->
+show_log(Config, RawLog) ->
     ?CONSOLE("Showing log\n", []),
-    case rebar_config:get_global(verbose, "0") of
-        "0" ->
+    case rebar_config:is_verbose(Config) of
+        false ->
             {ok, Contents} = file:read_file(RawLog),
             ?CONSOLE("~s", [Contents]);
-        _ ->
+        true ->
             ok
     end.
 
-make_cmd(TestDir, Config) ->
+make_cmd(TestDir, RawLogDir, Config) ->
     Cwd = rebar_utils:get_cwd(),
-    LogDir = filename:join(Cwd, "logs"),
+    LogDir = filename:join(Cwd, RawLogDir),
     EbinDir = filename:absname(filename:join(Cwd, "ebin")),
     IncludeDir = filename:join(Cwd, "include"),
     Include = case filelib:is_dir(IncludeDir) of
@@ -157,33 +158,33 @@ make_cmd(TestDir, Config) ->
               undefined ->
                   ?FMT("erl " % should we expand ERL_PATH?
                        " -noshell -pa ~s ~s"
-                       " -name test@~s"
+                       " ~s"
                        " -logdir \"~s\""
                        " -env TEST_DIR \"~s\""
                        " ~s"
                        " -s ct_run script_start -s erlang halt",
                        [CodePathString,
                         Include,
-                        net_adm:localhost(),
+                        build_name(Config),
                         LogDir,
                         filename:join(Cwd, TestDir),
                         get_extra_params(Config)]) ++
                       get_cover_config(Config, Cwd) ++
                       get_ct_config_file(TestDir) ++
                       get_config_file(TestDir) ++
-                      get_suite(TestDir) ++
-                      get_case();
+                      get_suites(Config, TestDir) ++
+                      get_case(Config);
               SpecFlags ->
                   ?FMT("erl " % should we expand ERL_PATH?
                        " -noshell -pa ~s ~s"
-                       " -name test@~s"
+                       " ~s"
                        " -logdir \"~s\""
                        " -env TEST_DIR \"~s\""
                        " ~s"
                        " -s ct_run script_start -s erlang halt",
                        [CodePathString,
                         Include,
-                        net_adm:localhost(),
+                        build_name(Config),
                         LogDir,
                         filename:join(Cwd, TestDir),
                         get_extra_params(Config)]) ++
@@ -191,6 +192,12 @@ make_cmd(TestDir, Config) ->
           end,
     RawLog = filename:join(LogDir, "raw.log"),
     {Cmd, RawLog}.
+
+build_name(Config) ->
+    case rebar_config:get_local(Config, ct_use_short_names, false) of
+        true -> "-sname test";
+        false -> " -name test@" ++ net_adm:localhost()
+    end.
 
 get_extra_params(Config) ->
     rebar_config:get_local(Config, ct_extra_params, "").
@@ -254,23 +261,30 @@ get_config_file(TestDir) ->
             " -config " ++ Config
     end.
 
-get_suite(TestDir) ->
-    case rebar_config:get_global(suite, undefined) of
+get_suites(Config, TestDir) ->
+    case rebar_config:get_global(Config, suites, undefined) of
         undefined ->
             " -dir " ++ TestDir;
-        Suite ->
-            Filename = filename:join(TestDir, Suite ++ "_SUITE.erl"),
-            case filelib:is_regular(Filename) of
-                false ->
-                    ?ERROR("Suite ~s not found\n", [Suite]),
-                    ?FAIL;
-                true ->
-                    " -suite " ++ Filename
-            end
+        Suites ->
+            Suites1 = string:tokens(Suites, ","),
+            Suites2 = [find_suite_path(Suite, TestDir) || Suite <- Suites1],
+            string:join([" -suite"] ++ Suites2, " ")
     end.
 
-get_case() ->
-    case rebar_config:get_global('case', undefined) of
+find_suite_path(Suite, TestDir) ->
+    Path = filename:join(TestDir, Suite ++ "_SUITE.erl"),
+    case filelib:is_regular(Path) of
+        false ->
+            ?WARN("Suite ~s not found\n", [Suite]),
+            %% Note - this throw is caught in run_test_if_present/3;
+            %% this solution was easier than refactoring the entire module.
+            throw(skip);
+        true ->
+            Path
+    end.
+
+get_case(Config) ->
+    case rebar_config:get_global(Config, 'case', undefined) of
         undefined ->
             "";
         Case ->

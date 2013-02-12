@@ -3,10 +3,10 @@
 		get_text_plain/2]).
 
 init(_Transport, _Req, _Opts) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
 allowed_methods(Req, State) ->
-	{['GET', 'HEAD', 'DELETE'], Req, State}.
+	{[<<"GET">>, <<"HEAD">>, <<"DELETE">>], Req, State}.
 
 
 content_types_provided(Req, State) ->

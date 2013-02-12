@@ -64,16 +64,25 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
--define(DEFAULT_INTERFACE,       {127,0,0,1}). % ip address
--define(DEFAULT_PORT,                   8080).
--define(DEFAULT_BACKLOG,                 128).
--define(DEFAULT_RECV_TIMEOUT,      30 * 1000). % milliseconds
--define(DEFAULT_SSL,                   false).
--define(DEFAULT_MAX_CONNECTIONS,        4096).
--define(DEFAULT_OUTPUT,             external).
--define(DEFAULT_CONTENT_TYPE,      undefined). % force a content type
--define(DEFAULT_USE_HOST_PREFIX,       false). % for virtual hosts
--define(DEFAULT_USE_METHOD_SUFFIX,      true). % get/post/etc. as a name suffix
+-define(DEFAULT_INTERFACE,         {127,0,0,1}). % ip address
+-define(DEFAULT_PORT,                     8080).
+-define(DEFAULT_BACKLOG,                   128).
+-define(DEFAULT_NODELAY,                  true).
+-define(DEFAULT_RECV_TIMEOUT,        30 * 1000). % milliseconds
+-define(DEFAULT_SSL,                     false).
+-define(DEFAULT_COMPRESS,                false).
+-define(DEFAULT_MAX_CONNECTIONS,          4096).
+-define(DEFAULT_MAX_EMPTY_LINES,             5).
+-define(DEFAULT_MAX_HEADER_NAME_LENGTH,     64).
+-define(DEFAULT_MAX_HEADER_VALUE_LENGTH,  4096).
+-define(DEFAULT_MAX_HEADERS,               100).
+-define(DEFAULT_MAX_KEEPALIVE,             100). % requests in keepalive session
+-define(DEFAULT_MAX_REQUEST_LINE_LENGTH,  4096).
+-define(DEFAULT_OUTPUT,               external).
+-define(DEFAULT_CONTENT_TYPE,        undefined). % force a content type
+-define(DEFAULT_USE_HOST_PREFIX,         false). % for virtual hosts
+-define(DEFAULT_USE_METHOD_SUFFIX,        true). % get/post/etc. name suffix
+
 
 -record(state,
     {
@@ -95,24 +104,41 @@
 
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
-        {ip,                     ?DEFAULT_INTERFACE},
-        {port,                   ?DEFAULT_PORT},
-        {backlog,                ?DEFAULT_BACKLOG},
-        {recv_timeout,           ?DEFAULT_RECV_TIMEOUT},
-        {ssl,                    ?DEFAULT_SSL},
-        {max_connections,        ?DEFAULT_MAX_CONNECTIONS},
-        {output,                 ?DEFAULT_OUTPUT},
-        {content_type,           ?DEFAULT_CONTENT_TYPE},
-        {use_host_prefix,        ?DEFAULT_USE_HOST_PREFIX},
-        {use_method_suffix,      ?DEFAULT_USE_METHOD_SUFFIX}],
-    [Interface, Port, Backlog, RecvTimeout, _SSL,
-     MaxConnections,
+        {ip,                       ?DEFAULT_INTERFACE},
+        {port,                     ?DEFAULT_PORT},
+        {backlog,                  ?DEFAULT_BACKLOG},
+        {nodelay,                  ?DEFAULT_NODELAY},
+        {recv_timeout,             ?DEFAULT_RECV_TIMEOUT},
+        {ssl,                      ?DEFAULT_SSL},
+        {compress,                 ?DEFAULT_COMPRESS},
+        {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
+        {max_empty_lines,          ?DEFAULT_MAX_EMPTY_LINES},
+        {max_header_name_length,   ?DEFAULT_MAX_HEADER_NAME_LENGTH},
+        {max_header_value_length,  ?DEFAULT_MAX_HEADER_VALUE_LENGTH},
+        {max_headers,              ?DEFAULT_MAX_HEADERS},
+        {max_keepalive,            ?DEFAULT_MAX_KEEPALIVE},
+        {max_request_line_length,  ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
+        {output,                   ?DEFAULT_OUTPUT},
+        {content_type,             ?DEFAULT_CONTENT_TYPE},
+        {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
+        {use_method_suffix,        ?DEFAULT_USE_METHOD_SUFFIX}],
+    [Interface, Port, Backlog, NoDelay, RecvTimeout, SSL, Compress,
+     MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
+     MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, DefaultContentType0, UseHostPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_integer(Backlog),
+    true = is_boolean(NoDelay),
     true = is_integer(RecvTimeout),
+    true = is_boolean(Compress),
     true = is_integer(MaxConnections),
+    true = is_integer(MaxEmptyLines),
+    true = is_integer(MaxHeaderNameLength),
+    true = is_integer(MaxHeaderValueLength),
+    true = is_integer(MaxHeaders),
+    true = is_integer(MaxKeepAlive),
+    true = is_integer(MaxRequestLineLength),
     true = OutputType =:= external orelse OutputType =:= internal orelse
            OutputType =:= list orelse OutputType =:= binary,
     DefaultContentType1 = if
@@ -126,26 +152,62 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseMethodSuffix),
     Service = cloudi_service:self(Dispatcher),
-    Dispatch = [
+    Dispatch = cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{service = Service,
                               output_type = OutputType,
                               use_host_prefix = UseHostPrefix,
                               use_method_suffix = UseMethodSuffix}}]}
-    ],
-    {ok, ListenerPid} = cowboy:start_listener(
-        Service, % Ref
-        100, % Number of acceptor processes
-        cowboy_tcp_transport, % Transport
-        [{ip, Interface},
-         {port, Port},
-         {backlog, Backlog},
-         {max_connections, MaxConnections}], % Transport options
-        cowboy_http_protocol, % Protocol
-        [{dispatch, Dispatch},
-         {timeout, RecvTimeout}] % Protocol options
-    ),
+    ]),
+    {ok, ListenerPid} = if
+        is_list(SSL) ->
+            {value, CertFile, SSLOpts} = lists:keytake(certfile, 1, SSL),
+            [] = cloudi_proplists:delete_all([cacertfile,
+                                              ciphers,
+                                              keyfile,
+                                              password,
+                                              verify], SSLOpts),
+            cowboy:start_https(
+                Service, % Ref
+                100, % Number of acceptor processes
+                [{ip, Interface},
+                 {port, Port},
+                 {backlog, Backlog},
+                 {nodelay, NoDelay},
+                 {max_connections, MaxConnections},
+                 {certfile, CertFile}] ++
+                SSLOpts, % Transport options
+                [{env, [{dispatch, Dispatch}]},
+                 {compress, Compress},
+                 {max_empty_lines, MaxEmptyLines},
+                 {max_header_name_length, MaxHeaderNameLength},
+                 {max_header_value_length, MaxHeaderValueLength},
+                 {max_headers, MaxHeaders},
+                 {max_keepalive, MaxKeepAlive},
+                 {max_request_line_length, MaxRequestLineLength},
+                 {timeout, RecvTimeout}] % Protocol options
+            );
+        SSL =:= false ->
+            cowboy:start_http(
+                Service, % Ref
+                100, % Number of acceptor processes
+                [{ip, Interface},
+                 {port, Port},
+                 {backlog, Backlog},
+                 {nodelay, NoDelay},
+                 {max_connections, MaxConnections}], % Transport options
+                [{env, [{dispatch, Dispatch}]},
+                 {compress, Compress},
+                 {max_empty_lines, MaxEmptyLines},
+                 {max_header_name_length, MaxHeaderNameLength},
+                 {max_header_value_length, MaxHeaderValueLength},
+                 {max_headers, MaxHeaders},
+                 {max_keepalive, MaxKeepAlive},
+                 {max_request_line_length, MaxRequestLineLength},
+                 {timeout, RecvTimeout}] % Protocol options
+            )
+    end,
     {ok, #state{listener = ListenerPid,
                 service = Service,
                 output_type = OutputType,

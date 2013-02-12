@@ -57,7 +57,7 @@
 %% cowboy_http_handler callbacks
 -export([init/3,
          handle/2,
-         terminate/2]).
+         terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
@@ -70,7 +70,7 @@
 %%% Callback functions from cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init({tcp, http}, Req, Opts) ->
+init(_Transport, Req, Opts) ->
     State = #cowboy_state{} = Opts,
     {ok, Req, State}.
 
@@ -78,13 +78,13 @@ handle(Req0, #cowboy_state{service = Service,
                            output_type = OutputType,
                            use_host_prefix = UseHostPrefix,
                            use_method_suffix = UseMethodSuffix} = State) ->
-    RequestStartMicroSec = uuid:get_v1_time(os),
-    {Method, Req1} = cowboy_http_req:method(Req0),
-    {HeadersIncoming, Req2} = cowboy_http_req:headers(Req1),
-    {PathRaw, Req3} = cowboy_http_req:raw_path(Req2),
-    {HostRaw, Req4} = cowboy_http_req:raw_host(Req3),
-    {QsVals, Req5} = cowboy_http_req:qs_vals(Req4),
-    {ok, Body, ReqN} = cowboy_http_req:body(Req5),
+    RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
+    {Method, Req1} = cowboy_req:method(Req0),
+    {HeadersIncoming, Req2} = cowboy_req:headers(Req1),
+    {PathRaw, Req3} = cowboy_req:path(Req2),
+    {HostRaw, Req4} = cowboy_req:host(Req3),
+    {QsVals, Req5} = cowboy_req:qs_vals(Req4),
+    {ok, Body, ReqN} = cowboy_req:body(Req5),
     NameIncoming = if
         UseHostPrefix =:= false; HostRaw =:= undefined ->
             erlang:binary_to_list(PathRaw);
@@ -94,25 +94,25 @@ handle(Req0, #cowboy_state{service = Service,
     NameOutgoing = if
         UseMethodSuffix =:= false ->
             NameIncoming;
-        Method =:= 'GET' ->
+        Method =:= <<"GET">> ->
             NameIncoming ++ "/get";
-        Method =:= 'POST' ->
+        Method =:= <<"POST">> ->
             NameIncoming ++ "/post";
-        Method =:= 'PUT' ->
+        Method =:= <<"PUT">> ->
             NameIncoming ++ "/put";
-        Method =:= 'DELETE' ->
+        Method =:= <<"DELETE">> ->
             NameIncoming ++ "/delete";
-        Method =:= 'HEAD' ->
+        Method =:= <<"HEAD">> ->
             NameIncoming ++ "/head";
-        Method =:= 'TRACE' ->
+        Method =:= <<"TRACE">> ->
             NameIncoming ++ "/trace";
-        Method =:= 'OPTIONS' ->
-            NameIncoming ++ "/options"%;
-        %Method =:= 'CONNECT' ->
-        %    NameIncoming ++ "/connect"
+        Method =:= <<"OPTIONS">> ->
+            NameIncoming ++ "/options";
+        Method =:= <<"CONNECT">> ->
+            NameIncoming ++ "/connect"
     end,
     RequestBinary = if
-        Method =:= 'GET' ->
+        Method =:= <<"GET">> ->
             if
                 QsVals =:= [] ->
                     <<>>;
@@ -128,7 +128,7 @@ handle(Req0, #cowboy_state{service = Service,
                         end
                     end, [], QsVals))
             end;
-        Method =:= 'POST'; Method =:= 'PUT' ->
+        Method =:= <<"POST">>; Method =:= <<"PUT">> ->
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
             % one type per name (path)
@@ -137,7 +137,9 @@ handle(Req0, #cowboy_state{service = Service,
                     zlib:unzip(Body);
                 _ ->
                     Body
-            end
+            end;
+        true ->
+            <<>>
     end,
     Request = if
         OutputType =:= list ->
@@ -160,26 +162,24 @@ handle(Req0, #cowboy_state{service = Service,
                               request_pid = self()}},
     receive
         {ok, HttpCode, HeadersOutgoing, ResponseBinary} ->
-            ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
-                       [HttpCode, Method, NameIncoming, NameOutgoing,
-                        (uuid:get_v1_time(os) -
-                         RequestStartMicroSec) / 1000.0]),
-            {ok, Req} = cowboy_http_req:reply(HttpCode,
-                                              HeadersOutgoing,
-                                              ResponseBinary,
-                                              ReqN),
+            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
+                             [HttpCode, Method, NameIncoming, NameOutgoing,
+                              RequestStartMicroSec]),
+            {ok, Req} = cowboy_req:reply(HttpCode,
+                                         HeadersOutgoing,
+                                         ResponseBinary,
+                                         ReqN),
             {ok, Req, State};
         {error, HttpCode, Reason} ->
-            ?LOG_WARN("~w ~s ~s ~p ms: ~p",
-                      [HttpCode, Method, NameIncoming,
-                       (uuid:get_v1_time(os) -
-                        RequestStartMicroSec) / 1000.0, Reason]),
-            {ok, Req} = cowboy_http_req:reply(HttpCode,
-                                              ReqN),
+            ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                            [HttpCode, Method, NameIncoming,
+                             RequestStartMicroSec, Reason]),
+            {ok, Req} = cowboy_req:reply(HttpCode,
+                                         ReqN),
             {ok, Req, State}
     end.
 
-terminate(_Req, _State) ->
+terminate(_Reason, _Req, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------
@@ -205,3 +205,20 @@ headers_external(Result, [{K, V} | L]) when is_atom(K) ->
 headers_external(Result, [{K, V} | L]) when is_binary(K) ->
     headers_external([[K, 0, V, 0] | Result], L).
 
+request_time_start() ->
+    uuid:get_v1_time(os).
+
+request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
+                         RequestStartMicroSec) ->
+    ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
+               [HttpCode, Method, NameIncoming, NameOutgoing,
+                (uuid:get_v1_time(os) -
+                 RequestStartMicroSec) / 1000.0]).
+
+request_time_end_error(HttpCode, Method, NameIncoming,
+                       RequestStartMicroSec, Reason) ->
+    ?LOG_WARN("~w ~s ~s ~p ms: ~p",
+              [HttpCode, Method, NameIncoming,
+               (uuid:get_v1_time(os) -
+                RequestStartMicroSec) / 1000.0, Reason]).
+    
