@@ -11,15 +11,14 @@
 %% API.
 
 start(_Type, _Args) ->
-	Dispatch = [
+	Dispatch = cowboy_router:compile([
 		{'_', [
-			{[], toppage_handler, []}
+			{"/", toppage_handler, []}
 		]}
-	],
-	{ok, _} = cowboy:start_listener(http, 100,
-		cowboy_tcp_transport, [{port, 8080}],
-		cowboy_http_protocol, [{dispatch, Dispatch}]
-	),
+	]),
+	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
+		{env, [{dispatch, Dispatch}]}
+	]),
 	hello_world_sup:start_link().
 
 stop(_State) ->

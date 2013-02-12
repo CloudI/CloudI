@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2012, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
 %% Copyright (c) 2011, Anthony Ramine <nox@dev-extend.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
@@ -17,45 +17,52 @@
 -module(cowboy_http).
 
 %% Parsing.
--export([list/2, nonempty_list/2, content_type/1, media_range/2, conneg/2,
-	language_range/2, entity_tag_match/1, expectation/2, params/2,
-	http_date/1, rfc1123_date/1, rfc850_date/1, asctime_date/1,
-	whitespace/2, digits/1, token/2, token_ci/2, quoted_string/2]).
+-export([list/2]).
+-export([nonempty_list/2]).
+-export([cookie_list/1]).
+-export([content_type/1]).
+-export([media_range/2]).
+-export([conneg/2]).
+-export([language_range/2]).
+-export([entity_tag_match/1]).
+-export([expectation/2]).
+-export([params/2]).
+-export([http_date/1]).
+-export([rfc1123_date/1]).
+-export([rfc850_date/1]).
+-export([asctime_date/1]).
+-export([whitespace/2]).
+-export([digits/1]).
+-export([token/2]).
+-export([token_ci/2]).
+-export([quoted_string/2]).
+-export([authorization/2]).
 
 %% Decoding.
--export([te_chunked/2, te_identity/2, ce_identity/1]).
+-export([te_chunked/2]).
+-export([te_identity/2]).
+-export([ce_identity/1]).
 
 %% Interpretation.
--export([connection_to_atom/1, version_to_binary/1,
-	urldecode/1, urldecode/2, urlencode/1,
-	urlencode/2, x_www_form_urlencoded/2]).
+-export([cookie_to_iodata/3]).
+-export([version_to_binary/1]).
+-export([urldecode/1]).
+-export([urldecode/2]).
+-export([urlencode/1]).
+-export([urlencode/2]).
+-export([x_www_form_urlencoded/1]).
 
--type method() :: 'OPTIONS' | 'GET' | 'HEAD'
-	| 'POST' | 'PUT' | 'DELETE' | 'TRACE' | binary().
--type uri() :: '*' | {absoluteURI, http | https, Host::binary(),
-	Port::integer() | undefined, Path::binary()}
-	| {scheme, Scheme::binary(), binary()}
-	| {abs_path, binary()} | binary().
 -type version() :: {Major::non_neg_integer(), Minor::non_neg_integer()}.
--type header() :: 'Cache-Control' | 'Connection' | 'Date' | 'Pragma'
-	| 'Transfer-Encoding' | 'Upgrade' | 'Via' | 'Accept' | 'Accept-Charset'
-	| 'Accept-Encoding' | 'Accept-Language' | 'Authorization' | 'From' | 'Host'
-	| 'If-Modified-Since' | 'If-Match' | 'If-None-Match' | 'If-Range'
-	| 'If-Unmodified-Since' | 'Max-Forwards' | 'Proxy-Authorization' | 'Range'
-	| 'Referer' | 'User-Agent' | 'Age' | 'Location' | 'Proxy-Authenticate'
-	| 'Public' | 'Retry-After' | 'Server' | 'Vary' | 'Warning'
-	| 'Www-Authenticate' | 'Allow' | 'Content-Base' | 'Content-Encoding'
-	| 'Content-Language' | 'Content-Length' | 'Content-Location'
-	| 'Content-Md5' | 'Content-Range' | 'Content-Type' | 'Etag'
-	| 'Expires' | 'Last-Modified' | 'Accept-Ranges' | 'Set-Cookie'
-	| 'Set-Cookie2' | 'X-Forwarded-For' | 'Cookie' | 'Keep-Alive'
-	| 'Proxy-Connection' | binary().
--type headers() :: [{header(), iodata()}].
+-type headers() :: [{binary(), iodata()}].
 -type status() :: non_neg_integer() | binary().
 
--export_type([method/0, uri/0, version/0, header/0, headers/0, status/0]).
+-export_type([version/0]).
+-export_type([headers/0]).
+-export_type([status/0]).
 
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %% Parsing.
 
@@ -95,6 +102,77 @@ list(Data, Fun, Acc) ->
 						end)
 				end)
 		end).
+
+%% @doc Parse a list of cookies.
+%%
+%% We need a special function for this because we need to support both
+%% $; and $, as separators as per RFC2109.
+-spec cookie_list(binary()) -> [{binary(), binary()}] | {error, badarg}.
+cookie_list(Data) ->
+	case cookie_list(Data, []) of
+		{error, badarg} -> {error, badarg};
+		[] -> {error, badarg};
+		L -> lists:reverse(L)
+	end.
+
+-spec cookie_list(binary(), Acc) -> Acc | {error, badarg}
+	when Acc::[{binary(), binary()}].
+cookie_list(Data, Acc) ->
+	whitespace(Data,
+		fun (<<>>) -> Acc;
+			(<< $,, Rest/binary >>) -> cookie_list(Rest, Acc);
+			(<< $;, Rest/binary >>) -> cookie_list(Rest, Acc);
+			(Rest) -> cookie(Rest,
+				fun (Rest2, << $$, _/bits >>, _) ->
+						cookie_list(Rest2, Acc);
+					(Rest2, Name, Value) ->
+						cookie_list(Rest2, [{Name, Value}|Acc])
+				end)
+		end).
+
+-spec cookie(binary(), fun()) -> any().
+cookie(Data, Fun) ->
+	whitespace(Data,
+		fun (Rest) ->
+				cookie_name(Rest,
+					fun (_Rest2, <<>>) -> {error, badarg};
+						(<< $=, Rest2/binary >>, Name) ->
+							cookie_value(Rest2,
+								fun (Rest3, Value) ->
+										Fun(Rest3, Name, Value)
+								end);
+						(_Rest2, _Attr) -> {error, badarg}
+					end)
+		end).
+
+-spec cookie_name(binary(), fun()) -> any().
+cookie_name(Data, Fun) ->
+	cookie_name(Data, Fun, <<>>).
+
+-spec cookie_name(binary(), fun(), binary()) -> any().
+cookie_name(<<>>, Fun, Acc) ->
+	Fun(<<>>, Acc);
+cookie_name(Data = << C, _Rest/binary >>, Fun, Acc)
+		when C =:= $=; C =:= $,; C =:= $;; C =:= $\s; C =:= $\t;
+			 C =:= $\r; C =:= $\n; C =:= $\013; C =:= $\014 ->
+	Fun(Data, Acc);
+cookie_name(<< C, Rest/binary >>, Fun, Acc) ->
+	C2 = cowboy_bstr:char_to_lower(C),
+	cookie_name(Rest, Fun, << Acc/binary, C2 >>).
+
+-spec cookie_value(binary(), fun()) -> any().
+cookie_value(Data, Fun) ->
+	cookie_value(Data, Fun, <<>>).
+
+-spec cookie_value(binary(), fun(), binary()) -> any().
+cookie_value(<<>>, Fun, Acc) ->
+	Fun(<<>>, Acc);
+cookie_value(Data = << C, _Rest/binary >>, Fun, Acc)
+		when C =:= $,; C =:= $;; C =:= $\s; C =:= $\t;
+			 C =:= $\r; C =:= $\n; C =:= $\013; C =:= $\014 ->
+	Fun(Data, Acc);
+cookie_value(<< C, Rest/binary >>, Fun, Acc) ->
+	cookie_value(Rest, Fun, << Acc/binary, C >>).
 
 %% @doc Parse a content type.
 -spec content_type(binary()) -> any().
@@ -337,12 +415,17 @@ params(Data, Fun) ->
 -spec params(binary(), fun(), [{binary(), binary()}]) -> any().
 params(Data, Fun, Acc) ->
 	whitespace(Data,
-		fun (<< $;, Rest/binary >>) -> param(Rest, Fun, Acc);
-			(Rest) -> Fun(Rest, lists:reverse(Acc))
+		fun (<< $;, Rest/binary >>) ->
+				param(Rest,
+					fun (Rest2, Attr, Value) ->
+							params(Rest2, Fun, [{Attr, Value}|Acc])
+					end);
+			(Rest) ->
+				Fun(Rest, lists:reverse(Acc))
 		end).
 
--spec param(binary(), fun(), [{binary(), binary()}]) -> any().
-param(Data, Fun, Acc) ->
+-spec param(binary(), fun()) -> any().
+param(Data, Fun) ->
 	whitespace(Data,
 		fun (Rest) ->
 				token_ci(Rest,
@@ -350,8 +433,7 @@ param(Data, Fun, Acc) ->
 						(<< $=, Rest2/binary >>, Attr) ->
 							word(Rest2,
 								fun (Rest3, Value) ->
-										params(Rest3, Fun,
-											[{Attr, Value}|Acc])
+										Fun(Rest3, Attr, Value)
 								end);
 						(_Rest2, _Attr) -> {error, badarg}
 					end)
@@ -720,25 +802,72 @@ qvalue(<< C, Rest/binary >>, Fun, Q, M)
 qvalue(Data, Fun, Q, _M) ->
 	Fun(Data, Q).
 
+%% @doc Parse authorization value according rfc 2617.
+%% Only Basic authorization is supported so far.
+-spec authorization(binary(), binary()) -> {binary(), any()} | {error, badarg}.
+authorization(UserPass, Type = <<"basic">>) ->
+	cowboy_http:whitespace(UserPass,
+		fun(D) ->
+			authorization_basic_userid(base64:mime_decode(D),
+				fun(Rest, Userid) ->
+					authorization_basic_password(Rest,
+						fun(Password) ->
+							{Type, {Userid, Password}}
+						end)
+				end)
+		end);
+authorization(String, Type) ->
+	cowboy_http:whitespace(String, fun(Rest) -> {Type, Rest} end).
+
+%% @doc Parse user credentials.
+-spec authorization_basic_userid(binary(), fun()) -> any().
+authorization_basic_userid(Data, Fun) ->
+	authorization_basic_userid(Data, Fun, <<>>).
+
+authorization_basic_userid(<<>>, _Fun, _Acc) ->
+	{error, badarg};
+authorization_basic_userid(<<C, _Rest/binary>>, _Fun, Acc)
+		when C < 32; C =:= 127; (C =:=$: andalso Acc =:= <<>>) ->
+	{error, badarg};
+authorization_basic_userid(<<$:, Rest/binary>>, Fun, Acc) ->
+	Fun(Rest, Acc);
+authorization_basic_userid(<<C, Rest/binary>>, Fun, Acc) ->
+	authorization_basic_userid(Rest, Fun, <<Acc/binary, C>>).
+
+-spec authorization_basic_password(binary(), fun()) -> any().
+authorization_basic_password(Data, Fun) ->
+	authorization_basic_password(Data, Fun, <<>>).
+
+authorization_basic_password(<<>>, _Fun, <<>>) ->
+	{error, badarg};
+authorization_basic_password(<<C, _Rest/binary>>, _Fun, _Acc)
+		when C < 32; C=:= 127 ->
+	{error, badarg};
+authorization_basic_password(<<>>, Fun, Acc) ->
+	Fun(Acc);
+authorization_basic_password(<<C, Rest/binary>>, Fun, Acc) ->
+	authorization_basic_password(Rest, Fun, <<Acc/binary, C>>).
+
 %% Decoding.
 
 %% @doc Decode a stream of chunks.
--spec te_chunked(binary(), {non_neg_integer(), non_neg_integer()})
-	-> more | {ok, binary(), {non_neg_integer(), non_neg_integer()}}
-	| {ok, binary(), binary(),  {non_neg_integer(), non_neg_integer()}}
-	| {done, non_neg_integer(), binary()} | {error, badarg}.
-te_chunked(<<>>, _) ->
-	more;
+-spec te_chunked(Bin, TransferState)
+	-> more | {more, non_neg_integer(), Bin, TransferState}
+	| {ok, Bin, TransferState} | {ok, Bin, Bin, TransferState}
+	| {done, non_neg_integer(), Bin} | {error, badarg}
+	when Bin::binary(), TransferState::{non_neg_integer(), non_neg_integer()}.
 te_chunked(<< "0\r\n\r\n", Rest/binary >>, {0, Streamed}) ->
 	{done, Streamed, Rest};
 te_chunked(Data, {0, Streamed}) ->
 	%% @todo We are expecting an hex size, not a general token.
 	token(Data,
-		fun (Rest, _) when byte_size(Rest) < 4 ->
-				more;
-			(<< "\r\n", Rest/binary >>, BinLen) ->
+		fun (<< "\r\n", Rest/binary >>, BinLen) ->
 				Len = list_to_integer(binary_to_list(BinLen), 16),
 				te_chunked(Rest, {Len, Streamed});
+			%% Chunk size shouldn't take too many bytes,
+			%% don't try to stream forever.
+			(Rest, _) when byte_size(Rest) < 16 ->
+				more;
 			(_, _) ->
 				{error, badarg}
 		end);
@@ -746,13 +875,12 @@ te_chunked(Data, {ChunkRem, Streamed}) when byte_size(Data) >= ChunkRem + 2 ->
 	<< Chunk:ChunkRem/binary, "\r\n", Rest/binary >> = Data,
 	{ok, Chunk, Rest, {0, Streamed + byte_size(Chunk)}};
 te_chunked(Data, {ChunkRem, Streamed}) ->
-	Size = byte_size(Data),
-	{ok, Data, {ChunkRem - Size, Streamed + Size}}.
+	{more, ChunkRem + 2, Data, {ChunkRem, Streamed}}.
 
 %% @doc Decode an identity stream.
--spec te_identity(binary(), {non_neg_integer(), non_neg_integer()})
-	-> {ok, binary(), {non_neg_integer(), non_neg_integer()}}
-	| {done, binary(), non_neg_integer(), binary()}.
+-spec te_identity(Bin, TransferState)
+	-> {ok, Bin, TransferState} | {done, Bin, non_neg_integer(), Bin}
+	when Bin::binary(), TransferState::{non_neg_integer(), non_neg_integer()}.
 te_identity(Data, {Streamed, Total})
 		when Streamed + byte_size(Data) < Total ->
 	{ok, Data, {Streamed + byte_size(Data), Total}};
@@ -768,19 +896,54 @@ ce_identity(Data) ->
 
 %% Interpretation.
 
-%% @doc Walk through a tokens list and return whether
-%% the connection is keepalive or closed.
+%% @doc Convert a cookie name, value and options to its iodata form.
+%% @end
 %%
-%% The connection token is expected to be lower-case.
--spec connection_to_atom([binary()]) -> keepalive | close.
-connection_to_atom([]) ->
-	keepalive;
-connection_to_atom([<<"keep-alive">>|_Tail]) ->
-	keepalive;
-connection_to_atom([<<"close">>|_Tail]) ->
-	close;
-connection_to_atom([_Any|Tail]) ->
-	connection_to_atom(Tail).
+%% Initially from Mochiweb:
+%%   * Copyright 2007 Mochi Media, Inc.
+%% Initial binary implementation:
+%%   * Copyright 2011 Thomas Burdick <thomas.burdick@gmail.com>
+-spec cookie_to_iodata(iodata(), iodata(), cowboy_req:cookie_opts())
+	-> iodata().
+cookie_to_iodata(Name, Value, Opts) ->
+	case binary:match(iolist_to_binary(Name), [<<$=>>, <<$,>>, <<$;>>,
+			<<$\s>>, <<$\t>>, <<$\r>>, <<$\n>>, <<$\013>>, <<$\014>>]) of
+		nomatch -> ok
+	end,
+	case binary:match(iolist_to_binary(Value), [<<$,>>, <<$;>>,
+			<<$\s>>, <<$\t>>, <<$\r>>, <<$\n>>, <<$\013>>, <<$\014>>]) of
+		nomatch -> ok
+	end,
+	MaxAgeBin = case lists:keyfind(max_age, 1, Opts) of
+		false -> <<>>;
+		{_, 0} ->
+			%% MSIE requires an Expires date in the past to delete a cookie.
+			<<"; Expires=Thu, 01-Jan-1970 00:00:01 GMT; Max-Age=0">>;
+		{_, MaxAge} when is_integer(MaxAge), MaxAge > 0 ->
+			UTC = calendar:universal_time(),
+			Secs = calendar:datetime_to_gregorian_seconds(UTC),
+			Expires = calendar:gregorian_seconds_to_datetime(Secs + MaxAge),
+			[<<"; Expires=">>, cowboy_clock:rfc2109(Expires),
+				<<"; Max-Age=">>, integer_to_list(MaxAge)]
+	end,
+	DomainBin = case lists:keyfind(domain, 1, Opts) of
+		false -> <<>>;
+		{_, Domain} -> [<<"; Domain=">>, Domain]
+	end,
+	PathBin = case lists:keyfind(path, 1, Opts) of
+		false -> <<>>;
+		{_, Path} -> [<<"; Path=">>, Path]
+	end,
+	SecureBin = case lists:keyfind(secure, 1, Opts) of
+		false -> <<>>;
+		{_, true} -> <<"; Secure">>
+	end,
+	HttpOnlyBin = case lists:keyfind(http_only, 1, Opts) of
+		false -> <<>>;
+		{_, true} -> <<"; HttpOnly">>
+	end,
+	[Name, <<"=">>, Value, <<"; Version=1">>,
+		MaxAgeBin, DomainBin, PathBin, SecureBin, HttpOnlyBin].
 
 %% @doc Convert an HTTP version tuple to its binary form.
 -spec version_to_binary(version()) -> binary().
@@ -841,8 +1004,8 @@ urlencode(Bin) ->
 %% instead.
 -spec urlencode(binary(), [noplus|upper]) -> binary().
 urlencode(Bin, Opts) ->
-	Plus = not proplists:get_value(noplus, Opts, false),
-	Upper = proplists:get_value(upper, Opts, false),
+	Plus = not lists:member(noplus, Opts),
+	Upper = lists:member(upper, Opts),
 	urlencode(Bin, <<>>, Plus, Upper).
 
 -spec urlencode(binary(), binary(), boolean(), boolean()) -> binary().
@@ -871,15 +1034,14 @@ tohexu(C) when C < 17 -> $A + C - 10.
 tohexl(C) when C < 10 -> $0 + C;
 tohexl(C) when C < 17 -> $a + C - 10.
 
--spec x_www_form_urlencoded(binary(), fun((binary()) -> binary())) ->
-		list({binary(), binary() | true}).
-x_www_form_urlencoded(<<>>, _URLDecode) ->
+-spec x_www_form_urlencoded(binary()) -> list({binary(), binary() | true}).
+x_www_form_urlencoded(<<>>) ->
 	[];
-x_www_form_urlencoded(Qs, URLDecode) ->
+x_www_form_urlencoded(Qs) ->
 	Tokens = binary:split(Qs, <<"&">>, [global, trim]),
 	[case binary:split(Token, <<"=">>) of
-		[Token] -> {URLDecode(Token), true};
-		[Name, Value] -> {URLDecode(Name), URLDecode(Value)}
+		[Token] -> {urldecode(Token), true};
+		[Name, Value] -> {urldecode(Name), urldecode(Value)}
 	end || Token <- Tokens].
 
 %% Tests.
@@ -937,6 +1099,38 @@ nonempty_token_list_test_() ->
 		{<<"keep-alive, upgrade">>, [<<"keep-alive">>, <<"upgrade">>]}
 	],
 	[{V, fun() -> R = nonempty_list(V, fun token/2) end} || {V, R} <- Tests].
+
+cookie_list_test_() ->
+	%% {Value, Result}.
+	Tests = [
+		{<<"name=value; name2=value2">>, [
+			{<<"name">>, <<"value">>},
+			{<<"name2">>, <<"value2">>}
+		]},
+		{<<"$Version=1; Customer=WILE_E_COYOTE; $Path=/acme">>, [
+			{<<"customer">>, <<"WILE_E_COYOTE">>}
+		]},
+		{<<"$Version=1; Customer=WILE_E_COYOTE; $Path=/acme; "
+			"Part_Number=Rocket_Launcher_0001; $Path=/acme; "
+			"Shipping=FedEx; $Path=/acme">>, [
+			{<<"customer">>, <<"WILE_E_COYOTE">>},
+			{<<"part_number">>, <<"Rocket_Launcher_0001">>},
+			{<<"shipping">>, <<"FedEx">>}
+		]},
+		%% Potential edge cases (initially from Mochiweb).
+		{<<"foo=\\x">>, [{<<"foo">>, <<"\\x">>}]},
+		{<<"=">>, {error, badarg}},
+		{<<"  foo ; bar  ">>, {error, badarg}},
+		{<<"foo=;bar=">>, [{<<"foo">>, <<>>}, {<<"bar">>, <<>>}]},
+		{<<"foo=\\\";;bar ">>, {error, badarg}},
+		{<<"foo=\\\";;bar=good ">>,
+			[{<<"foo">>, <<"\\\"">>}, {<<"bar">>, <<"good">>}]},
+		{<<"foo=\"\\\";bar">>, {error, badarg}},
+		{<<"">>, {error, badarg}},
+		{<<"foo=bar , baz=wibble ">>,
+			[{<<"foo">>, <<"bar">>}, {<<"baz">>, <<"wibble">>}]}
+	],
+	[{V, fun() -> R = cookie_list(V) end} || {V, R} <- Tests].
 
 media_range_list_test_() ->
 	%% {Tokens, Result}
@@ -1025,16 +1219,6 @@ asctime_date_test_() ->
 	],
 	[{V, fun() -> R = asctime_date(V) end} || {V, R} <- Tests].
 
-connection_to_atom_test_() ->
-	%% {Tokens, Result}
-	Tests = [
-		{[<<"close">>], close},
-		{[<<"keep-alive">>], keepalive},
-		{[<<"keep-alive">>, <<"upgrade">>], keepalive}
-	],
-	[{lists:flatten(io_lib:format("~p", [T])),
-		fun() -> R = connection_to_atom(T) end} || {T, R} <- Tests].
-
 content_type_test_() ->
 	%% {ContentType, Result}
 	Tests = [
@@ -1061,6 +1245,64 @@ digits_test_() ->
 	],
 	[{V, fun() -> R = digits(V) end} || {V, R} <- Tests].
 
+cookie_to_iodata_test_() ->
+	%% {Name, Value, Opts, Result}
+	Tests = [
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{http_only, true}, {domain, <<"acme.com">>}],
+			<<"Customer=WILE_E_COYOTE; Version=1; "
+				"Domain=acme.com; HttpOnly">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{path, <<"/acme">>}],
+			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{path, <<"/acme">>}, {badoption, <<"negatory">>}],
+			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>}
+	],
+	[{R, fun() -> R = iolist_to_binary(cookie_to_iodata(N, V, O)) end}
+		|| {N, V, O, R} <- Tests].
+
+cookie_to_iodata_max_age_test() ->
+	F = fun(N, V, O) ->
+		binary:split(iolist_to_binary(
+			cookie_to_iodata(N, V, O)), <<";">>, [global])
+	end,
+	[<<"Customer=WILE_E_COYOTE">>,
+		<<" Version=1">>,
+		<<" Expires=", _/binary>>,
+		<<" Max-Age=111">>,
+		<<" Secure">>] = F(<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{max_age, 111}, {secure, true}]),
+	case catch F(<<"Customer">>, <<"WILE_E_COYOTE">>, [{max_age, -111}]) of
+		{'EXIT', {{case_clause, {max_age, -111}}, _}} -> ok
+	end,
+	[<<"Customer=WILE_E_COYOTE">>,
+		<<" Version=1">>,
+		<<" Expires=", _/binary>>,
+		<<" Max-Age=86417">>] = F(<<"Customer">>, <<"WILE_E_COYOTE">>,
+			 [{max_age, 86417}]),
+	ok.
+
+cookie_to_iodata_failures_test_() ->
+	F = fun(N, V) ->
+		try cookie_to_iodata(N, V, []) of
+			_ ->
+				false
+		catch _:_ ->
+			true
+		end
+	end,
+	Tests = [
+		{<<"Na=me">>, <<"Value">>},
+		{<<"Name;">>, <<"Value">>},
+		{<<"\r\name">>, <<"Value">>},
+		{<<"Name">>, <<"Value;">>},
+		{<<"Name">>, <<"\value">>}
+	],
+	[{iolist_to_binary(io_lib:format("{~p, ~p} failure", [N, V])),
+		fun() -> true = F(N, V) end}
+		|| {N, V} <- Tests].
+
 x_www_form_urlencoded_test_() ->
 	%% {Qs, Result}
 	Tests = [
@@ -1073,9 +1315,7 @@ x_www_form_urlencoded_test_() ->
 		{<<"a=b=c=d=e&f=g">>, [{<<"a">>, <<"b=c=d=e">>}, {<<"f">>, <<"g">>}]},
 		{<<"a+b=c+d">>, [{<<"a b">>, <<"c d">>}]}
 	],
-	URLDecode = fun urldecode/1,
-	[{Qs, fun() -> R = x_www_form_urlencoded(
-		Qs, URLDecode) end} || {Qs, R} <- Tests].
+	[{Qs, fun() -> R = x_www_form_urlencoded(Qs) end} || {Qs, R} <- Tests].
 
 urldecode_test_() ->
 	U = fun urldecode/2,
@@ -1099,6 +1339,19 @@ urlencode_test_() ->
 	 ?_assertEqual(<<"aBc">>, U(<<"aBc">>, [])),
 	 ?_assertEqual(<<".-~_">>, U(<<".-~_">>, [])),
 	 ?_assertEqual(<<"%ff+">>, urlencode(<<255, " ">>))
+	].
+
+http_authorization_test_() ->
+	[?_assertEqual({<<"basic">>, {<<"Alladin">>, <<"open sesame">>}},
+		authorization(<<"QWxsYWRpbjpvcGVuIHNlc2FtZQ==">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"dXNlcm5hbWUK">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"_[]@#$%^&*()-AA==">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"dXNlcjpwYXNzCA==">>, <<"basic">>)), %% user:pass\010
+	 ?_assertEqual({<<"bearer">>,<<"some_secret_key">>},
+		authorization(<<" some_secret_key">>, <<"bearer">>))
 	].
 
 -endif.

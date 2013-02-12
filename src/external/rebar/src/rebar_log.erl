@@ -26,33 +26,25 @@
 %% -------------------------------------------------------------------
 -module(rebar_log).
 
--export([init/0,
-         set_level/1, get_level/0,
+-export([init/1,
+         set_level/1, default_level/0,
          log/3]).
 
 %% ===================================================================
 %% Public API
 %% ===================================================================
 
-init() ->
-    case rebar_config:get_global(verbose, "0") of
-        "1" ->
-            set_level(debug);
-        _ ->
-            set_level(error)
+init(Config) ->
+    Verbosity = rebar_config:get_global(Config, verbose, default_level()),
+    case valid_level(Verbosity) of
+        0 -> set_level(error);
+        1 -> set_level(warn);
+        2 -> set_level(info);
+        3 -> set_level(debug)
     end.
-
 
 set_level(Level) ->
     ok = application:set_env(rebar, log_level, Level).
-
-get_level() ->
-    case application:get_env(rebar, log_level) of
-        undefined ->
-            error;
-        {ok, Value} ->
-            Value
-    end.
 
 log(Level, Str, Args) ->
     {ok, LogLevel} = application:get_env(rebar, log_level),
@@ -63,9 +55,17 @@ log(Level, Str, Args) ->
             ok
     end.
 
+default_level() -> error_level().
+
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
+
+valid_level(Level) ->
+    erlang:max(error_level(), erlang:min(Level, debug_level())).
+
+error_level() -> 0.
+debug_level() -> 3.
 
 should_log(debug, _)     -> true;
 should_log(info, debug)  -> false;
