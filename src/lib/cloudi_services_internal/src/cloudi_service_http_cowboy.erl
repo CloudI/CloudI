@@ -263,27 +263,27 @@ cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
     FileName = cloudi_string:afterr($/, NameIncoming, input),
     HeadersOutgoing = if
         DefaultContentType =/= undefined ->
-            [{<<"Content-Type">>, DefaultContentType}];
+            [{<<"content-type">>, DefaultContentType}];
         true ->
             Extension = filename:extension(FileName),
             if
                 Extension == [] ->
-                    [{<<"Content-Type">>, <<"text/html">>}];
+                    [{<<"content-type">>, <<"text/html">>}];
                 true ->
                     case trie:find(Extension, ContentTypeLookup) of
                         error ->
-                            [{<<"Content-Disposition">>,
+                            [{<<"content-disposition">>,
                               erlang:list_to_binary("attachment; filename=\"" ++
                                                     NameIncoming ++ "\"")},
-                             {<<"Content-Type">>,
+                             {<<"content-type">>,
                               <<"application/octet-stream">>}];
                         {ok, {request, ContentType}} ->
-                            [{<<"Content-Type">>, ContentType}];
+                            [{<<"content-type">>, ContentType}];
                         {ok, {attachment, ContentType}} ->
-                            [{<<"Content-Disposition">>,
+                            [{<<"content-disposition">>,
                               erlang:list_to_binary("attachment; filename=\"" ++
                                                     NameIncoming ++ "\"")},
-                             {<<"Content-Type">>, ContentType}]
+                             {<<"content-type">>, ContentType}]
                     end
             end
     end,
