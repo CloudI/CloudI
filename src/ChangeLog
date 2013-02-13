@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cowboy content types integration for 0.8.0
+
 2013-02-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove misultin integration due to its usage of parameterized modules

@@ -187,10 +187,10 @@ terminate(_Reason, _Req, _State) ->
 %%%------------------------------------------------------------------------
 
 header_content_type(Headers) ->
-    case lists:keyfind('Content-Type', 1, Headers) of
+    case lists:keyfind(<<"content-type">>, 1, Headers) of
         false ->
             <<>>;
-        {'Content-Type', Value} ->
+        {<<"content-type">>, Value} ->
             hd(binary:split(Value, <<",">>))
     end.
 

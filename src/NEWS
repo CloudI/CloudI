@@ -1,3 +1,10 @@
+???
+  Version 1.2.0 (beta) released.
+
+  * Erlang >= R15B01 is now required due to callback/behavior changes
+  * misultin was removed, cowboy now provides better functionality
+    (misultin was also broken due to parameterized modules usage)
+
 February 4, 2013
   Version 1.1.1 (beta) released.
 
