@@ -113,11 +113,7 @@ class API(object):
 
     def unsubscribe(self, pattern):
         key = self.__prefix + pattern
-        value = self.__callbacks.get(key, None)
-        assert value is not None
-        value.popleft()
-        if len(value) == 0:
-            del self.__callbacks[key]
+        del self.__callbacks[key]
         self.__send(term_to_binary((OtpErlangAtom('unsubscribe'), pattern)))
 
     def send_async(self, name, request,
