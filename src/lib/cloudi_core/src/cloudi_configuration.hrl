@@ -52,7 +52,7 @@
     {
         % -128 (high) <= priority_default <= 127 (low)
         priority_default = 0,
-        % a limit on the total number of incoming service messages that
+        % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined,
         % delay after startup before requesting the initial service

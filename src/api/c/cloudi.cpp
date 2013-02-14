@@ -164,6 +164,18 @@ namespace
                         m_size++;
                     }
 
+                    void pop_front()
+                    {
+                        m_queue->pop_front();
+                        assert(m_size > 0);
+                        m_size--;
+                    }
+
+                    bool empty() const
+                    {
+                        return (m_size == 0);
+                    }
+
                     callback_function const & cycle()
                     {
                         queue_t & queue = *m_queue;
@@ -197,12 +209,14 @@ namespace
                 }
             }
 
-            bool erase(std::string const & pattern)
+            bool remove(std::string const & pattern)
             {
                 lookup_queue_t::iterator itr = m_lookup.find(pattern);
                 if (itr == m_lookup.end())
                     return false;
-                m_lookup.erase(itr);
+                itr->second.pop_front();
+                if (itr->second.empty())
+                    m_lookup.erase(itr);
                 return true;
             }
 
@@ -543,7 +557,7 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
     std::string str(p->prefix);
     str += pattern;
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    if (lookup.erase(str))
+    if (lookup.remove(str))
     {
         buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
         int index = 0;

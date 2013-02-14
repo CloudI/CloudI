@@ -11,29 +11,24 @@
 
 <h1>Module cloudi_service</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
-   <h3><a name="CloudI_(Internal)_Service_Behavior">CloudI (Internal) Service Behavior</a></h3>.
+   <h3><a name="CloudI_Internal_Service_Behavior">CloudI Internal Service Behavior</a></h3>
+   The interface which all internal services must implement.
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.0 Feb 6 2013 20:50:03
+<p><b>Version:</b> 1.2.0 Feb 13 2013 19:53:59
   ------------------------------------------------------------------------</p>
-<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>This module defines the <tt>cloudi_service</tt> behaviour.</b><br> Required callback functions: <tt>cloudi_service_init/3</tt>, <tt>cloudi_service_handle_request/11</tt>, <tt>cloudi_service_handle_info/3</tt>, <tt>cloudi_service_terminate/2</tt>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
-   <h3><a name="CloudI_(Internal)_Service_Behavior">CloudI (Internal) Service Behavior</a></h3>
-
+   <h3><a name="CloudI_Internal_Service_Behavior">CloudI Internal Service Behavior</a></h3>
+   The interface which all internal services must implement.
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#forward-9">forward/9</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#forward-9">forward/9</a></td><td></td></tr>
 <tr><td valign="top"><a href="#forward_async-8">forward_async/8</a></td><td></td></tr>
 <tr><td valign="top"><a href="#forward_sync-8">forward_sync/8</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_pid-2">get_pid/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_pid-3">get_pid/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_request-13">handle_request/13</a></td><td></td></tr>
-<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#mcast_async-3">mcast_async/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#mcast_async-4">mcast_async/4</a></td><td></td></tr>
 <tr><td valign="top"><a href="#mcast_async-5">mcast_async/5</a></td><td></td></tr>
@@ -72,18 +67,12 @@
 <tr><td valign="top"><a href="#send_sync-6">send_sync/6</a></td><td></td></tr>
 <tr><td valign="top"><a href="#send_sync-7">send_sync/7</a></td><td></td></tr>
 <tr><td valign="top"><a href="#subscribe-2">subscribe/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#timeout_async-1">timeout_async/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#timeout_sync-1">timeout_sync/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#unsubscribe-2">unsubscribe/2</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
-
-<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
-<div class="spec">
-<p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
-</div>
 
 <h3 class="function"><a name="forward-9">forward/9</a></h3>
 <div class="spec">
@@ -108,31 +97,6 @@
 <h3 class="function"><a name="get_pid-3">get_pid/3</a></h3>
 <div class="spec">
 <p><tt>get_pid(Dispatcher::pid(), Name::string(), Timeout::pos_integer()) -&gt; {ok, {string(), pid()}} | {error, atom()}</tt><br></p>
-</div>
-
-<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
-<div class="spec">
-<p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
-<div class="spec">
-<p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
-<div class="spec">
-<p><tt>handle_info(T, State) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="handle_request-13">handle_request/13</a></h3>
-<div class="spec">
-<p><tt>handle_request(X1, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, Module, Dispatcher, ServiceState, Parent) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="init-1">init/1</a></h3>
-<div class="spec">
-<p><tt>init(X1) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="mcast_async-3">mcast_async/3</a></h3>
@@ -167,22 +131,22 @@
 
 <h3 class="function"><a name="recv_async-1">recv_async/1</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::pid()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::pid()) -&gt; {ok, any(), any(), binary()} | {error, atom()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="recv_async-2">recv_async/2</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::pid(), TransId::pos_integer() | binary()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::pid(), TransId::pos_integer() | binary()) -&gt; {ok, any(), any(), binary()} | {error, atom()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="recv_async-3">recv_async/3</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer() | binary(), TransId::binary() | boolean()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer() | binary(), TransId::binary() | boolean()) -&gt; {ok, any(), any(), binary()} | {error, atom()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="recv_async-4">recv_async/4</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer(), TransId::binary(), Consume::boolean()) -&gt; {ok, any(), any()} | {ok, any()} | {error, atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::pid(), Timeout::pos_integer(), TransId::binary(), Consume::boolean()) -&gt; {ok, any(), any(), binary()} | {error, atom()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="request_http_qs_parse-1">request_http_qs_parse/1</a></h3>
@@ -325,11 +289,6 @@
 <p><tt>subscribe(Dispatcher::pid(), Pattern::string()) -&gt; ok</tt><br></p>
 </div>
 
-<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
-<div class="spec">
-<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
-</div>
-
 <h3 class="function"><a name="timeout_async-1">timeout_async/1</a></h3>
 <div class="spec">
 <p><tt>timeout_async(Dispatcher::pid()) -&gt; pos_integer()</tt><br></p>
@@ -347,6 +306,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Feb 6 2013, 20:50:03.</i></p>
+<p><i>Generated by EDoc, Feb 13 2013, 19:53:59.</i></p>
 </body>
 </html>

@@ -3,9 +3,8 @@
 
 2013-02-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Fix python cloudi module so unsubscribe removes all
-      subscriptions, so that it is consistent with the other
-      CloudI API implementations
+    * Fix the C/C++, Java, and Ruby CloudI API to make sure
+      unsubscribe only removes a single instance of the service name pattern
     * Fix cowboy content types integration for 0.8.0
 
 2013-02-12 Michael Truog   <mjtruog [at] gmail (dot) com>
