@@ -92,7 +92,13 @@ module CloudI
         end
 
         def unsubscribe(pattern)
-            @callbacks.delete(@prefix + pattern)
+            key = @prefix + pattern
+            value = @callbacks.fetch(key, nil)
+            API.assert{value != nil}
+            value.shift
+            if value.empty?
+                @callbacks.delete(key)
+            end
             send(term_to_binary([:unsubscribe, pattern]))
         end
 

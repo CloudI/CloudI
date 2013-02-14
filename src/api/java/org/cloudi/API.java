@@ -230,9 +230,31 @@ public class API
         send(subscribe);
     }
 
-    public void unsubscribe(final String pattern)
+    public void unsubscribe(final String pattern) throws InvalidInputException
     {
-        this.callbacks.remove(this.prefix + pattern);
+        final String s = this.prefix + pattern;
+        LinkedList< Function9<Integer,
+                              String,
+                              String,
+                              byte[],
+                              byte[],
+                              Integer,
+                              Byte,
+                              byte[],
+                              OtpErlangPid> >
+                    callback_list = this.callbacks.get(s);
+        if (callback_list == null)
+        {
+            throw new InvalidInputException();
+        }
+        else
+        {
+            callback_list.removeFirst();
+            if (callback_list.isEmpty())
+            {
+                this.callbacks.remove(s);
+            }
+        }
         OtpOutputStream unsubscribe = new OtpOutputStream();
         unsubscribe.write(OtpExternal.versionTag);
         final OtpErlangObject[] tuple = {new OtpErlangAtom("unsubscribe"),
