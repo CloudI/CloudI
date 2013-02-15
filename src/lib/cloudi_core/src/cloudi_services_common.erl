@@ -245,6 +245,9 @@ recv_timeout_start(Timeout, Priority, TransId, T,
     {dict:store(TransId, Tref, RecvTimeouts),
      pqueue4:in(T, Priority, Queue)}.
 
+async_response_timeout_start(_, _, 0, _, AsyncResponses, _) ->
+    AsyncResponses;
+
 async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
                              AsyncResponses, Dispatcher)
     when is_integer(Timeout), is_binary(TransId) ->

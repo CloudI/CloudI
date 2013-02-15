@@ -654,6 +654,12 @@ handle_info({'cloudi_service_send_sync', Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Pid), State),
     {next_state, StateName, State#state{queue_requests = true}};
 
+handle_info({Type, _, _, _, _, 0, _, _, _}, StateName,
+            #state{queue_requests = true} = State)
+    when Type =:= 'cloudi_service_send_async';
+         Type =:= 'cloudi_service_send_sync' ->
+    {next_state, StateName, State};
+
 handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T, StateName,
             #state{dispatcher = Dispatcher,
                    recv_timeouts = RecvTimeouts,
@@ -720,7 +726,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
         {ok, {passive, Tref}} ->
             Timeout = case erlang:cancel_timer(Tref) of
                 false ->
-                    1;
+                    0;
                 V ->
                     V
             end,
@@ -1086,7 +1092,7 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
             Tref = dict:fetch(TransId, RecvTimeouts),
             Timeout = case erlang:cancel_timer(Tref) of
                 false ->
-                    1;
+                    0;
                 V ->    
                     V       
             end,
@@ -1101,7 +1107,7 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
             Tref = dict:fetch(TransId, RecvTimeouts),
             Timeout = case erlang:cancel_timer(Tref) of
                 false ->
-                    1;
+                    0;
                 V ->    
                     V       
             end,
