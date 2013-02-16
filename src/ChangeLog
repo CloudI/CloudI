@@ -4,6 +4,7 @@
 2013-02-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Tweaks in an attempt to appease the dialyzer
+    * Add edoc and type spec information to cloudi_service
 
 2013-02-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
