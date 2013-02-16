@@ -70,7 +70,9 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec start_link(Config :: #config{}) -> {'ok', pid()} | {'error', any()}.
+-spec start_link(Config :: #config{}) ->
+    {'ok', pid()} |
+    {'error', any()}.
 
 start_link(Config) when is_record(Config, config) ->
     supervisor:start_link(?MODULE, [Config]).

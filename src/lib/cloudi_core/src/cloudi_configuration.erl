@@ -400,6 +400,8 @@ nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+-spec new(list({atom(), any()}), #config{}) -> #config{}.
+
 new([], #config{services = Services, acl = ACL} = Config) ->
     Config#config{services = services_acl_update([], Services, ACL)};
 
@@ -504,8 +506,8 @@ services_validate(Output, [Service | L], UUID)
            (Service#internal.dest_refresh =:= lazy_remote) orelse
            (Service#internal.dest_refresh =:= none),
     true = Service#internal.timeout_init > 0,
-    true = Service#internal.timeout_async > ?TIMEOUT_DELTA,
-    true = Service#internal.timeout_sync > ?TIMEOUT_DELTA,
+    true = Service#internal.timeout_async > 0,
+    true = Service#internal.timeout_sync > 0,
     true = is_list(Service#internal.dest_list_deny) orelse
            (Service#internal.dest_list_deny =:= undefined),
     true = is_list(Service#internal.dest_list_allow) orelse
@@ -567,8 +569,8 @@ services_validate(Output, [Service | L], UUID)
            (Service#external.protocol =:= udp),
     true = Service#external.buffer_size >= 1024, % should be roughly 16436
     true = Service#external.timeout_init > 0,
-    true = Service#external.timeout_async > ?TIMEOUT_DELTA,
-    true = Service#external.timeout_sync > ?TIMEOUT_DELTA,
+    true = Service#external.timeout_async > 0,
+    true = Service#external.timeout_sync > 0,
     true = is_list(Service#external.dest_list_deny) orelse
            (Service#external.dest_list_deny =:= undefined),
     true = is_list(Service#external.dest_list_allow) orelse

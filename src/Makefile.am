@@ -208,22 +208,23 @@ clean-configure: config.log
 
 dialyze: all-local dialyzer.plt
 	$(DIALYZER) --plt dialyzer.plt \
-                -I lib/cloudi_core/include/ \
-                lib/cloudi_core/ebin/ \
-                lib/cloudi_services_internal/ebin/ \
-                lib/cloudi_services_databases/ebin/ \
-                lib/cloudi_services_messaging/ebin/ \
-                lib/cpg/ebin/ \
-                lib/uuid/ebin/ \
-                lib/trie/ebin/ \
-                external/cowboy/ebin \
-                external/epgsql/ebin \
-                external/etokyotyrant/ebin \
-                external/ememcached/ebin \
-                external/ecouchdb/ebin \
-                external/emysql/ebin \
-                external/jsx/ebin \
-                external/misultin/ebin
+              -Wno_return -Wno_unused \
+              -I lib/cloudi_core/include/ \
+              lib/cloudi_core/ebin/ \
+              lib/cloudi_services_internal/ebin/ \
+              lib/cloudi_services_databases/ebin/ \
+              lib/cloudi_services_messaging/ebin/ \
+              lib/cpg/ebin/ \
+              lib/uuid/ebin/ \
+              lib/trie/ebin/ \
+              external/cowboy/ebin \
+              external/epgsql/ebin \
+              external/etokyotyrant/ebin \
+              external/ememcached/ebin \
+              external/ecouchdb/ebin \
+              external/emysql/ebin \
+              external/jsx/ebin \
+              external/misultin/ebin
 
 dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt dialyzer.plt \

@@ -66,21 +66,27 @@
 %% ===Start the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec start(StartType :: normal | {takeover, node()} | {failover, node()},
+            StartArgs :: any()) ->
+    {ok, Pid :: pid()} |
+    {ok, Pid :: pid(), State :: any()} |
+    {error, Reason :: any()}.
+
 start(_, _) ->
     cloudi_random:seed(),
     {ok, Path} = application:get_env(configuration),
-    case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
-        {ok, _} = Success ->
-            Success;
-        {error, _} = Error ->
-            Error
-    end.
+    cloudi_sup:start_link(cloudi_configuration:open(Path)).
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Stop the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec stop(State :: any()) ->
+    'ok'.
+
 stop(_) ->
     ok.
 
