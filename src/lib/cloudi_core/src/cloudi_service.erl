@@ -172,7 +172,8 @@ behaviour_info(_) ->
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------
 
--spec process_index(Dispatcher :: pid()) -> pos_integer().
+-spec process_index(Dispatcher :: pid()) ->
+    non_neg_integer().
 
 process_index(Dispatcher) ->
     gen_server:call(Dispatcher, process_index, infinity).
@@ -207,7 +208,7 @@ get_pid(Dispatcher, Name)
 
 -spec get_pid(Dispatcher :: pid(),
               Name :: string(),
-              Timeout :: pos_integer()) ->
+              Timeout :: non_neg_integer()) ->
     {'ok', {string(), pid()}} |
     {'error', atom()}.
 
@@ -232,7 +233,7 @@ send_async(Dispatcher, Name, Request)
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any(),
-                 Timeout :: pos_integer() | 'undefined') ->
+                 Timeout :: non_neg_integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
 
@@ -252,7 +253,7 @@ send_async(Dispatcher, Name, Request, Timeout)
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any(),
-                 Timeout :: pos_integer() | 'undefined',
+                 Timeout :: non_neg_integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -274,7 +275,7 @@ send_async(Dispatcher, Name, Request, Timeout, PatternPid)
                  Name :: string(),
                  RequestInfo :: any(),
                  Request :: any(),
-                 Timeout :: pos_integer() | 'undefined',
+                 Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -319,7 +320,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                  Name :: string(),
                  RequestInfo :: any(),
                  Request :: any(),
-                 Timeout :: pos_integer() | 'undefined',
+                 Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
@@ -379,7 +380,7 @@ send_async_active(Dispatcher, Name, Request)
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any(),
-                        Timeout :: pos_integer() | 'undefined') ->
+                        Timeout :: non_neg_integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
 
@@ -399,7 +400,7 @@ send_async_active(Dispatcher, Name, Request, Timeout)
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any(),
-                        Timeout :: pos_integer() | 'undefined',
+                        Timeout :: non_neg_integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -421,7 +422,7 @@ send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
                         Name :: string(),
                         RequestInfo :: any(),
                         Request :: any(),
-                        Timeout :: pos_integer() | 'undefined',
+                        Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -468,7 +469,7 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                         Name :: string(),
                         RequestInfo :: any(),
                         Request :: any(),
-                        Timeout :: pos_integer() | 'undefined',
+                        Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
@@ -526,7 +527,7 @@ send_async_passive(Dispatcher, Name, Request) ->
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any(),
-                         Timeout :: pos_integer() | 'undefined') ->
+                         Timeout :: non_neg_integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
 
@@ -536,7 +537,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout) ->
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any(),
-                         Timeout :: pos_integer() | 'undefined',
+                         Timeout :: non_neg_integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -548,7 +549,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
                          Name :: string(),
                          RequestInfo :: any(),
                          Request :: any(),
-                         Timeout :: pos_integer() | 'undefined',
+                         Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined') ->
     {'ok', binary()} |
     {'error', atom()}.
@@ -562,7 +563,7 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                          Name :: string(),
                          RequestInfo :: any(),
                          Request :: any(),
-                         Timeout :: pos_integer() | 'undefined',
+                         Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
     {'ok', binary()} |
@@ -588,7 +589,7 @@ send_sync(Dispatcher, Name, Request)
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 Request :: any(),
-                Timeout :: pos_integer() | 'undefined') ->
+                Timeout :: non_neg_integer() | 'undefined') ->
     {'ok', any(), any()} |
     {'ok', any()} |
     {'error', atom()}.
@@ -609,7 +610,7 @@ send_sync(Dispatcher, Name, Request, Timeout)
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 Request :: any(),
-                Timeout :: pos_integer() | 'undefined',
+                Timeout :: non_neg_integer() | 'undefined',
                 PatternPid :: {string(), pid()}) ->
     {'ok', any(), any()} |
     {'ok', any()} |
@@ -631,7 +632,7 @@ send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
                 Name :: string(),
                 RequestInfo :: any(),
                 Request :: any(),
-                Timeout :: pos_integer() | 'undefined', 
+                Timeout :: non_neg_integer() | 'undefined', 
                 Priority :: integer() | 'undefined') ->
     {'ok', any(), any()} |
     {'ok', any()} |
@@ -677,7 +678,7 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                 Name :: string(),
                 RequestInfo :: any(),
                 Request :: any(),
-                Timeout :: pos_integer() | 'undefined',
+                Timeout :: non_neg_integer() | 'undefined',
                 Priority :: integer() | 'undefined',
                 PatternPid :: {string(), pid()}) ->
     {'ok', any(), any()} |
@@ -738,7 +739,7 @@ mcast_async(Dispatcher, Name, Request)
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any(),
-                  Timeout :: pos_integer() | 'undefined') ->
+                  Timeout :: non_neg_integer() | 'undefined') ->
     {'ok', list(binary())} |
     {'error', atom()}.
 
@@ -758,7 +759,7 @@ mcast_async(Dispatcher, Name, Request, Timeout)
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any(),
-                  Timeout :: pos_integer() | 'undefined',
+                  Timeout :: non_neg_integer() | 'undefined',
                   PatternPid :: {string(), pid()}) ->
     {'ok', list(binary())} |
     {'error', atom()}.
@@ -780,7 +781,7 @@ mcast_async(Dispatcher, Name, Request, Timeout, PatternPid)
                   Name :: string(),
                   RequestInfo :: any(),
                   Request :: any(),
-                  Timeout :: pos_integer() | 'undefined',
+                  Timeout :: non_neg_integer() | 'undefined',
                   Priority :: integer() | 'undefined') ->
     {'ok', list(binary())} |
     {'error', atom()}.
@@ -824,7 +825,7 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
               Name :: string(),
               RequestInfo :: any(),
               Request :: any(),
-              Timeout :: pos_integer(),
+              Timeout :: non_neg_integer(),
               Priority :: integer(),
               TransId :: binary(),
               Pid :: pid()) -> none().
@@ -845,7 +846,7 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Name :: string(),
                     RequestInfo :: any(),
                     Request :: any(),
-                    Timeout :: pos_integer(),
+                    Timeout :: non_neg_integer(),
                     Priority :: integer(),
                     TransId :: binary(),
                     Pid :: pid()) -> none().
@@ -864,7 +865,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Name :: string(),
                    RequestInfo :: any(),
                    Request :: any(),
-                   Timeout :: pos_integer(),
+                   Timeout :: non_neg_integer(),
                    Priority :: integer(),
                    TransId :: binary(),
                    Pid :: pid()) -> none().
@@ -885,7 +886,7 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
              Pattern :: string(),
              ResponseInfo :: any(),
              Response :: any(),
-             Timeout :: pos_integer(),
+             Timeout :: non_neg_integer(),
              TransId :: binary(),
              Pid :: pid()) -> none().
 
@@ -900,7 +901,7 @@ return(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
                    Pattern :: string(),
                    ResponseInfo :: any(),
                    Response :: any(),
-                   Timeout :: pos_integer(),
+                   Timeout :: non_neg_integer(),
                    TransId :: binary(),
                    Pid :: pid()) -> none().
 
@@ -918,7 +919,7 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   Pattern :: string(),
                   ResponseInfo :: any(),
                   Response :: any(),
-                  Timeout :: pos_integer(),
+                  Timeout :: non_neg_integer(),
                   TransId :: binary(),
                   Pid :: pid()) -> none().
 
@@ -937,7 +938,7 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
                      Pattern :: string(),
                      ResponseInfo :: any(),
                      Response :: any(),
-                     Timeout :: pos_integer(),
+                     Timeout :: non_neg_integer(),
                      TransId :: binary(),
                      Pid :: pid()) -> 'ok'.
 
@@ -956,8 +957,8 @@ return_nothrow(_, 'send_sync', Name, Pattern, ResponseInfo, Response,
     ok.
 
 -spec recv_async(Dispatcher :: pid()) ->
-    {'ok', any(), any(), binary()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -965,9 +966,9 @@ recv_async(Dispatcher)
                     {'recv_async', <<0:128>>, true}, infinity).
 
 -spec recv_async(Dispatcher :: pid(),
-                 pos_integer() | binary()) ->
-    {'ok', any(), any(), binary()} |
-    {'error', atom()}.
+                 non_neg_integer() | binary()) ->
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
@@ -982,10 +983,10 @@ recv_async(Dispatcher, Timeout)
                                    Timeout + ?TIMEOUT_DELTA)).
 
 -spec recv_async(Dispatcher :: pid(),
-                 pos_integer() | binary(),
+                 non_neg_integer() | binary(),
                  binary() | boolean()) ->
-    {'ok', any(), any(), binary()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -1007,11 +1008,11 @@ recv_async(Dispatcher, TransId, Consume)
                     {'recv_async', TransId, Consume}, infinity).
 
 -spec recv_async(Dispatcher :: pid(),
-                 Timeout :: pos_integer(),
+                 Timeout :: non_neg_integer(),
                  TransId :: binary(),
                  Consume :: boolean()) ->
-    {'ok', any(), any(), binary()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, Timeout, TransId, Consume)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -1020,23 +1021,26 @@ recv_async(Dispatcher, Timeout, TransId, Consume)
                                    {'recv_async', Timeout, TransId, Consume},
                                    Timeout + ?TIMEOUT_DELTA)).
 
--spec prefix(Dispatcher :: pid()) -> pos_integer().
+-spec prefix(Dispatcher :: pid()) ->
+    Prefix :: string().
 
 prefix(Dispatcher) ->
     gen_server:call(Dispatcher, prefix, infinity).
 
--spec timeout_async(Dispatcher :: pid()) -> pos_integer().
+-spec timeout_async(Dispatcher :: pid()) ->
+    TimeoutAsync :: pos_integer().
 
 timeout_async(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_async, infinity).
 
--spec timeout_sync(Dispatcher :: pid()) -> pos_integer().
+-spec timeout_sync(Dispatcher :: pid()) ->
+    TimeoutSync :: pos_integer().
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
 
 -spec request_http_qs_parse(Request :: binary()) ->
-    dict().
+    Result :: dict().
 
 request_http_qs_parse(Request)
     when is_binary(Request) ->
@@ -1044,7 +1048,7 @@ request_http_qs_parse(Request)
                                 binary:split(Request, <<0>>, [global])).
 
 -spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
-    dict().
+    Result :: dict().
 
 request_info_key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->

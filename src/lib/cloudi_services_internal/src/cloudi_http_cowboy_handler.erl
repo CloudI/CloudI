@@ -200,8 +200,6 @@ headers_external(L) ->
 
 headers_external(Result, []) ->
     Result;
-headers_external(Result, [{K, V} | L]) when is_atom(K) ->
-    headers_external([[erlang:atom_to_binary(K, utf8), 0, V, 0] | Result], L);
 headers_external(Result, [{K, V} | L]) when is_binary(K) ->
     headers_external([[K, 0, V, 0] | Result], L).
 
