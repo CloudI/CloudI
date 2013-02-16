@@ -99,11 +99,6 @@
          request_http_qs_parse/1,
          request_info_key_value_parse/1]).
 
--ifdef(ERLANG_OTP_VER_R14).
-%% behavior callbacks
--export([behaviour_info/1]).
--endif.
-
 -include("cloudi_constants.hrl").
 
 -define(CATCH_TIMEOUT(F),
@@ -112,22 +107,6 @@
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
-
--ifdef(ERLANG_OTP_VER_R14).
-
--spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
-
-behaviour_info(callbacks) ->
-    [
-        {cloudi_service_init, 3},
-        {cloudi_service_handle_request, 11},
-        {cloudi_service_handle_info, 3},
-        {cloudi_service_terminate, 2}
-    ];
-behaviour_info(_) ->
-    undefined.
-
--else. % Erlang version must be >= R15
 
 -callback cloudi_service_init(Args :: list(),
                               Prefix :: string(),
@@ -166,22 +145,42 @@ behaviour_info(_) ->
                                    State :: any()) ->
     'ok'.
 
--endif.
-
 %%%------------------------------------------------------------------------
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the index of this instance of the service.===
+%% The configuration of the service defined how many instances should exist.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec process_index(Dispatcher :: pid()) ->
-    non_neg_integer().
+    ProcessIndex :: non_neg_integer().
 
 process_index(Dispatcher) ->
     gen_server:call(Dispatcher, process_index, infinity).
 
--spec self(Dispatcher :: pid()) -> pid().
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the Erlang pid representing the service.===
+%% Makes the service source code simpler, though the function may
+%% seem unnecessary.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec self(Dispatcher :: pid()) ->
+    Self :: pid().
 
 self(Dispatcher) ->
     Dispatcher.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to a service name pattern.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec subscribe(Dispatcher :: pid(),
                 Pattern :: string()) -> ok.
@@ -190,6 +189,12 @@ subscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
     gen_server:call(Dispatcher, {'subscribe', Pattern}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Unsubscribe from a service name pattern.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec unsubscribe(Dispatcher :: pid(),
                   Pattern :: string()) -> ok.
 
@@ -197,20 +202,32 @@ unsubscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
     gen_server:call(Dispatcher, {'unsubscribe', Pattern}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a service destination based on a service name.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_pid(Dispatcher :: pid(),
               Name :: string()) ->
-    {'ok', {string(), pid()}} |
-    {'error', atom()}.
+    {'ok', PatternPid :: {string(), pid()}} |
+    {'error', Reason :: atom()}.
 
 get_pid(Dispatcher, Name)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'get_pid', Name}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a service destination based on a service name.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec get_pid(Dispatcher :: pid(),
               Name :: string(),
               Timeout :: non_neg_integer()) ->
-    {'ok', {string(), pid()}} |
-    {'error', atom()}.
+    {'ok', PatternPid :: {string(), pid()}} |
+    {'error', Reason :: atom()}.
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -219,23 +236,35 @@ get_pid(Dispatcher, Name, Timeout)
                                    {'get_pid', Name,
                                     Timeout}, Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any()) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
@@ -250,13 +279,19 @@ send_async(Dispatcher, Name, Request, Timeout)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
@@ -271,14 +306,20 @@ send_async(Dispatcher, Name, Request, Timeout, PatternPid)
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  RequestInfo :: any(),
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            undefined, undefined)
@@ -316,6 +357,12 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  RequestInfo :: any(),
@@ -323,8 +370,8 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                  Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            undefined, undefined, PatternPid)
@@ -366,23 +413,43 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any()) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
@@ -397,13 +464,23 @@ send_async_active(Dispatcher, Name, Request, Timeout)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
@@ -418,14 +495,24 @@ send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         RequestInfo :: any(),
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   undefined, undefined)
@@ -465,6 +552,16 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         RequestInfo :: any(),
@@ -472,8 +569,8 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                         Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   undefined, undefined, PatternPid)
@@ -515,35 +612,67 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% An alias for send_async.  The asynchronous service request is returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any()) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request) ->
     send_async(Dispatcher, Name, Request).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% An alias for send_async.  The asynchronous service request is returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request, Timeout) ->
     send_async(Dispatcher, Name, Request, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% An alias for send_async.  The asynchronous service request is returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
     send_async(Dispatcher, Name, Request, Timeout, PatternPid).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% An alias for send_async.  The asynchronous service request is returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
@@ -551,13 +680,21 @@ send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined') ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, RequestInfo, Request,
                    Timeout, Priority) ->
     send_async(Dispatcher, Name, RequestInfo, Request,
                Timeout, Priority).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request.===
+%% An alias for send_async.  The asynchronous service request is returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
@@ -566,33 +703,45 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                          Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
-    {'ok', binary()} |
-    {'error', atom()}.
+    {'ok', TransId :: binary()} |
+    {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, RequestInfo, Request,
                    Timeout, Priority, PatternPid) ->
     send_async(Dispatcher, Name, RequestInfo, Request,
                Timeout, Priority, PatternPid).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 Request :: any()) ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
 
 send_sync(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 Request :: any(),
                 Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
 
 send_sync(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
@@ -607,14 +756,20 @@ send_sync(Dispatcher, Name, Request, Timeout)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 Request :: any(),
                 Timeout :: non_neg_integer() | 'undefined',
                 PatternPid :: {string(), pid()}) ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
 
 send_sync(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
@@ -628,15 +783,22 @@ send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
                                    {'send_sync', Name, <<>>, Request,
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 RequestInfo :: any(),
                 Request :: any(),
                 Timeout :: non_neg_integer() | 'undefined', 
                 Priority :: integer() | 'undefined') ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           undefined, undefined)
@@ -674,6 +836,12 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec send_sync(Dispatcher :: pid(),
                 Name :: string(),
                 RequestInfo :: any(),
@@ -681,9 +849,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                 Timeout :: non_neg_integer() | 'undefined',
                 Priority :: integer() | 'undefined',
                 PatternPid :: {string(), pid()}) ->
-    {'ok', any(), any()} |
-    {'ok', any()} |
-    {'error', atom()}.
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           undefined, undefined, PatternPid)
@@ -725,23 +893,39 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any()) ->
-    {'ok', list(binary())} |
-    {'error', atom()}.
+    {'ok', TransIdList :: list(binary())} |
+    {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', list(binary())} |
-    {'error', atom()}.
+    {'ok', TransIdList :: list(binary())} |
+    {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
@@ -756,13 +940,21 @@ mcast_async(Dispatcher, Name, Request, Timeout)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined',
                   PatternPid :: {string(), pid()}) ->
-    {'ok', list(binary())} |
-    {'error', atom()}.
+    {'ok', TransIdList :: list(binary())} |
+    {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
@@ -777,14 +969,22 @@ mcast_async(Dispatcher, Name, Request, Timeout, PatternPid)
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   RequestInfo :: any(),
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined',
                   Priority :: integer() | 'undefined') ->
-    {'ok', list(binary())} |
-    {'error', atom()}.
+    {'ok', TransIdList :: list(binary())} |
+    {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
@@ -820,6 +1020,12 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Forward a service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec forward(Dispatcher :: pid(),
               'send_async' | 'send_sync',
               Name :: string(),
@@ -842,6 +1048,12 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                  Timeout, Priority, TransId, Pid),
     erlang:throw(forward).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Forward an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec forward_async(Dispatcher :: pid(),
                     Name :: string(),
                     RequestInfo :: any(),
@@ -860,6 +1072,12 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                   RequestInfo, Request,
                   Timeout, Priority, TransId, Pid},
     erlang:throw(forward).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Forward a synchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec forward_sync(Dispatcher :: pid(),
                    Name :: string(),
@@ -880,6 +1098,12 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Priority, TransId, Pid},
     erlang:throw(forward).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec return(Dispatcher :: pid(),
              'send_async' | 'send_sync',
              Name :: string(),
@@ -895,6 +1119,12 @@ return(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
     return_nothrow(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
                    Timeout, TransId, Pid),
     erlang:throw(return).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return an asynchronous service response.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec return_async(Dispatcher :: pid(),
                    Name :: string(),
@@ -914,6 +1144,12 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
            Timeout, TransId, Pid},
     erlang:throw(return).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a synchronous service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec return_sync(Dispatcher :: pid(),
                   Name :: string(),
                   Pattern :: string(),
@@ -931,6 +1167,12 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
            ResponseInfo, Response,
            Timeout, TransId, Pid},
     erlang:throw(return).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response without exiting the request handler.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec return_nothrow(Dispatcher :: pid(),
                      'send_async' | 'send_sync',
@@ -956,6 +1198,13 @@ return_nothrow(_, 'send_sync', Name, Pattern, ResponseInfo, Response,
            Timeout, TransId, Pid},
     ok.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive an asynchronous service request.===
+%% Use a null TransId to receive the oldest service request.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec recv_async(Dispatcher :: pid()) ->
     {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
     {'error', Reason :: atom()}.
@@ -964,6 +1213,14 @@ recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
     gen_server:call(Dispatcher,
                     {'recv_async', <<0:128>>, true}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive an asynchronous service request.===
+%% Either use the supplied TransId to receive the specific service request
+%% or use a null TransId to receive the oldest service request.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec recv_async(Dispatcher :: pid(),
                  non_neg_integer() | binary()) ->
@@ -981,6 +1238,14 @@ recv_async(Dispatcher, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'recv_async', Timeout, <<0:128>>, true},
                                    Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive an asynchronous service request.===
+%% Either use the supplied TransId to receive the specific service request
+%% or use a null TransId to receive the oldest service request.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec recv_async(Dispatcher :: pid(),
                  non_neg_integer() | binary(),
@@ -1007,6 +1272,12 @@ recv_async(Dispatcher, TransId, Consume)
     gen_server:call(Dispatcher,
                     {'recv_async', TransId, Consume}, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive an asynchronous service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec recv_async(Dispatcher :: pid(),
                  Timeout :: non_neg_integer(),
                  TransId :: binary(),
@@ -1021,11 +1292,25 @@ recv_async(Dispatcher, Timeout, TransId, Consume)
                                    {'recv_async', Timeout, TransId, Consume},
                                    Timeout + ?TIMEOUT_DELTA)).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service default prefix.===
+%% All subscribed/unsubscribed service names use this prefix.  The prefix
+%% defines the scope of the service.
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec prefix(Dispatcher :: pid()) ->
     Prefix :: string().
 
 prefix(Dispatcher) ->
     gen_server:call(Dispatcher, prefix, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service default asynchronous timeout (in milliseconds).===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec timeout_async(Dispatcher :: pid()) ->
     TimeoutAsync :: pos_integer().
@@ -1033,11 +1318,23 @@ prefix(Dispatcher) ->
 timeout_async(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_async, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service default synchronous timeout (in milliseconds).===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec timeout_sync(Dispatcher :: pid()) ->
     TimeoutSync :: pos_integer().
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse HTTP Request query string data.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec request_http_qs_parse(Request :: binary()) ->
     Result :: dict().
@@ -1046,6 +1343,14 @@ request_http_qs_parse(Request)
     when is_binary(Request) ->
     binary_key_value_parse_list(dict:new(),
                                 binary:split(Request, <<0>>, [global])).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse RequestInfo key/value data.===
+%% @end
+%% RequestInfo is meant to contain key/value pairs that is request
+%% meta-data.
+%%-------------------------------------------------------------------------
 
 -spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
     Result :: dict().
