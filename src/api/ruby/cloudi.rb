@@ -170,22 +170,14 @@ module CloudI
 
         def forward_async(name, request_info, request,
                           timeout, priority, trans_id, pid)
-            send(term_to_binary([:forward_async, name,
-                                  OtpErlangBinary.new(request_info),
-                                  OtpErlangBinary.new(request),
-                                  timeout, priority,
-                                  OtpErlangBinary.new(trans_id), pid]))
-            raise ReturnAsyncException
+            raise ForwardAsyncException.new(name, request_info, request,
+                                            timeout, priority, trans_id, pid)
         end
 
         def forward_sync(name, request_info, request,
                          timeout, priority, trans_id, pid)
-            send(term_to_binary([:forward_sync, name, 
-                                  OtpErlangBinary.new(request_info),
-                                  OtpErlangBinary.new(request),
-                                  timeout, priority,
-                                  OtpErlangBinary.new(trans_id), pid]))
-            raise ReturnSyncException
+            raise ForwardSyncException.new(name, request_info, request,
+                                           timeout, priority, trans_id, pid)
         end
 
         def return_(command, name, pattern, response_info, response,
@@ -202,34 +194,16 @@ module CloudI
 
         def return_async(name, pattern, response_info, response,
                          timeout, trans_id, pid)
-            return_async_nothrow(name, pattern, response_info, response,
-                                 timeout, trans_id, pid)
-            raise ReturnAsyncException
-        end
-
-        def return_async_nothrow(name, pattern, response_info, response,
-                                 timeout, trans_id, pid)
-            send(term_to_binary([:return_async, name, pattern,
-                                  OtpErlangBinary.new(response_info),
-                                  OtpErlangBinary.new(response),
-                                  timeout,
-                                  OtpErlangBinary.new(trans_id), pid]))
+            raise ReturnAsyncException.new(name, pattern,
+                                           response_info, response,
+                                           timeout, trans_id, pid)
         end
 
         def return_sync(name, pattern, response_info, response,
                         timeout, trans_id, pid)
-            return_sync_nothrow(name, pattern, response_info, response,
-                                timeout, trans_id, pid)
-            raise ReturnSyncException
-        end
-
-        def return_sync_nothrow(name, pattern, response_info, response,
-                                timeout, trans_id, pid)
-            send(term_to_binary([:return_sync, name, pattern,
-                                  OtpErlangBinary.new(response_info),
-                                  OtpErlangBinary.new(response),
-                                  timeout,
-                                  OtpErlangBinary.new(trans_id), pid]))
+            raise ReturnSyncException.new(name, pattern,
+                                          response_info, response,
+                                          timeout, trans_id, pid)
         end
 
         def recv_async(timeout=nil, trans_id=nil, consume=true)
@@ -256,8 +230,56 @@ module CloudI
             return @timeoutSync
         end
 
+        def return_async_nothrow(name, pattern, response_info, response,
+                                 timeout, trans_id, pid)
+            send(term_to_binary([:return_async, name, pattern,
+                                  OtpErlangBinary.new(response_info),
+                                  OtpErlangBinary.new(response),
+                                  timeout,
+                                  OtpErlangBinary.new(trans_id), pid]))
+        end
+
+        def return_sync_nothrow(name, pattern, response_info, response,
+                                timeout, trans_id, pid)
+            send(term_to_binary([:return_sync, name, pattern,
+                                  OtpErlangBinary.new(response_info),
+                                  OtpErlangBinary.new(response),
+                                  timeout,
+                                  OtpErlangBinary.new(trans_id), pid]))
+        end
+
+        def forward_async_nothrow(name, request_info, request,
+                                 timeout, priority, trans_id, pid)
+            send(term_to_binary([:forward_async, name,
+                                  OtpErlangBinary.new(request_info),
+                                  OtpErlangBinary.new(request),
+                                  timeout, priority,
+                                  OtpErlangBinary.new(trans_id), pid]))
+        end
+
+        def forward_sync_nothrow(name, request_info, request,
+                                 timeout, priority, trans_id, pid)
+            send(term_to_binary([:forward_sync, name, 
+                                  OtpErlangBinary.new(request_info),
+                                  OtpErlangBinary.new(request),
+                                  timeout, priority,
+                                  OtpErlangBinary.new(trans_id), pid]))
+        end
+
+        def request_timeout(timeout_new, timeout_old, request_time_start)
+            if timeout_new != timeout_old
+                return timeout_new
+            end
+            [0, timeout_old -
+             ((Time.now - request_time_start) * 1000.0).floor].max
+        end
+
         def callback(command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid)
+            request_time_start = nil
+            if @requestTimeoutAdjustment
+                request_time_start = Time.now
+            end
             function_queue = @callbacks.fetch(pattern, nil)
             API.assert{function_queue != nil}
             function = function_queue.shift
@@ -281,9 +303,35 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
-                rescue ReturnAsyncException
+                rescue ReturnAsyncException => e
+                    if @requestTimeoutAdjustment
+                        timeout = request_timeout(e.timeout, timeout,
+                                                  request_time_start)
+                    else
+                        timeout = e.timeout
+                    end
+                    return_async_nothrow(e.name, e.pattern,
+                                         e.response_info, e.response,
+                                         timeout, e.trans_id, e.pid)
+                    return
+                rescue ForwardAsyncException => e
+                    if @requestTimeoutAdjustment
+                        timeout = request_timeout(e.timeout, timeout,
+                                                  request_time_start)
+                    else
+                        timeout = e.timeout
+                    end
+                    forward_async_nothrow(e.name,
+                                          e.request_info, e.request,
+                                          timeout, e.priority,
+                                          e.trans_id, e.pid)
                     return
                 rescue ReturnSyncException => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                    API.assert{false}
+                    return
+                rescue ForwardSyncException => e
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
                     API.assert{false}
@@ -293,6 +341,10 @@ module CloudI
                     $stderr.puts $!.backtrace
                     response_info = ''
                     response = ''
+                end
+                if @requestTimeoutAdjustment
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start)
                 end
                 return_async_nothrow(name, pattern, response_info, response,
                                      timeout, trans_id, pid)
@@ -314,9 +366,35 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
-                rescue ReturnSyncException
+                rescue ReturnSyncException => e
+                    if @requestTimeoutAdjustment
+                        timeout = request_timeout(e.timeout, timeout,
+                                                  request_time_start)
+                    else
+                        timeout = e.timeout
+                    end
+                    return_sync_nothrow(e.name, e.pattern,
+                                        e.response_info, e.response,
+                                        timeout, e.trans_id, e.pid)
+                    return
+                rescue ForwardSyncException => e
+                    if @requestTimeoutAdjustment
+                        timeout = request_timeout(e.timeout, timeout,
+                                                  request_time_start)
+                    else
+                        timeout = e.timeout
+                    end
+                    forward_sync_nothrow(e.name,
+                                         e.request_info, e.request,
+                                         timeout, e.priority,
+                                         e.trans_id, e.pid)
                     return
                 rescue ReturnAsyncException => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                    API.assert{false}
+                    return
+                rescue ForwardAsyncException => e
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
                     API.assert{false}
@@ -326,6 +404,10 @@ module CloudI
                     $stderr.puts $!.backtrace
                     response_info = ''
                     response = ''
+                end
+                if @requestTimeoutAdjustment
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start)
                 end
                 return_sync_nothrow(name, pattern, response_info, response,
                                     timeout, trans_id, pid)
@@ -363,12 +445,13 @@ module CloudI
                 when MESSAGE_INIT
                     i += j; j = 4
                     prefixSize = data[i, j].unpack('L')[0]
-                    i += j; j = prefixSize + 4 + 4 + 1
-                    tmp = data[i, j].unpack("Z#{prefixSize}LLc")
+                    i += j; j = prefixSize + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("Z#{prefixSize}LLcC")
                     @prefix = tmp[0]
                     @timeoutAsync = tmp[1]
                     @timeoutSync = tmp[2]
                     @priorityDefault = tmp[3]
+                    @requestTimeoutAdjustment = (tmp[4] != 0)
                     i += j
                     if i != data.length
                         raise MessageDecodingException
@@ -507,6 +590,9 @@ module CloudI
 
         private :return_async_nothrow
         private :return_sync_nothrow
+        private :forward_async_nothrow
+        private :forward_sync_nothrow
+        private :request_timeout
         private :callback
         private :poll_request
         private :binary_key_value_parse
@@ -566,9 +652,167 @@ module CloudI
     end
 
     class ReturnSyncException < Exception
+        def initialize(name, pattern, response_info, response,
+                       timeout, trans_id, pid)
+            @name = name
+            @pattern = pattern
+            @response_info = response_info
+            @response = response
+            @timeout = timeout
+            @trans_id = trans_id
+            @pid = pid
+        end
+
+        def name
+            @name
+        end
+
+        def pattern
+            @pattern
+        end
+
+        def response_info
+            @response_info
+        end
+
+        def response
+            @response
+        end
+
+        def timeout
+            @timeout
+        end
+
+        def trans_id
+            @trans_id
+        end
+
+        def pid
+            @pid
+        end
     end
 
     class ReturnAsyncException < Exception
+        def initialize(name, pattern, response_info, response,
+                       timeout, trans_id, pid)
+            @name = name
+            @pattern = pattern
+            @response_info = response_info
+            @response = response
+            @timeout = timeout
+            @trans_id = trans_id
+            @pid = pid
+        end
+
+        def name
+            @name
+        end
+
+        def pattern
+            @pattern
+        end
+
+        def response_info
+            @response_info
+        end
+
+        def response
+            @response
+        end
+
+        def timeout
+            @timeout
+        end
+
+        def trans_id
+            @trans_id
+        end
+
+        def pid
+            @pid
+        end
+    end
+
+    class ForwardSyncException < Exception
+        def initialize(name, request_info, request,
+                       timeout, priority, trans_id, pid)
+            @name = name
+            @request_info = request_info
+            @request = request
+            @timeout = timeout
+            @priority = priority
+            @trans_id = trans_id
+            @pid = pid
+        end
+
+        def name
+            @name
+        end
+
+        def request_info
+            @request_info
+        end
+
+        def request
+            @request
+        end
+
+        def timeout
+            @timeout
+        end
+
+        def priority
+            @priority
+        end
+
+        def trans_id
+            @trans_id
+        end
+
+        def pid
+            @pid
+        end
+    end
+
+    class ForwardAsyncException < Exception
+        def initialize(name, request_info, request,
+                       timeout, priority, trans_id, pid)
+            @name = name
+            @request_info = request_info
+            @request = request
+            @timeout = timeout
+            @priority = priority
+            @trans_id = trans_id
+            @pid = pid
+        end
+
+        def name
+            @name
+        end
+
+        def request_info
+            @request_info
+        end
+
+        def request
+            @request
+        end
+
+        def timeout
+            @timeout
+        end
+
+        def priority
+            @priority
+        end
+
+        def trans_id
+            @trans_id
+        end
+
+        def pid
+            @pid
+        end
     end
 
     class MessageDecodingException < Exception

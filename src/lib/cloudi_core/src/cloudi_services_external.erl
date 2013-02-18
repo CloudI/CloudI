@@ -242,8 +242,12 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                          options = ConfigOptions} = State) ->
     % first message within the CloudI API received during
     % the object construction or init API function
-    PriorityDefault = ConfigOptions#config_service_options.priority_default,
-    send('init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault),
+    PriorityDefault =
+        ConfigOptions#config_service_options.priority_default,
+    RequestTimeoutAdjustment =
+        ConfigOptions#config_service_options.request_timeout_adjustment,
+    send('init_out'(Prefix, TimeoutAsync, TimeoutSync,
+                    PriorityDefault, RequestTimeoutAdjustment),
          State),
     if
         Protocol =:= udp ->
@@ -932,18 +936,27 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
              State#state{send_timeouts = NewSendTimeouts}}
     end.
 
-'init_out'(Prefix, TimeoutAsync, TimeoutSync, PriorityDefault)
+'init_out'(Prefix, TimeoutAsync, TimeoutSync,
+           PriorityDefault, RequestTimeoutAdjustment)
     when is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(PriorityDefault),
-         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
+         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
+         is_boolean(RequestTimeoutAdjustment) ->
     PrefixBin = erlang:list_to_binary(Prefix),
     PrefixSize = erlang:byte_size(PrefixBin) + 1,
+    RequestTimeoutAdjustmentInt = if
+        RequestTimeoutAdjustment ->
+            1;
+        true ->
+            0
+    end,
     <<?MESSAGE_INIT:32/unsigned-integer-native,
       PrefixSize:32/unsigned-integer-native,
       PrefixBin/binary, 0:8,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
-      PriorityDefault:8/signed-integer-native>>.
+      PriorityDefault:8/signed-integer-native,
+      RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
 
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.

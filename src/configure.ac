@@ -60,6 +60,9 @@ AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer, ,
     [AC_MSG_ERROR([java nio not found])])
 AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
     [AC_MSG_ERROR([java reflection not found])])
+# new in jdk 5.0
+AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
+    [AC_MSG_ERROR([java concurrent not found])])
 
 # python check
 AC_ARG_WITH([python-debug],

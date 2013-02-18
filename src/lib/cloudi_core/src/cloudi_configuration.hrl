@@ -65,7 +65,13 @@
         % service is mainly communicating with long-lived services
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
-        dest_refresh_delay = 300000 % milliseconds (5 minutes)
+        dest_refresh_delay = 300000, % milliseconds (5 minutes)
+        % should the service request handler execution time decrement the
+        % request timeout to reduce the timeout of a forwarded request or
+        % the timeout of a returned response
+        % (if the request timeout is equal to the forward or return timeout,
+        %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
+        request_timeout_adjustment = false
     }).
 
 % internal service parameters

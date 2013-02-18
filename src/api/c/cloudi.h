@@ -65,10 +65,12 @@ typedef struct cloudi_instance_t
     void * buffer_recv;
     uint32_t buffer_recv_index;
     void * buffer_call;
+    void * request_timer;
     char * prefix;
     uint32_t timeout_async;
     uint32_t timeout_sync;
     int8_t priority_default;
+    uint8_t request_timeout_adjustment;
     char * response_info;
     uint32_t response_info_size;
     char * response;
