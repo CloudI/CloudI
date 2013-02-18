@@ -509,8 +509,8 @@ public class Task implements Runnable
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
-                               throws API.ReturnAsyncException,
-                                      API.ReturnSyncException,
+                               throws API.ForwardAsyncException,
+                                      API.ForwardSyncException,
                                       API.InvalidInputException
     {
         int request_i = (int) request[0];
@@ -529,8 +529,8 @@ public class Task implements Runnable
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
-                             throws API.ReturnAsyncException,
-                                    API.ReturnSyncException,
+                             throws API.ForwardAsyncException,
+                                    API.ForwardSyncException,
                                     API.InvalidInputException
     {
         int request_i = (int) request[0];

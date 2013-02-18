@@ -5,6 +5,53 @@
 %%% @doc
 %%% ==CloudI Internal Service Behavior==
 %%% The interface which all internal services must implement.
+%%% ```
+%%% The user module should export:
+%%%
+%%%   cloudi_service_init(Args, Prefix, Dispatcher)  
+%%%    ==> {ok, State}
+%%%        {stop, Reason}
+%%%
+%%%   cloudi_service_handle_request(Type, Name, Pattern,
+%%%                                 RequestInfo, Request, Timeout, Priority,
+%%%                                 TransId, Pid, State, Dispatcher)
+%%%    ==> {reply, Response, NewState}
+%%%        {reply, ResponseInfo, Response, NewState}
+%%%        {forward, NextName, NextRequestInfo, NextRequest, NewState}
+%%%        {forward, NextName, NextRequestInfo, NextRequest,
+%%%         NextTimeout, NextPriority, NewState}
+%%%        {noreply, NewState}
+%%%        {stop, Reason, NewState}  
+%%%               Reason = normal | shutdown | Term terminate(State) is called
+%%%
+%%%   cloudi_service_handle_info(Info, State)
+%%%
+%%%    ==> {noreply, State}
+%%%        {stop, Reason, NewState} 
+%%%               Reason = normal | shutdown | Term, terminate(State) is called
+%%%
+%%%   cloudi_service_terminate(Reason, State) Let the user module clean up
+%%%        always called when server terminates
+%%%
+%%%    ==> ok
+%%%
+%%%
+%%% The work flow (of the server) can be described as follows:
+%%%
+%%%   User module                          Generic
+%%%   -----------                          -------
+%%%    init             <-----              .
+%%%
+%%%                                        loop
+%%%    handle_call      <-----              .
+%%%                     ----->             reply
+%%%
+%%%    handle_info      <-----              .
+%%%
+%%%    terminate        <-----              .
+%%%
+%%%                     ----->             reply
+%%% '''
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -97,7 +144,12 @@
          timeout_async/1,
          timeout_sync/1,
          request_http_qs_parse/1,
-         request_info_key_value_parse/1]).
+         request_info_key_value_parse/1,
+         % functions to trigger edoc, until -callback works with edoc
+         'Module:cloudi_service_init'/3,
+         'Module:cloudi_service_handle_request'/11,
+         'Module:cloudi_service_handle_info'/3,
+         'Module:cloudi_service_terminate'/2]).
 
 -include("cloudi_constants.hrl").
 
@@ -121,7 +173,7 @@
                                         Request :: any(),
                                         Timeout :: non_neg_integer(),
                                         Priority :: integer(),
-                                        TransId :: binary(),
+                                        TransId :: <<_:128>>,
                                         Pid :: pid(),
                                         State :: any(),
                                         Dispatcher :: pid()) ->
@@ -133,7 +185,8 @@
      NextRequestInfo :: any(), NextRequest :: any(),
      NextTimeout :: non_neg_integer(), NextPriority :: integer(),
      NewState :: any()} |
-    {'noreply', NewState :: any()}.
+    {'noreply', NewState :: any()} |
+    {'stop', Reason :: any(), NewState :: any()}.
 
 -callback cloudi_service_handle_info(Request :: any(),
                                      State :: any(),
@@ -245,7 +298,7 @@ get_pid(Dispatcher, Name, Timeout)
 -spec send_async(Dispatcher :: pid(),
                  Name :: string(),
                  Request :: any()) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request)
@@ -263,7 +316,7 @@ send_async(Dispatcher, Name, Request)
                  Name :: string(),
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request, undefined)
@@ -290,7 +343,7 @@ send_async(Dispatcher, Name, Request, Timeout)
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, Request, undefined, PatternPid)
@@ -318,7 +371,7 @@ send_async(Dispatcher, Name, Request, Timeout, PatternPid)
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
@@ -370,7 +423,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                  Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined',
                  PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
@@ -426,7 +479,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
 -spec send_async_active(Dispatcher :: pid(),
                         Name :: string(),
                         Request :: any()) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request)
@@ -448,7 +501,7 @@ send_async_active(Dispatcher, Name, Request)
                         Name :: string(),
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request, undefined)
@@ -479,7 +532,7 @@ send_async_active(Dispatcher, Name, Request, Timeout)
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, Request, undefined, PatternPid)
@@ -511,7 +564,7 @@ send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
                         Request :: any(),
                         Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
@@ -569,7 +622,7 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                         Timeout :: non_neg_integer() | 'undefined',
                         Priority :: integer() | 'undefined',
                         PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
@@ -623,7 +676,7 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
 -spec send_async_passive(Dispatcher :: pid(),
                          Name :: string(),
                          Request :: any()) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request) ->
@@ -641,7 +694,7 @@ send_async_passive(Dispatcher, Name, Request) ->
                          Name :: string(),
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request, Timeout) ->
@@ -660,7 +713,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout) ->
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
@@ -680,7 +733,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
                          Request :: any(),
                          Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined') ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, RequestInfo, Request,
@@ -703,7 +756,7 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                          Timeout :: non_neg_integer() | 'undefined',
                          Priority :: integer() | 'undefined',
                          PatternPid :: {string(), pid()}) ->
-    {'ok', TransId :: binary()} |
+    {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 send_async_passive(Dispatcher, Name, RequestInfo, Request,
@@ -904,7 +957,7 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
 -spec mcast_async(Dispatcher :: pid(),
                   Name :: string(),
                   Request :: any()) ->
-    {'ok', TransIdList :: list(binary())} |
+    {'ok', TransIdList :: list(<<_:128>>)} |
     {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request)
@@ -924,7 +977,7 @@ mcast_async(Dispatcher, Name, Request)
                   Name :: string(),
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined') ->
-    {'ok', TransIdList :: list(binary())} |
+    {'ok', TransIdList :: list(<<_:128>>)} |
     {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request, undefined)
@@ -953,7 +1006,7 @@ mcast_async(Dispatcher, Name, Request, Timeout)
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined',
                   PatternPid :: {string(), pid()}) ->
-    {'ok', TransIdList :: list(binary())} |
+    {'ok', TransIdList :: list(<<_:128>>)} |
     {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, Request, undefined, PatternPid)
@@ -983,7 +1036,7 @@ mcast_async(Dispatcher, Name, Request, Timeout, PatternPid)
                   Request :: any(),
                   Timeout :: non_neg_integer() | 'undefined',
                   Priority :: integer() | 'undefined') ->
-    {'ok', TransIdList :: list(binary())} |
+    {'ok', TransIdList :: list(<<_:128>>)} |
     {'error', Reason :: atom()}.
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
@@ -1027,26 +1080,24 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
 %%-------------------------------------------------------------------------
 
 -spec forward(Dispatcher :: pid(),
-              'send_async' | 'send_sync',
+              Type :: 'send_async' | 'send_sync',
               Name :: string(),
               RequestInfo :: any(),
               Request :: any(),
               Timeout :: non_neg_integer(),
               Priority :: integer(),
-              TransId :: binary(),
+              TransId :: <<_:128>>,
               Pid :: pid()) -> none().
 
 forward(Dispatcher, 'send_async', Name, RequestInfo, Request,
         Timeout, Priority, TransId, Pid) ->
     forward_async(Dispatcher, Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid),
-    erlang:throw(forward);
+                  Timeout, Priority, TransId, Pid);
 
 forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
         Timeout, Priority, TransId, Pid) ->
     forward_sync(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, TransId, Pid),
-    erlang:throw(forward).
+                 Timeout, Priority, TransId, Pid).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1060,7 +1111,7 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Request :: any(),
                     Timeout :: non_neg_integer(),
                     Priority :: integer(),
-                    TransId :: binary(),
+                    TransId :: <<_:128>>,
                     Pid :: pid()) -> none().
 
 forward_async(Dispatcher, Name, RequestInfo, Request,
@@ -1068,10 +1119,10 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    Dispatcher ! {'cloudi_service_forward_async', Name,
-                  RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid},
-    erlang:throw(forward).
+    erlang:throw({cloudi_service_forward,
+                  {'cloudi_service_forward_async_retry', Name,
+                   RequestInfo, Request,
+                   Timeout, Priority, TransId, Pid}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1085,7 +1136,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Request :: any(),
                    Timeout :: non_neg_integer(),
                    Priority :: integer(),
-                   TransId :: binary(),
+                   TransId :: <<_:128>>,
                    Pid :: pid()) -> none().
 
 forward_sync(Dispatcher, Name, RequestInfo, Request,
@@ -1093,10 +1144,10 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid), Timeout > 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    Dispatcher ! {'cloudi_service_forward_sync', Name,
-                  RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid},
-    erlang:throw(forward).
+    erlang:throw({cloudi_service_forward,
+                  {'cloudi_service_forward_sync_retry', Name,
+                   RequestInfo, Request,
+                   Timeout, Priority, TransId, Pid}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1105,20 +1156,24 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
 %%-------------------------------------------------------------------------
 
 -spec return(Dispatcher :: pid(),
-             'send_async' | 'send_sync',
+             Type :: 'send_async' | 'send_sync',
              Name :: string(),
              Pattern :: string(),
              ResponseInfo :: any(),
              Response :: any(),
              Timeout :: non_neg_integer(),
-             TransId :: binary(),
+             TransId :: <<_:128>>,
              Pid :: pid()) -> none().
 
-return(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
+return(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
        Timeout, TransId, Pid) ->
-    return_nothrow(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
-                   Timeout, TransId, Pid),
-    erlang:throw(return).
+    return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
+                 Timeout, TransId, Pid);
+
+return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
+       Timeout, TransId, Pid) ->
+    return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
+                Timeout, TransId, Pid).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1132,17 +1187,18 @@ return(Dispatcher, Type, Name, Pattern, ResponseInfo, Response,
                    ResponseInfo :: any(),
                    Response :: any(),
                    Timeout :: non_neg_integer(),
-                   TransId :: binary(),
+                   TransId :: <<_:128>>,
                    Pid :: pid()) -> none().
 
 return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid), Timeout > 0 ->
-    Pid ! {'cloudi_service_return_async', Name, Pattern,
-           ResponseInfo, Response,
-           Timeout, TransId, Pid},
-    erlang:throw(return).
+         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         Timeout >= 0 ->
+    erlang:throw({cloudi_service_return,
+                  {'cloudi_service_return_async', Name, Pattern,
+                   ResponseInfo, Response,
+                   Timeout, TransId, Pid}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1156,43 +1212,53 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   ResponseInfo :: any(),
                   Response :: any(),
                   Timeout :: non_neg_integer(),
-                  TransId :: binary(),
+                  TransId :: <<_:128>>,
                   Pid :: pid()) -> none().
 
 return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
             Timeout, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid), Timeout > 0 ->
-    Pid ! {'cloudi_service_return_sync', Name, Pattern,
-           ResponseInfo, Response,
-           Timeout, TransId, Pid},
-    erlang:throw(return).
+         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         Timeout >= 0 ->
+    erlang:throw({cloudi_service_return,
+                  {'cloudi_service_return_sync', Name, Pattern,
+                   ResponseInfo, Response,
+                   Timeout, TransId, Pid}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Return a service response without exiting the request handler.===
+%% Should rarely, if ever, be used.  If the service has the option
+%% request_timeout_adjustment == true, the adjustment will not occur when
+%% this function is used.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec return_nothrow(Dispatcher :: pid(),
-                     'send_async' | 'send_sync',
+                     Type :: 'send_async' | 'send_sync',
                      Name :: string(),
                      Pattern :: string(),
                      ResponseInfo :: any(),
                      Response :: any(),
                      Timeout :: non_neg_integer(),
-                     TransId :: binary(),
+                     TransId :: <<_:128>>,
                      Pid :: pid()) -> 'ok'.
 
-return_nothrow(_, 'send_async', Name, Pattern, ResponseInfo, Response,
-               Timeout, TransId, Pid) ->
+return_nothrow(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
+               Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         Timeout >= 0 ->
     Pid ! {'cloudi_service_return_async', Name, Pattern,
            ResponseInfo, Response,
            Timeout, TransId, Pid},
     ok;
 
-return_nothrow(_, 'send_sync', Name, Pattern, ResponseInfo, Response,
-               Timeout, TransId, Pid) ->
+return_nothrow(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
+               Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         Timeout >= 0 ->
     Pid ! {'cloudi_service_return_sync', Name, Pattern,
            ResponseInfo, Response,
            Timeout, TransId, Pid},
@@ -1206,7 +1272,7 @@ return_nothrow(_, 'send_sync', Name, Pattern, ResponseInfo, Response,
 %%-------------------------------------------------------------------------
 
 -spec recv_async(Dispatcher :: pid()) ->
-    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 recv_async(Dispatcher)
@@ -1224,7 +1290,7 @@ recv_async(Dispatcher)
 
 -spec recv_async(Dispatcher :: pid(),
                  non_neg_integer() | binary()) ->
-    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, TransId)
@@ -1250,7 +1316,7 @@ recv_async(Dispatcher, Timeout)
 -spec recv_async(Dispatcher :: pid(),
                  non_neg_integer() | binary(),
                  binary() | boolean()) ->
-    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, Timeout, TransId)
@@ -1280,9 +1346,9 @@ recv_async(Dispatcher, TransId, Consume)
 
 -spec recv_async(Dispatcher :: pid(),
                  Timeout :: non_neg_integer(),
-                 TransId :: binary(),
+                 TransId :: <<_:128>>,
                  Consume :: boolean()) ->
-    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: binary()} |
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.
 
 recv_async(Dispatcher, Timeout, TransId, Consume)
@@ -1347,9 +1413,9 @@ request_http_qs_parse(Request)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse RequestInfo key/value data.===
-%% @end
 %% RequestInfo is meant to contain key/value pairs that is request
 %% meta-data.
+%% @end
 %%-------------------------------------------------------------------------
 
 -spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
@@ -1382,4 +1448,80 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
         error ->
             binary_key_value_parse_list(dict:store(K, V, Lookup), L)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Initialize the internal service.===
+%% Create the internal service state.  Do any initial service subscriptions
+%% necessary.  Send service requests, if required for service initialization.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec 'Module:cloudi_service_init'(Args :: list(),
+                                   Prefix :: string(),
+                                   Dispatcher :: pid()) ->
+    {'ok', State :: any()} |
+    {'stop', Reason :: any()}.
+
+'Module:cloudi_service_init'(_, _, _) ->
+    {ok, state}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Handle an incoming service request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec 'Module:cloudi_service_handle_request'(Type :: 'send_async' | 'send_sync',
+                                             Name :: string(),
+                                             Pattern :: string(),
+                                             RequestInfo :: any(),
+                                             Request :: any(),
+                                             Timeout :: non_neg_integer(),
+                                             Priority :: integer(),
+                                             TransId :: <<_:128>>,
+                                             Pid :: pid(),
+                                             State :: any(),
+                                             Dispatcher :: pid()) ->
+    {'reply', Response :: any(), NewState :: any()} |
+    {'reply', ResponseInfo :: any(), Response :: any(), NewState :: any()} |
+    {'forward', NextName :: string(),
+     NextRequestInfo :: any(), NextRequest :: any(), NewState :: any()} |
+    {'forward', NextName :: string(),
+     NextRequestInfo :: any(), NextRequest :: any(),
+     NextTimeout :: non_neg_integer(), NextPriority :: integer(),
+     NewState :: any()} |
+    {'noreply', NewState :: any()} |
+    {'stop', Reason :: any(), NewState :: any()}.
+
+'Module:cloudi_service_handle_request'(_, _, _, _, _, _, _, _, _, _, _) ->
+    {reply, response, state}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Handle an incoming Erlang message.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec 'Module:cloudi_service_handle_info'(Request :: any(),
+                                          State :: any(),
+                                          Dispatcher :: pid()) ->
+    {'noreply', NewState :: any()} |
+    {'stop', Reason :: any(), NewState :: any()}.
+
+'Module:cloudi_service_handle_info'(_, _, _) ->
+    {noreply, state}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Handle service termination.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec 'Module:cloudi_service_terminate'(Reason :: any(),
+                                        State :: any()) ->
+    'ok'.
+
+'Module:cloudi_service_terminate'(_, _) ->
+    'ok'.
 

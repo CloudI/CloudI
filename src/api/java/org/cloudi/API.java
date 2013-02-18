@@ -109,6 +109,7 @@ public class API
     private int timeout_async;
     private int timeout_sync;
     private byte priority_default;
+    private boolean request_timeout_adjustment;
 
     public API(final int thread_index)
                throws InvalidInputException, MessageDecodingException
@@ -365,8 +366,8 @@ public class API
                          String name, byte[] request_info, byte[] request,
                          Integer timeout, Byte priority,
                          byte[] transId, OtpErlangPid pid)
-                         throws ReturnAsyncException,
-                                ReturnSyncException,
+                         throws ForwardAsyncException,
+                                ForwardSyncException,
                                 InvalidInputException
     {
         if (command == API.ASYNC)
@@ -382,55 +383,19 @@ public class API
     public void forward_async(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority,
                               byte[] transId, OtpErlangPid pid)
-                              throws ReturnAsyncException
+                              throws ForwardAsyncException
     {
-        try
-        {
-            OtpOutputStream forward_async = new OtpOutputStream();
-            forward_async.write(OtpExternal.versionTag);
-            final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_async"),
-                                             new OtpErlangString(name),
-                                             new OtpErlangBinary(request_info),
-                                             new OtpErlangBinary(request),
-                                             new OtpErlangUInt(timeout),
-                                             new OtpErlangInt(priority),
-                                             new OtpErlangBinary(transId), pid};
-            forward_async.write_any(new OtpErlangTuple(tuple));
-            send(forward_async);
-        }
-        catch (OtpErlangRangeException e)
-        {
-            e.printStackTrace(API.err);
-            return;
-        }
-        throw new ReturnAsyncException();
+        throw new ForwardAsyncException(name, request_info, request,
+                                        timeout, priority, transId, pid);
     }
 
     public void forward_sync(String name, byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] transId, OtpErlangPid pid)
-                             throws ReturnSyncException
+                             throws ForwardSyncException
     {
-        try
-        {
-            OtpOutputStream forward_sync = new OtpOutputStream();
-            forward_sync.write(OtpExternal.versionTag);
-            final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_sync"),
-                                             new OtpErlangString(name),
-                                             new OtpErlangBinary(request_info),
-                                             new OtpErlangBinary(request),
-                                             new OtpErlangUInt(timeout),
-                                             new OtpErlangInt(priority),
-                                             new OtpErlangBinary(transId), pid};
-            forward_sync.write_any(new OtpErlangTuple(tuple));
-            send(forward_sync);
-        }
-        catch (OtpErlangRangeException e)
-        {
-            e.printStackTrace(API.err);
-            return;
-        }
-        throw new ReturnSyncException();
+        throw new ForwardSyncException(name, request_info, request,
+                                       timeout, priority, transId, pid);
     }
 
     public void return_(Integer command,
@@ -456,35 +421,8 @@ public class API
                              Integer timeout, byte[] transId, OtpErlangPid pid)
                              throws ReturnAsyncException
     {
-        return_async_nothrow(name, pattern, response_info, response,
-                             timeout, transId, pid);
-        throw new ReturnAsyncException();
-    }
-
-    private void return_async_nothrow(String name, String pattern,
-                                      byte[] response_info, byte[] response,
-                                      Integer timeout, byte[] transId,
-                                      OtpErlangPid pid)
-    {
-        try
-        {
-            OtpOutputStream return_async = new OtpOutputStream();
-            return_async.write(OtpExternal.versionTag);
-            final OtpErlangObject[] tuple = {new OtpErlangAtom("return_async"),
-                                             new OtpErlangString(name),
-                                             new OtpErlangString(pattern),
-                                             new OtpErlangBinary(response_info),
-                                             new OtpErlangBinary(response),
-                                             new OtpErlangUInt(timeout),
-                                             new OtpErlangBinary(transId), pid};
-            return_async.write_any(new OtpErlangTuple(tuple));
-            send(return_async);
-        }
-        catch (OtpErlangRangeException e)
-        {
-            e.printStackTrace(API.err);
-            return;
-        }
+        throw new ReturnAsyncException(name, pattern, response_info, response,
+                                       timeout, transId, pid);
     }
 
     public void return_sync(String name, String pattern,
@@ -492,35 +430,8 @@ public class API
                             Integer timeout, byte[] transId, OtpErlangPid pid)
                             throws ReturnSyncException
     {
-        return_sync_nothrow(name, pattern, response_info, response,
-                            timeout, transId, pid);
-        throw new ReturnSyncException();
-    }
-
-    private void return_sync_nothrow(String name, String pattern,
-                                     byte[] response_info, byte[] response,
-                                     Integer timeout, byte[] transId,
-                                     OtpErlangPid pid)
-    {
-        try
-        {
-            OtpOutputStream return_sync = new OtpOutputStream();
-            return_sync.write(OtpExternal.versionTag);
-            final OtpErlangObject[] tuple = {new OtpErlangAtom("return_sync"),
-                                             new OtpErlangString(name),
-                                             new OtpErlangString(pattern),
-                                             new OtpErlangBinary(response_info),
-                                             new OtpErlangBinary(response),
-                                             new OtpErlangUInt(timeout),
-                                             new OtpErlangBinary(transId), pid};
-            return_sync.write_any(new OtpErlangTuple(tuple));
-            send(return_sync);
-        }
-        catch (OtpErlangRangeException e)
-        {
-            e.printStackTrace(API.err);
-            return;
-        }
+        throw new ReturnSyncException(name, pattern, response_info, response,
+                                      timeout, transId, pid);
     }
 
     public Response recv_async()
@@ -604,12 +515,133 @@ public class API
         return this.timeout_sync;
     }
 
+    private void return_async_nothrow(String name, String pattern,
+                                      byte[] response_info, byte[] response,
+                                      Integer timeout, byte[] transId,
+                                      OtpErlangPid pid)
+    {
+        try
+        {
+            OtpOutputStream return_async = new OtpOutputStream();
+            return_async.write(OtpExternal.versionTag);
+            final OtpErlangObject[] tuple = {new OtpErlangAtom("return_async"),
+                                             new OtpErlangString(name),
+                                             new OtpErlangString(pattern),
+                                             new OtpErlangBinary(response_info),
+                                             new OtpErlangBinary(response),
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangBinary(transId), pid};
+            return_async.write_any(new OtpErlangTuple(tuple));
+            send(return_async);
+        }
+        catch (OtpErlangRangeException e)
+        {
+            e.printStackTrace(API.err);
+            return;
+        }
+    }
+
+    private void return_sync_nothrow(String name, String pattern,
+                                     byte[] response_info, byte[] response,
+                                     Integer timeout, byte[] transId,
+                                     OtpErlangPid pid)
+    {
+        try
+        {
+            OtpOutputStream return_sync = new OtpOutputStream();
+            return_sync.write(OtpExternal.versionTag);
+            final OtpErlangObject[] tuple = {new OtpErlangAtom("return_sync"),
+                                             new OtpErlangString(name),
+                                             new OtpErlangString(pattern),
+                                             new OtpErlangBinary(response_info),
+                                             new OtpErlangBinary(response),
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangBinary(transId), pid};
+            return_sync.write_any(new OtpErlangTuple(tuple));
+            send(return_sync);
+        }
+        catch (OtpErlangRangeException e)
+        {
+            e.printStackTrace(API.err);
+            return;
+        }
+    }
+
+    private void forward_async_nothrow(String name,
+                                       byte[] request_info, byte[] request,
+                                       Integer timeout, Byte priority,
+                                       byte[] transId, OtpErlangPid pid)
+    {
+        try
+        {
+            OtpOutputStream forward_async = new OtpOutputStream();
+            forward_async.write(OtpExternal.versionTag);
+            final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_async"),
+                                             new OtpErlangString(name),
+                                             new OtpErlangBinary(request_info),
+                                             new OtpErlangBinary(request),
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority),
+                                             new OtpErlangBinary(transId), pid};
+            forward_async.write_any(new OtpErlangTuple(tuple));
+            send(forward_async);
+        }
+        catch (OtpErlangRangeException e)
+        {
+            e.printStackTrace(API.err);
+            return;
+        }
+    }
+
+    private void forward_sync_nothrow(String name,
+                                      byte[] request_info, byte[] request,
+                                      Integer timeout, Byte priority,
+                                      byte[] transId, OtpErlangPid pid)
+    {
+        try
+        {
+            OtpOutputStream forward_sync = new OtpOutputStream();
+            forward_sync.write(OtpExternal.versionTag);
+            final OtpErlangObject[] tuple = {new OtpErlangAtom("forward_sync"),
+                                             new OtpErlangString(name),
+                                             new OtpErlangBinary(request_info),
+                                             new OtpErlangBinary(request),
+                                             new OtpErlangUInt(timeout),
+                                             new OtpErlangInt(priority),
+                                             new OtpErlangBinary(transId), pid};
+            forward_sync.write_any(new OtpErlangTuple(tuple));
+            send(forward_sync);
+        }
+        catch (OtpErlangRangeException e)
+        {
+            e.printStackTrace(API.err);
+            return;
+        }
+    }
+
+    private Integer request_timeout(Integer timeout_new,
+                                    Integer timeout_old,
+                                    long request_time_start)
+    {
+        if (timeout_new != timeout_old)
+        {
+            return timeout_new;
+        }
+        return java.lang.Math.max(0, timeout_old -
+            (int) ((System.nanoTime() - request_time_start) * 1e-6));
+    }
+
     private void callback(int command, String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] transId, OtpErlangPid pid)
                           throws MessageDecodingException
     {
+        long request_time_start = 0;
+        if (this.request_timeout_adjustment)
+        {
+            request_time_start = System.nanoTime();
+        }
         LinkedList< Function9<Integer,
                               String,
                               String,
@@ -638,6 +670,11 @@ public class API
                                                   request_info, request,
                                                   timeout, priority,
                                                   transId, pid);
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start);
+                }
                 if (response.getClass() == byte[][].class)
                 {
                     byte [][] responseArray = (byte[][]) response;
@@ -662,14 +699,48 @@ public class API
                                          response.toString().getBytes(),
                                          timeout, transId, pid);
                 }
+                return;
             }
             catch (ReturnAsyncException e)
             {
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(e.timeout, timeout,
+                                              request_time_start);
+                }
+                else
+                {
+                    timeout = e.timeout;
+                }
+                return_async_nothrow(e.name, e.pattern,
+                                     e.response_info, e.response,
+                                     timeout, e.transId, e.pid);
+                return;
+            }
+            catch (ForwardAsyncException e)
+            {
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(e.timeout, timeout,
+                                              request_time_start);
+                }
+                else
+                {
+                    timeout = e.timeout;
+                }
+                forward_async_nothrow(e.name,
+                                      e.request_info, e.request,
+                                      timeout, e.priority, e.transId, e.pid);
                 return;
             }
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start);
+                }
                 return_async_nothrow(name, pattern,
                                      ("").getBytes(),
                                      ("").getBytes(),
@@ -685,6 +756,11 @@ public class API
                                                   request_info, request,
                                                   timeout, priority,
                                                   transId, pid);
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start);
+                }
                 if (response.getClass() == byte[][].class)
                 {
                     byte [][] responseArray = (byte[][]) response;
@@ -709,14 +785,48 @@ public class API
                                         response.toString().getBytes(),
                                         timeout, transId, pid);
                 }
+                return;
             }
             catch (ReturnSyncException e)
             {
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(e.timeout, timeout,
+                                              request_time_start);
+                }
+                else
+                {
+                    timeout = e.timeout;
+                }
+                return_sync_nothrow(e.name, e.pattern,
+                                    e.response_info, e.response,
+                                    timeout, e.transId, e.pid);
+                return;
+            }
+            catch (ForwardSyncException e)
+            {
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(e.timeout, timeout,
+                                              request_time_start);
+                }
+                else
+                {
+                    timeout = e.timeout;
+                }
+                forward_sync_nothrow(e.name,
+                                     e.request_info, e.request,
+                                     timeout, e.priority, e.transId, e.pid);
                 return;
             }
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
+                if (this.request_timeout_adjustment)
+                {
+                    timeout = request_timeout(timeout, timeout,
+                                              request_time_start);
+                }
                 return_sync_nothrow(name, pattern,
                                     ("").getBytes(),
                                     ("").getBytes(),
@@ -760,6 +870,8 @@ public class API
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
                         this.priority_default = buffer.get();
+                        this.request_timeout_adjustment =
+                            (buffer.get() & 0xFF) != 0;
                         if (buffer.hasRemaining())
                             throw new MessageDecodingException();
                         return null;
@@ -1148,19 +1260,107 @@ public class API
 
     public static class ReturnSyncException extends Exception
     {
-        private static final long serialVersionUID = 1L;
-        ReturnSyncException()
+        private static final long serialVersionUID = 2L;
+        public final String name;
+        public final String pattern;
+        public final byte[] response_info;
+        public final byte[] response;
+        public final Integer timeout;
+        public final byte[] transId;
+        public final OtpErlangPid pid;
+
+        ReturnSyncException(String name, String pattern,
+                            byte[] response_info, byte[] response,
+                            Integer timeout, byte[] transId, OtpErlangPid pid)
         {
             super("Synchronous Call Return Invalid");
+            this.name = name;
+            this.pattern = pattern;
+            this.response_info = response_info;
+            this.response = response;
+            this.timeout = timeout;
+            this.transId = transId;
+            this.pid = pid;
         }
     }
     
     public static class ReturnAsyncException extends Exception
     {
-        private static final long serialVersionUID = 1L;
-        ReturnAsyncException()
+        private static final long serialVersionUID = 2L;
+        public final String name;
+        public final String pattern;
+        public final byte[] response_info;
+        public final byte[] response;
+        public final Integer timeout;
+        public final byte[] transId;
+        public final OtpErlangPid pid;
+
+        ReturnAsyncException(String name, String pattern,
+                             byte[] response_info, byte[] response,
+                             Integer timeout, byte[] transId, OtpErlangPid pid)
         {
             super("Asynchronous Call Return Invalid");
+            this.name = name;
+            this.pattern = pattern;
+            this.response_info = response_info;
+            this.response = response;
+            this.timeout = timeout;
+            this.transId = transId;
+            this.pid = pid;
+        }
+    }
+
+    public static class ForwardSyncException extends Exception
+    {
+        private static final long serialVersionUID = 2L;
+        public final String name;
+        public final byte[] request_info;
+        public final byte[] request;
+        public final Integer timeout;
+        public final Byte priority;
+        public final byte[] transId;
+        public final OtpErlangPid pid;
+
+        ForwardSyncException(String name,
+                            byte[] request_info, byte[] request,
+                            Integer timeout, Byte priority,
+                            byte[] transId, OtpErlangPid pid)
+        {
+            super("Synchronous Call Forward Invalid");
+            this.name = name;
+            this.request_info = request_info;
+            this.request = request;
+            this.timeout = timeout;
+            this.priority = priority;
+            this.transId = transId;
+            this.pid = pid;
+        }
+    }
+    
+    public static class ForwardAsyncException extends Exception
+    {
+        private static final long serialVersionUID = 2L;
+        public final String name;
+        public final byte[] request_info;
+        public final byte[] request;
+        public final Integer timeout;
+        public final Byte priority;
+        public final byte[] transId;
+        public final OtpErlangPid pid;
+
+        ForwardAsyncException(String name,
+                             byte[] request_info, byte[] request,
+                             Integer timeout, Byte priority,
+                             byte[] transId, OtpErlangPid pid)
+        {
+            super("Asynchronous Call Forward Invalid");
+            this.name = name;
+            this.request_info = request_info;
+            this.request = request;
+            this.timeout = timeout;
+            this.priority = priority;
+            this.transId = transId;
+            this.pid = pid;
         }
     }
 

@@ -610,18 +610,24 @@ services_validate_options(OptionsList) ->
         {dest_refresh_start,
          Options#config_service_options.dest_refresh_start},
         {dest_refresh_delay,
-         Options#config_service_options.dest_refresh_delay}],
-    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay] =
+         Options#config_service_options.dest_refresh_delay},
+        {request_timeout_adjustment,
+         Options#config_service_options.request_timeout_adjustment}],
+    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
+     RequestTimeoutAdjustment] =
         cloudi_proplists:take_values(Defaults, OptionsList),
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
     true = (QueueLimit =:= undefined) orelse is_integer(QueueLimit),
     true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
     true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
-    Options#config_service_options{priority_default = PriorityDefault,
-                                   queue_limit = QueueLimit,
-                                   dest_refresh_start = DestRefreshStart,
-                                   dest_refresh_delay = DestRefreshDelay}.
+    true = is_boolean(RequestTimeoutAdjustment),
+    Options#config_service_options{
+        priority_default = PriorityDefault,
+        queue_limit = QueueLimit,
+        dest_refresh_start = DestRefreshStart,
+        dest_refresh_delay = DestRefreshDelay,
+        request_timeout_adjustment = RequestTimeoutAdjustment}.
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).
