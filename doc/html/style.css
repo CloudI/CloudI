@@ -111,8 +111,21 @@ pre {
 #content p.block {
     margin-left: 1em;
 }
+#content p.code {
+    text-indent: -3em;
+    font-family: monospace;
+    padding-left: 4em;
+    border-left-style: solid;
+    border-left-width: 1px;
+}
 #content ul.faq li {
     list-style-type: none;
+}
+#content ul.api li {
+    list-style-type: none;
+}
+#content table tr td.api {
+    text-align: right;
 }
 
 #footer {
