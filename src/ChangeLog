@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update the documentation (added Quick Start and API documentation)
+
 2013-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add service configuration option request_timeout_adjustment

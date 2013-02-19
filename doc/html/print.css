@@ -69,3 +69,7 @@ pre {
 #navigation li.print {
     display: none;
 }
+#content p.code {
+    border-left-color: black;
+}
+

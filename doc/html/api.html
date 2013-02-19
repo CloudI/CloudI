@@ -1,0 +1,1742 @@
+<html>
+<head>
+  <title>CloudI: A Cloud as an Interface - API Documentation</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
+  <meta content="api, cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
+  <meta content="global" name="distribution" />
+  <meta content="This document copyright 2013 by Michael Truog" name="copyright" />
+  <link rel="stylesheet" type="text/css" href="style.css" />
+  <link rel="stylesheet" type="text/css" title="print"
+        href="print.css" />
+  <meta http-equiv="Default-Style" content="print" />
+  <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
+</head>
+<body>
+
+<div id="header">
+<a href="http://cloudi.org/">
+Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="images/cloud.png" />
+</a>
+</div>
+<br />
+<div id="navigation">
+  <ul>
+    <li><a href="index.html">QUICKSTART</a></li>
+    <li><a href="api.html" class="active">API</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
+    <li><a href="https://github.com/okeuday/CloudI/tree/master#readme">Source</a></li>
+  </ul>
+</div>
+
+<div id="content">
+  <h1>CloudI API Documentation</h1>
+  <center><h3>version 1.2.0b<br />last updated on February 18 2013</h3></center>
+
+  <a name="Service"></a>
+  <h2>CloudI API - Making a Service</h2>
+  <ul class="api">
+    <li><a href="#1_Intro"             >1.0 - Introduction</a></li>
+    <li><a href="#1_initialization"    >1.1 - (initialization)</a></li>
+    <li><a href="#1_subscribe"         >1.2 - subscribe</a></li>
+    <li><a href="#1_unsubscribe"       >1.3 - unsubscribe</a></li>
+    <li><a href="#1_get_pid"           >1.4 - get_pid (Erlang-only)</a></li>
+    <li><a href="#1_send_sync"         >1.5 - send_sync</a></li>
+    <li><a href="#1_send_async"        >1.6 - send_async</a></li>
+    <li><a href="#1_send_async_active" >1.7 - send_async_active (Erlang-only)</a></li>
+    <li><a href="#1_mcast_async"       >1.8 - mcast_async</a></li>
+    <li><a href="#1_recv_async"        >1.9 - recv_async</a></li>
+    <li><a href="#1_return"            >1.10 - return</a></li>
+    <li><a href="#1_forward"           >1.11 - forward</a></li>
+  </ul>
+  <a name="CloudI"></a>
+  <h2>CloudI Service API - Controlling CloudI</h2>
+  <ul class="api">
+    <li><a href="#2_Intro"             >2.0 - Introduction</a></li>
+    <li><a href="#2_acl_add"           >2.1 - acl_add</a></li>
+    <li><a href="#2_acl_remove"        >2.2 - acl_remove</a></li>
+    <li><a href="#2_services_add"      >2.3 - services_add</a></li>
+    <li><a href="#2_services_remove"   >2.4 - services_remove</a></li>
+    <li><a href="#2_services_restart"  >2.5 - services_restart</a></li>
+    <li><a href="#2_services"          >2.6 - services</a></li>
+    <li><a href="#2_nodes_add"         >2.7 - nodes_add</a></li>
+    <li><a href="#2_nodes_remove"      >2.8 - nodes_remove</a></li>
+    <li><a href="#2_nodes_alive"       >2.9 - nodes_alive</a></li>
+    <li><a href="#2_nodes_dead"        >2.10 - nodes_dead</a></li>
+    <li><a href="#2_nodes"             >2.11 - nodes</a></li>
+    <li><a href="#2_loglevel_set"      >2.12 - loglevel_set</a></li>
+    <li><a href="#2_log_redirect"      >2.13 - log_redirect</a></li>
+    <li><a href="#2_code_path_add"     >2.14 - code_path_add</a></li>
+    <li><a href="#2_code_path_remove"  >2.15 - code_path_remove</a></li>
+    <li><a href="#2_code_path"         >2.16 - code_path</a></li>
+  </ul>
+
+  <hr \>
+  <h2>CloudI API - Making a Service</h2>
+
+  <a name="1_Intro"></a>
+  <h3>1.0 - Introduction</h3>
+  <p class="paragraph">
+    The CloudI API provides a simple messaging API which allows CloudI services
+    to send requests.  So, the CloudI API contains messaging primitives that
+    can be used to emulate other messaging APIs, but normally the CloudI API
+    is used directly.  The CloudI API supports both publish/subscribe and
+    point-to-point communication in an intuitive way.  It is not necessary to
+    understand the Erlang programming language, to use the CloudI API since a
+    full CloudI API implementation is provided for every supported programming
+    language (C/C++, Java, Python, and Ruby, currently).
+  </p>
+  <p class="paragraph">
+    The <a href="#1_subscribe">subscribe</a> function subscribes to a
+    service name pattern which can contain "*" wildcard characters, to
+    accept any matching service requests.  "*" within a service name pattern
+    matches 1 or more characters, but "**" is forbidden.
+    The <a href="#1_send_sync">send_sync</a> function and the
+    <a href="#1_send_async">send_async</a> function provide point-to-point
+    communication based on the service name provided.  When multiple services
+    <a href="#1_subscribe">subscribe</a> with the same service name pattern
+    the destination is picked based on the sending service's "destination
+    refresh method", which can be any of the following:
+  </p>
+  <table><tr><th>
+    Destination Refresh Method
+  </th><th>
+    Meaning
+  </th></tr><tr><td>
+    lazy_closest (or)<br /> immediate_closest
+  </td><td>
+    A service running on the local node will be selected,
+    unless the destination only exists on a remote node
+  </td></tr><tr><td>
+    lazy_furthest (or)<br /> immediate_furthest
+  </td><td>
+    A service running on a remote node will be selected,
+    unless the destination only exists on the local node
+  </td></tr><tr><td>
+    lazy_random (or)<br /> immediate_random
+  </td><td>
+    A service is selected randomly, based on the destination
+  </td></tr><tr><td>
+    lazy_local (or)<br /> immediate_local
+  </td><td>
+    Only a service on the local node is selected, based on the destination
+  </td></tr><tr><td>
+    lazy_remote (or)<br /> immediate_remote
+  </td><td>
+    Only a service on a remote node is selected, based on the destination
+  </td></tr><tr><td>
+    none
+  </td><td>
+    The service should never send a request and it is an error when the
+    service attempts to send (the service may still receive requests)
+  </td></tr></table>
+  <p class="paragraph">
+    The "lazy" prefix and the "immediate" prefix on the destination refresh
+    method determines whether stale data is used within the service's data
+    or if a single Erlang lookup process is used to get the most current
+    destination result, respectively ("lazy" is for when long-lived services
+    are the destination but consumes more service memory, and "immediate" is
+    for when short-lived services are the destination but creates contention
+    for the Erlang lookup process).
+  </p>
+  <p class="paragraph">
+    If the same service subscribes with the same service name pattern more
+    than once, each subscription is used in round-robin order
+    (first subscription is called first, so order is preserved), when the
+    service receives a request for the specific service name pattern.
+  </p>
+  <p class="paragraph">
+    The <a href="#1_mcast_async">mcast_async</a> function provides
+    publish functionality by sending a request asynchronously to all
+    services that have <a href="#1_subscribe">subscribe</a>d to the same
+    service name pattern.  To receive an asynchronous request
+    <a href="#1_recv_async">recv_async</a> is used with the "TransId"
+    (i.e., Transaction Id, a v1 UUID) or a null UUID to receive the
+    oldest service request.
+  </p>
+  <p class="paragraph">
+    The <a href="#1_return">return</a> function is used to respond to a
+    service request and terminate the current request handler
+    (i.e., the service request is finished, at that point).
+    A service can <a href="#1_return">return</a> a null response if the sending
+    service should not receive a response, which can be used for typical
+    response-less publish functionality.  The <a href="#1_forward">forward</a>
+    function provides a new destination for the same service request,
+    delaying the request's completion, but still terminating the current
+    request handler.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_initialization"></a>
+  <h3>1.1 - (initialization)</h3>
+  <p class="paragraph">
+    The service configuration will control the CloudI API initialization,
+    which is done automatically, but does influence the source code.
+    The service configuration defines the number of Operating System (OS)
+    processes to create and the number of threads for an external
+    (non-Erlang) service.  For an internal (Erlang) service, the configuration
+    defines the number of Erlang processes to create.  A number specified as
+    an integer in the configuration is the exact number of processes or threads.
+    However, if the number is specified as a floating point number, it is used
+    as a CPU count (i.e., Erlang scheduler count) multipler where &gt;1.0
+    implies ceiling and &lt;1.0 implies round.  The external service
+    APIs provide the thread_count function so that the total number of threads
+    can be used for thread creation, with each thread holding an instance of
+    the CloudI API (to avoid lock contention):
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_initialize_thread_count(unsigned int * const thread_count);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+unsigned int CloudI::API::thread_count();
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+int org.cloudi.API.thread_count();
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.thread_count()
+cloudi.API.thread_count()
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.thread_count()
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The service configuration also allows Access Control Lists (ACLs) to define
+    explicit service name patterns for allowing or denying service
+    destinations when the service sends a service request.  The ACLs along
+    with the destination refresh method determine how service requests are
+    sent while other service options can tweak default settings:
+  </p>
+  <table><tr><th>
+    Service Configuration Parameter w/Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    priority_default=0
+  </td><td>
+    -128 (high) &#8804; priority_default &#8804; 127 (low)
+  </td></tr><tr><td>
+    queue_limit=undefined
+  </td><td>
+    A limit on the total number of incoming service requests that
+    are queued while the service is busy (limits memory consumption)
+  </td></tr><tr><td>
+    dest_refresh_start=500
+  </td><td>
+    Delay after startup before requesting the initial service
+    group membership (when using a lazy destination refresh method),
+    specified in milliseconds.
+  </td></tr><tr><td>
+    dest_refresh_delay=300000
+  </td><td>
+    Maximum possible time for a service death to remove service
+    group membership (when using a lazy destination refresh method),
+    specified in milliseconds.
+  </td></tr></table>
+  <p class="paragraph">
+    External (non-Erlang) services are provided both the command line and
+    the environmental variables specified within the service configuration.
+    External sevice configuration uses the full path to the executable while
+    internal services use the module name (and the OTP application name)
+    within the code search paths.
+  </p>
+  <p>
+  Please see <a href="#CloudI">the CloudI Service API</a> for more details
+  about service configuration.
+  <br /><br />
+  Specific Language Integration Notes:
+  </p>
+  <p class="paragraph">
+    The Erlang CloudI API functions shown below accept the most function
+    parameters in cloudi_service but functions with less parameters do
+    exist and they utilize default values for timeouts and request
+    priority.  Please see the
+    <a href="api/cloudi_core-1.2.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    to see all the available functions.
+  </p>
+  <p class="paragraph">
+    Both the C and the C++ CloudI API rely on the same underlying code, with
+    the C++ API object as a wrapper around the C API pointer, so there should
+    be no large performance difference.  STL is avoided, to avoid the
+    libstdc++ memory pool and internal memory pools are used.  The C++
+    CloudI API functions below use the STRING type to represent either
+    char const * const (or) std::string const &amp;, since both are
+    supported with overloaded functions.
+  </p>
+  <p class="paragraph">
+    The Java CloudI API avoids any C or C++ integration.  It only uses
+    reflection to utilize the low-level file descriptor object and
+    store object function pointers.
+  </p>
+  <p class="paragraph">
+    The python CloudI API is provided as both the "cloudi" module and the
+    "cloudi_c" module.  The "cloudi_c" module uses the C++ CloudI API for
+    more efficiency, while the "cloudi" module only uses Python source code.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_subscribe"></a>
+  <h3>1.2 - subscribe</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:subscribe(Dispatcher :: pid(), Pattern :: string()) -&gt;
+    ok.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_subscribe(cloudi_instance_t * p,
+                     char const * const pattern,
+                     cloudi_callback_t f);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+template &lt;typename T&gt;
+int CloudI::API::subscribe(STRING pattern,
+                           T &amp; object,
+                           void (T::*f) (CloudI::API const &amp;,
+                                         int const,
+                                         STRING,
+                                         STRING,
+                                         void const * const,
+                                         uint32_t const,
+                                         void const * const,
+                                         uint32_t const,
+                                         uint32_t,
+                                         int8_t,
+                                         char const * const,
+                                         char const * const,
+                                         uint32_t const)) const;
+int CloudI::API::subscribe(STRING pattern,
+                           void (*f) (API const &amp;,
+                                      int const,
+                                      STRING,
+                                      STRING,
+                                      void const * const,
+                                      uint32_t const,
+                                      void const * const,
+                                      uint32_t const,
+                                      uint32_t,
+                                      int8_t,
+                                      char const * const,
+                                      char const * const,
+                                      uint32_t const)) const
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+void org.cloudi.API.subscribe(final String pattern,
+                              final Object instance,
+                              final String methodName);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.subscribe(pattern, Function)
+cloudi.API.subscribe(pattern, Function)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.subscribe(pattern, function)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Subscribes with a service name pattern which provides a destination for
+    other services to send to.  The subscribing service will receive a
+    service request, if a different service sends a service request with a
+    service name that matches the service name pattern.  The service name
+    pattern is a string that may contain a "*" wildcard character to match
+    1 or more characters, while "**" is forbidden.  The service names and
+    service name patterns are expected to be in a filepath format
+    (e.g., "/root/directory/file.extension") by some provided CloudI services,
+    though nothing enforces this convention.  Good design dictates that
+    service names operate within a given scope.  Both the service names and
+    the service name patterns should represent an appropriate scope, which
+    the service manages (i.e., the same concept as a
+    <a href="http://en.wikipedia.org/wiki/Uniform_resource_identifier" target="_blank">Uniform Resource Identifier (URI)</a>).
+  </p>
+  <p class="paragraph">
+    When a service subscribes to a service name pattern, the supplied pattern
+    string is appended to the service name prefix from the service's
+    configuration, to provide the full service name pattern.  The prefix
+    provided within the service's configuration declares the scope of all
+    service operations, as they are seen from other running services.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_unsubscribe"></a>
+  <h3>1.3 - unsubscribe</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:unsubscribe(Dispatcher :: pid(), Pattern :: string()) -&gt;
+    ok.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_unsubscribe(cloudi_instance_t * p,
+                       char const * const pattern);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::unsubscribe(STRING pattern) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+void org.cloudi.API.unsubscribe(final String pattern);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.unsubscribe(pattern)
+cloudi.API.unsubscribe(pattern)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.unsubscribe(pattern)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Unsubscribe will remove the service's subscription for the specific
+    service name pattern.  If a service has subscribed with the same service
+    name pattern multiple times, the unsubscribe will only remove one
+    subscription instance.  The subscription instance which is removed
+    is whatever subscription would have been called next, for a matching
+    service request.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_get_pid"></a>
+  <h3>1.4 - get_pid (Erlang-only)</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:get_pid(Dispatcher :: pid(),
+                       Name :: string(),
+                       Timeout :: non_neg_integer()) -&gt;
+    {'ok', PatternPid :: {string(), pid()}} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Internal (Erlang-only) services can request an Erlang process
+    based on the service name provided, before calling either the
+    send_sync function or the send_async function.  The get_pid
+    function should rarely be necessary, but it can allow other logic
+    to be used for determining which service should receive a request
+    (e.g., based on apparent processing power, like within the hexpi test).
+    The Erlang process (tuple) returned could become invalid if the service
+    destination terminated, so the Erlang process monitoring becomes
+    the burden of the get_pid function user.  Due to the intimate nature
+    of this function, it only exists within the Erlang CloudI API
+    (to implement it in other languages would do more harm than good).
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_send_sync"></a>
+  <h3>1.5 - send_sync</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:send_sync(Dispatcher :: pid(),
+                         Name :: string(),
+                         RequestInfo :: any(),
+                         Request :: any(),
+                         Timeout :: non_neg_integer() | 'undefined',
+                         Priority :: integer() | 'undefined') -&gt;
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
+cloudi_service:send_sync(Dispatcher :: pid(),
+                         Name :: string(),
+                         RequestInfo :: any(),
+                         Request :: any(),
+                         Timeout :: non_neg_integer() | 'undefined',
+                         Priority :: integer() | 'undefined',
+                         PatternPid :: {string(), pid()}) -&gt;
+    {'ok', ResponseInfo :: any(), Response :: any()} |
+    {'ok', Response :: any()} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_send_sync_(cloudi_instance_t * p,
+                      char const * const name,
+                      void const * const request_info,
+                      uint32_t const request_info_size,
+                      void const * const request,
+                      uint32_t const request_size,
+                      uint32_t timeout,
+                      int8_t const priority);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::send_sync(STRING name,
+                           void const * const request_info,
+                           uint32_t const request_info_size,
+                           void const * const request,
+                           uint32_t const request_size,
+                           uint32_t timeout,
+                           int8_t const priority) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+Response org.cloudi.API.send_sync(String name, byte[] request_info,
+                                  byte[] request, Integer timeout,
+                                  Byte priority);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.send_sync(name, request,
+                       timeout=None, request_info=None, priority=None)
+cloudi.API.send_sync(name, request,
+                     timeout=None, request_info=None, priority=None)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.send_sync(name, request,
+                      timeout=nil, request_info=nil, priority=nil)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Send a synchronous request to a service name with a specific timeout
+    and a specific priority.  If a timeout is not provided, the default
+    synchronous timeout from the service configuration is used.  If a
+    priority is not provided, the default priority from the service
+    configuration options is used (normally the default priority is 0).
+  </p>
+  <p>
+    Function Return Values:
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Return Value
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+    ResponseInfo is only returned if it does not equal &lt;&lt;&gt;&gt;.
+    Response is only returned if it does not equal &lt;&lt;&gt;&gt;.
+  </p>
+<pre>
+{'ok', ResponseInfo :: any(), Response :: any()}
+{'ok', Response :: any()}
+{'error', Reason :: atom()}
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_sync function call (an integer 0 return value).
+  </p>
+<pre>
+cloudi_get_response(p)
+cloudi_get_response_size(p)
+cloudi_get_response_info(p)
+cloudi_get_response_info_size(p)
+cloudi_get_trans_id_count(p)
+cloudi_get_trans_id(p, i)
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_sync function call (an integer 0 return value).
+  </p>
+<pre>
+char const * CloudI::API::get_response() const;
+uint32_t CloudI::API::get_response_size() const;
+char const * CloudI::API::get_response_info() const;
+uint32_t CloudI::API::get_response_info_size() const;
+uint32_t CloudI::API::get_trans_id_count() const;
+char const * CloudI::API::get_trans_id(unsigned int const i = 0) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+  <p>
+    A class encapsulates the function result.
+  </p>
+<pre>
+org.cloudi.API.Response
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+  <p>
+    A tuple provides the function result.
+  </p>
+<pre>
+(response_info, response, trans_id)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+  <p>
+    An array provides the function result.
+  </p>
+<pre>
+[response_info, response, trans_id]
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The send_sync response data is provided in ways typical to each programming
+    language, as shown above.  The non-Erlang send_sync functions
+    provide the TransId of the request because the calling service may need
+    to use the v1 UUID to manipulate and/or store the response.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_send_async"></a>
+  <h3>1.6 - send_async</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:send_async(Dispatcher :: pid(),
+                          Name :: string(),
+                          RequestInfo :: any(),
+                          Request :: any(),
+                          Timeout :: non_neg_integer() | 'undefined',
+                          Priority :: integer() | 'undefined') -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', Reason :: atom()}.
+cloudi_service:send_async(Dispatcher :: pid(),
+                          Name :: string(),
+                          RequestInfo :: any(),
+                          Request :: any(),
+                          Timeout :: non_neg_integer() | 'undefined',
+                          Priority :: integer() | 'undefined',
+                          PatternPid :: {string(), pid()}) -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', Reason :: atom()}.
+cloudi_service:send_async_passive(Dispatcher :: pid(),
+                                  Name :: string(),
+                                  RequestInfo :: any(),
+                                  Request :: any(),
+                                  Timeout :: non_neg_integer() | 'undefined',
+                                  Priority :: integer() | 'undefined') -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', Reason :: atom()}.
+cloudi_service:send_async_passive(Dispatcher :: pid(),
+                                  Name :: string(),
+                                  RequestInfo :: any(),
+                                  Request :: any(),
+                                  Timeout :: non_neg_integer() | 'undefined',
+                                  Priority :: integer() | 'undefined',
+                                  PatternPid :: {string(), pid()}) -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_send_async_(cloudi_instance_t * p,
+                       char const * const name,
+                       void const * const request_info,
+                       uint32_t const request_info_size,
+                       void const * const request,
+                       uint32_t const request_size,
+                       uint32_t timeout,
+                       int8_t const priority);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::send_async(STRING name,
+                            void const * const request_info,
+                            uint32_t const request_info_size,
+                            void const * const request,
+                            uint32_t const request_size,
+                            uint32_t timeout,
+                            int8_t const priority) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+TransId org.cloudi.API.send_async(String name, byte[] request_info,
+                                  byte[] request, Integer timeout,
+                                  Byte priority);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.send_async(name, request,
+                        timeout=None, request_info=None, priority=None)
+cloudi.API.send_async(name, request,
+                      timeout=None, request_info=None, priority=None)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.send_async(name, request,
+                       timeout=nil, request_info=nil, priority=nil)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Send an asynchronous request to a service name with a specific timeout
+    and a specific priority.  If a timeout is not provided, the default
+    asynchronous timeout from the service configuration is used.  If a
+    priority is not provided, the default priority from the service
+    configuration options is used (normally the default priority is 0).
+  </p>
+  <p class="paragraph">
+    An asynchronous send will block until a live service matches the
+    service name destination or the timeout expires.  Once the asynchronous
+    request is sent the TransId which identifies the request is returned.
+  </p>
+  <p>
+    Function Return Values:
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Return Value
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+  </p>
+<pre>
+{'ok', TransId :: &lt;&lt;_:128&gt;&gt;}
+{'error', Reason :: atom()}
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_async function call (an integer 0 return value).
+  </p>
+<pre>
+cloudi_get_trans_id_count(p)
+cloudi_get_trans_id(p, i)
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_async function call (an integer 0 return value).
+  </p>
+<pre>
+uint32_t CloudI::API::get_trans_id_count() const;
+char const * CloudI::API::get_trans_id(unsigned int const i = 0) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+  <p>
+    A class encapsulates the function result.
+  </p>
+<pre>
+org.cloudi.API.TransId
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+  <p>
+    The trans_id is a string of 16 bytes.
+  </p>
+<pre>
+trans_id
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+  <p>
+    The trans_id is a string of 16 bytes.
+  </p>
+<pre>
+trans_id
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The send_async result is provided in ways typical to each programming
+    language, as shown above.  A TransId is a v1 UUID.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_send_async_active"></a>
+  <h3>1.7 - send_async_active (Erlang-only)</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:send_async_active(Dispatcher :: pid(),
+                                 Name :: string(),
+                                 RequestInfo :: any(),
+                                 Request :: any(),
+                                 Timeout :: non_neg_integer() | 'undefined',
+                                 Priority :: integer() | 'undefined') -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', atom()}.
+cloudi_service:send_async_active(Dispatcher :: pid(),
+                                 Name :: string(),
+                                 RequestInfo :: any(),
+                                 Request :: any(),
+                                 Timeout :: non_neg_integer() | 'undefined',
+                                 Priority :: integer() | 'undefined',
+                                 PatternPid :: {string(), pid()}) -&gt;
+    {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', atom()}.
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The send_async_active function provides the same functionality as
+    the send_async function within an Erlang process, but the response is
+    automatically sent to the Erlang process, after completion.  Using
+    send_async_active is the preferred way to send an asynchronous
+    service request in Erlang because it utilizes Erlang's concurrency
+    without requiring a blocking operation (a passive send, using Erlang
+    vernacular, since it would otherwise require a call of the function
+    recv_async to receive the request).
+  </p>
+  <p>
+    Incoming Process Message:
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Messages
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+  </p>
+<pre>
+{'return_async_active', Name :: string(), Pattern :: string(),
+ ResponseInfo :: any(), Response :: any(),
+ Timeout :: non_neg_integer(), TransId :: &lt;&lt;_:128&gt;&gt;}
+{'timeout_async_active', TransId :: &lt;&lt;_:128&gt;&gt;}
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The send_async_active message is sent to the Erlang process as an
+    Erlang message, so it arrives in the cloudi_service_handle_info function
+    of the Erlang service module (i.e., the module that implements the
+    <a href="api/cloudi_core-1.2.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_mcast_async"></a>
+  <h3>1.8 - mcast_async</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:mcast_async(Dispatcher :: pid(),
+                           Name :: string(),
+                           RequestInfo :: any(),
+                           Request :: any(),
+                           Timeout :: non_neg_integer() | 'undefined',
+                           Priority :: integer() | 'undefined') -&gt;
+    {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
+    {'error', Reason :: atom()}.
+cloudi_service:mcast_async(Dispatcher :: pid(),
+                           Name :: string(),
+                           RequestInfo :: any(),
+                           Request :: any(),
+                           Timeout :: non_neg_integer() | 'undefined',
+                           Priority :: integer() | 'undefined',
+                           PatternPid :: {string(), pid()}) -&gt;
+    {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_mcast_async_(cloudi_instance_t * p,
+                        char const * const name,
+                        void const * const request_info,
+                        uint32_t const request_info_size,
+                        void const * const request,
+                        uint32_t const request_size,
+                        uint32_t timeout,
+                        int8_t const priority);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::mcast_async(STRING name,
+                             void const * const request_info,
+                             uint32_t const request_info_size,
+                             void const * const request,
+                             uint32_t const request_size,
+                             uint32_t timeout,
+                             int8_t const priority) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+List&lt;TransId&gt; org.cloudi.API.mcast_async(String name, byte[] request_info,
+                                         byte[] request, Integer timeout,
+                                         Byte priority);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.mcast_async(name, request,
+                         timeout=None, request_info=None, priority=None)
+cloudi.API.mcast_async(name, request,
+                       timeout=None, request_info=None, priority=None)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.mcast_async(name, request,
+                        timeout=nil, request_info=nil, priority=nil)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Multicast asynchronously, which is the same as publish, except that
+    it is possible to respond to the service request.  The function mcast_async
+    will send the service request asynchronously to all services that have
+    subscribed to a service name pattern that matches the service name
+    destination.  The mcast_async function will block until at least a
+    single request has been sent or the timeout has expired.  The result of
+    the function call is a list of TransIds (one TransId per service request).
+    If a publish request is required, the destination service should
+    have a null response (an empty binary of size 0), so that the service
+    request response is ignored.
+  </p>
+  <p>
+    Function Return Values:
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Return Value
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+  </p>
+<pre>
+{'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)}
+{'error', Reason :: atom()}
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_async function call (an integer 0 return value).
+  </p>
+<pre>
+cloudi_get_trans_id_count(p)
+cloudi_get_trans_id(p, i)
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful send_async function call (an integer 0 return value).
+  </p>
+<pre>
+uint32_t CloudI::API::get_trans_id_count() const;
+char const * CloudI::API::get_trans_id(unsigned int const i = 0) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+  <p>
+    A class encapsulates the function result.
+  </p>
+<pre>
+List&lt;org.cloudi.API.TransId&gt;
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+  <p>
+    The trans_id is a string of 16 bytes.
+  </p>
+<pre>
+[trans_id]
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+  <p>
+    The trans_id is a string of 16 bytes.
+  </p>
+<pre>
+[trans_id]
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The mcast_async result is provided in ways typical to each programming
+    language, as shown above.  A TransId is a v1 UUID.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_recv_async"></a>
+  <h3>1.9 - recv_async</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:recv_async(Dispatcher :: pid(),
+                          Timeout :: non_neg_integer(),
+                          TransId :: &lt;&lt;_:128&gt;&gt;,
+                          Consume :: boolean()) -&gt;
+    {'ok', ResponseInfo :: any(), Response :: any(), TransId :: &lt;&lt;_:128&gt;&gt;} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_recv_async(cloudi_instance_t * p,
+                      uint32_t timeout,
+                      char const * const trans_id,
+                      int consume);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::recv_async(uint32_t timeout,
+                            STRING trans_id,
+                            bool consume) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+Response org.cloudi.API.recv_async(Integer timeout, byte[] transId,
+                                   boolean consume);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.recv_async(timeout=None, trans_id=None, consume=True)
+cloudi.API.recv_async(timeout=None, trans_id=None, consume=True)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.recv_async(timeout=nil, trans_id=nil, consume=true)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Receive an asynchronous service request's response.  If a TransId is not
+    provided, a null UUID is used to request the oldest response
+    that has not timed out.  By default, the recv_async function will consume
+    the service request so it is not accessible with the same function call
+    in the future.  The TransId of the service request is always returned
+    for any external use or tracking of the request or response.
+  </p>
+  <p>
+    Function Return Values:
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Return Value
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+    Response is only returned if it does not equal &lt;&lt;&gt;&gt;.
+    ResponseInfo is always returned if Response is returned.
+  </p>
+<pre>
+{'ok', ResponseInfo :: any(), Response :: any(), TransId :: &lt;&lt;_:128&gt;&gt;}
+{'error', Reason :: atom()}
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful recv_async function call (an integer 0 return value).
+  </p>
+<pre>
+cloudi_get_response(p)
+cloudi_get_response_size(p)
+cloudi_get_response_info(p)
+cloudi_get_response_info_size(p)
+cloudi_get_trans_id_count(p)
+cloudi_get_trans_id(p, i)
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+  <p>
+    Separate functions are provided to get the function result after
+    a successful recv_async function call (an integer 0 return value).
+  </p>
+<pre>
+char const * CloudI::API::get_response() const;
+uint32_t CloudI::API::get_response_size() const;
+char const * CloudI::API::get_response_info() const;
+uint32_t CloudI::API::get_response_info_size() const;
+uint32_t CloudI::API::get_trans_id_count() const;
+char const * CloudI::API::get_trans_id(unsigned int const i = 0) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+  <p>
+    A class encapsulates the function result.
+  </p>
+<pre>
+org.cloudi.API.Response
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+  <p>
+    A tuple provides the function result.
+  </p>
+<pre>
+(response_info, response, trans_id)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+  <p>
+    An array provides the function result.
+  </p>
+<pre>
+[response_info, response, trans_id]
+</pre>
+  </td></tr></table>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_return"></a>
+  <h3>1.10 - return</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:return(Dispatcher :: pid(),
+                      Type :: 'send_async' | 'send_sync',
+                      Name :: string(),
+                      Pattern :: string(),
+                      ResponseInfo :: any(),
+                      Response :: any(),
+                      Timeout :: non_neg_integer(),
+                      TransId :: &lt;&lt;_:128&gt;&gt;,
+                      Pid :: pid()) -&gt;
+    none().
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_return(cloudi_instance_t * p,
+                  int const command,
+                  char const * const name,
+                  char const * const pattern,
+                  void const * const response_info,
+                  uint32_t const response_info_size,
+                  void const * const response,
+                  uint32_t const response_size,
+                  uint32_t timeout,
+                  char const * const trans_id,
+                  char const * const pid,
+                  uint32_t const pid_size);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::return_(int const command,
+                         STRING name,
+                         STRING pattern,
+                         void const * const response_info,
+                         uint32_t const response_info_size,
+                         void const * const response,
+                         uint32_t const response_size,
+                         uint32_t timeout,
+                         char const * const trans_id,
+                         char const * const pid,
+                         uint32_t const pid_size) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+void org.cloudi.API.return_(Integer command,
+                            String name, String pattern,
+                            byte[] response_info, byte[] response,
+                            Integer timeout, byte[] transId,
+                            OtpErlangPid pid);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.return_(command, name, pattern, response_info, response,
+                     timeout, trans_id, pid)
+cloudi.API.return_(command, name, pattern, response_info, response,
+                   timeout, trans_id, pid)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.return_(command, name, pattern, response_info, response,
+                    timeout, trans_id, pid)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Return a response to a service request.  The return function will
+    throw a caught exception so that the request handler execution is aborted
+    after returning the service request response.  The simplest
+    and preferred way to return a response within an Erlang service is to
+    utilize the cloudi_service_handle_request functon return values used by the
+    <a href="api/cloudi_core-1.2.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    utilize the request handler return value for the response in the
+    programming languages Java, Python, and Ruby.  However, within the
+    external services it is more explicit (i.e., easier to understand the
+    source code) when the source code uses the return functions.
+  </p>
+  <p class="paragraph">
+    If the service is configured with the request_timeout_adjustment option set
+    to true (the default is false), the request handler execution time will
+    automatically decrement the response timeout.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <a name="1_forward"></a>
+  <h3>1.11 - forward</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:forward(Dispatcher :: pid(),
+                       Type :: 'send_async' | 'send_sync',
+                       Name :: string(),
+                       RequestInfo :: any(),
+                       Request :: any(),
+                       Timeout :: non_neg_integer(),
+                       Priority :: integer(),
+                       TransId :: &lt;&lt;_:128&gt;&gt;,
+                       Pid :: pid()) -&gt;
+    none().
+</pre>
+  </td></tr><tr><td>
+    C
+  </td><td>
+<pre>
+int cloudi_forward(cloudi_instance_t * p,
+                   int const command,
+                   char const * const name,
+                   void const * const request_info,
+                   uint32_t const request_info_size,
+                   void const * const request,
+                   uint32_t const request_size,
+                   uint32_t timeout,
+                   int8_t const priority,
+                   char const * const trans_id,
+                   char const * const pid,
+                   uint32_t const pid_size);
+</pre>
+  </td></tr><tr><td>
+    C++
+  </td><td>
+<pre>
+int CloudI::API::forward_(int const command,
+                          STRING name,
+                          void const * const request_info,
+                          uint32_t const request_info_size,
+                          void const * const request,
+                          uint32_t const request_size,
+                          uint32_t timeout,
+                          int8_t const priority,
+                          char const * const trans_id,
+                          char const * const pid,
+                          uint32_t const pid_size) const;
+</pre>
+  </td></tr><tr><td>
+    Java
+  </td><td>
+<pre>
+Response org.cloudi.API.forward_(Integer command, String name,
+                                 byte[] request_info, byte[] request,
+                                 Integer timeout, Byte priority,
+                                 byte[] transId, OtpErlangPid pid);
+</pre>
+  </td></tr><tr><td>
+    Python
+  </td><td>
+<pre>
+cloudi_c.API.forward_(command, name, request_info, request,
+                      timeout, priority, trans_id, pid)
+cloudi.API.forward_(command, name, request_info, request,
+                    timeout, priority, trans_id, pid)
+</pre>
+  </td></tr><tr><td>
+    Ruby
+  </td><td>
+<pre>
+CloudI::API.forward_(command, name, request_info, request,
+                     timeout, priority, trans_id, pid)
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Forward the service request to a different destination, possibly with
+    different parameters (e.g., a completely different request).  The forward
+    function will throw a caught exception so that the request handler
+    execution is aborted after forwarding the service request.  The simplest
+    and preferred way to forward a request within an Erlang service is to
+    utilize the cloudi_service_handle_request functon return values used by the
+    <a href="api/cloudi_core-1.2.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    All external services must use a forward function when forwarding a request.
+  </p>
+  <p class="paragraph">
+    If the service is configured with the request_timeout_adjustment option set
+    to true (the default is false), the request handler execution time will
+    automatically decrement the forwarded request timeout.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
+  <hr \>
+  <h2>CloudI Service API - Controlling CloudI</h2>
+
+  <a name="2_Intro"></a>
+  <h3>2.0 - Introduction</h3>
+  <p class="paragraph">
+    When CloudI is first started, the configuration file at
+    /usr/local/etc/cloudi/cloudi.conf is used to determine what
+    Access Control Lists (ACLs) should be used for services,
+    what services should be started, what nodes should be connected,
+    and what logging should occur.  All the configuration functionality
+    for CloudI can be done dynamically, after startup, with the
+    CloudI Service API.  A typical way to use the Service API is with
+    either erlang terms or JSON-RPC over HTTP.
+  </p>
+  <table><tr><th>
+    Protocol
+  </th><th>
+    Example
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/services
+</p>
+  </td></tr><tr><td>
+    JSON-RPC
+  </td><td>
+<p class="code">
+curl -X POST -d '{"method": "services", "params":[], "id": 1}' http://localhost:6467/cloudi/api/json_rpc/
+</p>
+  </td></tr></table>
+  <p class="paragraph">
+    The data returned in both examples is Erlang terms within a string.
+    All of the examples below use the Erlang protocol.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_acl_add"></a>
+  <h3>2.1 - acl_add</h3>
+<p class="code">
+curl -X POST -d '[{sensitive, ["/accouting/", "/finance/"]}]' http://localhost:6467/cloudi/api/erlang/acl_add
+</p>
+  <p class="paragraph">
+    Add more ACL entries to be later used when starting services.  An ACL
+    entry is an Erlang atom() -&gt; list(atom() | string()) relationship which
+    provides a logical grouping of service name patterns
+    (e.g., {api, ["/cloudi/api/"]}).  When providing a service name pattern
+    for an ACL entry, a non-pattern will be assumed to be a prefix
+    (i.e., "/cloudi/api/" == "/cloudi/api/*").
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_acl_remove"></a>
+  <h3>2.2 - acl_remove</h3>
+<p class="code">
+curl -X POST -d '[sensitive]' http://localhost:6467/cloudi/api/erlang/acl_remove
+</p>
+  <p class="paragraph">
+    Remove ACL entries that are no longer needed.  Running services will
+    retain their configuration, so this impacts services that are
+    started in the future.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_services_add"></a>
+  <h3>2.3 - services_add</h3>
+<p class="code">
+curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "1 tcp 16384", [{"LD_LIBRARY_PATH", "api/c/lib/"}, {"DYLD_LIBRARY_PATH", "api/c/lib/"}], none, tcp, 16384, 5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}, {internal, "/tests/flood/", cloudi_service_flood, [{flood, "/tests/flood/c", &lt;&lt;"DATA"&gt;&gt;, 1000}], lazy_closest, 5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]' http://localhost:6467/cloudi/api/erlang/services_add
+</p>
+  <p class="paragraph">
+    Start services.  Provide service configuration using the same syntax
+    found in the configuration file (i.e., /usr/local/etc/cloudi/cloudi.conf).
+    Internal services will need to be located in a code path that the
+    running Erlang VM is aware of (see
+    <a href="#2_code_path_add">code_path_add</a>).  The syntax of the
+    configuration entries is shown below:
+  </p>
+<pre>
+{internal,
+ (ServiceNamePrefix),
+ (ErlangModuleName),
+ (ModuleInitializationList),
+ (<a href="#1_Intro">DestinationRefreshMethod</a>),
+ (InitializationTimeout in milliseconds),
+ (DefaultAsynchronousTimeout in milliseconds),
+ (DefaultSynchronousTimeout in milliseconds),
+ (DestinationDenyACL),
+ (DestinationAllowACL),
+ (ProcessCount),
+ (MaxR),
+ (MaxT in seconds),
+ (ServiceOptionsPropList)}
+
+{external,
+ (ServiceNamePrefix),
+ (ExecutableFilePath),
+ (ExecutableCommandLineArguments),
+ (ExecutableEnvironmentalVariables),
+ (<a href="#1_Intro">DestinationRefreshMethod</a>),
+ (Protocol, use tcp),
+ (ProtocolBufferSize, use 16384 on Linux),
+ (InitializationTimeout in milliseconds),
+ (DefaultAsynchronousTimeout in milliseconds),
+ (DefaultSynchronousTimeout in milliseconds),
+ (DestinationDenyACL),
+ (DestinationAllowACL),
+ (ProcessCount),
+ (ThreadCount),
+ (MaxR),
+ (MaxT in seconds),
+ (ServiceOptionsPropList)}
+</pre>
+  <p class="paragraph">
+    The ACL lists contain either atoms that reference the current ACL
+    configuration or strings.  If an ACL string is not a pattern, it
+    is assumed to be a prefix (i.e., "*" is appended to make it a pattern).
+    The ProcessCount and ThreadCount can be specified as integers for an
+    exact count or as a floating point number to provide a CPU multiplier
+    (X &lt; 1.0 is round, X &gt; 1.0 is floor).  MaxR is the maximum
+    restarts allowed within MaxT seconds (same parameters used by Erlang
+    supervisors).  The ServiceOptionsPropList provides the configurable
+    defaults:
+  </p>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    priority_default
+  </td><td>
+    0
+  </td><td>
+    -128(high) &le; priority &le; 127(low)
+  </td></tr><tr><td>
+    queue_limit
+  </td><td>
+    undefined
+  </td><td>
+    A limit on the total number of incoming service requests that
+    are queued while the service is busy (limits memory consumption)
+  </td></tr><tr><td>
+    dest_refresh_start
+  </td><td>
+    500
+  </td><td>
+    Delay after startup (in milliseconds) before requesting the initial
+    service group membership (when using a lazy destination refresh method)
+  </td></tr><tr><td>
+    dest_refresh_delay
+  </td><td>
+    300000
+  </td><td>
+    Maximum possible time (in milliseconds) for a service death to remove
+    service group membership (when using a lazy destination refresh method)
+  </td></tr><tr><td>
+    request_timeout_adjustment
+  </td><td>
+    false
+  </td><td>
+    Should the service request handler execution time decrement the
+    request timeout to reduce the timeout of a forwarded request or
+    the timeout of a returned response
+  </td></tr></table>
+  <p class="paragraph">
+    Please see the configuration file /usr/local/etc/cloudi/cloudi.conf
+    for more specific examples.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_services_remove"></a>
+  <h3>2.4 - services_remove</h3>
+<p class="code">
+curl -X POST -d '[&lt;&lt;110,129,240,166,122,31,17,226,212,14,165,221,0,0,0,88&gt;&gt;, &lt;&lt;110,129,240,236,122,31,17,226,212,14,165,221,0,0,0,88&gt;&gt;]' http://localhost:6467/cloudi/api/erlang/services_remove
+</p>
+  <p class="paragraph">
+    Provide the Service UUIDs for the services that should be stopped.
+    The Service UUID is shown in the output of
+    <a href="#2_services">services</a>.  When the service is stopped, its
+    running instance is removed from CloudI, but does not impact any
+    other running instances (even if they are the same service
+    module or binary).
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_services_restart"></a>
+  <h3>2.5 - services_restart</h3>
+<p class="code">
+curl -X POST -d '[&lt;&lt;106,103,84,112,122,31,17,226,212,14,165,221,0,0,0,88&gt;&gt;]' http://localhost:6467/cloudi/api/erlang/services_restart
+</p>
+  <p class="paragraph">
+    Provide the Service UUIDs for the services that should be restarted.
+    The Service UUID is shown in the output of
+    <a href="#2_services">services</a>.  When the service is restarted,
+    the old instance is stopped and a new instance is started.  During the
+    restart delay, it is possible to lose queued service requests and
+    received asynchronous responses.  Keeping the state separate between
+    the service instances is important to prevent failures within the new
+    instance.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_services"></a>
+  <h3>2.6 - services</h3>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/services
+</p>
+  <p class="paragraph">
+    List the service configuration parameters with each service's UUID.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes_add"></a>
+  <h3>2.7 - nodes_add</h3>
+<p class="code">
+curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/nodes_add
+</p>
+  <p class="paragraph">
+    Explicitly add a CloudI node name, so that services between all other
+    CloudI nodes and the added nodes can send each other service requests.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes_remove"></a>
+  <h3>2.8 - nodes_remove</h3>
+<p class="code">
+curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/nodes_remove
+</p>
+  <p class="paragraph">
+    Explicitly remove a CloudI node name.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes_alive"></a>
+  <h3>2.9 - nodes_alive</h3>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/nodes_alive
+</p>
+  <p class="paragraph">
+    List all the CloudI nodes known to be connected.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes_dead"></a>
+  <h3>2.10 - nodes_dead</h3>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/nodes_dead
+</p>
+  <p class="paragraph">
+    List all the CloudI nodes that are disconnected but expected to
+    reconnect.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes"></a>
+  <h3>2.11 - nodes</h3>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/nodes
+</p>
+  <p class="paragraph">
+    List both the connected and disconnected CloudI nodes.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_loglevel_set"></a>
+  <h3>2.12 - loglevel_set</h3>
+<p class="code">
+curl -X POST -d 'warn' http://localhost:6467/cloudi/api/erlang/loglevel_set
+</p>
+  <p class="paragraph">
+    Modify the loglevel.  CloudI uses asynchronous logging with flow control
+    (backpressure handling) to prevent misbehaving services from causing
+    instability.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_log_redirect"></a>
+  <h3>2.13 - log_redirect</h3>
+<p class="code">
+curl -X POST -d 'cloudi@host' http://localhost:6467/cloudi/api/erlang/log_redirect
+</p>
+  <p class="paragraph">
+    Redirect all local log output to a remote CloudI node.  Use 'undefined'
+    as the node name to log locally.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_code_path_add"></a>
+  <h3>2.14 - code_path_add</h3>
+<p class="code">
+curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_add
+</p>
+  <p class="paragraph">
+    Add a directory to the CloudI Erlang VM code server's search paths.
+    The path is always appended to the list of search paths
+    (you should not need to rely on search path order because of unique naming).
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_code_path_remove"></a>
+  <h3>2.15 - code_path_remove</h3>
+<p class="code">
+curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_remove
+</p>
+  <p class="paragraph">
+    Remove a directory from the CloudI Erlang VM code server's search paths.
+    This doesn't impact any running services, only services that will be
+    started in the future.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_code_path"></a>
+  <h3>2.16 - code_path</h3>
+<p class="code">
+curl http://localhost:6467/cloudi/api/erlang/code_path
+</p>
+  <p class="paragraph">
+    List all the CloudI Erlang VM code server search paths
+    (in the same order the directories are searched).
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+</div>
+
+<br />
+<br />
+<br />
+<br />
+<br />
+<div id="footer">
+Copyright &#169; 2013 Michael Truog
+</div>
+
+</body>
+</html>
