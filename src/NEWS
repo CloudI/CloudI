@@ -1,20 +1,37 @@
-???
+February 19, 2013
   Version 1.2.0 (beta) released.
 
   * Erlang >= R15B01 is now required due to callback/behavior changes
   * misultin was removed, cowboy now provides better functionality
     (misultin was also broken due to parameterized modules usage)
+    cowboy was updated to 0.8.0
   * The documentation and CloudI source code changes so that "job" is no
     longer used to refer to services.  Now "service" is used consistently
     to help prevent confusion.  This change means that Erlang services
     (i.e., internal services) must now use the cloudi_service behavior
     instead of the cloudi_job behavior and the callback names reflect the
-    same change.  The CloudI Job API is now referred to as the CloudI
-    Service API.
-  * A minor CloudI API change occured that effects Erlang services:
+    same change.  The CloudI Job API is now referred to as the
+    CloudI Service API.
+  * A Quick Start and API documentation was added to help people
+    learn about CloudI
+  * A minor CloudI API change occured that affects Erlang services:
     cloudi_service:recv_async now always returns
     {ResponseInfo, Response, TransId} to be consistent with
     functionality in external services
+  * Important bugfixes and improvements are included in this release
+      * cloudi_service:unsubscribe will now properly unsubscribe a single
+        instance of the service name pattern
+      * Many improvements to internal services and
+        the python_c external services
+      * the ZeroMQ integration service has been fixed
+      * the CloudI Service API had some minor issues fixed
+      * the flood and messaging tests had some fixes
+      * the bug with ACL string usage (from 1.1.1) was fixed
+  * The request_timeout_adjustment service configuration option was added
+    to make all service requests have their timeout decremented by the
+    service request handler's execution time (defaults to false)
+  * ZeroMQ v3 is now the default version if it is enabled
+    (version 3.2.2 is used, if it isn't already installed)
 
 February 4, 2013
   Version 1.1.1 (beta) released.
