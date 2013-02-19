@@ -11,6 +11,7 @@
       removed by the Services API
     * Fix immediate_local, immediate_remote, lazy_local, lazy_remote
       destination refresh methods usage by mcast_async
+    * Add better error checking to cpg
 
 2013-02-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
