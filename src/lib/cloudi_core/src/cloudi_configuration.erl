@@ -286,23 +286,22 @@ services_remove([UUID | _] = Value, #config{services = Services} = Config)
 %%-------------------------------------------------------------------------
 services_restart([UUID | _] = Value, #config{services = Services} = Config)
     when is_binary(UUID), byte_size(UUID) == 16 ->
-    NewServices = lists:foldl(fun(ID, L) ->
-        {[Service], NewL} = lists:partition(fun(S) ->
+    lists:foreach(fun(ID) ->
+        [Service | _] = lists:dropwhile(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->
-                    true;
+                    false;
                 is_record(S, config_service_external),
                 S#config_service_external.uuid == ID ->
-                    true;
+                    false;
                 true ->
-                    false
+                    true
             end
-        end, L),
-        cloudi_configurator:service_restart(Service),
-        NewL
-    end, Services, cloudi_lists:rsort(Value)),
-    Config#config{services = NewServices}.
+        end, Services),
+        cloudi_configurator:service_restart(Service)
+    end, cloudi_lists:rsort(Value)),
+    Config.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -337,7 +336,9 @@ services(#config{services = Services}) ->
                            max_r =
                                Service#config_service_internal.max_r,
                            max_t =
-                               Service#config_service_internal.max_t}};
+                               Service#config_service_internal.max_t,
+                           options =
+                               Service#config_service_internal.options}};
             is_record(Service, config_service_external) ->
                 {Service#config_service_external.uuid,
                  #external{prefix =
@@ -371,7 +372,9 @@ services(#config{services = Services}) ->
                            max_r =
                                Service#config_service_external.max_r,
                            max_t =
-                               Service#config_service_external.max_t}}
+                               Service#config_service_external.max_t,
+                           options =
+                               Service#config_service_external.options}}
         end
     end, Services)])).
 

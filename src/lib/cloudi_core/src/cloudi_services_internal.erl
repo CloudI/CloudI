@@ -478,6 +478,10 @@ handle_info({'EXIT', _,
     ?LOG_ERROR("info stop ~p", [Reason]),
     {stop, Reason, State#state{service_state = NewServiceState}};
 
+handle_info({'EXIT', _, restart}, State) ->
+    % CloudI Service API requested a restart
+    {stop, restart, State};
+
 handle_info({'EXIT', Pid, Reason}, State) ->
     % a service request process died unexpectedly
     ?LOG_ERROR("~p exited: ~p", [Pid, Reason]),

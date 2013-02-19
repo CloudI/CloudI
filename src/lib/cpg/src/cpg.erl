@@ -35,7 +35,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -72,6 +72,10 @@
          get_members/3,
          get_local_members/1,
          get_local_members/2,
+         get_local_members/3,
+         get_remote_members/1,
+         get_remote_members/2,
+         get_remote_members/3,
          which_groups/0,
          which_groups/1,
          get_closest_pid/1,
@@ -537,15 +541,74 @@ get_local_members(GroupName) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get only the local members of a specific group within a specific scope.===
+%% ===Get only the local members of a specific group while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_local_members(scope(), name()) -> get_members_ret().
+-spec get_local_members(name() | scope(), pid() | name()) -> get_members_ret().
+
+get_local_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName, Exclude});
 
 get_local_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope, {get_local_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_members(scope(), name(), pid()) -> get_members_ret().
+
+get_local_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_local_members, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(name()) -> get_members_ret().
+
+get_remote_members(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(name() | scope(), pid() | name()) -> get_members_ret().
+
+get_remote_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName, Exclude});
+
+get_remote_members(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_remote_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(scope(), name(), pid()) -> get_members_ret().
+
+get_remote_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_remote_members, GroupName, Exclude}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -849,6 +912,18 @@ handle_call({get_members, GroupName, Exclude}, _,
 handle_call({get_local_members, GroupName}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_local_members(GroupName, Groups), State};
+
+handle_call({get_local_members, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_members(GroupName, Groups, Exclude), State};
+
+handle_call({get_remote_members, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_members(GroupName, Groups), State};
+
+handle_call({get_remote_members, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_members(GroupName, Groups, Exclude), State};
 
 handle_call(which_groups, _,
             #state{groups = Groups} = State) ->

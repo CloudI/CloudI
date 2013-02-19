@@ -138,6 +138,7 @@ init([Config]) ->
 handle_call({reconfigure, Config, _}, _,
             #state{nodes_alive = NodesAlive,
                    timer_reconnect = TimerReconnect} = State) ->
+    Nodes = lists:usort(Config#config.nodes ++ nodes()),
     NewNodesDead = lists:foldl(fun(N, L) ->
         case cloudi_lists:delete_checked(N, L) of
             false ->
@@ -147,10 +148,10 @@ handle_call({reconfigure, Config, _}, _,
             NewL ->
                 NewL
         end
-    end, Config#config.nodes, NodesAlive),
+    end, Nodes, NodesAlive),
     NewNodesAlive = lists:filter(fun(N) ->
         not lists:member(N, NewNodesDead)
-    end, Config#config.nodes),
+    end, Nodes),
     NewTimerReconnect = if
         NewNodesDead /= [], TimerReconnect == undefined ->
             erlang:send_after(?NODE_RECONNECT, self(), reconnect);
@@ -159,10 +160,10 @@ handle_call({reconfigure, Config, _}, _,
     end,
     % assume the logger_redirect node does not need to be checked
     % if the node was removed intentionally
-    {reply, ok, State#state{nodes_dead = NewNodesDead,
-                            nodes_alive = NewNodesAlive,
+    {reply, ok, State#state{nodes_alive = NewNodesAlive,
+                            nodes_dead = NewNodesDead,
                             timer_reconnect = NewTimerReconnect,
-                            nodes = Config#config.nodes}};
+                            nodes = Nodes}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -225,7 +226,8 @@ handle_cast(Request, State) ->
 handle_info({'nodeup', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
-                   logger_redirect = NodeLogger} = State) ->
+                   logger_redirect = NodeLogger,
+                   nodes = Nodes} = State) ->
     if
         Node == NodeLogger ->
             cloudi_logger:redirect(NodeLogger);
@@ -235,7 +237,8 @@ handle_info({'nodeup', Node, InfoList},
     ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
     {noreply,
      State#state{nodes_alive = [Node | NodesAlive],
-                 nodes_dead = cloudi_lists:delete_all(Node, NodesDead)}};
+                 nodes_dead = cloudi_lists:delete_all(Node, NodesDead),
+                 nodes = lists:umerge(Nodes, [Node])}};
 
 handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,
