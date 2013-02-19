@@ -119,4 +119,3 @@ examples of CloudI integration
 
 Michael Truog (mjtruog [at] gmail (dot) com)
 
-
