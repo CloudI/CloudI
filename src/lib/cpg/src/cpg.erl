@@ -151,8 +151,8 @@ start_link(Scope) when is_atom(Scope) ->
 join(GroupName) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -172,8 +172,8 @@ join(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end;
@@ -182,8 +182,8 @@ join(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -204,8 +204,8 @@ join(Scope, GroupName, Pid)
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -222,8 +222,8 @@ join(Scope, GroupName, Pid)
 leave(GroupName) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -243,8 +243,8 @@ leave(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end;
@@ -253,8 +253,8 @@ leave(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -275,8 +275,8 @@ leave(Scope, GroupName, Pid)
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -301,8 +301,8 @@ create(GroupName) ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {create, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -326,8 +326,8 @@ create(Scope, GroupName)
                           gen_server:multi_call(Scope,
                                                 {create, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -350,8 +350,8 @@ delete(GroupName) ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {delete, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -375,8 +375,8 @@ delete(Scope, GroupName)
                           gen_server:multi_call(Scope,
                                                 {delete, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -400,8 +400,8 @@ join(GroupName, Pid)
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {join, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -425,8 +425,8 @@ join(Scope, GroupName, Pid)
                           gen_server:multi_call(Scope,
                                                 {join, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -450,8 +450,8 @@ leave(GroupName, Pid)
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {leave, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -475,8 +475,8 @@ leave(Scope, GroupName, Pid)
                           gen_server:multi_call(Scope,
                                                 {leave, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -894,8 +894,20 @@ handle_call({delete, GroupName}, _, State) ->
 handle_call({join, GroupName, Pid}, _, State) ->
     {reply, ok, join_group(GroupName, Pid, State)};
 
-handle_call({leave, GroupName, Pid}, _, State) ->
-    {reply, ok, leave_group(GroupName, Pid, State)};
+handle_call({leave, GroupName, Pid}, _,
+            #state{pids = Pids} = State) ->
+    Found = case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:member(GroupName, GroupNameList)
+    end,
+    if
+        Found ->
+            {reply, ok, leave_group(GroupName, Pid, State)};
+        true ->
+            {reply, error, State}
+    end;
 
 handle_call(cpg_data, _,
             #state{groups = Groups} = State) ->
@@ -1309,3 +1321,11 @@ group_name_validate(Name) ->
 group_name_validate(_) ->
     ok.
 -endif.
+
+check_multi_call_replies([]) ->
+    ok;
+check_multi_call_replies([{_, ok} | Replies]) ->
+    check_multi_call_replies(Replies);
+check_multi_call_replies([{_, Result} | _]) ->
+    Result.
+
