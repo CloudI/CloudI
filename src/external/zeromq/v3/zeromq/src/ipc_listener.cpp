@@ -52,8 +52,7 @@ zmq::ipc_listener_t::ipc_listener_t (io_thread_t *io_thread_,
 
 zmq::ipc_listener_t::~ipc_listener_t ()
 {
-    if (s != retired_fd)
-        close ();
+    zmq_assert (s == retired_fd);
 }
 
 void zmq::ipc_listener_t::process_plug ()
@@ -77,12 +76,12 @@ void zmq::ipc_listener_t::in_event ()
     //  If connection was reset by the peer in the meantime, just ignore it.
     //  TODO: Handle specific errors like ENFILE/EMFILE etc.
     if (fd == retired_fd) {
-        socket->monitor_event (ZMQ_EVENT_ACCEPT_FAILED, endpoint.c_str(), zmq_errno());
+        socket->event_accept_failed (endpoint, zmq_errno());
         return;
     }
 
     //  Create the engine object for this connection.
-    stream_engine_t *engine = new (std::nothrow) stream_engine_t (fd, options);
+    stream_engine_t *engine = new (std::nothrow) stream_engine_t (fd, options, endpoint);
     alloc_assert (engine);
 
     //  Choose I/O thread to run connecter in. Given that we are already
@@ -97,13 +96,17 @@ void zmq::ipc_listener_t::in_event ()
     session->inc_seqnum ();
     launch_child (session);
     send_attach (session, engine, false);
-    socket->monitor_event (ZMQ_EVENT_ACCEPTED, endpoint.c_str(), fd);
+    socket->event_accepted (endpoint, fd);
 }
 
 int zmq::ipc_listener_t::get_address (std::string &addr_)
 {
     struct sockaddr_storage ss;
+#ifdef ZMQ_HAVE_HPUX
+    int sl = sizeof (ss);
+#else
     socklen_t sl = sizeof (ss);
+#endif
     int rc = getsockname (s, (sockaddr *) &ss, &sl);
     if (rc != 0) {
         addr_.clear ();
@@ -142,7 +145,7 @@ int zmq::ipc_listener_t::set_address (const char *addr_)
     //  Bind the socket to the file path.
     rc = bind (s, address.addr (), address.addrlen ());
     if (rc != 0)
-        return -1;
+        goto error;
 
     filename.assign(addr_);
     has_file = true;
@@ -150,45 +153,51 @@ int zmq::ipc_listener_t::set_address (const char *addr_)
     //  Listen for incomming connections.
     rc = listen (s, options.backlog);
     if (rc != 0)
-        return -1;
+        goto error;
 
-    socket->monitor_event (ZMQ_EVENT_LISTENING, addr_, s);
+    socket->event_listening (endpoint, s);
     return 0;
+
+error:
+    int err = errno;
+    close ();
+    errno = err;
+    return -1;
 }
 
 int zmq::ipc_listener_t::close ()
 {
     zmq_assert (s != retired_fd);
     int rc = ::close (s);
-    if (rc != 0) {
-        socket->monitor_event (ZMQ_EVENT_CLOSE_FAILED, endpoint.c_str(), zmq_errno());
-        return -1;
-    }
+    errno_assert (rc == 0);
+
+    s = retired_fd;
 
     //  If there's an underlying UNIX domain socket, get rid of the file it
     //  is associated with.
     if (has_file && !filename.empty ()) {
         rc = ::unlink(filename.c_str ());
         if (rc != 0) {
-            socket->monitor_event (ZMQ_EVENT_CLOSE_FAILED, endpoint.c_str(), zmq_errno());
+            socket->event_close_failed (endpoint, zmq_errno());
             return -1;
         }
     }
 
-    socket->monitor_event (ZMQ_EVENT_CLOSED, endpoint.c_str(), s);
-    s = retired_fd;
+    socket->event_closed (endpoint, s);
     return 0;
 }
 
 zmq::fd_t zmq::ipc_listener_t::accept ()
 {
     //  Accept one connection and deal with different failure modes.
+    //  The situation where connection cannot be accepted due to insufficient
+    //  resources is considered valid and treated by ignoring the connection.
     zmq_assert (s != retired_fd);
     fd_t sock = ::accept (s, NULL, NULL);
     if (sock == -1) {
         errno_assert (errno == EAGAIN || errno == EWOULDBLOCK ||
             errno == EINTR || errno == ECONNABORTED || errno == EPROTO ||
-            errno == ENOBUFS);
+            errno == ENFILE);
         return retired_fd;
     }
     return sock;

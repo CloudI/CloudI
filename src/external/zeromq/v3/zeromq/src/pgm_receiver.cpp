@@ -233,7 +233,7 @@ void zmq::pgm_receiver_t::in_event ()
             it->second.decoder = new (std::nothrow) decoder_t (0,
                 options.maxmsgsize);
             alloc_assert (it->second.decoder);
-            it->second.decoder->set_session (session);
+            it->second.decoder->set_msg_sink (session);
         }
 
         mru_decoder = it->second.decoder;
@@ -274,7 +274,8 @@ void zmq::pgm_receiver_t::timer_event (int token)
 void zmq::pgm_receiver_t::drop_subscriptions ()
 {
     msg_t msg;
-    while (session->read (&msg))
+    msg.init ();
+    while (session->pull_msg (&msg))
         msg.close ();
 }
 

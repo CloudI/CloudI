@@ -1,7 +1,7 @@
 beamdir = ../ebin
-beam_DATA = cloudi_job_flood.beam
+beam_DATA = cloudi_service_flood.beam
 CLEANFILES = $(beam_DATA) \
-             $(beamdir)/cloudi_job_flood.beam
+             $(beamdir)/cloudi_service_flood.beam
 
 all-local: $(beam_DATA)
 	$(MKDIR_P) $(beamdir) || exit 0

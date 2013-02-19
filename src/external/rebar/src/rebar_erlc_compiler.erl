@@ -29,8 +29,8 @@
 -export([compile/2,
          clean/2]).
 
--export([doterl_compile/2,
-         doterl_compile/3]).
+%% for internal use by only eunit and qc
+-export([test_compile/3]).
 
 -include("rebar.hrl").
 
@@ -68,15 +68,8 @@
 %%                           'old_inets'}]}.
 %%
 
--spec compile(Config::rebar_config:config(), AppFile::file:filename()) -> 'ok'.
+-spec compile(rebar_config:config(), file:filename()) -> 'ok'.
 compile(Config, _AppFile) ->
-    ?DEPRECATED(xrl_opts, fail_on_warning, warnings_as_errors,
-                rebar_config:get_list(Config, xrl_opts, []),
-                "once R14B04 is released"),
-    ?DEPRECATED(yrl_opts, fail_on_warning, warnings_as_errors,
-                rebar_config:get_list(Config, yrl_opts, []),
-                "once R14B04 is released"),
-
     rebar_base_compiler:run(Config,
                             check_files(rebar_config:get_local(
                                           Config, xrl_first_files, [])),
@@ -94,7 +87,7 @@ compile(Config, _AppFile) ->
                             fun compile_mib/3),
     doterl_compile(Config, "ebin").
 
--spec clean(Config::rebar_config:config(), AppFile::file:filename()) -> 'ok'.
+-spec clean(rebar_config:config(), file:filename()) -> 'ok'.
 clean(_Config, _AppFile) ->
     MibFiles = rebar_utils:find_files("mibs", "^.*\\.mib\$"),
     MIBs = [filename:rootname(filename:basename(MIB)) || MIB <- MibFiles],
@@ -117,30 +110,127 @@ clean(_Config, _AppFile) ->
     lists:foreach(fun(Dir) -> delete_dir(Dir, dirs(Dir)) end, dirs("ebin")),
     ok.
 
+%% ===================================================================
+%% .erl Compilation API (externally used by only eunit and qc)
+%% ===================================================================
+
+test_compile(Config, Cmd, OutDir) ->
+    %% Obtain all the test modules for inclusion in the compile stage.
+    %% Notice: this could also be achieved with the following
+    %% rebar.config option: {test_compile_opts, [{src_dirs, ["test"]}]}
+    TestErls = rebar_utils:find_files("test", ".*\\.erl\$"),
+
+    %% Copy source files to eunit dir for cover in case they are not directly
+    %% in src but in a subdirectory of src. Cover only looks in cwd and ../src
+    %% for source files. Also copy files from src_dirs.
+    ErlOpts = rebar_utils:erl_opts(Config),
+
+    SrcDirs = rebar_utils:src_dirs(proplists:append_values(src_dirs, ErlOpts)),
+    SrcErls = lists:foldl(
+                fun(Dir, Acc) ->
+                        Files = rebar_utils:find_files(Dir, ".*\\.erl\$"),
+                        lists:append(Acc, Files)
+                end, [], SrcDirs),
+
+    %% If it is not the first time rebar eunit is executed, there will be source
+    %% files already present in OutDir. Since some SCMs (like Perforce) set
+    %% the source files as being read only (unless they are checked out), we
+    %% need to be sure that the files already present in OutDir are writable
+    %% before doing the copy. This is done here by removing any file that was
+    %% already present before calling rebar_file_utils:cp_r.
+
+    %% Get the full path to a file that was previously copied in OutDir
+    ToCleanUp = fun(F, Acc) ->
+                        F2 = filename:basename(F),
+                        F3 = filename:join([OutDir, F2]),
+                        case filelib:is_regular(F3) of
+                            true -> [F3|Acc];
+                            false -> Acc
+                        end
+                end,
+
+    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], TestErls)),
+    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
+
+    ok = rebar_file_utils:cp_r(SrcErls ++ TestErls, OutDir),
+
+    %% Compile erlang code to OutDir, using a tweaked config
+    %% with appropriate defines for eunit, and include all the test modules
+    %% as well.
+    ok = doterl_compile(test_compile_config(Config, Cmd), OutDir, TestErls),
+
+    {ok, SrcErls}.
 
 %% ===================================================================
-%% .erl Compilation API (externally used by only eunit)
+%% Internal functions
 %% ===================================================================
 
--spec doterl_compile(Config::rebar_config:config(),
-                     OutDir::file:filename()) -> 'ok'.
+test_compile_config(Config, Cmd) ->
+    {Config1, TriqOpts} = triq_opts(Config),
+    {Config2, PropErOpts} = proper_opts(Config1),
+    {Config3, EqcOpts} = eqc_opts(Config2),
+
+    ErlOpts = rebar_config:get_list(Config3, erl_opts, []),
+    OptsAtom = list_to_atom(Cmd ++ "_compile_opts"),
+    EunitOpts = rebar_config:get_list(Config3, OptsAtom, []),
+    Opts0 = [{d, 'TEST'}] ++
+        ErlOpts ++ EunitOpts ++ TriqOpts ++ PropErOpts ++ EqcOpts,
+    Opts = [O || O <- Opts0, O =/= no_debug_info],
+    Config4 = rebar_config:set(Config3, erl_opts, Opts),
+
+    FirstFilesAtom = list_to_atom(Cmd ++ "_first_files"),
+    FirstErls = rebar_config:get_list(Config4, FirstFilesAtom, []),
+    rebar_config:set(Config4, erl_first_files, FirstErls).
+
+triq_opts(Config) ->
+    {NewConfig, IsAvail} = is_lib_avail(Config, is_triq_avail, triq,
+                                        "triq.hrl", "Triq"),
+    Opts = define_if('TRIQ', IsAvail),
+    {NewConfig, Opts}.
+
+proper_opts(Config) ->
+    {NewConfig, IsAvail} = is_lib_avail(Config, is_proper_avail, proper,
+                                        "proper.hrl", "PropEr"),
+    Opts = define_if('PROPER', IsAvail),
+    {NewConfig, Opts}.
+
+eqc_opts(Config) ->
+    {NewConfig, IsAvail} = is_lib_avail(Config, is_eqc_avail, eqc,
+                                        "eqc.hrl", "QuickCheck"),
+    Opts = define_if('EQC', IsAvail),
+    {NewConfig, Opts}.
+
+define_if(Def, true) -> [{d, Def}];
+define_if(_Def, false) -> [].
+
+is_lib_avail(Config, DictKey, Mod, Hrl, Name) ->
+    case rebar_config:get_xconf(Config, DictKey, undefined) of
+        undefined ->
+            IsAvail = case code:lib_dir(Mod, include) of
+                          {error, bad_name} ->
+                              false;
+                          Dir ->
+                              filelib:is_regular(filename:join(Dir, Hrl))
+                      end,
+            NewConfig = rebar_config:set_xconf(Config, DictKey, IsAvail),
+            ?DEBUG("~s availability: ~p\n", [Name, IsAvail]),
+            {NewConfig, IsAvail};
+        IsAvail ->
+            {Config, IsAvail}
+    end.
+
+-spec doterl_compile(rebar_config:config(), file:filename()) -> 'ok'.
 doterl_compile(Config, OutDir) ->
     doterl_compile(Config, OutDir, []).
 
 doterl_compile(Config, OutDir, MoreSources) ->
     FirstErls = rebar_config:get_list(Config, erl_first_files, []),
-    RawErlOpts = filter_defines(rebar_config:get(Config, erl_opts, []), []),
-    ErlOpts = case proplists:is_defined(no_debug_info, RawErlOpts) of
-                  true ->
-                      [O || O <- RawErlOpts, O =/= no_debug_info];
-                  _ ->
-                      [debug_info|RawErlOpts]
-              end,
-    ?DEBUG("erl_opts ~p~n",[ErlOpts]),
+    ErlOpts = rebar_utils:erl_opts(Config),
+    ?DEBUG("erl_opts ~p~n", [ErlOpts]),
     %% Support the src_dirs option allowing multiple directories to
     %% contain erlang source. This might be used, for example, should
     %% eunit tests be separated from the core application source.
-    SrcDirs = src_dirs(proplists:append_values(src_dirs, ErlOpts)),
+    SrcDirs = rebar_utils:src_dirs(proplists:append_values(src_dirs, ErlOpts)),
     RestErls  = [Source || Source <- gather_src(SrcDirs, []) ++ MoreSources,
                            not lists:member(Source, FirstErls)],
 
@@ -154,6 +244,8 @@ doterl_compile(Config, OutDir, MoreSources) ->
                                     [[F | A], B, C];
                                 behaviour ->
                                     [A, [F | B], C];
+                                callback ->
+                                    [A, [F | B], C];
                                 _ ->
                                     [A, B, [F | C]]
                             end
@@ -165,9 +257,10 @@ doterl_compile(Config, OutDir, MoreSources) ->
     ok = filelib:ensure_dir(filename:join("ebin", "dummy.beam")),
     CurrPath = code:get_path(),
     true = code:add_path(filename:absname("ebin")),
+    OutDir1 = proplists:get_value(outdir, ErlOpts, OutDir),
     rebar_base_compiler:run(Config, NewFirstErls, OtherErls,
                             fun(S, C) ->
-                                    internal_erl_compile(S, C, OutDir, ErlOpts)
+                                    internal_erl_compile(C, S, OutDir1, ErlOpts)
                             end),
     true = code:set_path(CurrPath),
     ok.
@@ -177,15 +270,15 @@ doterl_compile(Config, OutDir, MoreSources) ->
 %% Internal functions
 %% ===================================================================
 
--spec include_path(Source::file:filename(),
-                   Config::rebar_config:config()) -> [file:filename(), ...].
+-spec include_path(file:filename(),
+                   rebar_config:config()) -> [file:filename(), ...].
 include_path(Source, Config) ->
     ErlOpts = rebar_config:get(Config, erl_opts, []),
     ["include", filename:dirname(Source)]
         ++ proplists:get_all_values(i, ErlOpts).
 
--spec inspect(Source::file:filename(),
-              IncludePath::[file:filename(), ...]) -> {string(), [string()]}.
+-spec inspect(file:filename(),
+              [file:filename(), ...]) -> {string(), [string()]}.
 inspect(Source, IncludePath) ->
     ModuleDefault = filename:basename(Source, ".erl"),
     case epp:open(Source, IncludePath) of
@@ -196,27 +289,28 @@ inspect(Source, IncludePath) ->
             {ModuleDefault, []}
     end.
 
--spec inspect_epp(Epp::pid(), Source::file:filename(), Module::file:filename(),
-                  Includes::[string()]) -> {string(), [string()]}.
+-spec inspect_epp(pid(), file:filename(), file:filename(),
+                  [string()]) -> {string(), [string()]}.
 inspect_epp(Epp, Source, Module, Includes) ->
     case epp:parse_erl_form(Epp) of
         {ok, {attribute, _, module, ModInfo}} ->
-            case ModInfo of
-                %% Typical module name, single atom
-                ActualModule when is_atom(ActualModule) ->
-                    ActualModuleStr = atom_to_list(ActualModule);
-                %% Packag-ized module name, list of atoms
-                ActualModule when is_list(ActualModule) ->
-                    ActualModuleStr = string:join([atom_to_list(P) ||
-                                                      P <- ActualModule], ".");
-                %% Parameterized module name, single atom
-                {ActualModule, _} when is_atom(ActualModule) ->
-                    ActualModuleStr = atom_to_list(ActualModule);
-                %% Parameterized and packagized module name, list of atoms
-                {ActualModule, _} when is_list(ActualModule) ->
-                    ActualModuleStr = string:join([atom_to_list(P) ||
-                                                      P <- ActualModule], ".")
-            end,
+            ActualModuleStr =
+                case ModInfo of
+                    %% Typical module name, single atom
+                    ActualModule when is_atom(ActualModule) ->
+                        atom_to_list(ActualModule);
+                    %% Packag-ized module name, list of atoms
+                    ActualModule when is_list(ActualModule) ->
+                        string:join([atom_to_list(P) ||
+                                        P <- ActualModule], ".");
+                    %% Parameterized module name, single atom
+                    {ActualModule, _} when is_atom(ActualModule) ->
+                        atom_to_list(ActualModule);
+                    %% Parameterized and packagized module name, list of atoms
+                    {ActualModule, _} when is_list(ActualModule) ->
+                        string:join([atom_to_list(P) ||
+                                        P <- ActualModule], ".")
+                end,
             inspect_epp(Epp, Source, ActualModuleStr, Includes);
         {ok, {attribute, 1, file, {Module, 1}}} ->
             inspect_epp(Epp, Source, Module, Includes);
@@ -231,18 +325,16 @@ inspect_epp(Epp, Source, Module, Includes) ->
             inspect_epp(Epp, Source, Module, Includes)
     end.
 
--spec needs_compile(Source::file:filename(), Target::file:filename(),
-                    Hrls::[string()]) -> boolean().
+-spec needs_compile(file:filename(), file:filename(),
+                    [string()]) -> boolean().
 needs_compile(Source, Target, Hrls) ->
     TargetLastMod = filelib:last_modified(Target),
     lists:any(fun(I) -> TargetLastMod < filelib:last_modified(I) end,
               [Source] ++ Hrls).
 
--spec internal_erl_compile(Source::file:filename(),
-                           Config::rebar_config:config(),
-                           Outdir::file:filename(),
-                           ErlOpts::list()) -> 'ok' | 'skipped'.
-internal_erl_compile(Source, Config, Outdir, ErlOpts) ->
+-spec internal_erl_compile(rebar_config:config(), file:filename(),
+                           file:filename(), list()) -> 'ok' | 'skipped'.
+internal_erl_compile(Config, Source, Outdir, ErlOpts) ->
     %% Determine the target name and includes list by inspecting the source file
     {Module, Hrls} = inspect(Source, include_path(Source, Config)),
 
@@ -255,21 +347,25 @@ internal_erl_compile(Source, Config, Outdir, ErlOpts) ->
     case needs_compile(Source, Target, Hrls) of
         true ->
             Opts = [{outdir, filename:dirname(Target)}] ++
-                ErlOpts ++ [{i, "include"}, report],
+                ErlOpts ++ [{i, "include"}, return],
             case compile:file(Source, Opts) of
-                {ok, _} ->
+                {ok, _Mod} ->
                     ok;
-                _ ->
-                    ?FAIL
+                {ok, _Mod, Ws} ->
+                    rebar_base_compiler:ok_tuple(Config, Source, Ws);
+                {error, Es, Ws} ->
+                    rebar_base_compiler:error_tuple(Config, Source,
+                                                    Es, Ws, Opts)
             end;
         false ->
             skipped
     end.
 
--spec compile_mib(Source::file:filename(), Target::file:filename(),
-                  Config::rebar_config:config()) -> 'ok'.
+-spec compile_mib(file:filename(), file:filename(),
+                  rebar_config:config()) -> 'ok'.
 compile_mib(Source, Target, Config) ->
     ok = rebar_utils:ensure_dir(Target),
+    ok = rebar_utils:ensure_dir(filename:join("include", "dummy.hrl")),
     Opts = [{outdir, "priv/mibs"}, {i, ["priv/mibs"]}] ++
         rebar_config:get(Config, mib_opts, []),
     case snmpc:compile(Source, Opts) of
@@ -277,44 +373,37 @@ compile_mib(Source, Target, Config) ->
             Mib = filename:rootname(Target),
             ok = snmpc:mib_to_hrl(Mib),
             Hrl_filename = Mib ++ ".hrl",
-            rebar_file_utils:mv(Hrl_filename,"include"),
+            rebar_file_utils:mv(Hrl_filename, "include"),
             ok;
         {error, compilation_failed} ->
             ?FAIL
     end.
 
--spec compile_xrl(Source::file:filename(), Target::file:filename(),
-                  Config::rebar_config:config()) -> 'ok'.
+-spec compile_xrl(file:filename(), file:filename(),
+                  rebar_config:config()) -> 'ok'.
 compile_xrl(Source, Target, Config) ->
-    Opts = [{scannerfile, Target}, {return, true}
-            | rebar_config:get(Config, xrl_opts, [])],
-    compile_xrl_yrl(Source, Target, Opts, leex).
+    Opts = [{scannerfile, Target} | rebar_config:get(Config, xrl_opts, [])],
+    compile_xrl_yrl(Config, Source, Target, Opts, leex).
 
--spec compile_yrl(Source::file:filename(), Target::file:filename(),
-                  Config::rebar_config:config()) -> 'ok'.
+-spec compile_yrl(file:filename(), file:filename(),
+                  rebar_config:config()) -> 'ok'.
 compile_yrl(Source, Target, Config) ->
-    Opts = [{parserfile, Target}, {return, true}
-            | rebar_config:get(Config, yrl_opts, [])],
-    compile_xrl_yrl(Source, Target, Opts, yecc).
+    Opts = [{parserfile, Target} | rebar_config:get(Config, yrl_opts, [])],
+    compile_xrl_yrl(Config, Source, Target, Opts, yecc).
 
--spec compile_xrl_yrl(Source::file:filename(), Target::file:filename(),
-                      Opts::list(), Mod::atom()) -> 'ok'.
-compile_xrl_yrl(Source, Target, Opts, Mod) ->
+-spec compile_xrl_yrl(rebar_config:config(), file:filename(),
+                      file:filename(), list(), module()) -> 'ok'.
+compile_xrl_yrl(Config, Source, Target, Opts, Mod) ->
     case needs_compile(Source, Target, []) of
         true ->
-            case Mod:file(Source, Opts) of
-                {ok, _, []} ->
+            case Mod:file(Source, Opts ++ [{return, true}]) of
+                {ok, _} ->
                     ok;
-                {ok, _, _Warnings} ->
-                    %% TODO: remove once R14B04 is released
-                    case lists:member(fail_on_warning, Opts) of
-                        true ->
-                            ?FAIL;
-                        false ->
-                            ok
-                    end;
-                _X ->
-                    ?FAIL
+                {ok, _Mod, Ws} ->
+                    rebar_base_compiler:ok_tuple(Config, Source, Ws);
+                {error, Es, Ws} ->
+                    rebar_base_compiler:error_tuple(Config, Source,
+                                                    Es, Ws, Opts)
             end;
         false ->
             skipped
@@ -325,26 +414,21 @@ gather_src([], Srcs) ->
 gather_src([Dir|Rest], Srcs) ->
     gather_src(Rest, Srcs ++ rebar_utils:find_files(Dir, ".*\\.erl\$")).
 
--spec src_dirs(SrcDirs::[string()]) -> [file:filename(), ...].
-src_dirs([]) ->
-    ["src"];
-src_dirs(SrcDirs) ->
-    SrcDirs ++ src_dirs([]).
 
--spec dirs(Dir::file:filename()) -> [file:filename()].
+-spec dirs(file:filename()) -> [file:filename()].
 dirs(Dir) ->
     [F || F <- filelib:wildcard(filename:join([Dir, "*"])), filelib:is_dir(F)].
 
--spec delete_dir(Dir::file:filename(),
-                 Subdirs::[string()]) -> 'ok' | {'error', atom()}.
+-spec delete_dir(file:filename(), [string()]) -> 'ok' | {'error', atom()}.
 delete_dir(Dir, []) ->
     file:del_dir(Dir);
 delete_dir(Dir, Subdirs) ->
     lists:foreach(fun(D) -> delete_dir(D, dirs(D)) end, Subdirs),
     file:del_dir(Dir).
 
--spec compile_priority(File::file:filename()) -> 'normal' | 'behaviour' |
-                                                 'parse_transform'.
+-spec compile_priority(file:filename()) -> 'normal' | 'behaviour' |
+                                           'callback' |
+                                           'parse_transform'.
 compile_priority(File) ->
     case epp_dodger:parse_file(File) of
         {error, _} ->
@@ -366,6 +450,9 @@ compile_priority(File) ->
                      {attribute, {tree, atom, _, export},
                       [{tree, list, _, {list, List, none}}]}}, Acc) ->
                         lists:foldl(F2, Acc, List);
+                   ({tree, attribute, _,
+                     {attribute, {tree, atom, _, callback},_}}, _Acc) ->
+                        callback;
                    (_, Acc) ->
                         Acc
                 end,
@@ -374,33 +461,9 @@ compile_priority(File) ->
     end.
 
 %%
-%% Filter a list of erl_opts platform_define options such that only
-%% those which match the provided architecture regex are returned.
-%%
--spec filter_defines(ErlOpts::list(), Acc::list()) -> list().
-filter_defines([], Acc) ->
-    lists:reverse(Acc);
-filter_defines([{platform_define, ArchRegex, Key} | Rest], Acc) ->
-    case rebar_utils:is_arch(ArchRegex) of
-        true ->
-            filter_defines(Rest, [{d, Key} | Acc]);
-        false ->
-            filter_defines(Rest, Acc)
-    end;
-filter_defines([{platform_define, ArchRegex, Key, Value} | Rest], Acc) ->
-    case rebar_utils:is_arch(ArchRegex) of
-        true ->
-            filter_defines(Rest, [{d, Key, Value} | Acc]);
-        false ->
-            filter_defines(Rest, Acc)
-    end;
-filter_defines([Opt | Rest], Acc) ->
-    filter_defines(Rest, [Opt | Acc]).
-
-%%
 %% Ensure all files in a list are present and abort if one is missing
 %%
--spec check_files(FileList::[file:filename()]) -> [file:filename()].
+-spec check_files([file:filename()]) -> [file:filename()].
 check_files(FileList) ->
     [check_file(F) || F <- FileList].
 

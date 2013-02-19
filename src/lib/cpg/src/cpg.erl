@@ -35,7 +35,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -72,6 +72,10 @@
          get_members/3,
          get_local_members/1,
          get_local_members/2,
+         get_local_members/3,
+         get_remote_members/1,
+         get_remote_members/2,
+         get_remote_members/3,
          which_groups/0,
          which_groups/1,
          get_closest_pid/1,
@@ -147,8 +151,8 @@ start_link(Scope) when is_atom(Scope) ->
 join(GroupName) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -168,8 +172,8 @@ join(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end;
@@ -178,8 +182,8 @@ join(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -200,8 +204,8 @@ join(Scope, GroupName, Pid)
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -218,8 +222,8 @@ join(Scope, GroupName, Pid)
 leave(GroupName) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -239,8 +243,8 @@ leave(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end;
@@ -249,8 +253,8 @@ leave(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -271,8 +275,8 @@ leave(Scope, GroupName, Pid)
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
     case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -297,8 +301,8 @@ create(GroupName) ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {create, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -322,8 +326,8 @@ create(Scope, GroupName)
                           gen_server:multi_call(Scope,
                                                 {create, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -346,8 +350,8 @@ delete(GroupName) ->
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {delete, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -371,8 +375,8 @@ delete(Scope, GroupName)
                           gen_server:multi_call(Scope,
                                                 {delete, GroupName})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -396,8 +400,8 @@ join(GroupName, Pid)
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {join, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -421,8 +425,8 @@ join(Scope, GroupName, Pid)
                           gen_server:multi_call(Scope,
                                                 {join, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -446,8 +450,8 @@ leave(GroupName, Pid)
                           gen_server:multi_call(?DEFAULT_SCOPE,
                                                 {leave, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -471,8 +475,8 @@ leave(Scope, GroupName, Pid)
                           gen_server:multi_call(Scope,
                                                 {leave, GroupName, Pid})
                       end) of
-        {[_ | _], _} ->
-            ok;
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
         _ ->
             error
     end.
@@ -537,15 +541,74 @@ get_local_members(GroupName) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get only the local members of a specific group within a specific scope.===
+%% ===Get only the local members of a specific group while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_local_members(scope(), name()) -> get_members_ret().
+-spec get_local_members(name() | scope(), pid() | name()) -> get_members_ret().
+
+get_local_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_local_members, GroupName, Exclude});
 
 get_local_members(Scope, GroupName)
     when is_atom(Scope) ->
     gen_server:call(Scope, {get_local_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_local_members(scope(), name(), pid()) -> get_members_ret().
+
+get_local_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_local_members, GroupName, Exclude}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(name()) -> get_members_ret().
+
+get_remote_members(GroupName) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group while excluding a specific pid or within a specific scope.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(name() | scope(), pid() | name()) -> get_members_ret().
+
+get_remote_members(GroupName, Exclude)
+    when is_pid(Exclude) ->
+    gen_server:call(?DEFAULT_SCOPE, {get_remote_members, GroupName, Exclude});
+
+get_remote_members(Scope, GroupName)
+    when is_atom(Scope) ->
+    gen_server:call(Scope, {get_remote_members, GroupName}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group within a specific scope while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_remote_members(scope(), name(), pid()) -> get_members_ret().
+
+get_remote_members(Scope, GroupName, Exclude)
+    when is_atom(Scope), is_pid(Exclude) ->
+    gen_server:call(Scope, {get_remote_members, GroupName, Exclude}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -831,8 +894,20 @@ handle_call({delete, GroupName}, _, State) ->
 handle_call({join, GroupName, Pid}, _, State) ->
     {reply, ok, join_group(GroupName, Pid, State)};
 
-handle_call({leave, GroupName, Pid}, _, State) ->
-    {reply, ok, leave_group(GroupName, Pid, State)};
+handle_call({leave, GroupName, Pid}, _,
+            #state{pids = Pids} = State) ->
+    Found = case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:member(GroupName, GroupNameList)
+    end,
+    if
+        Found ->
+            {reply, ok, leave_group(GroupName, Pid, State)};
+        true ->
+            {reply, error, State}
+    end;
 
 handle_call(cpg_data, _,
             #state{groups = Groups} = State) ->
@@ -849,6 +924,18 @@ handle_call({get_members, GroupName, Exclude}, _,
 handle_call({get_local_members, GroupName}, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:get_local_members(GroupName, Groups), State};
+
+handle_call({get_local_members, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_local_members(GroupName, Groups, Exclude), State};
+
+handle_call({get_remote_members, GroupName}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_members(GroupName, Groups), State};
+
+handle_call({get_remote_members, GroupName, Exclude}, _,
+            #state{groups = Groups} = State) ->
+    {reply, cpg_data:get_remote_members(GroupName, Groups, Exclude), State};
 
 handle_call(which_groups, _,
             #state{groups = Groups} = State) ->
@@ -1234,3 +1321,11 @@ group_name_validate(Name) ->
 group_name_validate(_) ->
     ok.
 -endif.
+
+check_multi_call_replies([]) ->
+    ok;
+check_multi_call_replies([{_, ok} | Replies]) ->
+    check_multi_call_replies(Replies);
+check_multi_call_replies([{_, Result} | _]) ->
+    Result.
+

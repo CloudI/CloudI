@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,22 +43,52 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2009-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_proplists).
 -author('mjtruog [at] gmail (dot) com').
 
--export([take_value/3,
-         take_values/2,
-         partition/2]).
+-export([delete_all/2,
+         partition/2,
+         take_value/3,
+         take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
 -type proplist() :: list({atom(), any()}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete all the instances of the keys provided.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete_all(Keys :: list(atom()),
+                 List :: proplist()) -> proplist().
+
+delete_all([], List) ->
+    List;
+
+delete_all([Key | Keys], List)
+    when is_atom(Key), is_list(List) ->
+    delete_all(Keys, proplists:delete(Key, List)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Partition the proplist based on a key.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec partition(Key :: atom(),
+                List :: proplist()) -> {proplist(), proplist()}.
+
+partition(Key, List)
+    when is_atom(Key), is_list(List) ->
+    lists:partition(fun({K, _}) -> K == Key end, List).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -93,9 +123,11 @@ take_value(Key, List, Default)
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
     take_values([], DefaultList, List).
+
 take_values(Result, [], List)
     when is_list(Result), is_list(List) ->
     lists:reverse(Result) ++ List;
+
 take_values(Result, [{Key, Default} | DefaultList], List)
     when is_list(Result), is_atom(Key), is_list(List) ->
     case lists:keytake(Key, 1, List) of
@@ -104,17 +136,4 @@ take_values(Result, [{Key, Default} | DefaultList], List)
         {value, {Key, Value}, RemainingList} ->
             take_values([Value | Result], DefaultList, RemainingList)
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Partition the proplist based on a key.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec partition(Key :: atom(),
-                List :: proplist()) -> {proplist(), proplist()}.
-
-partition(Key, List)
-    when is_atom(Key), is_list(List) ->
-    lists:partition(fun({K, _}) -> K == Key end, List).
 

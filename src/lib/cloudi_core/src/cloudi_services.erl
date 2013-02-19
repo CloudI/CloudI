@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services).
@@ -93,19 +93,19 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-monitor(M, F, A, MaxR, MaxT, JobId)
+monitor(M, F, A, MaxR, MaxT, ServiceId)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
-         is_binary(JobId), byte_size(JobId) == 16 ->
-    gen_server:call(?MODULE, {monitor, M, F, A, MaxR, MaxT, JobId}).
+         is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    gen_server:call(?MODULE, {monitor, M, F, A, MaxR, MaxT, ServiceId}).
 
-shutdown(JobId)
-    when is_binary(JobId), byte_size(JobId) == 16 ->
-    gen_server:call(?MODULE, {shutdown, JobId}).
+shutdown(ServiceId)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    gen_server:call(?MODULE, {shutdown, ServiceId}).
 
-restart(JobId)
-    when is_binary(JobId), byte_size(JobId) == 16 ->
-    gen_server:call(?MODULE, {restart, JobId}).
+restart(ServiceId)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    gen_server:call(?MODULE, {restart, ServiceId}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -114,13 +114,13 @@ restart(JobId)
 init([]) ->
     {ok, #state{}}.
 
-handle_call({monitor, M, F, A, MaxR, MaxT, JobId}, _,
+handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
     case erlang:apply(M, F, A) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pid]),
             NewServices =
-                key2value:store(JobId, Pid,
+                key2value:store(ServiceId, Pid,
                                 #service{service_m = M,
                                          service_f = F,
                                          service_a = A,
@@ -132,7 +132,7 @@ handle_call({monitor, M, F, A, MaxR, MaxT, JobId}, _,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
-                key2value:store(JobId, P,
+                key2value:store(ServiceId, P,
                                 #service{service_m = M,
                                          service_f = F,
                                          service_a = A,
@@ -146,22 +146,22 @@ handle_call({monitor, M, F, A, MaxR, MaxT, JobId}, _,
             {reply, Error, State}
     end;
 
-handle_call({shutdown, JobId}, _,
+handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
-    case key2value:find1(JobId, Services) of
+    case key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, kill),
-                key2value:erase(JobId, P, D)
+                key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
         error ->
             {reply, {error, not_found}, State}
     end;
 
-handle_call({restart, JobId}, _,
+handle_call({restart, ServiceId}, _,
             #state{services = Services} = State) ->
-    case key2value:find1(JobId, Services) of
+    case key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             lists:foreach(fun(P) ->
                 erlang:exit(P, restart)
@@ -183,14 +183,14 @@ handle_cast(Request, State) ->
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
     case key2value:find2(Pid, Services) of
-        {ok, {[JobId], #service{service_m = M,
-                                service_f = F,
-                                service_a = A,
-                                pids = Pids}}} ->
+        {ok, {[ServiceId], #service{service_m = M,
+                                    service_f = F,
+                                    service_a = A,
+                                    pids = Pids}}} ->
             ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, A]),
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
-                key2value:erase(JobId, P, D)
+                key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {noreply, State#state{services = NewServices}};
         error ->
@@ -201,8 +201,8 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
 handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             #state{services = Services} = State) ->
     case key2value:find2(Pid, Services) of
-        {ok, {[JobId], Service}} ->
-            {noreply, restart(Service, Services, State, JobId, Pid)};
+        {ok, {[ServiceId], Service}} ->
+            {noreply, restart(Service, Services, State, ServiceId, Pid)};
         error ->
             % Pids started together as threads for one OS process may
             % have died together.  The first death triggers the restart and
@@ -210,9 +210,9 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
             {noreply, State}
     end;
 
-handle_info({restart_stage2, Service, JobId, OldPid},
+handle_info({restart_stage2, Service, ServiceId, OldPid},
             #state{services = Services} = State) ->
-    {noreply, restart_stage2(Service, Services, State, JobId, OldPid)};
+    {noreply, restart_stage2(Service, Services, State, ServiceId, OldPid)};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -228,18 +228,18 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-restart(Service, Services, State, JobId, OldPid) ->
-    restart_stage1(Service, Services, State, JobId, OldPid).
+restart(Service, Services, State, ServiceId, OldPid) ->
+    restart_stage1(Service, Services, State, ServiceId, OldPid).
 
 restart_stage1(#service{pids = Pids} = Service, Services,
-               State, JobId, OldPid) ->
+               State, ServiceId, OldPid) ->
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, kill),
-        key2value:erase(JobId, P, D)
+        key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
-                   NewServices, State, JobId, OldPid).
+                   NewServices, State, ServiceId, OldPid).
 
 restart_stage2(#service{service_m = M,
                         service_f = F,
@@ -256,7 +256,7 @@ restart_stage2(#service{service_m = M,
                         service_a = A,
                         restart_count = 0,
                         restart_times = []} = Service,
-               Services, State, JobId, OldPid) ->
+               Services, State, ServiceId, OldPid) ->
     % first restart
     Now = erlang:now(),
     NewServices = case erlang:apply(M, F, A) of
@@ -265,7 +265,7 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p:~p~p", [OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
-            key2value:store(JobId, Pid,
+            key2value:store(ServiceId, Pid,
                             Service#service{pids = [Pid],
                                             monitor = Monitor,
                                             restart_count = 1,
@@ -277,7 +277,7 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
-                key2value:store(JobId, P,
+                key2value:store(ServiceId, P,
                                 Service#service{pids = Pids,
                                                 monitor = Monitor,
                                                 restart_count = 1,
@@ -289,7 +289,7 @@ restart_stage2(#service{service_m = M,
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [Now]},
-                      JobId,
+                      ServiceId,
                       OldPid},
             Services
     end,
@@ -302,7 +302,7 @@ restart_stage2(#service{service_m = M,
                         restart_times = RestartTimes,
                         max_r = MaxR,
                         max_t = MaxT} = Service,
-               Services, State, JobId, OldPid)
+               Services, State, ServiceId, OldPid)
     when MaxR == RestartCount ->
     % last restart?
     Now = erlang:now(),
@@ -314,7 +314,7 @@ restart_stage2(#service{service_m = M,
         NewRestartCount < RestartCount ->
             restart_stage2(Service#service{restart_count = NewRestartCount,
                                            restart_times = NewRestartTimes},
-                           Services, State, JobId, OldPid);
+                           Services, State, ServiceId, OldPid);
         true ->
             ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
                       " ~p:~p~p", [MaxR, MaxT, OldPid, M, F, A]),
@@ -326,7 +326,7 @@ restart_stage2(#service{service_m = M,
                         service_a = A,
                         restart_count = RestartCount,
                         restart_times = RestartTimes} = Service,
-               Services, State, JobId, OldPid) ->
+               Services, State, ServiceId, OldPid) ->
     % typical restart scenario
     Now = erlang:now(),
     R = RestartCount + 1,
@@ -337,7 +337,7 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
-            key2value:store(JobId, Pid,
+            key2value:store(ServiceId, Pid,
                             Service#service{pids = [Pid],
                                             monitor = Monitor,
                                             restart_count = R,
@@ -350,7 +350,7 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [R, T, OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
-                key2value:store(JobId, P,
+                key2value:store(ServiceId, P,
                                 Service#service{pids = Pids,
                                                 monitor = Monitor,
                                                 restart_count = R,
@@ -362,7 +362,9 @@ restart_stage2(#service{service_m = M,
             ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
-                                      restart_times = [Now | RestartTimes]}},
+                                      restart_times = [Now | RestartTimes]},
+                      ServiceId,
+                      OldPid},
             Services
     end,
     State#state{services = NewServices}.

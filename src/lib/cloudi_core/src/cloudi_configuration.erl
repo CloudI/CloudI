@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2, jobs_restart/2, jobs/1,
+         services_add/2, services_remove/2, services_restart/2, services/1,
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
@@ -62,8 +62,8 @@
 
 -define(CONFIGURATION_FILE_NAME, "cloudi.conf").
 
-% internal job parameters
-% (same as the config_job_internal record, but the order is significant
+% internal service parameters
+% (same as the config_service_internal record, but the order is significant
 %  since it is used within all configuration data)
 -record(internal,
     {
@@ -82,8 +82,8 @@
         options
     }).
     
-% external job parameters
-% (same as the config_job_external record, but the order is significant
+% external service parameters
+% (same as the config_service_external record, but the order is significant
 %  since it is used within all configuration data)
 -record(external,
     {
@@ -120,43 +120,46 @@
 %%
 %%   `off, fatal, error, warn, info, debug, trace'
 %%
-%% ====jobs:====
-%%   `{jobs, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT}]}'
+%% ====services:====
+%%   `{services, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT}]}'
 %%
-%%   Job configuration defines all the necessary information for the lifetime
-%%   of running the job, which may be a service or a short-lived task.
-%%   Every job defines a service name prefix which provides scope for the job
-%%   (ServiceNamePrefix) and typically uses the forward slash ('/')
+%%   Services configuration defines all the necessary information for the
+%%   lifetime of running the service.
+%%   Every service defines a name prefix which provides scope for the
+%%   service (ServiceNamePrefix) and typically uses the forward slash ('/')
 %%   character as a path delimiter (though this convention is not required
-%%   for service functionality). An internal job is an Erlang module that
-%%   exists in the code search path and is started with a list of
+%%   for service functionality). An internal service is an Erlang application
+%%   or module that exists in the code search path and is started with a list of
 %%   initialization arguments (ErlangModuleName and ModuleInitializationList).
-%%   An external job is an executable that has integrated with the CloudI API
-%%   and is provided as the executable file path (ExecutableFilePath).
-%%   An external job also specifies the command line arguments and the
-%%   environmental variables (ExecutableCommandLineArguments and
-%%   ExecutableEnvironmentalVariables) that are used when executing the job.
-%%   Currently, the ThreadCount, Protocol, and ProtocolBufferSize are 
-%%   typically provided as command line arguments to the executable, though
-%%   they could be provided as environmental variables or be hard-coded
-%%   within the job (least desirable choice).
+%%   An external service is an executable that has integrated with the
+%%   CloudI API and is provided as the executable file path
+%%   (ExecutableFilePath). An external service also specifies the command line
+%%   arguments and the environmental variables
+%%   (ExecutableCommandLineArguments and ExecutableEnvironmentalVariables)
+%%   that are used when executing the service.
 %%
-%%   Each job configuration then defines the destination refresh method
-%%   (DestinationRefreshMethod) which may be set to: lazy_closest, lazy_random,
-%%   immediate_closest, immediate_random, or none. A "lazy" destination refresh
+%%   Each service configuration then defines the destination refresh method
+%%   (DestinationRefreshMethod) which may be set to: lazy_closest,
+%%   lazy_furthest, lazy_random, lazy_local, lazy_remote, immediate_closest,
+%%   immediate_furthest, immediate_random, immediate_local, immediate_remote,
+%%   or none. A "lazy" destination refresh
 %%   method prefix is used by services that send messages to only
 %%   long-lived services and will avoid contention for doing service name
 %%   lookups (i.e., the most scalable choice).  An "immediate" destination
 %%   refresh method prefix is used by services that send messages to
 %%   short-lived services.  A "closest" destination refresh method suffix
-%%   always prefers to send to a service (with the same service name) on the
-%%   local machine rather than send to a remote machine.  A "random"
-%%   destination refresh method suffix always selects a service randomly,
-%%   so the service message is uniformly distributed among all services that
-%%   have subscribed to the same service name.
+%%   always prefers to send to a service on the local machine rather than send
+%%   to a remote machine, to minimize latency.  A "furthest" destination
+%%   refresh method suffix always prefers to send to a service on a remote
+%%   machine, for fault-tolerance.  A "random" destination refresh method
+%%   suffix always selects a service randomly, to load-balance the requests
+%%   among both local and remote service instances,  A "local" destination
+%%   refresh method will only send to local service instances, for minimal
+%%   latency.  A "remote" destination refresh method will only send to remote
+%%   service instances, to always provide a fault-tolerance guarantee.
 %%
 %%   The InitializationTimeout timeout specifies how long an internal service
-%%   can spend in its cloudi_job_init/3 function or how long an external
+%%   can spend in its cloudi_service_init/3 function or how long an external
 %%   service may take to instantiate the CloudI API data structure (for all
 %%   of the configured threads). The DefaultAsynchronousTimeout and the
 %%   DefaultSynchronousTimeout provide timeouts for any service function calls
@@ -195,9 +198,12 @@
 %%
 %% ====nodes:====
 %%   `{nodes, [cloudi@hostname1, cloudi@hostname2]}'
+%%   `{nodes, automatic}'
 %%
 %%   Remote CloudI nodes that are started separately
-%%   (CloudI operates as a master-less system).
+%%   (CloudI operates as a master-less system).  Instead of providing the
+%%   exact node names within a list, you can also provide "automatic"
+%%   to let nodefinder do automatic node discovery.
 %%
 %% @end
 %%-------------------------------------------------------------------------
@@ -236,119 +242,141 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Add jobs (services) based on the configuration format.===
+%% ===Add services based on the configuration format.===
 %% @end
 %%-------------------------------------------------------------------------
-jobs_add([T | _] = Value, #config{uuid_generator = UUID,
-                                  jobs = Jobs,
-                                  acl = ACL} = Config)
+services_add([T | _] = Value, #config{uuid_generator = UUID,
+                                      services = Services,
+                                      acl = ACL} = Config)
     when is_record(T, internal); is_record(T, external) ->
-    NewJobs = jobs_acl_update([], jobs_validate([], Value, UUID), ACL),
-    lists:foreach(fun(J) -> cloudi_configurator:job_start(J) end, NewJobs),
-    Config#config{jobs = Jobs ++ NewJobs}.
+    NewServices = services_acl_update([],
+                                      services_validate([], Value, UUID), ACL),
+    lists:foreach(fun cloudi_configurator:service_start/1, NewServices),
+    Config#config{services = Services ++ NewServices}.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Remove jobs (services) based on their UUID.===
+%% ===Remove services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-jobs_remove([UUID | _] = Value, #config{jobs = Jobs} = Config)
+services_remove([UUID | _] = Value, #config{services = Services} = Config)
     when is_binary(UUID), byte_size(UUID) == 16 ->
-    NewJobs = lists:foldl(fun(ID, L) ->
-        {[Job], NewL} = lists:partition(fun(J) ->
+    NewServices = lists:foldl(fun(ID, L) ->
+        {[Service], NewL} = lists:partition(fun(S) ->
             if
-                is_record(J, config_job_internal),
-                J#config_job_internal.uuid == ID ->
+                is_record(S, config_service_internal),
+                S#config_service_internal.uuid == ID ->
                     true;
-                is_record(J, config_job_external),
-                J#config_job_external.uuid == ID ->
+                is_record(S, config_service_external),
+                S#config_service_external.uuid == ID ->
                     true;
                 true ->
                     false
             end
         end, L),
-        cloudi_configurator:job_stop(Job),
+        cloudi_configurator:service_stop(Service),
         NewL
-    end, Jobs, cloudi_lists:rsort(Value)),
-    Config#config{jobs = NewJobs}.
+    end, Services, cloudi_lists:rsort(Value)),
+    Config#config{services = NewServices}.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Restart jobs (services) based on their UUID.===
+%% ===Restart services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-jobs_restart([UUID | _] = Value, #config{jobs = Jobs} = Config)
+services_restart([UUID | _] = Value, #config{services = Services} = Config)
     when is_binary(UUID), byte_size(UUID) == 16 ->
-    NewJobs = lists:foldl(fun(ID, L) ->
-        {[Job], NewL} = lists:partition(fun(J) ->
+    lists:foreach(fun(ID) ->
+        [Service | _] = lists:dropwhile(fun(S) ->
             if
-                is_record(J, config_job_internal),
-                J#config_job_internal.uuid == ID ->
-                    true;
-                is_record(J, config_job_external),
-                J#config_job_external.uuid == ID ->
-                    true;
+                is_record(S, config_service_internal),
+                S#config_service_internal.uuid == ID ->
+                    false;
+                is_record(S, config_service_external),
+                S#config_service_external.uuid == ID ->
+                    false;
                 true ->
-                    false
+                    true
             end
-        end, L),
-        cloudi_configurator:job_restart(Job),
-        NewL
-    end, Jobs, cloudi_lists:rsort(Value)),
-    Config#config{jobs = NewJobs}.
+        end, Services),
+        cloudi_configurator:service_restart(Service)
+    end, cloudi_lists:rsort(Value)),
+    Config.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Display the currently running jobs (services) (including their UUID).===
+%% ===Display the currently running services (including their UUID).===
 %% @end
 %%-------------------------------------------------------------------------
-jobs(#config{jobs = Jobs}) ->
-    erlang:list_to_binary(cloudi_string:format("~p", [lists:map(fun(Job) ->
+services(#config{services = Services}) ->
+    erlang:list_to_binary(cloudi_string:format("~p", [lists:map(fun(Service) ->
         if
-            is_record(Job, config_job_internal) ->
-                {Job#config_job_internal.uuid,
-                 #internal{prefix = Job#config_job_internal.prefix,
-                           module = Job#config_job_internal.module,
-                           args = Job#config_job_internal.args,
-                           dest_refresh = Job#config_job_internal.dest_refresh,
-                           timeout_init = Job#config_job_internal.timeout_init,
+            is_record(Service, config_service_internal) ->
+                {Service#config_service_internal.uuid,
+                 #internal{prefix =
+                               Service#config_service_internal.prefix,
+                           module =
+                               Service#config_service_internal.module,
+                           args =
+                               Service#config_service_internal.args,
+                           dest_refresh =
+                               Service#config_service_internal.dest_refresh,
+                           timeout_init =
+                               Service#config_service_internal.timeout_init,
                            timeout_async =
-                               Job#config_job_internal.timeout_async,
+                               Service#config_service_internal.timeout_async,
                            timeout_sync =
-                               Job#config_job_internal.timeout_sync,
+                               Service#config_service_internal.timeout_sync,
                            dest_list_deny =
-                               Job#config_job_internal.dest_list_deny,
+                               Service#config_service_internal.dest_list_deny,
                            dest_list_allow =
-                               Job#config_job_internal.dest_list_allow,
+                               Service#config_service_internal.dest_list_allow,
                            count_process =
-                               Job#config_job_internal.count_process,
-                           max_r = Job#config_job_internal.max_r,
-                           max_t = Job#config_job_internal.max_t}};
-            is_record(Job, config_job_external) ->
-                {Job#config_job_external.uuid,
-                 #external{prefix = Job#config_job_external.prefix,
-                           file_path = Job#config_job_external.file_path,
-                           args = Job#config_job_external.args,
-                           env = Job#config_job_external.env,
-                           dest_refresh = Job#config_job_external.dest_refresh,
-                           protocol = Job#config_job_external.protocol,
-                           buffer_size = Job#config_job_external.buffer_size,
-                           timeout_init = Job#config_job_external.timeout_init,
+                               Service#config_service_internal.count_process,
+                           max_r =
+                               Service#config_service_internal.max_r,
+                           max_t =
+                               Service#config_service_internal.max_t,
+                           options =
+                               Service#config_service_internal.options}};
+            is_record(Service, config_service_external) ->
+                {Service#config_service_external.uuid,
+                 #external{prefix =
+                               Service#config_service_external.prefix,
+                           file_path =
+                               Service#config_service_external.file_path,
+                           args =
+                               Service#config_service_external.args,
+                           env =
+                               Service#config_service_external.env,
+                           dest_refresh =
+                               Service#config_service_external.dest_refresh,
+                           protocol =
+                               Service#config_service_external.protocol,
+                           buffer_size =
+                               Service#config_service_external.buffer_size,
+                           timeout_init =
+                               Service#config_service_external.timeout_init,
                            timeout_async =
-                               Job#config_job_external.timeout_async,
+                               Service#config_service_external.timeout_async,
                            timeout_sync =
-                               Job#config_job_external.timeout_sync,
+                               Service#config_service_external.timeout_sync,
                            dest_list_deny =
-                               Job#config_job_external.dest_list_deny,
+                               Service#config_service_external.dest_list_deny,
                            dest_list_allow =
-                               Job#config_job_external.dest_list_allow,
+                               Service#config_service_external.dest_list_allow,
                            count_process =
-                               Job#config_job_external.count_process,
-                           count_thread = Job#config_job_external.count_thread,
-                           max_r = Job#config_job_external.max_r,
-                           max_t = Job#config_job_external.max_t}}
+                               Service#config_service_external.count_process,
+                           count_thread =
+                               Service#config_service_external.count_thread,
+                           max_r =
+                               Service#config_service_external.max_r,
+                           max_t =
+                               Service#config_service_external.max_t,
+                           options =
+                               Service#config_service_external.options}}
         end
-    end, Jobs)])).
+    end, Services)])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -375,15 +403,17 @@ nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-new([], #config{jobs = Jobs, acl = ACL} = Config) ->
-    Config#config{jobs = jobs_acl_update([], Jobs, ACL)};
+-spec new(list({atom(), any()}), #config{}) -> #config{}.
 
-new([{'jobs', []} | Terms], Config) ->
+new([], #config{services = Services, acl = ACL} = Config) ->
+    Config#config{services = services_acl_update([], Services, ACL)};
+
+new([{'services', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'jobs', [T | _] = Value} | Terms],
+new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external) ->
-    new(Terms, Config#config{jobs = jobs_validate([], Value, UUID)});
+    new(Terms, Config#config{services = services_validate([], Value, UUID)});
 new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
@@ -415,180 +445,192 @@ new([{'logging', [T | _] = Value} | Terms], Config)
                                                        file = File,
                                                        redirect = Redirect}}).
 
-jobs_acl_update(Output, [], _) ->
+services_acl_update(Output, [], _) ->
     lists:reverse(Output);
-jobs_acl_update(Output, [Job | L], Lookup)
-    when is_record(Job, config_job_internal) ->
-    Deny = jobs_acl_update_list([], Job#config_job_internal.dest_list_deny,
+services_acl_update(Output, [Service | L], Lookup)
+    when is_record(Service, config_service_internal) ->
+    Deny = services_acl_update_list([], Service#config_service_internal.dest_list_deny,
                                 Lookup),
-    Allow = jobs_acl_update_list([], Job#config_job_internal.dest_list_allow,
+    Allow = services_acl_update_list([], Service#config_service_internal.dest_list_allow,
                                  Lookup),
-    jobs_acl_update([Job#config_job_internal{dest_list_deny = Deny,
+    services_acl_update([Service#config_service_internal{dest_list_deny = Deny,
                                              dest_list_allow = Allow} | Output],
                     L, Lookup);
-jobs_acl_update(Output, [Job | L], Lookup)
-    when is_record(Job, config_job_external) ->
-    Deny = jobs_acl_update_list([], Job#config_job_external.dest_list_deny,
+services_acl_update(Output, [Service | L], Lookup)
+    when is_record(Service, config_service_external) ->
+    Deny = services_acl_update_list([], Service#config_service_external.dest_list_deny,
                                 Lookup),
-    Allow = jobs_acl_update_list([], Job#config_job_external.dest_list_allow,
+    Allow = services_acl_update_list([], Service#config_service_external.dest_list_allow,
                                  Lookup),
-    jobs_acl_update([Job#config_job_external{dest_list_deny = Deny,
+    services_acl_update([Service#config_service_external{dest_list_deny = Deny,
                                              dest_list_allow = Allow} | Output],
                     L, Lookup).
 
-jobs_acl_update_list(_, undefined, _) ->
+services_acl_update_list(_, undefined, _) ->
     undefined;
-jobs_acl_update_list(Output, [], _) ->
+services_acl_update_list(Output, [], _) ->
     Output;
-jobs_acl_update_list(Output, [E | L], Lookup)
+services_acl_update_list(Output, [E | L], Lookup)
     when is_atom(E) ->
-    jobs_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
-jobs_acl_update_list(Output, [E | L], Lookup)
+    services_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
+services_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
     case trie:is_pattern(E) of
         true ->
-            jobs_acl_update_list([E | Output], L, Lookup);
+            services_acl_update_list([E | Output], L, Lookup);
         false ->
-            jobs_acl_update_list([E ++ "*" | Output], L, Lookup)
+            services_acl_update_list([E ++ "*" | Output], L, Lookup)
     end.
 
-jobs_validate(Output, [], _) ->
+services_validate(Output, [], _) ->
     lists:reverse(Output);
-jobs_validate(Output, [Job | L], UUID)
-    when is_record(Job, internal),
-         is_list(Job#internal.prefix),
-         is_atom(Job#internal.module),
-         is_list(Job#internal.args),
-         is_atom(Job#internal.dest_refresh),
-         is_integer(Job#internal.timeout_init),
-         is_integer(Job#internal.timeout_async),
-         is_integer(Job#internal.timeout_sync),
-         is_number(Job#internal.count_process),
-         is_integer(Job#internal.max_r),
-         is_integer(Job#internal.max_t),
-         is_list(Job#internal.options) ->
-    true = (Job#internal.dest_refresh =:= immediate_closest) orelse
-           (Job#internal.dest_refresh =:= lazy_closest) orelse
-           (Job#internal.dest_refresh =:= immediate_furthest) orelse
-           (Job#internal.dest_refresh =:= lazy_furthest) orelse
-           (Job#internal.dest_refresh =:= immediate_random) orelse
-           (Job#internal.dest_refresh =:= lazy_random) orelse
-           (Job#internal.dest_refresh =:= immediate_local) orelse
-           (Job#internal.dest_refresh =:= lazy_local) orelse
-           (Job#internal.dest_refresh =:= immediate_remote) orelse
-           (Job#internal.dest_refresh =:= lazy_remote) orelse
-           (Job#internal.dest_refresh =:= none),
-    true = Job#internal.timeout_init > 0,
-    true = Job#internal.timeout_async > ?TIMEOUT_DELTA,
-    true = Job#internal.timeout_sync > ?TIMEOUT_DELTA,
-    true = is_list(Job#internal.dest_list_deny) orelse
-           (Job#internal.dest_list_deny =:= undefined),
-    true = is_list(Job#internal.dest_list_allow) orelse
-           (Job#internal.dest_list_allow =:= undefined),
-    true = Job#internal.max_r >= 0,
-    true = Job#internal.max_t >= 0,
-    C = #config_job_internal{prefix = Job#internal.prefix,
-                             module = Job#internal.module,
-                             args = Job#internal.args,
-                             dest_refresh = Job#internal.dest_refresh,
-                             timeout_init = Job#internal.timeout_init,
-                             timeout_async = Job#internal.timeout_async,
-                             timeout_sync = Job#internal.timeout_sync,
-                             dest_list_deny = Job#internal.dest_list_deny,
-                             dest_list_allow = Job#internal.dest_list_allow,
-                             count_process = Job#internal.count_process,
-                             max_r = Job#internal.max_r,
-                             max_t = Job#internal.max_t,
-                             options = jobs_validate_options(
-                                 Job#internal.options
-                             ),
-                             uuid = uuid:get_v1(UUID)},
-    jobs_validate([C | Output], L, UUID);
-jobs_validate(Output, [Job | L], UUID)
-    when is_record(Job, external),
-         is_list(Job#external.prefix),
-         is_integer(erlang:hd(Job#external.file_path)),
-         is_list(Job#external.file_path),
-         is_list(Job#external.args),
-         is_list(Job#external.env),
-         is_atom(Job#external.dest_refresh),
-         is_atom(Job#external.protocol),
-         is_integer(Job#external.buffer_size),
-         is_integer(Job#external.timeout_init),
-         is_integer(Job#external.timeout_async),
-         is_integer(Job#external.timeout_sync),
-         is_number(Job#external.count_process),
-         is_number(Job#external.count_thread),
-         is_integer(Job#external.max_r),
-         is_integer(Job#external.max_t),
-         is_list(Job#external.options) ->
-    true = (Job#external.prefix == []) orelse
-           is_integer(erlang:hd(Job#external.prefix)),
-    true = (Job#external.args == []) orelse
-           is_integer(erlang:hd(Job#external.args)),
-    true = (Job#external.dest_refresh =:= immediate_closest) orelse
-           (Job#external.dest_refresh =:= lazy_closest) orelse
-           (Job#external.dest_refresh =:= immediate_furthest) orelse
-           (Job#external.dest_refresh =:= lazy_furthest) orelse
-           (Job#external.dest_refresh =:= immediate_random) orelse
-           (Job#external.dest_refresh =:= lazy_random) orelse
-           (Job#external.dest_refresh =:= immediate_local) orelse
-           (Job#external.dest_refresh =:= lazy_local) orelse
-           (Job#external.dest_refresh =:= immediate_remote) orelse
-           (Job#external.dest_refresh =:= lazy_remote) orelse
-           (Job#external.dest_refresh =:= none),
-    true = (Job#external.protocol =:= tcp) orelse
-           (Job#external.protocol =:= udp),
-    true = Job#external.buffer_size >= 1024, % should be roughly 16436
-    true = Job#external.timeout_init > 0,
-    true = Job#external.timeout_async > ?TIMEOUT_DELTA,
-    true = Job#external.timeout_sync > ?TIMEOUT_DELTA,
-    true = is_list(Job#external.dest_list_deny) orelse
-           (Job#external.dest_list_deny =:= undefined),
-    true = is_list(Job#external.dest_list_allow) orelse
-           (Job#external.dest_list_allow =:= undefined),
-    true = Job#external.max_r >= 0,
-    true = Job#external.max_t >= 0,
-    C = #config_job_external{prefix = Job#external.prefix,
-                             file_path = Job#external.file_path,
-                             args = Job#external.args,
-                             env = Job#external.env,
-                             dest_refresh = Job#external.dest_refresh,
-                             protocol = Job#external.protocol,
-                             buffer_size = Job#external.buffer_size,
-                             timeout_init = Job#external.timeout_init,
-                             timeout_async = Job#external.timeout_async,
-                             timeout_sync = Job#external.timeout_sync,
-                             dest_list_deny = Job#external.dest_list_deny,
-                             dest_list_allow = Job#external.dest_list_allow,
-                             count_process = Job#external.count_process,
-                             count_thread = Job#external.count_thread,
-                             max_r = Job#external.max_r,
-                             max_t = Job#external.max_t,
-                             options = jobs_validate_options(
-                                 Job#external.options
-                             ),
-                             uuid = uuid:get_v1(UUID)},
-    jobs_validate([C | Output], L, UUID).
+services_validate(Output, [Service | L], UUID)
+    when is_record(Service, internal),
+         is_list(Service#internal.prefix),
+         is_atom(Service#internal.module),
+         is_list(Service#internal.args),
+         is_atom(Service#internal.dest_refresh),
+         is_integer(Service#internal.timeout_init),
+         is_integer(Service#internal.timeout_async),
+         is_integer(Service#internal.timeout_sync),
+         is_number(Service#internal.count_process),
+         is_integer(Service#internal.max_r),
+         is_integer(Service#internal.max_t),
+         is_list(Service#internal.options) ->
+    true = (Service#internal.dest_refresh =:= immediate_closest) orelse
+           (Service#internal.dest_refresh =:= lazy_closest) orelse
+           (Service#internal.dest_refresh =:= immediate_furthest) orelse
+           (Service#internal.dest_refresh =:= lazy_furthest) orelse
+           (Service#internal.dest_refresh =:= immediate_random) orelse
+           (Service#internal.dest_refresh =:= lazy_random) orelse
+           (Service#internal.dest_refresh =:= immediate_local) orelse
+           (Service#internal.dest_refresh =:= lazy_local) orelse
+           (Service#internal.dest_refresh =:= immediate_remote) orelse
+           (Service#internal.dest_refresh =:= lazy_remote) orelse
+           (Service#internal.dest_refresh =:= none),
+    true = Service#internal.timeout_init > 0,
+    true = Service#internal.timeout_async > 0,
+    true = Service#internal.timeout_sync > 0,
+    true = is_list(Service#internal.dest_list_deny) orelse
+           (Service#internal.dest_list_deny =:= undefined),
+    true = is_list(Service#internal.dest_list_allow) orelse
+           (Service#internal.dest_list_allow =:= undefined),
+    true = Service#internal.max_r >= 0,
+    true = Service#internal.max_t >= 0,
+    C = #config_service_internal{
+        prefix = Service#internal.prefix,
+        module = Service#internal.module,
+        args = Service#internal.args,
+        dest_refresh = Service#internal.dest_refresh,
+        timeout_init = Service#internal.timeout_init,
+        timeout_async = Service#internal.timeout_async,
+        timeout_sync = Service#internal.timeout_sync,
+        dest_list_deny = Service#internal.dest_list_deny,
+        dest_list_allow = Service#internal.dest_list_allow,
+        count_process = Service#internal.count_process,
+        max_r = Service#internal.max_r,
+        max_t = Service#internal.max_t,
+        options = services_validate_options(
+            Service#internal.options
+        ),
+        uuid = uuid:get_v1(UUID)},
+    services_validate([C | Output], L, UUID);
+services_validate(Output, [Service | L], UUID)
+    when is_record(Service, external),
+         is_list(Service#external.prefix),
+         is_integer(erlang:hd(Service#external.file_path)),
+         is_list(Service#external.file_path),
+         is_list(Service#external.args),
+         is_list(Service#external.env),
+         is_atom(Service#external.dest_refresh),
+         is_atom(Service#external.protocol),
+         is_integer(Service#external.buffer_size),
+         is_integer(Service#external.timeout_init),
+         is_integer(Service#external.timeout_async),
+         is_integer(Service#external.timeout_sync),
+         is_number(Service#external.count_process),
+         is_number(Service#external.count_thread),
+         is_integer(Service#external.max_r),
+         is_integer(Service#external.max_t),
+         is_list(Service#external.options) ->
+    true = (Service#external.prefix == []) orelse
+           is_integer(erlang:hd(Service#external.prefix)),
+    true = (Service#external.args == []) orelse
+           is_integer(erlang:hd(Service#external.args)),
+    true = (Service#external.dest_refresh =:= immediate_closest) orelse
+           (Service#external.dest_refresh =:= lazy_closest) orelse
+           (Service#external.dest_refresh =:= immediate_furthest) orelse
+           (Service#external.dest_refresh =:= lazy_furthest) orelse
+           (Service#external.dest_refresh =:= immediate_random) orelse
+           (Service#external.dest_refresh =:= lazy_random) orelse
+           (Service#external.dest_refresh =:= immediate_local) orelse
+           (Service#external.dest_refresh =:= lazy_local) orelse
+           (Service#external.dest_refresh =:= immediate_remote) orelse
+           (Service#external.dest_refresh =:= lazy_remote) orelse
+           (Service#external.dest_refresh =:= none),
+    true = (Service#external.protocol =:= tcp) orelse
+           (Service#external.protocol =:= udp),
+    true = Service#external.buffer_size >= 1024, % should be roughly 16436
+    true = Service#external.timeout_init > 0,
+    true = Service#external.timeout_async > 0,
+    true = Service#external.timeout_sync > 0,
+    true = is_list(Service#external.dest_list_deny) orelse
+           (Service#external.dest_list_deny =:= undefined),
+    true = is_list(Service#external.dest_list_allow) orelse
+           (Service#external.dest_list_allow =:= undefined),
+    true = Service#external.max_r >= 0,
+    true = Service#external.max_t >= 0,
+    C = #config_service_external{
+        prefix = Service#external.prefix,
+        file_path = Service#external.file_path,
+        args = Service#external.args,
+        env = Service#external.env,
+        dest_refresh = Service#external.dest_refresh,
+        protocol = Service#external.protocol,
+        buffer_size = Service#external.buffer_size,
+        timeout_init = Service#external.timeout_init,
+        timeout_async = Service#external.timeout_async,
+        timeout_sync = Service#external.timeout_sync,
+        dest_list_deny = Service#external.dest_list_deny,
+        dest_list_allow = Service#external.dest_list_allow,
+        count_process = Service#external.count_process,
+        count_thread = Service#external.count_thread,
+        max_r = Service#external.max_r,
+        max_t = Service#external.max_t,
+        options = services_validate_options(
+            Service#external.options
+        ),
+        uuid = uuid:get_v1(UUID)},
+    services_validate([C | Output], L, UUID).
 
-jobs_validate_options(OptionsList) ->
-    Options = #config_job_options{},
+services_validate_options(OptionsList) ->
+    Options = #config_service_options{},
     Defaults = [
-        {priority_default,     Options#config_job_options.priority_default},
-        {queue_limit,          Options#config_job_options.queue_limit},
-        {dest_refresh_start,   Options#config_job_options.dest_refresh_start},
-        {dest_refresh_delay,   Options#config_job_options.dest_refresh_delay}],
-    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay] =
+        {priority_default,
+         Options#config_service_options.priority_default},
+        {queue_limit,
+         Options#config_service_options.queue_limit},
+        {dest_refresh_start,
+         Options#config_service_options.dest_refresh_start},
+        {dest_refresh_delay,
+         Options#config_service_options.dest_refresh_delay},
+        {request_timeout_adjustment,
+         Options#config_service_options.request_timeout_adjustment}],
+    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
+     RequestTimeoutAdjustment] =
         cloudi_proplists:take_values(Defaults, OptionsList),
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
     true = (QueueLimit =:= undefined) orelse is_integer(QueueLimit),
     true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
     true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
-    Options#config_job_options{priority_default = PriorityDefault,
-                               queue_limit = QueueLimit,
-                               dest_refresh_start = DestRefreshStart,
-                               dest_refresh_delay = DestRefreshDelay}.
+    true = is_boolean(RequestTimeoutAdjustment),
+    Options#config_service_options{
+        priority_default = PriorityDefault,
+        queue_limit = QueueLimit,
+        dest_refresh_start = DestRefreshStart,
+        dest_refresh_delay = DestRefreshDelay,
+        request_timeout_adjustment = RequestTimeoutAdjustment}.
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).
@@ -630,5 +672,10 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    acl_expand_values([E | Output], L, Path, Key, Lookup).
+    case trie:is_pattern(E) of
+        true ->
+            acl_expand_values([E | Output], L, Path, Key, Lookup);
+        false ->
+            acl_expand_values([E ++ "*" | Output], L, Path, Key, Lookup)
+    end.
 

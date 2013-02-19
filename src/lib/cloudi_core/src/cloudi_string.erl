@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2009-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -339,7 +339,7 @@ list_to_term(L) when is_list(L) ->
 %%-------------------------------------------------------------------------
 
 term_to_binary(T) ->
-    erlang:iolist_to_binary(io_lib:format("~w", [T])).
+    erlang:iolist_to_binary(io_lib:format("~p", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -350,7 +350,7 @@ term_to_binary(T) ->
 -spec term_to_list(T :: any()) -> string().
 
 term_to_list(T) ->
-    format("~w", [T]).
+    format("~p", [T]).
 
 %%-------------------------------------------------------------------------
 %% @doc

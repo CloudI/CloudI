@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_services_common</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_services_common</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Services_Fuctions_Common_to_Both_Internal_and_External_Services">CloudI Services Fuctions Common to Both Internal and External Services</a></h3>.
+<p>Copyright © 2013 Michael Truog</p>
+
+<p><b>Version:</b> 1.2.0 Feb 16 2013 14:44:14
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Services_Fuctions_Common_to_Both_Internal_and_External_Services">CloudI Services Fuctions Common to Both Internal and External Services</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#async_response_timeout_end-2">async_response_timeout_end/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#async_response_timeout_start-6">async_response_timeout_start/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destination_all-4">destination_all/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destination_allowed-3">destination_allowed/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destination_get-4">destination_get/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destination_refresh_first-2">destination_refresh_first/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destination_refresh_start-2">destination_refresh_start/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async_select_oldest-1">recv_async_select_oldest/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_async_select_random-1">recv_async_select_random/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#recv_timeout_start-7">recv_timeout_start/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_async_timeout_start-4">send_async_timeout_start/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_sync_timeout_start-5">send_sync_timeout_start/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_timeout_check-2">send_timeout_check/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send_timeout_end-2">send_timeout_end/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="async_response_timeout_end-2">async_response_timeout_end/2</a></h3>
+<div class="spec">
+<p><tt>async_response_timeout_end(TransId, AsyncResponses) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="async_response_timeout_start-6">async_response_timeout_start/6</a></h3>
+<div class="spec">
+<p><tt>async_response_timeout_start(ResponseInfo, Response, Timeout, TransId, AsyncResponses, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destination_all-4">destination_all/4</a></h3>
+<div class="spec">
+<p><tt>destination_all(DestRefresh, Name, Pid, Groups) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destination_allowed-3">destination_allowed/3</a></h3>
+<div class="spec">
+<p><tt>destination_allowed(Name, DestDeny, DestAllow) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destination_get-4">destination_get/4</a></h3>
+<div class="spec">
+<p><tt>destination_get(DestRefresh, Name, Pid, Groups) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destination_refresh_first-2">destination_refresh_first/2</a></h3>
+<div class="spec">
+<p><tt>destination_refresh_first(DestRefresh, Config_service_options) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destination_refresh_start-2">destination_refresh_start/2</a></h3>
+<div class="spec">
+<p><tt>destination_refresh_start(DestRefresh, Config_service_options) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="recv_async_select_oldest-1">recv_async_select_oldest/1</a></h3>
+<div class="spec">
+<p><tt>recv_async_select_oldest(L) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="recv_async_select_random-1">recv_async_select_random/1</a></h3>
+<div class="spec">
+<p><tt>recv_async_select_random(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="recv_timeout_start-7">recv_timeout_start/7</a></h3>
+<div class="spec">
+<p><tt>recv_timeout_start(Timeout, Priority, TransId, T, RecvTimeouts, Queue, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="send_async_timeout_start-4">send_async_timeout_start/4</a></h3>
+<div class="spec">
+<p><tt>send_async_timeout_start(Timeout, TransId, SendTimeouts, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="send_sync_timeout_start-5">send_sync_timeout_start/5</a></h3>
+<div class="spec">
+<p><tt>send_sync_timeout_start(Timeout, TransId, Client, SendTimeouts, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="send_timeout_check-2">send_timeout_check/2</a></h3>
+<div class="spec">
+<p><tt>send_timeout_check(TransId, SendTimeouts) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="send_timeout_end-2">send_timeout_end/2</a></h3>
+<div class="spec">
+<p><tt>send_timeout_end(TransId, SendTimeouts) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 16 2013, 14:44:14.</i></p>
+</body>
+</html>

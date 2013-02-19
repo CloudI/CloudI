@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq_ipc
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.2
 .\"  Language: English
 .\"
-.TH "ZMQ_IPC" "7" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ_IPC" "7" "11/23/2012" "0MQ 3\&.2\&.2" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -50,16 +50,33 @@ The inter\-process transport is currently only implemented on operating systems 
 .RE
 .SH "ADDRESSING"
 .sp
-A 0MQ address string consists of two parts as follows: \fItransport\fR://\fIendpoint\fR\&. The \fItransport\fR part specifies the underlying transport protocol to use, and for the inter\-process transport shall be set to ipc\&. The meaning of the \fIendpoint\fR part for the inter\-process transport is defined below\&.
-.SS "Assigning a local address to a socket"
+A 0MQ endpoint is a string consisting of a \fItransport\fR:// followed by an \fIaddress\fR\&. The \fItransport\fR specifies the underlying protocol to use\&. The \fIaddress\fR specifies the transport\-specific address to connect to\&.
 .sp
-When assigning a local address to a \fIsocket\fR using \fIzmq_bind()\fR with the \fIipc\fR transport, the \fIendpoint\fR shall be interpreted as an arbitrary string identifying the \fIpathname\fR to create\&. The \fIpathname\fR must be unique within the operating system namespace used by the \fIipc\fR implementation, and must fulfill any restrictions placed by the operating system on the format and length of a \fIpathname\fR\&.
+For the inter\-process transport, the transport is ipc, and the meaning of the \fIaddress\fR part is defined below\&.
+.SS "Binding a socket"
+.sp
+When binding a \fIsocket\fR to a local address using \fIzmq_bind()\fR with the \fIipc\fR transport, the \fIendpoint\fR shall be interpreted as an arbitrary string identifying the \fIpathname\fR to create\&. The \fIpathname\fR must be unique within the operating system namespace used by the \fIipc\fR implementation, and must fulfill any restrictions placed by the operating system on the format and length of a \fIpathname\fR\&.
+.sp
+When the address is *, \fIzmq_bind()\fR shall generate a unique temporary pathname\&. The caller should retrieve this pathname using the ZMQ_LAST_ENDPOINT socket option\&. See \fBzmq_getsockopt\fR(3) for details\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+any existing binding to the same endpoint shall be overridden\&. In this behavior, the \fIipc\fR transport is not consistent with the \fItcp\fR or \fIinproc\fR transports\&.
+.sp .5v
+.RE
 .SS "Connecting a socket"
 .sp
 When connecting a \fIsocket\fR to a peer address using \fIzmq_connect()\fR with the \fIipc\fR transport, the \fIendpoint\fR shall be interpreted as an arbitrary string identifying the \fIpathname\fR to connect to\&. The \fIpathname\fR must have been previously created within the operating system namespace by assigning it to a \fIsocket\fR with \fIzmq_bind()\fR\&.
-.SH "WIRE FORMAT"
-.sp
-Not applicable\&.
 .SH "EXAMPLES"
 .PP
 \fBAssigning a local address to a socket\fR. 
@@ -68,7 +85,7 @@ Not applicable\&.
 .RS 4
 .\}
 .nf
-/* Assign the pathname "/tmp/feeds/0" */
+//  Assign the pathname "/tmp/feeds/0"
 rc = zmq_bind(socket, "ipc:///tmp/feeds/0");
 assert (rc == 0);
 .fi
@@ -82,7 +99,7 @@ assert (rc == 0);
 .RS 4
 .\}
 .nf
-/* Connect to the pathname "/tmp/feeds/0" */
+//  Connect to the pathname "/tmp/feeds/0"
 rc = zmq_connect(socket, "ipc:///tmp/feeds/0");
 assert (rc == 0);
 .fi
@@ -92,17 +109,22 @@ assert (rc == 0);
 .sp
 .SH "SEE ALSO"
 .sp
-\fBzmq_bind\fR(3) \fBzmq_connect\fR(3) \fBzmq_inproc\fR(7) \fBzmq_tcp\fR(7) \fBzmq_pgm\fR(7) \fBzmq\fR(7)
+\fBzmq_bind\fR(3) \fBzmq_connect\fR(3) \fBzmq_inproc\fR(7) \fBzmq_tcp\fR(7) \fBzmq_pgm\fR(7) \fBzmq_getsockopt\fR(3) \fBzmq\fR(7)
 .SH "AUTHORS"
 .sp
-This 0MQ manual page was written by Martin Sustrik <\m[blue]\fBsustrik@250bpm\&.com\fR\m[]\&\s-2\u[1]\d\s+2> and Martin Lucina <\m[blue]\fBmato@kotelna\&.sk\fR\m[]\&\s-2\u[2]\d\s+2>\&.
+This 0MQ manual page was written by Pieter Hintjens <\m[blue]\fBph@imatix\&.com\fR\m[]\&\s-2\u[1]\d\s+2>, Martin Sustrik <\m[blue]\fBsustrik@250bpm\&.com\fR\m[]\&\s-2\u[2]\d\s+2> and Martin Lucina <\m[blue]\fBmato@kotelna\&.sk\fR\m[]\&\s-2\u[3]\d\s+2>\&.
 .SH "NOTES"
 .IP " 1." 4
+ph@imatix.com
+.RS 4
+\%mailto:ph@imatix.com
+.RE
+.IP " 2." 4
 sustrik@250bpm.com
 .RS 4
 \%mailto:sustrik@250bpm.com
 .RE
-.IP " 2." 4
+.IP " 3." 4
 mato@kotelna.sk
 .RS 4
 \%mailto:mato@kotelna.sk

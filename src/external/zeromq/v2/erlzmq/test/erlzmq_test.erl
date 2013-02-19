@@ -30,7 +30,6 @@ hwm_loop(N, S) ->
     ?assertMatch({error, _} ,erlzmq:send(S, <<"test">>, [noblock])),
     hwm_loop(N-1, S).
 
-
 pair_inproc_test() ->
     basic_tests("inproc://tester", pair, pair, active),
     basic_tests("inproc://tester", pair, pair, passive).
@@ -76,7 +75,7 @@ shutdown_stress_loop(N) ->
     ?assertMatch(ok, erlzmq:term(C)),
     shutdown_stress_loop(N-1).
 
-shutdown_no_blocking_test() ->
+shutdown_test() ->
     {ok, C} = erlzmq:context(),
     {ok, S} = erlzmq:socket(C, [pub, {active, false}]),
     erlzmq:close(S),

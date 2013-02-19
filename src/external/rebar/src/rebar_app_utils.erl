@@ -29,11 +29,12 @@
 -export([is_app_dir/0, is_app_dir/1,
          is_app_src/1,
          app_src_to_app/1,
-         app_name/1,
-         app_applications/1,
-         app_vsn/1]).
+         app_name/2,
+         app_applications/2,
+         app_vsn/2,
+         is_skipped_app/2]).
 
--export([load_app_file/1]). % TEMPORARY
+-export([load_app_file/2]). % TEMPORARY
 
 -include("rebar.hrl").
 
@@ -76,54 +77,102 @@ is_app_src(Filename) ->
 app_src_to_app(Filename) ->
     filename:join("ebin", filename:basename(Filename, ".app.src") ++ ".app").
 
-app_name(AppFile) ->
-    case load_app_file(AppFile) of
-        {ok, AppName, _} ->
-            AppName;
+app_name(Config, AppFile) ->
+    case load_app_file(Config, AppFile) of
+        {ok, NewConfig, AppName, _} ->
+            {NewConfig, AppName};
         {error, Reason} ->
             ?ABORT("Failed to extract name from ~s: ~p\n",
                    [AppFile, Reason])
     end.
 
-app_applications(AppFile) ->
-    case load_app_file(AppFile) of
-        {ok, _, AppInfo} ->
-            get_value(applications, AppInfo, AppFile);
+app_applications(Config, AppFile) ->
+    case load_app_file(Config, AppFile) of
+        {ok, NewConfig, _, AppInfo} ->
+            {NewConfig, get_value(applications, AppInfo, AppFile)};
         {error, Reason} ->
             ?ABORT("Failed to extract applications from ~s: ~p\n",
                    [AppFile, Reason])
     end.
 
-app_vsn(AppFile) ->
-    case load_app_file(AppFile) of
-        {ok, _, AppInfo} ->
+app_vsn(Config, AppFile) ->
+    case load_app_file(Config, AppFile) of
+        {ok, Config1, _, AppInfo} ->
             AppDir = filename:dirname(filename:dirname(AppFile)),
-            vcs_vsn(get_value(vsn, AppInfo, AppFile), AppDir);
+            rebar_utils:vcs_vsn(Config1, get_value(vsn, AppInfo, AppFile),
+                                AppDir);
         {error, Reason} ->
             ?ABORT("Failed to extract vsn from ~s: ~p\n",
                    [AppFile, Reason])
     end.
 
+is_skipped_app(Config, AppFile) ->
+    {Config1, ThisApp} = app_name(Config, AppFile),
+    %% Check for apps global parameter; this is a comma-delimited list
+    %% of apps on which we want to run commands
+    Skipped =
+        case get_apps(Config) of
+            undefined ->
+                %% No apps parameter specified, check the skip_apps list..
+                case get_skip_apps(Config) of
+                    undefined ->
+                        %% No skip_apps list, run everything..
+                        false;
+                    SkipApps ->
+                        TargetApps = [list_to_atom(A) ||
+                                         A <- string:tokens(SkipApps, ",")],
+                        is_skipped(ThisApp, TargetApps)
+                end;
+            Apps ->
+                %% run only selected apps
+                TargetApps = [list_to_atom(A) || A <- string:tokens(Apps, ",")],
+                is_selected(ThisApp, TargetApps)
+        end,
+    {Config1, Skipped}.
 
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
 
-load_app_file(Filename) ->
+load_app_file(Config, Filename) ->
     AppFile = {app_file, Filename},
-    case erlang:get(AppFile) of
+    case rebar_config:get_xconf(Config, {appfile, AppFile}, undefined) of
         undefined ->
-            case file:consult(Filename) of
+            case consult_app_file(Filename) of
                 {ok, [{application, AppName, AppData}]} ->
-                    erlang:put(AppFile, {AppName, AppData}),
-                    {ok, AppName, AppData};
+                    Config1 = rebar_config:set_xconf(Config,
+                                                     {appfile, AppFile},
+                                                     {AppName, AppData}),
+                    {ok, Config1, AppName, AppData};
                 {error, _} = Error ->
                     Error;
                 Other ->
                     {error, {unexpected_terms, Other}}
             end;
         {AppName, AppData} ->
-            {ok, AppName, AppData}
+            {ok, Config, AppName, AppData}
+    end.
+
+%% In the case of *.app.src we want to give the user the ability to
+%% dynamically script the application resource file (think dynamic version
+%% string, etc.), in a way similar to what can be done with the rebar
+%% config. However, in the case of *.app, rebar should not manipulate
+%% that file. This enforces that dichotomy between app and app.src.
+consult_app_file(Filename) ->
+    case lists:suffix(".app.src", Filename) of
+        false ->
+            file:consult(Filename);
+        true ->
+            %% TODO: EXPERIMENTAL For now let's warn the user if a
+            %% script is going to be run.
+            case filelib:is_regular([Filename, ".script"]) of
+                true ->
+                    ?CONSOLE("NOTICE: Using experimental *.app.src.script "
+                             "functionality on ~s ~n", [Filename]);
+                _ ->
+                    ok
+            end,
+            rebar_config:consult_file(Filename)
     end.
 
 get_value(Key, AppInfo, AppFile) ->
@@ -134,41 +183,26 @@ get_value(Key, AppInfo, AppFile) ->
             Value
     end.
 
-vcs_vsn(Vcs, Dir) ->
-    case vcs_vsn_cmd(Vcs) of
-        {unknown, VsnString} ->
-            ?DEBUG("vcs_vsn: Unknown VCS atom in vsn field: ~p\n", [Vcs]),
-            VsnString;
-        Cmd ->
-            %% If there is a valid VCS directory in the application directory,
-            %% use that version info
-            Extension = lists:concat([".", Vcs]),
-            case filelib:is_dir(filename:join(Dir, Extension)) of
-                true ->
-                    ?DEBUG("vcs_vsn: Primary vcs used for ~s\n", [Dir]),
-                    vcs_vsn_invoke(Cmd, Dir);
-                false ->
-                    %% No VCS directory found for the app. Depending on source
-                    %% tree structure, there may be one higher up, but that can
-                    %% yield unexpected results when used with deps. So, we
-                    %% fallback to searching for a priv/vsn.Vcs file.
-                    case file:read_file(filename:join([Dir, "priv", "vsn" ++ Extension])) of
-                        {ok, VsnBin} ->
-                            ?DEBUG("vcs_vsn: Read ~s from priv/vsn.~p\n", [VsnBin, Vcs]),
-                            string:strip(binary_to_list(VsnBin), right, $\n);
-                        {error, enoent} ->
-                            ?DEBUG("vcs_vsn: Fallback to vcs for ~s\n", [Dir]),
-                            vcs_vsn_invoke(Cmd, Dir)
-                    end
-            end
+%% apps= for selecting apps
+is_selected(ThisApp, TargetApps) ->
+    case lists:member(ThisApp, TargetApps) of
+        false ->
+            {true, ThisApp};
+        true ->
+            false
     end.
 
-vcs_vsn_cmd(git) -> "git describe --always --tags";
-vcs_vsn_cmd(hg)  -> "hg identify -i";
-vcs_vsn_cmd(bzr) -> "bzr revno";
-vcs_vsn_cmd(svn) -> "svnversion";
-vcs_vsn_cmd(Version) -> {unknown, Version}.
+%% skip_apps= for filtering apps
+is_skipped(ThisApp, TargetApps) ->
+    case lists:member(ThisApp, TargetApps) of
+        false ->
+            false;
+        true ->
+            {true, ThisApp}
+    end.
 
-vcs_vsn_invoke(Cmd, Dir) ->
-    {ok, VsnString} = rebar_utils:sh(Cmd, [{cd, Dir}, {use_stdout, false}]),
-    string:strip(VsnString, right, $\n).
+get_apps(Config) ->
+    rebar_config:get_global(Config, apps, undefined).
+
+get_skip_apps(Config) ->
+    rebar_config:get_global(Config, skip_apps, undefined).

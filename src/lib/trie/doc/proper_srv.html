@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module proper_srv</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module proper_srv</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   Test the dict API functions on an ordered collection.
+<p>Copyright © 2012 Michael Truog
+  ------------------------------------------------------------------------</p>
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   Test the dict API functions on an ordered collection.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#append-2">append/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#append_list-2">append_list/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#erase-1">erase/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#fetch_keys-0">fetch_keys/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#filter-1">filter/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#find-1">find/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#fold-2">fold/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#is_key-1">is_key/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#map-1">map/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#size-0">size/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#store-2">store/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#update-3">update/3</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="append-2">append/2</a></h3>
+<div class="spec">
+<p><tt>append(Key, Value) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="append_list-2">append_list/2</a></h3>
+<div class="spec">
+<p><tt>append_list(Key, L) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="erase-1">erase/1</a></h3>
+<div class="spec">
+<p><tt>erase(Key) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="fetch_keys-0">fetch_keys/0</a></h3>
+<div class="spec">
+<p><tt>fetch_keys() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="filter-1">filter/1</a></h3>
+<div class="spec">
+<p><tt>filter(F) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="find-1">find/1</a></h3>
+<div class="spec">
+<p><tt>find(Key) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="fold-2">fold/2</a></h3>
+<div class="spec">
+<p><tt>fold(F, Acc) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(X1, F, S) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="is_key-1">is_key/1</a></h3>
+<div class="spec">
+<p><tt>is_key(Key) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="map-1">map/1</a></h3>
+<div class="spec">
+<p><tt>map(F) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="size-0">size/0</a></h3>
+<div class="spec">
+<p><tt>size() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(Module) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="store-2">store/2</a></h3>
+<div class="spec">
+<p><tt>store(Key, L) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="update-3">update/3</a></h3>
+<div class="spec">
+<p><tt>update(Key, F, L) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 6 2013, 20:47:13.</i></p>
+</body>
+</html>

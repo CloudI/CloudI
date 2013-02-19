@@ -60,7 +60,7 @@ extern "C" {
 /*  Version macros for compile-time API version detection                     */
 #define ZMQ_VERSION_MAJOR 3
 #define ZMQ_VERSION_MINOR 2
-#define ZMQ_VERSION_PATCH 0
+#define ZMQ_VERSION_PATCH 2
 
 #define ZMQ_MAKE_VERSION(major, minor, patch) \
     ((major) * 10000 + (minor) * 100 + (patch))
@@ -106,11 +106,32 @@ ZMQ_EXPORT void zmq_version (int *major, int *minor, int *patch);
 #ifndef ENOTSOCK
 #define ENOTSOCK (ZMQ_HAUSNUMERO + 9)
 #endif
+#ifndef EMSGSIZE
+#define EMSGSIZE (ZMQ_HAUSNUMERO + 10)
+#endif
 #ifndef EAFNOSUPPORT
-#define EAFNOSUPPORT (ZMQ_HAUSNUMERO + 10)
+#define EAFNOSUPPORT (ZMQ_HAUSNUMERO + 11)
+#endif
+#ifndef ENETUNREACH
+#define ENETUNREACH (ZMQ_HAUSNUMERO + 12)
+#endif
+#ifndef ECONNABORTED
+#define ECONNABORTED (ZMQ_HAUSNUMERO + 13)
+#endif
+#ifndef ECONNRESET
+#define ECONNRESET (ZMQ_HAUSNUMERO + 14)
+#endif
+#ifndef ENOTCONN
+#define ENOTCONN (ZMQ_HAUSNUMERO + 15)
+#endif
+#ifndef ETIMEDOUT
+#define ETIMEDOUT (ZMQ_HAUSNUMERO + 16)
 #endif
 #ifndef EHOSTUNREACH
-#define EHOSTUNREACH (ZMQ_HAUSNUMERO + 11)
+#define EHOSTUNREACH (ZMQ_HAUSNUMERO + 17)
+#endif
+#ifndef ENETRESET
+#define ENETRESET (ZMQ_HAUSNUMERO + 18)
 #endif
 
 /*  Native 0MQ error codes.                                                   */
@@ -155,7 +176,7 @@ ZMQ_EXPORT int zmq_term (void *context);
 /*  0MQ message definition.                                                   */
 /******************************************************************************/
 
-typedef struct {unsigned char _ [32];} zmq_msg_t;
+typedef struct zmq_msg_t {unsigned char _ [32];} zmq_msg_t;
 
 typedef void (zmq_free_fn) (void *data, void *hint);
 
@@ -221,12 +242,15 @@ ZMQ_EXPORT int zmq_msg_set (zmq_msg_t *msg, int option, int optval);
 #define ZMQ_SNDTIMEO 28
 #define ZMQ_IPV4ONLY 31
 #define ZMQ_LAST_ENDPOINT 32
-#define ZMQ_FAIL_UNROUTABLE 33
+#define ZMQ_ROUTER_MANDATORY 33
 #define ZMQ_TCP_KEEPALIVE 34
 #define ZMQ_TCP_KEEPALIVE_CNT 35
 #define ZMQ_TCP_KEEPALIVE_IDLE 36
 #define ZMQ_TCP_KEEPALIVE_INTVL 37
 #define ZMQ_TCP_ACCEPT_FILTER 38
+#define ZMQ_DELAY_ATTACH_ON_CONNECT 39
+#define ZMQ_XPUB_VERBOSE 40
+
 
 /*  Message options                                                           */
 #define ZMQ_MORE 1
@@ -234,6 +258,11 @@ ZMQ_EXPORT int zmq_msg_set (zmq_msg_t *msg, int option, int optval);
 /*  Send/recv options.                                                        */
 #define ZMQ_DONTWAIT 1
 #define ZMQ_SNDMORE 2
+
+/*  Deprecated aliases                                                        */
+#define ZMQ_NOBLOCK ZMQ_DONTWAIT
+#define ZMQ_FAIL_UNROUTABLE ZMQ_ROUTER_MANDATORY
+#define ZMQ_ROUTER_BEHAVIOR ZMQ_ROUTER_MANDATORY
 
 /******************************************************************************/
 /*  0MQ socket events and monitoring                                          */
@@ -254,8 +283,16 @@ ZMQ_EXPORT int zmq_msg_set (zmq_msg_t *msg, int option, int optval);
 #define ZMQ_EVENT_CLOSE_FAILED 256
 #define ZMQ_EVENT_DISCONNECTED 512
 
+#define ZMQ_EVENT_ALL ( ZMQ_EVENT_CONNECTED | ZMQ_EVENT_CONNECT_DELAYED | \
+                        ZMQ_EVENT_CONNECT_RETRIED | ZMQ_EVENT_LISTENING | \
+                        ZMQ_EVENT_BIND_FAILED | ZMQ_EVENT_ACCEPTED | \
+                        ZMQ_EVENT_ACCEPT_FAILED | ZMQ_EVENT_CLOSED | \
+                        ZMQ_EVENT_CLOSE_FAILED | ZMQ_EVENT_DISCONNECTED )
+
 /*  Socket event data (union member per event)                                */
-typedef union {
+typedef struct {
+    int event;
+    union {
     struct {
         char *addr;
         int fd;
@@ -296,12 +333,8 @@ typedef union {
         char *addr;
         int fd;
     } disconnected;
-} zmq_event_data_t;
-
-/*  Callback template for socket state changes                                */
-typedef void (zmq_monitor_fn) (void *s, int event, zmq_event_data_t *data);
-
-ZMQ_EXPORT int zmq_ctx_set_monitor (void *context, zmq_monitor_fn *monitor);
+    } data;
+} zmq_event_t;
 
 ZMQ_EXPORT void *zmq_socket (void *, int type);
 ZMQ_EXPORT int zmq_close (void *s);
@@ -315,11 +348,14 @@ ZMQ_EXPORT int zmq_unbind (void *s, const char *addr);
 ZMQ_EXPORT int zmq_disconnect (void *s, const char *addr);
 ZMQ_EXPORT int zmq_send (void *s, const void *buf, size_t len, int flags);
 ZMQ_EXPORT int zmq_recv (void *s, void *buf, size_t len, int flags);
+ZMQ_EXPORT int zmq_socket_monitor (void *s, const char *addr, int events);
 
 ZMQ_EXPORT int zmq_sendmsg (void *s, zmq_msg_t *msg, int flags);
 ZMQ_EXPORT int zmq_recvmsg (void *s, zmq_msg_t *msg, int flags);
 
 /*  Experimental                                                              */
+struct iovec;
+
 ZMQ_EXPORT int zmq_sendiov (void *s, struct iovec *iov, size_t count, int flags);
 ZMQ_EXPORT int zmq_recviov (void *s, struct iovec *iov, size_t *count, int flags);
 
@@ -345,15 +381,16 @@ typedef struct
 
 ZMQ_EXPORT int zmq_poll (zmq_pollitem_t *items, int nitems, long timeout);
 
-/******************************************************************************/
-/*  Devices - Experimental.                                                   */
-/******************************************************************************/
+/*  Built-in message proxy (3-way) */
 
+ZMQ_EXPORT int zmq_proxy (void *frontend, void *backend, void *capture);
+
+/*  Deprecated aliases */
 #define ZMQ_STREAMER 1
 #define ZMQ_FORWARDER 2
 #define ZMQ_QUEUE 3
-
-ZMQ_EXPORT int zmq_device (int device, void *insocket, void* outsocket);
+/*  Deprecated method */
+ZMQ_EXPORT int zmq_device (int type, void *frontend, void *backend);
 
 #undef ZMQ_EXPORT
 

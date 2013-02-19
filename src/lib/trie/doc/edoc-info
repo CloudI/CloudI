@@ -1,3 +1,4 @@
+%% encoding: UTF-8
 {application,trie}.
 {packages,[]}.
-{modules,[trie]}.
+{modules,[btrie,proper_srv,trie,trie_proper]}.

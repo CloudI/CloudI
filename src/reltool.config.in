@@ -10,14 +10,17 @@
   {rel, "cloudi", "1",
    [
     % external dependencies
-    misultin,
-    jsx,
-    etokyotyrant,
-    epgsql,
+    cowboy,
+    % combonodefinder not started automatically
+    % ec2nodefinder not started automatically
+    ecouchdb,
     ememcached,
     emysql,
-    ecouchdb,
-    cowboy,
+    epgsql,
+    etokyotyrant,
+    jsx,
+    % nodefinder not started automatically
+    ranch,
     % CloudI
     cloudi_core,
     cloudi_services_internal,
@@ -42,17 +45,16 @@
                       "^erts.*/bin/(dialyzer|typer)"]},
   % external dependencies
   @ZEROMQ_ERLZMQ_RELTOOL@
-  {app, nodefinder, [{incl_cond, include}]},
-  {app, misultin, [{incl_cond, include}]},
-  {app, jsx, [{incl_cond, include}]},
-  {app, etokyotyrant, [{incl_cond, include}]},
-  {app, emysql, [{incl_cond, include}]},
-  {app, ememcached, [{incl_cond, include}]},
-  {app, epgsql, [{incl_cond, include}]},
-  {app, ecouchdb, [{incl_cond, include}]},
-  {app, ec2nodefinder, [{incl_cond, include}]},
-  {app, cowboy, [{incl_cond, include}]},
   {app, combonodefinder, [{incl_cond, include}]},
+  {app, cowboy, [{incl_cond, include}]},
+  {app, ec2nodefinder, [{incl_cond, include}]},
+  {app, ecouchdb, [{incl_cond, include}]},
+  {app, ememcached, [{incl_cond, include}]},
+  {app, emysql, [{incl_cond, include}]},
+  {app, epgsql, [{incl_cond, include}]},
+  {app, etokyotyrant, [{incl_cond, include}]},
+  {app, jsx, [{incl_cond, include}]},
+  {app, nodefinder, [{incl_cond, include}]},
   % CloudI
   {app, cloudi_core, [{incl_cond, include}]},
   {app, cloudi_services_internal, [{incl_cond, include}]},
