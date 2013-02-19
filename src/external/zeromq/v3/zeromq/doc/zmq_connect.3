@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq_connect
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.2
 .\"  Language: English
 .\"
-.TH "ZMQ_CONNECT" "3" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ_CONNECT" "3" "11/23/2012" "0MQ 3\&.2\&.2" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,22 +28,22 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-zmq_connect \- connect a socket
+zmq_connect \- create outgoing connection from socket
 .SH "SYNOPSIS"
 .sp
 \fBint zmq_connect (void \fR\fB\fI*socket\fR\fR\fB, const char \fR\fB\fI*endpoint\fR\fR\fB);\fR
 .SH "DESCRIPTION"
 .sp
-The \fIzmq_connect()\fR function shall connect the socket referenced by the \fIsocket\fR argument to the endpoint specified by the \fIendpoint\fR argument\&.
+The \fIzmq_connect()\fR function connects the \fIsocket\fR to an \fIendpoint\fR and then accepts incoming connections on that endpoint\&.
 .sp
-The \fIendpoint\fR argument is a string consisting of two parts as follows: \fItransport\fR://\fIaddress\fR\&. The \fItransport\fR part specifies the underlying transport protocol to use\&. The meaning of the \fIaddress\fR part is specific to the underlying transport protocol selected\&.
+The \fIendpoint\fR is a string consisting of a \fItransport\fR:// followed by an \fIaddress\fR\&. The \fItransport\fR specifies the underlying protocol to use\&. The \fIaddress\fR specifies the transport\-specific address to connect to\&.
 .sp
-The following transports are defined:
+0MQ provides the the following transports:
 .PP
-\fIinproc\fR
+\fItcp\fR
 .RS 4
-local in\-process (inter\-thread) communication transport, see
-\fBzmq_inproc\fR(7)
+unicast transport using TCP, see
+\fBzmq_tcp\fR(7)
 .RE
 .PP
 \fIipc\fR
@@ -52,10 +52,10 @@ local inter\-process communication transport, see
 \fBzmq_ipc\fR(7)
 .RE
 .PP
-\fItcp\fR
+\fIinproc\fR
 .RS 4
-unicast transport using TCP, see
-\fBzmq_tcp\fR(7)
+local in\-process (inter\-thread) communication transport, see
+\fBzmq_inproc\fR(7)
 .RE
 .PP
 \fIpgm\fR, \fIepgm\fR
@@ -64,7 +64,7 @@ reliable multicast transport using PGM, see
 \fBzmq_pgm\fR(7)
 .RE
 .sp
-With the exception of \fIZMQ_PAIR\fR sockets, a single socket may be connected to multiple endpoints using \fIzmq_connect()\fR, while simultaneously accepting incoming connections from multiple endpoints bound to the socket using \fIzmq_bind()\fR\&. Refer to \fBzmq_socket\fR(3) for a description of the exact semantics involved when connecting or binding a socket to multiple endpoints\&.
+Every 0MQ socket type except \fIZMQ_PAIR\fR supports one\-to\-many and many\-to\-one semantics\&. The precise semantics depend on the socket type and are defined in \fBzmq_socket\fR(3)\&.
 .if n \{\
 .sp
 .\}
@@ -78,12 +78,28 @@ With the exception of \fIZMQ_PAIR\fR sockets, a single socket may be connected t
 .ps -1
 .br
 .sp
-The connection will not be performed immediately but as needed by 0MQ\&. Thus a successful invocation of \fIzmq_connect()\fR does not indicate that a physical connection was or can actually be established\&.
+for most transports and socket types the connection is not performed immediately but as needed by 0MQ\&. Thus a successful call to \fIzmq_connect()\fR does not mean that the connection was or could actually be established\&. Because of this, for most transports and socket types the order in which a \fIserver\fR socket is bound and a \fIclient\fR socket is connected to it does not matter\&. The first exception is when using the inproc:// transport: you must call \fIzmq_bind()\fR before calling \fIzmq_connect()\fR\&. The second exception are \fIZMQ_PAIR\fR sockets, which do not automatically reconnect to endpoints\&.
+.sp .5v
+.RE
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+following a \fIzmq_connect()\fR, the socket enters its normal \fIready\fR state\&. By contrast, following a \fIzmq_bind()\fR alone, the socket enters a \fImute\fR state in which the socket blocks or drops messages according to the socket type, as defined in \fBzmq_socket\fR(3)\&.
 .sp .5v
 .RE
 .SH "RETURN VALUE"
 .sp
-The \fIzmq_connect()\fR function shall return zero if successful\&. Otherwise it shall return \-1 and set \fIerrno\fR to one of the values defined below\&.
+The \fIzmq_connect()\fR function returns zero if successful\&. Otherwise it returns \-1 and sets \fIerrno\fR to one of the values defined below\&.
 .SH "ERRORS"
 .PP
 \fBEINVAL\fR
@@ -152,14 +168,19 @@ assert (rc == 0);
 \fBzmq_bind\fR(3) \fBzmq_socket\fR(3) \fBzmq\fR(7)
 .SH "AUTHORS"
 .sp
-This 0MQ manual page was written by Martin Sustrik <\m[blue]\fBsustrik@250bpm\&.com\fR\m[]\&\s-2\u[1]\d\s+2> and Martin Lucina <\m[blue]\fBmato@kotelna\&.sk\fR\m[]\&\s-2\u[2]\d\s+2>\&.
+This 0MQ manual page was written by Pieter Hintjens <\m[blue]\fBph@imatix\&.com\fR\m[]\&\s-2\u[1]\d\s+2>, Martin Sustrik <\m[blue]\fBsustrik@250bpm\&.com\fR\m[]\&\s-2\u[2]\d\s+2> and Martin Lucina <\m[blue]\fBmato@kotelna\&.sk\fR\m[]\&\s-2\u[3]\d\s+2>\&.
 .SH "NOTES"
 .IP " 1." 4
+ph@imatix.com
+.RS 4
+\%mailto:ph@imatix.com
+.RE
+.IP " 2." 4
 sustrik@250bpm.com
 .RS 4
 \%mailto:sustrik@250bpm.com
 .RE
-.IP " 2." 4
+.IP " 3." 4
 mato@kotelna.sk
 .RS 4
 \%mailto:mato@kotelna.sk

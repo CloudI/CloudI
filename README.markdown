@@ -1,4 +1,4 @@
-#[CloudI 1.1.1 (beta)](http://cloudi.org)
+#[CloudI 1.2.0 (beta)](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
@@ -38,10 +38,10 @@ The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
 (currently C++/C, Java, Python, Ruby, and Erlang):
 
-* subscribe, unsubscribe
-* send_async, send_sync, mcast_async (mcast_async == publish)
-* recv_async
-* return, forward
+* `subscribe`, `unsubscribe`
+* `send_async`, `send_sync`, `mcast_async` (`mcast_async` == `publish`)
+* `recv_async`
+* `return`, `forward`
 
 External communication that needs to scale (beyond 10,000 connections)
 can use an internal CloudI service (implemented in Erlang) which may do
@@ -58,23 +58,20 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 ## INSTALLATION
 
-The default CloudI configuration runs many tests that can be used as
-examples of CloudI integration
-(see [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)).
-
 ### Requirements
 
-* Erlang >= R14B02 (erlang/Ubuntu, erlang/macports)
-* C++ (g++/Ubuntu, libstdcxx/macports)
-* Java (default-jdk/Ubuntu, (built-in)/OSX)
-* Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)
-* Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)
-* GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)
-* boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)
+* `Erlang >= R14B02 (erlang/Ubuntu, erlang/macports)`
+* `C++ (g++/Ubuntu, libstdcxx/macports)`
+* `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
+* `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
+* `Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)`
+* `GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)`
+* `boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
 
 Optional (installed/linked statically, automatically):
 
-* ZeroMQ >= 2.x.x (or 3.x.x) (use the "--with-zeromq" configure flag)
+* `ZeroMQ >= 3.x.x or 2.x.x (use the "--with-zeromq" configure flag)`
+  * `uuid-dev (uuid-dev/Ubuntu)`
 
 ### Building
 
@@ -98,22 +95,27 @@ To stop CloudI:
 
 ## INTEGRATION
 
+See the [Quick Start Guide](https://github.com/okeuday/CloudI/tree/master/doc#readme) or the [API documentation](http://cloudi.org/api.html#1_Intro)
+
 Integration points:
 
 * CloudI API (See [src/api/README](https://github.com/okeuday/CloudI/tree/master/src/api#readme))
-* HTTP with [cloudi_job_http_misultin](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_http_misultin.erl) or [cloudi_job_http_cowboy](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_job_http_cowboy.erl)
-* ZeroMQ with [cloudi_job_zeromq](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_messaging/src/cloudi_job_zeromq.erl)
+* HTTP with [cloudi_service_http_cowboy](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl)
+* ZeroMQ with [cloudi_service_zeromq](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_messaging/src/cloudi_service_zeromq.erl)
 * Supported databases
-  * CouchDB with [cloudi_job_db_couchdb](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_job_db_couchdb.erl)
-  * memcached with [cloudi_job_db_memcached](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_job_db_memcached.erl)
-  * MySQL with [cloudi_job_db_mysql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_job_db_mysql.erl)
-  * PostgreSQL with [cloudi_job_db_pgsql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_job_db_pgsql.erl)
-  * Tokyo Tyrant with [cloudi_job_db_tokyotyrant](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_job_db_tokyotyrant.erl)
+  * CouchDB with [cloudi_service_db_couchdb](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_couchdb.erl)
+  * memcached with [cloudi_service_db_memcached](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_memcached.erl)
+  * MySQL with [cloudi_service_db_mysql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_mysql.erl)
+  * PostgreSQL with [cloudi_service_db_pgsql](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_pgsql.erl)
+  * Tokyo Tyrant with [cloudi_service_db_tokyotyrant](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_tokyotyrant.erl)
 
-Dynamic configuration uses the CloudI Job API (See [src/job_api/README](https://github.com/okeuday/CloudI/tree/master/src/job_api#readme))
+Dynamic configuration uses the CloudI Service API (See [src/service_api/README](https://github.com/okeuday/CloudI/tree/master/src/service_api#readme))
+
+The default CloudI configuration runs many tests that can be used as
+examples of CloudI integration
+(see [src/cloudi.conf.in](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)).
 
 ## CONTACT
 
 Michael Truog (mjtruog [at] gmail (dot) com)
-
 

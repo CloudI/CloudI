@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq_setsockopt
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.2
 .\"  Language: English
 .\"
-.TH "ZMQ_SETSOCKOPT" "3" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ_SETSOCKOPT" "3" "11/23/2012" "0MQ 3\&.2\&.2" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,7 +33,7 @@ zmq_setsockopt \- set 0MQ socket options
 .sp
 \fBint zmq_setsockopt (void \fR\fB\fI*socket\fR\fR\fB, int \fR\fB\fIoption_name\fR\fR\fB, const void \fR\fB\fI*option_value\fR\fR\fB, size_t \fR\fB\fIoption_len\fR\fR\fB);\fR
 .sp
-Caution: All options, with the exception of ZMQ_SUBSCRIBE, ZMQ_UNSUBSCRIBE, ZMQ_LINGER and ZMQ_FAIL_UNROUTABLE only take effect for subsequent socket bind/connects\&.
+Caution: All options, with the exception of ZMQ_SUBSCRIBE, ZMQ_UNSUBSCRIBE, ZMQ_LINGER, ZMQ_ROUTER_MANDATORY and ZMQ_XPUB_VERBOSE only take effect for subsequent socket bind/connects\&.
 .SH "DESCRIPTION"
 .sp
 The \fIzmq_setsockopt()\fR function shall set the option specified by the \fIoption_name\fR argument to the value pointed to by the \fIoption_value\fR argument for the 0MQ socket pointed to by the \fIsocket\fR argument\&. The \fIoption_len\fR argument is the size of the option value in bytes\&.
@@ -44,6 +44,22 @@ The following socket options can be set with the \fIzmq_setsockopt()\fR function
 The \fIZMQ_SNDHWM\fR option shall set the high water mark for outbound messages on the specified \fIsocket\fR\&. The high water mark is a hard limit on the maximum number of outstanding messages 0MQ shall queue in memory for any single peer that the specified \fIsocket\fR is communicating with\&.
 .sp
 If this limit has been reached the socket shall enter an exceptional state and depending on the socket type, 0MQ shall take appropriate action such as blocking or dropping sent messages\&. Refer to the individual socket descriptions in \fBzmq_socket\fR(3) for details on the exact action taken for each socket type\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+0MQ does not guarantee that the socket will accept as many as ZMQ_SNDHWM messages, and the actual limit may be as much as 60\-70% lower depending on the flow of messages on the socket\&.
+.sp .5v
+.RE
 .TS
 tab(:);
 lt lt
@@ -878,9 +894,9 @@ all, when using TCP transports\&.
 T}
 .TE
 .sp 1
-.SS "ZMQ_FAIL_UNROUTABLE: Set unroutable message behavior"
+.SS "ZMQ_DELAY_ATTACH_ON_CONNECT: Accept messages only when connections are made"
 .sp
-Sets the behavior when an unroutable message is encountered in a \fIZMQ_ROUTER\fR socket\&. A value of 0 is the default behavior when the message is silently dropped, while a value of 1 forces the sending to fail with a \fIEHOSTUNREACH\fR error code\&.
+If set to 1, will delay the attachment of a pipe on connect until the underlying connection has completed\&. This will cause the socket to block if there are no other connections, but will prevent queues from filling on pipes awaiting connection\&.
 .TS
 tab(:);
 lt lt
@@ -913,7 +929,85 @@ T{
 Applicable socket types
 T}:T{
 .sp
+all, only for connection\-oriented transports\&.
+T}
+.TE
+.sp 1
+.SS "ZMQ_ROUTER_MANDATORY: accept only routable messages on ROUTER sockets"
+.sp
+Sets the \fIROUTER\fR socket behavior when an unroutable message is encountered\&. A value of 0 is the default and discards the message silently when it cannot be routed\&. A value of 1 returns an \fIEHOSTUNREACH\fR error code if the message cannot be routed\&.
+.TS
+tab(:);
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Option value type
+T}:T{
+.sp
+int
+T}
+T{
+.sp
+Option value unit
+T}:T{
+.sp
+0, 1
+T}
+T{
+.sp
+Default value
+T}:T{
+.sp
+0
+T}
+T{
+.sp
+Applicable socket types
+T}:T{
+.sp
 ZMQ_ROUTER
+T}
+.TE
+.sp 1
+.SS "ZMQ_XPUB_VERBOSE: provide all subscription messages on XPUB sockets"
+.sp
+Sets the \fIXPUB\fR socket behavior on new subscriptions and unsubscriptions\&. A value of \fI0\fR is the default and passes only new subscription messages to upstream\&. A value of \fI1\fR passes all subscription messages upstream\&.
+.TS
+tab(:);
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Option value type
+T}:T{
+.sp
+int
+T}
+T{
+.sp
+Option value unit
+T}:T{
+.sp
+0, 1
+T}
+T{
+.sp
+Default value
+T}:T{
+.sp
+0
+T}
+T{
+.sp
+Applicable socket types
+T}:T{
+.sp
+ZMQ_XPUB
 T}
 .TE
 .sp 1

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -59,15 +59,6 @@ class Task(threading.Thread):
 
     def run(self):
         try:
-            # sends outside of a callback function must occur before the
-            # subscriptions so that the incoming requests do not interfere with
-            # the outgoing sends (i.e., without subscriptions there will be no
-            # incoming requests)
-            if self.__index == 0:
-                # start sequence1
-                self.__api.send_async(
-                    self.__api.prefix() + 'sequence1', 'start',
-                )
             self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
             self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
             self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
@@ -93,6 +84,11 @@ class Task(threading.Thread):
             self.__api.subscribe('f2', self.__sequence3_f2)
             self.__api.subscribe('g1', self.__sequence3_g1)
             self.__api.subscribe('sequence3', self.__sequence3)
+            if self.__index == 0:
+                # start sequence1
+                self.__api.send_async(
+                    self.__api.prefix() + 'sequence1', 'start',
+                )
     
             result = self.__api.poll()
             print 'exited thread:', result
@@ -178,8 +174,10 @@ class Task(threading.Thread):
 
     def __sequence1(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
-        while self.__api.recv_async(timeout=1000)[2] != (chr(0) * 16):
-            pass # consume "end" and sleep
+        # consume all the 'end' responses from all sequences handled
+        # by this service
+        while self.__api.recv_async(timeout=1000)[1] == 'end':
+            pass
         print 'messaging sequence1 start ' + self.__name
         assert request == 'start'
         # n.b., depends on cloudi_constants.hrl having
@@ -341,23 +339,37 @@ class Task(threading.Thread):
                     timeout, priority, trans_id, pid):
         print 'messaging sequence2 start ' + self.__name
         assert request == 'start'
-        time.sleep(0.5)
-        # the sending process is excluded from the services that receive
-        # the asynchronous message, so in this case, the receiving thread
-        # will not be called, despite the fact it has subscribed to 'e',
-        # to prevent a process (in this case thread) from deadlocking
-        # with itself.
-        e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
-        # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
-        # since 1 thread is sending the mcast_async, so 3 * 8 == 24
-        assert len(e_ids) == 24
-        e_check_list = []
-        for e_id in e_ids:
-            (tmp, e_check, e_id_check) = self.__api.recv_async(trans_id=e_id)
-            assert e_id == e_id_check
-            e_check_list.append(e_check)
-        e_check_list.sort()
-        assert ''.join(e_check_list) == '111222333444555666777888'
+        while True:
+            # the sending process is excluded from the services that receive
+            # the asynchronous message, so in this case, the receiving thread
+            # will not be called, despite the fact it has subscribed to 'e',
+            # to prevent a process (in this case thread) from deadlocking
+            # with itself.
+            e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
+            # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
+            # since 1 thread is sending the mcast_async, so 3 * 8 == 24
+            if len(e_ids) == 24:
+                e_check_list = []
+                for e_id in e_ids:
+                    (tmp,
+                     e_check,
+                     e_id_check) = self.__api.recv_async(trans_id=e_id)
+                    assert e_id == e_id_check
+                    e_check_list.append(e_check)
+                e_check_list.sort()
+                assert ''.join(e_check_list) == '111222333444555666777888'
+                break
+            else:
+                print 'Waiting for %s services to initialize' % (
+                    str(4 - len(e_ids) / 8.0),
+                )
+                for e_id in e_ids:
+                    (tmp,
+                     e_check,
+                     e_id_check) = self.__api.recv_async(trans_id=e_id)
+                    assert e_id == e_id_check
+                null_id = self.__api.recv_async(timeout=1000)[2]
+                assert null_id == (chr(0) * 16)
         print 'messaging sequence2 end ' + self.__name
         # start sequence3
         self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')

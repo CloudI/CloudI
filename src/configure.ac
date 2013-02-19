@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [1.1.1], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.2.0], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
@@ -60,6 +60,9 @@ AX_CHECK_RQRD_CLASS(java.nio.ByteBuffer, ,
     [AC_MSG_ERROR([java nio not found])])
 AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
     [AC_MSG_ERROR([java reflection not found])])
+# new in jdk 5.0
+AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
+    [AC_MSG_ERROR([java concurrent not found])])
 
 # python check
 AC_ARG_WITH([python-debug],
@@ -94,8 +97,8 @@ AX_PROG_RUBY_VERSION([1.9.0], ,
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AX_ERLANG_REQUIRE_OTP_VER([R14B01], ,
-    [AC_MSG_ERROR([Erlang >= R14B01 not found])])
+AX_ERLANG_REQUIRE_OTP_VER([R15B01], ,
+    [AC_MSG_ERROR([Erlang >= R15B01 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AX_ERLANG_SUBST_OTP_VER

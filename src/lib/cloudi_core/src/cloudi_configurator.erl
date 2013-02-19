@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -56,11 +56,11 @@
 %% external interface
 -export([start_link/1,
          acl_add/2, acl_remove/2,
-         jobs_add/2, jobs_remove/2, jobs_restart/2, jobs/1,
+         services_add/2, services_remove/2, services_restart/2, services/1,
          nodes_add/2, nodes_remove/2,
-         job_start/1,
-         job_stop/1,
-         job_restart/1,
+         service_start/1,
+         service_stop/1,
+         service_restart/1,
          concurrency/1]).
 
 %% gen_server callbacks
@@ -93,20 +93,20 @@ acl_remove(L, Timeout) ->
     gen_server:call(?MODULE, {acl_remove, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
-jobs_add(L, Timeout) ->
-    gen_server:call(?MODULE, {jobs_add, L,
+services_add(L, Timeout) ->
+    gen_server:call(?MODULE, {services_add, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
-jobs_remove(L, Timeout) ->
-    gen_server:call(?MODULE, {jobs_remove, L,
+services_remove(L, Timeout) ->
+    gen_server:call(?MODULE, {services_remove, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
-jobs_restart(L, Timeout) ->
-    gen_server:call(?MODULE, {jobs_restart, L,
+services_restart(L, Timeout) ->
+    gen_server:call(?MODULE, {services_restart, L,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
-jobs(Timeout) ->
-    gen_server:call(?MODULE, {jobs,
+services(Timeout) ->
+    gen_server:call(?MODULE, {services,
                               Timeout - ?TIMEOUT_DELTA}, Timeout).
 
 nodes_add(L, Timeout) ->
@@ -129,43 +129,46 @@ nodes_remove(L, Timeout) ->
                  end),
     ok.
 
-job_start(Job)
-    when is_record(Job, config_job_internal) ->
-    case application:load(Job#config_job_internal.module) of
+service_start(Service)
+    when is_record(Service, config_service_internal) ->
+    case application:load(Service#config_service_internal.module) of
         ok ->
-            % prefer application files to load internal jobs
+            % prefer application files to load internal services
             % (so that application dependencies can be clearly specified, etc.)
-            application:start(Job#config_job_internal.module, temporary);
+            application:start(Service#config_service_internal.module,
+                              temporary);
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
-            case code:is_loaded(Job#config_job_internal.module) of
+            case code:is_loaded(Service#config_service_internal.module) of
                 false ->
-                    code:load_file(Job#config_job_internal.module);
+                    code:load_file(Service#config_service_internal.module);
                 _ ->
                     ok
             end
     end,
-    job_start_internal(concurrency(Job#config_job_internal.count_process), Job);
+    service_start_internal(
+        concurrency(Service#config_service_internal.count_process), Service);
 
-job_start(Job)
-    when is_record(Job, config_job_external) ->
-    job_start_external(concurrency(Job#config_job_external.count_process), Job).
+service_start(Service)
+    when is_record(Service, config_service_external) ->
+    service_start_external(
+        concurrency(Service#config_service_external.count_process), Service).
 
-job_stop(Job)
-    when is_record(Job, config_job_internal) ->
-    job_stop_internal(Job);
+service_stop(Service)
+    when is_record(Service, config_service_internal) ->
+    service_stop_internal(Service);
 
-job_stop(Job)
-    when is_record(Job, config_job_external) ->
-    job_stop_external(Job).
+service_stop(Service)
+    when is_record(Service, config_service_external) ->
+    service_stop_external(Service).
 
-job_restart(Job)
-    when is_record(Job, config_job_internal) ->
-    job_restart_internal(Job);
+service_restart(Service)
+    when is_record(Service, config_service_internal) ->
+    service_restart_internal(Service);
 
-job_restart(Job)
-    when is_record(Job, config_job_external) ->
-    job_restart_external(Job).
+service_restart(Service)
+    when is_record(Service, config_service_external) ->
+    service_restart_external(Service).
 
 concurrency(I)
     when is_integer(I) ->
@@ -199,24 +202,24 @@ handle_call({acl_remove, L, _}, _,
     NewConfig = cloudi_configuration:acl_remove(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({jobs_add, L, _}, _,
+handle_call({services_add, L, _}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:jobs_add(L, Config),
+    NewConfig = cloudi_configuration:services_add(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({jobs_remove, L, _}, _,
+handle_call({services_remove, L, _}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:jobs_remove(L, Config),
+    NewConfig = cloudi_configuration:services_remove(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({jobs_restart, L, _}, _,
+handle_call({services_restart, L, _}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:jobs_restart(L, Config),
+    NewConfig = cloudi_configuration:services_restart(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({jobs, _}, _,
+handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    {reply, cloudi_configuration:jobs(Config), State};
+    {reply, cloudi_configuration:services(Config), State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
@@ -258,111 +261,113 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(Config) ->
-    lists:foreach(fun(Job) -> job_start(Job) end, Config#config.jobs).
+    lists:foreach(fun service_start/1, Config#config.services).
 
-job_start_internal(0, _) ->
+service_start_internal(0, _) ->
     ok;
-job_start_internal(Count0, Job)
-    when is_record(Job, config_job_internal) ->
+service_start_internal(Count0, Service)
+    when is_record(Service, config_service_internal) ->
     Count1 = Count0 - 1,
-    case cloudi_services:monitor(cloudi_spawn, start_internal,
-                                 [Count1,
-                                  Job#config_job_internal.module,
-                                  Job#config_job_internal.args,
-                                  Job#config_job_internal.timeout_init,
-                                  Job#config_job_internal.prefix,
-                                  Job#config_job_internal.timeout_async,
-                                  Job#config_job_internal.timeout_sync,
-                                  Job#config_job_internal.dest_refresh,
-                                  Job#config_job_internal.dest_list_deny,
-                                  Job#config_job_internal.dest_list_allow,
-                                  Job#config_job_internal.options],
-                                 Job#config_job_internal.max_r,
-                                 Job#config_job_internal.max_t,
-                                 Job#config_job_internal.uuid) of
+    case cloudi_services:monitor(
+        cloudi_spawn, start_internal,
+        [Count1,
+         Service#config_service_internal.module,
+         Service#config_service_internal.args,
+         Service#config_service_internal.timeout_init,
+         Service#config_service_internal.prefix,
+         Service#config_service_internal.timeout_async,
+         Service#config_service_internal.timeout_sync,
+         Service#config_service_internal.dest_refresh,
+         Service#config_service_internal.dest_list_deny,
+         Service#config_service_internal.dest_list_allow,
+         Service#config_service_internal.options],
+        Service#config_service_internal.max_r,
+        Service#config_service_internal.max_t,
+        Service#config_service_internal.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error starting internal job (~p):~n ~p",
-                       [Job#config_job_internal.module, Reason]),
+            ?LOG_ERROR("error starting internal service (~p):~n ~p",
+                       [Service#config_service_internal.module, Reason]),
             ok
     end,
-    job_start_internal(Count1, Job).
+    service_start_internal(Count1, Service).
 
-job_start_external(0, _) ->
+service_start_external(0, _) ->
     ok;
-job_start_external(Count, Job)
-    when is_record(Job, config_job_external) ->
-    case cloudi_services:monitor(cloudi_spawn, start_external,
-                                 [concurrency(
-                                      Job#config_job_external.count_thread
-                                  ),
-                                  Job#config_job_external.file_path,
-                                  Job#config_job_external.args,
-                                  Job#config_job_external.env,
-                                  Job#config_job_external.protocol,
-                                  Job#config_job_external.buffer_size,
-                                  Job#config_job_external.timeout_init,
-                                  Job#config_job_external.prefix,
-                                  Job#config_job_external.timeout_async,
-                                  Job#config_job_external.timeout_sync,
-                                  Job#config_job_external.dest_refresh,
-                                  Job#config_job_external.dest_list_deny,
-                                  Job#config_job_external.dest_list_allow,
-                                  Job#config_job_external.options],
-                                 Job#config_job_external.max_r,
-                                 Job#config_job_external.max_t,
-                                 Job#config_job_external.uuid) of
+service_start_external(Count, Service)
+    when is_record(Service, config_service_external) ->
+    case cloudi_services:monitor(
+        cloudi_spawn, start_external,
+        [concurrency(
+             Service#config_service_external.count_thread
+         ),
+         Service#config_service_external.file_path,
+         Service#config_service_external.args,
+         Service#config_service_external.env,
+         Service#config_service_external.protocol,
+         Service#config_service_external.buffer_size,
+         Service#config_service_external.timeout_init,
+         Service#config_service_external.prefix,
+         Service#config_service_external.timeout_async,
+         Service#config_service_external.timeout_sync,
+         Service#config_service_external.dest_refresh,
+         Service#config_service_external.dest_list_deny,
+         Service#config_service_external.dest_list_allow,
+         Service#config_service_external.options],
+        Service#config_service_external.max_r,
+        Service#config_service_external.max_t,
+        Service#config_service_external.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error starting external job (~p):~n ~p",
-                       [Job#config_job_external.file_path, Reason]),
+            ?LOG_ERROR("error starting external service (~p):~n ~p",
+                       [Service#config_service_external.file_path, Reason]),
             ok
     end,
-    job_start_external(Count - 1, Job).
+    service_start_external(Count - 1, Service).
 
-job_stop_internal(Job)
-    when is_record(Job, config_job_internal) ->
-    case cloudi_services:shutdown(Job#config_job_internal.uuid) of
+service_stop_internal(Service)
+    when is_record(Service, config_service_internal) ->
+    case cloudi_services:shutdown(Service#config_service_internal.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error stopping internal job (~p):~n ~p",
-                       [Job#config_job_internal.module, Reason]),
+            ?LOG_ERROR("error stopping internal service (~p):~n ~p",
+                       [Service#config_service_internal.module, Reason]),
             ok
     end.
 
-job_stop_external(Job)
-    when is_record(Job, config_job_external) ->
-    case cloudi_services:shutdown(Job#config_job_external.uuid) of
+service_stop_external(Service)
+    when is_record(Service, config_service_external) ->
+    case cloudi_services:shutdown(Service#config_service_external.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error stopping external job (~p):~n ~p",
-                       [Job#config_job_external.file_path, Reason]),
+            ?LOG_ERROR("error stopping external service (~p):~n ~p",
+                       [Service#config_service_external.file_path, Reason]),
             ok
     end.
 
-job_restart_internal(Job)
-    when is_record(Job, config_job_internal) ->
-    case cloudi_services:restart(Job#config_job_internal.uuid) of
+service_restart_internal(Service)
+    when is_record(Service, config_service_internal) ->
+    case cloudi_services:restart(Service#config_service_internal.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error restarting internal job (~p):~n ~p",
-                       [Job#config_job_internal.module, Reason]),
+            ?LOG_ERROR("error restarting internal service (~p):~n ~p",
+                       [Service#config_service_internal.module, Reason]),
             ok
     end.
 
-job_restart_external(Job)
-    when is_record(Job, config_job_external) ->
-    case cloudi_services:restart(Job#config_job_external.uuid) of
+service_restart_external(Service)
+    when is_record(Service, config_service_external) ->
+    case cloudi_services:restart(Service#config_service_external.uuid) of
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("error restarting external job (~p):~n ~p",
-                       [Job#config_job_external.file_path, Reason]),
+            ?LOG_ERROR("error restarting external service (~p):~n ~p",
+                       [Service#config_service_external.file_path, Reason]),
             ok
     end.
 

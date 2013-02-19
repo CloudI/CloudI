@@ -1,3 +1,21 @@
+???
+  Version 1.2.0 (beta) released.
+
+  * Erlang >= R15B01 is now required due to callback/behavior changes
+  * misultin was removed, cowboy now provides better functionality
+    (misultin was also broken due to parameterized modules usage)
+  * The documentation and CloudI source code changes so that "job" is no
+    longer used to refer to services.  Now "service" is used consistently
+    to help prevent confusion.  This change means that Erlang services
+    (i.e., internal services) must now use the cloudi_service behavior
+    instead of the cloudi_job behavior and the callback names reflect the
+    same change.  The CloudI Job API is now referred to as the CloudI
+    Service API.
+  * A minor CloudI API change occured that effects Erlang services:
+    cloudi_service:recv_async now always returns
+    {ResponseInfo, Response, TransId} to be consistent with
+    functionality in external services
+
 February 4, 2013
   Version 1.1.1 (beta) released.
 

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -57,14 +57,6 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
-                # sends outside of a callback function must occur before the
-                # subscriptions so that the incoming requests do not interfere
-                # with the outgoing sends (i.e., without subscriptions there
-                # will be no incoming requests)
-                if @thread_index == 0
-                    # start sequence1
-                    @api.send_async(@api.prefix + 'sequence1', 'start')
-                end
                 @api.subscribe('a/b/c/d', method(:sequence1_abcd))
                 @api.subscribe('a/b/c/*', method(:sequence1_abc_))
                 @api.subscribe('a/b/*/d', method(:sequence1_ab_d))
@@ -90,6 +82,10 @@ if __FILE__ == $PROGRAM_NAME
                 @api.subscribe('f2', method(:sequence3_f2))
                 @api.subscribe('g1', method(:sequence3_g1))
                 @api.subscribe('sequence3', method(:sequence3))
+                if @thread_index == 0
+                    # start sequence1
+                    @api.send_async(@api.prefix + 'sequence1', 'start')
+                end
 
                 result = @api.poll
                 $stdout.puts "exited thread: #{result}"
@@ -191,7 +187,7 @@ if __FILE__ == $PROGRAM_NAME
 
             def sequence1(command, name, pattern, request_info, request,
                           timeout, priority, trans_id, pid)
-                while @api.recv_async(1000)[2] != (0.chr * 16)
+                while @api.recv_async(1000)[1] == 'end'
                     # consume "end" and sleep
                 end
                 $stdout.puts 'messaging sequence1 start ruby'

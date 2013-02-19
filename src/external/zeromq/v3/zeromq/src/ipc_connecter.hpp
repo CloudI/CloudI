@@ -41,11 +41,11 @@ namespace zmq
     {
     public:
 
-        //  If 'delay' is true connecter first waits for a while, then starts
-        //  connection process.
+        //  If 'delayed_start' is true connecter first waits for a while,
+        //  then starts connection process.
         ipc_connecter_t (zmq::io_thread_t *io_thread_,
             zmq::session_base_t *session_, const options_t &options_,
-            const address_t *addr_, bool delay_);
+            const address_t *addr_, bool delayed_start_);
         ~ipc_connecter_t ();
 
     private:
@@ -55,6 +55,7 @@ namespace zmq
 
         //  Handlers for incoming commands.
         void process_plug ();
+        void process_term (int linger_);
 
         //  Handlers for I/O events.
         void in_event ();
@@ -98,7 +99,10 @@ namespace zmq
         bool handle_valid;
 
         //  If true, connecter is waiting a while before trying to connect.
-        bool wait;
+        const bool delayed_start;
+
+        //  True iff a timer has been started.
+        bool timer_started;
 
         //  Reference to the session we belong to.
         zmq::session_base_t *session;
@@ -108,6 +112,9 @@ namespace zmq
 
         // String representation of endpoint to connect to
         std::string endpoint;
+
+        // Socket
+        zmq::socket_base_t *socket;
 
         ipc_connecter_t (const ipc_connecter_t&);
         const ipc_connecter_t &operator = (const ipc_connecter_t&);

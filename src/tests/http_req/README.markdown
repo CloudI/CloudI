@@ -18,10 +18,10 @@ Which all give the following response, from the associated programming language:
 The loadtest's test data is based on the testing in
 http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .  The test's task is simple usage of an XML response to a
 HTTP GET request, which requires minimal processing in each programming
-language.  The CloudI HTTP jobs that currently exist
-are `cloudi_job_http_misultin` and `cloudi_job_http_cowboy`.
+language.  The CloudI HTTP services that currently exist
+are `cloudi_service_http_misultin` and `cloudi_service_http_cowboy`.
 The loadtest results from the version 1.0.0 release only
-used `cloudi_job_http_misultin`.  The CloudI loadtesting uses Tsung to
+used `cloudi_service_http_misultin`.  The CloudI loadtesting uses Tsung to
 produce dependable loadtesting results
 (see `loadtest/results_v*/*/setup/http_req_*.xml`).
 

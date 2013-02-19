@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: zmq_msg_recv
 .\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 06/05/2012
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/23/2012
 .\"    Manual: 0MQ Manual
-.\"    Source: 0MQ 3.2.0
+.\"    Source: 0MQ 3.2.1
 .\"  Language: English
 .\"
-.TH "ZMQ_MSG_RECV" "3" "06/05/2012" "0MQ 3\&.2\&.0" "0MQ Manual"
+.TH "ZMQ_MSG_RECV" "3" "11/23/2012" "0MQ 3\&.2\&.1" "0MQ Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -34,7 +34,7 @@ zmq_msg_recv \- receive a message part from a socket
 \fBint zmq_msg_recv (zmq_msg_t \fR\fB\fI*msg\fR\fR\fB, void \fR\fB\fI*socket\fR\fR\fB, int \fR\fB\fIflags\fR\fR\fB);\fR
 .SH "DESCRIPTION"
 .sp
-The \fIzmq_msg_send()\fR function is identical to \fBzmq_sendmsg\fR(3), which shall be deprecated in future versions\&. \fIzmq_msg_send()\fR is more consistent with other message manipulation functions\&.
+The \fIzmq_msg_recv()\fR function is identical to \fBzmq_recvmsg\fR(3), which shall be deprecated in future versions\&. \fIzmq_msg_recv()\fR is more consistent with other message manipulation functions\&.
 .sp
 The \fIzmq_msg_recv()\fR function shall receive a message part from the socket referenced by the \fIsocket\fR argument and store it in the message referenced by the \fImsg\fR argument\&. Any content previously stored in \fImsg\fR shall be properly deallocated\&. If there are no message parts available on the specified \fIsocket\fR the \fIzmq_msg_recv()\fR function shall block until the request can be satisfied\&. The \fIflags\fR argument is a combination of the flags defined below:
 .PP

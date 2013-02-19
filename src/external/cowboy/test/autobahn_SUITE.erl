@@ -36,7 +36,8 @@ groups() ->
 	[{autobahn, [], BaseTests}].
 
 init_per_suite(Config) ->
-	application:start(inets),
+	application:start(crypto),
+	application:start(ranch),
 	application:start(cowboy),
 	%% /tmp must be used as the parent directory for the virtualenv because
 	%% the directory names used in CT are so long that the interpreter path
@@ -56,15 +57,15 @@ init_per_suite(Config) ->
 end_per_suite(_Config) ->
 	os:cmd("deactivate"),
 	application:stop(cowboy),
-	application:stop(inets),
+	application:stop(ranch),
+	application:stop(crypto),
 	ok.
 
 init_per_group(autobahn, Config) ->
 	Port = 33080,
-	cowboy:start_listener(autobahn, 100,
-		cowboy_tcp_transport, [{port, Port}],
-		cowboy_http_protocol, [{dispatch, init_dispatch()}]
-	),
+	cowboy:start_http(autobahn, 100, [{port, Port}], [
+		{env, [{dispatch, init_dispatch()}]}
+	]),
 	[{port, Port}|Config].
 
 end_per_group(Listener, _Config) ->
@@ -74,8 +75,8 @@ end_per_group(Listener, _Config) ->
 %% Dispatch configuration.
 
 init_dispatch() ->
-	[{[<<"localhost">>], [
-		{[<<"echo">>], websocket_echo_handler, []}]}].
+	cowboy_router:compile([{"localhost", [
+		{"/echo", websocket_echo_handler, []}]}]).
 
 %% autobahn cases
 
@@ -91,7 +92,7 @@ run_tests(Config) ->
 		_ -> ok
 	end,
 	{ok, IndexHTML} = file:read_file(IndexFile),
-	case binary:match(IndexHTML, <<"Fail">>) of
-		{_, _} -> erlang:error(failed);
-		nomatch -> ok
+	case length(binary:matches(IndexHTML, <<"case_failed">>)) > 2 of
+		true -> erlang:error(failed);
+		false -> ok
 	end.

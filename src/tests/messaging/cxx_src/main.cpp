@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -77,16 +77,6 @@ class Input
         OutputData process(bool const & stop, ThreadData & /*data*/)
         {
             int result;
-            // sends outside of a callback function must occur before the
-            // subscriptions so that the incoming requests do not interfere with
-            // the outgoing sends (i.e., without subscriptions there will be no
-            // incoming requests)
-            if (m_thread_index == 0)
-            {
-                result = m_api.send_async(std::string(m_api.prefix()) +
-                                          "sequence1", "start", 6);
-                assert(result == CloudI::API::return_value::success);
-            }
             result = m_api.subscribe("a/b/c/d", *this,
                                      &Input::sequence1_abcd);
             assert(result == CloudI::API::return_value::success);
@@ -162,6 +152,12 @@ class Input
             result = m_api.subscribe("sequence3", *this,
                                      &Input::sequence3);
             assert(result == CloudI::API::return_value::success);
+            if (m_thread_index == 0)
+            {
+                result = m_api.send_async(std::string(m_api.prefix()) +
+                                          "sequence1", "start", 6);
+                assert(result == CloudI::API::return_value::success);
+            }
 
             OutputData resultObject;
             int value;
@@ -429,7 +425,7 @@ class Input
             int result;
             result = api.recv_async(1000);
             assert(result == CloudI::API::return_value::success);
-            while (! api.get_trans_id_null())
+            while (::memcmp(api.get_response(), "end", 4) == 0)
             {
                 // consume "end" and sleep
                 result = api.recv_async(1000);

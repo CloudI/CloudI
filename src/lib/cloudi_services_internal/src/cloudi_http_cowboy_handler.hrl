@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 %% cowboy handler state
 -record(cowboy_state,
     {
-        job,
+        service,
         output_type,
         use_host_prefix,
         use_method_suffix

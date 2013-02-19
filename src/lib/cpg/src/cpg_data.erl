@@ -51,7 +51,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -64,6 +64,9 @@
          get_members/2,
          get_members/3,
          get_local_members/2,
+         get_local_members/3,
+         get_remote_members/2,
+         get_remote_members/3,
          which_groups/1,
          get_closest_pid/2,
          get_closest_pid/3,
@@ -195,10 +198,92 @@ get_local_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0}} ->
+            {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
             {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
             end, [], Local)}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the local members of a specific group while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_members(GroupName, Groups, Exclude)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{local = Local}} ->
+            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
+                if
+                    Pid =/= Exclude ->
+                        [Pid | L];
+                    true ->
+                        L
+                end
+            end, [], Local),
+            if
+                Members == [] ->
+                    {error, {'no_process', GroupName}};
+                true ->
+                    {ok, Pattern, Members}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_members(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote = Remote}} ->
+            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
+                [Pid | L]
+            end, [], Remote)}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get only the remote members of a specific group while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_members(GroupName, Groups, Exclude)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{remote = Remote}} ->
+            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
+                if
+                    Pid =/= Exclude ->
+                        [Pid | L];
+                    true ->
+                        L
+                end
+            end, [], Remote),
+            if
+                Members == [] ->
+                    {error, {'no_process', GroupName}};
+                true ->
+                    {ok, Pattern, Members}
+            end
     end.
 
 %%-------------------------------------------------------------------------

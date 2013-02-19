@@ -1,6 +1,87 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-02-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update the documentation (added Quick Start and API documentation)
+
+2013-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add service configuration option request_timeout_adjustment
+    * Reduce internal service logic latency
+    * Fix Erlang flood test
+    * Fix service configuration options displayed by the Services API
+    * Fix service restart so the configuration is not
+      removed by the Services API
+    * Fix immediate_local, immediate_remote, lazy_local, lazy_remote
+      destination refresh methods usage by mcast_async
+    * Add better error checking to cpg
+
+2013-02-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Tweaks in an attempt to appease the dialyzer
+    * Add edoc and type spec information to cloudi_service
+
+2013-02-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add more validation of timeouts and priorities
+
+2013-02-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the C/C++, Java, and Ruby CloudI API to make sure
+      unsubscribe only removes a single instance of the service name pattern
+    * Update edoc documentation
+    * Fix cowboy content types integration for 0.8.0
+
+2013-02-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove misultin integration due to its usage of parameterized modules
+    * Update cloudi_service_http_cowboy with better cowboy integration
+    * Update cowboy dependency to 0.8.0
+    * Add ranch 0.6.1 dependency for cowboy
+    * Update rebar to 2.1.0-pre
+    * Fix for services restart on failure
+
+2013-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add quick start guide to doc/README.markdown
+    * Change the configuration to use ZeroMQ version 3 by default
+
+2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix erlzmq2 based on recent changes by adding the
+      {active_pid, pid()} option to erlzmq2:socket/2
+      (to fix cloudi_service_zeromq.erl after recent changes)
+    * Change internal service code to utilize the single dispatcher
+      Erlang process with temporary Erlang processes for
+      service requests and info messages
+      (so only 1 long-lived Erlang process used by
+       internal services instead of 2)
+    * Moved common internal service code to
+      lib/cloudi_core/src/cloudi_services_common.erl
+    * Changed the service code to have better filename scoping and
+      better info message scoping
+      (so internal service info messages will not be accidentally
+       used by modules implementing a cloudi_service behavior)
+    * Fix cloudi_core OTP application dependencies
+
+2013-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service timeout usage bugs so that the
+      timeout is more accurate
+    * Change cloudi_service:recv_async functions to always return the
+      ResponseInfo data (even if <<>>) and return the TransId, so that the
+      behavior is consistent with the external CloudI API usage
+    * Make the messaging tests stricter
+    * Update ZeroMQ v3 to (stable) 3.2.2 (v2 is still (stable) 2.2.0)
+
+2013-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update edoc documentation
+    * Change all references of "job" to "service" to avoid confusion
+    * Fix ACL atom usage bug
+    * Fix CloudI Job API output
+
 2013-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.1.1 (beta) released

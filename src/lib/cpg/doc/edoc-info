@@ -1,3 +1,4 @@
+%% encoding: UTF-8
 {application,cpg}.
 {packages,[]}.
-{modules,[cpg,cpg_app,cpg_data,cpg_sup,trie]}.
+{modules,[cpg,cpg_app,cpg_data,cpg_sup]}.

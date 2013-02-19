@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2012 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @copyright 2009-2013 Michael Truog
+%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_app).
@@ -66,21 +66,27 @@
 %% ===Start the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec start(StartType :: normal | {takeover, node()} | {failover, node()},
+            StartArgs :: any()) ->
+    {ok, Pid :: pid()} |
+    {ok, Pid :: pid(), State :: any()} |
+    {error, Reason :: any()}.
+
 start(_, _) ->
     cloudi_random:seed(),
     {ok, Path} = application:get_env(configuration),
-    case cloudi_sup:start_link(cloudi_configuration:open(Path)) of
-        {ok, _} = Success ->
-            Success;
-        {error, _} = Error ->
-            Error
-    end.
+    cloudi_sup:start_link(cloudi_configuration:open(Path)).
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Stop the CloudI application.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec stop(State :: any()) ->
+    'ok'.
+
 stop(_) ->
     ok.
 

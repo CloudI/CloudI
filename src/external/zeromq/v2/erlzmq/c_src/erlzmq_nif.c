@@ -51,6 +51,7 @@ typedef struct erlzmq_socket {
   int64_t socket_index;
   void * socket_zmq;
   int active;
+  ErlNifPid active_pid;
   ErlNifMutex * mutex;
 } erlzmq_socket_t;
 
@@ -114,7 +115,7 @@ static ERL_NIF_TERM return_zmq_errno(ErlNifEnv* env, int const value);
 static ErlNifFunc nif_funcs[] =
 {
   {"context", 1, erlzmq_nif_context},
-  {"socket", 3, erlzmq_nif_socket},
+  {"socket", 4, erlzmq_nif_socket},
   {"bind", 2, erlzmq_nif_bind},
   {"connect", 2, erlzmq_nif_connect},
   {"setsockopt", 3, erlzmq_nif_setsockopt},
@@ -179,6 +180,7 @@ NIF(erlzmq_nif_socket)
   erlzmq_context_t * context;
   int socket_type;
   int active;
+  ErlNifPid active_pid;
 
   if (! enif_get_resource(env, argv[0], erlzmq_nif_resource_context,
                           (void **) &context)) {
@@ -193,6 +195,10 @@ NIF(erlzmq_nif_socket)
     return enif_make_badarg(env);
   }
   
+  if (! enif_get_local_pid(env, argv[3], &active_pid)) {
+    return enif_make_badarg(env);
+  }
+  
   erlzmq_socket_t * socket = enif_alloc_resource(erlzmq_nif_resource_socket,
                                                  sizeof(erlzmq_socket_t));
   assert(socket);
@@ -203,6 +209,7 @@ NIF(erlzmq_nif_socket)
     return return_zmq_errno(env, zmq_errno());
   }
   socket->active = active;
+  socket->active_pid = active_pid;
   socket->mutex = enif_mutex_create("erlzmq_socket_t_mutex");
   assert(socket->mutex);
 
@@ -785,7 +792,7 @@ static void * polling_thread(void * handle)
         {
           enif_mutex_unlock(r->data.recv.socket->mutex);
           if (r->data.recv.socket->active == ERLZMQ_SOCKET_ACTIVE_ON) {
-            enif_send(NULL, &r->data.recv.pid, r->data.recv.env,
+            enif_send(NULL, &r->data.recv.socket->active_pid, r->data.recv.env,
               enif_make_tuple3(r->data.recv.env,
                 enif_make_atom(r->data.recv.env, "zmq"),
                 enif_make_tuple2(r->data.recv.env,
@@ -820,7 +827,7 @@ static void * polling_thread(void * handle)
             flags_list = enif_make_list(r->data.recv.env, 0);
           }
           
-          enif_send(NULL, &r->data.recv.pid, r->data.recv.env,
+          enif_send(NULL, &r->data.recv.socket->active_pid, r->data.recv.env,
             enif_make_tuple4(r->data.recv.env,
               enif_make_atom(r->data.recv.env, "zmq"),
               enif_make_tuple2(r->data.recv.env,

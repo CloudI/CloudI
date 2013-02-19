@@ -5,12 +5,13 @@
   [{description, "Cloudi Services Messaging Integration"},
    {vsn, "@VERSION@"},
    {modules, [
-        cloudi_job_zeromq
+        cloudi_service_zeromq
         ]},
    {registered,[
         ]},
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
+        cloudi_core,
         stdlib,
         kernel
         ]},
