@@ -5,6 +5,12 @@
 
     * Add service configuration option request_timeout_adjustment
     * Reduce internal service logic latency
+    * Fix Erlang flood test
+    * Fix service configuration options displayed by the Services API
+    * Fix service restart so the configuration is not
+      removed by the Services API
+    * Fix immediate_local, immediate_remote, lazy_local, lazy_remote
+      destination refresh methods usage by mcast_async
 
 2013-02-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 

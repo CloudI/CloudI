@@ -76,13 +76,15 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, _Dispatcher) ->
+cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Rates = lists:foldl(fun({flood, Name, _Request, Count} = Info, Lookup) ->
         true = is_list(Name) and is_integer(Count),
-        erlang:send_after(?FLOOD_INTERVAL, self(), Info),
+        erlang:send_after(?FLOOD_INTERVAL,
+                          cloudi_service:self(Dispatcher), Info),
         trie:store(Name, (?FLOOD_INTERVAL * 1.0) / Count, Lookup)
     end, trie:new(), Args),
-    erlang:send_after(?STATUS_INTERVAL, self(), status),
+    erlang:send_after(?STATUS_INTERVAL,
+                      cloudi_service:self(Dispatcher), status),
     {ok, #state{rates = Rates}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
@@ -93,7 +95,8 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
 cloudi_service_handle_info({flood, Name, Request, Count} = Info,
                            #state{rates = Rates} = State,
                            Dispatcher) ->
-    erlang:send_after(?FLOOD_INTERVAL, self(), Info),
+    erlang:send_after(?FLOOD_INTERVAL,
+                      cloudi_service:self(Dispatcher), Info),
     Delay = trie:fetch(Name, Rates),
     {Time, _} = timer:tc(cloudi_service_flood, flood,
                          [Count, erlang:round(Delay),
@@ -102,12 +105,14 @@ cloudi_service_handle_info({flood, Name, Request, Count} = Info,
                                  (Time * 0.001)) * Delay, Rates),
     {noreply, State#state{rates = NewRates}};
 
-cloudi_service_handle_info(status, #state{rates = Rates} = State, _) ->
+cloudi_service_handle_info(status, #state{rates = Rates} = State,
+                           Dispatcher) ->
     Output = lists:flatten(trie:foldl(fun(Name, Delay, L) ->
         [io_lib:format("~10w req/s ~s~n", [Delay * 1000.0, Name]) | L]
     end, [], Rates)),
     ?LOG_INFO("~s", [Output]),
-    erlang:send_after(?STATUS_INTERVAL, self(), status),
+    erlang:send_after(?STATUS_INTERVAL,
+                      cloudi_service:self(Dispatcher), status),
     {noreply, State};
 
 cloudi_service_handle_info(Request, State, _) ->

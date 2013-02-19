@@ -197,19 +197,35 @@ destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
+          DestRefresh =:= lazy_random) ->
     cpg_data:get_members(Name, Pid, Groups);
+
+destination_all(DestRefresh, Name, Pid, Groups)
+    when is_list(Name),
+         DestRefresh =:= lazy_local ->
+    cpg_data:get_local_members(Name, Pid, Groups);
+
+destination_all(DestRefresh, Name, Pid, Groups)
+    when is_list(Name),
+         DestRefresh =:= lazy_remote ->
+    cpg_data:get_remote_members(Name, Pid, Groups);
 
 destination_all(DestRefresh, Name, Pid, _)
     when is_list(Name),
          (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
+          DestRefresh =:= immediate_random) ->
     cpg:get_members(Name, Pid);
+
+destination_all(DestRefresh, Name, Pid, _)
+    when is_list(Name),
+         DestRefresh =:= immediate_local ->
+    cpg:get_local_members(Name, Pid);
+
+destination_all(DestRefresh, Name, Pid, _)
+    when is_list(Name),
+         DestRefresh =:= immediate_remote ->
+    cpg:get_remote_members(Name, Pid);
 
 destination_all(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
