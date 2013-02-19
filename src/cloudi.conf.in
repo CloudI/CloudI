@@ -12,8 +12,11 @@
     {api, ["/cloudi/api/"]}
 ]}.
 {services, [
-    % an internal service is a native Erlang service, using the cloudi_service behavior
-    % the service below provides a queue for specific database queries
+    % an internal service is a native Erlang service,
+    % using the cloudi_service behavior
+
+    % this particular service handles the CloudI Service API which provides
+    % dynamic configuration of CloudI
     {internal,
         % prefix specified for all subscriptions
         "/cloudi/api/",
@@ -83,9 +86,10 @@
         % options, e.g.:
         % {queue_limit, 1024} % to limit the service's queue to a maximum
         %                     % of 1024 requests (to prevent excessive memory
-        %                     % consumption while the service is busy, handling a
-        %                     % previous request)
-        % (see config_service_options in lib/cloudi/src/cloudi_configuration.hrl)
+        %                     % consumption while the service is busy,
+        %                     % handling a previous request)
+        % (see config_service_options in
+        %  lib/cloudi_core/src/cloudi_configuration.hrl)
         []},
 
     % an external service is an OS process connected
@@ -173,17 +177,18 @@
         % options, e.g.:
         % {queue_limit, 1024} % to limit the service's queue to a maximum
         %                     % of 1024 requests (to prevent excessive memory
-        %                     % consumption while the service is busy, handling a
-        %                     % previous request)
-        % (see config_service_options in lib/cloudi/src/cloudi_configuration.hrl)
+        %                     % consumption while the service is busy,
+        %                     % handling a previous request)
+        % (see config_service_options in
+        %  lib/cloudi_core/src/cloudi_configuration.hrl)
         [{request_timeout_adjustment, true}]},
     % the service below provides a connection to the cloudi_tests PostgreSQL DB
     %{internal,
     %    "/db/pgsql/",
     %    cloudi_service_db_pgsql,
-    %    [{hostname, "192.168.2.4"},
+    %    [{hostname, "192.168.1.2"},
     %     {username, "cloudi"},
-    %     {password, "sdehmtr1g9qs"},
+    %     {password, "xxxxxxxxxx"},
     %     {port, 5432},
     %     {database, "cloudi_tests"}],
     %    none,
@@ -683,7 +688,7 @@
         immediate_local,
         5000, 10000, 10000, [api], undefined, 4, 5, 300, []}
     %,
-    % Flood tests configuration to generate 2K requests/second internally
+    % Flood tests configuration to generate 1Ks requests/second internally
     %{external,
     %    "/tests/flood/",
     %    "@PYTHON@",
@@ -743,7 +748,7 @@
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.
-% manually specified short node names
+% manually specified node names
 %{nodes, [
 %    'cloudi@host1',
 %    'cloudi@host2'
