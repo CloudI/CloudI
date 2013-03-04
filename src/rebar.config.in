@@ -3,6 +3,7 @@
             "lib/cloudi_services_databases",
             "lib/cloudi_services_messaging",
             "external/cowboy",
+            "external/cowboy_old",
             "external/ecouchdb",
             "external/ememcached",
             "external/emysql",
