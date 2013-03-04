@@ -30,6 +30,7 @@ all-local: rebar \
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
+	$(MKDIR_P) external/cowboy_old/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src; \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
@@ -105,6 +106,9 @@ all-local: rebar \
 	(cd $(top_srcdir)/external/cowboy; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/cowboy_old; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cowboy_old/ebin || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config compile)
@@ -132,6 +136,7 @@ clean-local: rebar
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
+          $(top_builddir)/external/cowboy_old/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
           $(top_srcdir)/lib/cloudi_services_internal/ebin \
@@ -150,7 +155,8 @@ clean-local: rebar
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
-          $(top_srcdir)/external/cowboy/ebin
+          $(top_srcdir)/external/cowboy/ebin \
+          $(top_srcdir)/external/cowboy_old/ebin
 
 clean-configure: config.log
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
@@ -218,6 +224,7 @@ dialyze: all-local dialyzer.plt
               lib/uuid/ebin/ \
               lib/trie/ebin/ \
               external/cowboy/ebin \
+              external/cowboy_old/ebin \
               external/epgsql/ebin \
               external/etokyotyrant/ebin \
               external/ememcached/ebin \

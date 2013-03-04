@@ -9,6 +9,14 @@ External Dependencies
 - `Tue Feb 12 10:38:15 PST 2013`
 - `MIT`
 
+`cowboy_old`
+------------
+`Erlang HTTP Server`
+- `https://github.com/extend/cowboy`
+- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.6.1)`
+- `Sat Sep 15 13:42:26 PDT 2012`
+- `MIT`
+
 `ecouchdb (erlang_couchdb)`
 ---------------------------
 `Erlang CouchDB (native) Driver`

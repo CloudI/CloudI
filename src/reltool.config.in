@@ -11,6 +11,7 @@
    [
     % external dependencies
     cowboy,
+    cowboy_old,
     % combonodefinder not started automatically
     % ec2nodefinder not started automatically
     ecouchdb,
@@ -20,7 +21,7 @@
     etokyotyrant,
     jsx,
     % nodefinder not started automatically
-    ranch,
+    ranch, % required for cowboy
     % CloudI
     cloudi_core,
     cloudi_services_internal,
@@ -47,6 +48,7 @@
   @ZEROMQ_ERLZMQ_RELTOOL@
   {app, combonodefinder, [{incl_cond, include}]},
   {app, cowboy, [{incl_cond, include}]},
+  {app, cowboy_old, [{incl_cond, include}]},
   {app, ec2nodefinder, [{incl_cond, include}]},
   {app, ecouchdb, [{incl_cond, include}]},
   {app, ememcached, [{incl_cond, include}]},
