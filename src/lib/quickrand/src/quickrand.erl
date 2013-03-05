@@ -77,7 +77,7 @@ seed() ->
     catch
         error:low_entropy ->
             error_logger:info_msg("quickrand: low_entropy!~n"),
-            crypto:rand_bytes(12)
+            crypto:rand_bytes(16)
     end,
     random:seed(B1, B2, B3),
     random_wh06_int:seed(B1, B2, B3, B4),
