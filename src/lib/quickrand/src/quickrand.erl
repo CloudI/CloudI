@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Random==
+%%% ==Quick Random Number Generation==
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -47,23 +47,76 @@
 %%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_random).
+-module(quickrand).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([seed/0]).
+-export([seed/0,
+         uniform/1,
+         strong_uniform/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Seed random number generation.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seed() ->
+    'ok'.
+
 seed() ->
-    % to provide better seeding than erlang:now()
-    % (the random module is still used since it provides quick
-    %  pseudo-random number generation, quicker than provided
-    %  with a linked-in port_driver or NIF)
-    <<B1:16/unsigned-integer,
-      B2:16/unsigned-integer,
-      B3:16/unsigned-integer>> = crypto:rand_bytes(6),
-    random:seed(B1, B2, B3).
+    % to provide better seeding than erlang:now() or os:timestamp()
+    <<B1:32/unsigned-integer,
+      B2:32/unsigned-integer,
+      B3:32/unsigned-integer,
+      B4:32/unsigned-integer>> = try crypto:strong_rand_bytes(16)
+    catch
+        error:low_entropy ->
+            error_logger:info_msg("quickrand: low_entropy!~n"),
+            crypto:rand_bytes(12)
+    end,
+    random:seed(B1, B2, B3),
+    random_wh06_int:seed(B1, B2, B3, B4),
+    ok.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Quick uniform random number generation.===
+%% Not meant for cryptographic purposes.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uniform(N :: 1..21267638781707063560975648195455661513) ->
+    1..21267638781707063560975648195455661513.
+
+uniform(N) when N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    (MicroSecs rem N) + 1;
+
+uniform(N) when N =< 27817185604309 ->
+    % 27817185604309 == 30269 * 30307 * 30323
+    random:uniform(N);
+
+uniform(N) when N =< 21267638781707063560975648195455661513 ->
+    % 21267638781707063560975648195455661513 ==
+    %   2147483579 * 2147483543 * 2147483423 * 2147483123
+    random_wh06_int:uniform(N).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Strong uniform random number generation.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_uniform(N :: pos_integer()) ->
+    pos_integer().
+
+strong_uniform(N) when is_integer(N), N > 0 ->
+    Bytes = erlang:byte_size(binary:encode_unsigned(N)),
+    (binary:decode_unsigned(crypto:strong_rand_bytes(Bytes), big) rem N) + 1.
 

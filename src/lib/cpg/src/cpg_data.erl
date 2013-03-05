@@ -581,5 +581,5 @@ pick(N1, L1, N2, L2, Exclude, GroupName, Pattern) ->
     end.
 
 random(N) ->
-    random:uniform(N).
+    quickrand:uniform(N).
 

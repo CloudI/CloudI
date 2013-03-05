@@ -4,6 +4,7 @@
             "lib/cloudi_services_messaging",
             "external/cowboy",
             "external/cowboy_old",
+            "external/dynamic_compile",
             "external/ecouchdb",
             "external/ememcached",
             "external/emysql",
@@ -14,6 +15,8 @@
             "external/nodefinder/ec2nodefinder",
             "external/nodefinder/combonodefinder",
             "external/ranch",
+            "lib/pqueue",
+            "lib/quickrand",
             "lib/cpg",
             "lib/uuid",
             "lib/trie"]}.

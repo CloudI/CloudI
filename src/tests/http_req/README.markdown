@@ -18,11 +18,13 @@ Which all give the following response, from the associated programming language:
 The loadtest's test data is based on the testing in
 http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .  The test's task is simple usage of an XML response to a
 HTTP GET request, which requires minimal processing in each programming
-language.  The CloudI HTTP services that currently exist
-are `cloudi_service_http_misultin` and `cloudi_service_http_cowboy`.
-The loadtest results from the version 1.0.0 release only
-used `cloudi_service_http_misultin`.  The CloudI loadtesting uses Tsung to
-produce dependable loadtesting results
+language.  The misultin support in CloudI has been removed (in version 1.2.0),
+so now cowboy is the preferred HTTP server with integration provided by
+`cloudi_service_http_cowboy`.  The loadtest results from the version 1.0.0
+release only used `cloudi_service_http_misultin` (older misultin integration)
+but the loadtest results from the version 1.1.0 release used both
+`cloudi_service_http_misultin` and `cloudi_service_http_cowboy`.
+The CloudI loadtesting uses Tsung to produce dependable loadtesting results
 (see `loadtest/results_v*/*/setup/http_req_*.xml`).
 
 ##CONFIGURATION
@@ -87,10 +89,10 @@ Setting added to /etc/security/limits.conf
 ##INFORMATION
 
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
-* http://www.mnot.net/blog/2011/05/18/http_benchmark_rules
+* [http://www.mnot.net/blog/2011/05/18/http_benchmark_rules](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)
 
 interesting historical loadtest, only localhost usage... need more interfaces:
-* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
-* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2
-* http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3
+* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
+* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
+* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
 

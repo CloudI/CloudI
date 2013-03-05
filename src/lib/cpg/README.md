@@ -10,8 +10,8 @@ have avoided using it.  However, the pg2 module is used internally by
 Erlang OTP, and is currently the most common approach to the combination of
 availability and partition tolerance in Erlang (as they relate to the
 CAP theorem).  When comparing these goals with gproc (and its usage of
-gen_leader), gproc is focused on availability and consistency (as it relates to
-the CAP theorem), which makes its goals similar to mnesia.
+`gen_leader`), gproc is focused on availability and consistency (as it relates
+to the CAP theorem), which makes its goals similar to mnesia.
 
 The cpg interface was created to avoid some problems with pg2 while pursuing
 better availability and partition tolerance.  pg2 utilizes ets (global
@@ -22,7 +22,7 @@ the ability to set a pattern string as a group name.  A pattern string
 is a string that includes the`"*"`wildcard character (equivalent to ".+"
 regex while`"**"`is forbidden).  When a group name is a pattern string,
 a process can be retrieved by matching the pattern.  This behavior can
-be changed with the macros set in src/cpg_constants.hrl, if a user would
+be changed with the macros set in `src/cpg_constants.hrl`, if a user would
 prefer to limit the functionality to what pg2 provides.
 
 The cpg interface provides more error checking than the pg2 module, and it
@@ -45,22 +45,38 @@ So, that means these process group solutions are only targeting a cluster
 of Erlang nodes, given the constraints of distributed Erlang and a
 fully-connected network topology.
 
+Build
+-----
+
+    rebar get-deps
+    rebar compile
+
 Example
 -------
 
-    (cpg@localhost)1> application:start(cpg).
+    $ erl -sname cpg@localhost -pz deps/quickrand/ebin/ -pz deps/trie/ebin/ -pz ebin/
+    Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
+
+    Eshell V5.10.1  (abort with ^G)
+    (cpg@localhost)1> application:start(crypto).
     ok
-    (cpg@localhost)2> cpg:join(process_group1, "Hello", self()).      
+    (cpg@localhost)2> application:start(quickrand).
     ok
-    (cpg@localhost)3> cpg:join(process_group1, "World", self()).
+    (cpg@localhost)3> application:start(trie).
     ok
-    (cpg@localhost)4> cpg:get_local_members(process_group1, "Hello"). 
-    {ok,"Hello",[<0.43.0>]}
-    (cpg@localhost)5> cpg:get_local_members(process_group1, "World").
-    {ok,"World",[<0.43.0>]}
-    (cpg@localhost)6> cpg:which_groups(process_group1).              
+    (cpg@localhost)4> application:start(cpg).
+    ok
+    (cpg@localhost)5> cpg:join(process_group1, "Hello", self()).
+    ok
+    (cpg@localhost)6> cpg:join(process_group1, "World", self()).
+    ok
+    (cpg@localhost)7> cpg:get_local_members(process_group1, "Hello").
+    {ok,"Hello",[<0.39.0>]}
+    (cpg@localhost)8> cpg:get_local_members(process_group1, "World").
+    {ok,"World",[<0.39.0>]}
+    (cpg@localhost)9> cpg:which_groups(process_group1).
     ["Hello","World"]
-    (cpg@localhost)7> cpg:which_groups(process_group2).
+    (cpg@localhost)10> cpg:which_groups(process_group2).
     []
     
 Author

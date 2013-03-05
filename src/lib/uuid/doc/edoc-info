@@ -1,4 +1,4 @@
 %% encoding: UTF-8
 {application,uuid}.
 {packages,[]}.
-{modules,[random_wh06_int,uuid]}.
+{modules,[uuid]}.
