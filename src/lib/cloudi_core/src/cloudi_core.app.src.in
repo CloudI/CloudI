@@ -31,9 +31,7 @@
         cloudi_string,
         cloudi_sup,
         cloudi_tuple,
-        dynamic_compile,
-        key2value,
-        pqueue4
+        key2value
         ]},
    {registered,[
         cloudi_configurator,
@@ -50,6 +48,10 @@
         cloudi_services_internal
         ]},
    {applications, [
+        % nodefinder dependencies are started manually
+        dynamic_compile,
+        pqueue,
+        quickrand,
         trie,
         uuid,
         cpg,

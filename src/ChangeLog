@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the pqueue and quickrand applications as dependencies
+    * Add the external dynamic_compile application
+    * Remove the misultin application references
+
 2013-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cowboy 0.6.1 back into CloudI as cowboy_old

@@ -13,6 +13,7 @@
     cowboy,
     cowboy_old,
     % combonodefinder not started automatically
+    dynamic_compile,
     % ec2nodefinder not started automatically
     ecouchdb,
     ememcached,
@@ -27,6 +28,8 @@
     cloudi_services_internal,
     cloudi_services_databases,
     cloudi_services_messaging,
+    pqueue,
+    quickrand,
     cpg,
     uuid,
     trie,
@@ -49,6 +52,7 @@
   {app, combonodefinder, [{incl_cond, include}]},
   {app, cowboy, [{incl_cond, include}]},
   {app, cowboy_old, [{incl_cond, include}]},
+  {app, dynamic_compile, [{incl_cond, include}]},
   {app, ec2nodefinder, [{incl_cond, include}]},
   {app, ecouchdb, [{incl_cond, include}]},
   {app, ememcached, [{incl_cond, include}]},
@@ -62,6 +66,8 @@
   {app, cloudi_services_internal, [{incl_cond, include}]},
   {app, cloudi_services_databases, [{incl_cond, include}]},
   {app, cloudi_services_messaging, [{incl_cond, include}]},
+  {app, pqueue, [{incl_cond, include}]},
+  {app, quickrand, [{incl_cond, include}]},
   {app, cpg, [{incl_cond, include}]},
   {app, uuid, [{incl_cond, include}]},
   {app, trie, [{incl_cond, include}]},

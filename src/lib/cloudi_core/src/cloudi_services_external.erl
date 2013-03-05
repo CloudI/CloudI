@@ -175,7 +175,7 @@ init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         {ok, Listener} ->
             {ok, Port} = inet:port(Listener),
             {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
-            cloudi_random:seed(),
+            quickrand:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             destination_refresh_start(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{dispatcher = Dispatcher,
@@ -208,7 +208,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
     case gen_udp:open(0, Opts) of
         {ok, Socket} ->
             {ok, Port} = inet:port(Socket),
-            cloudi_random:seed(),
+            quickrand:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{dispatcher = Dispatcher,
                                    protocol = udp,

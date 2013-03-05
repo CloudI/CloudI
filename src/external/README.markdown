@@ -17,6 +17,14 @@ External Dependencies
 - `Sat Sep 15 13:42:26 PDT 2012`
 - `MIT`
 
+`dynamic_compile`
+-----------------
+`Dynamic compilation of Erlang modules`
+- `https://github.com/JacobVorreuter/dynamic_compile`
+- `commit 6a165715178dae8ea1c72e6ef171b9fc3435badc`
+- `Mon Mar  4 15:43:22 PST 2013`
+- `BSD`
+
 `ecouchdb (erlang_couchdb)`
 ---------------------------
 `Erlang CouchDB (native) Driver`

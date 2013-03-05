@@ -24,7 +24,6 @@
         cloudi_core,
         cowboy,
         cowboy_old,
-        misultin,
         jsx,
         stdlib,
         kernel

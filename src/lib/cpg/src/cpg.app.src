@@ -3,7 +3,7 @@
 
 {application, cpg, 
   [{description, "CloudI Process Groups"},
-   {vsn, "1.1.1"},
+   {vsn, "1.2.0"},
    {modules, [
         cpg,
         cpg_app,
@@ -15,6 +15,7 @@
         cloudi_process_group
         ]},
    {applications, [
+        quickrand,
         trie,
         stdlib,
         kernel
