@@ -4,8 +4,8 @@
 {modules,[cloudi_app,cloudi_array,cloudi_configuration,cloudi_configurator,
           cloudi_lists,cloudi_logger,cloudi_logger_interface,cloudi_math,
           cloudi_nodes,cloudi_os_spawn,cloudi_pool,cloudi_pool_sup,
-          cloudi_proplists,cloudi_random,cloudi_response,cloudi_service,
-          cloudi_services,cloudi_services_common,cloudi_services_external,
+          cloudi_proplists,cloudi_response,cloudi_service,cloudi_services,
+          cloudi_services_common,cloudi_services_external,
           cloudi_services_external_sup,cloudi_services_internal,
           cloudi_services_internal_sup,cloudi_spawn,cloudi_string,cloudi_sup,
-          cloudi_tuple,dynamic_compile,key2value,pqueue4]}.
+          cloudi_tuple,key2value]}.
