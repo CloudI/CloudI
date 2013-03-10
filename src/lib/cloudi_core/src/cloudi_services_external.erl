@@ -68,6 +68,7 @@
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
+-include("cloudi_services_common.hrl").
 
 % message type enumeration
 -define(MESSAGE_INIT,            1).
@@ -111,21 +112,6 @@
         dest_allow,                    % allowed to send to a destination
         options                        % #config_service_options{}
     }).
-
--import(cloudi_services_common,
-        [destination_allowed/3,
-         destination_refresh_first/2,
-         destination_refresh_start/2,
-         destination_get/4,
-         destination_all/4,
-         send_async_timeout_start/4,
-         send_sync_timeout_start/5,
-         send_timeout_check/2,
-         send_timeout_end/2,
-         recv_timeout_start/7,
-         async_response_timeout_start/6,
-         async_response_timeout_end/2,
-         ?RECV_ASYNC_STRATEGY/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

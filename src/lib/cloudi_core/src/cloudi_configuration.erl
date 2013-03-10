@@ -615,9 +615,18 @@ services_validate_options(OptionsList) ->
         {dest_refresh_delay,
          Options#config_service_options.dest_refresh_delay},
         {request_timeout_adjustment,
-         Options#config_service_options.request_timeout_adjustment}],
+         Options#config_service_options.request_timeout_adjustment},
+        {request_pid_uses,
+         Options#config_service_options.request_pid_uses},
+        {request_pid_options,
+         Options#config_service_options.request_pid_options},
+        {info_pid_uses,
+         Options#config_service_options.info_pid_uses},
+        {info_pid_options,
+         Options#config_service_options.info_pid_options}],
     [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-     RequestTimeoutAdjustment] =
+     RequestTimeoutAdjustment, RequestPidUses, RequestPidOptions,
+     InfoPidUses, InfoPidOptions] =
         cloudi_proplists:take_values(Defaults, OptionsList),
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
@@ -625,12 +634,52 @@ services_validate_options(OptionsList) ->
     true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
     true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
     true = is_boolean(RequestTimeoutAdjustment),
+    true = (RequestPidUses =:= infinity) orelse
+           (is_integer(RequestPidUses) and (RequestPidUses >= 1)),
+    true = (InfoPidUses =:= infinity) orelse
+           (is_integer(InfoPidUses) and (InfoPidUses >= 1)),
     Options#config_service_options{
         priority_default = PriorityDefault,
         queue_limit = QueueLimit,
         dest_refresh_start = DestRefreshStart,
         dest_refresh_delay = DestRefreshDelay,
-        request_timeout_adjustment = RequestTimeoutAdjustment}.
+        request_timeout_adjustment = RequestTimeoutAdjustment,
+        request_pid_uses = RequestPidUses,
+        request_pid_options =
+            services_validate_option_pid_options(RequestPidOptions),
+        info_pid_uses = InfoPidUses,
+        info_pid_options =
+            services_validate_option_pid_options(InfoPidOptions)}.
+
+services_validate_option_pid_options([]) ->
+    [link];
+services_validate_option_pid_options([_ | _] = L) ->
+    PidOptions0 = [link],
+    PidOptions1 = case proplists:get_value(fullsweep_after, L) of
+        undefined ->
+            PidOptions0;
+        V1 when is_integer(V1), V1 >= 0 ->
+            [{fullsweep_after, V1} | PidOptions0]
+    end,
+    PidOptions2 = case proplists:get_value(min_heap_size, L) of
+        undefined ->
+            PidOptions1;
+        V2 when is_integer(V2), V2 >= 0 ->
+            [{min_heap_size, V2} | PidOptions1]
+    end,
+    PidOptions3 = case proplists:get_value(min_bin_vheap_size, L) of
+        undefined ->
+            PidOptions2;
+        V3 when is_integer(V3), V3 >= 0 ->
+            [{min_bin_vheap_size, V3} | PidOptions2]
+    end,
+    case proplists:get_value(priority, L) of
+        undefined ->
+            ok;
+        _ ->
+            ?LOG_WARN("priority ignored in pid_options", [])
+    end,
+    PidOptions3.
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).
