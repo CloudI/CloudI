@@ -5,15 +5,15 @@ External Dependencies
 --------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.8.0)`
-- `Tue Feb 12 10:38:15 PST 2013`
+- `commit cc507789bf1d9ea27e9fb53d06dc8a464672b7da (version 0.8.2)`
+- `Sun Mar 10 13:07:51 PDT 2013`
 - `MIT`
 
 `cowboy_old`
 ------------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.6.1)`
+- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.6.2)`
 - `Sat Sep 15 13:42:26 PDT 2012`
 - `MIT`
 
@@ -153,8 +153,8 @@ External Dependencies
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/extend/ranch`
-- `commit d635aece25ae0d6489d2c3c074cfb6363d92fc61 (version 0.6.1)`
-- `Tue Feb 12 10:38:15 PST 2013`
+- `commit 809a12fdbe5ce355b06bcf197008e1b4e8ea9e21 (version 0.6.2)`
+- `Sun Mar 10 13:07:51 PDT 2013`
 - `MIT`
 
 `rebar`

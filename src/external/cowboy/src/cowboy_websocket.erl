@@ -17,6 +17,7 @@
 %% Cowboy supports versions 7 through 17 of the Websocket drafts.
 %% It also supports RFC6455, the proposed standard for Websocket.
 -module(cowboy_websocket).
+-behaviour(cowboy_sub_protocol).
 
 %% API.
 -export([upgrade/4]).
@@ -256,7 +257,7 @@ websocket_data(State, Req, HandlerState, << Fin:1, _Rsv:3, Opcode:4, 1:1,
 	websocket_data(State, Req, HandlerState,
 		Opcode, Len, MaskKey, Rest, Fin);
 %% When payload length is over 63 bits, the most significant bit MUST be 0.
-websocket_data(State, Req, HandlerState, << _:8, 1:1, 127:7, 1:1, _/bits >>) ->
+websocket_data(State, Req, HandlerState, << _:8, 1:1, 127:7, 1:1, _:7, _/binary >>) ->
 	websocket_close(State, Req, HandlerState, {error, badframe});
 %% All frames sent from the client to the server are masked.
 websocket_data(State, Req, HandlerState, << _:8, 0:1, _/bits >>) ->
@@ -536,7 +537,7 @@ handler_call(State=#state{handler=Handler, handler_opts=HandlerOpts}, Req,
 				ok ->
 					NextState(State, Req2, HandlerState2, RemainingData);
 				shutdown ->
-					handler_terminate(State, Req2, HandlerState,
+					handler_terminate(State, Req2, HandlerState2,
 						{normal, shutdown});
 				{error, _} = Error ->
 					handler_terminate(State, Req2, HandlerState2, Error)
@@ -548,7 +549,7 @@ handler_call(State=#state{handler=Handler, handler_opts=HandlerOpts}, Req,
 					NextState(State#state{hibernate=true},
 						Req2, HandlerState2, RemainingData);
 				shutdown ->
-					handler_terminate(State, Req2, HandlerState,
+					handler_terminate(State, Req2, HandlerState2,
 						{normal, shutdown});
 				{error, _} = Error ->
 					handler_terminate(State, Req2, HandlerState2, Error)
@@ -559,7 +560,7 @@ handler_call(State=#state{handler=Handler, handler_opts=HandlerOpts}, Req,
 				ok ->
 					NextState(State, Req2, HandlerState2, RemainingData);
 				shutdown ->
-					handler_terminate(State, Req2, HandlerState,
+					handler_terminate(State, Req2, HandlerState2,
 						{normal, shutdown});
 				{error, _} = Error ->
 					handler_terminate(State, Req2, HandlerState2, Error)
@@ -571,7 +572,7 @@ handler_call(State=#state{handler=Handler, handler_opts=HandlerOpts}, Req,
 					NextState(State#state{hibernate=true},
 						Req2, HandlerState2, RemainingData);
 				shutdown ->
-					handler_terminate(State, Req2, HandlerState,
+					handler_terminate(State, Req2, HandlerState2,
 						{normal, shutdown});
 				{error, _} = Error ->
 					handler_terminate(State, Req2, HandlerState2, Error)

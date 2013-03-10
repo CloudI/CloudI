@@ -10,6 +10,7 @@
       info_pid_uses, info_pid_options
     * Make sure the 0.6.2 cowboy integration is the same as the 0.8.0 cowboy
       integration
+    * Update cowboy to 0.8.2 and ranch to 0.6.2
 
 2013-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

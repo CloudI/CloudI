@@ -580,6 +580,15 @@ services_validate(Output, [Service | L], UUID)
            (Service#external.dest_list_allow =:= undefined),
     true = Service#external.max_r >= 0,
     true = Service#external.max_t >= 0,
+    % service options only relevant to internal services
+    undefined = proplists:get_value(request_pid_uses,
+                                    Service#external.options),
+    undefined = proplists:get_value(request_pid_options,
+                                    Service#external.options),
+    undefined = proplists:get_value(info_pid_uses,
+                                    Service#external.options),
+    undefined = proplists:get_value(info_pid_options,
+                                    Service#external.options),
     C = #config_service_external{
         prefix = Service#external.prefix,
         file_path = Service#external.file_path,
