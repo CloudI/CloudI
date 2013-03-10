@@ -1,7 +1,7 @@
 language: erlang
 otp_release:
   - R15B03
-  - R16A_RELEASE_CANDIDATE
+  - R16B
 python:
   - "2.7"
 rvm:
