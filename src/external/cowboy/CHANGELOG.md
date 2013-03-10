@@ -1,6 +1,70 @@
 CHANGELOG
 =========
 
+0.8.2
+-----
+
+ *  Add error_hook and ssl_hello_world example
+
+ *  Greatly improve the performance of body reading operations
+
+    The streamed chunk size is now configurable through the new
+    function cowboy_req:init_stream/5.
+
+ *  Add cowboy_req:body/2 and cowboy_req:body_qs/2
+
+    These functions take an additional argument indicating the
+    maximum size of the body. They will return {error, badlength}
+    if the size is too large, or {error, chunked} if the body
+    was sent using the chunked Transfer-Encoding and its size
+    cannot be determined.
+
+    The function body/1 is now an alias to body/2 with a maximum
+    body size of 8MB. Likewise, the function body_qs/1 is an alias
+    of body_qs/2 with a maximum body size of 16KB.
+
+ *  Properly handle explicit identity Transfer-Encoding in body_length/1
+
+ *  Small but noticeable performance improvement in the critical path
+
+    We stopped using binary:match/2 in favor of custom functions.
+    This makes Cowboy 0.5ms faster per request.
+
+ *  Prevent loop handlers from awakening after sending a response
+
+ *  Optimize cowboy_static initialization code
+
+ *  Make path checks in cowboy_static cross-platform
+
+ *  Allow '*' for REST content types parameters in content_types_provided
+
+ *  Fix cowboy_router types
+
+ *  Update Ranch to 0.6.2; adds support for two new SSL options
+
+ *  Improve documentation
+
+0.8.1
+-----
+
+ *  Add eventsource, web_server examples; improve rest_pastebin example
+
+ *  Add cowboy:set_env/3 to more conveniently update the dispatch list
+
+ *  Add cowboy_sub_protocol behaviour
+
+ *  Fix cowboy_req:has_body/1 when Content-Length == 0
+
+ *  Fix passing of state to websocket_terminate/3 on server close
+
+ *  Fix compilation with +native
+
+ *  Compile with more warnings enabled by default; fix warnings
+
+ *  Set the socket in passive mode after the loop handler terminates
+
+ *  Improve typespecs
+
 0.8.0
 -----
 

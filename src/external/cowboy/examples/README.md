@@ -22,6 +22,12 @@ Cowboy Examples
  *  [elixir_hello_world](./elixir_hello_world):
     simplest example application with Elixir
 
+ *  [error_hook](./error_hook):
+    provide custom error pages
+
+ *  [eventsource](./eventsource):
+    eventsource emitter and consumer
+
  *  [hello_world](./hello_world):
     simplest example application
 
@@ -37,8 +43,14 @@ Cowboy Examples
  *  [rest_stream_response](./rest_stream_response):
     stream results from a data store
 
+ *  [ssl_hello_world](./ssl_hello_world):
+    simplest SSL application
+
  *  [static_world](./static_world):
     static file handler
+
+ *  [web_sever](./web_server):
+    serves files with lists directory entries
 
  *  [websocket](./websocket):
     websocket example

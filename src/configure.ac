@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [1.2.0], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.2.1], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
