@@ -1429,7 +1429,7 @@ handle_module_request_loop(Uses,
                                    NewServiceState),
     if
         Uses == 1 ->
-            erlang:exit(self(), Result);
+            erlang:exit(Result);
         is_integer(Uses) ->
             Dispatcher ! Result,
             handle_module_request_loop(Uses - 1);
@@ -1466,7 +1466,7 @@ handle_module_info_loop(Uses,
                                 NewServiceState),
     if
         Uses == 1 ->
-            erlang:exit(self(), Result);
+            erlang:exit(Result);
         is_integer(Uses) ->
             Dispatcher ! Result,
             handle_module_info_loop(Uses - 1);

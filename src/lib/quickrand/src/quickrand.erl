@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -93,16 +93,22 @@ seed() ->
 -spec uniform(N :: 1..21267638781707063560975648195455661513) ->
     1..21267638781707063560975648195455661513.
 
-uniform(N) when N < 1000000 ->
+uniform(N) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform(1) ->
+    1;
+
+uniform(N) when is_integer(N), N < 1000000 ->
     % os:timestamp/0 is currently the quickest source of uniform randomness
     {_, _, MicroSecs} = os:timestamp(),
     (MicroSecs rem N) + 1;
 
-uniform(N) when N =< 27817185604309 ->
+uniform(N) when is_integer(N), N =< 27817185604309 ->
     % 27817185604309 == 30269 * 30307 * 30323
     random:uniform(N);
 
-uniform(N) when N =< 21267638781707063560975648195455661513 ->
+uniform(N) when is_integer(N), N =< 21267638781707063560975648195455661513 ->
     % 21267638781707063560975648195455661513 ==
     %   2147483579 * 2147483543 * 2147483423 * 2147483123
     random_wh06_int:uniform(N).
@@ -116,7 +122,13 @@ uniform(N) when N =< 21267638781707063560975648195455661513 ->
 -spec strong_uniform(N :: pos_integer()) ->
     pos_integer().
 
-strong_uniform(N) when is_integer(N), N > 0 ->
+strong_uniform(N) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+strong_uniform(1) ->
+    1;
+
+strong_uniform(N) when is_integer(N), N > 1 ->
     Bytes = erlang:byte_size(binary:encode_unsigned(N)),
     (binary:decode_unsigned(crypto:strong_rand_bytes(Bytes), big) rem N) + 1.
 

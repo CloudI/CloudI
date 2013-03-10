@@ -51,7 +51,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -534,12 +534,18 @@ group_find(GroupName, Groups) ->
     end.
 -endif.
 
+pick(1, [#cpg_data_pid{pid = Pid}], Pattern) ->
+    {ok, Pattern, Pid};
+
 pick(N, L, Pattern) ->
     #cpg_data_pid{pid = Pid} = lists:nth(random(N), L),
     {ok, Pattern, Pid}.
 
 pick_i(I, I, _, [], [], _, GroupName, _) ->
     {error, {'no_process', GroupName}};
+
+pick_i(I, I, 1, [Pid], [], _, _, Pattern) ->
+    {ok, Pattern, Pid};
 
 pick_i(I, I, Length, Filtered, [], _, _, Pattern) ->
     {ok, Pattern, lists:nth((I rem Length) + 1, Filtered)};
