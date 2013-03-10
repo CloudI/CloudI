@@ -21,7 +21,6 @@
         cloudi_random,
         cloudi_response,
         cloudi_service,
-        cloudi_services_common,
         cloudi_services_external,
         cloudi_services_external_sup,
         cloudi_services_internal,

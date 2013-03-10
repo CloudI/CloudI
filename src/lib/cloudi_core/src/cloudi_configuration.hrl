@@ -71,7 +71,24 @@
         % the timeout of a returned response
         % (if the request timeout is equal to the forward or return timeout,
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
-        request_timeout_adjustment = false
+        request_timeout_adjustment = false,
+
+        % Only Relevant For Internal Services:
+
+        % how many service requests should restart the Erlang process used for
+        % handling the service requests
+        % (an integer greater than 0 or the atom 'infinity' are valid values)
+        request_pid_uses = 1,
+        % what erlang:spawn_opt/2 options should be used, if any, by the
+        % service request handling Erlang process
+        request_pid_options = [],
+        % how many info messages should restart the Erlang process used for
+        % handling the info message
+        % (an integer greater than 0 or the atom 'infinity' are valid values)
+        info_pid_uses = 1,
+        % what erlang:spawn_opt/2 options should be used, if any, by the
+        % info message handling Erlang process
+        info_pid_options = []
     }).
 
 % internal service parameters

@@ -87,11 +87,7 @@
 -record(state,
     {
         listener,
-        service,                % listener ref
-        output_type,
-        default_content_type,
-        content_type_lookup = content_type_lookup(),
-        requests = dict:new()
+        service
     }).
 
 %%%------------------------------------------------------------------------
@@ -155,10 +151,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Dispatch = cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
-                #cowboy_state{service = Service,
+                #cowboy_state{dispatcher = Dispatcher,
                               output_type = OutputType,
+                              default_content_type = DefaultContentType1,
                               use_host_prefix = UseHostPrefix,
-                              use_method_suffix = UseMethodSuffix}}]}
+                              use_method_suffix = UseMethodSuffix,
+                              content_type_lookup = content_type_lookup()}}]}
     ]),
     {ok, ListenerPid} = if
         is_list(SSL) ->
@@ -209,93 +207,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             )
     end,
     {ok, #state{listener = ListenerPid,
-                service = Service,
-                output_type = OutputType,
-                default_content_type = DefaultContentType1}}.
+                service = Service}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
-
-cloudi_service_handle_info({'http_request',
-                            #request_state{name_outgoing = NameOutgoing,
-                                           request_info = RequestInfo,
-                                           request = Request,
-                                           request_pid = RequestPid} =
-                            RequestData},
-                           #state{requests = Requests} = State,
-                           Dispatcher) ->
-    case cloudi_service:send_async_active(Dispatcher, NameOutgoing,
-                                          RequestInfo, Request,
-                                          undefined, undefined) of
-        {ok, TransId} ->
-            NewRequestData = RequestData#request_state{request_info = undefined,
-                                                       request = undefined},
-            {noreply, State#state{requests = dict:store(TransId,
-                                                        NewRequestData,
-                                                        Requests)}};
-        {error, timeout} ->
-            RequestPid ! {error, 504, timeout},
-            {noreply, State};
-        {error, Reason} ->
-            RequestPid ! {error, 500, Reason},
-            {noreply, State}
-    end;
-
-cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
-                            _ResponseInfo, Response,
-                            _Timeout, TransId},
-                           #state{output_type = OutputType,
-                                  default_content_type = DefaultContentType,
-                                  content_type_lookup = ContentTypeLookup,
-                                  requests = Requests} = State,
-                           _Dispatcher) ->
-    #request_state{name_incoming = NameIncoming,
-                   request_pid = RequestPid} = dict:fetch(TransId, Requests),
-    ResponseBinary = if
-        OutputType =:= list, is_list(Response) ->
-            erlang:list_to_binary(Response);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary; is_binary(Response) ->
-            Response
-    end,
-    FileName = cloudi_string:afterr($/, NameIncoming, input),
-    HeadersOutgoing = if
-        DefaultContentType =/= undefined ->
-            [{<<"content-type">>, DefaultContentType}];
-        true ->
-            Extension = filename:extension(FileName),
-            if
-                Extension == [] ->
-                    [{<<"content-type">>, <<"text/html">>}];
-                true ->
-                    case trie:find(Extension, ContentTypeLookup) of
-                        error ->
-                            [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
-                             {<<"content-type">>,
-                              <<"application/octet-stream">>}];
-                        {ok, {request, ContentType}} ->
-                            [{<<"content-type">>, ContentType}];
-                        {ok, {attachment, ContentType}} ->
-                            [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
-                             {<<"content-type">>, ContentType}]
-                    end
-            end
-    end,
-    RequestPid ! {ok, 200, HeadersOutgoing, ResponseBinary},
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
-
-cloudi_service_handle_info({'timeout_async_active', TransId},
-                           #state{requests = Requests} = State,
-                           _Dispatcher) ->
-    #request_state{request_pid = RequestPid} = dict:fetch(TransId, Requests),
-    RequestPid ! {error, 504, timeout},
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

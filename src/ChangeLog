@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Provide better cowboy integration to reduce request latency
+    * Add the service configuration options to control the Erlang process
+      that handles service requests or info messages within an internal
+      service: request_pid_uses, request_pid_options,
+      info_pid_uses, info_pid_options
+    * Make sure the 0.6.2 cowboy integration is the same as the 0.8.0 cowboy
+      integration
+
 2013-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the pqueue and quickrand applications as dependencies

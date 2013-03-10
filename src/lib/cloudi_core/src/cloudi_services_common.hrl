@@ -2,9 +2,7 @@
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 %%%
 %%%------------------------------------------------------------------------
-%%% @doc
-%%% ==CloudI Services Fuctions Common to Both Internal and External Services==
-%%% @end
+%%% CloudI Services Fuctions Common to Both Internal and External Services
 %%%
 %%% BSD LICENSE
 %%% 
@@ -42,36 +40,10 @@
 %%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 %%% DAMAGE.
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_common).
--author('mjtruog [at] gmail (dot) com').
-
-%% external interface
--export([destination_allowed/3,
-         destination_refresh_first/2,
-         destination_refresh_start/2,
-         destination_get/4,
-         destination_all/4,
-         send_async_timeout_start/4,
-         send_sync_timeout_start/5,
-         send_timeout_check/2,
-         send_timeout_end/2,
-         recv_timeout_start/7,
-         async_response_timeout_start/6,
-         async_response_timeout_end/2,
-         recv_async_select_random/1,
-         recv_async_select_oldest/1]).
-
--include("cloudi_configuration.hrl").
--include("cloudi_logger.hrl").
-
-%%%------------------------------------------------------------------------
-%%% External interface functions
-%%%------------------------------------------------------------------------
+-compile({nowarn_unused_function, [{recv_async_select_random, 1},
+                                   {recv_async_select_oldest, 1}]}).
 
 destination_allowed([], _, _) ->
     false;
