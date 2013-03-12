@@ -171,8 +171,9 @@ External Dependencies
 `ZeroMQ (http://www.zeromq.org/) Erlang Driver`
 
 - `https://github.com/okeuday/erlzmq2 (branch master and 3.x)`
-- `commit 9171c69d94b2af72dbe74cfce8f4b61266026e33`
-- `Fri Feb  8 19:12:47 PST 2013`
+- `commit 9171c69d94b2af72dbe74cfce8f4b61266026e33` (master)
+- `commit e75f3c8cdf050fc08c00a184d91c4bcbace7c683` (3.x)
+- `Mon Mar 11 12:52:17 PDT 2013`
 - `BSD`
 
 `zeromq/v?/zeromq`

@@ -92,7 +92,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -218,8 +218,6 @@ process_index(Dispatcher) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Return the Erlang pid representing the service.===
-%% Makes the service source code simpler, though the function may
-%% seem unnecessary.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -227,7 +225,7 @@ process_index(Dispatcher) ->
     Self :: pid().
 
 self(Dispatcher) ->
-    Dispatcher.
+    gen_server:call(Dispatcher, self, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

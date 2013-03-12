@@ -241,6 +241,8 @@ recv({I, Socket}, Flags)
     case erlzmq_nif:recv(Socket, sendrecv_flags(Flags)) of
         Ref when is_reference(Ref) ->
             receive
+                {Ref, {error, _} = Error} ->
+                    Error;
                 {Ref, Result} ->
                     {ok, Result}
             after case erlzmq_nif:getsockopt(Socket,?'ZMQ_RCVTIMEO') of
