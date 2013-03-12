@@ -85,10 +85,20 @@
         % how many info messages should restart the Erlang process used for
         % handling the info message
         % (an integer greater than 0 or the atom 'infinity' are valid values)
-        info_pid_uses = 1,
+        info_pid_uses = infinity,
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % info message handling Erlang process
-        info_pid_options = []
+        info_pid_options = [],
+        % use two Erlang processes instead of one for an internal service to
+        % keep send operations separate from receive operations.  better
+        % throughput can be achieved with duo_mode, especially when sending to
+        % external services (the mean request latency should become half
+        % due to the Erlang processes splitting the processing).  duo_mode was
+        % the default for pre-v1.2.0 internal services.  the second process
+        % is used in place of the info_pid and the process' message queue
+        % is used directly (so info_pid_uses must be set to infinity when
+        % duo_mode is true).
+        duo_mode = false
     }).
 
 % internal service parameters

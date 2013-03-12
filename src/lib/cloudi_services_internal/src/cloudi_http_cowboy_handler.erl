@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -75,7 +75,8 @@ init(_Transport, Req, Opts)
     State = Opts,
     {ok, Req, State}.
 
-handle(Req0, #cowboy_state{dispatcher = Dispatcher,
+handle(Req0, #cowboy_state{service = Service,
+                           timeout_async = TimeoutAsync,
                            output_type = OutputType,
                            default_content_type = DefaultContentType,
                            use_host_prefix = UseHostPrefix,
@@ -157,19 +158,10 @@ handle(Req0, #cowboy_state{dispatcher = Dispatcher,
         OutputType =:= external; OutputType =:= binary ->
             headers_external_incoming(HeadersIncoming)
     end,
-    case cloudi_service:send_sync(Dispatcher, NameOutgoing,
-                                  RequestInfo, Request,
-                                  undefined, undefined) of
-        {ok, Response} ->
-            {HttpCode,
-             Req} = return_response(NameIncoming, [], Response,
-                                    ReqN, OutputType, DefaultContentType,
-                                    ContentTypeLookup),
-            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                             [HttpCode, Method, NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
-            {ok, Req, State};
-        {ok, ResponseInfo, Response} ->
+    Self = self(),
+    Service ! {cowboy_request, Self, NameOutgoing, RequestInfo, Request},
+    receive
+        {cowboy_response, ResponseInfo, Response} ->
             HeadersOutgoing = if
                 OutputType =:= internal; OutputType =:= list ->
                     ResponseInfo;
@@ -184,7 +176,7 @@ handle(Req0, #cowboy_state{dispatcher = Dispatcher,
                              [HttpCode, Method, NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             {ok, Req, State};
-        {error, timeout} ->
+        {cowboy_error, timeout} ->
             HttpCode = 504,
             {ok, Req} = cowboy_req:reply(HttpCode,
                                          ReqN),
@@ -192,13 +184,22 @@ handle(Req0, #cowboy_state{dispatcher = Dispatcher,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, timeout]),
             {ok, Req, State};
-        {error, Reason} ->
+        {cowboy_error, Reason} ->
             HttpCode = 500,
             {ok, Req} = cowboy_req:reply(HttpCode,
                                          ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, Reason]),
+            {ok, Req, State}
+    after
+        TimeoutAsync ->
+            HttpCode = 504,
+            {ok, Req} = cowboy_req:reply(HttpCode,
+                                         ReqN),
+            ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                            [HttpCode, Method, NameIncoming,
+                             RequestStartMicroSec, timeout]),
             {ok, Req, State}
     end.
 
