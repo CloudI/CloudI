@@ -100,6 +100,7 @@
         options                        % #config_service_options{}
     }).
 
+% used when duo_mode is true
 -record(state_duo,
     {
         dispatcher,                    % self()
@@ -108,6 +109,7 @@
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         queue_requests = true,         % is the request pid busy?
         queued = pqueue4:new(),        % queued incoming messages
+        queued_info = queue:new(),     % queue process messages for service
         duo_mode_pid,                  % dual mode pid (info_pid)
         request_pid = undefined,       % request pid
         options                        % #config_service_options{}
@@ -937,6 +939,7 @@ handle_info(Request,
                    module = Module,
                    service_state = ServiceState,
                    info_pid = InfoPid,
+                   duo_mode_pid = undefined,
                    options = ConfigOptions} = State) ->
     ModuleInfo = {'cloudi_service_info_loop',
                   Request, Module, Dispatcher, ServiceState},
@@ -948,8 +951,12 @@ handle_info(Request,
 
 terminate(Reason,
           #state{module = Module,
-                 service_state = ServiceState}) ->
+                 service_state = ServiceState,
+                 duo_mode_pid = undefined}) ->
     Module:cloudi_service_terminate(Reason, ServiceState),
+    ok;
+
+terminate(_, _) ->
     ok.
 
 code_change(_, State, _) ->
@@ -1561,11 +1568,13 @@ duo_mode_loop_init(#state_duo{dispatcher = Dispatcher} = State) ->
     receive
         {'cloudi_service_init', {ok, ServiceState}} ->
             erlang:process_flag(trap_exit, true),
-            duo_mode_loop(duo_process_queue(ServiceState, State));
+            duo_mode_loop(duo_process_queues(ServiceState, State));
         Request ->
             % mimic a gen_server handle_info for code reuse
             case duo_handle_info(Request, State) of
-                {stop, Reason, _} ->
+                {stop, Reason, #state_duo{module = Module,
+                                          service_state = ServiceState}} ->
+                    Module:cloudi_service_terminate(Reason, ServiceState),
                     erlang:exit(Dispatcher, Reason);
                 {noreply, NewState} ->
                     duo_mode_loop_init(NewState)
@@ -1577,7 +1586,9 @@ duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
         Request ->
             % mimic a gen_server handle_info for code reuse
             case duo_handle_info(Request, State) of
-                {stop, Reason, _} ->
+                {stop, Reason, #state_duo{module = Module,
+                                          service_state = ServiceState}} ->
+                    Module:cloudi_service_terminate(Reason, ServiceState),
                     erlang:exit(Dispatcher, Reason);
                 {noreply, NewState} ->
                     duo_mode_loop(NewState)
@@ -1586,7 +1597,7 @@ duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
 
 duo_handle_info({'cloudi_service_request_success',
                  NewServiceState}, State) ->
-    {noreply, duo_process_queue(NewServiceState, State)};
+    {noreply, duo_process_queues(NewServiceState, State)};
 
 duo_handle_info({'cloudi_service_request_failure',
                  Type, Error, Stack, NewServiceState}, State) ->
@@ -1709,6 +1720,11 @@ duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId},
                               queued = NewQueue}};
 
 duo_handle_info(Request,
+                #state_duo{queue_requests = true,
+                           queued_info = QueueInfo} = State) ->
+    {noreply, State#state_duo{queued_info = queue:in(Request, QueueInfo)}};
+
+duo_handle_info(Request,
                 #state_duo{dispatcher = Dispatcher,
                            module = Module,
                            service_state = ServiceState} = State) ->
@@ -1718,6 +1734,30 @@ duo_handle_info(Request,
         {'cloudi_service_info_failure', Reason, NewServiceState} ->
             ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
             {stop, Reason, State#state_duo{service_state = NewServiceState}}
+    end.
+
+duo_process_queue_info(NewServiceState,
+                       #state_duo{dispatcher = Dispatcher,
+                                  module = Module,
+                                  queue_requests = true,
+                                  queued_info = QueueInfo} = State) ->
+    case queue:out(QueueInfo) of
+        {empty, NewQueueInfo} ->
+            State#state_duo{service_state = NewServiceState,
+                            queue_requests = false,
+                            queued_info = NewQueueInfo};
+        {{value, Request}, NewQueueInfo} ->
+            case handle_module_info(Request, Module, Dispatcher,
+                                    NewServiceState) of
+                {'cloudi_service_info_success', NextServiceState} ->
+                    duo_process_queue_info(NextServiceState,
+                        State#state_duo{queued_info = NewQueueInfo});
+                {'cloudi_service_info_failure', Reason, NextServiceState} ->
+                    ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
+                    {stop, Reason,
+                     State#state_duo{service_state = NextServiceState,
+                                     queued_info = NewQueueInfo}}
+            end
     end.
 
 duo_process_queue(NewServiceState,
@@ -1782,4 +1822,14 @@ duo_process_queue(NewServiceState,
                             request_pid = NewRequestPid}
     end.
 
+duo_process_queues(NewServiceState, State) ->
+    % info messages should be processed before service requests
+    NewState = duo_process_queue_info(NewServiceState, State),
+    if
+        NewState#state_duo.queue_requests =:= false ->
+            duo_process_queue(NewServiceState,
+                              NewState#state_duo{queue_requests = true});
+        true ->
+            NewState
+    end.
 
