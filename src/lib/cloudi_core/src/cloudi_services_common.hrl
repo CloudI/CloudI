@@ -42,8 +42,14 @@
 %%%
 %%%------------------------------------------------------------------------
 
--compile({nowarn_unused_function, [{recv_async_select_random, 1},
-                                   {recv_async_select_oldest, 1}]}).
+% When using the state record within this file, only the state elements
+% that are common among cloudi_services_internal.erl and
+% cloudi_services_external.erl may be used (to avoid GC delays)
+
+-compile({nowarn_unused_function,
+          [{duo_recv_timeout_start, 5},
+           {recv_async_select_random, 1},
+           {recv_async_select_oldest, 1}]}).
 
 destination_allowed([], _, _) ->
     false;
@@ -204,48 +210,65 @@ destination_all(DestRefresh, _, _, _) ->
                [DestRefresh]),
     throw(badarg).
 
-send_async_timeout_start(Timeout, TransId, SendTimeouts, Dispatcher)
+send_async_timeout_start(Timeout, TransId,
+                         #state{dispatcher = Self,
+                                send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, Dispatcher,
-                             {'cloudi_service_send_async_timeout', TransId}),
-    dict:store(TransId, {passive, Tref}, SendTimeouts).
+    State#state{
+        send_timeouts = dict:store(TransId, {passive,
+            erlang:send_after(Timeout, Self,
+                              {'cloudi_service_send_async_timeout', TransId})},
+            SendTimeouts)}.
 
-send_sync_timeout_start(Timeout, TransId, Client, SendTimeouts, Dispatcher)
+send_sync_timeout_start(Timeout, TransId, Client,
+                        #state{dispatcher = Self,
+                               send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, Dispatcher,
-                             {'cloudi_service_send_sync_timeout', TransId}),
-    dict:store(TransId, {Client, Tref}, SendTimeouts).
+    State#state{
+        send_timeouts = dict:store(TransId, {Client,
+            erlang:send_after(Timeout, Self,
+                              {'cloudi_service_send_sync_timeout', TransId})},
+            SendTimeouts)}.
 
-send_timeout_check(TransId, SendTimeouts)
+send_timeout_end(TransId,
+                 #state{send_timeouts = SendTimeouts} = State)
     when is_binary(TransId) ->
-    dict:find(TransId, SendTimeouts).
-
-send_timeout_end(TransId, SendTimeouts)
-    when is_binary(TransId) ->
-    dict:erase(TransId, SendTimeouts).
+    State#state{send_timeouts = dict:erase(TransId, SendTimeouts)}.
 
 recv_timeout_start(Timeout, Priority, TransId, T,
-                   RecvTimeouts, Queue, Dispatcher)
+                   #state{dispatcher = Self,
+                          recv_timeouts = RecvTimeouts,
+                          queued = Queue} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
-    Tref = erlang:send_after(Timeout, Dispatcher,
-                             {'cloudi_service_recv_timeout',
-                              Priority, TransId}),
-    {dict:store(TransId, Tref, RecvTimeouts),
-     pqueue4:in(T, Priority, Queue)}.
+    State#state{
+        recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, Self,
+                {'cloudi_service_recv_timeout', Priority, TransId}),
+            RecvTimeouts),
+        queued = pqueue4:in(T, Priority, Queue)}.
 
-async_response_timeout_start(_, _, 0, _, AsyncResponses, _) ->
-    AsyncResponses;
+duo_recv_timeout_start(Timeout, Priority, TransId, T,
+                       #state_duo{duo_mode_pid = Self,
+                                  recv_timeouts = RecvTimeouts,
+                                  queued = Queue} = State)
+    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
+    State#state_duo{
+        recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, Self,
+                {'cloudi_service_recv_timeout', Priority, TransId}),
+            RecvTimeouts),
+        queued = pqueue4:in(T, Priority, Queue)}.
+
+async_response_timeout_start(_, _, 0, _, State) ->
+    State;
 
 async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                             AsyncResponses, Dispatcher)
+                             #state{dispatcher = Self,
+                                    async_responses = AsyncResponses} = State)
     when is_integer(Timeout), is_binary(TransId) ->
-    erlang:send_after(Timeout, Dispatcher,
+    erlang:send_after(Timeout, Self,
                       {'cloudi_service_recv_async_timeout', TransId}),
-    dict:store(TransId, {ResponseInfo, Response}, AsyncResponses).
-
-async_response_timeout_end(TransId, AsyncResponses)
-    when is_binary(TransId) ->
-    dict:erase(TransId, AsyncResponses).
+    State#state{async_responses = dict:store(TransId,
+                                             {ResponseInfo, Response},
+                                             AsyncResponses)}.
 
 recv_async_select_random([{TransId, _} | _]) ->
     TransId.

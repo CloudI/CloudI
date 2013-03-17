@@ -72,6 +72,11 @@
         % (if the request timeout is equal to the forward or return timeout,
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
         request_timeout_adjustment = false,
+        % should the service use internal timeout information to provide a
+        % more accurate timeout value within the response provided
+        % (n.b., this only affects the response timeout of a successful
+        %  send_async request)
+        response_timeout_adjustment = true,
 
         % Only Relevant For Internal Services:
 

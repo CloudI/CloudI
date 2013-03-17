@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve performance so that it is closer to v1.1.0 performance
+    * Fix remaining duo_mode errors
+
 2013-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix duo_mode issues related to termination and info messages

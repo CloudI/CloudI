@@ -627,6 +627,8 @@ services_validate_options(OptionsList) ->
          Options#config_service_options.dest_refresh_delay},
         {request_timeout_adjustment,
          Options#config_service_options.request_timeout_adjustment},
+        {response_timeout_adjustment,
+         Options#config_service_options.response_timeout_adjustment},
         {request_pid_uses,
          Options#config_service_options.request_pid_uses},
         {request_pid_options,
@@ -638,8 +640,9 @@ services_validate_options(OptionsList) ->
         {duo_mode,
          Options#config_service_options.duo_mode}],
     [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-     RequestTimeoutAdjustment, RequestPidUses, RequestPidOptions,
-     InfoPidUses, InfoPidOptions, DuoMode] =
+     RequestTimeoutAdjustment, ResponseTimeoutAdjustment,
+     RequestPidUses, RequestPidOptions, InfoPidUses, InfoPidOptions,
+     DuoMode] =
         cloudi_proplists:take_values(Defaults, OptionsList),
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
@@ -648,6 +651,7 @@ services_validate_options(OptionsList) ->
     true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
     true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
     true = is_boolean(RequestTimeoutAdjustment),
+    true = is_boolean(ResponseTimeoutAdjustment),
     true = (RequestPidUses =:= infinity) orelse
            (is_integer(RequestPidUses) and (RequestPidUses >= 1)),
     true = (InfoPidUses =:= infinity) orelse
@@ -660,6 +664,7 @@ services_validate_options(OptionsList) ->
         dest_refresh_start = DestRefreshStart,
         dest_refresh_delay = DestRefreshDelay,
         request_timeout_adjustment = RequestTimeoutAdjustment,
+        response_timeout_adjustment = ResponseTimeoutAdjustment,
         request_pid_uses = RequestPidUses,
         request_pid_options =
             services_validate_option_pid_options(RequestPidOptions),
