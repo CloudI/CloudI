@@ -794,10 +794,15 @@ int cloudi_forward(cloudi_instance_t * p,
                                        trans_id, pid, pid_size);
         if (result == cloudi_success)
         {
-            throw CloudI::API::forward_async_exception(p, size,
-                                                       timeout,
-                                                       timeout_index_start,
-                                                       timeout_index_end);
+            CloudI::API::forward_async_exception e(p, size,
+                                                   timeout,
+                                                   timeout_index_start,
+                                                   timeout_index_end);
+            result = e.send();
+            if (result == cloudi_success)
+            {
+                throw e;
+            }
         }
     }
     else if (command == CLOUDI_SYNC)
@@ -812,10 +817,15 @@ int cloudi_forward(cloudi_instance_t * p,
                                        trans_id, pid, pid_size);
         if (result == cloudi_success)
         {
-            throw CloudI::API::forward_sync_exception(p, size,
-                                                      timeout,
-                                                      timeout_index_start,
-                                                      timeout_index_end);
+            CloudI::API::forward_sync_exception e(p, size,
+                                                  timeout,
+                                                  timeout_index_start,
+                                                  timeout_index_end);
+            result = e.send();
+            if (result == cloudi_success)
+            {
+                throw e;
+            }
         }
     }
     else
@@ -840,20 +850,25 @@ int cloudi_forward_async(cloudi_instance_t * p,
     uint32_t size;
     uint32_t timeout_index_start;
     uint32_t timeout_index_end;
-    int const result = cloudi_forward_store_(p, size,
-                                             timeout_index_start,
-                                             timeout_index_end,
-                                             "forward_async", name,
-                                             request_info, request_info_size,
-                                             request, request_size,
-                                             timeout, priority,
-                                             trans_id, pid, pid_size);
+    int result = cloudi_forward_store_(p, size,
+                                       timeout_index_start,
+                                       timeout_index_end,
+                                       "forward_async", name,
+                                       request_info, request_info_size,
+                                       request, request_size,
+                                       timeout, priority,
+                                       trans_id, pid, pid_size);
     if (result == cloudi_success)
     {
-        throw CloudI::API::forward_async_exception(p, size,
-                                                   timeout,
-                                                   timeout_index_start,
-                                                   timeout_index_end);
+        CloudI::API::forward_async_exception e(p, size,
+                                               timeout,
+                                               timeout_index_start,
+                                               timeout_index_end);
+        result = e.send();
+        if (result == cloudi_success)
+        {
+            throw e;
+        }
     }
     return result;
 }
@@ -873,20 +888,25 @@ int cloudi_forward_sync(cloudi_instance_t * p,
     uint32_t size;
     uint32_t timeout_index_start;
     uint32_t timeout_index_end;
-    int const result = cloudi_forward_store_(p, size,
-                                             timeout_index_start,
-                                             timeout_index_end,
-                                             "forward_sync", name,
-                                             request_info, request_info_size,
-                                             request, request_size,
-                                             timeout, priority,
-                                             trans_id, pid, pid_size);
+    int result = cloudi_forward_store_(p, size,
+                                       timeout_index_start,
+                                       timeout_index_end,
+                                       "forward_sync", name,
+                                       request_info, request_info_size,
+                                       request, request_size,
+                                       timeout, priority,
+                                       trans_id, pid, pid_size);
     if (result == cloudi_success)
     {
-        throw CloudI::API::forward_sync_exception(p, size,
-                                                  timeout,
-                                                  timeout_index_start,
-                                                  timeout_index_end);
+        CloudI::API::forward_sync_exception e(p, size,
+                                              timeout,
+                                              timeout_index_start,
+                                              timeout_index_end);
+        result = e.send();
+        if (result == cloudi_success)
+        {
+            throw e;
+        }
     }
     return result;
 }
@@ -974,10 +994,15 @@ int cloudi_return(cloudi_instance_t * p,
                                       timeout, trans_id, pid, pid_size);
         if (result == cloudi_success)
         {
-            throw CloudI::API::return_async_exception(p, size,
-                                                      timeout,
-                                                      timeout_index_start,
-                                                      timeout_index_end);
+            CloudI::API::return_async_exception e(p, size,
+                                                  timeout,
+                                                  timeout_index_start,
+                                                  timeout_index_end);
+            result = e.send();
+            if (result == cloudi_success)
+            {
+                throw e;
+            }
         }
     }
     else if (command == CLOUDI_SYNC)
@@ -991,10 +1016,15 @@ int cloudi_return(cloudi_instance_t * p,
                                       timeout, trans_id, pid, pid_size);
         if (result == cloudi_success)
         {
-            throw CloudI::API::return_sync_exception(p, size,
-                                                     timeout,
-                                                     timeout_index_start,
-                                                     timeout_index_end);
+            CloudI::API::return_sync_exception e(p, size,
+                                                 timeout,
+                                                 timeout_index_start,
+                                                 timeout_index_end);
+            result = e.send();
+            if (result == cloudi_success)
+            {
+                throw e;
+            }
         }
     }
     else
@@ -1019,19 +1049,24 @@ int cloudi_return_async(cloudi_instance_t * p,
     uint32_t size;
     uint32_t timeout_index_start;
     uint32_t timeout_index_end;
-    int const result = cloudi_return_store_(p, size,
-                                            timeout_index_start,
-                                            timeout_index_end,
-                                            "return_async", name, pattern,
-                                            response_info, response_info_size,
-                                            response, response_size,
-                                            timeout, trans_id, pid, pid_size);
+    int result = cloudi_return_store_(p, size,
+                                      timeout_index_start,
+                                      timeout_index_end,
+                                      "return_async", name, pattern,
+                                      response_info, response_info_size,
+                                      response, response_size,
+                                      timeout, trans_id, pid, pid_size);
     if (result == cloudi_success)
     {
-        throw CloudI::API::return_async_exception(p, size,
-                                                  timeout,
-                                                  timeout_index_start,
-                                                  timeout_index_end);
+        CloudI::API::return_async_exception e(p, size,
+                                              timeout,
+                                              timeout_index_start,
+                                              timeout_index_end);
+        result = e.send();
+        if (result == cloudi_success)
+        {
+            throw e;
+        }
     }
     return result;
 }
@@ -1051,20 +1086,25 @@ int cloudi_return_sync(cloudi_instance_t * p,
     uint32_t size;
     uint32_t timeout_index_start;
     uint32_t timeout_index_end;
-    int const result = cloudi_return_store_(p, size,
-                                            timeout_index_start,
-                                            timeout_index_end,
-                                            "return_sync",
-                                            name, pattern,
-                                            response_info, response_info_size,
-                                            response, response_size,
-                                            timeout, trans_id, pid, pid_size);
+    int result = cloudi_return_store_(p, size,
+                                      timeout_index_start,
+                                      timeout_index_end,
+                                      "return_sync",
+                                      name, pattern,
+                                      response_info, response_info_size,
+                                      response, response_size,
+                                      timeout, trans_id, pid, pid_size);
     if (result == cloudi_success)
     {
-        throw CloudI::API::return_sync_exception(p, size,
-                                                 timeout,
-                                                 timeout_index_start,
-                                                 timeout_index_end);
+        CloudI::API::return_sync_exception e(p, size,
+                                             timeout,
+                                             timeout_index_start,
+                                             timeout_index_end);
+        result = e.send();
+        if (result == cloudi_success)
+        {
+            throw e;
+        }
     }
     return result;
 }
@@ -1204,10 +1244,6 @@ static void callback(cloudi_instance_t * p,
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
             }
-            else
-            {
-                result = e.send(timeout, 0);
-            }
             assert(result == cloudi_success);
             return;
         }
@@ -1222,10 +1258,6 @@ static void callback(cloudi_instance_t * p,
             {
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
-            }
-            else
-            {
-                result = e.send(timeout, 0);
             }
             assert(result == cloudi_success);
             return;
@@ -1257,10 +1289,6 @@ static void callback(cloudi_instance_t * p,
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
             }
-            else
-            {
-                result = e.send(timeout, 0);
-            }
             assert(result == cloudi_success);
             return;
         }
@@ -1287,10 +1315,6 @@ static void callback(cloudi_instance_t * p,
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
             }
-            else
-            {
-                result = e.send(timeout, 0);
-            }
             assert(result == cloudi_success);
             return;
         }
@@ -1305,10 +1329,6 @@ static void callback(cloudi_instance_t * p,
             {
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
-            }
-            else
-            {
-                result = e.send(timeout, 0);
             }
             assert(result == cloudi_success);
             return;
@@ -1334,10 +1354,6 @@ static void callback(cloudi_instance_t * p,
             {
                 result = e.send(timeout,
                     static_cast<int32_t>(request_timer.elapsed() * 1000.0));
-            }
-            else
-            {
-                result = e.send(timeout, 0);
             }
             assert(result == cloudi_success);
             return;
@@ -2053,9 +2069,38 @@ void API::info_key_value_destroy(char const ** p) const
     cloudi_info_key_value_destroy(p);
 }
 
-int API::return_sync_exception::send(int32_t const timeout_old,
-                                     int32_t const elapsed) const
+API::function_termination_exception::
+function_termination_exception(cloudi_instance_t * p,
+                               uint32_t size,
+                               int32_t timeout_new,
+                               uint32_t timeout_index_start,
+                               uint32_t timeout_index_end) throw() :
+    m_api(p),
+    m_size(size),
+    m_timeout_new(timeout_new),
+    m_timeout_index_start(timeout_index_start),
+    m_timeout_index_end(timeout_index_end)
 {
+}
+
+int API::function_termination_exception::send() const
+{
+    if (m_api->request_timeout_adjustment)
+    {
+        return cloudi_success;
+    }
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(m_api->buffer_send);
+    return write_exact(m_api->fd_out, m_api->use_header,
+                       buffer.get<char>(), m_size);
+}
+
+int API::function_termination_exception::send(int32_t const timeout_old,
+                                              int32_t const elapsed) const
+{
+    if (! m_api->request_timeout_adjustment)
+    {
+        return cloudi_success;
+    }
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(m_api->buffer_send);
     uint32_t size = m_size;
     if (elapsed > 0 && m_timeout_new == timeout_old)
@@ -2075,78 +2120,50 @@ int API::return_sync_exception::send(int32_t const timeout_old,
     }
     return write_exact(m_api->fd_out, m_api->use_header,
                        buffer.get<char>(), size);
+}
+
+int API::return_async_exception::send() const
+{
+    return function_termination_exception::send();
 }
 
 int API::return_async_exception::send(int32_t const timeout_old,
                                       int32_t const elapsed) const
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(m_api->buffer_send);
-    uint32_t size = m_size;
-    if (elapsed > 0 && m_timeout_new == timeout_old)
-    {
-        uint32_t const timeout_final =
-            static_cast<uint32_t>(std::max(0, timeout_old - elapsed));
-        int index = m_timeout_index_start;
-        if (ei_encode_ulong(buffer.get<char>(), &index, timeout_final))
-            return cloudi_error_ei_encode;
-        if (static_cast<uint32_t>(index) != m_timeout_index_end)
-        {
-            assert(static_cast<uint32_t>(index) < m_timeout_index_end);
-            buffer.move(m_timeout_index_end,
-                        size - m_timeout_index_end, index);
-            size -= (m_timeout_index_end - index);
-        }
-    }
-    return write_exact(m_api->fd_out, m_api->use_header,
-                       buffer.get<char>(), size);
+    return function_termination_exception::send(timeout_old, elapsed);
 }
 
-int API::forward_sync_exception::send(int32_t const timeout_old,
-                                      int32_t const elapsed) const
+int API::return_sync_exception::send() const
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(m_api->buffer_send);
-    uint32_t size = m_size;
-    if (elapsed > 0 && m_timeout_new == timeout_old)
-    {
-        uint32_t const timeout_final =
-            static_cast<uint32_t>(std::max(0, timeout_old - elapsed));
-        int index = m_timeout_index_start;
-        if (ei_encode_ulong(buffer.get<char>(), &index, timeout_final))
-            return cloudi_error_ei_encode;
-        if (static_cast<uint32_t>(index) != m_timeout_index_end)
-        {
-            assert(static_cast<uint32_t>(index) < m_timeout_index_end);
-            buffer.move(m_timeout_index_end,
-                        size - m_timeout_index_end, index);
-            size -= (m_timeout_index_end - index);
-        }
-    }
-    return write_exact(m_api->fd_out, m_api->use_header,
-                       buffer.get<char>(), size);
+    return function_termination_exception::send();
+}
+
+int API::return_sync_exception::send(int32_t const timeout_old,
+                                     int32_t const elapsed) const
+{
+    return function_termination_exception::send(timeout_old, elapsed);
+}
+
+int API::forward_async_exception::send() const
+{
+    return function_termination_exception::send();
 }
 
 int API::forward_async_exception::send(int32_t const timeout_old,
                                        int32_t const elapsed) const
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(m_api->buffer_send);
-    uint32_t size = m_size;
-    if (elapsed > 0 && m_timeout_new == timeout_old)
-    {
-        uint32_t const timeout_final =
-            static_cast<uint32_t>(std::max(0, timeout_old - elapsed));
-        int index = m_timeout_index_start;
-        if (ei_encode_ulong(buffer.get<char>(), &index, timeout_final))
-            return cloudi_error_ei_encode;
-        if (static_cast<uint32_t>(index) != m_timeout_index_end)
-        {
-            assert(static_cast<uint32_t>(index) < m_timeout_index_end);
-            buffer.move(m_timeout_index_end,
-                        size - m_timeout_index_end, index);
-            size -= (m_timeout_index_end - index);
-        }
-    }
-    return write_exact(m_api->fd_out, m_api->use_header,
-                       buffer.get<char>(), size);
+    return function_termination_exception::send(timeout_old, elapsed);
+}
+
+int API::forward_sync_exception::send() const
+{
+    return function_termination_exception::send();
+}
+
+int API::forward_sync_exception::send(int32_t const timeout_old,
+                                      int32_t const elapsed) const
+{
+    return function_termination_exception::send(timeout_old, elapsed);
 }
 
 } // namespace CloudI

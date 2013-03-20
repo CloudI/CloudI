@@ -76,7 +76,7 @@
         % more accurate timeout value within the response provided
         % (n.b., this only affects the response timeout of a successful
         %  send_async request)
-        response_timeout_adjustment = true,
+        response_timeout_adjustment = false,
 
         % Only Relevant For Internal Services:
 

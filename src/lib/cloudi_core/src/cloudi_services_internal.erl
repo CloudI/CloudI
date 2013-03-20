@@ -1238,7 +1238,7 @@ handle_mcast_async(Name, RequestInfo, Request,
     end.
 
 handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
-                      Timeout, Priority, TransId, Pid,
+                      Timeout, Priority, TransId, Source,
                       Module, Dispatcher, ConfigOptions, ServiceState) ->
     RequestTimeoutF = if
         ConfigOptions#config_service_options.request_timeout_adjustment ->
@@ -1256,7 +1256,7 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
                                              Name, Pattern,
                                              RequestInfo, Request,
                                              Timeout, Priority,
-                                             TransId, Pid,
+                                             TransId, Source,
                                              ServiceState,
                                              Dispatcher) of
         {reply, <<>>, NewServiceState} ->
@@ -1265,13 +1265,13 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
               <<>>, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
         {reply, ResponseInfo, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
               ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
         {forward, _, _, _, NextTimeout, NextPriority, NewServiceState}
             when NextPriority < ?PRIORITY_HIGH;
@@ -1284,21 +1284,21 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_success',
              {'cloudi_service_forward_async_retry', NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), NextPriority, TransId, Pid},
+              RequestTimeoutF(Timeout), NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_forward_async_retry', NextName,
               NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority, TransId, Pid},
+              NextTimeout, NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_forward_async_retry', NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), Priority, TransId, Pid},
+              RequestTimeoutF(Timeout), Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
             {'cloudi_service_request_success', undefined, NewServiceState};
@@ -1309,42 +1309,42 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
-                Timeout, TransId, Pid}}
+                Timeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_async' ->
             {'cloudi_service_request_success',
              {ReturnType, Name, Pattern,
               ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              ServiceState};
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
-                NextTimeout, TransId, Pid}}
+                NextTimeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_async' ->
             {'cloudi_service_request_success',
              {ReturnType, Name, Pattern,
               ResponseInfo, Response,
-              NextTimeout, TransId, Pid},
+              NextTimeout, TransId, Source},
              ServiceState};
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
-                Timeout, NextPriority, TransId, Pid}}
+                Timeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_async_retry' ->
             {'cloudi_service_request_success',
              {ForwardType, NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), NextPriority, TransId, Pid},
+              RequestTimeoutF(Timeout), NextPriority, TransId, Source},
              ServiceState};
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
-                NextTimeout, NextPriority, TransId, Pid}}
+                NextTimeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_async_retry' ->
             {'cloudi_service_request_success',
              {ForwardType, NextName,
               NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority, TransId, Pid},
+              NextTimeout, NextPriority, TransId, Source},
              ServiceState};
         Type:Error ->
             {'cloudi_service_request_failure',
@@ -1352,7 +1352,7 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
     end;
 
 handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
-                      Timeout, Priority, TransId, Pid,
+                      Timeout, Priority, TransId, Source,
                       Module, Dispatcher, ConfigOptions, ServiceState) ->
     RequestTimeoutF = if
         ConfigOptions#config_service_options.request_timeout_adjustment ->
@@ -1370,7 +1370,7 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
                                              Name, Pattern,
                                              RequestInfo, Request,
                                              Timeout, Priority,
-                                             TransId, Pid,
+                                             TransId, Source,
                                              ServiceState,
                                              Dispatcher) of
         {reply, <<>>, NewServiceState} ->
@@ -1379,13 +1379,13 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
               <<>>, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
         {reply, ResponseInfo, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
               ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
         {forward, _, _, _, NextTimeout, NextPriority, NewServiceState}
             when NextPriority < ?PRIORITY_HIGH;
@@ -1398,21 +1398,21 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_success',
              {'cloudi_service_forward_sync_retry', NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), NextPriority, TransId, Pid},
+              RequestTimeoutF(Timeout), NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_forward_sync_retry', NextName,
               NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority, TransId, Pid},
+              NextTimeout, NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_forward_sync_retry', NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), Priority, TransId, Pid},
+              RequestTimeoutF(Timeout), Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
             {'cloudi_service_request_success', undefined, NewServiceState};
@@ -1423,42 +1423,42 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
-                Timeout, TransId, Pid}}
+                Timeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_sync' ->
             {'cloudi_service_request_success',
              {ReturnType, Name, Pattern,
               ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Pid},
+              RequestTimeoutF(Timeout), TransId, Source},
              ServiceState};
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
-                NextTimeout, TransId, Pid}}
+                NextTimeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_sync' ->
             {'cloudi_service_request_success',
              {ReturnType, Name, Pattern,
               ResponseInfo, Response,
-              NextTimeout, TransId, Pid},
+              NextTimeout, TransId, Source},
              ServiceState};
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
-                Timeout, NextPriority, TransId, Pid}}
+                Timeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_sync_retry' ->
             {'cloudi_service_request_success',
              {ForwardType, NextName,
               NextRequestInfo, NextRequest,
-              RequestTimeoutF(Timeout), NextPriority, TransId, Pid},
+              RequestTimeoutF(Timeout), NextPriority, TransId, Source},
              ServiceState};
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
-                NextTimeout, NextPriority, TransId, Pid}}
+                NextTimeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_sync_retry' ->
             {'cloudi_service_request_success',
              {ForwardType, NextName,
               NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority, TransId, Pid},
+              NextTimeout, NextPriority, TransId, Source},
              ServiceState};
         Type:Error ->
             {'cloudi_service_request_failure',
@@ -1597,7 +1597,7 @@ handle_module_request_loop(Uses, ResultPid) ->
          _NewServiceState} = ModuleRequest ->
             handle_module_request_loop(Uses, ModuleRequest, ResultPid)
     end.
-        
+
 handle_module_request_loop(Uses,
                            {'cloudi_service_request_loop',
                             Type, Name, Pattern,
