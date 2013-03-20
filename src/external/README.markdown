@@ -9,14 +9,6 @@ External Dependencies
 - `Sun Mar 10 13:07:51 PDT 2013`
 - `MIT`
 
-`cowboy_old`
-------------
-`Erlang HTTP Server`
-- `https://github.com/extend/cowboy`
-- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.6.2)`
-- `Sat Sep 15 13:42:26 PDT 2012`
-- `MIT`
-
 `dynamic_compile`
 -----------------
 `Dynamic compilation of Erlang modules`

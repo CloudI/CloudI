@@ -3,7 +3,6 @@
             "lib/cloudi_services_databases",
             "lib/cloudi_services_messaging",
             "external/cowboy",
-            "external/cowboy_old",
             "external/dynamic_compile",
             "external/ecouchdb",
             "external/ememcached",

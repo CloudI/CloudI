@@ -31,7 +31,6 @@ all-local: rebar \
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
-	$(MKDIR_P) external/cowboy_old/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src; \
         test ! -e cloudi_core.app.src && \
@@ -111,9 +110,6 @@ all-local: rebar \
 	(cd $(top_srcdir)/external/cowboy; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
-	(cd $(top_srcdir)/external/cowboy_old; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/cowboy_old/ebin || exit 0)
 	(cd $(top_srcdir)/external/dynamic_compile; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/dynamic_compile/ebin || exit 0)
@@ -145,7 +141,6 @@ clean-local: rebar
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
-          $(top_builddir)/external/cowboy_old/ebin \
           $(top_builddir)/external/dynamic_compile/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
@@ -167,7 +162,6 @@ clean-local: rebar
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
           $(top_srcdir)/external/cowboy/ebin \
-          $(top_srcdir)/external/cowboy_old/ebin \
           $(top_srcdir)/external/dynamic_compile/ebin
 
 clean-configure: config.log
@@ -238,7 +232,6 @@ dialyze: all-local dialyzer.plt
               lib/uuid/ebin/ \
               lib/trie/ebin/ \
               external/cowboy/ebin \
-              external/cowboy_old/ebin \
               external/dynamic_compile/ebin \
               external/epgsql/ebin \
               external/etokyotyrant/ebin \

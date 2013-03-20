@@ -207,24 +207,26 @@ handle_call({'subscribe', Pattern}, _,
             #state{dispatcher = Dispatcher,
                    prefix = Prefix,
                    duo_mode_pid = DuoModePid} = State) ->
-    if
+    Receiver = if
         is_pid(DuoModePid) ->
-            ok = cpg:join(Prefix ++ Pattern, DuoModePid);
+            DuoModePid;
         true ->
-            ok = cpg:join(Prefix ++ Pattern, Dispatcher)
+            Dispatcher
     end,
+    ok = cpg:join(Prefix ++ Pattern, Receiver),
     {reply, ok, State};
 
 handle_call({'unsubscribe', Pattern}, _,
             #state{dispatcher = Dispatcher,
                    prefix = Prefix,
                    duo_mode_pid = DuoModePid} = State) ->
-    if
+    Receiver = if
         is_pid(DuoModePid) ->
-            ok = cpg:leave(Prefix ++ Pattern, DuoModePid);
+            DuoModePid;
         true ->
-            ok = cpg:leave(Prefix ++ Pattern, Dispatcher)
+            Dispatcher
     end,
+    ok = cpg:leave(Prefix ++ Pattern, Receiver),
     {reply, ok, State};
 
 handle_call({'get_pid', Name}, Client,
@@ -576,8 +578,15 @@ handle_info({'EXIT', InfoPid, Reason},
     {stop, Reason, State};
 
 handle_info({'EXIT', Dispatcher, restart},
-            #state{dispatcher = Dispatcher} = State) ->
+            #state{dispatcher = Dispatcher,
+                   duo_mode_pid = DuoModePid} = State) ->
     % CloudI Service API requested a restart
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, restart);
+        true ->
+            ok
+    end,
     {stop, restart, State};
 
 handle_info({'EXIT', Dispatcher, Reason},
@@ -1028,13 +1037,13 @@ handle_get_pid(Name, Timeout, Client,
                       dest_refresh = DestRefresh,
                       cpg_data = Groups,
                       duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
             Dispatcher
     end,
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Receiver, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_get_pid_retry',
@@ -1055,13 +1064,13 @@ handle_send_async(Name, RequestInfo, Request,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups,
                          duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
             Dispatcher
     end,
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Receiver, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_send_async_retry',
@@ -1076,7 +1085,7 @@ handle_send_async(Name, RequestInfo, Request,
             TransId = uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Source},
+                   Timeout, Priority, TransId, Receiver},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
     end.
@@ -1086,7 +1095,7 @@ handle_send_async_pid(Name, Pattern, RequestInfo, Request,
                       #state{dispatcher = Dispatcher,
                              uuid_generator = UUID,
                              duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
@@ -1095,7 +1104,7 @@ handle_send_async_pid(Name, Pattern, RequestInfo, Request,
     TransId = uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source},
+           Timeout, Priority, TransId, Receiver},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)}.
 
 handle_send_async_active(Name, RequestInfo, Request,
@@ -1105,13 +1114,13 @@ handle_send_async_active(Name, RequestInfo, Request,
                                 dest_refresh = DestRefresh,
                                 cpg_data = Groups,
                                 duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
             Dispatcher
     end,
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Receiver, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_send_async_active_retry',
@@ -1126,7 +1135,7 @@ handle_send_async_active(Name, RequestInfo, Request,
             TransId = uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Source},
+                   Timeout, Priority, TransId, Receiver},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
@@ -1136,7 +1145,7 @@ handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
                              #state{dispatcher = Dispatcher,
                                     uuid_generator = UUID,
                                     duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
@@ -1145,7 +1154,7 @@ handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
     TransId = uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source},
+           Timeout, Priority, TransId, Receiver},
     {reply, {ok, TransId},
      send_async_active_timeout_start(Timeout, TransId, State)}.
 
@@ -1156,13 +1165,13 @@ handle_send_sync(Name, RequestInfo, Request,
                         dest_refresh = DestRefresh,
                         cpg_data = Groups,
                         duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
             Dispatcher
     end,
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Receiver, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_send_sync_retry',
@@ -1177,7 +1186,7 @@ handle_send_sync(Name, RequestInfo, Request,
             TransId = uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_sync',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Source},
+                   Timeout, Priority, TransId, Receiver},
             {noreply, send_sync_timeout_start(Timeout, TransId, Client, State)}
     end.
 
@@ -1186,7 +1195,7 @@ handle_send_sync_pid(Name, Pattern, RequestInfo, Request,
                      #state{dispatcher = Dispatcher,
                             uuid_generator = UUID,
                             duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
@@ -1195,7 +1204,7 @@ handle_send_sync_pid(Name, Pattern, RequestInfo, Request,
     TransId = uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source},
+           Timeout, Priority, TransId, Receiver},
     {noreply, send_sync_timeout_start(Timeout, TransId, Client, State)}.
 
 handle_mcast_async(Name, RequestInfo, Request,
@@ -1205,13 +1214,13 @@ handle_mcast_async(Name, RequestInfo, Request,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups,
                           duo_mode_pid = DuoModePid} = State) ->
-    Source = if
+    Receiver = if
         is_pid(DuoModePid) ->
             DuoModePid;
         true ->
             Dispatcher
     end,
-    case destination_all(DestRefresh, Name, Source, Groups) of
+    case destination_all(DestRefresh, Name, Receiver, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_mcast_async_retry',
@@ -1227,7 +1236,7 @@ handle_mcast_async(Name, RequestInfo, Request,
                 TransId = uuid:get_v1(UUID),
                 Pid ! {'cloudi_service_send_async',
                        Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Source},
+                       Timeout, Priority, TransId, Receiver},
                 TransId
             end, PidList),
             gen_server:reply(Client, {ok, TransIdList}),
@@ -1696,7 +1705,7 @@ duo_handle_info({'cloudi_service_return_async',
                  _, _, _, _, _, _, Source} = T,
                 #state_duo{duo_mode_pid = DuoModePid,
                            dispatcher = Dispatcher} = State) ->
-    true = Source == DuoModePid,
+    true = Source =:= DuoModePid,
     Dispatcher ! T,
     {noreply, State};
 
@@ -1704,7 +1713,7 @@ duo_handle_info({'cloudi_service_return_sync',
                  _, _, _, _, _, _, Source} = T,
                 #state_duo{duo_mode_pid = DuoModePid,
                            dispatcher = Dispatcher} = State) ->
-    true = Source == DuoModePid,
+    true = Source =:= DuoModePid,
     Dispatcher ! T,
     {noreply, State};
 
@@ -1753,6 +1762,19 @@ duo_handle_info({'EXIT', RequestPid,
 duo_handle_info({'EXIT', RequestPid, Reason},
                 #state_duo{request_pid = RequestPid} = State) ->
     ?LOG_ERROR("~p duo_mode request exited: ~p", [RequestPid, Reason]),
+    {stop, Reason, State};
+
+duo_handle_info({'EXIT', Dispatcher, shutdown},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    {stop, shutdown, State};
+
+duo_handle_info({'EXIT', Dispatcher, restart},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    {stop, restart, State};
+
+duo_handle_info({'EXIT', Dispatcher, Reason},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    ?LOG_ERROR("~p duo_mode dispatcher exited: ~p", [Dispatcher, Reason]),
     {stop, Reason, State};
 
 duo_handle_info({'cloudi_service_send_async',

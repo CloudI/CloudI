@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove the cowboy_old (v0.6.2) application since the latency
+      problems in v1.2.0 were determined to be internal
+      (the latency problems are now solved with previous commits)
+    * Fix some Erlang process exit conditions
+
 2013-03-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix latency due to the request_timeout_adjustment changes in the
