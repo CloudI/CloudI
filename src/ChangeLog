@@ -5,8 +5,17 @@
 
     * Fix latency due to the request_timeout_adjustment changes in the
       C/C++ CloudI API due to exception handling overhead
+      which was ~175 ms for 20k@10kreq/s
       (now performance is the same as v1.1.0 with the C/C++ CloudI API
        when using a duo_mode internal service to send requests)
+    * Fix latency due to the request_timeout_adjustment changes in the
+      Java CloudI API due to exception handling overhead
+      which was ~200 ms for 20k@10kreq/s
+      (now performance is the same as v1.1.0 with the Java CloudI API
+       when using a duo_mode internal service to send requests)
+    * The Python and Ruby CloudI API implementations will not require
+      changes due to their inherent latency, while the Python_C implementation
+      naturally gets the changes to the C/C++ CloudI API
 
 2013-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
