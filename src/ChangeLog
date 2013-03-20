@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-03-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix latency due to the request_timeout_adjustment changes in the
+      C/C++ CloudI API due to exception handling overhead
+      (now performance is the same as v1.1.0 with the C/C++ CloudI API
+       when using a duo_mode internal service to send requests)
+
 2013-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve performance so that it is closer to v1.1.0 performance
