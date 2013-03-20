@@ -45,7 +45,6 @@
 -record(cowboy_state,
     {
         service,
-        dispatcher,
         timeout_async,
         output_type,
         default_content_type,

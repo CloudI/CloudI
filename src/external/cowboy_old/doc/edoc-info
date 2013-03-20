@@ -1,8 +1,0 @@
-%% encoding: UTF-8
-{application,cowboy}.
-{packages,[]}.
-{modules,[cowboy,cowboy_bstr,cowboy_clock,cowboy_handler,cowboy_http,
-          cowboy_http_handler,cowboy_loop_handler,cowboy_middleware,
-          cowboy_multipart,cowboy_protocol,cowboy_req,cowboy_rest,
-          cowboy_router,cowboy_static,cowboy_websocket,
-          cowboy_websocket_handler]}.
