@@ -562,7 +562,7 @@ handle_info({cpg_data, Groups}, StateName,
     destination_refresh_start(DestRefresh, ConfigOptions),
     {next_state, StateName, State#state{cpg_data = Groups}};
 
-handle_info('cloudi_service_init', _, State) ->
+handle_info('cloudi_service_init_timeout', _, State) ->
     {stop, timeout, State};
 
 handle_info({'cloudi_service_send_async_retry', Name, RequestInfo, Request,
