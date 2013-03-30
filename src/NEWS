@@ -1,3 +1,43 @@
+March 30, 2013
+  Version 1.2.1 (beta) released.
+
+  * Performance issues with the version 1.2.0 release were addressed here.
+    It became clear after loadtesting that using a single Erlang process
+    instead of two Erlang processes for each internal service caused much
+    more latency under heavy load for internal services that receive a
+    large amount of throughput.  While this may be an obvious conclusion,
+    the latency was judged to be significant after loadtesting, so duo_mode
+    was added as an internal service configuration option to provide a
+    service with two Erlang processes instead of a single Erlang process
+    (which provides performance similar to what was seen previous to
+     version 1.2.0, but with slightly less latency, caveat: python_c
+     suffered due to changes for the request timeout adjustment).
+    The duo_mode option being set to true makes sure to provide an Erlang
+    process for receiving service requests while the main Erlang process
+    handles sending service requests, so that the service messaging flow
+    is able to more fully exploit the Erlang VM scheduling
+    (i.e., duo_mode is a duplex communication mode).
+  * The exception handling overhead has become a source of latency under load
+    when using the request_timeout_adjustment.  The request_timeout_adjustment
+    being set to false avoids the extra latency for all CloudI API
+    implementations except python_c (so the python_c performance gains
+    were sacrificed due to usage of python exception handling, with the
+    version 1.2.0 release).  So, the python_c latency will be addressed
+    in the next release.
+  * Added more service configuration options:
+      * request_pid_uses, request_pid_options, info_pid_uses, info_pid_options -
+        to provide more control over internal service garbage collection
+        characteristics
+      * duo_mode - to provide better performance for high-throughput internal
+        services
+      * response_timeout_adjustment - to avoid latency typical with the
+        erlang:cancel_timer/1 function call
+  * cowboy was updated to 0.8.2 and misultin was removed
+  * loadtests were done to verify the reduced latency and to test the new
+    service configuration options
+    (results+config are at src/tests/http_req/loadtest/results_v1_2_1/)
+  * ZeroMQ integration received more testing and changes to make it more robust
+
 February 19, 2013
   Version 1.2.0 (beta) released.
 
