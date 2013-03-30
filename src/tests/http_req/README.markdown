@@ -15,15 +15,17 @@ Which all give the following response, from the associated programming language:
 
     <http_test><value>42</value></http_test>
 
-The loadtest's test data is based on the testing in
-http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/ .  The test's task is simple usage of an XML response to a
+The test's task is simple usage of an XML response to a
 HTTP GET request, which requires minimal processing in each programming
 language.  The misultin support in CloudI has been removed (in version 1.2.0),
 so now cowboy is the preferred HTTP server with integration provided by
 `cloudi_service_http_cowboy`.  The loadtest results from the version 1.0.0
 release only used `cloudi_service_http_misultin` (older misultin integration)
 but the loadtest results from the version 1.1.0 release used both
-`cloudi_service_http_misultin` and `cloudi_service_http_cowboy`.
+`cloudi_service_http_misultin` and `cloudi_service_http_cowboy`.  The
+version 1.1.0 results showed cowboy performance was superior to misultin and
+justified the removal of misultin in version 1.2.0 (due to the parameterized
+module usage and the lack of active development).
 The CloudI loadtesting uses Tsung to produce dependable loadtesting results
 (see `loadtest/results_v*/*/setup/http_req_*.xml`).
 
@@ -40,9 +42,9 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 
 ###Software
 
-    Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)
+    Ubuntu 12.04.1 LTS (GNU/Linux 3.2.0-29-generic x86_64)
 
-    Erlang R15B01/R15B02 configuration:
+    Erlang R15B01/R15B02/R16B configuration:
     ./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe
 
 Settings added to /etc/sysctl.conf
@@ -71,28 +73,46 @@ Setting added to /etc/security/limits.conf
 
 ##RESULTS
 
-[loadtest/results_v1_0_0/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs):
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request):
+* shows the latency due to adjusting the request timeout based on the service's request handling latency, in CloudI version 1.2.1
+
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response):
+* shows the latency due to adjusting the response timeout which incurs a smaller latency penalty, in CloudI version 1.2.1
+
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment):
+* shows the default cowboy configuration for CloudI version 1.2.1 and how it provides better performance than CloudI version 1.1.0 for CloudI API implementations in C/C++, Java, and Erlang
+
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment):
+* used the default cowboy configuration from CloudI version 1.2.0 to show performance problems when relying on a `non-duo_mode` service, which was previously the default before CloudI version 1.2.0
+
+[`loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
+* same test as [`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
+
+[`loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy):
+* used to compare [cowboy with misultin](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
+
+[`loadtest/results_v1_1_0/201210_40k_10kreqs_misultin/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_misultin) and [`loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy):
+* shows more latency with 40,000 concurrent connections open ( [summary](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf) ) for external programming languages (i.e., any programming languages not running on the Erlang VM)
+
+[`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs):
 * 20,000 concurrent connections open
 * 10,000 requests/second maintained for 10 minutes
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
-* used Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64) with Erlang R15B01
-
-[loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
-* same test as [loadtest/results_v1_0_0/201206_20k_10kreqs/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
-
-[loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy):
-* used to compare [cowboy with misultin](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
-
-[loadtest/results_v1_1_0/201210_40k_10kreqs_misultin/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_misultin) and [loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy/](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy):
-* shows more latency with 40,000 concurrent connections open ( [summary](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf) ) for external programming languages (i.e., any programming languages not running on the Erlang VM)
+* used `Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)` with `Erlang R15B01`
 
 ##INFORMATION
 
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
-* [http://www.mnot.net/blog/2011/05/18/http_benchmark_rules](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)
+* [`http://www.mnot.net/blog/2011/05/18/http_benchmark_rules`](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)
 
-interesting historical loadtest, only localhost usage... need more interfaces:
-* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
-* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
-* [http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
+Recent connection count test:
+* [`http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/`](http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/)
+
+Interesting historical connection count test:
+* [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
+* [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
+* [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
+
+XML loadtest data was adapted from previous testing here:
+* [`http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/`](http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/)
 
