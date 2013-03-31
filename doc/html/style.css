@@ -27,6 +27,17 @@
 
 body { 
     font-family: sans-serif;
+    font-size: 14pt;
+}
+table tr th {
+    font-size: 14pt;
+}
+table tr td {
+    font-size: 14pt;
+}
+table {
+    border-collapse: separate;
+    border-spacing: 0px 10px;
 }
 
 a {
@@ -47,21 +58,31 @@ img {
 
 pre {
     font-family: monospace;
+    font-size: 12pt;
     padding-left: 1em;
     border-left-style: solid;
     border-left-width: 1px;
+    font-weight: bold;
 }
 
 #header {
     font-size: 6em;
     display: inline-block;
-    font-weight: bold; 
+    font-weight: bolder; 
 }
 #header a {
     text-decoration: none;
 }
 #header img {
     border: none;
+}
+#sub-header {
+    font-size: 2em;
+    display: inline-block;
+    font-weight: bolder; 
+}
+#sub-header a {
+    text-decoration: none;
 }
 
 #navigation {
