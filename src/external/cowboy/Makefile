@@ -1,8 +1,9 @@
 # See LICENSE for licensing information.
 
 PROJECT = cowboy
-RANCH_VSN = 0.6.0
-ERLC_OPTS = -Werror +debug_info +warn_export_all # +bin_opt_info +warn_missing_spec
+RANCH_VSN = 0.6.2
+ERLC_OPTS ?= -Werror +debug_info +warn_export_all +warn_export_vars \
+   +warn_shadow_vars +warn_obsolete_guard # +bin_opt_info +warn_missing_spec
 
 DEPS_DIR ?= $(CURDIR)/deps
 export DEPS_DIR
@@ -36,10 +37,12 @@ app: ebin/$(PROJECT).app
 		| sed 's/{modules, \[\]}/{modules, \[$(MODULES)\]}/' \
 		> ebin/$(PROJECT).app
 
+COMPILE_FIRST = src/cowboy_middleware.erl src/cowboy_sub_protocol.erl
+
 ebin/$(PROJECT).app: src/*.erl
 	@mkdir -p ebin/
 	$(erlc_verbose) erlc -v $(ERLC_OPTS) -o ebin/ -pa ebin/ \
-		src/$(PROJECT)_middleware.erl $?
+		$(COMPILE_FIRST) $?
 
 clean:
 	$(gen_verbose) rm -rf ebin/ test/*.beam erl_crash.dump
@@ -69,10 +72,11 @@ clean-docs:
 # Tests.
 
 CT_RUN = ct_run \
+	-noshell \
 	-pa ebin $(DEPS_DIR)/*/ebin \
 	-dir test \
-	-logdir logs \
-	-cover test/cover.spec
+	-logdir logs
+#	-cover test/cover.spec
 
 tests: ERLC_OPTS += -DTEST=1
 tests: clean clean-deps deps app

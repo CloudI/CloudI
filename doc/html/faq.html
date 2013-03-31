@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.2.0b<br />last updated on February 18 2013</h3></center>
+  <center><h3>version 1.2.1b<br />last updated on March 30 2013</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -206,10 +206,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     and
     <a href="http://en.wikipedia.org/wiki/Heroku" target="_blank">Heroku</a>.
     Generally, Integration "Clouds" provide software packages for common
-    scripting language deployment scenarios (typically Python and Ruby
-    web frameworks).  Integration "Clouds" (PaaS) normally do not provide
-    fault-tolerance or reliability, so they are typically deployed with a
-    Hypervisor.
+    scripting language deployment scenarios (typically Javascript, Ruby or
+    Python web frameworks).  Integration "Clouds" (PaaS) normally do not
+    provide fault-tolerance or reliability, so they are typically deployed
+    with a Hypervisor.
   </p>
   <p class="paragraph">
     CloudI is an Integration Cloud that focuses on flexible integration
@@ -1229,6 +1229,8 @@ sudo cloudi stop
       <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF))</li>
       <li>stdout and stderr output is logged automatically to the single CloudI log</li>
       <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology)</li>
+      <li>A long-running CloudI service can be contrary to the Erlang VM scheduling and garbage collection, when under heavy load, if implemented without CloudI.  This is especially true when attempting to integrate with C or C++ which can cause the schedulers to lock-up if a NIF or port driver is used for longer operations (&ge; 1 ms), causing poor Erlang VM performance.</li>
+      <li>Core Erlang/OTP source code does not handle node-splits (global name registration, global transactions and mnesia are common examples), but CloudI provides master-less fault-tolerance for a cluster of any number of CloudI nodes on an unreliable network.</li>
     </ul>
   </p>
   <p class="paragraph">
@@ -1374,6 +1376,22 @@ sudo cloudi stop
   <a name="5_LoadTesting"></a>
   <h3>5.5 - Load Testing</h3>
   <p class="paragraph">
+    For the 1.2.1 CloudI release, loadtests were done to verify development
+    decisions and guide the default configuration.  The summary of the 1.2.1
+    results is
+    <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">available here</a> and
+    the raw results exist in
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_2_1/" target="_blank">src/tests/http_req/loadtest/results_v1_2_1/</a>.
+  </p>
+  <p class="paragraph">
+    For the 1.1.0 CloudI release, a comparison was done of misultin and
+    cowboy (two Erlang HTTP servers), with 20k and 40k concurrent connections
+    at 10k req/s.  The summary of the 1.1.0 results is
+    <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">available here</a> and
+    the raw results exist in
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_1_0/" target="_blank">src/tests/http_req/loadtest/results_v1_1_0/</a>.
+  </p>
+  <p class="paragraph">
     As part of the 1.0.0 CloudI release, the http_req test was used to do a
     load test of CloudI incoming HTTP requests.  The loadtest shows how the
     results vary when interacting with separate programming languages that
@@ -1387,14 +1405,6 @@ sudo cloudi stop
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/</a>
     or the configuration in 
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/</a>.
-  </p>
-  <p class="paragraph">
-    For the 1.1.0 CloudI release, a comparison was done of misultin and
-    cowboy (two Erlang HTTP servers), with 20k and 40k concurrent connections
-    at 10k req/s.  The summary with the 1.0.0 results is
-    <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">available here</a> and
-    the raw results exist in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_1_0/" target="_blank">src/tests/http_req/loadtest/results_v1_1_0/</a>.
   </p>
   <p>
     The latency graphs below show service request performance during the

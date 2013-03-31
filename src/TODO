@@ -1,7 +1,10 @@
-Items waiting for after the release of version 1.1.1
+Items waiting for after the release of version 1.2.0
 ----------------------------------------------------
-Quick Start
-    * get this done for 1.2.0 (next release)
+Add to http://0install.net/
+Do loadtests after the 1.2.0 changes
+X-HTTP-Method-Override usage in cowboy integration
+Add https://github.com/Amadiro/erlang-statistics integration
+    or something similar
 EC2 automatic node configuration
     * working with external/nodefinder/ec2nodefinder/
       but with sane ec2 integration

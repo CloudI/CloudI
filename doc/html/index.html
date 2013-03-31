@@ -31,26 +31,13 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
 </div>
 
 <div id="content">
-  <h1>A Cloud as an Interface</h1>
+  <br />
+  <div id="sub-header">
+    &nbsp;<a href="faq.html#1_WhatIs">A Cloud at the lowest level!</a>
+  </div>
+  <br />
 
-  <p class="paragraph">
-    CloudI is an open-source private cloud computing framework for
-    <strong>efficient</strong>, <strong>scalable</strong>, and
-    <strong>fault-tolerant</strong> soft-realtime event processing. CloudI
-    uses an Erlang core, with its actor model, to be a universal integrator
-    for services, databases, and messaging buses.  All CloudI services
-    exchange unstructured data within a Service Oriented Architecture (SOA)
-    with RESTful development practices.  CloudI service requests are
-    publish/subscribe or point-to-point with simple Access Control Lists
-    (ACLs), highly configurable load balancing, and service based
-    fault-tolerance.  CloudI scales linearly for distributing realtime
-    service load and can easily integrate with software written in
-    C/C++, Erlang, Java, Python, and Ruby with its light-weight API.
-    <a href="faq.html#1_WhatIs">
-    Read more about what CloudI is within the FAQ.</a>
-  </p>
-
-  <h2>CloudI Quick Start</h2>
+  <h2>Quick Start</h2>
   <p>
     <h3>Install Quick Start Tools</h3>
 
@@ -67,9 +54,9 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <h3>Get CloudI Running</h3>
 
 <pre>
-$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.0.tar.gz
-$ tar zxvf cloudi-1.2.0.tar.gz
-$ cd cloudi-1.2.0/src
+$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.1.tar.gz
+$ tar zxvf cloudi-1.2.1.tar.gz
+$ cd cloudi-1.2.1/src
 $ ./configure
 $ make
 $ sudo make install
@@ -123,7 +110,7 @@ cloudi_service_handle_info(Request, State, _) -&gt;
 cloudi_service_terminate(_, #state{}) -&gt;
     ok.
 EOF
-$ erlc -pz /usr/local/lib/cloudi-1.2.0/lib/cloudi_core-1.2.0 hello_world.erl
+$ erlc -pz /usr/local/lib/cloudi-1.2.1/lib/cloudi_core-1.2.1 hello_world.erl
 ./hello_world.erl:2: Warning: behaviour cloudi_service undefined
 </pre>
 
@@ -181,7 +168,7 @@ Hello World!
 <pre>
 $ cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.2.0/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.2.1/api/python/')
 from cloudi_c import API
 
 class Task(object):

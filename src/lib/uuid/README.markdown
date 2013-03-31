@@ -12,7 +12,13 @@ bitwise-XORed from 72 bits down to 32 bits.
 The version 3 (MD5), version 4 (random), and version 5 (SHA)
 methods are provided as specified within the RFC.
 
-Requires Erlang >= R14B01
+Requires `Erlang >= R14B01`
+
+Build
+-----
+
+    rebar get-deps
+    rebar compile
 
 Author
 ------
@@ -23,3 +29,4 @@ License
 -------
 
 BSD
+

@@ -385,6 +385,12 @@ public class API
                               byte[] transId, OtpErlangPid pid)
                               throws ForwardAsyncException
     {
+        if (! this.request_timeout_adjustment)
+        {
+            // avoid exception overhead (~200ms during testing of 20k@10kreq/s)
+            forward_async_nothrow(name, request_info, request,
+                                  timeout, priority, transId, pid);
+        }
         throw new ForwardAsyncException(name, request_info, request,
                                         timeout, priority, transId, pid);
     }
@@ -394,6 +400,12 @@ public class API
                              byte[] transId, OtpErlangPid pid)
                              throws ForwardSyncException
     {
+        if (! this.request_timeout_adjustment)
+        {
+            // avoid exception overhead (~200ms during testing of 20k@10kreq/s)
+            forward_sync_nothrow(name, request_info, request,
+                                 timeout, priority, transId, pid);
+        }
         throw new ForwardSyncException(name, request_info, request,
                                        timeout, priority, transId, pid);
     }
@@ -421,6 +433,13 @@ public class API
                              Integer timeout, byte[] transId, OtpErlangPid pid)
                              throws ReturnAsyncException
     {
+        if (! this.request_timeout_adjustment)
+        {
+            // avoid exception overhead (~200ms during testing of 20k@10kreq/s)
+            return_async_nothrow(name, pattern,
+                                 response_info, response,
+                                 timeout, transId, pid);
+        }
         throw new ReturnAsyncException(name, pattern, response_info, response,
                                        timeout, transId, pid);
     }
@@ -430,6 +449,13 @@ public class API
                             Integer timeout, byte[] transId, OtpErlangPid pid)
                             throws ReturnSyncException
     {
+        if (! this.request_timeout_adjustment)
+        {
+            // avoid exception overhead (~200ms during testing of 20k@10kreq/s)
+            return_sync_nothrow(name, pattern,
+                                response_info, response,
+                                timeout, transId, pid);
+        }
         throw new ReturnSyncException(name, pattern, response_info, response,
                                       timeout, transId, pid);
     }
@@ -707,14 +733,10 @@ public class API
                 {
                     timeout = request_timeout(e.timeout, timeout,
                                               request_time_start);
+                    return_async_nothrow(e.name, e.pattern,
+                                         e.response_info, e.response,
+                                         timeout, e.transId, e.pid);
                 }
-                else
-                {
-                    timeout = e.timeout;
-                }
-                return_async_nothrow(e.name, e.pattern,
-                                     e.response_info, e.response,
-                                     timeout, e.transId, e.pid);
                 return;
             }
             catch (ForwardAsyncException e)
@@ -723,14 +745,11 @@ public class API
                 {
                     timeout = request_timeout(e.timeout, timeout,
                                               request_time_start);
+                    forward_async_nothrow(e.name,
+                                          e.request_info, e.request,
+                                          timeout, e.priority,
+                                          e.transId, e.pid);
                 }
-                else
-                {
-                    timeout = e.timeout;
-                }
-                forward_async_nothrow(e.name,
-                                      e.request_info, e.request,
-                                      timeout, e.priority, e.transId, e.pid);
                 return;
             }
             catch (Throwable e)
@@ -793,14 +812,10 @@ public class API
                 {
                     timeout = request_timeout(e.timeout, timeout,
                                               request_time_start);
+                    return_sync_nothrow(e.name, e.pattern,
+                                        e.response_info, e.response,
+                                        timeout, e.transId, e.pid);
                 }
-                else
-                {
-                    timeout = e.timeout;
-                }
-                return_sync_nothrow(e.name, e.pattern,
-                                    e.response_info, e.response,
-                                    timeout, e.transId, e.pid);
                 return;
             }
             catch (ForwardSyncException e)
@@ -809,14 +824,10 @@ public class API
                 {
                     timeout = request_timeout(e.timeout, timeout,
                                               request_time_start);
+                    forward_sync_nothrow(e.name,
+                                         e.request_info, e.request,
+                                         timeout, e.priority, e.transId, e.pid);
                 }
-                else
-                {
-                    timeout = e.timeout;
-                }
-                forward_sync_nothrow(e.name,
-                                     e.request_info, e.request,
-                                     timeout, e.priority, e.transId, e.pid);
                 return;
             }
             catch (Throwable e)

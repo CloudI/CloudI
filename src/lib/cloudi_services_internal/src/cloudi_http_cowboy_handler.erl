@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -70,14 +70,18 @@
 %%% Callback functions from cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init(_Transport, Req, Opts) ->
-    State = #cowboy_state{} = Opts,
+init(_Transport, Req, Opts)
+    when is_record(Opts, cowboy_state) ->
+    State = Opts,
     {ok, Req, State}.
 
 handle(Req0, #cowboy_state{service = Service,
+                           timeout_async = TimeoutAsync,
                            output_type = OutputType,
+                           default_content_type = DefaultContentType,
                            use_host_prefix = UseHostPrefix,
-                           use_method_suffix = UseMethodSuffix} = State) ->
+                           use_method_suffix = UseMethodSuffix,
+                           content_type_lookup = ContentTypeLookup} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cowboy_req:method(Req0),
     {HeadersIncoming, Req2} = cowboy_req:headers(Req1),
@@ -152,30 +156,50 @@ handle(Req0, #cowboy_state{service = Service,
         OutputType =:= internal; OutputType =:= list ->
             HeadersIncoming;
         OutputType =:= external; OutputType =:= binary ->
-            headers_external(HeadersIncoming)
+            headers_external_incoming(HeadersIncoming)
     end,
-    Service ! {http_request,
-               #request_state{name_incoming = NameIncoming,
-                              name_outgoing = NameOutgoing,
-                              request_info = RequestInfo,
-                              request = Request,
-                              request_pid = self()}},
+    Self = self(),
+    Service ! {cowboy_request, Self, NameOutgoing, RequestInfo, Request},
     receive
-        {ok, HttpCode, HeadersOutgoing, ResponseBinary} ->
+        {cowboy_response, ResponseInfo, Response} ->
+            HeadersOutgoing = if
+                OutputType =:= internal; OutputType =:= list ->
+                    ResponseInfo;
+                OutputType =:= external; OutputType =:= binary ->
+                    headers_external_outgoing(ResponseInfo)
+            end,
+            {HttpCode,
+             Req} = return_response(NameIncoming, HeadersOutgoing, Response,
+                                    ReqN, OutputType, DefaultContentType,
+                                    ContentTypeLookup),
             ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                              [HttpCode, Method, NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
-            {ok, Req} = cowboy_req:reply(HttpCode,
-                                         HeadersOutgoing,
-                                         ResponseBinary,
-                                         ReqN),
             {ok, Req, State};
-        {error, HttpCode, Reason} ->
+        {cowboy_error, timeout} ->
+            HttpCode = 504,
+            {ok, Req} = cowboy_req:reply(HttpCode,
+                                         ReqN),
+            ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                            [HttpCode, Method, NameIncoming,
+                             RequestStartMicroSec, timeout]),
+            {ok, Req, State};
+        {cowboy_error, Reason} ->
+            HttpCode = 500,
+            {ok, Req} = cowboy_req:reply(HttpCode,
+                                         ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, Reason]),
+            {ok, Req, State}
+    after
+        TimeoutAsync ->
+            HttpCode = 504,
             {ok, Req} = cowboy_req:reply(HttpCode,
                                          ReqN),
+            ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                            [HttpCode, Method, NameIncoming,
+                             RequestStartMicroSec, timeout]),
             {ok, Req, State}
     end.
 
@@ -195,13 +219,29 @@ header_content_type(Headers) ->
     end.
 
 % format for external services, http headers passed as key-value pairs
-headers_external(L) ->
-    erlang:iolist_to_binary(lists:reverse(headers_external([], L))).
+headers_external_incoming(L) ->
+    erlang:iolist_to_binary(lists:reverse(headers_external_incoming([], L))).
 
-headers_external(Result, []) ->
+headers_external_incoming(Result, []) ->
     Result;
-headers_external(Result, [{K, V} | L]) when is_binary(K) ->
-    headers_external([[K, 0, V, 0] | Result], L).
+headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
+    headers_external_incoming([[K, 0, V, 0] | Result], L).
+
+headers_external_outgoing(<<>>) ->
+    [];
+headers_external_outgoing(ResponseInfo) ->
+    Options = case binary:last(ResponseInfo) of
+        0 ->
+            [global, {scope, {0, erlang:byte_size(ResponseInfo) - 1}}];
+        _ ->
+            [global]
+    end,
+    headers_external_outgoing([], binary:split(ResponseInfo, <<0>>, Options)).
+
+headers_external_outgoing(Result, []) ->
+    Result;
+headers_external_outgoing(Result, [K, V | L]) ->
+    headers_external_outgoing([{K, V} | Result], L).
 
 request_time_start() ->
     uuid:get_v1_time(os).
@@ -219,4 +259,50 @@ request_time_end_error(HttpCode, Method, NameIncoming,
               [HttpCode, Method, NameIncoming,
                (uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
-    
+
+return_response(NameIncoming, HeadersOutgoing, Response,
+                ReqN, OutputType, DefaultContentType,
+                ContentTypeLookup) ->
+    ResponseBinary = if
+        OutputType =:= list, is_list(Response) ->
+            erlang:list_to_binary(Response);
+        OutputType =:= internal; OutputType =:= external;
+        OutputType =:= binary; is_binary(Response) ->
+            Response
+    end,
+    FileName = cloudi_string:afterr($/, NameIncoming, input),
+    ResponseHeadersOutgoing = if
+        HeadersOutgoing =/= [] ->
+            HeadersOutgoing;
+        DefaultContentType =/= undefined ->
+            [{<<"content-type">>, DefaultContentType}];
+        true ->
+            Extension = filename:extension(FileName),
+            if
+                Extension == [] ->
+                    [{<<"content-type">>, <<"text/html">>}];
+                true ->
+                    case trie:find(Extension, ContentTypeLookup) of
+                        error ->
+                            [{<<"content-disposition">>,
+                              erlang:list_to_binary("attachment; filename=\"" ++
+                                                    NameIncoming ++ "\"")},
+                             {<<"content-type">>,
+                              <<"application/octet-stream">>}];
+                        {ok, {request, ContentType}} ->
+                            [{<<"content-type">>, ContentType}];
+                        {ok, {attachment, ContentType}} ->
+                            [{<<"content-disposition">>,
+                              erlang:list_to_binary("attachment; filename=\"" ++
+                                                    NameIncoming ++ "\"")},
+                             {<<"content-type">>, ContentType}]
+                    end
+            end
+    end,
+    HttpCode = 200,
+    {ok, Req} = cowboy_req:reply(HttpCode,
+                                 ResponseHeadersOutgoing,
+                                 ResponseBinary,
+                                 ReqN),
+    {HttpCode, Req}.
+
