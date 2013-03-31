@@ -162,12 +162,7 @@ handle(Req0, #cowboy_state{service = Service,
     Service ! {cowboy_request, Self, NameOutgoing, RequestInfo, Request},
     receive
         {cowboy_response, ResponseInfo, Response} ->
-            HeadersOutgoing = if
-                OutputType =:= internal; OutputType =:= list ->
-                    ResponseInfo;
-                OutputType =:= external; OutputType =:= binary ->
-                    headers_external_outgoing(ResponseInfo)
-            end,
+            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {HttpCode,
              Req} = return_response(NameIncoming, HeadersOutgoing, Response,
                                     ReqN, OutputType, DefaultContentType,
@@ -229,7 +224,13 @@ headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
 
 headers_external_outgoing(<<>>) ->
     [];
-headers_external_outgoing(ResponseInfo) ->
+headers_external_outgoing([] = ResponseInfo) ->
+    ResponseInfo;
+headers_external_outgoing([{K, V} | _] = ResponseInfo)
+    when is_binary(K), is_binary(V) ->
+    ResponseInfo;
+headers_external_outgoing(ResponseInfo)
+    when is_binary(ResponseInfo) ->
     Options = case binary:last(ResponseInfo) of
         0 ->
             [global, {scope, {0, erlang:byte_size(ResponseInfo) - 1}}];
