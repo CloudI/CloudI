@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.2.0b<br />last updated on February 18 2013</h3></center>
+  <center><h3>version 1.2.1b<br />last updated on March 30 2013</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -262,8 +262,8 @@ CloudI::API.thread_count()
     within the code search paths.
   </p>
   <p>
-  Please see <a href="#CloudI">the CloudI Service API</a> for more details
-  about service configuration.
+  Please see <a href="#2_services_add">the CloudI Service API (services_add)</a>
+  for more details about service configuration.
   <br /><br />
   Specific Language Integration Notes:
   </p>
@@ -272,7 +272,7 @@ CloudI::API.thread_count()
     parameters in cloudi_service but functions with less parameters do
     exist and they utilize default values for timeouts and request
     priority.  Please see the
-    <a href="api/cloudi_core-1.2.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.2.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions.
   </p>
   <p class="paragraph">
@@ -899,7 +899,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.2.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.2.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1293,7 +1293,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.2.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1302,7 +1302,10 @@ CloudI::API.return_(command, name, pattern, response_info, response,
   <p class="paragraph">
     If the service is configured with the request_timeout_adjustment option set
     to true (the default is false), the request handler execution time will
-    automatically decrement the response timeout.
+    automatically decrement the request timeout, after the request has been
+    handled.  If the service is configured with the response_timeout_adjustment
+    option set to true (the default is false), the response timeout is
+    automatically decremented based on the sender-side's timing (more accurate).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1393,13 +1396,16 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.2.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
     If the service is configured with the request_timeout_adjustment option set
     to true (the default is false), the request handler execution time will
-    automatically decrement the forwarded request timeout.
+    automatically decrement the request timeout, after the request has been
+    handled.  If the service is configured with the response_timeout_adjustment
+    option set to true (the default is false), the response timeout is
+    automatically decremented based on the sender-side's timing (more accurate).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1410,7 +1416,8 @@ CloudI::API.forward_(command, name, request_info, request,
   <h3>2.0 - Introduction</h3>
   <p class="paragraph">
     When CloudI is first started, the configuration file at
-    /usr/local/etc/cloudi/cloudi.conf is used to determine what
+    <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
+    is used to determine what
     Access Control Lists (ACLs) should be used for services,
     what services should be started, what nodes should be connected,
     and what logging should occur.  All the configuration functionality
@@ -1475,7 +1482,7 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "1 tc
 </p>
   <p class="paragraph">
     Start services.  Provide service configuration using the same syntax
-    found in the configuration file (i.e., /usr/local/etc/cloudi/cloudi.conf).
+    found in the configuration file (i.e., <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>).
     Internal services will need to be located in a code path that the
     running Erlang VM is aware of (see
     <a href="#2_code_path_add">code_path_add</a>).  The syntax of the
@@ -1566,11 +1573,57 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "1 tc
     false
   </td><td>
     Should the service request handler execution time decrement the
-    request timeout to reduce the timeout of a forwarded request or
-    the timeout of a returned response
+    request timeout, after the request has been handled.
+  </td></tr><tr><td>
+    response_timeout_adjustment
+  </td><td>
+    false
+  </td><td>
+    Should the service's incoming response timeout be automatically decremented
+    based on the sender-side's timing (more accurate).
+  </td></tr><tr><td>
+    duo_mode
+  </td><td>
+    false
+  </td><td>
+    (internal services only) Use two Erlang processes instead of one Erlang
+    process, so that more incoming service throughput can be handled with
+    low latency.
+  </td></tr><tr><td>
+    request_pid_uses
+  </td><td>
+    1
+  </td><td>
+    (internal services only) How many service requests to handle before
+    utilizing a new Erlang process for a new incoming service request.
+  </td></tr><tr><td>
+    request_pid_options
+  </td><td>
+    []
+  </td><td>
+    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    options to control memory usage of the service request handling Erlang
+    process (fullsweep_after, min_heap_size, min_bin_vheap_size).
+  </td></tr><tr><td>
+    info_pid_uses
+  </td><td>
+    infinity
+  </td><td>
+    (internal services only) How many info messages to handle before
+    utilizing a new Erlang process for a new incoming info message.  This
+    Erlang process is the second process that is utilized when duo_mode is true
+    (duo_mode requires that this is set to infinity).
+  </td></tr><tr><td>
+    info_pid_options
+  </td><td>
+    []
+  </td><td>
+    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    options to control memory usage of the info message handling Erlang process
+    (fullsweep_after, min_heap_size, min_bin_vheap_size).
   </td></tr></table>
   <p class="paragraph">
-    Please see the configuration file /usr/local/etc/cloudi/cloudi.conf
+    Please see the configuration file <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
     for more specific examples.
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>

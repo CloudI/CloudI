@@ -10,7 +10,6 @@
         cloudi_service_api,
         cloudi_service_filesystem,
         cloudi_service_http_cowboy,
-        cloudi_service_http_misultin,
         cloudi_service_map_reduce,
         cloudi_service_timers,
         cloudi_service_work_manager,
@@ -21,7 +20,6 @@
    {applications, [
         cloudi_core,
         cowboy,
-        misultin,
         jsx,
         stdlib,
         kernel

@@ -21,7 +21,6 @@
         cloudi_random,
         cloudi_response,
         cloudi_service,
-        cloudi_services_common,
         cloudi_services_external,
         cloudi_services_external_sup,
         cloudi_services_internal,
@@ -31,9 +30,7 @@
         cloudi_string,
         cloudi_sup,
         cloudi_tuple,
-        dynamic_compile,
-        key2value,
-        pqueue4
+        key2value
         ]},
    {registered,[
         cloudi_configurator,
@@ -50,6 +47,10 @@
         cloudi_services_internal
         ]},
    {applications, [
+        % nodefinder dependencies are started manually
+        dynamic_compile,
+        pqueue,
+        quickrand,
         trie,
         uuid,
         cpg,

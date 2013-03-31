@@ -16,13 +16,14 @@ all-local: rebar \
 	$(MKDIR_P) lib/cloudi_services_internal/ebin
 	$(MKDIR_P) lib/cloudi_services_databases/ebin
 	$(MKDIR_P) lib/cloudi_services_messaging/ebin
+	$(MKDIR_P) lib/pqueue/ebin
+	$(MKDIR_P) lib/quickrand/ebin
 	$(MKDIR_P) lib/cpg/ebin
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
-	$(MKDIR_P) external/misultin/ebin
 	$(MKDIR_P) external/jsx/ebin
 	$(MKDIR_P) external/etokyotyrant/ebin
 	$(MKDIR_P) external/epgsql/ebin
@@ -30,6 +31,7 @@ all-local: rebar \
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
+	$(MKDIR_P) external/dynamic_compile/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src; \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
@@ -42,6 +44,12 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/cloudi_services_messaging/src; \
         test ! -e cloudi_services_messaging.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src || exit 0)
+	(cd $(top_srcdir)/lib/pqueue/src; \
+        test ! -e pqueue.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/pqueue/src/pqueue.app.src || exit 0)
+	(cd $(top_srcdir)/lib/quickrand/src; \
+        test ! -e quickrand.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/quickrand/src/quickrand.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cpg/src; \
         test ! -e cpg.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cpg/src/cpg.app.src || exit 0)
@@ -81,9 +89,6 @@ all-local: rebar \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/combonodefinder/ebin || \
         exit 0)
-	(cd $(top_srcdir)/external/misultin; \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/misultin/ebin || exit 0)
 	(cd $(top_srcdir)/external/jsx; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
@@ -105,6 +110,9 @@ all-local: rebar \
 	(cd $(top_srcdir)/external/cowboy; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/dynamic_compile; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/dynamic_compile/ebin || exit 0)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(abs_top_builddir)/rebar \
                 -C $(abs_top_builddir)/rebar.config compile)
@@ -118,13 +126,14 @@ clean-local: rebar
           $(top_builddir)/lib/cloudi_services_internal/ebin \
           $(top_builddir)/lib/cloudi_services_databases/ebin \
           $(top_builddir)/lib/cloudi_services_messaging/ebin \
+          $(top_builddir)/lib/pqueue/ebin \
+          $(top_builddir)/lib/quickrand/ebin \
           $(top_builddir)/lib/cpg/ebin \
           $(top_builddir)/lib/uuid/ebin \
           $(top_builddir)/lib/trie/ebin \
           $(top_builddir)/external/nodefinder/nodefinder/ebin \
           $(top_builddir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
-          $(top_builddir)/external/misultin/ebin \
           $(top_builddir)/external/jsx/ebin \
           $(top_builddir)/external/etokyotyrant/ebin \
           $(top_builddir)/external/epgsql/ebin \
@@ -132,25 +141,28 @@ clean-local: rebar
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
+          $(top_builddir)/external/dynamic_compile/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
           $(top_srcdir)/lib/cloudi_services_internal/ebin \
           $(top_srcdir)/lib/cloudi_services_databases/ebin \
           $(top_srcdir)/lib/cloudi_services_messaging/ebin \
+          $(top_srcdir)/lib/pqueue/ebin \
+          $(top_srcdir)/lib/quickrand/ebin \
           $(top_srcdir)/lib/cpg/ebin \
           $(top_srcdir)/lib/uuid/ebin \
           $(top_srcdir)/lib/trie/ebin \
           $(top_srcdir)/external/nodefinder/nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
-          $(top_srcdir)/external/misultin/ebin \
           $(top_srcdir)/external/jsx/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
-          $(top_srcdir)/external/cowboy/ebin
+          $(top_srcdir)/external/cowboy/ebin \
+          $(top_srcdir)/external/dynamic_compile/ebin
 
 clean-configure: config.log
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
@@ -214,17 +226,19 @@ dialyze: all-local dialyzer.plt
               lib/cloudi_services_internal/ebin/ \
               lib/cloudi_services_databases/ebin/ \
               lib/cloudi_services_messaging/ebin/ \
+              lib/pqueue/ebin/ \
+              lib/quickrand/ebin/ \
               lib/cpg/ebin/ \
               lib/uuid/ebin/ \
               lib/trie/ebin/ \
               external/cowboy/ebin \
+              external/dynamic_compile/ebin \
               external/epgsql/ebin \
               external/etokyotyrant/ebin \
               external/ememcached/ebin \
               external/ecouchdb/ebin \
               external/emysql/ebin \
-              external/jsx/ebin \
-              external/misultin/ebin
+              external/jsx/ebin
 
 dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
@@ -536,4 +550,5 @@ service_api-python-install:
 	$(INSTALL_DATA) \
         "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
         "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
+
 

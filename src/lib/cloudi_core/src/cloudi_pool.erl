@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_pool).
@@ -83,7 +83,11 @@ start_link(Name, [_ | _] = ChildSpecs, Supervisor, Parent)
 
 get(Name)
     when is_atom(Name) ->
-    gen_server:call(Name, get).
+    try gen_server:call(Name, get)
+    catch
+        exit:{Reason, _} ->
+            {error, Reason}
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

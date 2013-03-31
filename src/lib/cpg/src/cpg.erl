@@ -868,10 +868,7 @@ init([Scope]) ->
                           % has restarted and wants previous state
                           %self() ! {nodeup, N} % pg2 does this
                   end, Ns),
-    <<B1:16/unsigned-integer,
-      B2:16/unsigned-integer,
-      B3:16/unsigned-integer>> = crypto:rand_bytes(6),
-    random:seed(B1, B2, B3),
+    quickrand:seed(),
     {ok, #state{scope = Scope}}.
 
 %% @private

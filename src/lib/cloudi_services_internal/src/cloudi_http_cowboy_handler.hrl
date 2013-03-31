@@ -45,17 +45,11 @@
 -record(cowboy_state,
     {
         service,
+        timeout_async,
         output_type,
+        default_content_type,
         use_host_prefix,
-        use_method_suffix
+        use_method_suffix,
+        content_type_lookup
     }).
 
-%% internal CloudI request state
--record(request_state,
-    {
-        name_incoming,
-        name_outgoing,
-        request_info,
-        request,
-        request_pid
-    }).

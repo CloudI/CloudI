@@ -5,9 +5,17 @@ External Dependencies
 --------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit 46cce4814390a2917563ce7af82e0e1bbfc81ed3 (version 0.8.0)`
-- `Tue Feb 12 10:38:15 PST 2013`
+- `commit cc507789bf1d9ea27e9fb53d06dc8a464672b7da (version 0.8.2)`
+- `Sun Mar 10 13:07:51 PDT 2013`
 - `MIT`
+
+`dynamic_compile`
+-----------------
+`Dynamic compilation of Erlang modules`
+- `https://github.com/JacobVorreuter/dynamic_compile`
+- `commit 6a165715178dae8ea1c72e6ef171b9fc3435badc`
+- `Mon Mar  4 15:43:22 PST 2013`
+- `BSD`
 
 `ecouchdb (erlang_couchdb)`
 ---------------------------
@@ -137,8 +145,8 @@ External Dependencies
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/extend/ranch`
-- `commit d635aece25ae0d6489d2c3c074cfb6363d92fc61 (version 0.6.1)`
-- `Tue Feb 12 10:38:15 PST 2013`
+- `commit 809a12fdbe5ce355b06bcf197008e1b4e8ea9e21 (version 0.6.2)`
+- `Sun Mar 10 13:07:51 PDT 2013`
 - `MIT`
 
 `rebar`
@@ -155,8 +163,9 @@ External Dependencies
 `ZeroMQ (http://www.zeromq.org/) Erlang Driver`
 
 - `https://github.com/okeuday/erlzmq2 (branch master and 3.x)`
-- `commit 9171c69d94b2af72dbe74cfce8f4b61266026e33`
-- `Fri Feb  8 19:12:47 PST 2013`
+- `commit 9171c69d94b2af72dbe74cfce8f4b61266026e33` (master)
+- `commit e75f3c8cdf050fc08c00a184d91c4bcbace7c683` (3.x)
+- `Mon Mar 11 12:52:17 PDT 2013`
 - `BSD`
 
 `zeromq/v?/zeromq`

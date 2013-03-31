@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [1.2.0], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.2.1], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
@@ -90,7 +90,7 @@ AX_PROG_PYTHON_VERSION([2.7.0],
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
-AC_PATH_PROGS([RUBY],[ruby1.9 ruby])
+AC_PATH_PROGS([RUBY],[ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 
