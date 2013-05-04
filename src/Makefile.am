@@ -299,6 +299,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-msg_size-install \
                    tests-zeromq-install \
                    api-install \
+                   api-erlang-install \
                    api-c-install \
                    api-java-install \
                    api-python-install \
@@ -512,6 +513,11 @@ tests-zeromq-install:
 
 api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api"
+
+api-erlang-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/erlang"
+	$(INSTALL_DATA) "$(top_srcdir)/api/erlang/README.markdown" \
+                  "$(DESTDIR)$(cloudi_prefix)/api/erlang/"
 
 api-c-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c"
