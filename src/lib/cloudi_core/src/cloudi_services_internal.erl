@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -535,8 +535,27 @@ handle_info({'cloudi_service_info_failure',
     ?LOG_ERROR("info stop ~p", [Reason]),
     {stop, Reason, State#state{service_state = NewServiceState}};
 
-handle_info({'EXIT', _, shutdown}, State) ->
+handle_info({'EXIT', _, shutdown},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service shutdown
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, shutdown);
+        true ->
+            ok
+    end,
     {stop, shutdown, State};
+
+handle_info({'EXIT', _, restart},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service API requested a restart
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, restart);
+        true ->
+            ok
+    end,
+    {stop, restart, State};
 
 handle_info({'EXIT', DuoModePid, Reason},
             #state{duo_mode_pid = DuoModePid} = State) ->
@@ -576,18 +595,6 @@ handle_info({'EXIT', InfoPid, Reason},
             #state{info_pid = InfoPid} = State) ->
     ?LOG_ERROR("~p info exited: ~p", [InfoPid, Reason]),
     {stop, Reason, State};
-
-handle_info({'EXIT', Dispatcher, restart},
-            #state{dispatcher = Dispatcher,
-                   duo_mode_pid = DuoModePid} = State) ->
-    % CloudI Service API requested a restart
-    if
-        is_pid(DuoModePid) ->
-            erlang:exit(DuoModePid, restart);
-        true ->
-            ok
-    end,
-    {stop, restart, State};
 
 handle_info({'EXIT', Dispatcher, Reason},
             #state{dispatcher = Dispatcher} = State) ->

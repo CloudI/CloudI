@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services).
@@ -56,9 +56,9 @@
 
 %% external interface
 -export([start_link/0,
-         monitor/6,
-         shutdown/1,
-         restart/1]).
+         monitor/7,
+         shutdown/2,
+         restart/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -66,6 +66,9 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
+
+-define(CATCH_TIMEOUT(F),
+        try F catch exit:{timeout, _} -> {error, timeout} end).
 
 -record(state,
     {
@@ -93,19 +96,25 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-monitor(M, F, A, MaxR, MaxT, ServiceId)
+monitor(M, F, A, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    gen_server:call(?MODULE, {monitor, M, F, A, MaxR, MaxT, ServiceId}).
+    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
+                                   {monitor, M, F, A, MaxR, MaxT, ServiceId},
+                                   Timeout)).
 
-shutdown(ServiceId)
+shutdown(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    gen_server:call(?MODULE, {shutdown, ServiceId}).
+    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
+                                   {shutdown, ServiceId},
+                                   Timeout)).
 
-restart(ServiceId)
+restart(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    gen_server:call(?MODULE, {restart, ServiceId}).
+    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
+                                   {restart, ServiceId},
+                                   Timeout)).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

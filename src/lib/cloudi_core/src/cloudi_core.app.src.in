@@ -52,6 +52,7 @@
         pqueue,
         quickrand,
         trie,
+        reltool_util,
         uuid,
         cpg,
         sasl,

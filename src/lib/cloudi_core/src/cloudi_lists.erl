@@ -44,14 +44,15 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([iter/3,
+-export([index/2,
+         iter/3,
          itera/3, itera2/4, itera3/5,
          delete_checked/2, delete_all/2,
          nth_take/2,
@@ -63,6 +64,25 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the index of a list element.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec index(Item :: any(),
+            L :: list()) -> pos_integer().
+
+index(Item, L)
+    when is_list(L) ->
+    index(Item, L, 1).
+index(_, [], _) ->
+    not_found;
+index(Item, [Item | _], I) ->
+    I;
+index(Item, [_ | T], I) ->
+    index(Item, T, I + 1).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -58,9 +58,9 @@
          acl_add/2, acl_remove/2,
          services_add/2, services_remove/2, services_restart/2, services/1,
          nodes_add/2, nodes_remove/2,
-         service_start/1,
-         service_stop/1,
-         service_restart/1,
+         service_start/2,
+         service_stop/2,
+         service_restart/2,
          concurrency/1]).
 
 %% gen_server callbacks
@@ -129,46 +129,39 @@ nodes_remove(L, Timeout) ->
                  end),
     ok.
 
-service_start(Service)
+service_start(#config_service_internal{module = Module,
+                                       count_process = Count} = Service,
+              Timeout) ->
+    case service_find_internal(Service) of
+        {ok, FoundService} ->
+            service_start_internal(concurrency(Count), FoundService, Timeout),
+            FoundService;
+        {error, Reason} ->
+            ?LOG_ERROR("error finding internal service (~p):~n ~p",
+                       [Module, Reason]),
+            Service
+    end;
+
+service_start(#config_service_external{count_process = Count} = Service,
+              Timeout) ->
+    service_start_external(concurrency(Count), Service, Timeout),
+    Service.
+
+service_stop(Service, Timeout)
     when is_record(Service, config_service_internal) ->
-    case application:load(Service#config_service_internal.module) of
-        ok ->
-            % prefer application files to load internal services
-            % (so that application dependencies can be clearly specified, etc.)
-            application:start(Service#config_service_internal.module,
-                              temporary);
-        {error, _} ->
-            % if no application file can be loaded, load it as a simple module
-            case code:is_loaded(Service#config_service_internal.module) of
-                false ->
-                    code:load_file(Service#config_service_internal.module);
-                _ ->
-                    ok
-            end
-    end,
-    service_start_internal(
-        concurrency(Service#config_service_internal.count_process), Service);
+    service_stop_internal(Service, Timeout);
 
-service_start(Service)
+service_stop(Service, Timeout)
     when is_record(Service, config_service_external) ->
-    service_start_external(
-        concurrency(Service#config_service_external.count_process), Service).
+    service_stop_external(Service, Timeout).
 
-service_stop(Service)
+service_restart(Service, Timeout)
     when is_record(Service, config_service_internal) ->
-    service_stop_internal(Service);
+    service_restart_internal(Service, Timeout);
 
-service_stop(Service)
+service_restart(Service, Timeout)
     when is_record(Service, config_service_external) ->
-    service_stop_external(Service).
-
-service_restart(Service)
-    when is_record(Service, config_service_internal) ->
-    service_restart_internal(Service);
-
-service_restart(Service)
-    when is_record(Service, config_service_external) ->
-    service_restart_external(Service).
+    service_restart_external(Service, Timeout).
 
 concurrency(I)
     when is_integer(I) ->
@@ -202,19 +195,19 @@ handle_call({acl_remove, L, _}, _,
     NewConfig = cloudi_configuration:acl_remove(L, Config),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({services_add, L, _}, _,
+handle_call({services_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_add(L, Config),
+    NewConfig = cloudi_configuration:services_add(L, Config, Timeout),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({services_remove, L, _}, _,
+handle_call({services_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_remove(L, Config),
+    NewConfig = cloudi_configuration:services_remove(L, Config, Timeout),
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({services_restart, L, _}, _,
+handle_call({services_restart, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_restart(L, Config),
+    NewConfig = cloudi_configuration:services_restart(L, Config, Timeout),
     {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({services, _}, _,
@@ -243,8 +236,7 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info(configure, #state{configuration = Config} = State) ->
-    configure(Config),
-    {noreply, State};
+    {noreply, State#state{configuration = configure(Config, infinity)}};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -260,114 +252,254 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-configure(Config) ->
-    lists:foreach(fun service_start/1, Config#config.services).
+configure(#config{services = Services} = Config, Timeout) ->
+    Config#config{services = configure_service(Services, [], Timeout)}.
 
-service_start_internal(0, _) ->
+configure_service([], Configured, _) ->
+    lists:reverse(Configured);
+configure_service([Service | Services], Configured, Timeout) ->
+    configure_service(Services,
+                      [service_start(Service, Timeout) | Configured],
+                      Timeout).
+
+service_find_internal(#config_service_internal{module = Path} = Service)
+    when is_list(Path) ->
+    case filename:extension(Path) of
+        ".erl" ->
+            Module = erlang:list_to_atom(filename:basename(Path, ".erl")),
+            case service_find_internal_add_pathz(Path) of
+                {ok, FullPath} ->
+                    case compile:file(FullPath,
+                                      compiler_options(FullPath)) of
+                        {ok, Module} ->
+                            service_find_internal_module(Module, Service);
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        ".beam" ->
+            Module = erlang:list_to_atom(filename:basename(Path, ".beam")),
+            case service_find_internal_add_pathz(Path) of
+                {ok, _} ->
+                    service_find_internal_module(Module, Service);
+                {error, _} = Error ->
+                    Error
+            end;
+        ".app" ->
+            Application = erlang:list_to_atom(filename:basename(Path, ".app")),
+            case service_find_internal_add_pathz(Path) of
+                {ok, _} ->
+                    service_find_internal_application(Application, Service);
+                {error, _} = Error ->
+                    Error
+            end;
+        ".script" ->
+            case filename:dirname(Path) of
+                "." ->
+                    case code:where_is_file(Path) of
+                        non_existing ->
+                            {error, {non_existing, Path}};
+                        FullPath ->
+                            service_find_internal_script(FullPath, Service)
+                    end;
+                _ ->
+                    service_find_internal_script(Path, Service)
+            end
+    end;
+service_find_internal(#config_service_internal{module = Module} = Service)
+    when is_atom(Module) ->
+    % prefer application files to load internal services
+    % (so that application dependencies can be clearly specified, etc.)
+    case application:load(Module) of
+        ok ->
+            service_find_internal_application(Module, Service);
+        {error, {already_loaded, Module}} ->
+            service_find_internal_application(Module, Service);
+        {error, _} ->
+            % if no application file can be loaded, load it as a simple module
+            service_find_internal_module(Module, Service)
+    end.
+
+compiler_options(FilePath) ->
+    [{outdir, filename:dirname(FilePath)}].
+
+service_find_internal_add_pathz(Path) ->
+    CodePath = filename:dirname(Path),
+    if
+        CodePath == "." ->
+            case code:where_is_file(Path) of
+                non_existing ->
+                    {error, {non_existing, Path}};
+                FullPath ->
+                    {ok, FullPath}
+            end;
+        true ->
+            case code:add_pathz(CodePath) of
+                true ->
+                    {ok, Path};
+                {error, Reason} ->
+                    {error, {Reason, CodePath}}
+            end
+    end.
+
+service_find_internal_module(Module, Service)
+    when is_atom(Module) ->
+    case code:is_loaded(Module) of
+        false ->
+            case code:load_file(Module) of
+                {module, Module} ->
+                    {ok, Service#config_service_internal{module = Module}};
+                {error, Reason} ->
+                    {error, {Reason, Module}}
+            end;
+        _ ->
+            {ok, Service}
+    end.
+
+service_find_internal_application(Application, Service)
+    when is_atom(Application) ->
+    case reltool_util:application_start(Application) of
+        ok ->
+            {ok, Service#config_service_internal{module = Application}};
+        {error, _} = Error ->
+            Error
+    end.
+
+service_find_internal_script(ScriptPath, Service)
+    when is_list(ScriptPath) ->
+    case reltool_util:script_start(ScriptPath) of
+        {ok, Application} ->
+            {ok, Service#config_service_internal{module = Application}};
+        {error, _} = Error ->
+            Error
+    end.
+
+service_start_internal(0, _, _) ->
     ok;
-service_start_internal(Count0, Service)
-    when is_record(Service, config_service_internal) ->
+service_start_internal(Count0,
+                       #config_service_internal{
+                           module = Module,
+                           args = Args,
+                           timeout_init = TimeoutInit,
+                           prefix = Prefix,
+                           timeout_async = TimeoutAsync,
+                           timeout_sync = TimeoutSync,
+                           dest_refresh = DestRefresh,
+                           dest_list_deny = DestListDeny,
+                           dest_list_allow = DestListAllow,
+                           options = Options,
+                           max_r = MaxR,
+                           max_t = MaxT,
+                           uuid = UUID} = Service, Timeout) ->
     Count1 = Count0 - 1,
-    case cloudi_services:monitor(
-        cloudi_spawn, start_internal,
-        [Count1,
-         Service#config_service_internal.module,
-         Service#config_service_internal.args,
-         Service#config_service_internal.timeout_init,
-         Service#config_service_internal.prefix,
-         Service#config_service_internal.timeout_async,
-         Service#config_service_internal.timeout_sync,
-         Service#config_service_internal.dest_refresh,
-         Service#config_service_internal.dest_list_deny,
-         Service#config_service_internal.dest_list_allow,
-         Service#config_service_internal.options],
-        Service#config_service_internal.max_r,
-        Service#config_service_internal.max_t,
-        Service#config_service_internal.uuid) of
+    case cloudi_services:monitor(cloudi_spawn, start_internal,
+                                 [Count1,
+                                  Module, Args, TimeoutInit,
+                                  Prefix, TimeoutAsync, TimeoutSync,
+                                  DestRefresh, DestListDeny, DestListAllow,
+                                  Options], MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error starting internal service (~p):~n ~p",
-                       [Service#config_service_internal.module, Reason]),
+                       [Module, Reason]),
             ok
     end,
-    service_start_internal(Count1, Service).
+    service_start_internal(Count1, Service, Timeout).
 
-service_start_external(0, _) ->
+service_start_external(0, _, _) ->
     ok;
-service_start_external(Count, Service)
-    when is_record(Service, config_service_external) ->
-    case cloudi_services:monitor(
-        cloudi_spawn, start_external,
-        [concurrency(
-             Service#config_service_external.count_thread
-         ),
-         Service#config_service_external.file_path,
-         Service#config_service_external.args,
-         Service#config_service_external.env,
-         Service#config_service_external.protocol,
-         Service#config_service_external.buffer_size,
-         Service#config_service_external.timeout_init,
-         Service#config_service_external.prefix,
-         Service#config_service_external.timeout_async,
-         Service#config_service_external.timeout_sync,
-         Service#config_service_external.dest_refresh,
-         Service#config_service_external.dest_list_deny,
-         Service#config_service_external.dest_list_allow,
-         Service#config_service_external.options],
-        Service#config_service_external.max_r,
-        Service#config_service_external.max_t,
-        Service#config_service_external.uuid) of
+service_start_external(Count0,
+                       #config_service_external{
+                           count_thread = CountThread,
+                           file_path = FilePath,
+                           args = Args,
+                           env = Env,
+                           protocol = Protocol,
+                           buffer_size = BufferSize,
+                           timeout_init = TimeoutInit,
+                           prefix = Prefix,
+                           timeout_async = TimeoutAsync,
+                           timeout_sync = TimeoutSync,
+                           dest_refresh = DestRefresh,
+                           dest_list_deny = DestListDeny,
+                           dest_list_allow = DestListAllow,
+                           options = Options,
+                           max_r = MaxR,
+                           max_t = MaxT,
+                           uuid = UUID} = Service, Timeout) ->
+    case cloudi_services:monitor(cloudi_spawn, start_external,
+                                 [concurrency(CountThread),
+                                  FilePath, Args, Env,
+                                  Protocol, BufferSize, TimeoutInit,
+                                  Prefix, TimeoutAsync, TimeoutSync,
+                                  DestRefresh, DestListDeny, DestListAllow,
+                                  Options], MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error starting external service (~p):~n ~p",
-                       [Service#config_service_external.file_path, Reason]),
+                       [FilePath, Reason]),
             ok
     end,
-    service_start_external(Count - 1, Service).
+    service_start_external(Count0 - 1, Service, Timeout).
 
-service_stop_internal(Service)
-    when is_record(Service, config_service_internal) ->
-    case cloudi_services:shutdown(Service#config_service_internal.uuid) of
+service_stop_internal(#config_service_internal{
+                          module = Module,
+                          uuid = UUID}, Timeout) ->
+    case cloudi_services:shutdown(UUID, Timeout) of
         ok ->
+            case reltool_util:application_running(Module, Timeout) of
+                {ok, _} ->
+                    reltool_util:application_stop(Module);
+                {error, {not_found, Module}} ->
+                    ok; % internal service is not an OTP application
+                {error, Reason} ->
+                    ?LOG_ERROR("error stopping internal service application "
+                               "(~p):~n ~p", [Module, Reason])
+            end,
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error stopping internal service (~p):~n ~p",
-                       [Service#config_service_internal.module, Reason]),
+                       [Module, Reason]),
             ok
     end.
 
-service_stop_external(Service)
-    when is_record(Service, config_service_external) ->
-    case cloudi_services:shutdown(Service#config_service_external.uuid) of
+service_stop_external(#config_service_external{
+                          file_path = FilePath,
+                          uuid  = UUID}, Timeout) ->
+    case cloudi_services:shutdown(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error stopping external service (~p):~n ~p",
-                       [Service#config_service_external.file_path, Reason]),
+                       [FilePath, Reason]),
             ok
     end.
 
-service_restart_internal(Service)
-    when is_record(Service, config_service_internal) ->
-    case cloudi_services:restart(Service#config_service_internal.uuid) of
+service_restart_internal(#config_service_internal{
+                             module = Module,
+                             uuid = UUID}, Timeout) ->
+    case cloudi_services:restart(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error restarting internal service (~p):~n ~p",
-                       [Service#config_service_internal.module, Reason]),
+                       [Module, Reason]),
             ok
     end.
 
-service_restart_external(Service)
-    when is_record(Service, config_service_external) ->
-    case cloudi_services:restart(Service#config_service_external.uuid) of
+service_restart_external(#config_service_external{
+                             file_path = FilePath,
+                             uuid  = UUID}, Timeout) ->
+    case cloudi_services:restart(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error restarting external service (~p):~n ~p",
-                       [Service#config_service_external.file_path, Reason]),
+                       [FilePath, Reason]),
             ok
     end.
 

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add a more flexible interal service configuration that provides
+      better support for OTP applications and allows OTP release loading
+    * Fix issues with the CloudI Services API (timeouts added, 
+      restart/shutdown handling for internal services and
+      fix requests that don't reference a running service)
+
 2013-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.1 (beta) released
