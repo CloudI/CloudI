@@ -33,6 +33,7 @@
     uuid,
     trie,
     reltool_util,
+    key2value,
     % Erlang
     sasl,
     stdlib,
@@ -71,6 +72,7 @@
   {app, uuid, [{incl_cond, include}]},
   {app, trie, [{incl_cond, include}]},
   {app, reltool_util, [{incl_cond, include}]},
+  {app, key2value, [{incl_cond, include}]},
   % Erlang
   {app, sasl, [{incl_cond, include}]}
  ]}.

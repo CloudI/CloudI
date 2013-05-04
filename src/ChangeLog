@@ -8,6 +8,7 @@
     * Fix issues with the CloudI Services API (timeouts added, 
       restart/shutdown handling for internal services and
       fix requests that don't reference a running service)
+    * Move key2value.erl into a separate application
 
 2013-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
