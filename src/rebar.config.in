@@ -19,7 +19,8 @@
             "lib/cpg",
             "lib/uuid",
             "lib/trie",
-            "lib/reltool_util"]}.
+            "lib/reltool_util",
+            "lib/key2value"]}.
 {edoc_opts, [{preprocess, true},
              {includes, ["../../lib"]}]}.
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},

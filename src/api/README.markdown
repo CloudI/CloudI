@@ -40,6 +40,5 @@ initialize the CloudI API and call its event-loop (in the "poll" function).
 * [Python (using C integration)](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/http_req_c.py) (`http_req` test HTTP handler)
 * [Ruby](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/http_req.rb) (`http_req` test HTTP handler)
 
-Please see the [FAQ](http://cloudi.org/faq.html) for more details
-(more integration documentation will be added soon).
+Please see the [API documentation](http://cloudi.org/api.html) for more details.
 
