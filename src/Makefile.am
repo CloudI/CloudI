@@ -22,6 +22,7 @@ all-local: rebar \
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) lib/reltool_util/ebin
+	$(MKDIR_P) lib/key2value/ebin
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
@@ -63,6 +64,9 @@ all-local: rebar \
 	(cd $(top_srcdir)/lib/reltool_util/src; \
         test ! -e reltool_util.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/reltool_util/src/reltool_util.app.src || exit 0)
+	(cd $(top_srcdir)/lib/key2value/src; \
+        test ! -e key2value.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/key2value/src/key2value.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
@@ -136,6 +140,7 @@ clean-local: rebar
           $(top_builddir)/lib/uuid/ebin \
           $(top_builddir)/lib/trie/ebin \
           $(top_builddir)/lib/reltool_util/ebin \
+          $(top_builddir)/lib/key2value/ebin \
           $(top_builddir)/external/nodefinder/nodefinder/ebin \
           $(top_builddir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
@@ -158,6 +163,7 @@ clean-local: rebar
           $(top_srcdir)/lib/uuid/ebin \
           $(top_srcdir)/lib/trie/ebin \
           $(top_srcdir)/lib/reltool_util/ebin \
+          $(top_srcdir)/lib/key2value/ebin \
           $(top_srcdir)/external/nodefinder/nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin \
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
@@ -238,6 +244,7 @@ dialyze: all-local dialyzer.plt
               lib/uuid/ebin/ \
               lib/trie/ebin/ \
               lib/reltool_util/ebin/ \
+              lib/key2value/ebin/ \
               external/cowboy/ebin \
               external/dynamic_compile/ebin \
               external/epgsql/ebin \

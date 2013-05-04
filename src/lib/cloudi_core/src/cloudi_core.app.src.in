@@ -29,8 +29,7 @@
         cloudi_spawn,
         cloudi_string,
         cloudi_sup,
-        cloudi_tuple,
-        key2value
+        cloudi_tuple
         ]},
    {registered,[
         cloudi_configurator,
@@ -53,6 +52,7 @@
         quickrand,
         trie,
         reltool_util,
+        key2value,
         uuid,
         cpg,
         sasl,
