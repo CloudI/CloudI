@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         services_add/2, services_remove/2, services_restart/2, services/1,
+         services_add/3, services_remove/3, services_restart/3, services/1,
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
@@ -245,13 +245,14 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
 %% ===Add services based on the configuration format.===
 %% @end
 %%-------------------------------------------------------------------------
-services_add([T | _] = Value, #config{uuid_generator = UUID,
-                                      services = Services,
-                                      acl = ACL} = Config)
+services_add([T | _] = Value,
+             #config{uuid_generator = UUID,
+                     services = Services,
+                     acl = ACL} = Config, Timeout)
     when is_record(T, internal); is_record(T, external) ->
-    NewServices = services_acl_update([],
-                                      services_validate([], Value, UUID), ACL),
-    lists:foreach(fun cloudi_configurator:service_start/1, NewServices),
+    NextServices = services_acl_update([],
+                                       services_validate([], Value, UUID), ACL),
+    NewServices = services_add_service(NextServices, [], Timeout),
     Config#config{services = Services ++ NewServices}.
 
 %%-------------------------------------------------------------------------
@@ -259,10 +260,11 @@ services_add([T | _] = Value, #config{uuid_generator = UUID,
 %% ===Remove services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-services_remove([UUID | _] = Value, #config{services = Services} = Config)
+services_remove([UUID | _] = Value,
+                #config{services = Services} = Config, Timeout)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     NewServices = lists:foldl(fun(ID, L) ->
-        {[Service], NewL} = lists:partition(fun(S) ->
+        {ServiceList, NewL} = lists:partition(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->
@@ -274,9 +276,14 @@ services_remove([UUID | _] = Value, #config{services = Services} = Config)
                     false
             end
         end, L),
-        cloudi_configurator:service_stop(Service),
+        case ServiceList of
+            [] ->
+                ok;
+            [Service] ->
+                cloudi_configurator:service_stop(Service, Timeout)
+        end,
         NewL
-    end, Services, cloudi_lists:rsort(Value)),
+    end, Services, Value),
     Config#config{services = NewServices}.
 
 %%-------------------------------------------------------------------------
@@ -284,23 +291,29 @@ services_remove([UUID | _] = Value, #config{services = Services} = Config)
 %% ===Restart services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-services_restart([UUID | _] = Value, #config{services = Services} = Config)
+services_restart([UUID | _] = Value,
+                 #config{services = Services} = Config, Timeout)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     lists:foreach(fun(ID) ->
-        [Service | _] = lists:dropwhile(fun(S) ->
+        {ServiceList, _} = lists:partition(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->
-                    false;
+                    true;
                 is_record(S, config_service_external),
                 S#config_service_external.uuid == ID ->
-                    false;
+                    true;
                 true ->
-                    true
+                    false
             end
         end, Services),
-        cloudi_configurator:service_restart(Service)
-    end, cloudi_lists:rsort(Value)),
+        case ServiceList of
+            [] ->
+                ok;
+            [Service] ->
+                cloudi_configurator:service_restart(Service, Timeout)
+        end
+    end, Value),
     Config.
 
 %%-------------------------------------------------------------------------
@@ -445,6 +458,13 @@ new([{'logging', [T | _] = Value} | Terms], Config)
                                                        file = File,
                                                        redirect = Redirect}}).
 
+services_add_service([], Added, _) ->
+    lists:reverse(Added);
+services_add_service([Service | Services], Added, Timeout) ->
+    services_add_service(Services,
+                         [cloudi_configurator:service_start(Service, Timeout) |
+                          Added], Timeout).
+
 services_acl_update(Output, [], _) ->
     lists:reverse(Output);
 services_acl_update(Output, [Service | L], Lookup)
@@ -487,7 +507,6 @@ services_validate(Output, [], _) ->
 services_validate(Output, [Service | L], UUID)
     when is_record(Service, internal),
          is_list(Service#internal.prefix),
-         is_atom(Service#internal.module),
          is_list(Service#internal.args),
          is_atom(Service#internal.dest_refresh),
          is_integer(Service#internal.timeout_init),
@@ -497,6 +516,8 @@ services_validate(Output, [Service | L], UUID)
          is_integer(Service#internal.max_r),
          is_integer(Service#internal.max_t),
          is_list(Service#internal.options) ->
+    true = is_atom(Service#internal.module) orelse
+           is_list(Service#internal.module),
     true = (Service#internal.dest_refresh =:= immediate_closest) orelse
            (Service#internal.dest_refresh =:= lazy_closest) orelse
            (Service#internal.dest_refresh =:= immediate_furthest) orelse
