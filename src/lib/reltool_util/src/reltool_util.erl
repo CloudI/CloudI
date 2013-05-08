@@ -274,10 +274,23 @@ script_start(FilePath)
 
 ensure_application_loaded(A) ->
     case application:load(A) of
-         ok ->
-             ok;
+        ok ->
+            case application:get_key(A, modules) of
+                {ok, Modules} ->
+                    NotLoaded = lists:all(fun(M) ->
+                        is_module_loaded(M) =:= false
+                    end, Modules),
+                    if
+                        NotLoaded ->
+                            load_all_modules(Modules);
+                        true ->
+                            {error, {modules_partially_loaded, A}}
+                    end;
+                undefined ->
+                    ok
+            end;
         {error, {already_loaded, A}} ->
-             ok;
+            ok;
         {error, _} = Error ->
             Error
      end.

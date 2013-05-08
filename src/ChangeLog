@@ -7,6 +7,7 @@
     * Update pqueue application based on (deployment) feedback
     * Small changes to service configuration and startup
     * Updates to release generation
+    * Update reltool_util
 
 2013-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
