@@ -18,3 +18,17 @@ will attempt to pull CloudI dependencies into the release.  Since the CloudI
 dependencies are already loaded and running within the Erlang VM,
 the dependencies are unnecessary for the `hello_world1` release.
 
+## USAGE
+
+    $ make
+    $ cat << EOF > hello_world1.conf
+    [{internal,
+      "/examples/",
+      "$PWD/ebin/hello_world1.app",
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/examples/hello_world1
+
