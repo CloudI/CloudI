@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Start to add deployment examples for creating internal services
+    * Update pqueue application based on (deployment) feedback
+    * Small changes to service configuration and startup
+    * Updates to release generation
+
 2013-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add a more flexible interal service configuration that provides

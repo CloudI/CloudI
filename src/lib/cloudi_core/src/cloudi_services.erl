@@ -207,10 +207,14 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             {noreply, State}
     end;
 
-handle_info({'DOWN', _MonitorRef, 'process', Pid, _Info},
+handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
             #state{services = Services} = State) ->
     case key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], Service}} ->
+        {ok, {[ServiceId], #service{service_m = M,
+                                    service_f = F,
+                                    service_a = A} = Service}} ->
+            ?LOG_WARN("Service pid ~p error: ~p~n ~p:~p~p~n",
+                      [Pid, Info, M, F, A]),
             {noreply, restart(Service, Services, State, ServiceId, Pid)};
         error ->
             % Pids started together as threads for one OS process may

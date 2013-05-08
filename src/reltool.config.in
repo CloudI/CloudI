@@ -7,6 +7,8 @@
     "external/nodefinder"
     @ZEROMQ_ERLZMQ_PATH@
    ]},
+  {erts, [{mod_cond, all}, {app_file, keep}]},
+  {app_file, keep},
   {rel, "cloudi", "1",
    [
     % external dependencies
@@ -46,8 +48,13 @@
    ]},
   {boot_rel, "cloudi"},
   {profile, embedded},
+  {incl_cond, derived},
+  {mod_cond, all},
+  {excl_archive_filters, [".*"]},
   {excl_sys_filters, ["^bin/.*",
-                      "^erts.*/bin/(dialyzer|typer)"]},
+                      "^erts.*/bin/(dialyzer|typer)",
+                      "^erts.*/(doc|info|include|lib|man|src)"]},
+  {app, hipe, [{incl_cond, exclude}]},
   % external dependencies
   @ZEROMQ_ERLZMQ_RELTOOL@
   {app, combonodefinder, [{incl_cond, include}]},
@@ -81,9 +88,14 @@
 
 {overlay,
  [
-  {copy, "rel/files/app.config", "etc/app.config"},
+  {copy, "@srcdir@/rel/files/app.config", "etc/app.config"},
   {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
+  {copy, "@srcdir@/rel/files/install_upgrade.escript",
+         "bin/install_upgrade.escript"},
   {copy, "@srcdir@/rel/files/cloudi", "bin/cloudi"},
   {copy, "@srcdir@/rel/files/vm.args", "etc/vm.args"}
+  % windows scripts
+  %{copy, "@srcdir@/rel/files/cloudi.cmd", "bin/cloudi.cmd"},
+  %{copy, "@srcdir@/rel/files/start_erl.cmd", "bin/start_erl.cmd"}
  ]}.
