@@ -295,7 +295,7 @@ services_restart([UUID | _] = Value,
                  #config{services = Services} = Config, Timeout)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     lists:foreach(fun(ID) ->
-        {ServiceList, _} = lists:partition(fun(S) ->
+        ServiceList = lists:filter(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->

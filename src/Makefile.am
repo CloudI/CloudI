@@ -305,7 +305,8 @@ install-exec-hook: cloudi-prefix-install \
                    api-python-install \
                    api-ruby-install \
                    service_api-install \
-                   service_api-python-install
+                   service_api-python-install \
+                   rel/files/app.config
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_logdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"

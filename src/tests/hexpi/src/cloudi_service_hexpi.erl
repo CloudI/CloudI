@@ -114,7 +114,7 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], Dispatcher)
                  index_start = IndexStart,
                  index_end = IndexEnd}, Dispatcher).
 
-cloudi_service_map_reduce_send(_, #state{done = true} = State) ->
+cloudi_service_map_reduce_send(#state{done = true} = State, _) ->
     {done, State};
 cloudi_service_map_reduce_send(#state{destination = Name,
                                       index = Index,
