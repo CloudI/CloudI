@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Application Supervisor==
+%%% ==CPG Test Server==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,52 +43,31 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
+%%% @copyright 2013 Michael Truog
 %%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_sup).
+-module(cpg_test_server).
+
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
+-behaviour(gen_server).
 
 %% external interface
--export([start_link/1]).
+-export([start_link/1,
+         put/2,
+         get/1,
+         pid/1]).
 
-%% supervisor callbacks
--export([init/1]).
+%% gen_server callbacks
+-export([init/1,
+         handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
 
--include("cpg_constants.hrl").
-
--ifdef(CPG_ETS_CACHE).
--define(CPG_ETS_CACHE_START(R),
-        ChildSpec1 = {cpg_ets1,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec2 = {cpg_ets2,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec3 = {cpg_ets3,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ok = cpg_ets:table_create(),
-        case R of
-            {ok, SupervisorPid} = Result ->
-                {ok, Child1} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec1),
-                {ok, Child2} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec2),
-                {ok, _} = supervisor:start_child(SupervisorPid,
-                                                 ChildSpec3),
-                ok = cpg_ets:table_owners(Child1, Child2),
-                Result;
-            Result ->
-                Result
-        end).
--else.
--define(CPG_ETS_CACHE_START(R),
-        R).
--endif.
+-record(state,
+    {
+        value
+    }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -96,46 +75,56 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start the CPG application supervisor.===
+%% ===Start the test server with a cpg via_name().===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec start_link(ScopeList :: list(atom())) ->
-    {'ok', pid()} |
-    {'error', any()}.
+-spec start_link(cpg:via_name()) -> {'ok', pid()} | {'error', any()}.
 
-start_link([A | _] = ScopeList) when is_atom(A) ->
-    ?CPG_ETS_CACHE_START(supervisor:start_link(?MODULE, [ScopeList])).
+start_link(ViaName) ->
+    gen_server:start_link({via, cpg, ViaName}, ?MODULE, [], []).
+
+put(ViaName, Value) ->
+    gen_server:call({via, cpg, ViaName}, {put, Value}).
+
+get(ViaName) ->
+    gen_server:call({via, cpg, ViaName}, get).
+
+pid(ViaName) ->
+    gen_server:call({via, cpg, ViaName}, pid).
 
 %%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
+%%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-%% @private
-%% @doc
-%% @end
+init([]) ->
+    {ok, #state{}}.
 
-init([ScopeList]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    {ok,
-     {{one_for_one, MaxRestarts, MaxTime},
-      child_specifications(ScopeList)}}.
+handle_call({put, Value}, _, State) ->
+    {reply, ok, State#state{value = Value}};
+
+handle_call(get, _, #state{value = Value} = State) ->
+    {reply, Value, State};
+
+handle_call(pid, _, State) ->
+    {reply, self(), State};
+
+handle_call(_, _, State) ->
+    {stop, unknown_call, error, State}.
+
+handle_cast(_, State) ->
+    {stop, unknown_cast, State}.
+
+handle_info(_, State) ->
+    {stop, unknown_info, State}.
+
+terminate(_, _) ->
+    ok.
+
+code_change(_, State, _) ->
+    {ok, State}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-child_specifications([_ | _] = ScopeList) ->
-    child_specifications([], ScopeList).
-
-child_specifications(ChildSpecs, []) ->
-    ChildSpecs;
-
-child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
-    Shutdown = 2000, % milliseconds
-    ChildSpec = {Scope,
-                 {cpg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg]},
-    child_specifications([ChildSpec | ChildSpecs], L).
 

@@ -5,6 +5,7 @@
   [{description, "Cloudi Core Application"},
    {vsn, "@VERSION@"},
    {modules, [
+        cloudi,
         cloudi_app,
         cloudi_array,
         cloudi_configuration,
