@@ -3,12 +3,13 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Application Supervisor==
+%%% ==CPG Supervisor for children.==
+%%% Helper process for cpg_supervisor.
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,99 +44,36 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
+%%% @copyright 2013 Michael Truog
 %%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_sup).
+-module(supervisor_cpg_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
 
-%% external interface
--export([start_link/1]).
+%% external interface functions
+-export([start_link/3]).
 
 %% supervisor callbacks
 -export([init/1]).
-
--include("cpg_constants.hrl").
-
--ifdef(CPG_ETS_CACHE).
--define(CPG_ETS_CACHE_START(R),
-        ChildSpec1 = {cpg_ets1,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec2 = {cpg_ets2,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec3 = {cpg_ets3,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ok = cpg_ets:table_create(),
-        case R of
-            {ok, SupervisorPid} = Result ->
-                {ok, Child1} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec1),
-                {ok, Child2} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec2),
-                {ok, _} = supervisor:start_child(SupervisorPid,
-                                                 ChildSpec3),
-                ok = cpg_ets:table_owners(Child1, Child2),
-                Result;
-            Result ->
-                Result
-        end).
--else.
--define(CPG_ETS_CACHE_START(R),
-        R).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Start the CPG application supervisor.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec start_link(ScopeList :: list(atom())) ->
-    {'ok', pid()} |
-    {'error', any()}.
-
-start_link([A | _] = ScopeList) when is_atom(A) ->
-    ?CPG_ETS_CACHE_START(supervisor:start_link(?MODULE, [ScopeList])).
+start_link(MaxR, MaxT, ChildSpecs) ->
+    supervisor:start_link(?MODULE, [MaxR, MaxT, ChildSpecs]).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
 
-%% @private
-%% @doc
-%% @end
-
-init([ScopeList]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    {ok,
-     {{one_for_one, MaxRestarts, MaxTime},
-      child_specifications(ScopeList)}}.
+init([MaxR, MaxT, ChildSpecs]) ->
+    {ok, {{one_for_one, MaxR, MaxT}, ChildSpecs}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-child_specifications([_ | _] = ScopeList) ->
-    child_specifications([], ScopeList).
-
-child_specifications(ChildSpecs, []) ->
-    ChildSpecs;
-
-child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
-    Shutdown = 2000, % milliseconds
-    ChildSpec = {Scope,
-                 {cpg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg]},
-    child_specifications([ChildSpec | ChildSpecs], L).
 

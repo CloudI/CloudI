@@ -72,7 +72,7 @@ start(_, _) ->
         L == [] ->
             [?DEFAULT_SCOPE];
         is_list(L) ->
-            L
+            [?DEFAULT_SCOPE | L]
     end,
     case cpg_sup:start_link(ScopeList) of
         {ok, _} = Success ->

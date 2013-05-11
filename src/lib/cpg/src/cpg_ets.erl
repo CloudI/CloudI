@@ -3,12 +3,13 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Application Supervisor==
+%%% ==CPG ETS Cache.==
+%%% Use ETS to avoid contention for CPG scope processes.
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,99 +44,125 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
+%%% @copyright 2013 Michael Truog
 %%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_sup).
+-module(cpg_ets).
 -author('mjtruog [at] gmail (dot) com').
 
--behaviour(supervisor).
+-behaviour(gen_server).
 
 %% external interface
--export([start_link/1]).
+-export([start_link/0,
+         table_create/0,
+         table_owners/2,
+         get/1,
+         put/2]).
 
-%% supervisor callbacks
--export([init/1]).
+%% gen_server callbacks
+-export([init/1,
+         handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
 
 -include("cpg_constants.hrl").
 
+-record(state,
+    {
+        parent_sup
+    }).
+
 -ifdef(CPG_ETS_CACHE).
--define(CPG_ETS_CACHE_START(R),
-        ChildSpec1 = {cpg_ets1,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec2 = {cpg_ets2,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec3 = {cpg_ets3,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ok = cpg_ets:table_create(),
-        case R of
-            {ok, SupervisorPid} = Result ->
-                {ok, Child1} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec1),
-                {ok, Child2} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec2),
-                {ok, _} = supervisor:start_child(SupervisorPid,
-                                                 ChildSpec3),
-                ok = cpg_ets:table_owners(Child1, Child2),
-                Result;
-            Result ->
-                Result
-        end).
+-define(CPG_ETS_TABLE, ?CPG_ETS_CACHE).
 -else.
--define(CPG_ETS_CACHE_START(R),
-        R).
+-define(CPG_ETS_TABLE, ?MODULE).
 -endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Start the CPG application supervisor.===
-%% @end
-%%-------------------------------------------------------------------------
+start_link() ->
+    gen_server:start_link(?MODULE, [self()], []).
 
--spec start_link(ScopeList :: list(atom())) ->
-    {'ok', pid()} |
-    {'error', any()}.
+table_create() ->
+    ets:new(?CPG_ETS_TABLE,
+            [set,
+             public,
+             named_table,
+             {keypos, 1},
+             {heir, none},
+             {read_concurrency, true}]),
+    ok.
 
-start_link([A | _] = ScopeList) when is_atom(A) ->
-    ?CPG_ETS_CACHE_START(supervisor:start_link(?MODULE, [ScopeList])).
+table_owners(OwnerPid, HeirPid)
+    when is_pid(OwnerPid), is_pid(HeirPid) ->
+    HeirData = undefined,
+    true = ets:setopts(?CPG_ETS_TABLE, [{heir, HeirPid, HeirData}]),
+    GiftData = undefined,
+    true = ets:give_away(?CPG_ETS_TABLE, OwnerPid, GiftData),
+    ok.
+
+get(Scope)
+    when is_atom(Scope) ->
+    ets:lookup_element(?CPG_ETS_TABLE, Scope, 2).
+
+put(Scope, Groups)
+    when is_atom(Scope) ->
+    true = ets:insert(?CPG_ETS_TABLE, {Scope, Groups}),
+    Groups.
 
 %%%------------------------------------------------------------------------
-%%% Callback functions from supervisor
+%%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-%% @private
-%% @doc
-%% @end
+init([ParentSup]) ->
+    {ok, #state{parent_sup = ParentSup}}.
 
-init([ScopeList]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    {ok,
-     {{one_for_one, MaxRestarts, MaxTime},
-      child_specifications(ScopeList)}}.
+handle_call(_, _, State) ->
+    {stop, unknown_call, error, State}.
+
+handle_cast(_, State) ->
+    {stop, unknown_cast, State}.
+
+handle_info({'ETS-TRANSFER', _, ParentSup, _GiftData},
+            #state{parent_sup = ParentSup} = State) ->
+    {noreply, State};
+
+handle_info({'ETS-TRANSFER', _, _OldPid, HeirData},
+            #state{parent_sup = ParentSup} = State) ->
+    NewHeirPid = get_heir(ParentSup),
+    true = is_pid(NewHeirPid),
+    ets:setopts(?CPG_ETS_TABLE, [{heir, NewHeirPid, HeirData}]),
+    {noreply, State};
+
+handle_info(_, State) ->
+    {stop, unknown_info, State}.
+
+terminate(_, _) ->
+    ok.
+
+code_change(_, State, _) ->
+    {ok, State}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-child_specifications([_ | _] = ScopeList) ->
-    child_specifications([], ScopeList).
-
-child_specifications(ChildSpecs, []) ->
-    ChildSpecs;
-
-child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
-    Shutdown = 2000, % milliseconds
-    ChildSpec = {Scope,
-                 {cpg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg]},
-    child_specifications([ChildSpec | ChildSpecs], L).
+get_heir(ParentSup) ->
+    Self = self(),
+    Choices = lists:filter(fun({_Id, Pid, _Type, Modules}) ->
+        if
+            [?MODULE] == Modules, Self /= Pid, is_pid(Pid) ->
+                is_process_alive(Pid);
+            true ->
+                false
+        end
+    end, supervisor:which_children(ParentSup)),
+    case Choices of
+        [] ->
+            undefined;
+        [{_, Pid, _, _} | _] ->
+            Pid
+    end.
 

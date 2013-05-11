@@ -169,7 +169,7 @@ destination_get(immediate_remote, Name, Pid, _)
 destination_get(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
-    throw(badarg).
+    erlang:exit(badarg).
 
 destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
@@ -208,7 +208,7 @@ destination_all(DestRefresh, Name, Pid, _)
 destination_all(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
-    throw(badarg).
+    erlang:exit(badarg).
 
 send_async_timeout_start(Timeout, TransId,
                          #state{dispatcher = Self,
