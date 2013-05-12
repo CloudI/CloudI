@@ -51,6 +51,8 @@
         %  'lazy_random', 'immediate_random',
         %  'lazy_local', 'immediate_local',
         %  'lazy_remote', 'immediate_remote',
+        %  'lazy_newest', 'immediate_newest',
+        %  'lazy_oldest', 'immediate_oldest',
         %  'none')
         none,
         % timeout for executing the cloudi_service_init/2 function
@@ -131,6 +133,8 @@
         %  'lazy_random', 'immediate_random',
         %  'lazy_local', 'immediate_local',
         %  'lazy_remote', 'immediate_remote',
+        %  'lazy_newest', 'immediate_newest',
+        %  'lazy_oldest', 'immediate_oldest',
         %  'none')
         none,
         % protocol used for each socket

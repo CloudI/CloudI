@@ -122,13 +122,15 @@ class API(object):
 
     def forward_async(self, name, request_info, request,
                       timeout, priority, trans_id, pid):
-        raise forward_async_exception(name, request_info, request,
-                                      timeout, priority, trans_id, pid)
+        self.__api.forward_async(name, request_info, request,
+                                 timeout, priority, trans_id, pid)
+        raise forward_async_exception()
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, trans_id, pid):
-        raise forward_sync_exception(name, request_info, request,
-                                     timeout, priority, trans_id, pid)
+        self.__api.forward_sync(name, request_info, request,
+                                timeout, priority, trans_id, pid)
+        raise forward_sync_exception()
 
     def return_(self, command, name, pattern, response_info, response,
                 timeout, trans_id, pid):
@@ -143,13 +145,15 @@ class API(object):
 
     def return_async(self, name, pattern, response_info, response,
                      timeout, trans_id, pid):
-        raise return_async_exception(name, pattern, response_info, response,
-                                     timeout, trans_id, pid)
+        self.__api.return_async(name, pattern, response_info, response,
+                                timeout, trans_id, pid)
+        raise return_async_exception()
 
     def return_sync(self, name, pattern, response_info, response,
                     timeout, trans_id, pid):
-        raise return_sync_exception(name, pattern, response_info, response,
-                                    timeout, trans_id, pid)
+        self.__api.return_sync(name, pattern, response_info, response,
+                               timeout, trans_id, pid)
+        raise return_sync_exception()
 
     def recv_async(self, timeout=None, trans_id=None, consume=None):
         kwargs = {}
@@ -205,52 +209,20 @@ class invalid_input_exception(Exception):
         Exception.__init__(self, message)
 
 class return_sync_exception(Exception):
-    def __init__(self, name, pattern, response_info, response,
-                 timeout, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Synchronous Call Return Invalid')
-        self.name = name
-        self.pattern = pattern
-        self.response_info = response_info
-        self.response = response
-        self.timeout = timeout
-        self.trans_id = trans_id
-        self.pid = pid
 
 class return_async_exception(Exception):
-    def __init__(self, name, pattern, response_info, response,
-                 timeout, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Return Invalid')
-        self.name = name
-        self.pattern = pattern
-        self.response_info = response_info
-        self.response = response
-        self.timeout = timeout
-        self.trans_id = trans_id
-        self.pid = pid
 
 class forward_sync_exception(Exception):
-    def __init__(self, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Synchronous Call Forward Invalid')
-        self.name = name
-        self.request_info = request_info
-        self.request = request
-        self.timeout = timeout
-        self.priority = priority
-        self.trans_id = trans_id
-        self.pid = pid
 
 class forward_async_exception(Exception):
-    def __init__(self, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Forward Invalid')
-        self.name = name
-        self.request_info = request_info
-        self.request = request
-        self.timeout = timeout
-        self.priority = priority
-        self.trans_id = trans_id
-        self.pid = pid
 
 class message_decoding_exception(Exception):
     def __init__(self, e):

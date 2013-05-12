@@ -92,7 +92,9 @@ destination_refresh_first(DestRefresh,
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
     cpg_data:get_groups(Delay);
 
 destination_refresh_first(DestRefresh, _)
@@ -100,7 +102,9 @@ destination_refresh_first(DestRefresh, _)
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
     ok;
 
 destination_refresh_first(none, _) ->
@@ -112,7 +116,9 @@ destination_refresh_start(DestRefresh,
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
     cpg_data:get_groups(Delay);
 
 destination_refresh_start(DestRefresh, _)
@@ -120,7 +126,9 @@ destination_refresh_start(DestRefresh, _)
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
     ok;
 
 destination_refresh_start(none, _) ->
@@ -146,6 +154,14 @@ destination_get(lazy_remote, Name, Pid, Groups)
     when is_list(Name) ->
     cpg_data:get_remote_pid(Name, Pid, Groups);
 
+destination_get(lazy_newest, Name, Pid, Groups)
+    when is_list(Name) ->
+    cpg_data:get_newest_pid(Name, Pid, Groups);
+
+destination_get(lazy_oldest, Name, Pid, Groups)
+    when is_list(Name) ->
+    cpg_data:get_oldest_pid(Name, Pid, Groups);
+
 destination_get(immediate_closest, Name, Pid, _)
     when is_list(Name) ->
     cpg:get_closest_pid(Name, Pid);
@@ -166,6 +182,14 @@ destination_get(immediate_remote, Name, Pid, _)
     when is_list(Name) ->
     cpg:get_remote_pid(Name, Pid);
 
+destination_get(immediate_newest, Name, Pid, _)
+    when is_list(Name) ->
+    cpg:get_newest_pid(Name, Pid);
+
+destination_get(immediate_oldest, Name, Pid, _)
+    when is_list(Name) ->
+    cpg:get_oldest_pid(Name, Pid);
+
 destination_get(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
@@ -175,7 +199,9 @@ destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random) ->
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
     cpg_data:get_members(Name, Pid, Groups);
 
 destination_all(DestRefresh, Name, Pid, Groups)
@@ -192,7 +218,9 @@ destination_all(DestRefresh, Name, Pid, _)
     when is_list(Name),
          (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random) ->
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
     cpg:get_members(Name, Pid);
 
 destination_all(DestRefresh, Name, Pid, _)
