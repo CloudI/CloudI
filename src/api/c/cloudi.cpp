@@ -784,9 +784,6 @@ int cloudi_forward(cloudi_instance_t * p,
                    char const * const pid,
                    uint32_t const pid_size)
 {
-    uint32_t size;
-    uint32_t timeout_index_start;
-    uint32_t timeout_index_end;
     int result;
     if (command == CLOUDI_ASYNC)
     {
@@ -833,9 +830,6 @@ int cloudi_forward_async(cloudi_instance_t * p,
                          char const * const pid,
                          uint32_t const pid_size)
 {
-    uint32_t size;
-    uint32_t timeout_index_start;
-    uint32_t timeout_index_end;
     int result = cloudi_forward_(p,
                                  "forward_async", name,
                                  request_info, request_info_size,
@@ -861,9 +855,6 @@ int cloudi_forward_sync(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size)
 {
-    uint32_t size;
-    uint32_t timeout_index_start;
-    uint32_t timeout_index_end;
     int result = cloudi_forward_(p,
                                  "forward_sync", name,
                                  request_info, request_info_size,
@@ -951,7 +942,6 @@ int cloudi_return(cloudi_instance_t * p,
                   char const * const pid,
                   uint32_t const pid_size)
 {
-    uint32_t size;
     int result;
     if (command == CLOUDI_ASYNC)
     {
@@ -996,9 +986,6 @@ int cloudi_return_async(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size)
 {
-    uint32_t size;
-    uint32_t timeout_index_start;
-    uint32_t timeout_index_end;
     int result = cloudi_return_(p,
                                 "return_async", name, pattern,
                                 response_info, response_info_size,
@@ -1023,9 +1010,6 @@ int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const pid,
                        uint32_t const pid_size)
 {
-    uint32_t size;
-    uint32_t timeout_index_start;
-    uint32_t timeout_index_end;
     int result = cloudi_return_(p,
                                 "return_sync",
                                 name, pattern,
