@@ -142,6 +142,10 @@ new(Settings)
            (DestRefresh =:= lazy_local) orelse
            (DestRefresh =:= immediate_remote) orelse
            (DestRefresh =:= lazy_remote) orelse
+           (DestRefresh =:= immediate_newest) orelse
+           (DestRefresh =:= lazy_newest) orelse
+           (DestRefresh =:= immediate_oldest) orelse
+           (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     true = is_integer(DefaultTimeoutAsync) and
            (DefaultTimeoutAsync > 0),
@@ -774,6 +778,18 @@ destination_get(DestRefresh, Name)
           DestRefresh =:= immediate_remote) ->
     cpg:get_remote_pid(Name);
 
+destination_get(DestRefresh, Name)
+    when is_list(Name),
+         (DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= immediate_newest) ->
+    cpg:get_newest_pid(Name);
+
+destination_get(DestRefresh, Name)
+    when is_list(Name),
+         (DestRefresh =:= lazy_oldest orelse
+          DestRefresh =:= immediate_oldest) ->
+    cpg:get_oldest_pid(Name);
+
 destination_get(DestRefresh, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
@@ -782,11 +798,15 @@ destination_get(DestRefresh, _) ->
 destination_all(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
           DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random) ->
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= lazy_oldest orelse
+          DestRefresh =:= immediate_oldest) ->
     cpg:get_members(Name);
 
 destination_all(DestRefresh, Name)

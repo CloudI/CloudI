@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -1225,32 +1225,6 @@ class API
         cloudi_instance_t * const m_api;
         int * m_count; // m_api shared pointer count
 
-        class function_termination_exception : public std::exception
-        {
-            public:
-                function_termination_exception(cloudi_instance_t * p,
-                                               uint32_t size,
-                                               int32_t timeout_new,
-                                               uint32_t timeout_index_start,
-                                               uint32_t timeout_index_end)
-                                               throw();
-                virtual ~function_termination_exception() throw() {}
-                virtual char const * what() const throw()
-                {
-                    return "Function Termination?";
-                }
-                int send() const;
-                int send(int32_t const timeout_old,
-                         int32_t const elapsed) const;
-
-            private:
-                cloudi_instance_t * const m_api;
-                uint32_t const m_size;
-                int32_t const m_timeout_new;
-                uint32_t const m_timeout_index_start;
-                uint32_t const m_timeout_index_end;
-        };
-        
     public:
         // create a nested namespace in a way the c++ standard accepts
         class return_value
@@ -1318,104 +1292,48 @@ class API
                 }
         };
 
-        class return_async_exception : public function_termination_exception
+        class return_async_exception : public std::exception
         {
             public:
-                return_async_exception(cloudi_instance_t * p,
-                                       uint32_t size,
-                                       int32_t timeout_new,
-                                       uint32_t timeout_index_start,
-                                       uint32_t timeout_index_end) throw() :
-                    function_termination_exception(p,
-                                                   size,
-                                                   timeout_new,
-                                                   timeout_index_start,
-                                                   timeout_index_end)
-                {
-                }
+                return_async_exception() throw() {}
                 virtual ~return_async_exception() throw() {}
                 virtual char const * what() const throw()
                 {
                     return "Asynchronous Call Return Invalid";
                 }
-                int send() const;
-                int send(int32_t const timeout_old,
-                         int32_t const elapsed) const;
         };
 
-        class return_sync_exception : public function_termination_exception
+        class return_sync_exception : public std::exception
         {
             public:
-                return_sync_exception(cloudi_instance_t * p,
-                                      uint32_t size,
-                                      int32_t timeout_new,
-                                      uint32_t timeout_index_start,
-                                      uint32_t timeout_index_end) :
-                    function_termination_exception(p,
-                                                   size,
-                                                   timeout_new,
-                                                   timeout_index_start,
-                                                   timeout_index_end)
-                {
-                }
+                return_sync_exception() throw() {}
                 virtual ~return_sync_exception() throw() {}
                 virtual char const * what() const throw()
                 {
                     return "Synchronous Call Return Invalid";
                 }
-                int send() const;
-                int send(int32_t const timeout_old,
-                         int32_t const elapsed) const;
         };
 
-        class forward_async_exception : public function_termination_exception
+        class forward_async_exception : public std::exception
         {
             public:
-                forward_async_exception(cloudi_instance_t * p,
-                                        uint32_t size,
-                                        int32_t timeout_new,
-                                        uint32_t timeout_index_start,
-                                        uint32_t timeout_index_end) throw() :
-                    function_termination_exception(p,
-                                                   size,
-                                                   timeout_new,
-                                                   timeout_index_start,
-                                                   timeout_index_end)
-                {
-                }
+                forward_async_exception() throw() {}
                 virtual ~forward_async_exception() throw() {}
                 virtual char const * what() const throw()
                 {
                     return "Asynchronous Call Forward Invalid";
                 }
-                int send() const;
-                int send(int32_t const timeout_old,
-                         int32_t const elapsed) const;
         };
 
-        class forward_sync_exception : public function_termination_exception
+        class forward_sync_exception : public std::exception
         {
             public:
-                forward_sync_exception(cloudi_instance_t * p,
-                                       uint32_t size,
-                                       int32_t timeout_new,
-                                       uint32_t timeout_index_start,
-                                       uint32_t timeout_index_end) throw() :
-                    function_termination_exception(p,
-                                                   size,
-                                                   timeout_new,
-                                                   timeout_index_start,
-                                                   timeout_index_end)
-                {
-                }
+                forward_sync_exception() throw() {}
                 virtual ~forward_sync_exception() throw() {}
                 virtual char const * what() const throw()
                 {
                     return "Synchronous Call Forward Invalid";
                 }
-                int send() const;
-                int send(int32_t const timeout_old,
-                         int32_t const elapsed) const;
         };
 
 };

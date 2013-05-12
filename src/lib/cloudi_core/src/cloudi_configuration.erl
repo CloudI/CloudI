@@ -140,8 +140,9 @@
 %%
 %%   Each service configuration then defines the destination refresh method
 %%   (DestinationRefreshMethod) which may be set to: lazy_closest,
-%%   lazy_furthest, lazy_random, lazy_local, lazy_remote, immediate_closest,
-%%   immediate_furthest, immediate_random, immediate_local, immediate_remote,
+%%   lazy_furthest, lazy_random, lazy_local, lazy_remote, lazy_newest,
+%%   lazy_oldest, immediate_closest, immediate_furthest, immediate_random,
+%%   immediate_local, immediate_remote, immediate_newest, immediate_oldest,
 %%   or none. A "lazy" destination refresh
 %%   method prefix is used by services that send messages to only
 %%   long-lived services and will avoid contention for doing service name
@@ -528,6 +529,10 @@ services_validate(Output, [Service | L], UUID)
            (Service#internal.dest_refresh =:= lazy_local) orelse
            (Service#internal.dest_refresh =:= immediate_remote) orelse
            (Service#internal.dest_refresh =:= lazy_remote) orelse
+           (Service#internal.dest_refresh =:= immediate_newest) orelse
+           (Service#internal.dest_refresh =:= lazy_newest) orelse
+           (Service#internal.dest_refresh =:= immediate_oldest) orelse
+           (Service#internal.dest_refresh =:= lazy_oldest) orelse
            (Service#internal.dest_refresh =:= none),
     true = Service#internal.timeout_init > 0,
     true = Service#internal.timeout_async > 0,
@@ -588,6 +593,10 @@ services_validate(Output, [Service | L], UUID)
            (Service#external.dest_refresh =:= lazy_local) orelse
            (Service#external.dest_refresh =:= immediate_remote) orelse
            (Service#external.dest_refresh =:= lazy_remote) orelse
+           (Service#external.dest_refresh =:= immediate_newest) orelse
+           (Service#external.dest_refresh =:= lazy_newest) orelse
+           (Service#external.dest_refresh =:= immediate_oldest) orelse
+           (Service#external.dest_refresh =:= lazy_oldest) orelse
            (Service#external.dest_refresh =:= none),
     true = (Service#external.protocol =:= tcp) orelse
            (Service#external.protocol =:= udp),

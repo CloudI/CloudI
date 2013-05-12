@@ -3,6 +3,12 @@
 
 2013-05-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix all the external CloudI API implementations so that their
+      usage of the request_timeout_adjustment service option does not require
+      the usage of exceptions (so that request latency should be back to
+      what was present for v1.1.1, including the python_c CloudI API
+      which remained a problem in the v1.2.1 release)
+    * Add newest/oldest destination refresh method options
     * Add the "cloudi" module for CloudI integration from Erlang processes
       external to a CloudI service (internal services will continue to use
       the "cloudi_service" behaviour/module as the CloudI API)
