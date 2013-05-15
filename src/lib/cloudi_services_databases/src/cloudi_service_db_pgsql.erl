@@ -151,8 +151,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                  {timeout, Timeout},
                  {database, Database} | NewArgs],
     case pgsql:connect(HostName, UserName, Password, FinalArgs) of
-        {ok, Connection} when is_pid(Connection) ->
-            erlang:unlink(Connection),
+        {ok, Connection} ->
             cloudi_service:subscribe(Dispatcher, Database),
             {ok, #state{connection = Connection}};
         {error, Reason} ->
