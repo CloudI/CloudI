@@ -25,6 +25,7 @@
         cloudi_services_external,
         cloudi_services_external_sup,
         cloudi_services_internal,
+        cloudi_services_internal_init,
         cloudi_services_internal_sup,
         cloudi_services,
         cloudi_spawn,

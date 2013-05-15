@@ -81,7 +81,7 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
 
--define(DEFAULT_PRIORITY_DEFAULT,                   0).
+-define(DEFAULT_PRIORITY,                           0).
 -define(DEFAULT_DEST_REFRESH,       immediate_closest).
 -define(DEFAULT_TIMEOUT_ASYNC,                   5000). % milliseconds
 -define(DEFAULT_TIMEOUT_SYNC,                    5000). % milliseconds
@@ -125,7 +125,7 @@ new(Settings)
         {dest_refresh,          ?DEFAULT_DEST_REFRESH},
         {timeout_async,        ?DEFAULT_TIMEOUT_ASYNC},
         {timeout_sync,          ?DEFAULT_TIMEOUT_SYNC},
-        {priority_default,  ?DEFAULT_PRIORITY_DEFAULT}
+        {priority_default,          ?DEFAULT_PRIORITY}
         ],
     [DestRefresh, DefaultTimeoutAsync, DefaultTimeoutSync,
      PriorityDefault] =

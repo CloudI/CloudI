@@ -83,8 +83,6 @@
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
-        init_timeout,                  % init timeout handler
-        init_pid,                      % init pid
         duo_mode_pid,                  % dual mode pid
         request_pid = undefined,       % request pid
         info_pid = undefined,          % info pid
@@ -163,12 +161,7 @@ start_link(ProcessIndex, Module, Args, Timeout, Prefix,
 init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
       DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
     Dispatcher = self(),
-    InitPid = proc_lib:spawn_link(fun() ->
-        Dispatcher ! {'cloudi_service_init',
-                      Module:cloudi_service_init(Args, Prefix, Dispatcher)}
-    end),
-    InitTimeout = erlang:send_after(Timeout, Dispatcher,
-                                    'cloudi_service_init_timeout'),
+    Dispatcher ! {'cloudi_service_init', Args, Timeout},
     DuoModePid = if
         ConfigOptions#config_service_options.duo_mode =:= true ->
             proc_lib:spawn_opt(fun() ->
@@ -186,10 +179,8 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                 module = Module,
                 process_index = ProcessIndex,
                 prefix = Prefix,
-                init_timeout = InitTimeout,
                 timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
-                init_pid = InitPid,
                 duo_mode_pid = DuoModePid,
                 uuid_generator = uuid:new(Dispatcher),
                 dest_refresh = DestRefresh,
@@ -476,31 +467,28 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
-handle_info({'cloudi_service_init', Result} = InitPidResult,
+handle_info({'cloudi_service_init', Args, Timeout},
             #state{queue_requests = true,
-                   init_pid = InitPid,
-                   init_timeout = InitTimeout,
+                   module = Module,
+                   prefix = Prefix,
                    duo_mode_pid = DuoModePid} = State) ->
+    {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(Timeout,
+                                                                     State),
+    Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
+    NewState = cloudi_services_internal_init:stop_link(DispatcherProxy),
     case Result of
         {ok, ServiceState} ->
-            erlang:cancel_timer(InitTimeout),
-            erlang:unlink(InitPid),
             erlang:process_flag(trap_exit, true),
-            NewState = State#state{init_pid = undefined,
-                                   init_timeout = undefined},
             if
                 is_pid(DuoModePid) ->
-                    DuoModePid ! InitPidResult,
+                    DuoModePid ! {'cloudi_service_init', Result},
                     {noreply, NewState};
                 true ->
                     {noreply, process_queues(ServiceState, NewState)}
             end;
         {stop, Reason} ->
-            {stop, Reason, State}
+            {stop, Reason, NewState}
     end;
-
-handle_info('cloudi_service_init_timeout', State) ->
-    {stop, timeout, State};
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              NewServiceState},
@@ -1691,9 +1679,9 @@ duo_mode_loop_init(#state_duo{dispatcher = Dispatcher} = State) ->
         Request ->
             % mimic a gen_server handle_info for code reuse
             case duo_handle_info(Request, State) of
-                {stop, Reason, #state_duo{module = Module,
-                                          service_state = ServiceState}} ->
-                    Module:cloudi_service_terminate(Reason, ServiceState),
+                {stop, Reason, _} ->
+                    % do not call Module:cloudi_service_terminate/2
+                    % since init has not completed yet
                     erlang:exit(Dispatcher, Reason);
                 {noreply, NewState} ->
                     duo_mode_loop_init(NewState)
