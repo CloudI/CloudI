@@ -84,6 +84,7 @@ start_link(Timeout, InternalState) ->
                           [{timeout, Timeout}]).
 stop_link(Pid) ->
     {ProcessDictionary, InternalState} = gen_server:call(Pid, stop, infinity),
+    erlang:erase(),
     lists:foreach(fun({K, V}) ->
         erlang:put(K, V)
     end, ProcessDictionary),
