@@ -41,4 +41,6 @@
             warn_unused_vars]}.
 {xref_checks, [undefined_function_calls]}.
 {cover_enabled, true}.
+{cover_print_enabled, true}.
+{cover_export_enabled, true}.
 

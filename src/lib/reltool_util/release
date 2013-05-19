@@ -115,6 +115,6 @@ execute_overlay([{copy, In, Out} | Rest], Vars, BaseDir, TargetDir) ->
     InFile = mustache(filename:join(BaseDir, In), Vars),
     OutFile = mustache(filename:join(TargetDir, Out), Vars),
     true = filelib:is_file(InFile),
-    ok = shell("cp -r ~s ~s", [InFile, OutFile]),
+    ok = shell("cp -R ~s ~s", [InFile, OutFile]),
     execute_overlay(Rest, Vars, BaseDir, TargetDir).
 

@@ -277,15 +277,15 @@ ensure_application_loaded(A) ->
         ok ->
             case application:get_key(A, modules) of
                 {ok, Modules} ->
-                    NotLoaded = lists:all(fun(M) ->
-                        is_module_loaded(M) =:= false
-                    end, Modules),
-                    if
-                        NotLoaded ->
-                            load_all_modules(Modules);
-                        true ->
-                            {error, {modules_partially_loaded, A}}
-                    end;
+                    lists:foreach(fun(M) ->
+                        case is_module_loaded(M) of
+                            false ->
+                                {module, M} = code:load_file(M),
+                                ok;
+                            true ->
+                                ok
+                        end
+                    end, Modules);
                 undefined ->
                     ok
             end;
