@@ -204,7 +204,7 @@ clean-local: rebar
           $(top_srcdir)/external/cowboy/ebin \
           $(top_srcdir)/external/dynamic_compile/ebin
 
-clean-configure: config.log
+clean-configure: config.log clean
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
      make clean || exit 0)
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
