@@ -88,7 +88,7 @@ init([Config]) when is_record(Config, config) ->
      {{rest_for_one, MaxRestarts, MaxTime},
       [child_specification(cloudi_logger, Config),
        child_specification(cloudi_nodes, Config),
-       child_specification(cloudi_services),
+       child_specification(cloudi_services_monitor),
        child_specification(cloudi_services_external_sup),
        child_specification(cloudi_services_internal_sup),
        child_specification(cloudi_os_spawn_pool),
@@ -119,11 +119,11 @@ child_specification(cloudi_configurator, Config)
      {cloudi_configurator, start_link, [Config]},
      transient, Shutdown, worker, [cloud_configurator]}.
 
-child_specification(cloudi_services) ->
+child_specification(cloudi_services_monitor) ->
     Shutdown = 2000, % milliseconds
-    {cloudi_services,
-     {cloudi_services, start_link, []},
-     permanent, Shutdown, worker, [cloudi_services]};
+    {cloudi_services_monitor,
+     {cloudi_services_monitor, start_link, []},
+     permanent, Shutdown, worker, [cloudi_services_monitor]};
 
 child_specification(cloudi_services_internal_sup) ->
     {cloudi_services_internal_sup,

@@ -94,13 +94,13 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
         DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
-            trie:new(DestDenyList)
+            cloudi_x_trie:new(DestDenyList)
     end,
     DestAllow = if
         DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
-            trie:new(DestAllowList)
+            cloudi_x_trie:new(DestAllowList)
     end,
     case code:is_loaded(Module) of
         false ->
@@ -142,13 +142,13 @@ start_external(ThreadsPerProcess,
         DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
-            trie:new(DestDenyList)
+            cloudi_x_trie:new(DestDenyList)
     end,
     DestAllow = if
         DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
-            trie:new(DestAllowList)
+            cloudi_x_trie:new(DestAllowList)
     end,
     {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
         case ?CREATE_EXTERNAL(Protocol, BufferSize, Timeout,

@@ -72,7 +72,7 @@ request_to_term(Data) ->
         is_binary(Data) ->
             Data
     end,
-    RPC0 = jsx:json_to_term(DataBin),
+    RPC0 = cloudi_x_jsx:json_to_term(DataBin),
     {value, {_, MethodBin}, RPC1} = lists:keytake(<<"method">>, 1, RPC0),
     {value, {_, Id}, RPC2} = lists:keytake(<<"id">>, 1, RPC1),
     case lists:keytake(<<"params">>, 1, RPC2) of
@@ -106,14 +106,14 @@ request_to_json(Method, Params, Id)
     end,
     if
         Params == [] ->
-            jsx:term_to_json([{<<"method">>, MethodBin},
+            cloudi_x_jsx:term_to_json([{<<"method">>, MethodBin},
                               {<<"id">>, Id},
                               {<<"jsonrpc">>, <<"2.0">>}]);
         true ->
             ParamsBin = lists:map(fun(E) ->
                 cloudi_string:term_to_binary(E)
             end, Params),
-            jsx:term_to_json([{<<"method">>, MethodBin},
+            cloudi_x_jsx:term_to_json([{<<"method">>, MethodBin},
                               {<<"params">>, ParamsBin},
                               {<<"id">>, Id},
                               {<<"jsonrpc">>, <<"2.0">>}])
@@ -129,7 +129,7 @@ response_to_term(Data) ->
         is_binary(Data) ->
             Data
     end,
-    RPC0 = jsx:json_to_term(DataBin),
+    RPC0 = cloudi_x_jsx:json_to_term(DataBin),
     {value, {_, Result}, RPC1} = lists:keytake(<<"result">>, 1, RPC0),
     {value, {_, Error}, RPC2} = lists:keytake(<<"error">>, 1, RPC1),
     {value, {_, Id}, _} = lists:keytake(<<"id">>, 1, RPC2),
@@ -164,7 +164,7 @@ response_to_json(Result, null, null, Id) ->
         is_binary(Id) ->
             <<"1.1">>
     end,
-    jsx:term_to_json([{<<"result">>, Result},
+    cloudi_x_jsx:term_to_json([{<<"result">>, Result},
                       {<<"error">>, null},
                       {<<"id">>, Id},
                       {<<"jsonrpc">>, Version}]);
@@ -177,7 +177,7 @@ response_to_json(Result, ErrorCode, ErrorMessage, Id)
         is_binary(Id) ->
             <<"1.1">>
     end,
-    jsx:term_to_json([{<<"result">>, Result},
+    cloudi_x_jsx:term_to_json([{<<"result">>, Result},
                       {<<"error">>, [
                        {<<"code">>, ErrorCode},
                        {<<"message">>, ErrorMessage}

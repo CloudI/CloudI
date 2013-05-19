@@ -61,7 +61,7 @@
 % Constants that should never be changed
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% pqueue4 usage limited by the signed byte integer storage
+% cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
 

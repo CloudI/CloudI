@@ -81,8 +81,8 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         true = is_list(Name) and is_integer(Count),
         erlang:send_after(?FLOOD_INTERVAL,
                           cloudi_service:self(Dispatcher), Info),
-        trie:store(Name, (?FLOOD_INTERVAL * 1.0) / Count, Lookup)
-    end, trie:new(), Args),
+        cloudi_x_trie:store(Name, (?FLOOD_INTERVAL * 1.0) / Count, Lookup)
+    end, cloudi_x_trie:new(), Args),
     erlang:send_after(?STATUS_INTERVAL,
                       cloudi_service:self(Dispatcher), status),
     {ok, #state{rates = Rates}}.
@@ -97,17 +97,17 @@ cloudi_service_handle_info({flood, Name, Request, Count} = Info,
                            Dispatcher) ->
     erlang:send_after(?FLOOD_INTERVAL,
                       cloudi_service:self(Dispatcher), Info),
-    Delay = trie:fetch(Name, Rates),
+    Delay = cloudi_x_trie:fetch(Name, Rates),
     {Time, _} = timer:tc(cloudi_service_flood, flood,
                          [Count, erlang:round(Delay),
                           Dispatcher, Name, Request]),
-    NewRates = trie:store(Name, (?FLOOD_INTERVAL /
+    NewRates = cloudi_x_trie:store(Name, (?FLOOD_INTERVAL /
                                  (Time * 0.001)) * Delay, Rates),
     {noreply, State#state{rates = NewRates}};
 
 cloudi_service_handle_info(status, #state{rates = Rates} = State,
                            Dispatcher) ->
-    Output = lists:flatten(trie:foldl(fun(Name, Delay, L) ->
+    Output = lists:flatten(cloudi_x_trie:foldl(fun(Name, Delay, L) ->
         [io_lib:format("~10w req/s ~s~n", [Delay * 1000.0, Name]) | L]
     end, [], Rates)),
     ?LOG_INFO("~s", [Output]),

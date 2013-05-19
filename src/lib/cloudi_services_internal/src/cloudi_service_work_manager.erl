@@ -76,7 +76,7 @@
         delay,
         destination,
         delay_timer,
-        queue = trie:new()
+        queue = cloudi_x_trie:new()
     }).
 
 %%%------------------------------------------------------------------------
@@ -110,17 +110,17 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     case Request of
         {DestinationName, Data} when is_list(DestinationName) ->
             {reply, ok,
-             State#state{queue = trie:prefix(DestinationName, Data, Queue)}};
+             State#state{queue = cloudi_x_trie:prefix(DestinationName, Data, Queue)}};
         Data when is_binary(Data) ->
             {reply, cloudi_response:new(Data, ok),
-             State#state{queue = trie:prefix(Destination, Data, Queue)}}
+             State#state{queue = cloudi_x_trie:prefix(Destination, Data, Queue)}}
     end.
 
 cloudi_service_handle_info(empty,
                            #state{delay = Delay,
                                   queue = Queue} = State, Dispatcher) ->
     
-    NewQueue = trie:map(fun(Name, DataList) ->
+    NewQueue = cloudi_x_trie:map(fun(Name, DataList) ->
         send_data(lists:reverse(DataList), Name, Dispatcher)
     end, Queue),
     {noreply,

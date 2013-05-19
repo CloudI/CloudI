@@ -87,7 +87,7 @@
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         async_responses = dict:new(),  % tracking for async requests
         queue_requests = true,         % is the external process busy?
-        queued = pqueue4:new(),        % queued incoming requests
+        queued = cloudi_x_pqueue4:new(),        % queued incoming requests
         % unique state elements
         protocol,                      % tcp or udp
         port,                          % port number used
@@ -110,7 +110,7 @@
                                        % immediate_newest | lazy_newest |
                                        % immediate_oldest | lazy_oldest,
                                        % destination pid refresh
-        cpg_data = cpg_data:get_empty_groups(), % dest_refresh lazy
+        cpg_data = cloudi_x_cpg_data:get_empty_groups(), % dest_refresh lazy
         dest_deny,                     % denied from sending to a destination
         dest_allow,                    % allowed to send to a destination
         options                        % #config_service_options{}
@@ -183,7 +183,7 @@ init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         {ok, Listener} ->
             {ok, Port} = inet:port(Listener),
             {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
-            quickrand:seed(),
+            cloudi_x_quickrand:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             destination_refresh_start(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{dispatcher = Dispatcher,
@@ -195,7 +195,7 @@ init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                                    timeout_async = TimeoutAsync,
                                    timeout_sync = TimeoutSync,
                                    init_timeout = InitTimeout,
-                                   uuid_generator = uuid:new(Dispatcher),
+                                   uuid_generator = cloudi_x_uuid:new(Dispatcher),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
                                    dest_allow = DestAllow,
@@ -216,7 +216,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
     case gen_udp:open(0, Opts) of
         {ok, Socket} ->
             {ok, Port} = inet:port(Socket),
-            quickrand:seed(),
+            cloudi_x_quickrand:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
             {ok, 'CONNECT', #state{dispatcher = Dispatcher,
                                    protocol = udp,
@@ -226,7 +226,7 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                                    timeout_async = TimeoutAsync,
                                    timeout_sync = TimeoutSync,
                                    init_timeout = InitTimeout,
-                                   uuid_generator = uuid:new(Dispatcher),
+                                   uuid_generator = cloudi_x_uuid:new(Dispatcher),
                                    dest_refresh = DestRefresh,
                                    dest_deny = DestDeny,
                                    dest_allow = DestAllow,
@@ -279,13 +279,13 @@ init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 'HANDLE'({'subscribe', Pattern},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix} = State) ->
-    ok = cpg:join(Prefix ++ Pattern, Dispatcher),
+    ok = cloudi_x_cpg:join(Prefix ++ Pattern, Dispatcher),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix} = State) ->
-    ok = cpg:leave(Prefix ++ Pattern, Dispatcher),
+    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, Dispatcher),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
@@ -562,7 +562,7 @@ handle_info({inet_async, Listener, Acceptor, Error}, StateName,
                    acceptor = Acceptor} = State) ->
     {stop, {StateName, inet_async, Error}, State};
 
-handle_info({cpg_data, Groups}, StateName,
+handle_info({cloudi_x_cpg_data, Groups}, StateName,
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),
@@ -677,7 +677,7 @@ handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T, StateName,
     QueueLimit = ConfigOptions#config_service_options.queue_limit,
     QueueLimitOk = if
         QueueLimit /= undefined ->
-            pqueue4:len(Queue) < QueueLimit;
+            cloudi_x_pqueue4:len(Queue) < QueueLimit;
         true ->
             true
     end,
@@ -695,7 +695,7 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId}, StateName,
                    queued = Queue} = State) ->
     NewQueue = if
         QueueRequests =:= true ->
-            pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
+            cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
                 Id /= TransId
             end, Priority, Queue);
         true ->
@@ -787,7 +787,7 @@ handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
                     % should never happen, timer should have been cancelled
                     % if the send_async already returned
                     ?LOG_WARN("send timeout not found (trans_id=~s)",
-                              [uuid:uuid_to_string(TransId)]);
+                              [cloudi_x_uuid:uuid_to_string(TransId)]);
                 true ->
                     ok % cancel_timer avoided due to latency
             end,
@@ -807,7 +807,7 @@ handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
                     % should never happen, timer should have been cancelled
                     % if the send_sync already returned
                     ?LOG_WARN("send timeout not found (trans_id=~s)",
-                              [uuid:uuid_to_string(TransId)]);
+                              [cloudi_x_uuid:uuid_to_string(TransId)]);
                 true ->
                     ok % cancel_timer avoided due to latency
             end,
@@ -877,7 +877,7 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
             send('return_async_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, Pid} ->
-            TransId = uuid:get_v1(UUID),
+            TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
@@ -902,7 +902,7 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
             send('return_sync_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, Pid} ->
-            TransId = uuid:get_v1(UUID),
+            TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_sync',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
@@ -927,7 +927,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
             {next_state, StateName, State};
         {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
-                TransId = uuid:get_v1(UUID),
+                TransId = cloudi_x_uuid:get_v1(UUID),
                 Pid ! {'cloudi_service_send_async',
                        Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Dispatcher},
@@ -1099,7 +1099,7 @@ send(Data, #state{protocol = Protocol,
 process_queue(#state{recv_timeouts = RecvTimeouts,
                      queue_requests = true,
                      queued = Queue} = State) ->
-    case pqueue4:out(Queue) of
+    case cloudi_x_pqueue4:out(Queue) of
         {empty, NewQueue} ->
             State#state{queue_requests = false,
                         queued = NewQueue};

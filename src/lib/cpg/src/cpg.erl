@@ -111,7 +111,7 @@
 
 -include("cpg_constants.hrl").
 -include("cpg_data.hrl").
--include("logging.hrl").
+-include("cpg_logging.hrl").
 
 -record(state,
     {

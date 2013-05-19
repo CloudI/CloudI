@@ -74,7 +74,7 @@
     {error, Reason :: any()}.
 
 start(_, _) ->
-    quickrand:seed(),
+    cloudi_x_quickrand:seed(),
     {ok, Path} = application:get_env(configuration),
     cloudi_sup:start_link(cloudi_configuration:open(Path)).
 

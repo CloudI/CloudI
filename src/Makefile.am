@@ -1,6 +1,33 @@
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
+SCOPE_EXTERNAL = cloudi_x_
+SCOPE_ARGS = -s cloudi_x_ -p cloudi -b _original \
+     -c $(abs_top_srcdir)/lib/ \
+     -d $(abs_top_srcdir)/lib/cloudi_core/src \
+     -d $(abs_top_srcdir)/lib/cloudi_services_databases/src \
+     -d $(abs_top_srcdir)/lib/cloudi_services_internal/src \
+     -d $(abs_top_srcdir)/lib/cloudi_services_messaging/src \
+     -d $(abs_top_srcdir)/lib/cpg/src \
+     -d $(abs_top_srcdir)/lib/key2value/src \
+     -d $(abs_top_srcdir)/lib/pqueue/src \
+     -d $(abs_top_srcdir)/lib/quickrand/src \
+     -d $(abs_top_srcdir)/lib/reltool_util/src \
+     -d $(abs_top_srcdir)/lib/trie/src \
+     -d $(abs_top_srcdir)/lib/uuid/src \
+     -d $(abs_top_srcdir)/external/nodefinder/combonodefinder/src \
+     -d $(abs_top_srcdir)/external/nodefinder/ec2nodefinder/src \
+     -d $(abs_top_srcdir)/external/nodefinder/nodefinder/src \
+     -d $(abs_top_srcdir)/external/cowboy/src \
+     -d $(abs_top_srcdir)/external/dynamic_compile/src \
+     -d $(abs_top_srcdir)/external/ecouchdb/src \
+     -d $(abs_top_srcdir)/external/ememcached/src \
+     -d $(abs_top_srcdir)/external/emysql/src \
+     -d $(abs_top_srcdir)/external/epgsql/src \
+     -d $(abs_top_srcdir)/external/etokyotyrant/src \
+     -d $(abs_top_srcdir)/external/jsx/src \
+     -d $(abs_top_srcdir)/external/ranch/src
+
 # automake expand all nested variables
 rel/files/app.config: rel/files/app.config.in
 	$(MKDIR_P) rel/files
@@ -34,6 +61,7 @@ all-local: rebar \
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
+	$(ESCRIPT) $(abs_top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS)
 	(cd $(top_srcdir)/lib/cloudi_core/src; \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
@@ -47,26 +75,26 @@ all-local: rebar \
         test ! -e cloudi_services_messaging.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src || exit 0)
 	(cd $(top_srcdir)/lib/pqueue/src; \
-        test ! -e pqueue.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/pqueue/src/pqueue.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)pqueue.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/pqueue/src/$(SCOPE_EXTERNAL)pqueue.app.src || exit 0)
 	(cd $(top_srcdir)/lib/quickrand/src; \
-        test ! -e quickrand.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/quickrand/src/quickrand.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)quickrand.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/quickrand/src/$(SCOPE_EXTERNAL)quickrand.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cpg/src; \
-        test ! -e cpg.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cpg/src/cpg.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)cpg.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cpg/src/$(SCOPE_EXTERNAL)cpg.app.src || exit 0)
 	(cd $(top_srcdir)/lib/uuid/src; \
-        test ! -e uuid.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/uuid/src/uuid.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)uuid.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/uuid/src/$(SCOPE_EXTERNAL)uuid.app.src || exit 0)
 	(cd $(top_srcdir)/lib/trie/src; \
-        test ! -e trie.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/trie/src/trie.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)trie.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/trie/src/$(SCOPE_EXTERNAL)trie.app.src || exit 0)
 	(cd $(top_srcdir)/lib/reltool_util/src; \
-        test ! -e reltool_util.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/reltool_util/src/reltool_util.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)reltool_util.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/reltool_util/src/$(SCOPE_EXTERNAL)reltool_util.app.src || exit 0)
 	(cd $(top_srcdir)/lib/key2value/src; \
-        test ! -e key2value.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/key2value/src/key2value.app.src || exit 0)
+        test ! -e $(SCOPE_EXTERNAL)key2value.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/key2value/src/$(SCOPE_EXTERNAL)key2value.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
@@ -182,6 +210,7 @@ clean-configure: config.log
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
      $(abs_top_builddir)/rebar -C $(abs_top_builddir)/rebar.config clean || \
      exit 0)
+	$(ESCRIPT) $(abs_top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 	rm -f $(top_srcdir)/aclocal.m4 \
           $(top_srcdir)/config.h.in \
           $(top_srcdir)/config.h.in~ \

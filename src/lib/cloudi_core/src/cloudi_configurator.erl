@@ -360,7 +360,7 @@ service_find_internal_module(Module, Service)
 
 service_find_internal_application(Application, Service)
     when is_atom(Application) ->
-    case reltool_util:application_start(Application) of
+    case cloudi_x_reltool_util:application_start(Application) of
         ok ->
             {ok, Service#config_service_internal{module = Application}};
         {error, _} = Error ->
@@ -369,7 +369,7 @@ service_find_internal_application(Application, Service)
 
 service_find_internal_script(ScriptPath, Service)
     when is_list(ScriptPath) ->
-    case reltool_util:script_start(ScriptPath) of
+    case cloudi_x_reltool_util:script_start(ScriptPath) of
         {ok, Application} ->
             {ok, Service#config_service_internal{module = Application}};
         {error, _} = Error ->
@@ -394,12 +394,13 @@ service_start_internal(Count0,
                            max_t = MaxT,
                            uuid = UUID} = Service, Timeout) ->
     Count1 = Count0 - 1,
-    case cloudi_services:monitor(cloudi_spawn, start_internal,
-                                 [Count1,
-                                  Module, Args, TimeoutInit,
-                                  Prefix, TimeoutAsync, TimeoutSync,
-                                  DestRefresh, DestListDeny, DestListAllow,
-                                  Options], MaxR, MaxT, UUID, Timeout) of
+    case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
+                                         [Count1,
+                                          Module, Args, TimeoutInit,
+                                          Prefix, TimeoutAsync, TimeoutSync,
+                                          DestRefresh, DestListDeny,
+                                          DestListAllow, Options],
+                                         MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -430,13 +431,14 @@ service_start_external(Count0,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = UUID} = Service, Timeout) ->
-    case cloudi_services:monitor(cloudi_spawn, start_external,
-                                 [concurrency(CountThread),
-                                  FilePath, Args, Env,
-                                  Protocol, BufferSize, TimeoutInit,
-                                  Prefix, TimeoutAsync, TimeoutSync,
-                                  DestRefresh, DestListDeny, DestListAllow,
-                                  Options], MaxR, MaxT, UUID, Timeout) of
+    case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
+                                         [concurrency(CountThread),
+                                          FilePath, Args, Env,
+                                          Protocol, BufferSize, TimeoutInit,
+                                          Prefix, TimeoutAsync, TimeoutSync,
+                                          DestRefresh, DestListDeny,
+                                          DestListAllow, Options],
+                                         MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -449,11 +451,11 @@ service_start_external(Count0,
 service_stop_internal(#config_service_internal{
                           module = Module,
                           uuid = UUID}, Timeout) ->
-    case cloudi_services:shutdown(UUID, Timeout) of
+    case cloudi_services_monitor:shutdown(UUID, Timeout) of
         ok ->
-            case reltool_util:application_running(Module, Timeout) of
+            case cloudi_x_reltool_util:application_running(Module, Timeout) of
                 {ok, _} ->
-                    reltool_util:application_stop(Module);
+                    cloudi_x_reltool_util:application_stop(Module);
                 {error, {not_found, Module}} ->
                     ok; % internal service is not an OTP application
                 {error, Reason} ->
@@ -469,8 +471,8 @@ service_stop_internal(#config_service_internal{
 
 service_stop_external(#config_service_external{
                           file_path = FilePath,
-                          uuid  = UUID}, Timeout) ->
-    case cloudi_services:shutdown(UUID, Timeout) of
+                          uuid = UUID}, Timeout) ->
+    case cloudi_services_monitor:shutdown(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -482,7 +484,7 @@ service_stop_external(#config_service_external{
 service_restart_internal(#config_service_internal{
                              module = Module,
                              uuid = UUID}, Timeout) ->
-    case cloudi_services:restart(UUID, Timeout) of
+    case cloudi_services_monitor:restart(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -493,8 +495,8 @@ service_restart_internal(#config_service_internal{
 
 service_restart_external(#config_service_external{
                              file_path = FilePath,
-                             uuid  = UUID}, Timeout) ->
-    case cloudi_services:restart(UUID, Timeout) of
+                             uuid = UUID}, Timeout) ->
+    case cloudi_services_monitor:restart(UUID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
