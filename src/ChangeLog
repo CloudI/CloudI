@@ -3,12 +3,13 @@
 
 2013-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Update cpg
     * Update reltool_util
 
 2013-05-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix problems with the database services linking within the
-      CloudI service init function.  This fix affects all services,
+      CloudI service init function.  This fix affects all internal services,
       so that the CloudI service init function always has self() == Dispatcher
       and the supplied Dispatcher variable is actually a short-lived
       proxy Erlang process utilizing the same process state.
