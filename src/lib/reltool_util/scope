@@ -152,8 +152,7 @@ undo_mv_old([Directory | DirectoriesIn], DirectorySuffixOld) ->
             OldIncludeDirectory = IncludeDirectory ++ DirectorySuffixOld,
             case filelib:is_dir(OldIncludeDirectory) of
                 true ->
-                    {ok, IncludeFilePaths} =
-                        file:list_dir_all(OldIncludeDirectory),
+                    {ok, IncludeFilePaths} = file:list_dir(OldIncludeDirectory),
                     ok = undo_mv_old_dir(IncludeFilePaths,
                                          OldIncludeDirectory,
                                          IncludeDirectory),
@@ -167,7 +166,7 @@ undo_mv_old([Directory | DirectoriesIn], DirectorySuffixOld) ->
     OldDirectory = Directory ++ DirectorySuffixOld,
     case filelib:is_dir(OldDirectory) of
         true ->
-            {ok, FilePaths} = file:list_dir_all(OldDirectory),
+            {ok, FilePaths} = file:list_dir(OldDirectory),
             ok = undo_mv_old_dir(FilePaths, OldDirectory, Directory),
             ok = file:del_dir(OldDirectory),
             ok;
@@ -188,7 +187,7 @@ undo_rm_scope([], _) ->
     ok;
 undo_rm_scope([Directory | DirectoriesIn], PrefixScope) ->
     true = filelib:is_dir(Directory),
-    {ok, FilePaths} = file:list_dir_all(Directory),
+    {ok, FilePaths} = file:list_dir(Directory),
     ok = undo_rm_scope_dir(FilePaths, Directory, PrefixScope),
     undo_rm_scope(DirectoriesIn, PrefixScope).
 
@@ -233,7 +232,7 @@ files_find([Directory | DirectoriesIn],
             case filelib:is_dir(IncludeDirectory) of
                 true ->
                     {ok, IncludeFilePaths} =
-                        file:list_dir_all(IncludeDirectory),
+                        file:list_dir(IncludeDirectory),
                     files_find_dir_include(IncludeFilePaths, IncludeDirectory,
                                            PrefixIgnore, PrefixScope,
                                            ReplaceUsage,
@@ -247,7 +246,7 @@ files_find([Directory | DirectoriesIn],
         false ->
             State
     end,
-    {ok, FilePaths} = file:list_dir_all(Directory),
+    {ok, FilePaths} = file:list_dir(Directory),
     files_find(DirectoriesIn, PrefixIgnore, PrefixScope, ReplaceUsage,
                files_find_dir_src(FilePaths, Directory,
                                   PrefixIgnore, PrefixScope,
