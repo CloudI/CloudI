@@ -19,8 +19,9 @@
         ]},
    {applications, [
         cloudi_core,
-        cowboy,
-        jsx,
+        cloudi_x_cowboy,
+        cloudi_x_jsx,
+        cloudi_x_trie,
         stdlib,
         kernel
         ]},

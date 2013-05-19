@@ -204,7 +204,7 @@
 %%   Remote CloudI nodes that are started separately
 %%   (CloudI operates as a master-less system).  Instead of providing the
 %%   exact node names within a list, you can also provide "automatic"
-%%   to let nodefinder do automatic node discovery.
+%%   to let cloudi_x_nodefinder do automatic node discovery.
 %%
 %% @end
 %%-------------------------------------------------------------------------
@@ -213,13 +213,13 @@
 
 open() ->
     {ok, Terms} = file:consult(?CONFIGURATION_FILE_NAME),
-    new(Terms, #config{uuid_generator = uuid:new(self())}).
+    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
 
 -spec open(Path :: string()) -> #config{}.
 
 open(Path) when is_list(Path) ->
     {ok, Terms} = file:consult(Path),
-    new(Terms, #config{uuid_generator = uuid:new(self())}).
+    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -434,7 +434,7 @@ new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
     when is_atom(A) ->
     new(Terms, Config#config{acl = acl_lookup_new(Value)});
 new([{'nodes', automatic} | Terms], Config) ->
-    application:start(combonodefinder),
+    application:start(cloudi_x_combonodefinder),
     new(Terms, Config);
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
@@ -496,7 +496,7 @@ services_acl_update_list(Output, [E | L], Lookup)
     services_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
 services_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    case trie:is_pattern(E) of
+    case cloudi_x_trie:is_pattern(E) of
         true ->
             services_acl_update_list([E | Output], L, Lookup);
         false ->
@@ -559,7 +559,7 @@ services_validate(Output, [Service | L], UUID)
         options = services_validate_options(
             Service#internal.options
         ),
-        uuid = uuid:get_v1(UUID)},
+        uuid = cloudi_x_uuid:get_v1(UUID)},
     services_validate([C | Output], L, UUID);
 services_validate(Output, [Service | L], UUID)
     when is_record(Service, external),
@@ -641,7 +641,7 @@ services_validate(Output, [Service | L], UUID)
         options = services_validate_options(
             Service#external.options
         ),
-        uuid = uuid:get_v1(UUID)},
+        uuid = cloudi_x_uuid:get_v1(UUID)},
     services_validate([C | Output], L, UUID).
 
 services_validate_options(OptionsList) ->
@@ -773,7 +773,7 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    case trie:is_pattern(E) of
+    case cloudi_x_trie:is_pattern(E) of
         true ->
             acl_expand_values([E | Output], L, Path, Key, Lookup);
         false ->

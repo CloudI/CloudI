@@ -65,7 +65,7 @@
 
 -record(state,
     {
-        functions = trie:new([
+        functions = cloudi_x_trie:new([
             {"acl_add",
              {fun cloudi_configurator:acl_add/2, 2}},
             {"acl_remove",
@@ -99,7 +99,7 @@
             {"code_path",
              {fun code_path/1, 1}}
         ]),
-        formats = trie:new([
+        formats = cloudi_x_trie:new([
             {"erlang",
              fun format_erlang/4},
             {"json_rpc",
@@ -166,9 +166,9 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
         [] ->
             undefined;
         Method ->
-            trie:fetch(Method, Functions)
+            cloudi_x_trie:fetch(Method, Functions)
     end,
-    FormatF = trie:fetch(Format, Formats),
+    FormatF = cloudi_x_trie:fetch(Format, Formats),
     Response = FormatF(FunctionArity, Request, Timeout, Functions),
     {reply, cloudi_response:new(Request, Response), State}.
 
@@ -226,7 +226,7 @@ format_erlang({F, 1}, Input, Timeout, _) ->
 
 format_json_rpc(undefined, Input, Timeout, Functions) ->
     {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
-    try (case trie:fetch(erlang:binary_to_list(Method), Functions) of
+    try (case cloudi_x_trie:fetch(erlang:binary_to_list(Method), Functions) of
         {F, 1} when Params == [] ->
             F(Timeout);
         {F, 2} when length(Params) == 1 ->

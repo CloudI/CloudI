@@ -49,7 +49,7 @@
 %%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services).
+-module(cloudi_services_monitor).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -72,7 +72,7 @@
 
 -record(state,
     {
-        services = key2value:new(dict) % {uuid, pid}  -> configuration
+        services = cloudi_x_key2value:new(dict) % {cloudi_x_uuid, pid}  -> configuration
     }).
 
 -record(service,
@@ -129,7 +129,7 @@ handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pid]),
             NewServices =
-                key2value:store(ServiceId, Pid,
+                cloudi_x_key2value:store(ServiceId, Pid,
                                 #service{service_m = M,
                                          service_f = F,
                                          service_a = A,
@@ -141,7 +141,7 @@ handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
-                key2value:store(ServiceId, P,
+                cloudi_x_key2value:store(ServiceId, P,
                                 #service{service_m = M,
                                          service_f = F,
                                          service_a = A,
@@ -157,11 +157,11 @@ handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
 
 handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
-    case key2value:find1(ServiceId, Services) of
+    case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, kill),
-                key2value:erase(ServiceId, P, D)
+                cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
         error ->
@@ -170,7 +170,7 @@ handle_call({shutdown, ServiceId}, _,
 
 handle_call({restart, ServiceId}, _,
             #state{services = Services} = State) ->
-    case key2value:find1(ServiceId, Services) of
+    case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             lists:foreach(fun(P) ->
                 erlang:exit(P, restart)
@@ -191,7 +191,7 @@ handle_cast(Request, State) ->
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
-    case key2value:find2(Pid, Services) of
+    case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{service_m = M,
                                     service_f = F,
                                     service_a = A,
@@ -199,7 +199,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, A]),
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
-                key2value:erase(ServiceId, P, D)
+                cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {noreply, State#state{services = NewServices}};
         error ->
@@ -209,7 +209,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
             #state{services = Services} = State) ->
-    case key2value:find2(Pid, Services) of
+    case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{service_m = M,
                                     service_f = F,
                                     service_a = A} = Service}} ->
@@ -248,7 +248,7 @@ restart_stage1(#service{pids = Pids} = Service, Services,
                State, ServiceId, OldPid) ->
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, kill),
-        key2value:erase(ServiceId, P, D)
+        cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
@@ -278,7 +278,7 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p:~p~p", [OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
-            key2value:store(ServiceId, Pid,
+            cloudi_x_key2value:store(ServiceId, Pid,
                             Service#service{pids = [Pid],
                                             monitor = Monitor,
                                             restart_count = 1,
@@ -290,7 +290,7 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
-                key2value:store(ServiceId, P,
+                cloudi_x_key2value:store(ServiceId, P,
                                 Service#service{pids = Pids,
                                                 monitor = Monitor,
                                                 restart_count = 1,
@@ -350,7 +350,7 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
-            key2value:store(ServiceId, Pid,
+            cloudi_x_key2value:store(ServiceId, Pid,
                             Service#service{pids = [Pid],
                                             monitor = Monitor,
                                             restart_count = R,
@@ -363,7 +363,7 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [R, T, OldPid, Pids, M, F, A]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
-                key2value:store(ServiceId, P,
+                cloudi_x_key2value:store(ServiceId, P,
                                 Service#service{pids = Pids,
                                                 monitor = Monitor,
                                                 restart_count = R,

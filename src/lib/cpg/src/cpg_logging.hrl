@@ -3,6 +3,6 @@
 
 % include the proper logging macros
 
-%-include("logging_default.hrl").
+%-include("cpg_logging_default.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 

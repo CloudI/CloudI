@@ -125,14 +125,10 @@ handle_operation(#config{directories_in = DirectoriesIn,
     if
         NameConversions == [] ->
             io:format("no files to process!~n", []),
-            exit_code(1);
+            exit_code(0);
         true ->
             ok
     end,
-%XXX
-%io:format("~p~n", [    #state{files_source = FilesSource,
-%               files_applications = FilesApplications,
-%                          name_conversions = NameConversions}]),
     % n.b., since only a prefix is added it is always true that no
     % resulting names in the NameConversions list are also source names
     % (so no cycles within the lookup)

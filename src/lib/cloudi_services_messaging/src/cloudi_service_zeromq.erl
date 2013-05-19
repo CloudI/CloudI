@@ -106,10 +106,10 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         end, EndpointL),
         lists:foldl(fun({NameInternal, NameExternal}, DD) ->
             cloudi_service:subscribe(Dispatcher, NameInternal),
-            trie:append(Prefix ++ NameInternal,
+            cloudi_x_trie:append(Prefix ++ NameInternal,
                         {erlang:list_to_binary(NameExternal), S}, DD)
         end, D, NamePairL)
-    end, trie:new(), PublishL),
+    end, cloudi_x_trie:new(), PublishL),
     ReceivesZMQ2 = lists:foldl(fun({subscribe,
                                    {[{[I1a | _], [I1b | _]} | _] = NamePairL,
                                     [[I2 | _] | _] = EndpointL}}, D) ->
@@ -140,8 +140,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:bind(S, Endpoint)
         end, EndpointL),
-        trie:store(Prefix ++ Name, S, D)
-    end, trie:new(), RequestL),
+        cloudi_x_trie:store(Prefix ++ Name, S, D)
+    end, cloudi_x_trie:new(), RequestL),
     ReceivesZMQ3 = lists:foldl(fun({inbound,
                                     {[I1 | _] = Name,
                                      [[I2 | _] | _] = EndpointL}}, D) ->
@@ -161,8 +161,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:bind(S, Endpoint)
         end, EndpointL),
-        trie:store(Prefix ++ Name, S, D)
-    end, trie:new(), PushL),
+        cloudi_x_trie:store(Prefix ++ Name, S, D)
+    end, cloudi_x_trie:new(), PushL),
     ReceivesZMQ4 = lists:foldl(fun({pull,
                                     {[I1 | _] = Name,
                                      [[I2 | _] | _] = EndpointL}}, D) ->
@@ -187,7 +187,7 @@ cloudi_service_handle_request(Type, Name, Pattern, _RequestInfo, Request,
                                      receives = ReceivesZMQ} = State,
                               Dispatcher) ->
     true = is_binary(Request),
-    case trie:find(Pattern, PublishZMQ) of
+    case cloudi_x_trie:find(Pattern, PublishZMQ) of
         {ok, PublishL} ->
             lists:foreach(fun({NameZMQ, S}) ->
                 ok = erlzmq:send(S, erlang:iolist_to_binary([NameZMQ, Request]))
@@ -195,13 +195,13 @@ cloudi_service_handle_request(Type, Name, Pattern, _RequestInfo, Request,
         error ->
             ok
     end,
-    case trie:find(Pattern, PushZMQ) of
+    case cloudi_x_trie:find(Pattern, PushZMQ) of
         {ok, PushS} ->
             ok = erlzmq:send(PushS, Request);
         error ->
             ok
     end,
-    case trie:find(Pattern, RequestZMQ) of
+    case cloudi_x_trie:find(Pattern, RequestZMQ) of
         {ok, RequestS} ->
             ok = erlzmq:send(RequestS, Request),
             F = fun(Response) ->
@@ -276,15 +276,15 @@ cloudi_service_terminate(_, #state{context = Context,
                                    request = Request,
                                    push = Push,
                                    receives = ReceivesZMQ}) ->
-    trie:foreach(fun(_, L) ->
+    cloudi_x_trie:foreach(fun(_, L) ->
         lists:foreach(fun({_, S}) ->
             erlzmq:close(S)
         end, L)
     end, Publish),
-    trie:foreach(fun(_, S) ->
+    cloudi_x_trie:foreach(fun(_, S) ->
         erlzmq:close(S)
     end, Request),
-    trie:foreach(fun(_, S) ->
+    cloudi_x_trie:foreach(fun(_, S) ->
         erlzmq:close(S)
     end, Push),
     dict:map(fun(S, _) ->

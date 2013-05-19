@@ -3,6 +3,10 @@
 
 2013-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add the "cloudi_x_" prefix to all CloudI external dependencies with an
+      automatic script, during the build process, to provide a scope that
+      avoids conflicts with other Erlang applications that share the
+      same Erlang VM
     * Update cpg
     * Update reltool_util
 

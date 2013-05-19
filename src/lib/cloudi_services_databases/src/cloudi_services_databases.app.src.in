@@ -15,11 +15,11 @@
         ]},
    {applications, [
         cloudi_core,
-        ecouchdb,
-        ememcached,
-        emysql,
-        epgsql,
-        etokyotyrant,
+        cloudi_x_ecouchdb,
+        cloudi_x_ememcached,
+        cloudi_x_emysql,
+        cloudi_x_epgsql,
+        cloudi_x_etokyotyrant,
         stdlib,
         kernel
         ]},

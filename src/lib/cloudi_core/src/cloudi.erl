@@ -160,7 +160,7 @@ new(Settings)
         timeout_sync = DefaultTimeoutSync,
         priority_default = PriorityDefault,
         receiver = Self,
-        uuid_generator = uuid:new(Self)
+        uuid_generator = cloudi_x_uuid:new(Self)
     }.
 
 %%-------------------------------------------------------------------------
@@ -301,7 +301,7 @@ send_async(#cloudi_context{receiver = Receiver,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    TransId = uuid:get_v1(UUID),
+    TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
@@ -529,7 +529,7 @@ send_sync(#cloudi_context{receiver = Receiver,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    TransId = uuid:get_v1(UUID),
+    TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
@@ -625,7 +625,7 @@ mcast_async(#cloudi_context{dest_refresh = DestRefresh,
             Error;
         {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
-                TransId = uuid:get_v1(UUID),
+                TransId = cloudi_x_uuid:get_v1(UUID),
                 Pid ! {'cloudi_service_send_async',
                        Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Receiver},
@@ -752,43 +752,43 @@ destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= immediate_closest) ->
-    cpg:get_closest_pid(Name);
+    cloudi_x_cpg:get_closest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= immediate_furthest) ->
-    cpg:get_furthest_pid(Name);
+    cloudi_x_cpg:get_furthest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_random orelse
           DestRefresh =:= immediate_random) ->
-    cpg:get_random_pid(Name);
+    cloudi_x_cpg:get_random_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_local orelse
           DestRefresh =:= immediate_local) ->
-    cpg:get_local_pid(Name);
+    cloudi_x_cpg:get_local_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_remote orelse
           DestRefresh =:= immediate_remote) ->
-    cpg:get_remote_pid(Name);
+    cloudi_x_cpg:get_remote_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_newest orelse
           DestRefresh =:= immediate_newest) ->
-    cpg:get_newest_pid(Name);
+    cloudi_x_cpg:get_newest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_oldest orelse
           DestRefresh =:= immediate_oldest) ->
-    cpg:get_oldest_pid(Name);
+    cloudi_x_cpg:get_oldest_pid(Name);
 
 destination_get(DestRefresh, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
@@ -807,19 +807,19 @@ destination_all(DestRefresh, Name)
           DestRefresh =:= immediate_newest orelse
           DestRefresh =:= lazy_oldest orelse
           DestRefresh =:= immediate_oldest) ->
-    cpg:get_members(Name);
+    cloudi_x_cpg:get_members(Name);
 
 destination_all(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_local orelse
           DestRefresh =:= immediate_local) ->
-    cpg:get_local_members(Name);
+    cloudi_x_cpg:get_local_members(Name);
 
 destination_all(DestRefresh, Name)
     when is_list(Name),
          (DestRefresh =:= lazy_remote orelse
           DestRefresh =:= immediate_remote) ->
-    cpg:get_remote_members(Name);
+    cloudi_x_cpg:get_remote_members(Name);
 
 destination_all(DestRefresh, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",

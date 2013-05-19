@@ -174,7 +174,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     [HostName, UserName, Password, Port, Encoding, Database] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Database),
-    try mysql_conn:start(HostName, Port, UserName, Password,
+    try cloudi_x_mysql_conn:start(HostName, Port, UserName, Password,
                          Database, Encoding, undefined) of
         {ok, Process} ->
             cloudi_service:subscribe(Dispatcher, Database),
@@ -193,7 +193,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Dispatcher) ->
     case Request of
         {equery, String, Parameters} ->
-            Result = mysql_conn:execute(Process, none, 1, Parameters, self(),
+            Result = cloudi_x_mysql_conn:execute(Process, none, 1, Parameters, self(),
                                         list_to_binary(String), Timeout),
             {reply, response_internal(Result, Request), State};
         {prepare, Identifier, String} ->
@@ -207,25 +207,25 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 error ->
                     {reply, {error, "not prepared"}, State};
                 {ok, {Version, String}} ->
-                    Result = mysql_conn:execute(Process, Identifier, Version,
+                    Result = cloudi_x_mysql_conn:execute(Process, Identifier, Version,
                                                 Arguments, self(),
                                                 list_to_binary(String),
                                                 Timeout),
                     {reply, response_internal(Result, Request), State}
             end;
         {squery, String} ->
-            Result = mysql_conn:fetch(Process, list_to_binary(String),
+            Result = cloudi_x_mysql_conn:fetch(Process, list_to_binary(String),
                                       self(), Timeout),
             {reply, response_internal(Result, Request), State};
         [String | _] = QueryList when is_list(String) ->
             {reply, do_queries_in_transaction(QueryList, Timeout,
                                               Process), State};
         String when is_list(String) ->
-            Result = mysql_conn:fetch(Process, list_to_binary(String),
+            Result = cloudi_x_mysql_conn:fetch(Process, list_to_binary(String),
                                       self(), Timeout),
             {reply, response_internal(Result, Request), State};
         String when is_binary(String) ->
-            Result = mysql_conn:fetch(Process, String, self(), Timeout),
+            Result = cloudi_x_mysql_conn:fetch(Process, String, self(), Timeout),
             {reply, response_external(Result, Request), State}
     end.
 
@@ -234,7 +234,7 @@ cloudi_service_handle_info(Request, State, _) ->
     {noreply, State}.
 
 cloudi_service_terminate(_, #state{process = Process}) ->
-    mysql_conn:close_socket(Process),
+    cloudi_x_mysql_conn:close_socket(Process),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -255,9 +255,9 @@ response_external({update, Result}, Input) ->
 response_external({error, _} = Error, Input) ->
     cloudi_response:new(Input, Error).
 
-%% wrap the mysql string query interface
+%% wrap the cloudi_x_mysql string query interface
 mysql_complete_query(Pid, Queries, From, Timeout) ->
-    case mysql_conn:fetch(Pid, Queries, From, Timeout) of
+    case cloudi_x_mysql_conn:fetch(Pid, Queries, From, Timeout) of
         {data, Result} ->
             {ok, Result};
         {updated, Result} ->
