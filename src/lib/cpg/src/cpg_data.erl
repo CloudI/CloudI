@@ -225,7 +225,7 @@ get_local_members(GroupName, Groups) ->
 %% @end
 %%-------------------------------------------------------------------------
 
-get_local_members(GroupName, Groups, Exclude)
+get_local_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -274,7 +274,7 @@ get_remote_members(GroupName, Groups) ->
 %% @end
 %%-------------------------------------------------------------------------
 
-get_remote_members(GroupName, Groups, Exclude)
+get_remote_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
