@@ -2085,7 +2085,7 @@ handle_call({get_local_members, GroupName}, _,
 
 handle_call({get_local_members, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_data:get_local_members(GroupName, Groups, Exclude), State};
+    {reply, cpg_data:get_local_members(GroupName, Exclude, Groups), State};
 
 handle_call({get_remote_members, GroupName}, _,
             #state{groups = Groups} = State) ->
@@ -2093,7 +2093,7 @@ handle_call({get_remote_members, GroupName}, _,
 
 handle_call({get_remote_members, GroupName, Exclude}, _,
             #state{groups = Groups} = State) ->
-    {reply, cpg_data:get_remote_members(GroupName, Groups, Exclude), State};
+    {reply, cpg_data:get_remote_members(GroupName, Exclude, Groups), State};
 
 handle_call(which_groups, _,
             #state{groups = Groups} = State) ->

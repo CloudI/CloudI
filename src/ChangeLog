@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-05-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid with fixes to variant bits
+      (external usage of the v1 UUIDs is fixed)
+    * Fix the cpg_data:get_remote_members/3 and cpg_data:get_local_members/3
+      argument order bug
+
 2013-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the "cloudi_x_" prefix to all CloudI external Erlang dependencies
