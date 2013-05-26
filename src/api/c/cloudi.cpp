@@ -450,6 +450,11 @@ int cloudi_initialize(cloudi_instance_t * p,
         p->fd_in = p->fd_out = thread_index + 3;
         p->use_header = 0;
     }
+    else if (::strcmp(protocol, "local") == 0)
+    {
+        p->fd_in = p->fd_out = thread_index + 3;
+        p->use_header = 1;
+    }
     else
     {
         p->fd_in = p->fd_out = 0; // uninitialized

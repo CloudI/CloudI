@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 0.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -59,7 +59,10 @@
          application_running/1,
          application_running/2,
          application_loaded/1,
+         module_loaded/1,
          script_start/1]).
+
+-compile({no_auto_import, [{module_loaded, 1}]}).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -229,6 +232,31 @@ application_loaded(Application)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Make sure a module is loaded.===
+%% If the module is not loaded, attempt to load it.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_loaded(Module :: atom()) ->
+    ok |
+    {error, any()}.
+
+module_loaded(Module)
+    when is_atom(Module) ->
+    case is_module_loaded(Module) of
+        false ->
+            case code:load_file(Module) of
+                {module, Module} ->
+                    ok;
+                {error, _} = Error ->
+                    Error
+            end;
+        true ->
+            ok
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Start everything specified within a script file.===
 %% A script file is the input used when creating a boot file, which is the
 %% file used when first starting the Erlang VM.  This function checks
@@ -278,13 +306,7 @@ ensure_application_loaded(A) ->
             case application:get_key(A, modules) of
                 {ok, Modules} ->
                     lists:foreach(fun(M) ->
-                        case is_module_loaded(M) of
-                            false ->
-                                {module, M} = code:load_file(M),
-                                ok;
-                            true ->
-                                ok
-                        end
+                        ok = module_loaded(M)
                     end, Modules);
                 undefined ->
                     ok

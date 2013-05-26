@@ -186,6 +186,22 @@ undo_mv_old_dir([FilePath | FilePaths], OldDirectory, Directory) ->
 undo_rm_scope([], _) ->
     ok;
 undo_rm_scope([Directory | DirectoriesIn], PrefixScope) ->
+    case lists:suffix("/src", Directory) of
+        true ->
+            [$c, $r, $s, $/ | DirectoryPrefix] = lists:reverse(Directory),
+            IncludeDirectory = filename:join(lists:reverse(DirectoryPrefix),
+                                             "include"),
+            case filelib:is_dir(IncludeDirectory) of
+                true ->
+                    {ok, IncludeFilePaths} = file:list_dir(IncludeDirectory),
+                    ok = undo_rm_scope_dir(IncludeFilePaths,
+                                           IncludeDirectory, PrefixScope);
+                false ->
+                    ok
+            end;
+        false ->
+            ok
+    end,
     true = filelib:is_dir(Directory),
     {ok, FilePaths} = file:list_dir(Directory),
     ok = undo_rm_scope_dir(FilePaths, Directory, PrefixScope),

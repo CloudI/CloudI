@@ -52,7 +52,7 @@
 
 %% external interface
 -export([start_internal/11,
-         start_external/14]).
+         start_external/15]).
 
 -include("cloudi_configuration.hrl").
 
@@ -116,13 +116,16 @@ start_external(ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions)
+               DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_service_options) ->
-    true = (Protocol =:= tcp) orelse (Protocol =:= udp),
+         is_record(ConfigOptions, config_service_options),
+         is_binary(UUID) ->
+    true = (Protocol =:= tcp) orelse
+           (Protocol =:= udp) orelse
+           (Protocol =:= local),
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -150,8 +153,9 @@ start_external(ThreadsPerProcess,
         is_list(DestAllowList) ->
             cloudi_x_trie:new(DestAllowList)
     end,
-    {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
-        case ?CREATE_EXTERNAL(Protocol, BufferSize, Timeout,
+    SocketPath = create_socket_path(UUID),
+    {Pids, Ports} = cloudi_lists:itera2(fun(I, L1, L2, F) ->
+        case ?CREATE_EXTERNAL(Protocol, SocketPath, I, BufferSize, Timeout,
                               Prefix, TimeoutAsync, TimeoutSync,
                               DestRefresh, DestDeny, DestAllow,
                               ConfigOptions) of
@@ -174,12 +178,15 @@ start_external(ThreadsPerProcess,
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
             ProtocolChar = if
                 Protocol =:= tcp ->
-                    $t;
+                    $t; % inet
                 Protocol =:= udp ->
-                    $u
+                    $u; % inet
+                Protocol =:= local ->
+                    $l  % tcp local
             end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,
+                                       string_terminate(SocketPath),
                                        Ports,
                                        string_terminate(Filename),
                                        arguments_parse(Arguments),
@@ -194,6 +201,14 @@ start_external(ThreadsPerProcess,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+create_socket_path(UUID)
+    when is_binary(UUID) ->
+    Path = filename:join(["", "tmp",
+                          "cloudi_socket_" ++
+                          cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
+    false = filelib:is_file(Path),
+    Path.
 
 string_terminate([_ | _] = L) ->
     L ++ [0].

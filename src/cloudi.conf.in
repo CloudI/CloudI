@@ -220,7 +220,7 @@
          {map_reduce_args, [1, 65536]},  % index start, index end
          {concurrency, 1.5}],
         immediate_closest, % recover from failures (process deaths) immediately
-        5000, 5000, 5000, [api], undefined, 1, 5, 300,
+        10000, 5000, 5000, [api], undefined, 1, 5, 300,
         [{request_timeout_adjustment, true}]},
     % tests/http/ services
     {internal,

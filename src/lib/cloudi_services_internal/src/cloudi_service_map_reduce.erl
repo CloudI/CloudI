@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -145,7 +145,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         cloudi_proplists:take_values(Defaults, Args),
     true = is_atom(MapReduceModule) and (MapReduceModule /= undefined),
     true = is_list(MapReduceArguments),
-    {module, MapReduceModule} = code:load_file(MapReduceModule),
+    ok = cloudi_x_reltool_util:module_loaded(MapReduceModule),
     MapReduceState =
         MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
                                                       Dispatcher),

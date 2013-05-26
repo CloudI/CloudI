@@ -65,6 +65,10 @@ module CloudI
                 @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
                 @s.sync = true
                 @use_header = false
+            elsif protocol == 'local'
+                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s.sync = true
+                @use_header = true
             else
                 raise InvalidInputException
             end
