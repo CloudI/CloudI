@@ -83,6 +83,11 @@ class API(object):
                 thread_index + 3, socket.AF_INET, socket.SOCK_DGRAM
             )
             self.__use_header = False
+        elif protocol_str == 'local':
+            self.__s = socket.fromfd(
+                thread_index + 3, socket.AF_UNIX, socket.SOCK_STREAM
+            )
+            self.__use_header = True
         else:
             raise invalid_input_exception()
         self.__initializtion_complete = False

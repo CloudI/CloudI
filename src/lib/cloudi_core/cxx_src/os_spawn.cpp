@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -37,21 +37,24 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#include "port.hpp"
-#include "realloc_ptr.hpp"
-#include "copy_ptr.hpp"
-#include "os_spawn.hpp"
 #include <ei.h>
 #include <vector>
+#include <cstring>
 #include <errno.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include <iostream>
+#include "port.hpp"
+#include "realloc_ptr.hpp"
+#include "copy_ptr.hpp"
+#include "os_spawn.hpp"
+#include "assert.hpp"
 
 namespace
 {
@@ -779,22 +782,33 @@ namespace
     std::vector< copy_ptr<process_data> > processes;
 }
 
-int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
+int32_t spawn(char protocol,
+              char * socket_path, uint32_t socket_path_len,
+              uint32_t * ports, uint32_t ports_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len)
 {
+    int domain;
     int type;
     int use_header;
-    if (protocol == 't') // tcp
+    if (protocol == 't') // tcp inet
     {
+        domain = PF_INET;
         type = SOCK_STREAM;
         use_header = 1;
     }
-    else if (protocol == 'u') // udp
+    else if (protocol == 'u') // udp inet
     {
+        domain = PF_INET;
         type = SOCK_DGRAM;
         use_header = 0;
+    }
+    else if (protocol == 'l') // tcp local
+    {
+        domain = PF_LOCAL;
+        type = SOCK_STREAM;
+        use_header = 1;
     }
     else
     {
@@ -832,13 +846,13 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
         if (use_header)
             pid_message_index = 4;
         unsigned long const pid_child = ::getpid();
-        if (ei_encode_version(pid_message, &pid_message_index))
+        if (::ei_encode_version(pid_message, &pid_message_index))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
-        if (ei_encode_tuple_header(pid_message, &pid_message_index, 2))
+        if (::ei_encode_tuple_header(pid_message, &pid_message_index, 2))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
-        if (ei_encode_atom(pid_message, &pid_message_index, "pid"))
+        if (::ei_encode_atom(pid_message, &pid_message_index, "pid"))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
-        if (ei_encode_ulong(pid_message, &pid_message_index, pid_child))
+        if (::ei_encode_ulong(pid_message, &pid_message_index, pid_child))
             ::_exit(GEPD::ExitStatus::ei_encode_error);
         if (use_header)
         {
@@ -851,10 +865,10 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
 
         for (size_t i = 0; i < ports_len; ++i)
         {
-            int sockfd = ::socket(AF_INET, type, 0);
+            int sockfd = ::socket(domain, type, 0);
             if (sockfd == -1)
                 ::_exit(spawn_status::errno_socket());
-            if (type == SOCK_STREAM)
+            if (domain == PF_INET && type == SOCK_STREAM)
             {
                 int tcp_nodelay_flag = 1;
                 // set TCP_NODELAY to turn off Nagle's algorithm
@@ -867,18 +881,42 @@ int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
             {
                 if (::dup2(sockfd, i + 3) == -1)
                     ::_exit(spawn_status::errno_dup());
+                if (::close(sockfd) == -1)
+                    ::_exit(spawn_status::errno_close());
                 sockfd = i + 3;
             }
             
-            struct sockaddr_in localhost;
-            localhost.sin_family = AF_INET;
-            localhost.sin_port = htons(ports[i]);
-            localhost.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-            if (::connect(sockfd,
-                          reinterpret_cast<struct sockaddr *>(&localhost),
-                          sizeof(localhost)) == -1)
-                ::_exit(spawn_status::errno_connect());
+            if (domain == PF_INET)
+            {
+                struct sockaddr_in localhost;
+                localhost.sin_family = domain;
+                localhost.sin_port = htons(ports[i]);
+                localhost.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    
+                if (::connect(sockfd,
+                              reinterpret_cast<struct sockaddr *>(&localhost),
+                              sizeof(localhost)) == -1)
+                    ::_exit(spawn_status::errno_connect());
+            }
+            else if (domain == PF_LOCAL)
+            {
+                char port_str[16];
+                ::sprintf(port_str, "%d", ports[i]);
+                assert(socket_path_len <= 104 - 10);
+                struct sockaddr_un local;
+                local.sun_family = domain;
+                ::memcpy(local.sun_path, socket_path, socket_path_len);
+                ::memcpy(&(local.sun_path[socket_path_len - 1]),
+                         port_str, sizeof(port_str));
+                if (::connect(sockfd,
+                              reinterpret_cast<struct sockaddr *>(&local),
+                              sizeof(local)) == -1)
+                    ::_exit(spawn_status::errno_connect());
+            }
+            else
+            {
+                assert(false);
+            }
 
             if (i == 0)
             {

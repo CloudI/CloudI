@@ -437,7 +437,7 @@ service_start_external(Count0,
                                           Protocol, BufferSize, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
-                                          DestListAllow, Options],
+                                          DestListAllow, Options, UUID],
                                          MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;

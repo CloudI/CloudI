@@ -570,7 +570,8 @@ services_validate(Output, [Service | L], UUID)
          is_list(Service#external.env),
          is_atom(Service#external.dest_refresh),
          is_atom(Service#external.protocol),
-         is_integer(Service#external.buffer_size),
+         ((Service#external.buffer_size =:= default) orelse
+          is_integer(Service#external.buffer_size)),
          is_integer(Service#external.timeout_init),
          is_integer(Service#external.timeout_async),
          is_integer(Service#external.timeout_sync),
@@ -598,9 +599,12 @@ services_validate(Output, [Service | L], UUID)
            (Service#external.dest_refresh =:= immediate_oldest) orelse
            (Service#external.dest_refresh =:= lazy_oldest) orelse
            (Service#external.dest_refresh =:= none),
-    true = (Service#external.protocol =:= tcp) orelse
-           (Service#external.protocol =:= udp),
-    true = Service#external.buffer_size >= 1024, % should be roughly 16436
+    true = (Service#external.protocol =:= default) orelse
+           (Service#external.protocol =:= tcp) orelse
+           (Service#external.protocol =:= udp) orelse
+           (Service#external.protocol =:= local),
+    true = (Service#external.buffer_size =:= default) orelse
+           (Service#external.buffer_size >= 1024),
     true = Service#external.timeout_init > 0,
     true = Service#external.timeout_async > 0,
     true = Service#external.timeout_sync > 0,
@@ -621,14 +625,33 @@ services_validate(Output, [Service | L], UUID)
                                     Service#external.options),
     undefined = proplists:get_value(duo_mode,
                                     Service#external.options),
+    Protocol = if
+        Service#external.protocol =:= default ->
+            tcp;
+        true ->
+            Service#external.protocol
+    end,
+    BufferSize = if
+        Service#external.buffer_size =:= default ->
+            if
+                Protocol =:= tcp ->
+                    16384; % Linux localhost (inet) MTU
+                Protocol =:= udp ->
+                    16384; % Linux localhost (inet) MTU
+                Protocol =:= local ->
+                    16384  % Linux localhost (inet) MTU for testing/comparison
+            end;
+        true ->
+            Service#external.buffer_size
+    end,
     C = #config_service_external{
         prefix = Service#external.prefix,
         file_path = Service#external.file_path,
         args = Service#external.args,
         env = Service#external.env,
         dest_refresh = Service#external.dest_refresh,
-        protocol = Service#external.protocol,
-        buffer_size = Service#external.buffer_size,
+        protocol = Protocol,
+        buffer_size = BufferSize,
         timeout_init = Service#external.timeout_init,
         timeout_async = Service#external.timeout_async,
         timeout_sync = Service#external.timeout_sync,

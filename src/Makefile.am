@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
 SCOPE_EXTERNAL = cloudi_x_
-SCOPE_ARGS = -s cloudi_x_ -p cloudi -b _original \
+SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -c $(abs_top_srcdir)/lib/ \
      -d $(abs_top_srcdir)/lib/cloudi_core/src \
      -d $(abs_top_srcdir)/lib/cloudi_services_databases/src \
@@ -352,7 +352,7 @@ install-exec-hook: cloudi-prefix-install \
               "$(DESTDIR)$(cloudi_prefix)" || exit 0
 	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
                       "$(DESTDIR)$(cloudi_bindir)/"
-	echo "#!/bin/bash"              > /tmp/cloudi
+	echo "#!/bin/sh"               > /tmp/cloudi
 	echo "cd $(cloudi_bindir)"     >> /tmp/cloudi
 	echo "exec ./cloudi \$$*"      >> /tmp/cloudi
 	$(INSTALL_SCRIPT) /tmp/cloudi "$(DESTDIR)$(bindir)/"
@@ -365,14 +365,20 @@ install-exec-hook: cloudi-prefix-install \
               "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/releases/start_erl.data" \
                     "$(DESTDIR)$(cloudi_prefix)/releases/"
-	list=`ls "$(top_builddir)/rel/cloudi/lib/"`; for subdir in $$list; do \
-        test ! -e "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir" && \
-        mv -f "$(top_builddir)/rel/cloudi/lib/$$subdir" \
-              "$(DESTDIR)$(cloudi_prefix)/lib/" || exit 0; \
-    done
+	list0=`ls "$(top_builddir)/rel/cloudi/lib/"`; \
+    for subdir0 in $$list0; do \
+	  list1=`ls "$(top_builddir)/rel/cloudi/lib/$$subdir0"`; \
+    for subdir1 in $$list1; do \
+        test ! -e "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/$$subdir1" && \
+        $(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/" && \
+        mv -f "$(top_builddir)/rel/cloudi/lib/$$subdir0/$$subdir1" \
+              "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/" || \
+        echo "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/$$subdir1 exists!"; \
+    done; done
 	rm -rf $(top_builddir)/rel/cloudi/
 	$(LIBTOOL) --mode=finish "$(DESTDIR)$(cloudi_prefix)/api/c"
 	$(LIBTOOL) --mode=finish --quiet "$(DESTDIR)$(cloudi_prefix)/api/python"
+	$(LIBTOOL) --mode=finish --quiet "$(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv"
 
 cloudi-prefix-install:
 	$(MKDIR_P) "$(DESTDIR)$(bindir)"

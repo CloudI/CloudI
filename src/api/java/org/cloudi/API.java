@@ -133,6 +133,11 @@ public class API
             this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
             this.use_header = false;
         }
+        else if (protocol.compareTo("local") == 0)
+        {
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.use_header = true;
+        }
         else
         {
             throw new InvalidInputException();

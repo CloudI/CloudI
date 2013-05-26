@@ -55,7 +55,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/10, port/1]).
+-export([start_link/12, port/1]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -89,11 +89,13 @@
         queue_requests = true,         % is the external process busy?
         queued = cloudi_x_pqueue4:new(),        % queued incoming requests
         % unique state elements
-        protocol,                      % tcp or udp
+        protocol,                      % tcp, udp, or local
         port,                          % port number used
         incoming_port,                 % udp incoming port
         listener,                      % tcp listener
         acceptor,                      % tcp acceptor
+        socket_path,                   % local socket filesystem path
+        socket_options,                % common socket options
         socket,                        % data socket
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
@@ -135,12 +137,16 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
+start_link(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
+           Prefix, TimeoutAsync, TimeoutSync,
            DestRefresh, DestDeny, DestAllow, ConfigOptions)
-    when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
+    when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
+         is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_record(ConfigOptions, config_service_options) ->
-    true = (Protocol =:= tcp) or (Protocol =:= udp),
+    true = (Protocol =:= tcp) orelse
+           (Protocol =:= udp) orelse
+           (Protocol =:= local),
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -156,9 +162,10 @@ start_link(Protocol, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
-    gen_fsm:start_link(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
-                                 TimeoutAsync, TimeoutSync, DestRefresh,
-                                 DestDeny, DestAllow, ConfigOptions], []).
+    gen_fsm:start_link(?MODULE,
+                       [Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
+                        Prefix, TimeoutAsync, TimeoutSync, DestRefresh,
+                        DestDeny, DestAllow, ConfigOptions], []).
 
 port(Process) when is_pid(Process) ->
     gen_fsm:sync_send_all_state_event(Process, port).
@@ -167,70 +174,31 @@ port(Process) when is_pid(Process) ->
 %%% Callback functions from gen_fsm
 %%%------------------------------------------------------------------------
 
-init([tcp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
-      DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
+init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
+      Prefix, TimeoutAsync, TimeoutSync,
+      DestRefresh, DestDeny, DestAllow, ConfigOptions])
+    when Protocol =:= tcp;
+         Protocol =:= udp;
+         Protocol =:= local ->
     Dispatcher = self(),
     InitTimeout = erlang:send_after(Timeout, Dispatcher,
                                     'cloudi_service_init_timeout'),
     process_flag(trap_exit, true),
-    Opts = [binary, {ip, {127,0,0,1}},
-            {recbuf, BufferSize}, {sndbuf, BufferSize},
-            {packet, 4}, {nodelay, true}, {delay_send, false},
-            {keepalive, false}, {backlog, 0},
-            {send_timeout, 5000}, {send_timeout_close, true},
-            {active, false}],
-    case gen_tcp:listen(0, Opts) of
-        {ok, Listener} ->
-            {ok, Port} = inet:port(Listener),
-            {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+    case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
+        {ok, State} ->
             cloudi_x_quickrand:seed(),
             destination_refresh_first(DestRefresh, ConfigOptions),
-            destination_refresh_start(DestRefresh, ConfigOptions),
-            {ok, 'CONNECT', #state{dispatcher = Dispatcher,
-                                   protocol = tcp,
-                                   port = Port,
-                                   listener = Listener,
-                                   acceptor = Acceptor,
-                                   prefix = Prefix,
-                                   timeout_async = TimeoutAsync,
-                                   timeout_sync = TimeoutSync,
-                                   init_timeout = InitTimeout,
-                                   uuid_generator = cloudi_x_uuid:new(Dispatcher),
-                                   dest_refresh = DestRefresh,
-                                   dest_deny = DestDeny,
-                                   dest_allow = DestAllow,
-                                   options = ConfigOptions}};
-        {error, Reason} ->
-            {stop, Reason}
-    end;
-
-init([udp, BufferSize, Timeout, Prefix, TimeoutAsync, TimeoutSync,
-      DestRefresh, DestDeny, DestAllow, ConfigOptions]) ->
-    Dispatcher = self(),
-    InitTimeout = erlang:send_after(Timeout, Dispatcher,
-                                    'cloudi_service_init_timeout'),
-    process_flag(trap_exit, true),
-    Opts = [binary, {ip, {127,0,0,1}},
-            {recbuf, BufferSize}, {sndbuf, BufferSize},
-            {active, once}],
-    case gen_udp:open(0, Opts) of
-        {ok, Socket} ->
-            {ok, Port} = inet:port(Socket),
-            cloudi_x_quickrand:seed(),
-            destination_refresh_first(DestRefresh, ConfigOptions),
-            {ok, 'CONNECT', #state{dispatcher = Dispatcher,
-                                   protocol = udp,
-                                   port = Port,
-                                   socket = Socket,
-                                   prefix = Prefix,
-                                   timeout_async = TimeoutAsync,
-                                   timeout_sync = TimeoutSync,
-                                   init_timeout = InitTimeout,
-                                   uuid_generator = cloudi_x_uuid:new(Dispatcher),
-                                   dest_refresh = DestRefresh,
-                                   dest_deny = DestDeny,
-                                   dest_allow = DestAllow,
-                                   options = ConfigOptions}};
+            {ok, 'CONNECT',
+             State#state{dispatcher = Dispatcher,
+                         prefix = Prefix,
+                         timeout_async = TimeoutAsync,
+                         timeout_sync = TimeoutSync,
+                         init_timeout = InitTimeout,
+                         uuid_generator = cloudi_x_uuid:new(Dispatcher),
+                         dest_refresh = DestRefresh,
+                         dest_deny = DestDeny,
+                         dest_allow = DestAllow,
+                         options = ConfigOptions}};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -523,8 +491,9 @@ handle_info({udp_closed, Socket}, _,
     {stop, normal, State};
 
 handle_info({tcp, Socket, Data}, StateName,
-            #state{protocol = tcp,
-                   socket = Socket} = State) ->
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
     inet:setopts(Socket, [{active, once}]),
     try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
     catch
@@ -534,32 +503,48 @@ handle_info({tcp, Socket, Data}, StateName,
     end;
 
 handle_info({tcp_closed, Socket}, _,
-            #state{protocol = tcp,
-                   socket = Socket} = State) ->
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
     {stop, normal, State};
 
 handle_info({tcp_error, Socket, Reason}, _,
-            #state{protocol = tcp,
-                   socket = Socket} = State) ->
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
     {stop, Reason, State};
 
 handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
             #state{protocol = tcp,
                    listener = Listener,
-                   acceptor = Acceptor} = State) ->
+                   acceptor = Acceptor,
+                   socket_options = SocketOptions} = State) ->
     true = inet_db:register_socket(Socket, inet_tcp),
-    CopyOpts = [recbuf, sndbuf, nodelay, keepalive, delay_send, priority, tos],
-    {ok, Opts} = prim_inet:getopts(Listener, CopyOpts),
-    ok = prim_inet:setopts(Socket, [{active, once} | Opts]),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
     catch gen_tcp:close(Listener),
     {next_state, StateName, State#state{listener = undefined,
                                         acceptor = undefined,
                                         socket = Socket}};
 
-handle_info({inet_async, Listener, Acceptor, Error}, StateName,
-            #state{protocol = tcp,
+handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
+            #state{protocol = local,
                    listener = Listener,
-                   acceptor = Acceptor} = State) ->
+                   acceptor = Acceptor,
+                   socket_path = SocketPath,
+                   socket_options = SocketOptions} = State) ->
+    {ok, NewSocket} = local_accept(Listener, Socket,
+                                   SocketPath, SocketOptions),
+    catch gen_tcp:close(Listener),
+    catch gen_tcp:close(Acceptor), % inet client to get Socket
+    {next_state, StateName, State#state{listener = undefined,
+                                        acceptor = undefined,
+                                        socket = NewSocket}};
+
+handle_info({inet_async, Listener, Acceptor, Error}, StateName,
+            #state{protocol = Protocol,
+                   listener = Listener,
+                   acceptor = Acceptor} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
     {stop, {StateName, inet_async, Error}, State};
 
 handle_info({cloudi_x_cpg_data, Groups}, StateName,
@@ -843,6 +828,17 @@ terminate(_, _, #state{protocol = udp,
                        os_pid = OsPid}) ->
     catch gen_udp:close(Socket),
     os_pid_kill(OsPid),
+    ok;
+
+terminate(_, _, #state{protocol = local,
+                       listener = Listener,
+                       socket_path = SocketPath,
+                       socket = Socket,
+                       os_pid = OsPid}) ->
+    catch gen_tcp:close(Listener),
+    catch gen_udp:close(Socket),
+    os_pid_kill(OsPid),
+    catch file:delete(SocketPath),
     ok.
 
 code_change(_, StateName, State, _) ->
@@ -1090,9 +1086,9 @@ send(Data, #state{protocol = Protocol,
                   incoming_port = Port,
                   socket = Socket}) when is_binary(Data) ->
     if
-        Protocol == tcp ->
+        Protocol =:= tcp; Protocol =:= local ->
             ok = gen_tcp:send(Socket, Data);
-        Protocol == udp ->
+        Protocol =:= udp ->
             ok = gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
 
@@ -1134,4 +1130,92 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
             State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
                         queued = NewQueue}
     end.
+
+socket_open(tcp, _, _, BufferSize) ->
+    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
+                     {nodelay, true}, {delay_send, false}, {keepalive, false},
+                     {send_timeout, 5000}, {send_timeout_close, true}],
+    case gen_tcp:listen(0, [binary, inet, {ip, {127,0,0,1}},
+                            {packet, 4}, {backlog, 0},
+                            {active, false} | SocketOptions]) of
+        {ok, Listener} ->
+            {ok, Port} = inet:port(Listener),
+            {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+            {ok, #state{protocol = tcp,
+                        port = Port,
+                        listener = Listener,
+                        acceptor = Acceptor,
+                        socket_options = SocketOptions}};
+        {error, _} = Error ->
+            Error
+    end;
+
+socket_open(udp, _, _, BufferSize) ->
+    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize}],
+    case gen_udp:open(0, [binary, inet, {ip, {127,0,0,1}},
+                          {active, once} | SocketOptions]) of
+        {ok, Socket} ->
+            {ok, Port} = inet:port(Socket),
+            {ok, #state{protocol = udp,
+                        port = Port,
+                        socket_options = SocketOptions,
+                        socket = Socket}};
+        {error, _} = Error ->
+            Error
+    end;
+
+socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
+    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
+                     {nodelay, true}, {delay_send, false}, {keepalive, false},
+                     {send_timeout, 5000}, {send_timeout_close, true}],
+    ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
+    case local_listen(ThreadSocketPath,
+                      [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
+                       {backlog, 0}, {active, false} | SocketOptions],
+                      SocketOptions) of
+        {ok, State} ->
+            {ok, State#state{port = ThreadIndex}};
+        {error, _} = Error ->
+            Error
+    end.
+
+local_listen(SocketPath, InetOptions, SocketOptions) ->
+    % carefully grafting unix domain socket support onto an Erlang listener
+    {ok, Listener} = gen_tcp:listen(0, InetOptions),
+    {ok, FileDescriptor} = prim_inet:getfd(Listener),
+    ok = cloudi_socket:local_listen(FileDescriptor, SocketPath),
+    {ok, ListenerInet} = gen_tcp:listen(0, InetOptions),
+    {ok, Port} = inet:port(ListenerInet),
+    {ok, Client} = gen_tcp:connect({127,0,0,1}, Port, [{active, false}]),
+    {ok, Socket} = gen_tcp:accept(ListenerInet, 100),
+    ok = inet:setopts(Socket, [{active, false} | SocketOptions]),
+    catch gen_tcp:close(ListenerInet),
+    erlang:send_after(10, self(),
+                      {inet_async, Listener, Client, {ok, Socket}}),
+    {ok, #state{protocol = local,
+                listener = Listener,
+                acceptor = Client,
+                socket_path = SocketPath,
+                socket_options = SocketOptions}}.
+
+local_accept(Listener, Socket, SocketPath, SocketOptions) ->
+    % carefully grafting unix domain socket support onto an Erlang socket
+    {ok, FileDescriptorIn} = prim_inet:getfd(Listener),
+    {ok, FileDescriptorOut} = prim_inet:getfd(Socket),
+    ok = prim_inet:ignorefd(Socket, true),
+    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
+    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
+    {ok, NewSocket} = gen_tcp:fdopen(FileDescriptorOut,
+                                     [binary, {packet, 4},
+                                      {active, false} | SocketOptions]),
+    ok = cloudi_socket:local_accept(FileDescriptorIn,
+                                    FileDescriptorOut,
+                                    SocketPath,
+                                    ReceiveBufferSize,
+                                    SendBufferSize),
+    ok = inet:setopts(NewSocket, [{active, once}]),
+    % NewSocket is used instead of Socket because it is internally marked as
+    % prebound (in ERTS) so that Erlang will not attempt to reconnect
+    % or make other assumptions about the socket file descriptor
+    {ok, NewSocket}.
 
