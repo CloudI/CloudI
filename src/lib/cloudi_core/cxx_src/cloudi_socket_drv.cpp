@@ -60,6 +60,9 @@
                                 int argc,\
                                 const ERL_NIF_TERM * argv)
 
+static ErlNifMutex * socket_mutex = 0; // prevent reentrant socket
+                                       // function call problems
+
 #if defined __cplusplus
 extern "C"
 {
@@ -83,9 +86,11 @@ NIF_FUNC(local_listen)
         return ::enif_make_badarg(env);
     }
 
+    ::enif_mutex_lock(socket_mutex);
     int fd_new = ::socket(PF_LOCAL, SOCK_STREAM, 0);
     if (fd_new == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -93,6 +98,7 @@ NIF_FUNC(local_listen)
     }
     if (::unlink(local.sun_path) == -1 && errno != ENOENT)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -102,13 +108,15 @@ NIF_FUNC(local_listen)
                reinterpret_cast<struct sockaddr *>(&local),
                sizeof(local)) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
                                                    ::erl_errno_id(errno)));
     }
-    if (::listen(fd_new, 1) == -1)
+    if (::listen(fd_new, 0) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -116,11 +124,13 @@ NIF_FUNC(local_listen)
     }
     if (::dup2(fd_new, fd_old) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
                                                    ::erl_errno_id(errno)));
     }
+    ::enif_mutex_unlock(socket_mutex);
 
     return ::enif_make_atom(env, "ok");
 }
@@ -157,12 +167,14 @@ NIF_FUNC(local_accept)
     {
         return ::enif_make_badarg(env);
     }
+    ::enif_mutex_lock(socket_mutex);
     socklen_t local_size = sizeof(local);
     int fd_new = ::accept(fd_listener,
                           reinterpret_cast<struct sockaddr *>(&local),
                           &local_size);
     if (fd_new == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -170,6 +182,7 @@ NIF_FUNC(local_accept)
     }
     if (::fcntl(fd_new, F_SETFL, O_NONBLOCK) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -178,6 +191,7 @@ NIF_FUNC(local_accept)
     if (::setsockopt(fd_new, SOL_SOCKET, SO_RCVBUF,
                      &recbuf, sizeof(recbuf)) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -186,6 +200,7 @@ NIF_FUNC(local_accept)
     if (::setsockopt(fd_new, SOL_SOCKET, SO_SNDBUF,
                      &sndbuf, sizeof(sndbuf)) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
@@ -193,11 +208,13 @@ NIF_FUNC(local_accept)
     }
     if (::dup2(fd_new, fd_old) == -1)
     {
+        ::enif_mutex_unlock(socket_mutex);
         return ::enif_make_tuple2(env,
                                   ::enif_make_atom(env, "error"),
                                   ::enif_make_atom(env,
                                                    ::erl_errno_id(errno)));
     }
+    ::enif_mutex_unlock(socket_mutex);
 
     return ::enif_make_atom(env, "ok");
 }
@@ -212,12 +229,15 @@ static int on_load(ErlNifEnv * /*env*/,
                    void ** /*priv_data*/,
                    ERL_NIF_TERM /*load_info*/)
 {
+    socket_mutex = ::enif_mutex_create(const_cast<char *>("socket_mutex"));
     return 0;
 }
 
 static void on_unload(ErlNifEnv * /*env*/,
                       void * /*priv_data*/)
 {
+    ::enif_mutex_destroy(socket_mutex);
+    socket_mutex = 0;
 }
 
 #if defined __cplusplus
