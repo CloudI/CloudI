@@ -470,22 +470,24 @@ services_acl_update(Output, [], _) ->
     lists:reverse(Output);
 services_acl_update(Output, [Service | L], Lookup)
     when is_record(Service, config_service_internal) ->
-    Deny = services_acl_update_list([], Service#config_service_internal.dest_list_deny,
-                                Lookup),
-    Allow = services_acl_update_list([], Service#config_service_internal.dest_list_allow,
-                                 Lookup),
-    services_acl_update([Service#config_service_internal{dest_list_deny = Deny,
-                                             dest_list_allow = Allow} | Output],
-                    L, Lookup);
+    Deny = services_acl_update_list([],
+        Service#config_service_internal.dest_list_deny, Lookup),
+    Allow = services_acl_update_list([],
+        Service#config_service_internal.dest_list_allow, Lookup),
+    services_acl_update(
+        [Service#config_service_internal{dest_list_deny = Deny,
+                                         dest_list_allow = Allow} | Output],
+        L, Lookup);
 services_acl_update(Output, [Service | L], Lookup)
     when is_record(Service, config_service_external) ->
-    Deny = services_acl_update_list([], Service#config_service_external.dest_list_deny,
-                                Lookup),
-    Allow = services_acl_update_list([], Service#config_service_external.dest_list_allow,
-                                 Lookup),
-    services_acl_update([Service#config_service_external{dest_list_deny = Deny,
-                                             dest_list_allow = Allow} | Output],
-                    L, Lookup).
+    Deny = services_acl_update_list([],
+        Service#config_service_external.dest_list_deny, Lookup),
+    Allow = services_acl_update_list([],
+        Service#config_service_external.dest_list_allow, Lookup),
+    services_acl_update(
+        [Service#config_service_external{dest_list_deny = Deny,
+                                         dest_list_allow = Allow} | Output],
+        L, Lookup).
 
 services_acl_update_list(_, undefined, _) ->
     undefined;

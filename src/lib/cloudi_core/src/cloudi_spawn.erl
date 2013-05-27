@@ -59,6 +59,8 @@
 -define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
 -define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
 
+-define(SOCKET_DIRECTORY, "/tmp"). % local protocol
+
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
 -define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
@@ -204,7 +206,7 @@ start_external(ThreadsPerProcess,
 
 create_socket_path(UUID)
     when is_binary(UUID) ->
-    Path = filename:join(["", "tmp",
+    Path = filename:join([?SOCKET_DIRECTORY,
                           "cloudi_socket_" ++
                           cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
     false = filelib:is_file(Path),
