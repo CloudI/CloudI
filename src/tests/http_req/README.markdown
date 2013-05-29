@@ -57,8 +57,7 @@ Settings added to /etc/sysctl.conf
     net.ipv4.tcp_rmem = 4096 16384 33554432
     net.ipv4.tcp_wmem = 4096 16384 33554432
     net.ipv4.tcp_syncookies = 1
-    # this gives the kernel more memory for tcp which you need with many (100k+) ope
-    n socket connections
+    # this gives the kernel more memory for tcp which you need with many (100k+) open socket connections
     net.ipv4.tcp_mem = 786432 1048576 26777216
     net.ipv4.tcp_max_tw_buckets = 360000
     net.core.netdev_max_backlog = 2500
@@ -101,6 +100,29 @@ Setting added to /etc/security/limits.conf
 * used `Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)` with `Erlang R15B01`
 
 ##INFORMATION
+
+Newer Linux distributions have ACPI control over CPU frequencies which may
+ramp down the CPU speed during a loadtest.  On Ubuntu, you can use the
+package "cpufrequtils" to set the criteria used for adjusting the CPU
+frequency.  Usually, this involves setting the CPU governor to "performance".
+Example configuration modifications are shown below for Ubuntu 12.04.2:
+
+    cat > /etc/default/cpufrequtils <<EOF
+    #!/bin/sh
+    ENABLE="true"
+    GOVERNOR="performance"
+    MAX_SPEED="2201000"
+    MIN_SPEED="2201000"
+    EOF
+    update-rc.d -f ondemand remove
+    cat > /etc/default/loadcpufreq <<EOF
+    #!/bin/sh
+    ENABLE="false"
+    EOF
+
+If the CPU is automatically ramped down during the loadtest due to CPU
+temperature guidelines (check with "cpufreq-info"), you may reset the original
+settings with "service cpufrequtils restart".
 
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
 * [`http://www.mnot.net/blog/2011/05/18/http_benchmark_rules`](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)

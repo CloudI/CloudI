@@ -399,7 +399,7 @@ service_start_internal(Count0,
                                           Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
-                                          DestListAllow, Options],
+                                          DestListAllow, Options, UUID],
                                          MaxR, MaxT, UUID, Timeout) of
         ok ->
             ok;
