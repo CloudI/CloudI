@@ -51,7 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/11,
+-export([start_internal/12,
          start_external/15]).
 
 -include("cloudi_configuration.hrl").
@@ -72,11 +72,12 @@
 
 start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions)
+               DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_service_options) ->
+         is_record(ConfigOptions, config_service_options),
+         is_binary(UUID) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse

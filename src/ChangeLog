@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-05-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add service UUID to internal startup arguments
+    * Add loadtest README CPU frequency information
+
 2013-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add local protocol option to provide tcp unix domain socket support
