@@ -1,6 +1,11 @@
 External Dependencies
 =====================
 
+All CloudI Erlang dependencies are now moved to exist with a `"cloudi_x_"`
+prefix to avoid any conflicts when CloudI shares the Erlang VM with other
+applications that may share common dependencies (erlzmq2 is an exception due
+to its integration and dependencies).
+
 `cowboy`
 --------
 `Erlang HTTP Server`

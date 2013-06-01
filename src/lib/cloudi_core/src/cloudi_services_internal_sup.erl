@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_sup).
@@ -92,6 +92,10 @@ create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
            (DestRefresh == lazy_local) orelse
            (DestRefresh == immediate_remote) orelse
            (DestRefresh == lazy_remote) orelse
+           (DestRefresh == immediate_newest) orelse
+           (DestRefresh == lazy_newest) orelse
+           (DestRefresh == immediate_oldest) orelse
+           (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
     case supervisor:start_child(?MODULE, [ProcessIndex, Module, Args,
                                           Timeout, Prefix,

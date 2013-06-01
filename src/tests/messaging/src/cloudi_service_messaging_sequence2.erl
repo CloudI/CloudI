@@ -159,7 +159,7 @@ sequence2(Dispatcher, Prefix) ->
             lists:foreach(fun(TransId) ->
                 {ok, <<>>, _, _} =
                     cloudi_service:recv_async(Dispatcher, TransId)
-            end, [], TransIds),
+            end, TransIds),
             % sleep
             {error, timeout} = cloudi_service:recv_async(Dispatcher, 1000),
             % retry

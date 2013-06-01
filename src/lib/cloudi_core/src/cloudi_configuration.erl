@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -53,7 +53,7 @@
 %% external interface
 -export([open/0, open/1,
          acl_add/2, acl_remove/2,
-         services_add/2, services_remove/2, services_restart/2, services/1,
+         services_add/3, services_remove/3, services_restart/3, services/1,
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
@@ -140,8 +140,9 @@
 %%
 %%   Each service configuration then defines the destination refresh method
 %%   (DestinationRefreshMethod) which may be set to: lazy_closest,
-%%   lazy_furthest, lazy_random, lazy_local, lazy_remote, immediate_closest,
-%%   immediate_furthest, immediate_random, immediate_local, immediate_remote,
+%%   lazy_furthest, lazy_random, lazy_local, lazy_remote, lazy_newest,
+%%   lazy_oldest, immediate_closest, immediate_furthest, immediate_random,
+%%   immediate_local, immediate_remote, immediate_newest, immediate_oldest,
 %%   or none. A "lazy" destination refresh
 %%   method prefix is used by services that send messages to only
 %%   long-lived services and will avoid contention for doing service name
@@ -203,7 +204,7 @@
 %%   Remote CloudI nodes that are started separately
 %%   (CloudI operates as a master-less system).  Instead of providing the
 %%   exact node names within a list, you can also provide "automatic"
-%%   to let nodefinder do automatic node discovery.
+%%   to let cloudi_x_nodefinder do automatic node discovery.
 %%
 %% @end
 %%-------------------------------------------------------------------------
@@ -212,13 +213,13 @@
 
 open() ->
     {ok, Terms} = file:consult(?CONFIGURATION_FILE_NAME),
-    new(Terms, #config{uuid_generator = uuid:new(self())}).
+    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
 
 -spec open(Path :: string()) -> #config{}.
 
 open(Path) when is_list(Path) ->
     {ok, Terms} = file:consult(Path),
-    new(Terms, #config{uuid_generator = uuid:new(self())}).
+    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -245,13 +246,14 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
 %% ===Add services based on the configuration format.===
 %% @end
 %%-------------------------------------------------------------------------
-services_add([T | _] = Value, #config{uuid_generator = UUID,
-                                      services = Services,
-                                      acl = ACL} = Config)
+services_add([T | _] = Value,
+             #config{uuid_generator = UUID,
+                     services = Services,
+                     acl = ACL} = Config, Timeout)
     when is_record(T, internal); is_record(T, external) ->
-    NewServices = services_acl_update([],
-                                      services_validate([], Value, UUID), ACL),
-    lists:foreach(fun cloudi_configurator:service_start/1, NewServices),
+    NextServices = services_acl_update([],
+                                       services_validate([], Value, UUID), ACL),
+    NewServices = services_add_service(NextServices, [], Timeout),
     Config#config{services = Services ++ NewServices}.
 
 %%-------------------------------------------------------------------------
@@ -259,10 +261,11 @@ services_add([T | _] = Value, #config{uuid_generator = UUID,
 %% ===Remove services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-services_remove([UUID | _] = Value, #config{services = Services} = Config)
+services_remove([UUID | _] = Value,
+                #config{services = Services} = Config, Timeout)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     NewServices = lists:foldl(fun(ID, L) ->
-        {[Service], NewL} = lists:partition(fun(S) ->
+        {ServiceList, NewL} = lists:partition(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->
@@ -274,9 +277,14 @@ services_remove([UUID | _] = Value, #config{services = Services} = Config)
                     false
             end
         end, L),
-        cloudi_configurator:service_stop(Service),
+        case ServiceList of
+            [] ->
+                ok;
+            [Service] ->
+                cloudi_configurator:service_stop(Service, Timeout)
+        end,
         NewL
-    end, Services, cloudi_lists:rsort(Value)),
+    end, Services, Value),
     Config#config{services = NewServices}.
 
 %%-------------------------------------------------------------------------
@@ -284,23 +292,29 @@ services_remove([UUID | _] = Value, #config{services = Services} = Config)
 %% ===Restart services based on their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
-services_restart([UUID | _] = Value, #config{services = Services} = Config)
+services_restart([UUID | _] = Value,
+                 #config{services = Services} = Config, Timeout)
     when is_binary(UUID), byte_size(UUID) == 16 ->
     lists:foreach(fun(ID) ->
-        [Service | _] = lists:dropwhile(fun(S) ->
+        ServiceList = lists:filter(fun(S) ->
             if
                 is_record(S, config_service_internal),
                 S#config_service_internal.uuid == ID ->
-                    false;
+                    true;
                 is_record(S, config_service_external),
                 S#config_service_external.uuid == ID ->
-                    false;
+                    true;
                 true ->
-                    true
+                    false
             end
         end, Services),
-        cloudi_configurator:service_restart(Service)
-    end, cloudi_lists:rsort(Value)),
+        case ServiceList of
+            [] ->
+                ok;
+            [Service] ->
+                cloudi_configurator:service_restart(Service, Timeout)
+        end
+    end, Value),
     Config.
 
 %%-------------------------------------------------------------------------
@@ -420,7 +434,7 @@ new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
     when is_atom(A) ->
     new(Terms, Config#config{acl = acl_lookup_new(Value)});
 new([{'nodes', automatic} | Terms], Config) ->
-    application:start(combonodefinder),
+    application:start(cloudi_x_combonodefinder),
     new(Terms, Config);
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
@@ -445,26 +459,35 @@ new([{'logging', [T | _] = Value} | Terms], Config)
                                                        file = File,
                                                        redirect = Redirect}}).
 
+services_add_service([], Added, _) ->
+    lists:reverse(Added);
+services_add_service([Service | Services], Added, Timeout) ->
+    services_add_service(Services,
+                         [cloudi_configurator:service_start(Service, Timeout) |
+                          Added], Timeout).
+
 services_acl_update(Output, [], _) ->
     lists:reverse(Output);
 services_acl_update(Output, [Service | L], Lookup)
     when is_record(Service, config_service_internal) ->
-    Deny = services_acl_update_list([], Service#config_service_internal.dest_list_deny,
-                                Lookup),
-    Allow = services_acl_update_list([], Service#config_service_internal.dest_list_allow,
-                                 Lookup),
-    services_acl_update([Service#config_service_internal{dest_list_deny = Deny,
-                                             dest_list_allow = Allow} | Output],
-                    L, Lookup);
+    Deny = services_acl_update_list([],
+        Service#config_service_internal.dest_list_deny, Lookup),
+    Allow = services_acl_update_list([],
+        Service#config_service_internal.dest_list_allow, Lookup),
+    services_acl_update(
+        [Service#config_service_internal{dest_list_deny = Deny,
+                                         dest_list_allow = Allow} | Output],
+        L, Lookup);
 services_acl_update(Output, [Service | L], Lookup)
     when is_record(Service, config_service_external) ->
-    Deny = services_acl_update_list([], Service#config_service_external.dest_list_deny,
-                                Lookup),
-    Allow = services_acl_update_list([], Service#config_service_external.dest_list_allow,
-                                 Lookup),
-    services_acl_update([Service#config_service_external{dest_list_deny = Deny,
-                                             dest_list_allow = Allow} | Output],
-                    L, Lookup).
+    Deny = services_acl_update_list([],
+        Service#config_service_external.dest_list_deny, Lookup),
+    Allow = services_acl_update_list([],
+        Service#config_service_external.dest_list_allow, Lookup),
+    services_acl_update(
+        [Service#config_service_external{dest_list_deny = Deny,
+                                         dest_list_allow = Allow} | Output],
+        L, Lookup).
 
 services_acl_update_list(_, undefined, _) ->
     undefined;
@@ -475,7 +498,7 @@ services_acl_update_list(Output, [E | L], Lookup)
     services_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
 services_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    case trie:is_pattern(E) of
+    case cloudi_x_trie:is_pattern(E) of
         true ->
             services_acl_update_list([E | Output], L, Lookup);
         false ->
@@ -487,7 +510,6 @@ services_validate(Output, [], _) ->
 services_validate(Output, [Service | L], UUID)
     when is_record(Service, internal),
          is_list(Service#internal.prefix),
-         is_atom(Service#internal.module),
          is_list(Service#internal.args),
          is_atom(Service#internal.dest_refresh),
          is_integer(Service#internal.timeout_init),
@@ -497,6 +519,8 @@ services_validate(Output, [Service | L], UUID)
          is_integer(Service#internal.max_r),
          is_integer(Service#internal.max_t),
          is_list(Service#internal.options) ->
+    true = is_atom(Service#internal.module) orelse
+           is_list(Service#internal.module),
     true = (Service#internal.dest_refresh =:= immediate_closest) orelse
            (Service#internal.dest_refresh =:= lazy_closest) orelse
            (Service#internal.dest_refresh =:= immediate_furthest) orelse
@@ -507,6 +531,10 @@ services_validate(Output, [Service | L], UUID)
            (Service#internal.dest_refresh =:= lazy_local) orelse
            (Service#internal.dest_refresh =:= immediate_remote) orelse
            (Service#internal.dest_refresh =:= lazy_remote) orelse
+           (Service#internal.dest_refresh =:= immediate_newest) orelse
+           (Service#internal.dest_refresh =:= lazy_newest) orelse
+           (Service#internal.dest_refresh =:= immediate_oldest) orelse
+           (Service#internal.dest_refresh =:= lazy_oldest) orelse
            (Service#internal.dest_refresh =:= none),
     true = Service#internal.timeout_init > 0,
     true = Service#internal.timeout_async > 0,
@@ -533,7 +561,7 @@ services_validate(Output, [Service | L], UUID)
         options = services_validate_options(
             Service#internal.options
         ),
-        uuid = uuid:get_v1(UUID)},
+        uuid = cloudi_x_uuid:get_v1(UUID)},
     services_validate([C | Output], L, UUID);
 services_validate(Output, [Service | L], UUID)
     when is_record(Service, external),
@@ -544,7 +572,8 @@ services_validate(Output, [Service | L], UUID)
          is_list(Service#external.env),
          is_atom(Service#external.dest_refresh),
          is_atom(Service#external.protocol),
-         is_integer(Service#external.buffer_size),
+         ((Service#external.buffer_size =:= default) orelse
+          is_integer(Service#external.buffer_size)),
          is_integer(Service#external.timeout_init),
          is_integer(Service#external.timeout_async),
          is_integer(Service#external.timeout_sync),
@@ -567,10 +596,17 @@ services_validate(Output, [Service | L], UUID)
            (Service#external.dest_refresh =:= lazy_local) orelse
            (Service#external.dest_refresh =:= immediate_remote) orelse
            (Service#external.dest_refresh =:= lazy_remote) orelse
+           (Service#external.dest_refresh =:= immediate_newest) orelse
+           (Service#external.dest_refresh =:= lazy_newest) orelse
+           (Service#external.dest_refresh =:= immediate_oldest) orelse
+           (Service#external.dest_refresh =:= lazy_oldest) orelse
            (Service#external.dest_refresh =:= none),
-    true = (Service#external.protocol =:= tcp) orelse
-           (Service#external.protocol =:= udp),
-    true = Service#external.buffer_size >= 1024, % should be roughly 16436
+    true = (Service#external.protocol =:= default) orelse
+           (Service#external.protocol =:= tcp) orelse
+           (Service#external.protocol =:= udp) orelse
+           (Service#external.protocol =:= local),
+    true = (Service#external.buffer_size =:= default) orelse
+           (Service#external.buffer_size >= 1024),
     true = Service#external.timeout_init > 0,
     true = Service#external.timeout_async > 0,
     true = Service#external.timeout_sync > 0,
@@ -591,14 +627,33 @@ services_validate(Output, [Service | L], UUID)
                                     Service#external.options),
     undefined = proplists:get_value(duo_mode,
                                     Service#external.options),
+    Protocol = if
+        Service#external.protocol =:= default ->
+            local;
+        true ->
+            Service#external.protocol
+    end,
+    BufferSize = if
+        Service#external.buffer_size =:= default ->
+            if
+                Protocol =:= tcp ->
+                    16384; % Linux localhost (inet) MTU
+                Protocol =:= udp ->
+                    16384; % Linux localhost (inet) MTU
+                Protocol =:= local ->
+                    16384  % Linux localhost (inet) MTU for testing/comparison
+            end;
+        true ->
+            Service#external.buffer_size
+    end,
     C = #config_service_external{
         prefix = Service#external.prefix,
         file_path = Service#external.file_path,
         args = Service#external.args,
         env = Service#external.env,
         dest_refresh = Service#external.dest_refresh,
-        protocol = Service#external.protocol,
-        buffer_size = Service#external.buffer_size,
+        protocol = Protocol,
+        buffer_size = BufferSize,
         timeout_init = Service#external.timeout_init,
         timeout_async = Service#external.timeout_async,
         timeout_sync = Service#external.timeout_sync,
@@ -611,7 +666,7 @@ services_validate(Output, [Service | L], UUID)
         options = services_validate_options(
             Service#external.options
         ),
-        uuid = uuid:get_v1(UUID)},
+        uuid = cloudi_x_uuid:get_v1(UUID)},
     services_validate([C | Output], L, UUID).
 
 services_validate_options(OptionsList) ->
@@ -743,7 +798,7 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_list(E), is_integer(erlang:hd(E)) ->
-    case trie:is_pattern(E) of
+    case cloudi_x_trie:is_pattern(E) of
         true ->
             acl_expand_values([E | Output], L, Path, Key, Lookup);
         false ->

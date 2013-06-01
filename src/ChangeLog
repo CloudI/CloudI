@@ -1,6 +1,78 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.2.2 (beta) released
+    * Add loadtest results
+    * Make "local" the default protocol for external services
+
+2013-05-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add service UUID to internal startup arguments
+    * Add loadtest README CPU frequency information
+
+2013-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add local protocol option to provide tcp unix domain socket support
+    * Fix external service send/receive buffer setting (was larger before)
+    * Update reltool_util
+
+2013-05-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid with fixes to variant bits
+      (external usage of the v1 UUIDs is fixed)
+    * Fix the cpg_data:get_remote_members/3 and cpg_data:get_local_members/3
+      argument order bug
+
+2013-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the "cloudi_x_" prefix to all CloudI external Erlang dependencies
+      with an automatic script, during the build process, to provide a scope
+      that avoids conflicts with other Erlang applications that share the
+      same Erlang VM
+    * Update cpg
+    * Update reltool_util
+
+2013-05-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix problems with the database services linking within the
+      CloudI service init function.  This fix affects all internal services,
+      so that the CloudI service init function always has self() == Dispatcher
+      and the supplied Dispatcher variable is actually a short-lived
+      proxy Erlang process utilizing the same process state.
+
+2013-05-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix all the external CloudI API implementations so that their
+      usage of the request_timeout_adjustment service option does not require
+      the usage of exceptions (so that request latency should be back to
+      what was present for v1.1.1, including the python_c CloudI API
+      which remained a problem in the v1.2.1 release)
+    * Add newest/oldest destination refresh method options
+    * Add the "cloudi" module for CloudI integration from Erlang processes
+      external to a CloudI service (internal services will continue to use
+      the "cloudi_service" behaviour/module as the CloudI API)
+    * Remove the erroneous function cloudi_service:mcast_async/5
+    * Update cpg
+
+2013-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Start to add deployment examples for creating internal services
+    * Update pqueue application based on (deployment) feedback
+    * Small changes to service configuration and startup
+    * Updates to release generation
+    * Update reltool_util
+
+2013-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add a more flexible interal service configuration that provides
+      better support for OTP applications and allows OTP release loading
+    * Fix issues with the CloudI Services API (timeouts added, 
+      restart/shutdown handling for internal services and
+      fix requests that don't reference a running service)
+    * Move key2value.erl into a separate application
+
 2013-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.1 (beta) released

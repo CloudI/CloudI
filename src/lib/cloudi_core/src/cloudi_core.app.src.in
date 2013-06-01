@@ -5,6 +5,7 @@
   [{description, "Cloudi Core Application"},
    {vsn, "@VERSION@"},
    {modules, [
+        cloudi,
         cloudi_app,
         cloudi_array,
         cloudi_configuration,
@@ -24,13 +25,14 @@
         cloudi_services_external,
         cloudi_services_external_sup,
         cloudi_services_internal,
+        cloudi_services_internal_init,
         cloudi_services_internal_sup,
-        cloudi_services,
+        cloudi_services_monitor,
+        cloudi_socket,
         cloudi_spawn,
         cloudi_string,
         cloudi_sup,
-        cloudi_tuple,
-        key2value
+        cloudi_tuple
         ]},
    {registered,[
         cloudi_configurator,
@@ -48,12 +50,14 @@
         ]},
    {applications, [
         % nodefinder dependencies are started manually
-        dynamic_compile,
-        pqueue,
-        quickrand,
-        trie,
-        uuid,
-        cpg,
+        cloudi_x_dynamic_compile,
+        cloudi_x_pqueue,
+        cloudi_x_quickrand,
+        cloudi_x_trie,
+        cloudi_x_reltool_util,
+        cloudi_x_key2value,
+        cloudi_x_uuid,
+        cloudi_x_cpg,
         sasl,
         stdlib,
         kernel

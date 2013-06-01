@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,9 @@
 #define OS_SPAWN_H
 
 #include <stdint.h>
-int32_t spawn(char protocol, uint32_t * ports, uint32_t ports_len,
+int32_t spawn(char protocol,
+              char * socket_path, uint32_t socket_path_len,
+              uint32_t * ports, uint32_t ports_len,
               char * filename, uint32_t filename_len,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len);

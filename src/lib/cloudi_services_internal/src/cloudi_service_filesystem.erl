@@ -99,10 +99,10 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 if
                     UseHttpGetSuffix =:= true ->
                         cloudi_service:subscribe(Dispatcher, "/get"),
-                        trie:store(Prefix ++ "/get", Contents, D1);
+                        cloudi_x_trie:store(Prefix ++ "/get", Contents, D1);
                     true ->
                         cloudi_service:subscribe(Dispatcher, ""),
-                        trie:store(Prefix, Contents, D1)
+                        cloudi_x_trie:store(Prefix, Contents, D1)
                 end;
             true ->
                 D1
@@ -114,15 +114,15 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 FileName
         end,
         cloudi_service:subscribe(Dispatcher, Name),
-        trie:store(Prefix ++ Name, Contents, D2)
-    end, trie:new()),
+        cloudi_x_trie:store(Prefix ++ Name, Contents, D2)
+    end, cloudi_x_trie:new()),
     {ok, #state{directory = Directory,
                 files = Files}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{files = Files} = State, _Dispatcher) ->
-    {reply, trie:fetch(Pattern, Files), State}.
+    {reply, cloudi_x_trie:fetch(Pattern, Files), State}.
 
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

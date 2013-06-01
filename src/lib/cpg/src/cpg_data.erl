@@ -51,7 +51,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -77,7 +77,19 @@
          get_local_pid/2,
          get_local_pid/3,
          get_remote_pid/2,
-         get_remote_pid/3]).
+         get_remote_pid/3,
+         get_oldest_pid/2,
+         get_oldest_pid/3,
+         get_local_oldest_pid/2,
+         get_local_oldest_pid/3,
+         get_remote_oldest_pid/2,
+         get_remote_oldest_pid/3,
+         get_newest_pid/2,
+         get_newest_pid/3,
+         get_local_newest_pid/2,
+         get_local_newest_pid/3,
+         get_remote_newest_pid/2,
+         get_remote_newest_pid/3]).
 
 -include("cpg_data.hrl").
 -include("cpg_constants.hrl").
@@ -213,7 +225,7 @@ get_local_members(GroupName, Groups) ->
 %% @end
 %%-------------------------------------------------------------------------
 
-get_local_members(GroupName, Groups, Exclude)
+get_local_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -262,7 +274,7 @@ get_remote_members(GroupName, Groups) ->
 %% @end
 %%-------------------------------------------------------------------------
 
-get_remote_members(GroupName, Groups, Exclude)
+get_remote_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -509,6 +521,272 @@ get_remote_pid(GroupName, Exclude, Groups)
             pick(RemoteCount, Remote, Exclude, GroupName, Pattern)
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_oldest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            {ok, Pattern, history_oldest(History)}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_oldest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_oldest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_oldest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_local_oldest(History) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest local group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_oldest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_local_oldest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_oldest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_remote_oldest(History) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the oldest remote group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_oldest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_remote_oldest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_newest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            {ok, Pattern, history_newest(History)}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_newest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_newest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest local group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_newest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_local_newest(History) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest local group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_local_newest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_local_newest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest remote group member.===
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_newest_pid(GroupName, Groups) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_remote_newest(History) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the newest remote group member while excluding a specific pid.===
+%% Usually the self() pid is excluded with this function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_remote_newest_pid(GroupName, Exclude, Groups)
+    when is_pid(Exclude) ->
+    case group_find(GroupName, Groups) of
+        error ->
+            {error, {'no_such_group', GroupName}};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
+        {ok, Pattern, #cpg_data{history = History}} ->
+            case history_remote_newest(History, Exclude) of
+                undefined ->
+                    {error, {'no_process', GroupName}};
+                Pid ->
+                    {ok, Pattern, Pid}
+            end
+    end.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -586,6 +864,121 @@ pick(N1, L1, N2, L2, Exclude, GroupName, Pattern) ->
             Success
     end.
 
+-compile({inline, [{random,1}]}).
+
 random(N) ->
     quickrand:uniform(N).
+
+history_oldest([_ | _] = History) ->
+    [Pid | _] = lists:reverse(History),
+    Pid.
+
+history_oldest_pid([], _) ->
+    undefined;
+history_oldest_pid([Exclude | History], Exclude) ->
+    history_oldest_pid(History, Exclude);
+history_oldest_pid([Pid | _], _) ->
+    Pid.
+history_oldest([_ | _] = History, Exclude) ->
+    history_oldest_pid(lists:reverse(History), Exclude).
+
+history_local_oldest_pid([]) ->
+    undefined;
+history_local_oldest_pid([Pid | _])
+    when node(Pid) == node() ->
+    Pid;
+history_local_oldest_pid([_ | History]) ->
+    history_local_oldest_pid(History).
+history_local_oldest([_ | _] = History) ->
+    history_local_oldest_pid(lists:reverse(History)).
+
+history_local_oldest_pid([], _) ->
+    undefined;
+history_local_oldest_pid([Exclude | History], Exclude) ->
+    history_local_oldest_pid(History, Exclude);
+history_local_oldest_pid([Pid | _], _)
+    when node(Pid) == node() ->
+    Pid;
+history_local_oldest_pid([_ | History], Exclude) ->
+    history_local_oldest_pid(History, Exclude).
+history_local_oldest([_ | _] = History, Exclude) ->
+    history_local_oldest_pid(lists:reverse(History), Exclude).
+
+history_remote_oldest_pid([]) ->
+    undefined;
+history_remote_oldest_pid([Pid | _])
+    when node(Pid) /= node() ->
+    Pid;
+history_remote_oldest_pid([_ | History]) ->
+    history_remote_oldest_pid(History).
+history_remote_oldest([_ | _] = History) ->
+    history_remote_oldest_pid(lists:reverse(History)).
+
+history_remote_oldest_pid([], _) ->
+    undefined;
+history_remote_oldest_pid([Exclude | History], Exclude) ->
+    history_remote_oldest_pid(History, Exclude);
+history_remote_oldest_pid([Pid | _], _)
+    when node(Pid) /= node() ->
+    Pid;
+history_remote_oldest_pid([_ | History], Exclude) ->
+    history_remote_oldest_pid(History, Exclude).
+history_remote_oldest([_ | _] = History, Exclude) ->
+    history_remote_oldest_pid(lists:reverse(History), Exclude).
+
+history_newest([Pid | _]) ->
+    Pid.
+
+history_newest_pid([], _) ->
+    undefined;
+history_newest_pid([Exclude | History], Exclude) ->
+    history_newest_pid(History, Exclude);
+history_newest_pid([Pid | _], _) ->
+    Pid.
+history_newest([_ | _] = History, Exclude) ->
+    history_newest_pid(History, Exclude).
+
+history_local_newest_pid([]) ->
+    undefined;
+history_local_newest_pid([Pid | _])
+    when node(Pid) == node() ->
+    Pid;
+history_local_newest_pid([_ | History]) ->
+    history_local_newest_pid(History).
+history_local_newest([_ | _] = History) ->
+    history_local_newest_pid(History).
+
+history_local_newest_pid([], _) ->
+    undefined;
+history_local_newest_pid([Exclude | History], Exclude) ->
+    history_local_newest_pid(History, Exclude);
+history_local_newest_pid([Pid | _], _)
+    when node(Pid) == node() ->
+    Pid;
+history_local_newest_pid([_ | History], Exclude) ->
+    history_local_newest_pid(History, Exclude).
+history_local_newest([_ | _] = History, Exclude) ->
+    history_local_newest_pid(History, Exclude).
+
+history_remote_newest_pid([]) ->
+    undefined;
+history_remote_newest_pid([Pid | _])
+    when node(Pid) /= node() ->
+    Pid;
+history_remote_newest_pid([_ | History]) ->
+    history_remote_newest_pid(History).
+history_remote_newest([_ | _] = History) ->
+    history_remote_newest_pid(History).
+
+history_remote_newest_pid([], _) ->
+    undefined;
+history_remote_newest_pid([Exclude | History], Exclude) ->
+    history_remote_newest_pid(History, Exclude);
+history_remote_newest_pid([Pid | _], _)
+    when node(Pid) /= node() ->
+    Pid;
+history_remote_newest_pid([_ | History], Exclude) ->
+    history_remote_newest_pid(History, Exclude).
+history_remote_newest([_ | _] = History, Exclude) ->
+    history_remote_newest_pid(History, Exclude).
 

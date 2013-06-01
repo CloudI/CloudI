@@ -4,7 +4,7 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI HTTP Integration==
-%%% Uses the cowboy Erlang HTTP Server.
+%%% Uses the cloudi_x_cowboy Erlang HTTP Server.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -150,7 +150,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     true = is_boolean(UseMethodSuffix),
     Service = cloudi_service:self(Dispatcher),
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
-    Dispatch = cowboy_router:compile([
+    Dispatch = cloudi_x_cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{service = Service,
@@ -169,7 +169,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                                               keyfile,
                                               password,
                                               verify], SSLOpts),
-            cowboy:start_https(
+            cloudi_x_cowboy:start_https(
                 Service, % Ref
                 100, % Number of acceptor processes
                 [{ip, Interface},
@@ -190,7 +190,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                  {timeout, RecvTimeout}] % Protocol options
             );
         SSL =:= false ->
-            cowboy:start_http(
+            cloudi_x_cowboy:start_http(
                 Service, % Ref
                 100, % Number of acceptor processes
                 [{ip, Interface},
@@ -250,7 +250,7 @@ cloudi_service_handle_info(Request, State, _) ->
 
 cloudi_service_terminate(_, #state{service = Service,
                                    requests = Requests}) ->
-    cowboy:stop_listener(Service),
+    cloudi_x_cowboy:stop_listener(Service),
     dict:map(fun(_, HandlerPid) ->
         HandlerPid ! {cowboy_error, timeout}
     end, Requests),
@@ -262,7 +262,7 @@ cloudi_service_terminate(_, #state{service = Service,
 
 % static content type detection
 content_type_lookup() ->
-    trie:new([
+    cloudi_x_trie:new([
         {".txt",     {request, <<"text/plain">>}},
         {".json",    {request, <<"application/json">>}},
         {".xml",     {request, <<"text/xml">>}},

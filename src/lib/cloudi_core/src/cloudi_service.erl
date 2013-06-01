@@ -127,7 +127,6 @@
          send_sync/7,
          mcast_async/3,
          mcast_async/4,
-         mcast_async/5,
          mcast_async/6,
          forward/9,
          forward_async/8,
@@ -989,35 +988,6 @@ mcast_async(Dispatcher, Name, Request, Timeout)
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name, <<>>, Request,
                                     Timeout, undefined},
-                                   Timeout + ?TIMEOUT_DELTA)).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Send a multicast asynchronous service request.===
-%% Asynchronous service requests are sent to all services that have
-%% subscribed to the service name pattern that matches the destination.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec mcast_async(Dispatcher :: pid(),
-                  Name :: string(),
-                  Request :: any(),
-                  Timeout :: non_neg_integer() | 'undefined',
-                  PatternPid :: {string(), pid()}) ->
-    {'ok', TransIdList :: list(<<_:128>>)} |
-    {'error', Reason :: atom()}.
-
-mcast_async(Dispatcher, Name, Request, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
-    gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
-                                 undefined, undefined, PatternPid}, infinity);
-
-mcast_async(Dispatcher, Name, Request, Timeout, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
-         Timeout >= 0, is_tuple(PatternPid) ->
-    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
-                                   {'mcast_async', Name, <<>>, Request,
-                                    Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
 %%-------------------------------------------------------------------------
