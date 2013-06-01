@@ -1,3 +1,42 @@
+June 1, 2013
+  Version 1.2.2 (beta) released.
+  * Performance was improved further for external services with the addition
+    of UNIX domain socket support as the "local" protocol.  The python_c
+    CloudI API now has minimal latency.  The Erlang, C/C++, and Java CloudI
+    API now has low latency which is similar (20-40ms latency mean max,
+    130-170ms latency max sample, for 20k connections at 10k req/s with the
+    "local" protocol).  Now all the CloudI API implementations have been
+    modified to send the request response before an exception is thrown to
+    avoid imposing any extra request latency.
+  * v1 UUIDs now have the correct variant bits set.  This fix makes the UUIDs
+    backwards incompatible (if older UUIDs have been stored in a database).
+  * Prevously, external service buffer sizes where assigned after being doubled.
+    Now, that is no longer the case.  If that is a concern, make sure to double
+    your configured buffer size (specified in the external service
+    configuration).
+  * Problems with the CloudI database services have now been fixed.  It is now
+    true that the cloudi_service_init/3 self() process is the Dispatcher
+    Erlang process used in future service function calls.  That will remain
+    true in the future to maintain consistency with OTP behaviours.
+    However, it is mainly for proper link/monitor creation, it is still
+    best to use cloudi_service:self/1 when retrieving the service's Erlang
+    process.
+  * Added the "cloudi" module for Erlang usage of CloudI services within
+    external Erlang processes.
+  * Added the "cloudi_x_" scope (i.e., namespace) prefix to all external
+    CloudI dependencies so that it is easier to include CloudI with other
+    Erlang applications.  This change will impact any Erlang applications
+    that currently use CloudI and CloudI external dependencies, but have not
+    yet included their own version of the external dependencies.
+  * Added proper support for loading Erlang applications and Erlang releases
+    that include a CloudI service module.
+  * Added newest/oldest destination refresh method options.
+  * Now external service configuration can use the "default" atom for either
+    the protocol and/or the buffer size.  The default protocol is the new
+    "local" protocol and the default buffer size is currently 16384 bytes
+    (Linux localhost (inet) MTU) but may change in the future based on
+    further testing.
+
 March 30, 2013
   Version 1.2.1 (beta) released.
 
