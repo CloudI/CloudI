@@ -1,0 +1,42 @@
+
+## Name of the node
+-sname cloudi
+
+## Cookie for distributed erlang
+-setcookie cloudi
+
+## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
+## (Disabled by default..use with caution!)
+##-heart
+
+## Enable kernel poll and a few async threads
++K true
++A 5
+
+## Increase number of Erlang processes
++P 120000
+
+## Increase number of concurrent ports/sockets
+-env ERL_MAX_PORTS 64511
+
+## Tweak GC to run more often
+#-env ERL_FULLSWEEP_AFTER 10
+
+# hexpi tests service module not included in an application
+-pz tests/hexpi/ebin/
+
+# flood tests service module not included in an application
+-pz tests/flood/ebin/
+
+# http_req tests service module not included in an application
+-pz tests/http_req/ebin/
+
+# msg_size tests service module not included in an application
+-pz tests/msg_size/ebin/
+
+# messaging tests service module not included in an application
+-pz tests/messaging/ebin/
+
+# erts_alloc_config testing
+#+Mea config
+

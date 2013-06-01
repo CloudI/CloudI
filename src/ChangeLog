@@ -3,6 +3,7 @@
 
 2013-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add loadtest results
     * Make "local" the default protocol for external services
 
 2013-05-28 Michael Truog   <mjtruog [at] gmail (dot) com>
