@@ -3,7 +3,7 @@ June 1, 2013
   * Performance was improved further for external services with the addition
     of UNIX domain socket support as the "local" protocol.  The python_c
     CloudI API now has minimal latency.  The Erlang, C/C++, and Java CloudI
-    API now has low latency which is similar (20-40ms latency mean max,
+    APIs now have similarly low latency (20-40ms latency mean max,
     130-170ms latency max sample, for 20k connections at 10k req/s with the
     "local" protocol).  Now all the CloudI API implementations have been
     modified to send the request response before an exception is thrown to
