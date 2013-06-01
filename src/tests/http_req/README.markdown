@@ -122,7 +122,8 @@ Example configuration modifications are shown below for Ubuntu 12.04.2:
 
 If the CPU is automatically ramped down during the loadtest due to CPU
 temperature guidelines (check with "cpufreq-info"), you may reset the original
-settings with "service cpufrequtils restart".
+settings with "service cpufrequtils restart".  Do not use "cpufreq-info"
+during a loadtest, since it skews the results by causing abnormal latency.
 
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
 * [`http://www.mnot.net/blog/2011/05/18/http_benchmark_rules`](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)

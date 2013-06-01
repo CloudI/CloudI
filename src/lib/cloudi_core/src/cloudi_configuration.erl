@@ -629,7 +629,7 @@ services_validate(Output, [Service | L], UUID)
                                     Service#external.options),
     Protocol = if
         Service#external.protocol =:= default ->
-            tcp;
+            local;
         true ->
             Service#external.protocol
     end,
