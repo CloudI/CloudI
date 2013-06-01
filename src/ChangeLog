@@ -3,6 +3,7 @@
 
 2013-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 1.2.2 (beta) released
     * Add loadtest results
     * Make "local" the default protocol for external services
 
