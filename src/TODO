@@ -1,7 +1,8 @@
-Items waiting for after the release of version 1.2.0
+Items waiting for after the release of version 1.2.2
 ----------------------------------------------------
-Add to http://0install.net/
-Do loadtests after the 1.2.0 changes
+Add more examples, specifically one for including CloudI in an Erlang release
+   with other Erlang applications
+Add to http://0install.net/ ?
 X-HTTP-Method-Override usage in cowboy integration
 Add https://github.com/Amadiro/erlang-statistics integration
     or something similar
@@ -30,6 +31,7 @@ R CloudI API
     * R w/C integration(?)
 Ocaml CloudI API
     * all-Ocaml implementation
+    * see https://github.com/EchoTeam/ocaml-erlang-port
 Haskell CloudI API
     * all-Haskell implementation
 
