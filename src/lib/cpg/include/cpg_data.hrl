@@ -6,7 +6,8 @@
         local_count = 0,
         local = [],
         remote_count = 0,
-        remote = []
+        remote = [],
+        history = []
     }).
 
 -record(cpg_data_pid,

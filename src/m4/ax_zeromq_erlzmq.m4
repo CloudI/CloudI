@@ -74,7 +74,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
               ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS \
               ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH \
               $BUILDDIR/rebar compile && \
-              echo "erlzmq locally installed" || exit 1)],
+              echo "erlzmq compiled" || exit 1)],
             [ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS
              ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS
              ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH

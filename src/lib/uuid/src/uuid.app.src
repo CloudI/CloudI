@@ -1,8 +1,6 @@
 {application, uuid,
   [{description, "Native UUID Generation"},
-   {vsn, "1.2.0"},
+   {vsn, "1.2.2"},
    {modules, [uuid]},
-   {registered, []},
-   {applications, [quickrand, stdlib]},
-   {start_phases, []}]}.
+   {applications, [quickrand, stdlib]}]}.
 

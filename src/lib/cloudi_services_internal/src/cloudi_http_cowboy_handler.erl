@@ -50,11 +50,11 @@
 -module(cloudi_http_cowboy_handler).
 -author('mjtruog [at] gmail (dot) com').
 
-%-behaviour(cowboy_http_handler).
+%-behaviour(cloudi_x_cowboy_http_handler).
 
 %% external interface
 
-%% cowboy_http_handler callbacks
+%% cloudi_x_cowboy_http_handler callbacks
 -export([init/3,
          handle/2,
          terminate/3]).
@@ -67,7 +67,7 @@
 %%%------------------------------------------------------------------------
 
 %%%------------------------------------------------------------------------
-%%% Callback functions from cowboy_http_handler
+%%% Callback functions from cloudi_x_cowboy_http_handler
 %%%------------------------------------------------------------------------
 
 init(_Transport, Req, Opts)
@@ -83,12 +83,12 @@ handle(Req0, #cowboy_state{service = Service,
                            use_method_suffix = UseMethodSuffix,
                            content_type_lookup = ContentTypeLookup} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
-    {Method, Req1} = cowboy_req:method(Req0),
-    {HeadersIncoming, Req2} = cowboy_req:headers(Req1),
-    {PathRaw, Req3} = cowboy_req:path(Req2),
-    {HostRaw, Req4} = cowboy_req:host(Req3),
-    {QsVals, Req5} = cowboy_req:qs_vals(Req4),
-    {ok, Body, ReqN} = cowboy_req:body(Req5),
+    {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
+    {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
+    {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
+    {HostRaw, Req4} = cloudi_x_cowboy_req:host(Req3),
+    {QsVals, Req5} = cloudi_x_cowboy_req:qs_vals(Req4),
+    {ok, Body, ReqN} = cloudi_x_cowboy_req:body(Req5),
     NameIncoming = if
         UseHostPrefix =:= false; HostRaw =:= undefined ->
             erlang:binary_to_list(PathRaw);
@@ -173,7 +173,7 @@ handle(Req0, #cowboy_state{service = Service,
             {ok, Req, State};
         {cowboy_error, timeout} ->
             HttpCode = 504,
-            {ok, Req} = cowboy_req:reply(HttpCode,
+            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                          ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
@@ -181,7 +181,7 @@ handle(Req0, #cowboy_state{service = Service,
             {ok, Req, State};
         {cowboy_error, Reason} ->
             HttpCode = 500,
-            {ok, Req} = cowboy_req:reply(HttpCode,
+            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                          ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
@@ -190,7 +190,7 @@ handle(Req0, #cowboy_state{service = Service,
     after
         TimeoutAsync ->
             HttpCode = 504,
-            {ok, Req} = cowboy_req:reply(HttpCode,
+            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                          ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
@@ -245,20 +245,20 @@ headers_external_outgoing(Result, [K, V | L]) ->
     headers_external_outgoing([{K, V} | Result], L).
 
 request_time_start() ->
-    uuid:get_v1_time(os).
+    cloudi_x_uuid:get_v1_time(os).
 
 request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
                          RequestStartMicroSec) ->
     ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
                [HttpCode, Method, NameIncoming, NameOutgoing,
-                (uuid:get_v1_time(os) -
+                (cloudi_x_uuid:get_v1_time(os) -
                  RequestStartMicroSec) / 1000.0]).
 
 request_time_end_error(HttpCode, Method, NameIncoming,
                        RequestStartMicroSec, Reason) ->
     ?LOG_WARN("~w ~s ~s ~p ms: ~p",
               [HttpCode, Method, NameIncoming,
-               (uuid:get_v1_time(os) -
+               (cloudi_x_uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
 
 return_response(NameIncoming, HeadersOutgoing, Response,
@@ -283,7 +283,7 @@ return_response(NameIncoming, HeadersOutgoing, Response,
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
                 true ->
-                    case trie:find(Extension, ContentTypeLookup) of
+                    case cloudi_x_trie:find(Extension, ContentTypeLookup) of
                         error ->
                             [{<<"content-disposition">>,
                               erlang:list_to_binary("attachment; filename=\"" ++
@@ -301,7 +301,7 @@ return_response(NameIncoming, HeadersOutgoing, Response,
             end
     end,
     HttpCode = 200,
-    {ok, Req} = cowboy_req:reply(HttpCode,
+    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                  ResponseHeadersOutgoing,
                                  ResponseBinary,
                                  ReqN),

@@ -58,7 +58,7 @@ destination_allowed(_, undefined, undefined) ->
     true;
 
 destination_allowed(Name, undefined, DestAllow) ->
-    case trie:find_match(Name, DestAllow) of
+    case cloudi_x_trie:find_match(Name, DestAllow) of
         {ok, _, _} ->
             true;
         error ->
@@ -66,7 +66,7 @@ destination_allowed(Name, undefined, DestAllow) ->
     end;
 
 destination_allowed(Name, DestDeny, undefined) ->
-    case trie:find_match(Name, DestDeny) of
+    case cloudi_x_trie:find_match(Name, DestDeny) of
         {ok, _, _} ->
             false;
         error ->
@@ -74,11 +74,11 @@ destination_allowed(Name, DestDeny, undefined) ->
     end;
 
 destination_allowed(Name, DestDeny, DestAllow) ->
-    case trie:find_match(Name, DestDeny) of
+    case cloudi_x_trie:find_match(Name, DestDeny) of
         {ok, _, _} ->
             false;
         error ->
-            case trie:find_match(Name, DestAllow) of
+            case cloudi_x_trie:find_match(Name, DestAllow) of
                 {ok, _, _} ->
                     true;
                 error ->
@@ -92,15 +92,19 @@ destination_refresh_first(DestRefresh,
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
-    cpg_data:get_groups(Delay);
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_groups(Delay);
 
 destination_refresh_first(DestRefresh, _)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
     ok;
 
 destination_refresh_first(none, _) ->
@@ -112,15 +116,19 @@ destination_refresh_start(DestRefresh,
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote) ->
-    cpg_data:get_groups(Delay);
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_groups(Delay);
 
 destination_refresh_start(DestRefresh, _)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote) ->
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
     ok;
 
 destination_refresh_start(none, _) ->
@@ -128,87 +136,107 @@ destination_refresh_start(none, _) ->
 
 destination_get(lazy_closest, Name, Pid, Groups)
     when is_list(Name) ->
-    cpg_data:get_closest_pid(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_closest_pid(Name, Pid, Groups);
 
 destination_get(lazy_furthest, Name, Pid, Groups)
     when is_list(Name) ->
-    cpg_data:get_furthest_pid(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_furthest_pid(Name, Pid, Groups);
 
 destination_get(lazy_random, Name, Pid, Groups)
     when is_list(Name) ->
-    cpg_data:get_random_pid(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_random_pid(Name, Pid, Groups);
 
 destination_get(lazy_local, Name, Pid, Groups)
     when is_list(Name) ->
-    cpg_data:get_local_pid(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_local_pid(Name, Pid, Groups);
 
 destination_get(lazy_remote, Name, Pid, Groups)
     when is_list(Name) ->
-    cpg_data:get_remote_pid(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_remote_pid(Name, Pid, Groups);
+
+destination_get(lazy_newest, Name, Pid, Groups)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_newest_pid(Name, Pid, Groups);
+
+destination_get(lazy_oldest, Name, Pid, Groups)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_oldest_pid(Name, Pid, Groups);
 
 destination_get(immediate_closest, Name, Pid, _)
     when is_list(Name) ->
-    cpg:get_closest_pid(Name, Pid);
+    cloudi_x_cpg:get_closest_pid(Name, Pid);
 
 destination_get(immediate_furthest, Name, Pid, _)
     when is_list(Name) ->
-    cpg:get_furthest_pid(Name, Pid);
+    cloudi_x_cpg:get_furthest_pid(Name, Pid);
 
 destination_get(immediate_random, Name, Pid, _)
     when is_list(Name) ->
-    cpg:get_random_pid(Name, Pid);
+    cloudi_x_cpg:get_random_pid(Name, Pid);
 
 destination_get(immediate_local, Name, Pid, _)
     when is_list(Name) ->
-    cpg:get_local_pid(Name, Pid);
+    cloudi_x_cpg:get_local_pid(Name, Pid);
 
 destination_get(immediate_remote, Name, Pid, _)
     when is_list(Name) ->
-    cpg:get_remote_pid(Name, Pid);
+    cloudi_x_cpg:get_remote_pid(Name, Pid);
+
+destination_get(immediate_newest, Name, Pid, _)
+    when is_list(Name) ->
+    cloudi_x_cpg:get_newest_pid(Name, Pid);
+
+destination_get(immediate_oldest, Name, Pid, _)
+    when is_list(Name) ->
+    cloudi_x_cpg:get_oldest_pid(Name, Pid);
 
 destination_get(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
-    throw(badarg).
+    erlang:exit(badarg).
 
 destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random) ->
-    cpg_data:get_members(Name, Pid, Groups);
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_members(Name, Pid, Groups);
 
 destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
          DestRefresh =:= lazy_local ->
-    cpg_data:get_local_members(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_local_members(Name, Pid, Groups);
 
 destination_all(DestRefresh, Name, Pid, Groups)
     when is_list(Name),
          DestRefresh =:= lazy_remote ->
-    cpg_data:get_remote_members(Name, Pid, Groups);
+    cloudi_x_cpg_data:get_remote_members(Name, Pid, Groups);
 
 destination_all(DestRefresh, Name, Pid, _)
     when is_list(Name),
          (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random) ->
-    cpg:get_members(Name, Pid);
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
+    cloudi_x_cpg:get_members(Name, Pid);
 
 destination_all(DestRefresh, Name, Pid, _)
     when is_list(Name),
          DestRefresh =:= immediate_local ->
-    cpg:get_local_members(Name, Pid);
+    cloudi_x_cpg:get_local_members(Name, Pid);
 
 destination_all(DestRefresh, Name, Pid, _)
     when is_list(Name),
          DestRefresh =:= immediate_remote ->
-    cpg:get_remote_members(Name, Pid);
+    cloudi_x_cpg:get_remote_members(Name, Pid);
 
 destination_all(DestRefresh, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
-    throw(badarg).
+    erlang:exit(badarg).
 
 send_async_timeout_start(Timeout, TransId,
                          #state{dispatcher = Self,
@@ -244,7 +272,7 @@ recv_timeout_start(Timeout, Priority, TransId, T,
         recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, Self,
                 {'cloudi_service_recv_timeout', Priority, TransId}),
             RecvTimeouts),
-        queued = pqueue4:in(T, Priority, Queue)}.
+        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 duo_recv_timeout_start(Timeout, Priority, TransId, T,
                        #state_duo{duo_mode_pid = Self,
@@ -255,7 +283,7 @@ duo_recv_timeout_start(Timeout, Priority, TransId, T,
         recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, Self,
                 {'cloudi_service_recv_timeout', Priority, TransId}),
             RecvTimeouts),
-        queued = pqueue4:in(T, Priority, Queue)}.
+        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;
@@ -274,13 +302,13 @@ recv_async_select_random([{TransId, _} | _]) ->
     TransId.
 
 recv_async_select_oldest([{TransId, _} | L]) ->
-    recv_async_select_oldest(L, uuid:get_v1_time(TransId), TransId).
+    recv_async_select_oldest(L, cloudi_x_uuid:get_v1_time(TransId), TransId).
 
 recv_async_select_oldest([], _, TransIdCurrent) ->
     TransIdCurrent;
 
 recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
-    Time1 = uuid:get_v1_time(TransId),
+    Time1 = cloudi_x_uuid:get_v1_time(TransId),
     if
         Time1 < Time0 ->
             recv_async_select_oldest(L, Time1, TransId);

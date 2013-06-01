@@ -642,7 +642,7 @@ version(Dispatcher, Name, Timeout)
 
 cloudi_service_init([{database, DatabaseName,
                     [{_,_,_}|_] = HostList}], _Prefix, Dispatcher) ->
-    case ememcached:start_link(HostList) of
+    case cloudi_x_ememcached:start_link(HostList) of
         {ok, Pid} when is_pid(Pid) ->
             cloudi_service:subscribe(Dispatcher, DatabaseName),
             {ok, #state{process = Pid}};
@@ -658,46 +658,46 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         Command when is_binary(Command) ->
             {reply, do_query(Command, Process, Timeout), State};
         {'get', Key} ->
-            {reply, ememcached:get(Process, Key, Timeout), State};
+            {reply, cloudi_x_ememcached:get(Process, Key, Timeout), State};
         {'get_many', Keys} ->
-            {reply, ememcached:get_many(Process, Keys, Timeout), State};
+            {reply, cloudi_x_ememcached:get_many(Process, Keys, Timeout), State};
         {'add', Key, Value} ->
-            {reply, ememcached:add(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:add(Process, Key, Value, Timeout), State};
         {'add', Key, Value, Expiration} ->
-            {reply, ememcached:add_exp(Process, Key, Value, Expiration,
+            {reply, cloudi_x_ememcached:add_exp(Process, Key, Value, Expiration,
                                        Timeout), State};
         {'set', Key, Value} ->
-            {reply, ememcached:set(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:set(Process, Key, Value, Timeout), State};
         {'set', Key, Value, Expiration} ->
-            {reply, ememcached:set_exp(Process, Key, Value, Expiration,
+            {reply, cloudi_x_ememcached:set_exp(Process, Key, Value, Expiration,
                                        Timeout), State};
         {'replace', Key, Value} ->
-            {reply, ememcached:replace(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:replace(Process, Key, Value, Timeout), State};
         {'replace', Key, Value, Expiration} ->
-            {reply, ememcached:replace_exp(Process, Key, Value, Expiration,
+            {reply, cloudi_x_ememcached:replace_exp(Process, Key, Value, Expiration,
                                            Timeout), State};
         {'delete', Key} ->
-            {reply, ememcached:delete(Process, Key, Timeout), State};
+            {reply, cloudi_x_ememcached:delete(Process, Key, Timeout), State};
         {'increment', Key, Value, Initial, Expiration} ->
-            {reply, ememcached:increment_exp(Process, Key, Value, Initial,
+            {reply, cloudi_x_ememcached:increment_exp(Process, Key, Value, Initial,
                                              Expiration, Timeout), State};
         {'decrement', Key, Value, Initial, Expiration} ->
-            {reply, ememcached:decrement_exp(Process, Key, Value, Initial,
+            {reply, cloudi_x_ememcached:decrement_exp(Process, Key, Value, Initial,
                                              Expiration, Timeout), State};
         {'append', Key, Value} ->
-            {reply, ememcached:append(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:append(Process, Key, Value, Timeout), State};
         {'prepend', Key, Value} ->
-            {reply, ememcached:prepend(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:prepend(Process, Key, Value, Timeout), State};
         'stats' ->
-            {reply, ememcached:stats(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:stats(Process, Timeout), State};
         'flush' ->
-            {reply, ememcached:flush(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:flush(Process, Timeout), State};
         {'flush', Expiration} ->
-            {reply, ememcached:flush_exp(Process, Expiration, Timeout), State};
+            {reply, cloudi_x_ememcached:flush_exp(Process, Expiration, Timeout), State};
         'quit' ->
-            {reply, ememcached:quit(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:quit(Process, Timeout), State};
         'version' ->
-            {reply, ememcached:version(Process, Timeout), State}
+            {reply, cloudi_x_ememcached:version(Process, Timeout), State}
     end.
 
 cloudi_service_handle_info(Request, State, _) ->
@@ -716,56 +716,56 @@ cloudi_service_terminate(_, #state{process = Process}) ->
 do_query(Query, Process, Timeout) ->
     try (case cloudi_string:binary_to_term(Query) of
         {'get', Key} ->
-            ememcached:get(Process, Key, Timeout);
+            cloudi_x_ememcached:get(Process, Key, Timeout);
         {'get_many', Keys} when is_list(Keys) ->
-            ememcached:get_many(Process, Keys, Timeout);
+            cloudi_x_ememcached:get_many(Process, Keys, Timeout);
         {'add', Key, Value}
             when is_binary(Value) ->
-            ememcached:add(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:add(Process, Key, Value, Timeout);
         {'add', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            ememcached:add_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:add_exp(Process, Key, Value, Expiration, Timeout);
         {'set', Key, Value}
             when is_binary(Value) ->
-            ememcached:set(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:set(Process, Key, Value, Timeout);
         {'set', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            ememcached:set_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:set_exp(Process, Key, Value, Expiration, Timeout);
         {'replace', Key, Value}
             when is_binary(Value) ->
-            ememcached:replace(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:replace(Process, Key, Value, Timeout);
         {'replace', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            ememcached:replace_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:replace_exp(Process, Key, Value, Expiration, Timeout);
         {'delete', Key} ->
-            ememcached:delete(Process, Key, Timeout);
+            cloudi_x_ememcached:delete(Process, Key, Timeout);
         {'increment', Key, Value, Initial, Expiration}
             when is_binary(Value), is_binary(Initial),
                  is_integer(Expiration) ->
-            ememcached:increment_exp(Process, Key, Value, Initial,
+            cloudi_x_ememcached:increment_exp(Process, Key, Value, Initial,
                                      Expiration, Timeout);
         {'decrement', Key, Value, Initial, Expiration}
             when is_binary(Value), is_binary(Initial),
                  is_integer(Expiration) ->
-            ememcached:decrement_exp(Process, Key, Value, Initial,
+            cloudi_x_ememcached:decrement_exp(Process, Key, Value, Initial,
                                      Expiration, Timeout);
         {'append', Key, Value}
             when is_binary(Value) ->
-            ememcached:append(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:append(Process, Key, Value, Timeout);
         {'prepend', Key, Value}
             when is_binary(Value) ->
-            ememcached:prepend(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:prepend(Process, Key, Value, Timeout);
         'stats' ->
-            ememcached:stats(Process, Timeout);
+            cloudi_x_ememcached:stats(Process, Timeout);
         'flush' ->
-            ememcached:flush(Process, Timeout);
+            cloudi_x_ememcached:flush(Process, Timeout);
         {'flush', Expiration}
             when is_integer(Expiration) ->
-            ememcached:flush_exp(Process, Expiration, Timeout);
+            cloudi_x_ememcached:flush_exp(Process, Expiration, Timeout);
         'quit' ->
-            ememcached:quit(Process, Timeout);
+            cloudi_x_ememcached:quit(Process, Timeout);
         'version' ->
-            ememcached:version(Process, Timeout);
+            cloudi_x_ememcached:version(Process, Timeout);
         _ ->
             {error, invalid_call}
         end) of

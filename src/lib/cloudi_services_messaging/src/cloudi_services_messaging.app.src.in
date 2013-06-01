@@ -12,6 +12,7 @@
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
         cloudi_core,
+        cloudi_x_trie,
         stdlib,
         kernel
         ]},

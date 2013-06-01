@@ -1,0 +1,8 @@
+{application, reltool_util,
+  [{description, "Reltool Utility Functions"},
+   {vsn, "0.3.0"},
+   {modules, [reltool_util]},
+   {registered, []},
+   {applications, [stdlib, kernel]},
+   {start_phases, []}]}.
+

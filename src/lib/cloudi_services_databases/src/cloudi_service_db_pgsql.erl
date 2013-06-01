@@ -75,7 +75,7 @@
         connection
     }).
 
-% from external/epgsql/include/pgsql.hrl 
+% from external/epgsql/include/cloudi_x_pgsql.hrl 
 %-record(column,    {name, type, size, modifier, format}).
 %-record(statement, {name, columns, types}).
 -record(error,     {severity, code, message, extra}).
@@ -150,7 +150,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     FinalArgs = [{port, Port},
                  {timeout, Timeout},
                  {database, Database} | NewArgs],
-    case pgsql:connect(HostName, UserName, Password, FinalArgs) of
+    case cloudi_x_pgsql:connect(HostName, UserName, Password, FinalArgs) of
         {ok, Connection} ->
             cloudi_service:subscribe(Dispatcher, Database),
             {ok, #state{connection = Connection}};
@@ -164,7 +164,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Dispatcher) ->
     case Request of
         {String, Parameters} when is_list(String), is_list(Parameters) ->
-            case pgsql:equery(Connection, String, Parameters) of
+            case cloudi_x_pgsql:equery(Connection, String, Parameters) of
                 {ok, _} = Response ->
                     {reply, response_internal(Response, Request), State};
                 {ok, _, _} = Response ->
@@ -182,7 +182,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                     {reply, response_internal(Error, Request), State}
             end;
         String when is_binary(String) ->
-            case pgsql:squery(Connection, String) of
+            case cloudi_x_pgsql:squery(Connection, String) of
                 {ok, _} = Response ->
                     {reply, response_external(Response, Request), State};
                 {ok, _, _} = Response ->
@@ -195,7 +195,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                     {reply, response_external(Response, Request), State}
             end;
         String when is_list(String) ->
-            case pgsql:squery(Connection, String) of
+            case cloudi_x_pgsql:squery(Connection, String) of
                 {ok, _} = Response ->
                     {reply, response_internal(Response, Request), State};
                 {ok, _, _} = Response ->
@@ -212,7 +212,7 @@ cloudi_service_handle_info(Request, State, _) ->
     {noreply, State}.
 
 cloudi_service_terminate(_, #state{connection = Connection}) ->
-    pgsql:close(Connection),
+    cloudi_x_pgsql:close(Connection),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -254,7 +254,7 @@ do_query(Query, Connection) when is_list(Query) ->
     do_query(list_to_binary(Query), Connection);
 
 do_query(Query, Connection) ->
-    case pgsql:squery(Connection, Query) of
+    case cloudi_x_pgsql:squery(Connection, Query) of
         {ok, _} ->
             true;
         {ok, _, _} ->
@@ -271,7 +271,7 @@ do_query(Query, Connection) ->
 %% return the remaining list if there is an error, else an empty list
 do_queries_in_transaction(SQLQueryList, Connection)
     when is_list(SQLQueryList) ->
-    case pgsql:with_transaction(Connection, fun(C) ->
+    case cloudi_x_pgsql:with_transaction(Connection, fun(C) ->
             lists:dropwhile(fun(Query) -> do_query(Query, C) end, SQLQueryList)
         end) of
         [] ->
@@ -280,8 +280,8 @@ do_queries_in_transaction(SQLQueryList, Connection)
             {error, Reason}
     end.
 
-%% provide the "?"s parameter syntax externally like mysql, but provide the
-%% $1, $2, $3, etc. PostgreSQL parameter syntax internally to epgsql,
+%% provide the "?"s parameter syntax externally like cloudi_x_mysql, but provide the
+%% $1, $2, $3, etc. PostgreSQL parameter syntax internally to cloudi_x_epgsql,
 %% as required.
 equery_argument_parse(String) ->
     equery_argument_parse_get([], 1, String).

@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.2.1b<br />last updated on March 30 2013</h3></center>
+  <center><h3>version 1.2.2b<br />last updated on June 1 2013</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -789,9 +789,19 @@ sudo cloudi stop
     values are: 
     <ul>
       <li>lazy_closest</li>
+      <li>lazy_furthest</li>
       <li>lazy_random</li>
+      <li>lazy_local</li>
+      <li>lazy_remote</li>
+      <li>lazy_newest</li>
+      <li>lazy_oldest</li>
       <li>immediate_closest</li>
+      <li>immediate_furthest</li>
       <li>immediate_random</li>
+      <li>immediate_local</li>
+      <li>immediate_remote</li>
+      <li>immediate_newest</li>
+      <li>immediate_oldest</li>
       <li>none</li>
     </ul>
     The "none" destination refresh is used for services that never send
@@ -882,13 +892,8 @@ sudo cloudi stop
     configuration specification.
   </p>
   <p class="paragraph">
-    The CloudI API external service requests are limited to 2GB when using
-    the tcp protocol.  Using the udp protocol for external services is
-    experimental (it limits service requests to the minimum of both the
-    loopback MTU and the buffer size).
-    The buffer size for external services is typically set
-    to 16384 bytes because that is a power of 2 closest to the MTU of the
-    loopback device (normally 16436 on Linux).  External service configuration
+    The CloudI API external service requests are limited to 2GB.
+    External service configuration
     can specify the number of threads per process and the number of processes
     which should be spawned, so that each thread receives an instance of the
     CloudI API.  This means that there can be one ioloop per thread per process
@@ -1229,6 +1234,7 @@ sudo cloudi stop
       <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF))</li>
       <li>stdout and stderr output is logged automatically to the single CloudI log</li>
       <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology)</li>
+      <li>UNIX domain socket integration is provided for external CloudI services with the "local" protocol (the default) service configuration option despite the fact Core Erlang/OTP does not provide UNIX domain socket integration</a>
       <li>A long-running CloudI service can be contrary to the Erlang VM scheduling and garbage collection, when under heavy load, if implemented without CloudI.  This is especially true when attempting to integrate with C or C++ which can cause the schedulers to lock-up if a NIF or port driver is used for longer operations (&ge; 1 ms), causing poor Erlang VM performance.</li>
       <li>Core Erlang/OTP source code does not handle node-splits (global name registration, global transactions and mnesia are common examples), but CloudI provides master-less fault-tolerance for a cluster of any number of CloudI nodes on an unreliable network.</li>
     </ul>
@@ -1376,73 +1382,72 @@ sudo cloudi stop
   <a name="5_LoadTesting"></a>
   <h3>5.5 - Load Testing</h3>
   <p class="paragraph">
-    For the 1.2.1 CloudI release, loadtests were done to verify development
-    decisions and guide the default configuration.  The summary of the 1.2.1
-    results is
-    <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">available here</a> and
-    the raw results exist in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_2_1/" target="_blank">src/tests/http_req/loadtest/results_v1_2_1/</a>.
-  </p>
-  <p class="paragraph">
-    For the 1.1.0 CloudI release, a comparison was done of misultin and
-    cowboy (two Erlang HTTP servers), with 20k and 40k concurrent connections
-    at 10k req/s.  The summary of the 1.1.0 results is
-    <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">available here</a> and
-    the raw results exist in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_1_0/" target="_blank">src/tests/http_req/loadtest/results_v1_1_0/</a>.
-  </p>
-  <p class="paragraph">
-    As part of the 1.0.0 CloudI release, the http_req test was used to do a
-    load test of CloudI incoming HTTP requests.  The loadtest shows how the
-    results vary when interacting with separate programming languages that
-    CloudI supports with the CloudI API.  20 thousand concurrent connections
-    were used with a dynamic XML request/response protocol sent at a frequency
-    of 10 thousand requests per second.  All external services
-    (i.e., non-Erlang services) were only given a single OS process
-    with no thread usage.  All programming languages received the same amount
-    of load, so it helps provide a comparison for performance within the
-    CloudI framework.  To find out more, look at the raw results in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/</a>
-    or the configuration in 
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/" target="_blank">src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/setup/</a>.
+    Since the 1.0.0 CloudI release, the http_req test has been used for
+    executing various loadtests which have guided development and configuration
+    decisions.  The main goal has been to reduce the latency due to
+    external service integration, but it has also helped to minimize internal
+    service latency.  The http_req test is a simple HTTP GET request query
+    parameter that creates an XML response with the parsed integer.
+    Typically, the loadtests have used 20 thousand concurrent connections
+    with each connection performing 10 thousand requests per second.
+    To keep the loadtesting fair, each http_req test was given a single
+    OS process (and/or a single Erlang process) with no threads usage.
+    All programming languages received the same amount of load, so that the
+    loadtesting results can be compared when making CloudI integration
+    decisions.  Below are summaries specific to past releases:
+    <ul>
+      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf" target="_blank">1.2.2 summary</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">1.2.1 summary</a></li>
+      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">1.1.0 summary</a></li>
+    </ul>
   </p>
   <p>
     The latency graphs below show service request performance during the
-    1.0.0 loadtest of 20k at 10k req/s (with misultin and R15B01):
+    1.2.2 loadtests of 20k connections at 10k req/s
+    (with cowboy, Erlang R16B, and Ubuntu 12.04.2):
     <ul>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/c.tar.gz" target="_blank">
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/c.tar.gz" target="_blank">
         C++/C
-        <img src="images/201206_graphes-Transactions-mean_c.png" /><br />
-        <img src="images/201206_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_c.png" width="280" />
+        <img src="images/201306_graphes-Transactions-mean_c.png" /><br />
+        <img src="images/201306_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_c.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/erlang.tar.gz" target="_blank">
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/erlang.tar.gz" target="_blank">
         Erlang
-        <img src="images/201206_graphes-Transactions-mean_erlang.png" /><br />
-        <img src="images/201206_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_erlang.png" width="280" />
+        <img src="images/201306_graphes-Transactions-mean_erlang.png" /><br />
+        <img src="images/201306_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_erlang.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/java.tar.gz" target="_blank">
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/java.tar.gz" target="_blank">
         Java
-        <img src="images/201206_graphes-Transactions-mean_java.png" /><br />
-        <img src="images/201206_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_java.png" width="280" />
+        <img src="images/201306_graphes-Transactions-mean_java.png" /><br />
+        <img src="images/201306_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_java.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/python.tar.gz" target="_blank">
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python_c.tar.gz" target="_blank">
         Python
-        <img src="images/201206_graphes-Transactions-mean_python.png" /><br />
-        <img src="images/201206_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_python.png" width="280" />
+        <img src="images/201306_graphes-Transactions-mean_python_c.png" />
+        (with C integration)
+        <br />
+        <img src="images/201306_graphes-Transactions-min_sample_python_c.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_python_c.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs/ruby.tar.gz" target="_blank">
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python.tar.gz" target="_blank">
+        Python
+        <img src="images/201306_graphes-Transactions-mean_python.png" /><br />
+        <img src="images/201306_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_python.png" width="280" />
+        </a><br /><br />
+      </li>
+      <li>
+        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/ruby.tar.gz" target="_blank">
         Ruby
-        <img src="images/201206_graphes-Transactions-mean_ruby.png" /><br />
-        <img src="images/201206_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201206_graphes-Transactions-max_sample_ruby.png" width="280" />
+        <img src="images/201306_graphes-Transactions-mean_ruby.png" /><br />
+        <img src="images/201306_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_ruby.png" width="280" />
         </a><br /><br />
       </li>
     </ul>
@@ -1540,9 +1545,9 @@ sudo cloudi stop
 {external,
     "/tests/http/",
     "@PYTHON@",
-    "tests/http/service/service.py 4 tcp 16384",
+    "tests/http/service/service.py",
     [],
-    none, tcp, 16384,
+    none, default, default,
     5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []}
     </pre>
   </p>

@@ -1,5 +1,4 @@
 %% encoding: UTF-8
 {application,pqueue}.
 {packages,[]}.
-{modules,[pqueue,pqueue2,pqueue3,pqueue4,pqueue_proper,priority_queue,
-          queue_srv]}.
+{modules,[pqueue,pqueue2,pqueue3,pqueue4]}.

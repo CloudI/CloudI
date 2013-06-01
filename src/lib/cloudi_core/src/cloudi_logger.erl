@@ -811,7 +811,7 @@ load_interface_module(Level, Destination) when is_atom(Level) ->
     code:delete(cloudi_logger_interface),
     % do not purge the module, but let it get purged after the new one is loaded
     {Module, Binary} =
-        dynamic_compile:from_string(interface(Level, Destination)),
+        cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
     case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
         {module, Module} ->
             {ok, Binary};

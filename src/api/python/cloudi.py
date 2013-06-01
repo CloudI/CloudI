@@ -83,6 +83,11 @@ class API(object):
                 thread_index + 3, socket.AF_INET, socket.SOCK_DGRAM
             )
             self.__use_header = False
+        elif protocol_str == 'local':
+            self.__s = socket.fromfd(
+                thread_index + 3, socket.AF_UNIX, socket.SOCK_STREAM
+            )
+            self.__use_header = True
         else:
             raise invalid_input_exception()
         self.__initializtion_complete = False
@@ -167,50 +172,80 @@ class API(object):
     def forward_(self, command, name, request_info, request,
                  timeout, priority, trans_id, pid):
         if command == API.ASYNC:
-            raise forward_async_exception(name,
-                                          request_info, request,
-                                          timeout, priority, trans_id, pid)
+            self.forward_async(name,
+                               request_info, request,
+                               timeout, priority, trans_id, pid)
         elif command == API.SYNC:
-            raise forward_sync_exception(name, pattern,
-                                         request_info, request,
-                                         timeout, priority, trans_id, pid)
+            self.forward_sync(name, pattern,
+                              request_info, request,
+                              timeout, priority, trans_id, pid)
         else:
             raise invalid_input_exception()
 
     def forward_async(self, name, request_info, request,
                       timeout, priority, trans_id, pid):
-        raise forward_async_exception(name,
-                                      request_info, request,
-                                      timeout, priority, trans_id, pid)
+        if self.__request_timeout_adjustment:
+            if timeout == self.__request_timeout:
+                elapsed = default_timer() - self.__request_timer
+                timeout = int(max(0, timeout - elapsed))
+        self.__send(term_to_binary((OtpErlangAtom('forward_async'), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority,
+                                    OtpErlangBinary(trans_id), pid)))
+        raise forward_async_exception()
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, trans_id, pid):
-        raise forward_sync_exception(name,
-                                     request_info, request,
-                                     timeout, priority, trans_id, pid)
+        if self.__request_timeout_adjustment:
+            if timeout == self.__request_timeout:
+                elapsed = default_timer() - self.__request_timer
+                timeout = int(max(0, timeout - elapsed))
+        self.__send(term_to_binary((OtpErlangAtom('forward_sync'), name,
+                                    OtpErlangBinary(request_info),
+                                    OtpErlangBinary(request),
+                                    timeout, priority,
+                                    OtpErlangBinary(trans_id), pid)))
+        raise forward_sync_exception()
 
     def return_(self, command, name, pattern, response_info, response,
                 timeout, trans_id, pid):
         if command == API.ASYNC:
-            raise return_async_exception(name, pattern,
-                                         response_info, response,
-                                         timeout, trans_id, pid)
+            self.return_async(name, pattern,
+                              response_info, response,
+                              timeout, trans_id, pid)
         elif command == API.SYNC:
-            raise return_sync_exception(name, pattern,
-                                        response_info, response,
-                                        timeout, trans_id, pid)
+            self.return_sync(name, pattern,
+                             response_info, response,
+                             timeout, trans_id, pid)
         else:
             raise invalid_input_exception()
 
     def return_async(self, name, pattern, response_info, response,
                      timeout, trans_id, pid):
-        raise return_async_exception(name, pattern, response_info, response,
-                                     timeout, trans_id, pid)
+        if self.__request_timeout_adjustment:
+            if timeout == self.__request_timeout:
+                elapsed = default_timer() - self.__request_timer
+                timeout = int(max(0, timeout - elapsed))
+        self.__send(term_to_binary((OtpErlangAtom('return_async'),
+                                    name, pattern,
+                                    OtpErlangBinary(response_info),
+                                    OtpErlangBinary(response), timeout,
+                                    OtpErlangBinary(trans_id), pid)))
+        raise return_async_exception()
 
     def return_sync(self, name, pattern, response_info, response,
                     timeout, trans_id, pid):
-        raise return_sync_exception(name, pattern, response_info, response,
-                                    timeout, trans_id, pid)
+        if self.__request_timeout_adjustment:
+            if timeout == self.__request_timeout:
+                elapsed = default_timer() - self.__request_timer
+                timeout = int(max(0, timeout - elapsed))
+        self.__send(term_to_binary((OtpErlangAtom('return_sync'),
+                                    name, pattern,
+                                    OtpErlangBinary(response_info),
+                                    OtpErlangBinary(response), timeout,
+                                    OtpErlangBinary(trans_id), pid)))
+        raise return_sync_exception()
 
     def recv_async(self, timeout=None, trans_id=None, consume=True):
         if timeout is None:
@@ -230,48 +265,11 @@ class API(object):
     def timeout_sync(self):
         return self.__timeout_sync
 
-    def __return_async_nothrow(self, name, pattern, response_info, response,
-                               timeout, trans_id, pid):
-        self.__send(term_to_binary((OtpErlangAtom('return_async'),
-                                    name, pattern,
-                                    OtpErlangBinary(response_info),
-                                    OtpErlangBinary(response), timeout,
-                                    OtpErlangBinary(trans_id), pid)))
-
-    def __return_sync_nothrow(self, name, pattern, response_info, response,
-                              timeout, trans_id, pid):
-        self.__send(term_to_binary((OtpErlangAtom('return_sync'),
-                                    name, pattern,
-                                    OtpErlangBinary(response_info),
-                                    OtpErlangBinary(response), timeout,
-                                    OtpErlangBinary(trans_id), pid)))
-
-    def __forward_async_nothrow(self, name, request_info, request,
-                                timeout, priority, trans_id, pid):
-        self.__send(term_to_binary((OtpErlangAtom('forward_async'), name,
-                                    OtpErlangBinary(request_info),
-                                    OtpErlangBinary(request),
-                                    timeout, priority,
-                                    OtpErlangBinary(trans_id), pid)))
-
-    def __forward_sync_nothrow(self, name, request_info, request,
-                               timeout, priority, trans_id, pid):
-        self.__send(term_to_binary((OtpErlangAtom('forward_sync'), name,
-                                    OtpErlangBinary(request_info),
-                                    OtpErlangBinary(request),
-                                    timeout, priority,
-                                    OtpErlangBinary(trans_id), pid)))
-
-    def __request_timeout(self, timeout_new, timeout_old, request_time_start):
-        if timeout_new != timeout_old:
-            return timeout_new
-        return max(0, timeout_old - int((default_timer() -
-                                         request_time_start) * 1000.0))
-
     def __callback(self, command, name, pattern, request_info, request,
                    timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
-            request_time_start = default_timer()
+            self.__request_timer = default_timer()
+            self.__request_timeout = timeout
         function_queue = self.__callbacks.get(pattern, None)
         assert function_queue is not None
         function = function_queue.popleft()
@@ -293,30 +291,13 @@ class API(object):
                         type(response) == str or
                         type(response) == unicode):
                     response = ''
-            except return_async_exception as e:
-                if self.__request_timeout_adjustment:
-                    timeout = self.__request_timeout(e.timeout, timeout,
-                                                     request_time_start)
-                else:
-                    timeout = e.timeout
-                self.__return_async_nothrow(e.name, e.pattern,
-                                            e.response_info, e.response,
-                                            timeout, e.trans_id, e.pid)
+            except return_async_exception:
                 return
             except return_sync_exception:
                 traceback.print_exc(file=sys.stderr)
                 assert False
                 return
-            except forward_async_exception as e:
-                if self.__request_timeout_adjustment:
-                    timeout = self.__request_timeout(e.timeout, timeout,
-                                                     request_time_start)
-                else:
-                    timeout = e.timeout
-                self.__forward_async_nothrow(e.name,
-                                             e.request_info, e.request,
-                                             timeout, e.priority,
-                                             e.trans_id, e.pid)
+            except forward_async_exception:
                 return
             except forward_sync_exception:
                 traceback.print_exc(file=sys.stderr)
@@ -326,12 +307,12 @@ class API(object):
                 traceback.print_exc(file=sys.stderr)
                 response_info = ''
                 response = ''
-            if self.__request_timeout_adjustment:
-                timeout = self.__request_timeout(timeout, timeout,
-                                                 request_time_start)
-            self.__return_async_nothrow(name, pattern,
-                                        response_info, response,
-                                        timeout, trans_id, pid)
+            try:
+                self.return_async(name, pattern,
+                                  response_info, response,
+                                  timeout, trans_id, pid)
+            except return_async_exception:
+                pass
             return
         elif command == _MESSAGE_SEND_SYNC:
             try:
@@ -350,30 +331,13 @@ class API(object):
                         type(response) == str or
                         type(response) == unicode):
                     response = ''
-            except return_sync_exception as e:
-                if self.__request_timeout_adjustment:
-                    timeout = self.__request_timeout(e.timeout, timeout,
-                                                     request_time_start)
-                else:
-                    timeout = e.timeout
-                self.__return_sync_nothrow(e.name, e.pattern,
-                                           e.response_info, e.response,
-                                           timeout, e.trans_id, e.pid)
+            except return_sync_exception:
                 return
             except return_async_exception:
                 traceback.print_exc(file=sys.stderr)
                 assert False
                 return
-            except forward_sync_exception as e:
-                if self.__request_timeout_adjustment:
-                    timeout = self.__request_timeout(e.timeout, timeout,
-                                                     request_time_start)
-                else:
-                    timeout = e.timeout
-                self.__forward_sync_nothrow(e.name,
-                                            e.request_info, e.request,
-                                            timeout, e.priority,
-                                            e.trans_id, e.pid)
+            except forward_sync_exception:
                 return
             except forward_async_exception:
                 traceback.print_exc(file=sys.stderr)
@@ -383,12 +347,12 @@ class API(object):
                 traceback.print_exc(file=sys.stderr)
                 response_info = ''
                 response = ''
-            if self.__request_timeout_adjustment:
-                timeout = self.__request_timeout(timeout, timeout,
-                                                 request_time_start)
-            self.__return_sync_nothrow(name, pattern,
-                                       response_info, response,
-                                       timeout, trans_id, pid)
+            try:
+                self.return_sync(name, pattern,
+                                 response_info, response,
+                                 timeout, trans_id, pid)
+            except return_sync_exception:
+                pass
             return
         else:
             raise message_decoding_exception()
@@ -561,52 +525,20 @@ class invalid_input_exception(Exception):
         Exception.__init__(self, 'Invalid Input')
 
 class return_sync_exception(Exception):
-    def __init__(self, name, pattern, response_info, response,
-                 timeout, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Synchronous Call Return Invalid')
-        self.name = name
-        self.pattern = pattern
-        self.response_info = response_info
-        self.response = response
-        self.timeout = timeout
-        self.trans_id = trans_id
-        self.pid = pid
 
 class return_async_exception(Exception):
-    def __init__(self, name, pattern, response_info, response,
-                 timeout, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Return Invalid')
-        self.name = name
-        self.pattern = pattern
-        self.response_info = response_info
-        self.response = response
-        self.timeout = timeout
-        self.trans_id = trans_id
-        self.pid = pid
 
 class forward_sync_exception(Exception):
-    def __init__(self, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Synchronous Call Forward Invalid')
-        self.name = name
-        self.request_info = request_info
-        self.request = request
-        self.timeout = timeout
-        self.priority = priority
-        self.trans_id = trans_id
-        self.pid = pid
 
 class forward_async_exception(Exception):
-    def __init__(self, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+    def __init__(self):
         Exception.__init__(self, 'Asynchronous Call Forward Invalid')
-        self.name = name
-        self.request_info = request_info
-        self.request = request
-        self.timeout = timeout
-        self.priority = priority
-        self.trans_id = trans_id
-        self.pid = pid
 
 class message_decoding_exception(Exception):
     def __init__(self):

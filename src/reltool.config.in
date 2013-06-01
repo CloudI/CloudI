@@ -7,31 +7,35 @@
     "external/nodefinder"
     @ZEROMQ_ERLZMQ_PATH@
    ]},
+  {erts, [{mod_cond, all}, {app_file, keep}]},
+  {app_file, keep},
   {rel, "cloudi", "1",
    [
     % external dependencies
-    cowboy,
+    cloudi_x_cowboy,
     % combonodefinder not started automatically
-    dynamic_compile,
+    cloudi_x_dynamic_compile,
     % ec2nodefinder not started automatically
-    ecouchdb,
-    ememcached,
-    emysql,
-    epgsql,
-    etokyotyrant,
-    jsx,
+    cloudi_x_ecouchdb,
+    cloudi_x_ememcached,
+    cloudi_x_emysql,
+    cloudi_x_epgsql,
+    cloudi_x_etokyotyrant,
+    cloudi_x_jsx,
     % nodefinder not started automatically
-    ranch, % required for cowboy
+    cloudi_x_ranch, % required for cowboy
     % CloudI
     cloudi_core,
     cloudi_services_internal,
     cloudi_services_databases,
     cloudi_services_messaging,
-    pqueue,
-    quickrand,
-    cpg,
-    uuid,
-    trie,
+    cloudi_x_pqueue,
+    cloudi_x_quickrand,
+    cloudi_x_cpg,
+    cloudi_x_uuid,
+    cloudi_x_trie,
+    cloudi_x_reltool_util,
+    cloudi_x_key2value,
     % Erlang
     sasl,
     stdlib,
@@ -44,31 +48,38 @@
    ]},
   {boot_rel, "cloudi"},
   {profile, embedded},
+  {incl_cond, derived},
+  {mod_cond, all},
+  {excl_archive_filters, [".*"]},
   {excl_sys_filters, ["^bin/.*",
-                      "^erts.*/bin/(dialyzer|typer)"]},
+                      "^erts.*/bin/(dialyzer|typer)",
+                      "^erts.*/(doc|info|include|lib|man|src)"]},
+  {app, hipe, [{incl_cond, exclude}]},
   % external dependencies
   @ZEROMQ_ERLZMQ_RELTOOL@
-  {app, combonodefinder, [{incl_cond, include}]},
-  {app, cowboy, [{incl_cond, include}]},
-  {app, dynamic_compile, [{incl_cond, include}]},
-  {app, ec2nodefinder, [{incl_cond, include}]},
-  {app, ecouchdb, [{incl_cond, include}]},
-  {app, ememcached, [{incl_cond, include}]},
-  {app, emysql, [{incl_cond, include}]},
-  {app, epgsql, [{incl_cond, include}]},
-  {app, etokyotyrant, [{incl_cond, include}]},
-  {app, jsx, [{incl_cond, include}]},
-  {app, nodefinder, [{incl_cond, include}]},
+  {app, cloudi_x_combonodefinder, [{incl_cond, include}]},
+  {app, cloudi_x_cowboy, [{incl_cond, include}]},
+  {app, cloudi_x_dynamic_compile, [{incl_cond, include}]},
+  {app, cloudi_x_ec2nodefinder, [{incl_cond, include}]},
+  {app, cloudi_x_ecouchdb, [{incl_cond, include}]},
+  {app, cloudi_x_ememcached, [{incl_cond, include}]},
+  {app, cloudi_x_emysql, [{incl_cond, include}]},
+  {app, cloudi_x_epgsql, [{incl_cond, include}]},
+  {app, cloudi_x_etokyotyrant, [{incl_cond, include}]},
+  {app, cloudi_x_jsx, [{incl_cond, include}]},
+  {app, cloudi_x_nodefinder, [{incl_cond, include}]},
   % CloudI
   {app, cloudi_core, [{incl_cond, include}]},
   {app, cloudi_services_internal, [{incl_cond, include}]},
   {app, cloudi_services_databases, [{incl_cond, include}]},
   {app, cloudi_services_messaging, [{incl_cond, include}]},
-  {app, pqueue, [{incl_cond, include}]},
-  {app, quickrand, [{incl_cond, include}]},
-  {app, cpg, [{incl_cond, include}]},
-  {app, uuid, [{incl_cond, include}]},
-  {app, trie, [{incl_cond, include}]},
+  {app, cloudi_x_pqueue, [{incl_cond, include}]},
+  {app, cloudi_x_quickrand, [{incl_cond, include}]},
+  {app, cloudi_x_cpg, [{incl_cond, include}]},
+  {app, cloudi_x_uuid, [{incl_cond, include}]},
+  {app, cloudi_x_trie, [{incl_cond, include}]},
+  {app, cloudi_x_reltool_util, [{incl_cond, include}]},
+  {app, cloudi_x_key2value, [{incl_cond, include}]},
   % Erlang
   {app, sasl, [{incl_cond, include}]}
  ]}.
@@ -77,9 +88,14 @@
 
 {overlay,
  [
-  {copy, "rel/files/app.config", "etc/app.config"},
+  {copy, "@srcdir@/rel/files/app.config", "etc/app.config"},
   {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
+  {copy, "@srcdir@/rel/files/install_upgrade.escript",
+         "bin/install_upgrade.escript"},
   {copy, "@srcdir@/rel/files/cloudi", "bin/cloudi"},
   {copy, "@srcdir@/rel/files/vm.args", "etc/vm.args"}
+  % windows scripts
+  %{copy, "@srcdir@/rel/files/cloudi.cmd", "bin/cloudi.cmd"},
+  %{copy, "@srcdir@/rel/files/start_erl.cmd", "bin/start_erl.cmd"}
  ]}.

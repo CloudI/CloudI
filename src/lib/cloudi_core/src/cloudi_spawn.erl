@@ -44,20 +44,22 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/11,
-         start_external/14]).
+-export([start_internal/12,
+         start_external/15]).
 
 -include("cloudi_configuration.hrl").
 
 -define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
 -define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
+
+-define(SOCKET_DIRECTORY, "/tmp"). % local protocol
 
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
@@ -70,11 +72,12 @@
 
 start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions)
+               DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
          is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_service_options) ->
+         is_record(ConfigOptions, config_service_options),
+         is_binary(UUID) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -85,18 +88,22 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
            (DestRefresh =:= lazy_local) orelse
            (DestRefresh =:= immediate_remote) orelse
            (DestRefresh =:= lazy_remote) orelse
+           (DestRefresh =:= immediate_newest) orelse
+           (DestRefresh =:= lazy_newest) orelse
+           (DestRefresh =:= immediate_oldest) orelse
+           (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     DestDeny = if
         DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
-            trie:new(DestDenyList)
+            cloudi_x_trie:new(DestDenyList)
     end,
     DestAllow = if
         DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
-            trie:new(DestAllowList)
+            cloudi_x_trie:new(DestAllowList)
     end,
     case code:is_loaded(Module) of
         false ->
@@ -112,13 +119,16 @@ start_external(ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions)
+               DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_service_options) ->
-    true = (Protocol =:= tcp) orelse (Protocol =:= udp),
+         is_record(ConfigOptions, config_service_options),
+         is_binary(UUID) ->
+    true = (Protocol =:= tcp) orelse
+           (Protocol =:= udp) orelse
+           (Protocol =:= local),
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -129,21 +139,26 @@ start_external(ThreadsPerProcess,
            (DestRefresh =:= lazy_local) orelse
            (DestRefresh =:= immediate_remote) orelse
            (DestRefresh =:= lazy_remote) orelse
+           (DestRefresh =:= immediate_newest) orelse
+           (DestRefresh =:= lazy_newest) orelse
+           (DestRefresh =:= immediate_oldest) orelse
+           (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     DestDeny = if
         DestDenyList =:= undefined ->
             undefined;
         is_list(DestDenyList) ->
-            trie:new(DestDenyList)
+            cloudi_x_trie:new(DestDenyList)
     end,
     DestAllow = if
         DestAllowList =:= undefined ->
             undefined;
         is_list(DestAllowList) ->
-            trie:new(DestAllowList)
+            cloudi_x_trie:new(DestAllowList)
     end,
-    {Pids, Ports} = cloudi_lists:itera2(fun(_, L1, L2, F) ->
-        case ?CREATE_EXTERNAL(Protocol, BufferSize, Timeout,
+    SocketPath = create_socket_path(UUID),
+    {Pids, Ports} = cloudi_lists:itera2(fun(I, L1, L2, F) ->
+        case ?CREATE_EXTERNAL(Protocol, SocketPath, I, BufferSize, Timeout,
                               Prefix, TimeoutAsync, TimeoutSync,
                               DestRefresh, DestDeny, DestAllow,
                               ConfigOptions) of
@@ -166,12 +181,15 @@ start_external(ThreadsPerProcess,
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
             ProtocolChar = if
                 Protocol =:= tcp ->
-                    $t;
+                    $t; % inet
                 Protocol =:= udp ->
-                    $u
+                    $u; % inet
+                Protocol =:= local ->
+                    $l  % tcp local
             end,
             case cloudi_os_spawn:spawn(SpawnProcess,
                                        ProtocolChar,
+                                       string_terminate(SocketPath),
                                        Ports,
                                        string_terminate(Filename),
                                        arguments_parse(Arguments),
@@ -186,6 +204,14 @@ start_external(ThreadsPerProcess,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+create_socket_path(UUID)
+    when is_binary(UUID) ->
+    Path = filename:join([?SOCKET_DIRECTORY,
+                          "cloudi_socket_" ++
+                          cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
+    false = filelib:is_file(Path),
+    Path.
 
 string_terminate([_ | _] = L) ->
     L ++ [0].

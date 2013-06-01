@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/10]).
+         create_external/12]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,12 +76,15 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_external(Protocol, BufferSize, Timeout, Prefix,
+create_external(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, DestRefresh,
                 DestDeny, DestAllow, ConfigOptions)
-    when is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
+    when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
+         is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
-    true = (Protocol == tcp) orelse (Protocol == udp),
+    true = (Protocol == tcp) orelse
+           (Protocol == udp) orelse
+           (Protocol == local),
     true = (DestRefresh == immediate_closest) orelse
            (DestRefresh == lazy_closest) orelse
            (DestRefresh == immediate_furthest) orelse
@@ -92,11 +95,17 @@ create_external(Protocol, BufferSize, Timeout, Prefix,
            (DestRefresh == lazy_local) orelse
            (DestRefresh == immediate_remote) orelse
            (DestRefresh == lazy_remote) orelse
+           (DestRefresh == immediate_newest) orelse
+           (DestRefresh == lazy_newest) orelse
+           (DestRefresh == immediate_oldest) orelse
+           (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [Protocol, BufferSize, Timeout, Prefix,
-                                          TimeoutSync, TimeoutAsync,
-                                          DestRefresh, DestDeny, DestAllow,
-                                          ConfigOptions]) of
+    case supervisor:start_child(?MODULE,
+                                [Protocol, SocketPath, ThreadIndex,
+                                 BufferSize, Timeout, Prefix,
+                                 TimeoutSync, TimeoutAsync,
+                                 DestRefresh, DestDeny, DestAllow,
+                                 ConfigOptions]) of
         {ok, Pid} ->
             {ok, Pid, cloudi_services_external:port(Pid)};
         {ok, Pid, _} ->
