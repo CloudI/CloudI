@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.2.1b<br />last updated on March 30 2013</h3></center>
+  <center><h3>version 1.2.2b<br />last updated on June 1 2013</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -82,10 +82,22 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     to send requests.  So, the CloudI API contains messaging primitives that
     can be used to emulate other messaging APIs, but normally the CloudI API
     is used directly.  The CloudI API supports both publish/subscribe and
-    point-to-point communication in an intuitive way.  It is not necessary to
+    request/reply communication in an intuitive way.  It is not necessary to
     understand the Erlang programming language, to use the CloudI API since a
     full CloudI API implementation is provided for every supported programming
-    language (C/C++, Java, Python, and Ruby, currently).
+    language (Erlang, C/C++, Java, Python, and Ruby, currently).
+  </p>
+  <p class="paragraph">
+    The CloudI API messaging is different from other messaging APIs and
+    provides simpler integration for a few reasons: 
+    <ul>
+      <li>The CloudI service that receives a request determines whether a reply occurs (returning no response data is the same as not providing a reply)</li>
+      <li>All required callbacks are minimal (only a single request callback is necessary for a CloudI service to handle requests) to keep CloudI services simpler, so they are less error-prone than other solutions</li>
+      <li>Requests are not persisted to database storage to avoid persisting errors since errors are often transient and only relate to a specific context</li>
+      <li>All CloudI API programming language integration makes CloudI services first-class actors within the Erlang VM's actor model to provide consistent functionality and fault-tolerance</li>
+      <li>Every CloudI API request contains a priority</li>
+      <li>Every CloudI API request contains a unique v1 UUID for identifying the request and its response</li>
+    </ul>
   </p>
   <p class="paragraph">
     The <a href="#1_subscribe">subscribe</a> function subscribes to a
@@ -116,15 +128,23 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
     lazy_random (or)<br /> immediate_random
   </td><td>
-    A service is selected randomly, based on the destination
+    A service is selected randomly from the subscribed services
   </td></tr><tr><td>
     lazy_local (or)<br /> immediate_local
   </td><td>
-    Only a service on the local node is selected, based on the destination
+    Only a service on the local node is selected
   </td></tr><tr><td>
     lazy_remote (or)<br /> immediate_remote
   </td><td>
-    Only a service on a remote node is selected, based on the destination
+    Only a service on a remote node is selected
+  </td></tr><tr><td>
+    lazy_newest (or)<br /> immediate_newest
+  </td><td>
+    Only the most recently subscribed service is selected
+  </td></tr><tr><td>
+    lazy_oldest (or)<br /> immediate_oldest
+  </td><td>
+    Only the first subscribed service is selected
   </td></tr><tr><td>
     none
   </td><td>
@@ -272,8 +292,12 @@ CloudI::API.thread_count()
     parameters in cloudi_service but functions with less parameters do
     exist and they utilize default values for timeouts and request
     priority.  Please see the
-    <a href="api/cloudi_core-1.2.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
-    to see all the available functions.
+    <a href="api/cloudi_core-1.2.2/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    to see all the available functions.  The cloudi_service module is used
+    within CloudI services, however, it is also possible to use CloudI
+    services from external Erlang processes with a subset of the CloudI API
+    functions in the
+    <a href="api/cloudi_core-1.2.2/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -899,7 +923,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.2.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.2.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1293,7 +1317,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.2.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1396,7 +1420,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.2.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1478,7 +1502,7 @@ curl -X POST -d '[sensitive]' http://localhost:6467/cloudi/api/erlang/acl_remove
   <a name="2_services_add"></a>
   <h3>2.3 - services_add</h3>
 <p class="code">
-curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "1 tcp 16384", [{"LD_LIBRARY_PATH", "api/c/lib/"}, {"DYLD_LIBRARY_PATH", "api/c/lib/"}], none, tcp, 16384, 5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}, {internal, "/tests/flood/", cloudi_service_flood, [{flood, "/tests/flood/c", &lt;&lt;"DATA"&gt;&gt;, 1000}], lazy_closest, 5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]' http://localhost:6467/cloudi/api/erlang/services_add
+curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [{"LD_LIBRARY_PATH", "api/c/lib/"}, {"DYLD_LIBRARY_PATH", "api/c/lib/"}], none, default, default, 5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}, {internal, "/tests/flood/", cloudi_service_flood, [{flood, "/tests/flood/c", &lt;&lt;"DATA"&gt;&gt;, 1000}], lazy_closest, 5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]' http://localhost:6467/cloudi/api/erlang/services_add
 </p>
   <p class="paragraph">
     Start services.  Provide service configuration using the same syntax
@@ -1510,8 +1534,8 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "1 tc
  (ExecutableCommandLineArguments),
  (ExecutableEnvironmentalVariables),
  (<a href="#1_Intro">DestinationRefreshMethod</a>),
- (Protocol, use tcp),
- (ProtocolBufferSize, use 16384 on Linux),
+ (Protocol, use 'default'),
+ (ProtocolBufferSize, use 'default'),
  (InitializationTimeout in milliseconds),
  (DefaultAsynchronousTimeout in milliseconds),
  (DefaultSynchronousTimeout in milliseconds),
@@ -1789,6 +1813,7 @@ curl http://localhost:6467/cloudi/api/erlang/code_path
 <br />
 <div id="footer">
 Copyright &#169; 2013 Michael Truog
+<a href="config.html"><img style="position: absolute; right: 10; bottom: 0;" src="images/powered_by_cloudi.png" /></a>
 </div>
 
 </body>
