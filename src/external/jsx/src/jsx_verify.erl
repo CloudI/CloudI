@@ -1,6 +1,6 @@
 %% The MIT License
 
-%% Copyright (c) 2010 Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+%% Copyright (c) 2010-2013 alisdair sullivan <alisdairsullivan@yahoo.ca>
 
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
 %% of this software and associated documentation files (the "Software"), to deal
@@ -27,57 +27,66 @@
 -export([init/1, handle_event/2]).
 
 
--record(opts, {
+-record(config, {
     repeated_keys = true
 }).
 
--type opts() :: [].
+-type config() :: [].
 
 
--spec is_json(Source::binary(), Opts::opts()) -> true | false.
-    
-is_json(Source, Opts) when is_list(Opts) ->
-    try (jsx:decoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source)
+-spec is_json(Source::binary(), Config::config()) -> true | false.
+
+is_json(Source, Config) when is_list(Config) ->
+    try (jsx:decoder(?MODULE, Config, jsx_config:extract_config(Config)))(Source)
     catch error:badarg -> false
     end.
 
 
--spec is_term(Source::any(), Opts::opts()) -> true | false.
+-spec is_term(Source::any(), Config::config()) -> true | false.
 
-is_term(Source, Opts) when is_list(Opts) ->
-    try (jsx:encoder(?MODULE, Opts, jsx_utils:extract_opts(Opts)))(Source)
+is_term(Source, Config) when is_list(Config) ->
+    try (jsx:encoder(?MODULE, Config, jsx_config:extract_config(Config)))(Source)
     catch error:badarg -> false
     end.
 
 
-parse_opts(Opts) -> parse_opts(Opts, #opts{}).
+parse_config(Config) -> parse_config(Config, #config{}).
 
-parse_opts([{repeated_keys, Val}|Rest], Opts) when Val == true; Val == false ->
-    parse_opts(Rest, Opts#opts{repeated_keys = Val});
-parse_opts([repeated_keys|Rest], Opts) ->
-    parse_opts(Rest, Opts#opts{repeated_keys = true});
-parse_opts([_|Rest], Opts) ->
-    parse_opts(Rest, Opts);
-parse_opts([], Opts) ->
-    Opts.
+parse_config([no_repeated_keys|Rest], Config) ->
+    parse_config(Rest, Config#config{repeated_keys=false});
+%% deprecated, use `no_repeated_keys`
+parse_config([{repeated_keys, Val}|Rest], Config) when Val == true; Val == false ->
+    parse_config(Rest, Config#config{repeated_keys=Val});
+parse_config([repeated_keys|Rest], Config) ->
+    parse_config(Rest, Config#config{repeated_keys=true});
+parse_config([{K, _}|Rest] = Options, Config) ->
+    case lists:member(K, jsx_config:valid_flags()) of
+        true -> parse_config(Rest, Config);
+        false -> erlang:error(badarg, [Options, Config])
+    end;
+parse_config([K|Rest] = Options, Config) ->
+    case lists:member(K, jsx_config:valid_flags()) of
+        true -> parse_config(Rest, Config);
+        false -> erlang:error(badarg, [Options, Config])
+    end;
+parse_config([], Config) ->
+    Config.
 
 
-
-init(Opts) -> {parse_opts(Opts), []}.
-
+init(Config) -> {parse_config(Config), []}.
 
 
 handle_event(end_json, _) -> true;
 
-handle_event(_, {Opts, _} = State) when Opts#opts.repeated_keys == true -> State;
+handle_event(_, {Config, _} = State) when Config#config.repeated_keys == true -> State;
 
-handle_event(start_object, {Opts, Keys}) -> {Opts, [dict:new()] ++ Keys};
-handle_event(end_object, {Opts, [_|Keys]}) -> {Opts, Keys};
+handle_event(start_object, {Config, Keys}) -> {Config, [dict:new()] ++ Keys};
+handle_event(end_object, {Config, [_|Keys]}) -> {Config, Keys};
 
-handle_event({key, Key}, {Opts, [CurrentKeys|Keys]}) ->
+handle_event({key, Key}, {Config, [CurrentKeys|Keys]}) ->
     case dict:is_key(Key, CurrentKeys) of
-        true -> erlang:error(badarg)
-        ; false -> {Opts, [dict:store(Key, blah, CurrentKeys)|Keys]}
+        true -> erlang:error(badarg);
+        false -> {Config, [dict:store(Key, blah, CurrentKeys)|Keys]}
     end;
 
 handle_event(_, State) -> State.
@@ -88,142 +97,72 @@ handle_event(_, State) -> State.
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-json_true_test_() ->
+
+config_test_() ->
     [
-        {"empty object", ?_assert(is_json(<<"{}">>, []))},
-        {"empty array", ?_assert(is_json(<<"[]">>, []))},
-        {"whitespace", 
-            ?_assert(is_json(<<" \n    \t   \r   [true]   \t    \n\r  ">>, 
-                    []
-                )
-            )
-        },
-        {"nested terms", 
-            ?_assert(is_json(
-                    <<"[{ \"x\": [ {}, {}, {} ], \"y\": [{}] }, {}, [[[]]]]">>, 
-                    []
-                )
-            )
-        },
-        {"numbers", 
-            ?_assert(is_json(
-                    <<"[ -1.0, -1, -0, 0, 1e-1, 1, 1.0, 1e1 ]">>, 
-                    []
-                )
-            )
-        },
-        {"strings", 
-            ?_assert(is_json(
-                    <<"[ \"a\", \"string\", \"in\", \"multiple\", \"acts\" ]">>, 
-                    []
-                )
-            )
-        },
-        {"literals", 
-            ?_assert(is_json(<<"[ true, false, null ]">>, []))
-        },
-        {"nested objects", 
-            ?_assert(is_json(<<"{\"key\": { \"key\": true}}">>, []))
-        },        
-        {"repeated key ok", ?_assert(is_json(
-                    <<"{\"key\": true, \"key\": true}">>,
-                    [repeated_keys]
-                )
-            )
-        },
-        {"nested repeated key", ?_assert(is_json(
-                    <<"{\"key\": { \"key\": true }}">>,
-                    [{repeated_keys, false}]
-                )
-            )
-        }
+        {"empty config", ?_assertEqual(#config{}, parse_config([]))},
+        {"no repeat keys", ?_assertEqual(#config{repeated_keys=false}, parse_config([no_repeated_keys]))},
+        {"bare repeated keys", ?_assertEqual(#config{}, parse_config([repeated_keys]))},
+        {"repeated keys true", ?_assertEqual(
+            #config{},
+            parse_config([{repeated_keys, true}])
+        )},
+        {"repeated keys false", ?_assertEqual(
+            #config{repeated_keys=false},
+            parse_config([{repeated_keys, false}])
+        )},
+        {"invalid opt flag", ?_assertError(badarg, parse_config([error]))},
+        {"invalid opt tuple", ?_assertError(badarg, parse_config([{error, true}]))}
     ].
 
-json_false_test_() ->
+
+repeated_keys_test_() ->
+    RepeatedKey = [
+        start_object,
+            {key, <<"alpha">>},
+            {literal, true},
+            {key, <<"alpha">>},
+            {literal, false},
+        end_object,
+        end_json
+    ],
+    NestedKey = [
+        start_object,
+            {key, <<"alpha">>},
+            start_object,
+                {key, <<"alpha">>},
+                start_object,
+                    {key, <<"alpha">>},
+                    {literal, true},
+                end_object,
+            end_object,
+        end_object,
+        end_json
+    ],
     [
-        {"unbalanced list", ?_assertNot(is_json(<<"[]]">>, []))},
-        {"trailing comma", 
-            ?_assertNot(is_json(<<"[ true, false, null, ]">>, []))
-        },
-        {"unquoted key", ?_assertNot(is_json(<<"{ key: false }">>, []))},
-        {"repeated key", ?_assertNot(is_json(
-                <<"{\"key\": true, \"key\": true}">>,
-                [{repeated_keys, false}])
-            )
-        },
-        {"nested repeated key", ?_assertNot(is_json(
-                <<"{\"key\": { \"a\": true, \"a\": false }}">>,
-                [{repeated_keys, false}])
-            )
-        }
+        {"repeated key", ?_assert(
+            lists:foldl(fun handle_event/2, {#config{}, []}, RepeatedKey)
+        )},
+        {"no repeated key", ?_assertError(
+            badarg,
+            lists:foldl(fun handle_event/2, {#config{repeated_keys=false}, []}, RepeatedKey)
+        )},
+        {"nested key", ?_assert(
+            lists:foldl(fun handle_event/2, {#config{repeated_keys=false}, []}, NestedKey)
+        )}
     ].
 
-json_incomplete_test_() ->
+
+handle_event_test_() ->
+    Data = jsx:test_cases(),
     [
-        {"incomplete test", ?_assertMatch({incomplete, _}, is_json(<<"[">>, []))}
+        {
+            Title, ?_assertEqual(
+                true,
+                lists:foldl(fun handle_event/2, {#config{}, []}, Events ++ [end_json])
+            )
+        } || {Title, _, _, Events} <- Data
     ].
 
-term_true_test_() ->
-    [
-        {"empty object", ?_assert(is_term([{}], []))},
-        {"empty array", ?_assert(is_term([], []))},
-        {"whitespace", ?_assert(is_term([    true      ], []))},
-        {"nested terms", 
-            ?_assert(is_term([[{x, [[{}], [{}], [{}]]}, {y, [{}]}], [{}], [[[]]]], []))
-        },
-        {"numbers", 
-            ?_assert(is_term([-1.0, -1, -0, 0, 1.0e-1, 1, 1.0, 1.0e1], []))
-        },
-        {"strings", 
-            ?_assert(is_term(
-                    [<<"a">>, <<"string">>, <<"in">>, <<"multiple">>, <<"acts">>], 
-                    []
-                )
-            )
-        },
-        {"literals", ?_assert(is_term([ true, false, null ], []))},
-        {"nested objects", ?_assert(is_term([{key, [{key, true}]}], []))},        
-        {"repeated key ok", ?_assert(is_term(
-                    [{key, true}, {key, true}],
-                    []
-                )
-            )
-        },
-        {"nested repeated key", ?_assert(is_term(
-                    [{key, [{key, true}]}],
-                    [{repeated_keys, false}]
-                )
-            )
-        }
-    ].
 
-term_false_test_() ->
-    [
-        {"repeated key", ?_assertNot(is_term(
-                    [{<<"key">>, true}, {<<"key">>, true}],
-                    [{repeated_keys, false}]
-                )
-            )
-        },
-        {"repeated key alternate representation", ?_assertNot(is_term(
-                    [{<<"key">>, true}, {key, true}],
-                    [{repeated_keys, false}]
-                )
-            )
-        },
-        {"repeated key alternate representation two", ?_assertNot(is_term(
-                    [{key, true}, {'key', true}],
-                    [{repeated_keys, false}]
-                )
-            )
-        },
-        {"nested repeated key", ?_assertNot(is_term(
-                    [{key, [{a, true}, {a, false}]}],
-                    [{repeated_keys, false}]
-                )
-            )
-        }
-    ].
-        
-    
 -endif.

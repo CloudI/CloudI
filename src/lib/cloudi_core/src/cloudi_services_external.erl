@@ -1169,15 +1169,11 @@ socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
                      {nodelay, true}, {delay_send, false}, {keepalive, false},
                      {send_timeout, 5000}, {send_timeout_close, true}],
     ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
-    case local_listen(ThreadSocketPath,
-                      [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
-                       {backlog, 0}, {active, false} | SocketOptions],
-                      SocketOptions) of
-        {ok, State} ->
-            {ok, State#state{port = ThreadIndex}};
-        {error, _} = Error ->
-            Error
-    end.
+    {ok, State} = local_listen(ThreadSocketPath,
+                               [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
+                                {backlog, 0}, {active, false} | SocketOptions],
+                               SocketOptions),
+    {ok, State#state{port = ThreadIndex}}.
 
 local_listen(SocketPath, InetOptions, SocketOptions) ->
     % carefully grafting unix domain socket support onto an Erlang listener
