@@ -273,8 +273,10 @@ service_find_internal(#config_service_internal{module = Path} = Service)
                                       compiler_options(FullPath)) of
                         {ok, Module} ->
                             service_find_internal_module(Module, Service);
-                        {error, _} = Error ->
-                            Error
+                        error ->
+                            {error, compile};
+                        {error, Errors, Warnings} ->
+                            {error, {compile, Errors, Warnings}}
                     end;
                 {error, _} = Error ->
                     Error

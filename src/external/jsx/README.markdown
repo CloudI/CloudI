@@ -1,8 +1,8 @@
-# jsx (v1.3.3) #
+# jsx (v1.4.1) #
 
 an erlang application for consuming, producing and manipulating [json][json]. inspired by [yajl][yajl]
 
-copyright 2011, 2012 alisdair sullivan
+copyright 2010-2013 alisdair sullivan
 
 jsx is released under the terms of the [MIT][MIT] license
 
@@ -263,7 +263,7 @@ jsx functions all take a common set of options. not all flags have meaning in al
 
 - `escaped_forward_slashes`
 
-    json strings are escaped according to the json spec. this means forward slashes (solidus) are only escaped when this flag is present. otherwise they are left unescaped. this option is only relevant for encoding; you may want to use this if you are embedding json directly into a html or xml document
+    json strings are escaped according to the json spec. this means forward slashes (solidus) are only escaped when this flag is present. otherwise they are left unescaped. you may want to use this if you are embedding json directly into a html or xml document
 
 - `single_quoted_strings`
 
@@ -285,13 +285,13 @@ jsx functions all take a common set of options. not all flags have meaning in al
 
     by default, both the encoder and decoder return strings as utf8 binaries appropriate for use in erlang. escape sequences that were present in decoded terms are converted into the appropriate codepoint while encoded terms are unaltered. this flag escapes strings as if for output in json, removing control codes and problematic codepoints and replacing them with the appropriate escapes
 
-- `dirty_strings`
-
-    json escaping is lossy; it mutates the json string and repeated application can result in unwanted behaviour. if your strings are already escaped (or you'd like to force invalid strings into "json") use this flag to bypass escaping
-
 - `ignored_bad_escapes`
 
     during decoding, ignore unrecognized escape sequences and leave them as is in the stream. note that combining this option with `escaped_strings` will result in the escape character itself being escaped
+
+- `dirty_strings`
+
+    json escaping is lossy; it mutates the json string and repeated application can result in unwanted behaviour. if your strings are already escaped (or you'd like to force invalid strings into "json") use this flag to bypass escaping. this can also be used to read in *really* invalid json strings. everything but escaped quotes are passed as is to result string term. note that this overrides `ignored_bad_escapes`, `unescaped_jsonp` and `escaped_strings`
 
 - `explicit_end`
 
@@ -300,6 +300,24 @@ jsx functions all take a common set of options. not all flags have meaning in al
 - `relax`
 
     relax is a synonym for `[replaced_bad_utf8, single_quoted_strings, comments, ignored_bad_escapes]` for when you don't care how janky and awful your json input is, you just want the parser to do the best it can
+
+- `incomplete_handler` & `error_handler`
+
+    the default incomplete and error handlers can be replaced with user defined handlers. if options include `{error_handler, F}` and/or `{incomplete_handler, F}` where `F` is a function of arity 3 they will be called instead of the default handler. the spec for `F` is as follows
+    ```erlang
+    F(Remaining, InternalState, Config) -> any()
+    
+      Remaining = binary() | term()
+      InternalState = opaque()
+      Config = list()
+    ```
+    `Remaining` is the binary fragment or term that caused the error
+    
+    `InternalState` is an opaque structure containing the internal state of the parser/decoder/encoder
+    
+    `Config` is a list of options/flags in use by the parser/decoder/encoder
+    
+    these functions should be considered experimental for now
 
 
 ## exports ##
@@ -328,7 +346,7 @@ all three functions return an anonymous function that takes the appropriate type
 
 `Args` is any term that will be passed to `Module:init/1` prior to syntactic analysis to produce an initial state
 
-`Opts` are detailed [here](#option) 
+`Opts` are detailed [here](#option)
 
 check out [callback module documentation](#callback_exports) for details of the callback module interface
 
@@ -375,7 +393,7 @@ encode(Term, Opts) -> JSON
     N = pos_integer()
 ```
 
-`encode` parses a json text (a `utf8` encoded binary) and produces an erlang term
+`encode` converts an erlang term into json text (a `utf8` encoded binary)
 
 the option `{space, N}` inserts `N` spaces after every comma and colon in your json output. `space` is an alias for `{space, 1}`. the default is `{space, 0}`
 

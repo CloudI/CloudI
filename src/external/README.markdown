@@ -90,8 +90,8 @@ to its integration and dependencies).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit cb14b92a228e51f7bdcaa7eb17f035e4a5c0b47d (master, v1.3.3)`
-- `Mon Feb  4 12:57:40 PST 2013`
+- `commit f0f43c4abab4d4e889bff79e5d5aab675f9e8d4d (master, v1.4.1)`
+- `Mon Jun  3 08:57:57 PDT 2013`
 - `MIT`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
