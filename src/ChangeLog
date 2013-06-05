@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the require Erlang version R16 since no one has mentioned needing
+      R15 support (and it is easier using the new reltool source code)
+    * Fix compilation and configuration problems on OSX
+      (OSX is unable to use the "local" external service protocol configuration
+       option, probably due to the Erlang bug with schedulers locking up
+       within NIFs... the problem occurs when a NIF thread hits an accept())
+
 2013-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update jsx

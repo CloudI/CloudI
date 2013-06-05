@@ -60,7 +60,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= R15B01 (erlang/Ubuntu, erlang/macports)`
+* `Erlang >= R16 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
 * `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
