@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_proplists).
@@ -52,14 +52,13 @@
 
 -export([delete_all/2,
          partition/2,
-         take_value/3,
          take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type proplist() :: list({atom(), any()}).
+-type tuplelist() :: list({atom(), any()}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -68,7 +67,7 @@
 %%-------------------------------------------------------------------------
 
 -spec delete_all(Keys :: list(atom()),
-                 List :: proplist()) -> proplist().
+                 List :: tuplelist()) -> tuplelist().
 
 delete_all([], List) ->
     List;
@@ -84,31 +83,11 @@ delete_all([Key | Keys], List)
 %%-------------------------------------------------------------------------
 
 -spec partition(Key :: atom(),
-                List :: proplist()) -> {proplist(), proplist()}.
+                List :: tuplelist()) -> {tuplelist(), tuplelist()}.
 
 partition(Key, List)
     when is_atom(Key), is_list(List) ->
     lists:partition(fun({K, _}) -> K == Key end, List).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Remove a key from the proplist.===
-%% Use the default value if the key does not exist
-%% @end
-%%-------------------------------------------------------------------------
-
--spec take_value(Key :: atom(),
-                 List :: proplist(),
-                 Default :: any()) -> {any(), proplist()}.
-
-take_value(Key, List, Default)
-    when is_atom(Key), is_list(List) ->
-    case lists:keytake(Key, 1, List) of
-        false ->
-            {Default, List};
-        {value, {Key, Value}, RemainingList} ->
-            {Value, RemainingList}
-    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -117,8 +96,8 @@ take_value(Key, List, Default)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec take_values(DefaultList :: proplist(),
-                  List :: proplist()) -> list().
+-spec take_values(DefaultList :: tuplelist(),
+                  List :: tuplelist()) -> list().
 
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove some dead Erlang code from cloudi_core
+    * Fix minor C++ syntax warnings
+
 2013-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make the require Erlang version R16 since no one has mentioned needing

@@ -486,7 +486,9 @@ int cloudi_initialize(cloudi_instance_t * p,
     if (result)
         return result;
 
-    while (cloudi_timeout == (result = poll_request(p, 1000, 0)));
+    while (cloudi_timeout == (result = poll_request(p, 1000, 0)))
+    {
+    }
 
     return result;
 }
