@@ -6,6 +6,7 @@
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_service_db_couchdb,
+        cloudi_service_db_elasticsearch,
         cloudi_service_db_memcached,
         cloudi_service_db_mysql,
         cloudi_service_db_pgsql,
@@ -19,6 +20,7 @@
         cloudi_x_ememcached,
         cloudi_x_emysql,
         cloudi_x_epgsql,
+        cloudi_x_erlasticsearch,
         cloudi_x_etokyotyrant,
         stdlib,
         kernel
