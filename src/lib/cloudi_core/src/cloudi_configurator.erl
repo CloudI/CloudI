@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -59,7 +59,7 @@
          services_add/2, services_remove/2, services_restart/2, services/1,
          nodes_add/2, nodes_remove/2,
          service_start/2,
-         service_stop/2,
+         service_stop/3,
          service_restart/2,
          concurrency/1]).
 
@@ -152,11 +152,11 @@ service_start(#config_service_external{count_process = Count} = Service,
     service_start_external(concurrency(Count), Service, Timeout),
     Service.
 
-service_stop(Service, Timeout)
-    when is_record(Service, config_service_internal) ->
-    service_stop_internal(Service, Timeout);
+service_stop(Service, Remove, Timeout)
+    when is_record(Service, config_service_internal), is_boolean(Remove) ->
+    service_stop_internal(Service, Remove, Timeout);
 
-service_stop(Service, Timeout)
+service_stop(Service, false, Timeout)
     when is_record(Service, config_service_external) ->
     service_stop_external(Service, Timeout).
 
@@ -366,7 +366,7 @@ service_start_find_internal_module(Module, Service)
                     {error, {Reason, Module}}
             end;
         _ ->
-            {ok, Service}
+            {ok, Service#config_service_internal{module = Module}}
     end.
 
 service_start_find_internal_application(Application, Service)
@@ -487,9 +487,12 @@ service_start_external(Count0,
 
 service_stop_internal(#config_service_internal{
                           module = Module,
-                          uuid = UUID} = Service, Timeout) ->
+                          uuid = UUID} = Service, Remove, Timeout) ->
     case cloudi_services_monitor:shutdown(UUID, Timeout) of
-        ok ->
+        ok when Remove =:= true ->
+            % no service processes are using the service module
+            % so it is safe to remove the service module
+            % dependencies (applications, if they were used)
             case service_stop_remove_internal(Service, Timeout) of
                 ok ->
                     ok;
@@ -497,6 +500,8 @@ service_stop_internal(#config_service_internal{
                     ?LOG_ERROR("error removing internal service (~p):~n ~p",
                                [Module, Reason])
             end,
+            ok;
+        ok when Remove =:= false ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error stopping internal service (~p):~n ~p",

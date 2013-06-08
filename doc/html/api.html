@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.2.2b<br />last updated on June 1 2013</h3></center>
+  <center><h3>version 1.2.3b<br />last updated on June 8 2013</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -292,12 +292,12 @@ CloudI::API.thread_count()
     parameters in cloudi_service but functions with less parameters do
     exist and they utilize default values for timeouts and request
     priority.  Please see the
-    <a href="api/cloudi_core-1.2.2/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.2.3/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions.  The cloudi_service module is used
     within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.2.2/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.2.3/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -923,7 +923,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.2.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.2.3/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1317,7 +1317,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.2.3/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1420,7 +1420,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.2.3/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1664,6 +1664,22 @@ curl -X POST -d '[&lt;&lt;110,129,240,166,122,31,17,226,212,14,165,221,0,0,0,88&
     running instance is removed from CloudI, but does not impact any
     other running instances (even if they are the same service
     module or binary).
+  </p>
+  <p class="paragraph">
+    When an internal service is removed and it is the last instance of the
+    service module, the service module is purged to avoid later module
+    conflicts.  All instances of the internal service module should be
+    configured in the same way (either a single module, an application, or
+    a release with an application), so that the last instance is removed
+    completely.  If an application was used that is named the same as the
+    service module, the application and its dependencies are removed
+    (applications are stopped, modules are purged, and applications are
+     unloaded) if the dependencies are not utilized by other applications.
+    The same occurs if a release was used to start an application that
+    contains the service module (the single top-level application of the
+    release is used to determine dependencies, where the single top-level
+    application within the release is the application that includes the
+    service module).
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
