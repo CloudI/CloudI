@@ -917,6 +917,7 @@ modules_purged([], BusyModules, Timeout) ->
 modules_purged([Module | Modules], BusyModules, Timeout) ->
     case is_module_loaded(Module) of
         true ->
+            true = code:delete(Module),
             case code:soft_purge(Module) of
                 true ->
                     modules_purged(Modules, BusyModules, Timeout);
