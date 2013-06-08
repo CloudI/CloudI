@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix services_remove CloudI Service API functions so that modules are
+      purged when they are no longer necessary
+      (after unnecessary Erlang applications have been stopped)
+    * Update reltool_util
+
 2013-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove some dead Erlang code from cloudi_core
