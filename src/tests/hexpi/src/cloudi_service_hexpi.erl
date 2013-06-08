@@ -130,7 +130,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
         {ok, {_, Pid} = PatternPid} ->
             TaskSize = cloudi_task_size:get(TaskSizeInitial, Pid,
                                             TaskSizeLookup),
-            Iterations = cloudi_math:ceil(TaskSize * ?MAX_ITERATIONS),
+            Iterations = erlang:round(0.5 + TaskSize * ?MAX_ITERATIONS),
             % determine the size of the task and take the ceiling of the value
             % (to avoid iterations of 0)
             IndexStr = erlang:integer_to_list(Index),
@@ -140,7 +140,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
                         IndexBin/binary>>,
             % TargetTime is the percentage of an hour
             % (elapsed time is returned this way from the hexpi C++ code)
-            Timeout = cloudi_math:ceil(TargetTime * 3600000.0) + 5000,
+            Timeout = erlang:round(0.5 + TargetTime * 3600000.0) + 5000,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
             ?LOG_INFO("~p iterations starting at digit ~p~n",
                       [Iterations, Index]),

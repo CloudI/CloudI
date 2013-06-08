@@ -1,6 +1,36 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.2.3 (beta) released
+
+2013-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix services_remove CloudI Service API functions so that modules are
+      purged when they are no longer necessary
+      (after unnecessary Erlang applications have been stopped)
+    * Update reltool_util
+
+2013-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove some dead Erlang code from cloudi_core
+    * Fix minor C++ syntax warnings
+
+2013-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the require Erlang version R16 since no one has mentioned needing
+      R15 support (and it is easier using the new reltool source code)
+    * Fix compilation and configuration problems on OSX
+      (OSX is unable to use the "local" external service protocol configuration
+       option, probably due to the Erlang bug with schedulers locking up
+       within NIFs... the problem occurs when a NIF thread hits an accept())
+
+2013-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update jsx
+    * Fix dialyzer errors
+
 2013-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.2 (beta) released

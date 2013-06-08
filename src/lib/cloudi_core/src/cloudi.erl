@@ -266,7 +266,7 @@ send_async(Context, Name, RequestInfo, Request,
                  Request :: any(),
                  Timeout :: non_neg_integer() | 'undefined',
                  Priority :: integer() | 'undefined',
-                 PatternPid :: {string(), pid()}) ->
+                 PatternPid :: {string(), pid()} | 'undefined') ->
     {'ok', TransId :: <<_:128>>} |
     {'error', Reason :: any()}.
 
@@ -493,7 +493,7 @@ send_sync(Context, Name, RequestInfo, Request,
                 Request :: any(),
                 Timeout :: non_neg_integer() | 'undefined',
                 Priority :: integer() | 'undefined',
-                PatternPid :: {string(), pid()}) ->
+                PatternPid :: {string(), pid()} | 'undefined') ->
     {'ok', ResponseInfo :: any(), Response :: any()} |
     {'ok', Response :: any()} |
     {'error', Reason :: any()}.
@@ -681,7 +681,7 @@ recv_async(Context, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec recv_async(Context :: #cloudi_context{},
-                 Timeout :: non_neg_integer(),
+                 Timeout :: non_neg_integer() | 'undefined',
                  TransId :: binary()) ->
     {'ok', ResponseInfo :: any(), Response :: any(), TransId :: <<_:128>>} |
     {'error', Reason :: atom()}.

@@ -117,34 +117,34 @@ handle_call(Request, From, #state{service_state = InternalState} = State) ->
         {reply, Reply, NewInternalState} ->
             {reply, Reply,
              State#state{service_state = NewInternalState}};
-        {reply, Reply, NewInternalState, Timeout} ->
-            {reply, Reply,
-             State#state{service_state = NewInternalState}, Timeout};
+        %{reply, Reply, NewInternalState, Timeout} ->
+        %    {reply, Reply,
+        %     State#state{service_state = NewInternalState}, Timeout};
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};
-        {noreply, NewInternalState, Timeout} ->
-            {noreply,
-             State#state{service_state = NewInternalState}, Timeout};
+        %{noreply, NewInternalState, Timeout} ->
+        %    {noreply,
+        %     State#state{service_state = NewInternalState}, Timeout};
         {stop, Reason, Reply, NewInternalState} ->
             {stop, Reason, Reply,
-             State#state{service_state = NewInternalState}};
-        {stop, Reason, NewInternalState} ->
-            {stop, Reason,
-             State#state{service_state = NewInternalState}}
+             State#state{service_state = NewInternalState}}%;
+        %{stop, Reason, NewInternalState} ->
+        %    {stop, Reason,
+        %     State#state{service_state = NewInternalState}}
     end.
 
 handle_cast(Request, #state{service_state = InternalState} = State) ->
     case cloudi_services_internal:handle_cast(Request, InternalState) of
         {noreply, NewInternalState} ->
             {noreply,
-             State#state{service_state = NewInternalState}};
-        {noreply, NewInternalState, Timeout} ->
-            {noreply,
-             State#state{service_state = NewInternalState}, Timeout};
-        {stop, Reason, NewInternalState} ->
-            {stop, Reason,
-             State#state{service_state = NewInternalState}}
+             State#state{service_state = NewInternalState}}%;
+        %{noreply, NewInternalState, Timeout} ->
+        %    {noreply,
+        %     State#state{service_state = NewInternalState}, Timeout};
+        %{stop, Reason, NewInternalState} ->
+        %    {stop, Reason,
+        %     State#state{service_state = NewInternalState}}
     end.
 
 handle_info('cloudi_service_init_timeout', State) ->
@@ -155,9 +155,9 @@ handle_info(Request, #state{service_state = InternalState} = State) ->
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};
-        {noreply, NewInternalState, Timeout} ->
-            {noreply,
-             State#state{service_state = NewInternalState}, Timeout};
+        %{noreply, NewInternalState, Timeout} ->
+        %    {noreply,
+        %     State#state{service_state = NewInternalState}, Timeout};
         {stop, Reason, NewInternalState} ->
             {stop, Reason,
              State#state{service_state = NewInternalState}}

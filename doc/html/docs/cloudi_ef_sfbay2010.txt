@@ -1,0 +1,17 @@
+pick the directory to expand the cloudi installation in
+  do not move the directory after compiling dependencies
+  to reduce problems
+  (would need to reinstall the local installation of asn1c)
+edit build_configuration.mk
+  change /home/user paths to reflect installation of erlware and erlang
+setup Postgres
+  use psql command sequence similar to output in docs/CONFIGURATION.txt
+edit cloud.conf
+  add password for cloudi user XXXXXXXXX
+  change host1 in machines entry to local hostname
+edit config/failover_hosts
+  change host1 to local hostname
+
+shell commands for test:
+  cloud_job_tests:clear_all_results().
+  q:q().

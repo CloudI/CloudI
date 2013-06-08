@@ -1,4 +1,4 @@
-AC_INIT([CloudI], [1.2.2], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.2.3], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
@@ -10,7 +10,7 @@ AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([1.10 no-define])
+AM_INIT_AUTOMAKE([1.10 no-define no-dependencies])
 AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
@@ -97,8 +97,8 @@ AX_PROG_RUBY_VERSION([1.9.0], ,
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AX_ERLANG_REQUIRE_OTP_VER([R15B01], ,
-    [AC_MSG_ERROR([Erlang >= R15B01 not found])])
+AX_ERLANG_REQUIRE_OTP_VER([R16A00], ,
+    [AC_MSG_ERROR([Erlang >= R16 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AX_ERLANG_SUBST_OTP_VER

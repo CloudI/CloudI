@@ -1,6 +1,6 @@
 %% The MIT License
 
-%% Copyright (c) 2010 Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+%% Copyright (c) 2010-2013 alisdair sullivan <alisdairsullivan@yahoo.ca>
 
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
 %% of this software and associated documentation files (the "Software"), to deal
@@ -27,14 +27,18 @@
 -export([is_json/1, is_json/2, is_term/1, is_term/2]).
 -export([format/1, format/2, minify/1, prettify/1]).
 -export([encoder/3, decoder/3, parser/3]).
+-export([resume/3]).
 %% old api
 -export([term_to_json/1, term_to_json/2, json_to_term/1, json_to_term/2]).
 -export([to_json/1, to_json/2]).
 -export([to_term/1, to_term/2]).
 
-%% test handler
+-export_type([json_term/0, json_text/0, token/0]).
+-export_type([encoder/0, decoder/0, parser/0, internal_state/0]).
+
+
 -ifdef(TEST).
--export([init/1, handle_event/2]).
+-include("jsx_tests.hrl").
 -endif.
 
 
@@ -50,82 +54,77 @@
 -type json_text() :: binary().
 
 
--spec encode(Source::json_term()) -> json_text().
--spec encode(Source::json_term(), Opts::jsx_to_json:opts()) -> json_text().
+-spec encode(Source::json_term()) -> json_text() | {incomplete, encoder()}.
+-spec encode(Source::json_term(), Config::jsx_to_json:config()) -> json_text() | {incomplete, encoder()}.
 
 encode(Source) -> encode(Source, []).
-
-encode(Source, Opts) -> jsx_to_json:to_json(Source, Opts).
+encode(Source, Config) -> jsx_to_json:to_json(Source, Config).
 
 %% old api, alias for encode/x
 
 to_json(Source) -> encode(Source, []).
-to_json(Source, Opts) -> encode(Source, Opts).
+to_json(Source, Config) -> encode(Source, Config).
 term_to_json(Source) -> encode(Source, []).
-term_to_json(Source, Opts) -> encode(Source, Opts).
+term_to_json(Source, Config) -> encode(Source, Config).
 
 
--spec format(Source::json_text()) -> json_text().
--spec format(Source::json_text(), Opts::jsx_to_json:opts()) -> json_text().
+-spec format(Source::json_text()) -> json_text() | {incomplete, decoder()}.
+-spec format(Source::json_text(), Config::jsx_to_json:config()) -> json_text() | {incomplete, decoder()}.
 
 format(Source) -> format(Source, []).
+format(Source, Config) -> jsx_to_json:format(Source, Config).
 
-format(Source, Opts) -> jsx_to_json:format(Source, Opts).
 
-
--spec minify(Source::json_text()) -> json_text().
+-spec minify(Source::json_text()) -> json_text()  | {incomplete, decoder()}.
 
 minify(Source) -> format(Source, []).
 
 
--spec prettify(Source::json_text()) -> json_text().
+-spec prettify(Source::json_text()) -> json_text() | {incomplete, decoder()}.
 
 prettify(Source) -> format(Source, [space, {indent, 2}]).
 
 
--spec decode(Source::json_text()) -> json_term().
--spec decode(Source::json_text(), Opts::jsx_to_term:opts()) -> json_term().
+-spec decode(Source::json_text()) -> json_term() | {incomplete, decoder()}.
+-spec decode(Source::json_text(), Config::jsx_to_term:config()) -> json_term()  | {incomplete, decoder()}.
 
 decode(Source) -> decode(Source, []).
-
-decode(Source, Opts) -> jsx_to_term:to_term(Source, Opts).
+decode(Source, Config) -> jsx_to_term:to_term(Source, Config).
 
 %% old api, alias for to_term/x
 
 to_term(Source) -> decode(Source, []).
-to_term(Source, Opts) -> decode(Source, Opts).
+to_term(Source, Config) -> decode(Source, Config).
 json_to_term(Source) -> decode(Source, []).
-json_to_term(Source, Opts) -> decode(Source, Opts).
+json_to_term(Source, Config) -> decode(Source, Config).
 
 
 -spec is_json(Source::any()) -> true | false.
--spec is_json(Source::any(), Opts::jsx_verify:opts()) -> true | false.
+-spec is_json(Source::any(), Config::jsx_verify:config()) -> true | false.
 
 is_json(Source) -> is_json(Source, []).
-
-is_json(Source, Opts) -> jsx_verify:is_json(Source, Opts).
+is_json(Source, Config) -> jsx_verify:is_json(Source, Config).
 
 
 -spec is_term(Source::any()) -> true | false.
--spec is_term(Source::any(), Opts::jsx_verify:opts()) -> true | false.
+-spec is_term(Source::any(), Config::jsx_verify:config()) -> true | false.
 
 is_term(Source) -> is_term(Source, []).
-
-is_term(Source, Opts) -> jsx_verify:is_term(Source, Opts).
+is_term(Source, Config) -> jsx_verify:is_term(Source, Config).
 
 
 -type decoder() :: fun((json_text() | end_stream) -> any()).
 
--spec decoder(Handler::module(), State::any(), Opts::list()) -> decoder().
+-spec decoder(Handler::module(), State::any(), Config::list()) -> decoder().
 
-decoder(Handler, State, Opts) -> jsx_decoder:decoder(Handler, State, Opts).
+decoder(Handler, State, Config) -> jsx_decoder:decoder(Handler, State, Config).
 
 
 -type encoder() :: fun((json_term() | end_stream) -> any()).
 
--spec encoder(Handler::module(), State::any(), Opts::list()) -> encoder().
+-spec encoder(Handler::module(), State::any(), Config::list()) -> encoder().
 
-encoder(Handler, State, Opts) -> jsx_encoder:encoder(Handler, State, Opts).
+encoder(Handler, State, Config) -> jsx_encoder:encoder(Handler, State, Config).
 
 
 -type token() :: [token()]
@@ -148,171 +147,19 @@ encoder(Handler, State, Opts) -> jsx_encoder:encoder(Handler, State, Opts).
     | false
     | null
     | end_json.
-    
+
 
 -type parser() :: fun((token() | end_stream) -> any()).
 
--spec parser(Handler::module(), State::any(), Opts::list()) -> parser().
+-spec parser(Handler::module(), State::any(), Config::list()) -> parser().
 
-parser(Handler, State, Opts) -> jsx_parser:parser(Handler, State, Opts).
+parser(Handler, State, Config) -> jsx_parser:parser(Handler, State, Config).
 
+-opaque internal_state() :: tuple().
 
+-spec resume(Term::json_text() | token(), InternalState::internal_state(), Config::list()) -> any().
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-
-jsx_decoder_test_() ->
-    jsx_decoder_gen(load_tests(code:lib_dir(jsx, priv) ++ "/test_cases/")).
-
-
-encoder_decoder_equiv_test_() ->
-    [
-        {"encoder/decoder equivalency",
-            ?_assert((jsx_decoder:decoder(?MODULE, [], []))(
-                    <<"[\"a\", 17, 3.14, true, {\"k\":false}, []]">>
-                ) =:= (jsx_encoder:encoder(?MODULE, [], []))([<<"a">>, 17, 3.14, true, [{<<"k">>, false}], []])
-            )
-        }
-    ].
-
-
-single_quoted_strings_test_() ->
-    [
-        {"single quoted keys",
-            ?_assertEqual(
-                to_term(<<"{'key':true}">>, [single_quoted_strings]),
-                [{<<"key">>, true}]
-            )
-        },
-        {"multiple single quoted keys",
-            ?_assertEqual(
-                to_term(<<"{'key':true, 'another key':true}">>, [single_quoted_strings]),
-                [{<<"key">>, true}, {<<"another key">>, true}]
-            )
-        },
-        {"nested single quoted keys",
-            ?_assertEqual(
-                to_term(<<"{'key': {'key':true, 'another key':true}}">>, [single_quoted_strings]),
-                [{<<"key">>, [{<<"key">>, true}, {<<"another key">>, true}]}]
-            )
-        },
-        {"single quoted string",
-            ?_assertEqual(
-                to_term(<<"['string']">>, [single_quoted_strings]),
-                [<<"string">>]
-            )
-        },
-        {"single quote in double quoted string",
-            ?_assertEqual(
-                to_term(<<"[\"a single quote: '\"]">>, [single_quoted_strings]),
-                [<<"a single quote: '">>]
-            )
-        },
-        {"escaped single quote in single quoted string",
-            ?_assertEqual(
-                to_term(<<"['a single quote: \\'']">>, [single_quoted_strings]),
-                [<<"a single quote: '">>]
-            )
-        },
-        {"escaped single quote when single quotes are disallowed",
-            ?_assertError(
-                badarg,
-                to_term(<<"[\"a single quote: \\'\"]">>)
-            )
-        },
-        {"mismatched quotes",
-            ?_assertError(
-                badarg,
-                to_term(<<"['mismatched\"]">>, [single_quoted_strings])
-            )
-        }
-    ].
-
-
-%% test handler
-init([]) -> [].
-
-handle_event(end_json, State) -> lists:reverse([end_json] ++ State);
-handle_event(Event, State) -> [Event] ++ State.
-    
-
-
-jsx_decoder_gen([]) -> [];    
-jsx_decoder_gen([Test|Rest]) ->
-    Name = proplists:get_value(name, Test),
-    JSON = proplists:get_value(json, Test),
-    JSX = proplists:get_value(jsx, Test),
-    Flags = proplists:get_value(jsx_flags, Test, []),
-    {generator, fun() ->
-        [{Name, ?_assertEqual(test_decode(JSON, Flags), JSX)},
-            {Name ++ " (incremental)",
-                ?_assertEqual(incremental_decode(JSON, Flags), JSX)
-            }
-            | jsx_decoder_gen(Rest)
-        ]
-    end}.
-
-
-load_tests(Path) ->
-    %% search the specified directory for any files with the .test ending
-    TestSpecs = filelib:wildcard("*.test", Path),
-    load_tests(TestSpecs, Path, []).
-
-load_tests([], _Dir, Acc) ->
-    lists:reverse(Acc);
-load_tests([Test|Rest], Dir, Acc) ->
-    case file:consult(Dir ++ "/" ++ Test) of
-        {ok, TestSpec} ->
-            ParsedTest = parse_tests(TestSpec, Dir),
-            load_tests(Rest, Dir, [ParsedTest] ++ Acc)
-        ; {error, _Reason} ->
-            erlang:error(badarg, [Test|Rest], Dir, Acc)
-    end.
-
-
-parse_tests(TestSpec, Dir) ->
-    parse_tests(TestSpec, Dir, []).
-    
-parse_tests([{json, Path}|Rest], Dir, Acc) when is_list(Path) ->
-    case file:read_file(Dir ++ "/" ++ Path) of
-        {ok, Bin} -> parse_tests(Rest, Dir, [{json, Bin}] ++ Acc)
-        ; _ -> erlang:error(badarg, [[{json, Path}|Rest], Dir, Acc])
-    end;
-parse_tests([KV|Rest], Dir, Acc) ->
-    parse_tests(Rest, Dir, [KV] ++ Acc);
-parse_tests([], _Dir, Acc) ->
-    Acc.
-
-
-test_decode(JSON, Flags) ->
-    try
-        case (jsx_decoder:decoder(?MODULE, [], Flags))(JSON) of
-            {incomplete, More} ->
-                case More(<<" ">>) of
-                    {incomplete, _} -> {error, badarg}
-                    ; Events -> Events
-                end
-            ; Events -> Events
-        end
-    catch
-        error:badarg -> {error, badarg}
-    end.
-
-    
-incremental_decode(<<C:1/binary, Rest/binary>>, Flags) ->
-	P = jsx_decoder:decoder(?MODULE, [], Flags ++ [explicit_end]),
-	try incremental_decode_loop(P(C), Rest)
-	catch error:badarg -> {error, badarg}
-	end.
-
-incremental_decode_loop({incomplete, More}, <<>>) ->
-    case More(end_stream) of
-        {incomplete, _} -> {error, badarg}
-        ; X -> X
-    end;
-incremental_decode_loop({incomplete, More}, <<C:1/binary, Rest/binary>>) ->
-    incremental_decode_loop(More(C), Rest).
-
-    
--endif.
+resume(Term, {decoder, State, Handler, Acc, Stack}, Config) ->
+    jsx_decoder:resume(Term, State, Handler, Acc, Stack, jsx_config:parse_config(Config));
+resume(Term, {parser, State, Handler, Stack}, Config) ->
+    jsx_parser:resume(Term, State, Handler, Stack, jsx_config:parse_config(Config)).
