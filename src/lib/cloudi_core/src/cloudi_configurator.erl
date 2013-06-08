@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -59,7 +59,7 @@
          services_add/2, services_remove/2, services_restart/2, services/1,
          nodes_add/2, nodes_remove/2,
          service_start/2,
-         service_stop/2,
+         service_stop/3,
          service_restart/2,
          concurrency/1]).
 
@@ -132,10 +132,15 @@ nodes_remove(L, Timeout) ->
 service_start(#config_service_internal{module = Module,
                                        count_process = Count} = Service,
               Timeout) ->
-    case service_find_internal(Service) of
+    case service_start_find_internal(Service) of
         {ok, FoundService} ->
             service_start_internal(concurrency(Count), FoundService, Timeout),
-            FoundService;
+            if
+                is_list(Module) ->
+                    FoundService#config_service_internal{file_path = Module};
+                true ->
+                    FoundService
+            end;
         {error, Reason} ->
             ?LOG_ERROR("error finding internal service (~p):~n ~p",
                        [Module, Reason]),
@@ -147,11 +152,11 @@ service_start(#config_service_external{count_process = Count} = Service,
     service_start_external(concurrency(Count), Service, Timeout),
     Service.
 
-service_stop(Service, Timeout)
-    when is_record(Service, config_service_internal) ->
-    service_stop_internal(Service, Timeout);
+service_stop(Service, Remove, Timeout)
+    when is_record(Service, config_service_internal), is_boolean(Remove) ->
+    service_stop_internal(Service, Remove, Timeout);
 
-service_stop(Service, Timeout)
+service_stop(Service, false, Timeout)
     when is_record(Service, config_service_external) ->
     service_stop_external(Service, Timeout).
 
@@ -262,36 +267,39 @@ configure_service([Service | Services], Configured, Timeout) ->
                       [service_start(Service, Timeout) | Configured],
                       Timeout).
 
-service_find_internal(#config_service_internal{module = Path} = Service)
+service_start_find_internal(#config_service_internal{module = Path} = Service)
     when is_list(Path) ->
     case filename:extension(Path) of
         ".erl" ->
             Module = erlang:list_to_atom(filename:basename(Path, ".erl")),
-            case service_find_internal_add_pathz(Path) of
+            case service_start_find_internal_add_pathz(Path) of
                 {ok, FullPath} ->
                     case compile:file(FullPath,
                                       compiler_options(FullPath)) of
                         {ok, Module} ->
-                            service_find_internal_module(Module, Service);
-                        {error, _} = Error ->
-                            Error
+                            service_start_find_internal_module(Module, Service);
+                        error ->
+                            {error, compile};
+                        {error, Errors, Warnings} ->
+                            {error, {compile, Errors, Warnings}}
                     end;
                 {error, _} = Error ->
                     Error
             end;
         ".beam" ->
             Module = erlang:list_to_atom(filename:basename(Path, ".beam")),
-            case service_find_internal_add_pathz(Path) of
+            case service_start_find_internal_add_pathz(Path) of
                 {ok, _} ->
-                    service_find_internal_module(Module, Service);
+                    service_start_find_internal_module(Module, Service);
                 {error, _} = Error ->
                     Error
             end;
         ".app" ->
             Application = erlang:list_to_atom(filename:basename(Path, ".app")),
-            case service_find_internal_add_pathz(Path) of
+            case service_start_find_internal_add_pathz(Path) of
                 {ok, _} ->
-                    service_find_internal_application(Application, Service);
+                    service_start_find_internal_application(Application,
+                                                            Service);
                 {error, _} = Error ->
                     Error
             end;
@@ -302,30 +310,33 @@ service_find_internal(#config_service_internal{module = Path} = Service)
                         non_existing ->
                             {error, {non_existing, Path}};
                         FullPath ->
-                            service_find_internal_script(FullPath, Service)
+                            service_start_find_internal_script(FullPath,
+                                                               Service)
                     end;
                 _ ->
-                    service_find_internal_script(Path, Service)
-            end
+                    service_start_find_internal_script(Path, Service)
+            end;
+        Extension ->
+            {error, {invalid_extension, Extension}}
     end;
-service_find_internal(#config_service_internal{module = Module} = Service)
+service_start_find_internal(#config_service_internal{module = Module} = Service)
     when is_atom(Module) ->
     % prefer application files to load internal services
     % (so that application dependencies can be clearly specified, etc.)
     case application:load(Module) of
         ok ->
-            service_find_internal_application(Module, Service);
+            service_start_find_internal_application(Module, Service);
         {error, {already_loaded, Module}} ->
-            service_find_internal_application(Module, Service);
+            service_start_find_internal_application(Module, Service);
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
-            service_find_internal_module(Module, Service)
+            service_start_find_internal_module(Module, Service)
     end.
 
 compiler_options(FilePath) ->
     [{outdir, filename:dirname(FilePath)}].
 
-service_find_internal_add_pathz(Path) ->
+service_start_find_internal_add_pathz(Path) ->
     CodePath = filename:dirname(Path),
     if
         CodePath == "." ->
@@ -344,7 +355,7 @@ service_find_internal_add_pathz(Path) ->
             end
     end.
 
-service_find_internal_module(Module, Service)
+service_start_find_internal_module(Module, Service)
     when is_atom(Module) ->
     case code:is_loaded(Module) of
         false ->
@@ -355,10 +366,10 @@ service_find_internal_module(Module, Service)
                     {error, {Reason, Module}}
             end;
         _ ->
-            {ok, Service}
+            {ok, Service#config_service_internal{module = Module}}
     end.
 
-service_find_internal_application(Application, Service)
+service_start_find_internal_application(Application, Service)
     when is_atom(Application) ->
     case cloudi_x_reltool_util:application_start(Application) of
         ok ->
@@ -367,11 +378,37 @@ service_find_internal_application(Application, Service)
             Error
     end.
 
-service_find_internal_script(ScriptPath, Service)
+service_start_find_internal_script(ScriptPath, Service)
     when is_list(ScriptPath) ->
     case cloudi_x_reltool_util:script_start(ScriptPath) of
-        {ok, Application} ->
+        {ok, [Application | _]} ->
             {ok, Service#config_service_internal{module = Application}};
+        {error, _} = Error ->
+            Error
+    end.
+
+service_stop_remove_internal(#config_service_internal{module = Module,
+                                                      file_path = Path},
+                             Timeout)
+    when is_atom(Module), is_list(Path) ->
+    case filename:extension(Path) of
+        ".erl" ->
+            cloudi_x_reltool_util:module_purged(Module, Timeout);
+        ".beam" ->
+            cloudi_x_reltool_util:module_purged(Module, Timeout);
+        ".app" ->
+            cloudi_x_reltool_util:application_remove(Module, Timeout);
+        ".script" ->
+            cloudi_x_reltool_util:script_remove(Path, Timeout)
+    end;
+service_stop_remove_internal(#config_service_internal{module = Module},
+                             Timeout)
+    when is_atom(Module) ->
+    case cloudi_x_reltool_util:application_running(Module, Timeout) of
+        {ok, _} ->
+            cloudi_x_reltool_util:application_remove(Module, Timeout);
+        {error, {not_found, Module}} ->
+            cloudi_x_reltool_util:module_purged(Module, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -450,18 +487,21 @@ service_start_external(Count0,
 
 service_stop_internal(#config_service_internal{
                           module = Module,
-                          uuid = UUID}, Timeout) ->
+                          uuid = UUID} = Service, Remove, Timeout) ->
     case cloudi_services_monitor:shutdown(UUID, Timeout) of
-        ok ->
-            case cloudi_x_reltool_util:application_running(Module, Timeout) of
-                {ok, _} ->
-                    cloudi_x_reltool_util:application_stop(Module);
-                {error, {not_found, Module}} ->
-                    ok; % internal service is not an OTP application
+        ok when Remove =:= true ->
+            % no service processes are using the service module
+            % so it is safe to remove the service module
+            % dependencies (applications, if they were used)
+            case service_stop_remove_internal(Service, Timeout) of
+                ok ->
+                    ok;
                 {error, Reason} ->
-                    ?LOG_ERROR("error stopping internal service application "
-                               "(~p):~n ~p", [Module, Reason])
+                    ?LOG_ERROR("error removing internal service (~p):~n ~p",
+                               [Module, Reason])
             end,
+            ok;
+        ok when Remove =:= false ->
             ok;
         {error, Reason} ->
             ?LOG_ERROR("error stopping internal service (~p):~n ~p",

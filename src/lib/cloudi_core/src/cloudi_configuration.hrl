@@ -111,6 +111,7 @@
     {
         prefix,
         module,
+        file_path,               % discovered if module was set as a string
         args,
         dest_refresh,
         timeout_init,

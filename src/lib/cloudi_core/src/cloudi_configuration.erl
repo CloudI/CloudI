@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -281,7 +281,22 @@ services_remove([UUID | _] = Value,
             [] ->
                 ok;
             [Service] ->
-                cloudi_configurator:service_stop(Service, Timeout)
+                Remove = if
+                    is_record(Service, config_service_internal) ->
+                        not lists:any(fun(S) ->
+                            if
+                                is_record(S, config_service_internal),
+                                S#config_service_internal.module == 
+                                Service#config_service_internal.module ->
+                                    true;
+                                true ->
+                                    false
+                            end
+                        end, NewL);
+                    true ->
+                        false
+                end,
+                cloudi_configurator:service_stop(Service, Remove, Timeout)
         end,
         NewL
     end, Services, Value),

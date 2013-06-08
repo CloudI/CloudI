@@ -1,4 +1,4 @@
-#[CloudI 1.2.2 (beta)](http://cloudi.org)
+#[CloudI 1.2.3 (beta)](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
@@ -60,7 +60,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= R15B01 (erlang/Ubuntu, erlang/macports)`
+* `Erlang >= R16 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
 * `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`

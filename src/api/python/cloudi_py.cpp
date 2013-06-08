@@ -480,6 +480,7 @@ class callback : public CloudI::API::function_object_c
             Py_DECREF(m_f);
         }
         callback(callback const & o) :
+            CloudI::API::function_object_c(o),
             m_f(o.m_f), m_thread_state(o.m_thread_state)
         {
             Py_INCREF(m_f);

@@ -19,7 +19,7 @@ cloudi_os_spawn_vsn_1_CPPFLAGS = \
  -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
  -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
  -DCURRENT_VERSION=$(CURRENT_VERSION) $(BOOST_CPPFLAGS) \
- -include $(srcdir)/cloudi_os_spawn.h
+ -include $(srcdir)/cloudi_os_spawn.h $(CXXFLAGS)
 cloudi_os_spawn_vsn_1_LDADD = -lei
 cloudi_os_spawn_vsn_1_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
 
@@ -28,7 +28,6 @@ cloudi_os_spawn_vsn_1_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
 libcloudi_socket_drv_la_SOURCES = cloudi_socket_drv.cpp assert.cpp
 libcloudi_socket_drv_la_CPPFLAGS = \
  -fPIC -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
- $(CXXFLAGS)
-libcloudi_socket_drv_la_LDFLAGS = \
- -shared -no-undefined -module -avoid-version \
+ $(BOOST_CPPFLAGS) $(CXXFLAGS)
+libcloudi_socket_drv_la_LDFLAGS = -module -avoid-version \
  -export-symbols-regex '(libcloudi_socket_drv|nif_init|on_load|on_unload)'

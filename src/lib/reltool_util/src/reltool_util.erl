@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.3.0 {@date} {@time}
+%%% @version 0.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -56,11 +56,19 @@
          application_start/2,
          application_start/3,
          application_stop/1,
+         application_remove/1,
+         application_remove/2,
+         application_purged/1,
+         application_purged/2,
          application_running/1,
          application_running/2,
          application_loaded/1,
          module_loaded/1,
-         script_start/1]).
+         module_purged/1,
+         module_purged/2,
+         script_start/1,
+         script_remove/1,
+         script_remove/2]).
 
 -compile({no_auto_import, [{module_loaded, 1}]}).
 
@@ -136,6 +144,7 @@ application_start(Application, Env, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Stop an application and its dependencies.===
+%% Only stop dependencies that are not required for other applications.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -143,26 +152,97 @@ application_start(Application, Env, Timeout)
     ok |
     {error, any()}.
 
-application_stop(Application)
+application_stop(Application) ->
+    case application_stop_dependencies(Application) of
+        {ok, _} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application) ->
+    application_remove(Application, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies with a timeout.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom(),
+                         Timeout :: pos_integer()) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application, Timeout)
+    when is_atom(Application), is_integer(Timeout), Timeout > 0 ->
+    case application_stop_dependencies(Application) of
+        {ok, Applications} ->
+            TimeoutSlice = erlang:round(
+                0.5 + Timeout / erlang:length(Applications)),
+            applications_purged(Applications, TimeoutSlice);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Purge a loaded application's modules and unload the application.===
+%% The application is stopped if it is running, but its dependencies are
+%% ignored.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_purged(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+application_purged(Application) ->
+    application_purged(Application, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Purge a loaded application's modules and unload the application with a specific timeout.===
+%% The application is stopped if it is running, but its dependencies are
+%% ignored.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_purged(Application :: atom(),
+                         Timeout :: pos_integer()) ->
+    ok |
+    {error, any()}.
+
+application_purged(Application, Timeout)
     when is_atom(Application) ->
-    case applications_dependencies(Application) of
-        {ok, StopAs0} ->
+    case application_loaded(Application) of
+        {ok, _} ->
             case ensure_application_stopped(Application) of
                 ok ->
-                    StopAs1 = delete_all(kernel, StopAs0),
-                    StopAs2 = delete_all(stdlib, StopAs1),
-                    Apps = application:loaded_applications(),
-                    {value, _, OtherApps0} = lists:keytake(Application,
-                                                           1, Apps),
-                    case application_stop_external(StopAs2, OtherApps0) of
-                        {ok, OtherAppsN} ->
-                            RequiredAs = application_stop_ignore(OtherAppsN),
-                            StopAsN = lists:reverse(lists:foldl(fun(A, As) ->
-                                delete_all(A, As)
-                            end, StopAs2, RequiredAs)),
-                            application_stop_dependencies(StopAsN);
-                        {error, _} = Error ->
-                            Error
+                    case application:get_key(Application, modules) of
+                        {ok, Modules} ->
+                            case modules_purged(Modules, Timeout) of
+                                ok ->
+                                    application:unload(Application);
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        undefined ->
+                            {error, {modules_missing, Application}}
                     end;
                 {error, _} = Error ->
                     Error
@@ -257,6 +337,36 @@ module_loaded(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Make sure a module is purged.===
+%% If the module is not loaded, ignore it.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_purged(Module :: atom()) ->
+    ok |
+    {error, any()}.
+
+module_purged(Module) ->
+    module_purged(Module, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure a module is purged with a timeout.===
+%% If the module is not loaded, ignore it.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_purged(Module :: atom(),
+                    Timeout :: pos_integer()) ->
+    ok |
+    {error, any()}.
+
+module_purged(Module, Timeout)
+    when is_atom(Module) ->
+    modules_purged([Module], Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Start everything specified within a script file.===
 %% A script file is the input used when creating a boot file, which is the
 %% file used when first starting the Erlang VM.  This function checks
@@ -272,7 +382,7 @@ module_loaded(Module)
 %%-------------------------------------------------------------------------
 
 -spec script_start(FilePath :: string()) ->
-    {ok, atom()} |
+    {ok, list(atom())} |
     {error, any()}.
 
 script_start(FilePath)
@@ -288,7 +398,82 @@ script_start(FilePath)
             Root = lists:sublist(DirNames, DirNamesLength - 2),
             case filelib:is_dir(filename:join(Root ++ ["lib"])) of
                 true ->
-                    script_instructions(Instructions, Root);
+                    % on success, return the last application to be started
+                    % (should be the main application since all the application
+                    %  dependencies are started first)
+                    script_start_instructions(Instructions, Root);
+                false ->
+                    {error, invalid_release_structure}
+            end;
+        _ ->
+            {error, invalid_release_directory}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a script file.===
+%% A script file is the input used when creating a boot file, which is the
+%% file used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% the script is only used in the binary boot file format and only a single
+%% boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The script file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec script_remove(FilePath :: string()) ->
+    ok |
+    {error, any()}.
+
+script_remove(FilePath) ->
+    script_remove(FilePath, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a script file with a timeout.===
+%% A script file is the input used when creating a boot file, which is the
+%% file used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% the script is only used in the binary boot file format and only a single
+%% boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The script file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec script_remove(FilePath :: string(),
+                    Timeout :: pos_integer()) ->
+    ok |
+    {error, any()}.
+
+script_remove(FilePath, Timeout)
+    when is_list(FilePath), is_integer(Timeout), Timeout > 0 ->
+    true = lists:suffix(".script", FilePath),
+    % system name and version are ignored
+    {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
+    Dir = filename:dirname(FilePath),
+    % expects the typical directory structure produced by reltool
+    DirNames = filename:split(Dir),
+    case erlang:length(DirNames) of
+        DirNamesLength when DirNamesLength > 2 ->
+            Root = lists:sublist(DirNames, DirNamesLength - 2),
+            case filelib:is_dir(filename:join(Root ++ ["lib"])) of
+                true ->
+                    case script_remove_instructions(Instructions) of
+                        {ok, Applications} ->
+                            TimeoutSlice = erlang:round(
+                                0.5 + Timeout / erlang:length(Applications)),
+                            applications_remove(Applications, TimeoutSlice);
+                        {error, _} = Error ->
+                            Error
+                    end;
                 false ->
                     {error, invalid_release_structure}
             end;
@@ -384,12 +569,72 @@ application_stop_ignore(Required, [{A, _, _} | L]) ->
             Error
     end.
 
-application_stop_dependencies([]) ->
+application_stop_all([]) ->
     ok;
-application_stop_dependencies([A | As]) ->
+application_stop_all([A | As]) ->
     case ensure_application_stopped(A) of
         ok ->
-            application_stop_dependencies(As);
+            application_stop_all(As);
+        {error, _} = Error ->
+            Error
+    end.
+
+application_stop_dependencies(Application)
+    when is_atom(Application) ->
+    case applications_dependencies(Application) of
+        {ok, StopAs0} ->
+            case ensure_application_stopped(Application) of
+                ok ->
+                    StopAs1 = delete_all(kernel, StopAs0),
+                    StopAs2 = delete_all(stdlib, StopAs1),
+                    Apps = application:loaded_applications(),
+                    {value, _, OtherApps0} = lists:keytake(Application,
+                                                           1, Apps),
+                    % determine applications which are not dependencies
+                    case application_stop_external(StopAs2, OtherApps0) of
+                        {ok, OtherAppsN} ->
+                            % check to see the required applications
+                            % separate from the application dependencies
+                            RequiredAs = application_stop_ignore(OtherAppsN),
+                            % ignore all applications that are requirements
+                            % of other applications
+                            StopAsN = lists:reverse(lists:foldl(fun(A, As) ->
+                                delete_all(A, As)
+                            end, StopAs2, RequiredAs)),
+                            % stop all the application dependencies
+                            % that are no longer required
+                            case application_stop_all(StopAsN) of
+                                ok ->
+                                    {ok, [Application | StopAsN]};
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+applications_remove([], _) ->
+    ok;
+applications_remove([Application | Applications], Timeout) ->
+    case application_remove(Application, Timeout) of
+        ok ->
+            applications_remove(Applications, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+applications_purged([], _) ->
+    ok;
+applications_purged([Application | Applications], Timeout) ->
+    case application_purged(Application, Timeout) of
+        ok ->
+            applications_purged(Applications, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -424,106 +669,181 @@ applications_dependencies([A | Rest], As) ->
             Error
     end.
 
-script_instructions(L, Root) ->
-    Apps = application:loaded_applications(),
-    script_instructions(L, preload, undefined, Root, Apps).
+applications_top_level(Applications) ->
+    true = erlang:length(lists:usort(Applications)) ==
+           erlang:length(Applications), % no duplicates
+    case applications_top_level(Applications, sets:new()) of
+        {ok, Dependencies} ->
+            TopLevelApplications = lists:foldl(fun(A, L) ->
+                lists:delete(A, L)
+            end, Applications, sets:to_list(Dependencies)),
+            {ok, TopLevelApplications};
+        {error, _} = Error ->
+            Error
+    end.
 
-script_instructions([], started, Application, _, _) ->
-    {ok, Application};
-script_instructions([{progress, Progress} | L],
-                    _, Application, Root, Apps) ->
-    script_instructions(L, Progress, Application, Root, Apps);
-script_instructions([{preLoaded, _} | L],
-                    preload, Application, Root, Apps) ->
-    script_instructions(L, preload, Application, Root, Apps);
-script_instructions([{kernel_load_completed} | L],
-                    preloaded, Application, Root, Apps) ->
-    script_instructions(L, kernel_load_completed, Application, Root, Apps);
-script_instructions([{path, Paths} | L],
-                    preloaded, Application, Root, Apps) ->
+applications_top_level([], Dependencies) ->
+    {ok, Dependencies};
+applications_top_level([Application | Applications], Dependencies) ->
+    case applications_dependencies(Application) of
+        {ok, As} ->
+            applications_top_level(Applications,
+                                   sets:union(sets:from_list(As),
+                                              Dependencies));
+        {error, _} = Error ->
+            Error
+    end.
+
+script_start_instructions(L, Root) ->
+    Apps = application:loaded_applications(),
+    script_start_instructions(L, preload, [], Root, Apps).
+
+script_start_instructions([], started, Applications, _, _) ->
+    applications_top_level(Applications);
+script_start_instructions([{progress, Progress} | L],
+                          _, Applications, Root, Apps) ->
+    script_start_instructions(L, Progress, Applications, Root, Apps);
+script_start_instructions([{preLoaded, _} | L],
+                          preload, Applications, Root, Apps) ->
+    script_start_instructions(L, preload, Applications, Root, Apps);
+script_start_instructions([{kernel_load_completed} | L],
+                          preloaded, Applications, Root, Apps) ->
+    script_start_instructions(L, kernel_load_completed,
+                              Applications, Root, Apps);
+script_start_instructions([{path, Paths} | L],
+                          preloaded, Applications, Root, Apps) ->
     case ensure_code_paths(Paths, Apps) of
         ok ->
-            script_instructions(L, preloaded, Application, Root, Apps);
+            script_start_instructions(L, preloaded, Applications, Root, Apps);
         {error, _} = Error ->
             Error
     end;
-script_instructions([{primLoad, Modules} | L],
-                    preloaded, Application, Root, Apps) ->
+script_start_instructions([{primLoad, Modules} | L],
+                          preloaded, Applications, Root, Apps) ->
     Loaded = lists:all(fun(M) ->
         is_module_loaded(M) =:= true
     end, Modules),
     if
         Loaded ->
-            script_instructions(L, preloaded, Application, Root, Apps);
+            script_start_instructions(L, preloaded, Applications, Root, Apps);
         true ->
             {error, modules_not_preloaded}
     end;
-script_instructions([{kernel_load_completed} | L],
-                    kernel_load_completed, Application, Root, Apps) ->
-    script_instructions(L, kernel_load_completed, Application, Root, Apps);
-script_instructions([{primLoad, Modules} | L],
-                    kernel_load_completed, Application, Root, Apps) ->
+script_start_instructions([{kernel_load_completed} | L],
+                          kernel_load_completed, Applications, Root, Apps) ->
+    script_start_instructions(L, kernel_load_completed,
+                              Applications, Root, Apps);
+script_start_instructions([{primLoad, Modules} | L],
+                          kernel_load_completed, Applications, Root, Apps) ->
     case ensure_all_loaded(Modules) of
         ok ->
-            script_instructions(L, kernel_load_completed,
-                                Application, Root, Apps);
+            script_start_instructions(L, kernel_load_completed,
+                                      Applications, Root, Apps);
         {error, _} = Error ->
             Error
     end;
-script_instructions([{path, Paths} | L],
-                    kernel_load_completed, Application, Root, Apps) ->
+script_start_instructions([{path, Paths} | L],
+                          kernel_load_completed, Applications, Root, Apps) ->
     case load_all_paths(Paths, Root) of
         ok ->
-            script_instructions(L, kernel_load_completed,
-                                Application, Root, Apps);
+            script_start_instructions(L, kernel_load_completed,
+                                      Applications, Root, Apps);
         {error, _} = Error ->
             Error
     end;
-script_instructions([{path, _} | L],
-                    modules_loaded, Application, Root, Apps) ->
-    script_instructions(L, modules_loaded, Application, Root, Apps);
-script_instructions([{kernelProcess, _, _} | L],
-                    modules_loaded, Application, Root, Apps) ->
-    script_instructions(L, modules_loaded, Application, Root, Apps);
-script_instructions([{apply, {application, load, [AppDescr]}} | L],
-                    init_kernel_started, Application, Root, Apps) ->
+script_start_instructions([{path, _} | L],
+                          modules_loaded, Applications, Root, Apps) ->
+    script_start_instructions(L, modules_loaded, Applications, Root, Apps);
+script_start_instructions([{kernelProcess, _, _} | L],
+                          modules_loaded, Applications, Root, Apps) ->
+    script_start_instructions(L, modules_loaded, Applications, Root, Apps);
+script_start_instructions([{apply, {application, load, [AppDescr]}} | L],
+                          init_kernel_started, Applications, Root, Apps) ->
     {application, A, [_ | _] = AppSpecKeys} = AppDescr,
     case lists:keyfind(A, 1, Apps) of
         {A, _, VSN} ->
             {vsn, RequestedVSN} = lists:keyfind(vsn, 1, AppSpecKeys),
             if
                 VSN == RequestedVSN ->
-                    script_instructions(L, init_kernel_started,
-                                        Application, Root, Apps);
+                    script_start_instructions(L, init_kernel_started,
+                                              [A | Applications], Root, Apps);
                 true ->
                     {error, {version_mismatch, A, RequestedVSN, VSN}}
             end;
         false ->
             case application:load(AppDescr) of
                 ok ->
-                    script_instructions(L, init_kernel_started,
-                                        Application, Root, Apps);
+                    script_start_instructions(L, init_kernel_started,
+                                              [A | Applications], Root, Apps);
                 {error, _} = Error ->
                     Error
             end
     end;
-script_instructions([{apply, {application, start_boot, [A, permanent]}} | L],
-                    applications_loaded, Application, Root, Apps)
+script_start_instructions([{apply,
+                            {application, start_boot, [A | _]}} | L],
+                          applications_loaded, Applications, Root, Apps)
     when A =:= kernel; A =:= stdlib ->
     % if this code is being used, kernel and stdlib should have already
     % been started with the boot file that was used to start the Erlang VM
-    script_instructions(L, applications_loaded, Application, Root, Apps);
-script_instructions([{apply, {application, start_boot, [A, permanent]}} | L],
-                    applications_loaded, _, Root, Apps) ->
+    script_start_instructions(L, applications_loaded, Applications, Root, Apps);
+script_start_instructions([{apply,
+                            {application, start_boot, [A | _]}} | L],
+                          applications_loaded, Applications, Root, Apps) ->
     case ensure_application_started(A) of
         ok ->
-            script_instructions(L, applications_loaded, A, Root, Apps);
+            script_start_instructions(L, applications_loaded,
+                                      Applications, Root, Apps);
         {error, _} = Error ->
             Error
     end;
-script_instructions([{apply, {c, erlangrc, []}} | L],
-                    applications_loaded, Application, Root, Apps) ->
-    script_instructions(L, applications_loaded, Application, Root, Apps).
+script_start_instructions([{apply, {c, erlangrc, _}} | L],
+                          applications_loaded, Applications, Root, Apps) ->
+    script_start_instructions(L, applications_loaded,
+                              Applications, Root, Apps).
+
+script_remove_instructions(L) ->
+    script_remove_instructions(L, preload, []).
+
+script_remove_instructions([], started, Applications) ->
+    applications_top_level(Applications);
+script_remove_instructions([{progress, Progress} | L], _, Applications) ->
+    script_remove_instructions(L, Progress, Applications);
+script_remove_instructions([{preLoaded, _} | L], preload, Applications) ->
+    script_remove_instructions(L, preload, Applications);
+script_remove_instructions([{kernel_load_completed} | L],
+                           preloaded, Applications) ->
+    script_remove_instructions(L, kernel_load_completed, Applications);
+script_remove_instructions([{path, _} | L],
+                           preloaded, Applications) ->
+    script_remove_instructions(L, preloaded, Applications);
+script_remove_instructions([{primLoad, _} | L],
+                           preloaded, Applications) ->
+    script_remove_instructions(L, preloaded, Applications);
+script_remove_instructions([{kernel_load_completed} | L],
+                           kernel_load_completed, Applications) ->
+    script_remove_instructions(L, kernel_load_completed, Applications);
+script_remove_instructions([{primLoad, _} | L],
+                           kernel_load_completed, Applications) ->
+    script_remove_instructions(L, kernel_load_completed, Applications);
+script_remove_instructions([{path, _} | L],
+                           kernel_load_completed, Applications) ->
+    script_remove_instructions(L, kernel_load_completed, Applications);
+script_remove_instructions([{path, _} | L],
+                           modules_loaded, Applications) ->
+    script_remove_instructions(L, modules_loaded, Applications);
+script_remove_instructions([{kernelProcess, _, _} | L],
+                           modules_loaded, Applications) ->
+    script_remove_instructions(L, modules_loaded, Applications);
+script_remove_instructions([{apply, {application, load, [AppDescr]}} | L],
+                           init_kernel_started, Applications) ->
+    {application, A, [_ | _]} = AppDescr,
+    script_remove_instructions(L, init_kernel_started, [A | Applications]);
+script_remove_instructions([{apply, {application, start_boot, _}} | L],
+                           applications_loaded, Applications) ->
+    script_remove_instructions(L, applications_loaded, Applications);
+script_remove_instructions([{apply, {c, erlangrc, _}} | L],
+                           applications_loaded, Applications) ->
+    script_remove_instructions(L, applications_loaded, Applications).
 
 ensure_all_loaded([]) ->
     ok;
@@ -572,6 +892,40 @@ is_module_loaded(Module) when is_atom(Module) ->
             true;
         false ->
             false
+    end.
+
+-define(MODULES_PURGED_DELTA, 100).
+modules_purged(Modules, Timeout)
+    when is_list(Modules), is_integer(Timeout), Timeout > 0 ->
+    modules_purged(Modules, [], Timeout).
+
+modules_purged([], [], _) ->
+    ok;
+modules_purged([], BusyModules, Timeout) ->
+    case erlang:max(Timeout - ?MODULES_PURGED_DELTA, 0) of
+        0 ->
+            case lists:dropwhile(fun code:purge/1, BusyModules) of
+                [] ->
+                    ok;
+                _ ->
+                    {error, timeout}
+            end;
+        NextTimeout ->
+            receive after ?MODULES_PURGED_DELTA -> ok end,
+            modules_purged(lists:reverse(BusyModules), [], NextTimeout)
+    end;
+modules_purged([Module | Modules], BusyModules, Timeout) ->
+    case is_module_loaded(Module) of
+        true ->
+            true = code:delete(Module),
+            case code:soft_purge(Module) of
+                true ->
+                    modules_purged(Modules, BusyModules, Timeout);
+                false ->
+                    modules_purged(Modules, [Module | BusyModules], Timeout)
+            end;
+        false ->
+            modules_purged(Modules, BusyModules, Timeout)
     end.
 
 load_all_modules([]) ->
