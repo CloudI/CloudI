@@ -9,6 +9,7 @@ ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
 ememcached    Nick Gerakines <nick@gerakines.net>
 emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
 epgsql        Will Glozer
+erlasticsearch  Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
 etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
 jinterface    Ericsson's OTP Team
