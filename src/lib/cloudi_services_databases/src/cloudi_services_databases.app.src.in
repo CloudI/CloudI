@@ -20,6 +20,8 @@
         cloudi_x_ememcached,
         cloudi_x_emysql,
         cloudi_x_epgsql,
+        cloudi_x_poolboy,
+        cloudi_x_thrift,
         cloudi_x_erlasticsearch,
         cloudi_x_etokyotyrant,
         stdlib,

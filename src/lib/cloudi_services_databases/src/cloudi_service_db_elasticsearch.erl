@@ -122,16 +122,14 @@
 -type database()        :: atom() | string() | binary().
 
 -record(state, {
-        pool_name       :: pool_name(),
-        connection      :: connection(),
-        database        :: database()
+        pool_name           :: pool_name(),
+        binary_pool_name    :: pool_name(),
+        connection          :: connection(),
+        binary_connection   :: connection(),
+        database            :: database()
         }).
 
--record(restResponse, {status :: integer(),
-                       headers :: dict(),
-                       body :: string() | binary()
-                      }).
--type response()        :: {ok, #restResponse{}} | boolean() | error().
+-type response()        :: [tuple()] | error().
 
 
 %%%------------------------------------------------------------------------
@@ -442,25 +440,41 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             {pool_options, ?DEFAULT_POOL_OPTIONS},
             {connection_options, ?DEFAULT_CONNECTION_OPTIONS},
             {database, ?DEFAULT_DATABASE}],
-    [PoolName, PoolOptions, ConnectionOptions, DatabaseName] =
+    [PoolName, PoolOptions, ConnectionOptions0, DatabaseName] =
         cloudi_proplists:take_values(Defaults, Args),
+
+    BinaryPoolName = <<PoolName/binary, "_binary">>,
+    ConnectionOptions1 = remove_binary_response_option(ConnectionOptions0),
+    ConnectionOptions = [{binary_response, false} | ConnectionOptions1],
+    BinaryConnectionOptions = [{binary_response, true} | ConnectionOptions1],
+
     case cloudi_x_erlasticsearch:start_pool(PoolName, PoolOptions, ConnectionOptions) of
         {ok, Connection} ->
-            cloudi_service:subscribe(Dispatcher, DatabaseName),
-            {ok, #state{pool_name = PoolName,
-                        connection = Connection,
-                        database = DatabaseName}};
+            case cloudi_x_erlasticsearch:start_pool(BinaryPoolName, PoolOptions, BinaryConnectionOptions) of
+                {ok, BinaryConnection} -> 
+                    cloudi_service:subscribe(Dispatcher, DatabaseName),
+                    {ok, #state{pool_name = PoolName,
+                                binary_pool_name = BinaryPoolName,
+                                connection = Connection,
+                                binary_connection = BinaryConnection,
+                                database = DatabaseName}};
+                {error, Reason} ->
+                    cloudi_x_erlasticsearch:stop_pool(PoolName),
+                    {stop, Reason}
+            end;
         {error, Reason} ->
             {stop, Reason}
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
-                              #state{pool_name = PoolName} = State,
+                              #state{pool_name = PoolName,
+                                     binary_pool_name = BinaryPoolName
+                                    } = State,
                               _Dispatcher) ->
     case Request of
         Command when is_binary(Command) ->
-            {reply, do_query(Command, PoolName, Timeout), State};
+            {reply, do_query(Command, BinaryPoolName, Timeout), State};
         {'health'} -> 
             {reply, cloudi_x_erlasticsearch:health({pool, PoolName}), State};
         {'state', Params} -> 
@@ -515,8 +529,10 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{pool_name = PoolName}) ->
+cloudi_service_terminate(_, #state{pool_name = PoolName,
+                                   binary_pool_name = BinaryPoolName}) ->
     cloudi_x_erlasticsearch:stop_pool(PoolName),
+    cloudi_x_erlasticsearch:stop_pool(BinaryPoolName),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -524,56 +540,56 @@ cloudi_service_terminate(_, #state{pool_name = PoolName}) ->
 %%%------------------------------------------------------------------------
 
 %% do a single query and return a boolean to determine if the query succeeded
-do_query(Query, PoolName, _Timeout) ->
+do_query(Query, BinaryPoolName, _Timeout) ->
     try (case cloudi_string:binary_to_term(Query) of
                 {'health'} -> 
-                    cloudi_x_erlasticsearch:health({pool, PoolName});
+                    cloudi_x_erlasticsearch:health({pool, BinaryPoolName});
                 {'state', Params} -> 
-                    cloudi_x_erlasticsearch:state({pool, PoolName}, Params);
+                    cloudi_x_erlasticsearch:state({pool, BinaryPoolName}, Params);
                 {'nodes_info', NodeNames, Params} -> 
-                    cloudi_x_erlasticsearch:nodes_info({pool, PoolName}, NodeNames, Params);
+                    cloudi_x_erlasticsearch:nodes_info({pool, BinaryPoolName}, NodeNames, Params);
 		        {'nodes_stats', NodeNames, Params} -> 
-                    cloudi_x_erlasticsearch:nodes_stats({pool, PoolName}, NodeNames, Params);
+                    cloudi_x_erlasticsearch:nodes_stats({pool, BinaryPoolName}, NodeNames, Params);
 		        {'status', Indexes} -> 
-		            cloudi_x_erlasticsearch:status({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:status({pool, BinaryPoolName}, Indexes);
 		        {'create_index', Index, Doc} -> 
-		            cloudi_x_erlasticsearch:create_index({pool, PoolName}, Index, Doc);
+		            cloudi_x_erlasticsearch:create_index({pool, BinaryPoolName}, Index, Doc);
 		        {'delete_index', Index} -> 
-		            cloudi_x_erlasticsearch:delete_index({pool, PoolName}, Index);
+		            cloudi_x_erlasticsearch:delete_index({pool, BinaryPoolName}, Index);
 		        {'open_index', Index} -> 
-		            cloudi_x_erlasticsearch:open_index({pool, PoolName}, Index);
+		            cloudi_x_erlasticsearch:open_index({pool, BinaryPoolName}, Index);
 		        {'close_index', Index} -> 
-		            cloudi_x_erlasticsearch:close_index({pool, PoolName}, Index);
+		            cloudi_x_erlasticsearch:close_index({pool, BinaryPoolName}, Index);
 		        {'is_index', Indexes} -> 
-		            cloudi_x_erlasticsearch:is_index({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:is_index({pool, BinaryPoolName}, Indexes);
 		        {'count', Indexes, Types, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:count({pool, PoolName}, Indexes, Types, Doc, Params);
+		            cloudi_x_erlasticsearch:count({pool, BinaryPoolName}, Indexes, Types, Doc, Params);
 		        {'delete_by_query', Indexes, Types, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:delete_by_query({pool, PoolName}, Indexes, Types, Doc, Params);
+		            cloudi_x_erlasticsearch:delete_by_query({pool, BinaryPoolName}, Indexes, Types, Doc, Params);
 		        {'is_type', Indexes, Types} -> 
-		            cloudi_x_erlasticsearch:is_type({pool, PoolName}, Indexes, Types);
+		            cloudi_x_erlasticsearch:is_type({pool, BinaryPoolName}, Indexes, Types);
 		        {'insert_doc', Index, Type, Id, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:insert_doc({pool, PoolName}, Index, Type, Id, Doc, Params);
+		            cloudi_x_erlasticsearch:insert_doc({pool, BinaryPoolName}, Index, Type, Id, Doc, Params);
 		        {'is_doc', Index, Type, Id} -> 
-		            cloudi_x_erlasticsearch:is_doc({pool, PoolName}, Index, Type, Id);
+		            cloudi_x_erlasticsearch:is_doc({pool, BinaryPoolName}, Index, Type, Id);
 		        {'get_doc', Index, Type, Id, Params} -> 
-		            cloudi_x_erlasticsearch:get_doc({pool, PoolName}, Index, Type, Id, Params);
+		            cloudi_x_erlasticsearch:get_doc({pool, BinaryPoolName}, Index, Type, Id, Params);
 		        {'mget_doc', Index, Type, Doc} -> 
-		            cloudi_x_erlasticsearch:mget_doc({pool, PoolName}, Index, Type, Doc);
+		            cloudi_x_erlasticsearch:mget_doc({pool, BinaryPoolName}, Index, Type, Doc);
 		        {'delete_doc', Index, Type, Id, Params} -> 
-		            cloudi_x_erlasticsearch:delete_doc({pool, PoolName}, Index, Type, Id, Params);
+		            cloudi_x_erlasticsearch:delete_doc({pool, BinaryPoolName}, Index, Type, Id, Params);
 		        {'search', Index, Type, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:search({pool, PoolName}, Index, Type, Doc, Params);
+		            cloudi_x_erlasticsearch:search({pool, BinaryPoolName}, Index, Type, Doc, Params);
 		        {'refresh', Indexes} ->
-		            cloudi_x_erlasticsearch:refresh({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:refresh({pool, BinaryPoolName}, Indexes);
 		        {'flush', Indexes} ->
-		            cloudi_x_erlasticsearch:flush({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:flush({pool, BinaryPoolName}, Indexes);
 		        {'optimize', Indexes} ->
-		            cloudi_x_erlasticsearch:optimize({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:optimize({pool, BinaryPoolName}, Indexes);
 		        {'segments', Indexes} ->
-		            cloudi_x_erlasticsearch:segments({pool, PoolName}, Indexes);
+		            cloudi_x_erlasticsearch:segments({pool, BinaryPoolName}, Indexes);
 		        {'clear_cache', Indexes, Params} ->
-                    cloudi_x_erlasticsearch:clear_cache({pool, PoolName}, Indexes, Params);
+                    cloudi_x_erlasticsearch:clear_cache({pool, BinaryPoolName}, Indexes, Params);
                 _ ->
                     {error, invalid_call}
             end) of
@@ -581,10 +597,9 @@ do_query(Query, PoolName, _Timeout) ->
             ?LOG_DEBUG("Invalid elasticsearch command tuple ~p",
                        [binary_to_list(Query)]),
             <<>>;
-        {ok, RestResponse} ->
-            cloudi_string:term_to_binary({ok, RestResponse});
-        Result when is_boolean(Result) ->
-            cloudi_string:term_to_binary(Result)
+        Response ->
+            response_to_single_binary(Response)
+
     catch
         _:Reason ->
             ?LOG_DEBUG("exception when processing "
@@ -592,4 +607,38 @@ do_query(Query, PoolName, _Timeout) ->
                        [binary_to_list(Query), Reason]),
             <<>>
     end.
+
+%% @doc Incoming options should not request binary_response
+%%      (since we have two pools!)
+-spec remove_binary_response_option(params()) -> params().
+remove_binary_response_option(Options) ->
+    case lists:keytake(binary_response, 1, Options) of 
+        {value, _, Result} -> Result;
+        false -> Options
+    end.
+
+
+
+%% @doc Convert the response to a single binary JSON blob
+-spec response_to_single_binary(response()) -> binary().
+response_to_single_binary(Response) ->
+    response_to_single_binary(Response, []).
+
+-spec response_to_single_binary(response(), iolist()) -> binary().
+response_to_single_binary([], Acc) -> 
+    iolist_to_binary([<<"{">>, lists:reverse(Acc), <<"}">>]);
+response_to_single_binary([{status, Status} | []], Acc) ->
+    response_to_single_binary([], [[<<"\"status\":">>, Status] | Acc]);
+response_to_single_binary([{status, Status} | Tail], Acc) ->
+    response_to_single_binary(Tail, [[<<"\"status\":">>, Status, <<",">>] | Acc]);
+response_to_single_binary([{result, Result} | []], Acc) ->
+    response_to_single_binary([], [[<<"\"result\":">>, Result] | Acc]);
+response_to_single_binary([{result, Result} | Tail], Acc) ->
+    response_to_single_binary(Tail, [[<<"\"result\":">>, Result, <<",">>] | Acc]);
+response_to_single_binary([{body, Body} | []], Acc) ->
+    response_to_single_binary([], [[<<"\"body\":">>, Body] | Acc]);
+response_to_single_binary([{body, Body} | Tail], Acc) ->
+    response_to_single_binary(Tail, [[<<"\"body\":">>, Body, <<",">>] | Acc]);
+response_to_single_binary([_ | Tail], Acc) ->
+    response_to_single_binary(Tail, [Acc]).
 

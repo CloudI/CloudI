@@ -66,7 +66,6 @@
 -export([segments/1, segments/2]).
 
 -export([is_200/1, is_200_or_201/1]).
--export([decode_response/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -74,8 +73,9 @@
 -define(APP, ?MODULE).
 
 -record(state, {
-        client_name     :: client_name(),
-        connection      :: connection()}).
+        client_name                         :: client_name(),
+        binary_response = false             :: boolean(),
+        connection                          :: connection()}).
 
 %% ------------------------------------------------------------------
 %% API
@@ -253,31 +253,31 @@ close_index(ServerRef, Index) when is_binary(Index) ->
     route_call(ServerRef, {close_index, Index}, infinity).
 
 %% @doc Check if an index/indices exists in the ElasticSearch cluster
--spec is_index(server_ref(), index() | [index()]) -> boolean().
+-spec is_index(server_ref(), index() | [index()]) -> response().
 is_index(ServerRef, Index) when is_binary(Index) ->
     is_index(ServerRef, [Index]);
 is_index(ServerRef, Indexes) when is_list(Indexes) ->
     route_call(ServerRef, {is_index, Indexes}, infinity).
 
 %% @equiv count(ServerRef, ?ALL, [], Doc []).
--spec count(server_ref(), doc()) -> boolean().
+-spec count(server_ref(), doc()) -> response().
 count(ServerRef, Doc) when is_binary(Doc) ->
     count(ServerRef, ?ALL, [], Doc, []).
 
 %% @equiv count(ServerRef, ?ALL, [], Doc, Params).
--spec count(server_ref(), doc(), params()) -> boolean().
+-spec count(server_ref(), doc(), params()) -> response().
 count(ServerRef, Doc, Params) when is_binary(Doc), is_list(Params) ->
     count(ServerRef, ?ALL, [], Doc, Params).
 
 %% @equiv count(ServerRef, Index, [], Doc, Params).
--spec count(server_ref(), index() | [index()], doc(), params()) -> boolean().
+-spec count(server_ref(), index() | [index()], doc(), params()) -> response().
 count(ServerRef, Index, Doc, Params) when is_binary(Index), is_binary(Doc), is_list(Params) ->
     count(ServerRef, [Index], [], Doc, Params);
 count(ServerRef, Indexes, Doc, Params) when is_list(Indexes), is_binary(Doc), is_list(Params) ->
     count(ServerRef, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
--spec count(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> boolean().
+-spec count(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> response().
 count(ServerRef, Index, Type, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
     count(ServerRef, [Index], [Type], Doc, Params);
 count(ServerRef, Indexes, Type, Doc, Params) when is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
@@ -288,24 +288,24 @@ count(ServerRef, Indexes, Types, Doc, Params) when is_list(Indexes), is_list(Typ
     route_call(ServerRef, {count, Indexes, Types, Doc, Params}, infinity).
 
 %% @equiv delete_by_query(ServerRef, ?ALL, [], Doc []).
--spec delete_by_query(server_ref(), doc()) -> boolean().
+-spec delete_by_query(server_ref(), doc()) -> response().
 delete_by_query(ServerRef, Doc) when is_binary(Doc) ->
     delete_by_query(ServerRef, ?ALL, [], Doc, []).
 
 %% @equiv delete_by_query(ServerRef, ?ALL, [], Doc, Params).
--spec delete_by_query(server_ref(), doc(), params()) -> boolean().
+-spec delete_by_query(server_ref(), doc(), params()) -> response().
 delete_by_query(ServerRef, Doc, Params) when is_binary(Doc), is_list(Params) ->
     delete_by_query(ServerRef, ?ALL, [], Doc, Params).
 
 %% @equiv delete_by_query(ServerRef, Index, [], Doc, Params).
--spec delete_by_query(server_ref(), index() | [index()], doc(), params()) -> boolean().
+-spec delete_by_query(server_ref(), index() | [index()], doc(), params()) -> response().
 delete_by_query(ServerRef, Index, Doc, Params) when is_binary(Index), is_binary(Doc), is_list(Params) ->
     delete_by_query(ServerRef, [Index], [], Doc, Params);
 delete_by_query(ServerRef, Indexes, Doc, Params) when is_list(Indexes), is_binary(Doc), is_list(Params) ->
     delete_by_query(ServerRef, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
--spec delete_by_query(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> boolean().
+-spec delete_by_query(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> response().
 delete_by_query(ServerRef, Index, Type, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
     delete_by_query(ServerRef, [Index], [Type], Doc, Params);
 delete_by_query(ServerRef, Indexes, Type, Doc, Params) when is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
@@ -316,7 +316,7 @@ delete_by_query(ServerRef, Indexes, Types, Doc, Params) when is_list(Indexes), i
     route_call(ServerRef, {delete_by_query, Indexes, Types, Doc, Params}, infinity).
 
 %% @doc Check if a type exists in an index/indices in the ElasticSearch cluster
--spec is_type(server_ref(), index() | [index()], type() | [type()]) -> boolean().
+-spec is_type(server_ref(), index() | [index()], type() | [type()]) -> response().
 is_type(ServerRef, Index, Type) when is_binary(Index), is_binary(Type) ->
     is_type(ServerRef, [Index], [Type]);
 is_type(ServerRef, Indexes, Type) when is_list(Indexes), is_binary(Type) ->
@@ -467,17 +467,22 @@ get_env(Key, Default) ->
             Default
     end.
 -spec is_200(response()) -> boolean().
-is_200({ok, Response}) ->
-    case Response#restResponse.status of
-        200 -> true;
+is_200({error, _} = Response) -> Response;
+is_200(Response) ->
+    case lists:keyfind(status, 1, Response) of
+        {status, 200} -> true;
+        {status, <<"200">>} -> true;
         _ -> false
     end.
 
 -spec is_200_or_201(response()) -> boolean().
-is_200_or_201({ok, Response}) ->
-    case Response#restResponse.status of
-        200 -> true;
-        201 -> true;
+is_200_or_201({error, _} = Response) -> Response;
+is_200_or_201(Response) ->
+    case lists:keyfind(status, 1, Response) of
+        {status, 200} -> true;
+        {status, <<"200">>} -> true;
+        {status, 201} -> true;
+        {status, <<"201">>} -> true;
         _ -> false
     end.
 
@@ -487,17 +492,18 @@ is_200_or_201({ok, Response}) ->
 join(List, Sep) when is_list(List) ->
     list_to_binary(join_list_sep(List, Sep)).
 
--spec decode_response(response()) -> any().
-decode_response({ok, {_,_,_,Json}}) ->
-    jsx:decode(Json).
-
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([ClientName, ConnectionOptions]) ->
+init([ClientName, Options0]) ->
+    {DecodeResponse, ConnectionOptions} = case lists:keytake(binary_response, 1, Options0) of
+        {value, {binary_response, Decode}, Options1} -> {Decode, Options1};
+        false -> {true, Options0}
+    end,
     Connection = connection(ConnectionOptions),
     {ok, #state{client_name = ClientName, 
+                binary_response = DecodeResponse,
                 connection = Connection}}.
 
 handle_call({stop}, _From, State) ->
@@ -506,129 +512,127 @@ handle_call({stop}, _From, State) ->
 
 handle_call({_Request = health}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_health(),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = state, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_state(Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = nodes_info, NodeNames, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_nodes_info(NodeNames, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = nodes_stats, NodeNames, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_nodes_stats(NodeNames, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = status, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_status(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = create_index, Index, Doc}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_create_index(Index, Doc),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = delete_index, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_delete_index(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = open_index, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_open_index(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = close_index, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_close_index(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = count, Index, Type, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_count(Index, Type, Doc, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = delete_by_query, Index, Type, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_delete_by_query(Index, Type, Doc, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = is_index, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_is_index(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    % Check if the result is 200 (true) or 404 (false)
-    Result = is_200(RestResponse),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    Result = make_boolean_response(Response, State),
     {reply, Result, State#state{connection = Connection1}};
 
 handle_call({_Request = is_type, Index, Type}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_is_type(Index, Type),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    % Check if the result is 200 (true) or 404 (false)
-    Result = is_200(RestResponse),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    Result = make_boolean_response(Response, State),
 
     {reply, Result, State#state{connection = Connection1}};
 
 handle_call({_Request = insert_doc, Index, Type, Id, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_insert_doc(Index, Type, Id, Doc, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = get_doc, Index, Type, Id, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_get_doc(Index, Type, Id, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = mget_doc, Index, Type, Doc}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_mget_doc(Index, Type, Doc),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = is_doc, Index, Type, Id}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_is_doc(Index, Type, Id),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    Result = is_200(RestResponse),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    Result = make_boolean_response(Response, State),
     {reply, Result, State#state{connection = Connection1}};
 
 handle_call({_Request = delete_doc, Index, Type, Id, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_delete_doc(Index, Type, Id, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = search, Index, Type, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_search(Index, Type, Doc, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = refresh, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_refresh(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = flush, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_flush(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = optimize, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_optimize(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = segments, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_segments(Index),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call({_Request = clear_cache, Index, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_clear_cache(Index, Params),
-    {Connection1, RestResponse} = process_request(Connection0, RestRequest),
-    {reply, RestResponse, State#state{connection = Connection1}};
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
 
 handle_call(_Request, _From, State) ->
     thrift_client:close(State#state.connection),
@@ -657,19 +661,12 @@ code_change(_OldVsn, State, _Extra) ->
 connection(ConnectionOptions) ->
     ThriftHost = proplists:get_value(thrift_host, ConnectionOptions, ?DEFAULT_THRIFT_HOST),
     ThriftPort = proplists:get_value(thrift_port, ConnectionOptions, ?DEFAULT_THRIFT_PORT),
-    RemainingOptions = clean_options(ConnectionOptions),
-    {ok, Connection} = thrift_client_util:new(ThriftHost, ThriftPort, elasticsearch_thrift, RemainingOptions),
+    ThriftOptions = case lists:keyfind(thrift_options, 1, ConnectionOptions) of
+        {thrift_options, Options} -> Options;
+        false -> []
+    end,
+    {ok, Connection} = thrift_client_util:new(ThriftHost, ThriftPort, elasticsearch_thrift, ThriftOptions),
     Connection.
-
-clean_options(Options) ->
-    clean_options(Options, []).
-clean_options([], Acc) -> Acc;
-clean_options([{thrift_host, _} | Tail], Acc) -> 
-    clean_options(Tail, Acc);
-clean_options([{thrift_port, _} | Tail], Acc) -> 
-    clean_options(Tail, Acc);
-clean_options([Head | Tail], Acc) -> 
-    clean_options(Tail, [Head |Acc]).
 
 
 %% @doc Sets the value of the configuration parameter Key for this application.
@@ -678,9 +675,23 @@ set_env(Key, Value) ->
     application:set_env(?APP, Key, Value).
 
 %% @doc Process the request over thrift
--spec process_request(connection(), request()) -> {connection(), response()}.
-process_request(Connection, Request) ->
-    thrift_client:call(Connection, 'execute', [Request]).
+-spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
+process_request(Connection, Request, #state{binary_response = BinaryResponse}) ->
+    {Connection1, RestResponse} = thrift_client:call(Connection, 'execute', [Request]),
+    {Connection1, process_response(BinaryResponse, RestResponse)}.
+
+-spec process_response(boolean(), response()) -> response().
+process_response(_, {error, _} = Response) ->
+    Response;
+process_response(true, {ok, #restResponse{status = Status, body = undefined}}) ->
+    [{status, erlang:integer_to_binary(Status)}];
+process_response(false, {ok, #restResponse{status = Status, body = undefined}}) ->
+    [{status, Status}];
+process_response(true, {ok, #restResponse{status = Status, body = Body}}) ->
+    [{status, erlang:integer_to_binary(Status)}, {body, Body}];
+process_response(false, {ok, #restResponse{status = Status, body = Body}}) ->
+    [{status, Status}, {body, jsx:decode(Body)}].
+
 
 %% @doc Build a new rest request
 rest_request_health() ->
@@ -972,3 +983,16 @@ dec2hex(N) when N >= 10 andalso N =< 15 ->
   N + $A - 10;
 dec2hex(N) when N >= 0 andalso N =< 9 ->
   N + $0.
+
+-spec make_boolean_response(response(), #state{}) -> response().
+make_boolean_response({error, _} = Response, _) -> Response;
+make_boolean_response(Response, #state{binary_response = false}) when is_list(Response) ->
+    case is_200(Response) of
+        true -> [{result, true} | Response];
+        false -> [{result, false} | Response]
+    end;
+make_boolean_response(Response, #state{binary_response = true}) when is_list(Response) ->
+    case is_200(Response) of
+        true -> [{result, <<"true">>} | Response];
+        false -> [{result, <<"false">>} | Response]
+    end.

@@ -12,9 +12,9 @@
 {application, erlasticsearch,
  [
   {description, "thrift based elasticsearch"},
-  {vsn, "1.2.0"},
+  {vsn, "1.3.0"},
   {registered, []},
-  {modules, [ ]},
+  {modules, []},
   {applications, [
                   kernel,
                   stdlib,
