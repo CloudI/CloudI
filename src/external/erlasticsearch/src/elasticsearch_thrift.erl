@@ -5,7 +5,7 @@
 %%
 
 -module(elasticsearch_thrift).
--behaviour(cloudi_x_thrift_service).
+-behaviour(thrift_service).
 
 
 -include("elasticsearch_types.hrl").

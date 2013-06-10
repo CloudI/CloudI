@@ -64,8 +64,8 @@ to its integration and dependencies).
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
-- `commit eca12a32f2897afbbca52c0b10d263add624c980`
-- `Sat Jun 8 15:11:08 EST 2013`
+- `tag v1.3`
+- `Mon Jun 10 08:01:52 EST 2013`
 - `BSD`
 
 `etokyotyrant (medici)`

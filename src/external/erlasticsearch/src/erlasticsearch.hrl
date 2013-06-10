@@ -15,7 +15,7 @@
 
 -type error()           :: {error, Reason :: term()}.
 -type method()          :: atom().
--type response()        :: {ok, #restResponse{}} | boolean() | error().
+-type response()        :: [tuple()] | error().
 -type request()         :: #restRequest{}.
 -type connection()      :: any().
 -type node_name()       :: binary().
@@ -42,7 +42,8 @@
                               ]).
 
 -define(DEFAULT_CONNECTION_OPTIONS, [{thrift_host, ?DEFAULT_THRIFT_HOST},
-                                     {thrift_port, ?DEFAULT_THRIFT_PORT}
+                                     {thrift_port, ?DEFAULT_THRIFT_PORT},
+                                     {binary_response, true}
                                     ]).
 -define(REGISTERED_NAME_PREFIX, "erlasticsearch_").
 
