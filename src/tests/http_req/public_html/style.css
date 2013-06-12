@@ -1,0 +1,7 @@
+/* Some basic style */
+div.control {
+    border: 2px solid;
+    border-radius: 25px;
+    margin: 5px 5px;
+    padding: 10px 10px;
+}

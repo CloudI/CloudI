@@ -44,13 +44,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
 -author('mjtruog [at] gmail (dot) com').
 
 %-behaviour(cloudi_x_cowboy_http_handler).
+%-behaviour(cloudi_x_cowboy_websocket_handler).
 
 %% external interface
 
@@ -59,6 +60,12 @@
          handle/2,
          terminate/3]).
 
+%% cloudi_x_cowboy_websocket_handler callbacks
+-export([websocket_init/3,
+         websocket_handle/3,
+         websocket_info/3,
+         websocket_terminate/3]).
+
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
@@ -66,22 +73,38 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-record(websocket_state,
+    {
+        name_incoming,
+        name_outgoing,
+        request_info
+    }).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_x_cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init(_Transport, Req, Opts)
-    when is_record(Opts, cowboy_state) ->
-    State = Opts,
+init(_Transport, Req0, #cowboy_state{use_websockets = true} = State) ->
+    case upgrade_request(Req0) of
+        {websocket, Req1} ->
+            {upgrade, protocol, cloudi_x_cowboy_websocket, Req1, State};
+        {undefined, Req1} ->
+            {ok, Req1, State};
+        {Upgrade, Req1} ->
+            ?LOG_WARN("Unknown protocol: ~p", [Upgrade]),
+            {loop, Req1, State}
+    end;
+init(_Transport, Req, #cowboy_state{use_websockets = false} = State) ->
     {ok, Req, State}.
 
-handle(Req0, #cowboy_state{service = Service,
-                           timeout_async = TimeoutAsync,
-                           output_type = OutputType,
-                           default_content_type = DefaultContentType,
-                           use_host_prefix = UseHostPrefix,
-                           use_method_suffix = UseMethodSuffix,
-                           content_type_lookup = ContentTypeLookup} = State) ->
+handle(Req0,
+       #cowboy_state{service = Service,
+                     timeout_async = TimeoutAsync,
+                     output_type = OutputType,
+                     default_content_type = DefaultContentType,
+                     use_host_prefix = UseHostPrefix,
+                     use_method_suffix = UseMethodSuffix,
+                     content_type_lookup = ContentTypeLookup} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
@@ -158,8 +181,7 @@ handle(Req0, #cowboy_state{service = Service,
         OutputType =:= external; OutputType =:= binary ->
             headers_external_incoming(HeadersIncoming)
     end,
-    Self = self(),
-    Service ! {cowboy_request, Self, NameOutgoing, RequestInfo, Request},
+    Service ! {cowboy_request, self(), NameOutgoing, RequestInfo, Request},
     receive
         {cowboy_response, ResponseInfo, Response} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
@@ -174,7 +196,7 @@ handle(Req0, #cowboy_state{service = Service,
         {cowboy_error, timeout} ->
             HttpCode = 504,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                         ReqN),
+                                                  ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, timeout]),
@@ -182,7 +204,7 @@ handle(Req0, #cowboy_state{service = Service,
         {cowboy_error, Reason} ->
             HttpCode = 500,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                         ReqN),
+                                                  ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, Reason]),
@@ -191,7 +213,7 @@ handle(Req0, #cowboy_state{service = Service,
         TimeoutAsync ->
             HttpCode = 504,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                         ReqN),
+                                                  ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, timeout]),
@@ -201,9 +223,120 @@ handle(Req0, #cowboy_state{service = Service,
 terminate(_Reason, _Req, _State) ->
     ok.
 
+websocket_init(_Transport, Req0,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
+                             use_host_prefix = UseHostPrefix,
+                             use_method_suffix = UseMethodSuffix} = State) ->
+    {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
+    {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
+    {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
+    {HostRaw, ReqN} = cloudi_x_cowboy_req:host(Req3),
+    NameIncoming = if
+        UseHostPrefix =:= false; HostRaw =:= undefined ->
+            erlang:binary_to_list(PathRaw);
+        true ->
+            erlang:binary_to_list(<<HostRaw/binary, PathRaw/binary>>)
+    end,
+    NameOutgoing = if
+        UseMethodSuffix =:= false ->
+            NameIncoming;
+        Method =:= <<"GET">> ->
+            NameIncoming ++ "/get"
+    end,
+    RequestInfo = if
+        OutputType =:= internal; OutputType =:= list ->
+            HeadersIncoming;
+        OutputType =:= external; OutputType =:= binary ->
+            headers_external_incoming(HeadersIncoming)
+    end,
+    {ok, ReqN,
+     State#cowboy_state{websocket_state = #websocket_state{
+                            name_incoming = NameIncoming,
+                            name_outgoing = NameOutgoing,
+                            request_info = RequestInfo}}}.
+
+websocket_handle({ping, Payload}, Req, State) ->
+    {reply, {pong, Payload}, Req, State};
+
+websocket_handle({pong, _Payload}, Req, State) ->
+    {ok, Req, State};
+
+websocket_handle({WebSocketRequestType, RequestBinary}, Req,
+                 #cowboy_state{service = Service,
+                               timeout_async = TimeoutAsync,
+                               output_type = OutputType,
+                               use_websockets = true,
+                               websocket_state = #websocket_state{
+                                   name_incoming = NameIncoming,
+                                   name_outgoing = NameOutgoing,
+                                   request_info = RequestInfo}} = State) ->
+    RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
+    Request = if
+        OutputType =:= list ->
+            erlang:binary_to_list(RequestBinary);
+        OutputType =:= internal; OutputType =:= external;
+        OutputType =:= binary ->
+            RequestBinary
+    end,
+    Service ! {cowboy_request, self(), NameOutgoing, RequestInfo, Request},
+    receive
+        {cowboy_response, _ResponseInfo, Response} ->
+            ResponseBinary = if
+                OutputType =:= list, is_list(Response) ->
+                    erlang:list_to_binary(Response);
+                OutputType =:= internal; OutputType =:= external;
+                OutputType =:= binary; is_binary(Response) ->
+                    Response
+            end,
+            ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
+                             [NameIncoming, NameOutgoing,
+                              RequestStartMicroSec]),
+            {reply, {WebSocketRequestType, ResponseBinary}, Req, State};
+        {cowboy_error, timeout} ->
+            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
+                            [NameIncoming,
+                             RequestStartMicroSec, timeout]),
+            {reply, {WebSocketRequestType, <<>>}, Req, State};
+        {cowboy_error, Reason} ->
+            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
+                            [NameIncoming,
+                             RequestStartMicroSec, Reason]),
+            {reply, {close, 1011, <<>>}, Req, State}
+    after
+        TimeoutAsync ->
+            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
+                            [NameIncoming,
+                             RequestStartMicroSec, timeout]),
+            {reply, {WebSocketRequestType, <<>>}, Req, State}
+    end.
+
+websocket_info(_Info, Req, State) ->
+    {ok, Req, State}.
+
+websocket_terminate(_Reason, _Req, _State) ->
+    ok.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+upgrade_request(Req0) ->
+    case cloudi_x_cowboy_req:parse_header(<<"connection">>, Req0) of
+        {undefined, _, Req1} ->
+            {undefined, Req1};
+        {ok, C, Req1} ->
+            case lists:member(<<"upgrade">>, C) of
+                true ->
+                    {ok, [U | _],
+                     Req2} = cloudi_x_cowboy_req:parse_header(<<"upgrade">>,
+                                                              Req1),
+                    {erlang:list_to_existing_atom(erlang:binary_to_list(U)),
+                     Req2};
+                false ->
+                    {undefined, Req1}
+            end
+    end.
 
 header_content_type(Headers) ->
     case lists:keyfind(<<"content-type">>, 1, Headers) of
@@ -261,6 +394,23 @@ request_time_end_error(HttpCode, Method, NameIncoming,
                (cloudi_x_uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
 
+websocket_time_start() ->
+    cloudi_x_uuid:get_v1_time(os).
+
+websocket_time_end_success(NameIncoming, NameOutgoing,
+                           RequestStartMicroSec) ->
+    ?LOG_TRACE("~s (to ~s) ~p ms",
+               [NameIncoming, NameOutgoing,
+                (cloudi_x_uuid:get_v1_time(os) -
+                 RequestStartMicroSec) / 1000.0]).
+
+websocket_time_end_error(NameIncoming,
+                         RequestStartMicroSec, Reason) ->
+    ?LOG_WARN("~s ~p ms: ~p",
+              [NameIncoming,
+               (cloudi_x_uuid:get_v1_time(os) -
+                RequestStartMicroSec) / 1000.0, Reason]).
+
 return_response(NameIncoming, HeadersOutgoing, Response,
                 ReqN, OutputType, DefaultContentType,
                 ContentTypeLookup) ->
@@ -302,8 +452,8 @@ return_response(NameIncoming, HeadersOutgoing, Response,
     end,
     HttpCode = 200,
     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                 ResponseHeadersOutgoing,
-                                 ResponseBinary,
-                                 ReqN),
+                                          ResponseHeadersOutgoing,
+                                          ResponseBinary,
+                                          ReqN),
     {HttpCode, Req}.
 
