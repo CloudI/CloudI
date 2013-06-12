@@ -26,6 +26,7 @@
 {erl_opts, [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
             {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
             {i, "lib"},
+            debug_info,
             warnings_as_errors,
             strict_validation,
             warn_bif_clash,

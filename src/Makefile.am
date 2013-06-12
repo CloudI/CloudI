@@ -319,6 +319,7 @@ uninstall:
 
 install-exec-hook: cloudi-prefix-install \
                    tests-install \
+                   tests-echo-install \
                    tests-flood-install \
                    tests-hexpi-install \
                    tests-http-install \
@@ -386,6 +387,11 @@ cloudi-prefix-install:
 
 tests-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests"
+
+tests-echo-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/echo"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/echo/echo.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/echo/"
 
 tests-flood-install: $(top_builddir)/tests/flood/service/flood \
                      $(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam \
@@ -455,23 +461,27 @@ tests-http_req-install: \
              "$(top_builddir)/tests/http_req/c_src/http_req" \
              "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req_c.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.rb" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
+                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
+                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
+                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
 	$(INSTALL_DATA) \
         "$(top_builddir)/tests/http_req/ebin/cloudi_service_http_req.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
 	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
+                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/style.css" \
+                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 	$(INSTALL_DATA) \
         "$(top_srcdir)/tests/http_req/public_html/800px-Juliadim2.png" \
         "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
+	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/websockets.html" \
+                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 
 tests-service_api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/service_api"

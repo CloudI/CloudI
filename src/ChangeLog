@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add websockets support to cloudi_service_http_cowboy
+    * Update cowboy to 0.8.5 and ranch to 0.8.3
+
 2013-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.3 (beta) released

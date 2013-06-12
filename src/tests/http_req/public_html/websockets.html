@@ -1,0 +1,75 @@
+<!DOCTYPE HTML>
+<!-- HTML5 -->
+<html>
+<head>
+<title>CloudI WebSockets Testing</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script type="text/javascript">
+var ws = new Object;
+
+function view(connected)
+{
+    document.getElementById("service_name").contentEditable = ! connected;
+    document.getElementById("request").contentEditable = connected;
+}
+
+function send()
+{
+    var request = document.getElementById("request").innerHTML.trim();
+    ws.send(request);
+    console.log('Request: ' + request);
+    var text = document.createTextNode("request(" + request + ")");
+    document.getElementById('responses').appendChild(text);
+}
+
+function open()
+{
+    if (! ("WebSocket" in window))
+    {
+        alert("This browser does not support WebSockets");
+        return;
+    }
+    var service_name = document.getElementById("service_name").innerHTML.trim();
+    ws = new WebSocket("ws://127.0.0.1:6468" + service_name);
+    console.log("Connecting to ws://127.0.0.1:6468" + service_name);
+    ws.onopen = function()
+    {
+        console.log('Connected');
+        view(true);
+    };
+    ws.onmessage = function (evt)
+    {
+        var response = evt.data;
+        console.log("Response: " + response);
+        var text = document.createTextNode(" -> response(" + response + ")");
+        document.getElementById('responses').appendChild(text);
+        var br = document.createElement("br");
+        document.getElementById('responses').appendChild(br);
+    };
+    ws.onclose = function()
+    {
+        console.log('Connection closed');
+        view(false);
+    };
+}
+</script>
+</head>
+<body>
+<div class="control">
+<div id="service_name" contenteditable="true">
+/tests/echo
+</div>
+<a href="javascript:open()">Websocket Connect</a>
+</div>
+
+<div class="control">
+<div id="request" contenteditable="false">
+42
+</div>
+<a href="javascript:send()">Websocket Request</a>
+</div>
+<div id="responses">
+</div>
+</body>
+</html>

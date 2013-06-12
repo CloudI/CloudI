@@ -48,8 +48,10 @@
         timeout_async,
         output_type,
         default_content_type,
+        use_websockets,
         use_host_prefix,
         use_method_suffix,
-        content_type_lookup
+        content_type_lookup,
+        websocket_state
     }).
 
