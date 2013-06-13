@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.3 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -57,54 +57,11 @@
          nodes_add/2, nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
--include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
+-include("cloudi_logger.hrl").
+-include("cloudi_service_api.hrl").
 
 -define(CONFIGURATION_FILE_NAME, "cloudi.conf").
-
-% internal service parameters
-% (same as the config_service_internal record, but the order is significant
-%  since it is used within all configuration data)
--record(internal,
-    {
-        prefix,
-        module,
-        args,
-        dest_refresh,
-        timeout_init,
-        timeout_async,
-        timeout_sync,
-        dest_list_deny,
-        dest_list_allow,
-        count_process,
-        max_r,
-        max_t,
-        options
-    }).
-    
-% external service parameters
-% (same as the config_service_external record, but the order is significant
-%  since it is used within all configuration data)
--record(external,
-    {
-        prefix,
-        file_path,
-        args,
-        env,
-        dest_refresh,
-        protocol,
-        buffer_size,
-        timeout_init,
-        timeout_async,
-        timeout_sync,
-        dest_list_deny,
-        dest_list_allow,
-        count_process,
-        count_thread,
-        max_r,
-        max_t,
-        options
-    }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

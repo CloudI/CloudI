@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel="stylesheet" type="text/css" href="style.css" />
 <script type="text/javascript">
-var ws = new Object;
+var ws = null;
 
 function view(connected)
 {
@@ -16,10 +16,19 @@ function view(connected)
 
 function send()
 {
+    if (ws == null)
+    {
+        alert("Not connected!");
+        return;
+    }
     var request = document.getElementById("request").innerHTML.trim();
     ws.send(request);
     console.log('Request: ' + request);
-    var text = document.createTextNode("request(" + request + ")");
+    var br = document.createElement("br");
+    document.getElementById('responses').appendChild(br);
+    var service_name = document.getElementById("service_name").innerHTML.trim();
+    var text = document.createTextNode(service_name +
+                                       " request(" + request + ")");
     document.getElementById('responses').appendChild(text);
 }
 
@@ -31,8 +40,8 @@ function open()
         return;
     }
     var service_name = document.getElementById("service_name").innerHTML.trim();
-    ws = new WebSocket("ws://127.0.0.1:6468" + service_name);
-    console.log("Connecting to ws://127.0.0.1:6468" + service_name);
+    ws = new WebSocket("ws://127.0.0.1:6464" + service_name);
+    console.log("Connecting to ws://127.0.0.1:6464" + service_name);
     ws.onopen = function()
     {
         console.log('Connected');
@@ -44,8 +53,6 @@ function open()
         console.log("Response: " + response);
         var text = document.createTextNode(" -> response(" + response + ")");
         document.getElementById('responses').appendChild(text);
-        var br = document.createElement("br");
-        document.getElementById('responses').appendChild(br);
     };
     ws.onclose = function()
     {

@@ -3,6 +3,8 @@
 
 2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add separate cloudi_service_api module to cloudi_core application
+      to provide a central interface module for the CloudI Service API
     * Add websockets support to cloudi_service_http_cowboy
     * Update cowboy to 0.8.5 and ranch to 0.8.3
 
