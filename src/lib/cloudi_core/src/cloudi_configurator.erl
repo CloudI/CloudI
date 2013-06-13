@@ -68,9 +68,9 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("cloudi_logger.hrl").
 -include("cloudi_configuration.hrl").
 -include("cloudi_constants.hrl").
+-include("cloudi_logger.hrl").
 
 -record(state,
     {

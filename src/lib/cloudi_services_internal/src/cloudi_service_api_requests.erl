@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Service API==
+%%% ==CloudI Service API Requests==
 %%% A service that exposes dynamic configuration of CloudI.
 %%% @end
 %%%
@@ -45,10 +45,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_api).
+-module(cloudi_service_api_requests).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_service).
@@ -67,37 +67,37 @@
     {
         functions = cloudi_x_trie:new([
             {"acl_add",
-             {fun cloudi_configurator:acl_add/2, 2}},
+             fun cloudi_service_api:acl_add/2},
             {"acl_remove",
-             {fun cloudi_configurator:acl_remove/2, 2}},
+             fun cloudi_service_api:acl_remove/2},
             {"services_add",
-             {fun cloudi_configurator:services_add/2, 2}},
+             fun cloudi_service_api:services_add/2},
             {"services_remove",
-             {fun cloudi_configurator:services_remove/2, 2}},
+             fun cloudi_service_api:services_remove/2},
             {"services_restart",
-             {fun cloudi_configurator:services_restart/2, 2}},
+             fun cloudi_service_api:services_restart/2},
             {"services",
-             {fun cloudi_configurator:services/1, 1}},
+             fun cloudi_service_api:services/1},
             {"nodes_add",
-             {fun cloudi_configurator:nodes_add/2, 2}},
+             fun cloudi_service_api:nodes_add/2},
             {"nodes_remove",
-             {fun cloudi_configurator:nodes_remove/2, 2}},
+             fun cloudi_service_api:nodes_remove/2},
             {"nodes_alive",
-             {fun cloudi_nodes:alive/1, 1}},
+             fun cloudi_service_api:alive/1},
             {"nodes_dead",
-             {fun cloudi_nodes:dead/1, 1}},
+             fun cloudi_service_api:dead/1},
             {"nodes",
-             {fun cloudi_nodes:nodes/1, 1}},
+             fun cloudi_service_api:nodes/1},
             {"loglevel_set",
-             {fun loglevel_set/2, 2}},
+             fun cloudi_service_api:loglevel_set/2},
             {"log_redirect",
-             {fun log_redirect/2, 2}},
+             fun cloudi_service_api:log_redirect/2},
             {"code_path_add",
-             {fun code_path_add/2, 2}},
+             fun cloudi_service_api:code_path_add/2},
             {"code_path_remove",
-             {fun code_path_remove/2, 2}},
+             fun cloudi_service_api:code_path_remove/2},
             {"code_path",
-             {fun code_path/1, 1}}
+             fun cloudi_service_api:code_path/1}
         ]),
         formats = cloudi_x_trie:new([
             {"erlang",
@@ -183,7 +183,12 @@ cloudi_service_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-format_erlang({F, 2}, Input, Timeout, _) ->
+format_erlang(F, Input, Timeout, _)
+    when is_function(F) ->
+    Arity = erlang:fun_info(F, arity),
+    format_erlang_f(F, Arity, Input, Timeout).
+
+format_erlang_f(F, 2, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(cloudi_string:binary_to_term(Input), Timeout) of
@@ -201,7 +206,7 @@ format_erlang({F, 2}, Input, Timeout, _) ->
             end
     end;
 
-format_erlang({F, 1}, Input, Timeout, _) ->
+format_erlang_f(F, 1, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(Timeout) of
@@ -227,9 +232,9 @@ format_erlang({F, 1}, Input, Timeout, _) ->
 format_json_rpc(undefined, Input, Timeout, Functions) ->
     {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
     try (case cloudi_x_trie:fetch(erlang:binary_to_list(Method), Functions) of
-        {F, 1} when Params == [] ->
+        F when Params == [], is_function(F, 1) ->
             F(Timeout);
-        {F, 2} when length(Params) == 1 ->
+        F when length(Params) == 1, is_function(F, 2) ->
             F(cloudi_string:binary_to_term(erlang:hd(Params)), Timeout)
          end) of
         Result when is_binary(Result) ->
@@ -246,19 +251,4 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
                 null, 0, cloudi_string:term_to_binary(Error), Id
             )
     end.
-
-loglevel_set(Level, _Timeout) ->
-    cloudi_logger:change_loglevel(Level).
-
-log_redirect(Node, _Timeout) ->
-    cloudi_nodes:logger_redirect(Node).
-
-code_path_add(Dir, _Timeout) ->
-    code:add_pathz(Dir).
-
-code_path_remove(Dir, _Timeout) ->
-    code:del_path(Dir).
-
-code_path(_Timeout) ->
-    code:get_path().
 
