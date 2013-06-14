@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Prevent service request response usage within an internal service's
+      init function for various technical reasons.  Fix retry service name
+      lookup and timeout timers within an internal service, during the
+      init function execution.
+
 2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add separate cloudi_service_api module to cloudi_core application

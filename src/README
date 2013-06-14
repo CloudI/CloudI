@@ -39,5 +39,5 @@ the command:
 
 The `"clean-configure"` makefile target will revert all external dependencies
 back to their original filenames, to bring the repository back into its
-original file structure.
+original file/directory structure.
 

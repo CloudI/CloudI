@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_init).
@@ -111,6 +111,21 @@ handle_call(stop, {Pid, _}, #state{service_state = InternalState,
                            init_timeout = undefined},
     erlang:unlink(Pid),
     {stop, normal, Result, NewState};
+
+handle_call(Request, _, State)
+    when is_tuple(Request), element(1, Request) =:= 'send_sync' ->
+    % synchronous requests should not be allowed because the service request
+    % source pid should also be the receiver pid and doing a 
+    % synchronous request during service initialization would attempt to use
+    % a fake source pid which would cause problems for forwarded service
+    % requests (i.e., since source != receiver, when source is excluded from
+    % the pid lookup for the forward)
+    {reply, {error, invalid_state}, State};
+
+handle_call(Request, _, State)
+    when is_tuple(Request), element(1, Request) =:= 'recv_async' ->
+    % internal service requests are always received after initialization
+    {reply, {error, invalid_state}, State};
 
 handle_call(Request, From, #state{service_state = InternalState} = State) ->
     case cloudi_services_internal:handle_call(Request, From, InternalState) of
