@@ -3,10 +3,11 @@
 
 2013-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add cloudi_service_api module documentation
     * Prevent service request response usage within an internal service's
-      init function for various technical reasons.  Fix retry service name
-      lookup and timeout timers within an internal service, during the
-      init function execution.
+      init function for various technical reasons
+    * Fix retry service name lookup and timeout timers within an
+      internal service, during the init function execution
 
 2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
