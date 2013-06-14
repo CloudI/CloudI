@@ -18,10 +18,16 @@ will attempt to pull CloudI dependencies into the release.  Since the CloudI
 dependencies are already loaded and running within the Erlang VM,
 the dependencies are unnecessary for the `hello_world1` release.
 
+The other usage examples show the other file types that are supported
+when providing a string for the internal service module name.
+
 ## USAGE
 
+To use an Erlang/OTP application file for an internal service with the same
+module name:
+
     $ make
-    $ cat << EOF > hello_world1.conf
+    $ cat << EOF > hello_world1_app.conf
     [{internal,
       "/examples/",
       "$PWD/ebin/hello_world1.app",
@@ -29,6 +35,49 @@ the dependencies are unnecessary for the `hello_world1` release.
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_app.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/examples/hello_world1
+
+To use an Erlang source file path with an internal service implementation:
+
+    $ make
+    $ cat << EOF > hello_world1_erl.conf
+    [{internal,
+      "/examples/",
+      "$PWD/src/hello_world1.erl",
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1_erl.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/examples/hello_world1
+
+To use a compiled Erlang BEAM file path with an internal service implementation:
+
+    $ make
+    $ cat << EOF > hello_world1_beam.conf
+    [{internal,
+      "/examples/",
+      "$PWD/ebin/hello_world1.beam",
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1_beam.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/examples/hello_world1
+
+To use an Erlang/OTP script release file for an internal service with the
+same module name as the top-level application:
+
+    $ make release
+    $ cat << EOF > hello_world1_script.conf
+    [{internal,
+      "/examples/",
+      "$PWD/release/releases/1/hello_world1.script",
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1_script.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6467/examples/hello_world1
 
