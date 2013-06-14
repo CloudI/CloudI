@@ -3,6 +3,7 @@
 
 2013-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Update cpg
     * Add cloudi_service_api module documentation
     * Prevent service request response usage within an internal service's
       init function for various technical reasons
