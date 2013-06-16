@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, traceback
+import threading, time, traceback
 from cloudi_c import API
 
 class Task(threading.Thread):
@@ -57,7 +57,8 @@ class Task(threading.Thread):
 
     def run(self):
         try:
-            self.__api.subscribe('echo/get', self.__request)
+            self.__api.subscribe('websockets/get', self.__request)
+            self.__api.subscribe('websockets/delay', self.__delay)
 
             result = self.__api.poll()
             print >> sys.stderr, 'exited thread:', result
@@ -66,7 +67,23 @@ class Task(threading.Thread):
 
     def __request(self, command, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
+        # send the request to self
+        self.__api.send_async(self.__api.prefix() + 'websockets/delay',
+                              request)
         return request
+
+    def __delay(self, command, name, pattern, request_info, request,
+                timeout, priority, trans_id, pid):
+        time.sleep(1.0)
+        trans_ids = self.__api.mcast_async(name[:-6] + '/websocket',
+                                           'notification: got "' +
+                                           request + '" 1 second ago')
+        if len(trans_ids) == 0:
+            print 'websockets: (no websockets connected?)'
+        else:
+            for check in trans_ids:
+                (tmp, response, tmp) = self.__api.recv_async(trans_id=check)
+                print 'websockets:', response
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
