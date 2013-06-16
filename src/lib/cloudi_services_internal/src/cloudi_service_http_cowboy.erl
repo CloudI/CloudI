@@ -100,7 +100,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
@@ -159,6 +159,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{service = Service,
                               timeout_async = TimeoutAsync,
+                              prefix = Prefix,
                               output_type = OutputType,
                               default_content_type = DefaultContentType1,
                               use_websockets = UseWebSockets,

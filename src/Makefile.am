@@ -327,6 +327,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-service_api-install \
                    tests-messaging-install \
                    tests-msg_size-install \
+                   tests-websockets-install \
                    tests-zeromq-install \
                    api-install \
                    api-erlang-install \
@@ -551,6 +552,11 @@ tests-msg_size-install: \
 	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
              "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
              "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
+
+tests-websockets-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/websockets"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/websockets/websockets.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/websockets/"
 
 tests-zeromq-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"

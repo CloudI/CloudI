@@ -46,6 +46,7 @@
     {
         service,
         timeout_async,
+        prefix,
         output_type,
         default_content_type,
         use_websockets,

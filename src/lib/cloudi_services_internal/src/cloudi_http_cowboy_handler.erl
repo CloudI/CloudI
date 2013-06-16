@@ -75,9 +75,14 @@
 
 -record(websocket_state,
     {
+        % for service requests entering CloudI
         name_incoming,
         name_outgoing,
-        request_info
+        request_info,
+        % for a service request exiting CloudI
+        response_pending = false,
+        response_timer,
+        request_pending
     }).
 
 %%%------------------------------------------------------------------------
@@ -224,7 +229,8 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 websocket_init(_Transport, Req0,
-               #cowboy_state{output_type = OutputType,
+               #cowboy_state{prefix = Prefix,
+                             output_type = OutputType,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
                              use_method_suffix = UseMethodSuffix} = State) ->
@@ -244,6 +250,15 @@ websocket_init(_Transport, Req0,
         Method =:= <<"GET">> ->
             NameIncoming ++ "/get"
     end,
+    NameWebsocket = NameIncoming ++ "/websocket",
+    case lists:prefix(Prefix, NameWebsocket) of
+        true ->
+            % service requests are only received if they relate to
+            % the service's prefix
+            ok = cloudi_x_cpg:join(NameWebsocket);
+        false ->
+            ok
+    end,
     RequestInfo = if
         OutputType =:= internal; OutputType =:= list ->
             HeadersIncoming;
@@ -262,6 +277,53 @@ websocket_handle({ping, Payload}, Req, State) ->
 websocket_handle({pong, _Payload}, Req, State) ->
     {ok, Req, State};
 
+websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
+                 #cowboy_state{output_type = OutputType,
+                               use_websockets = true,
+                               websocket_state = #websocket_state{
+                                   request_info = ResponseInfo,
+                                   response_pending = true,
+                                   response_timer = ResponseTimer,
+                                   request_pending = T} = WebSocketState
+                               } = State)
+    when WebSocketResponseType =:= text;
+         WebSocketResponseType =:= binary ->
+    Response = if
+        OutputType =:= list ->
+            erlang:binary_to_list(ResponseBinary);
+        OutputType =:= internal; OutputType =:= external;
+        OutputType =:= binary ->
+            ResponseBinary
+    end,
+    Timeout = case erlang:cancel_timer(ResponseTimer) of
+        false ->
+            0;
+        V ->
+            V
+    end,
+    case T of
+        {'cloudi_service_send_async',
+         Name, Pattern, _, _, OldTimeout, _, TransId, Source} ->
+            Source ! {'cloudi_service_return_async',
+                      Name, Pattern, ResponseInfo, Response,
+                      Timeout, TransId, Source},
+            ?LOG_TRACE_APPLY(fun websocket_request_end/3,
+                             [Name, Timeout, OldTimeout]);
+        {'cloudi_service_send_sync',
+         Name, Pattern, _, _, OldTimeout, _, TransId, Source} ->
+            Source ! {'cloudi_service_return_sync',
+                      Name, Pattern, ResponseInfo, Response,
+                      Timeout, TransId, Source},
+            ?LOG_TRACE_APPLY(fun websocket_request_end/3,
+                             [Name, Timeout, OldTimeout])
+    end,
+    {ok, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+                            response_pending = false,
+                            response_timer = undefined,
+                            request_pending = undefined}
+                        }};
+
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{service = Service,
                                timeout_async = TimeoutAsync,
@@ -270,7 +332,10 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                                websocket_state = #websocket_state{
                                    name_incoming = NameIncoming,
                                    name_outgoing = NameOutgoing,
-                                   request_info = RequestInfo}} = State) ->
+                                   request_info = RequestInfo,
+                                   response_pending = false}} = State)
+    when WebSocketRequestType =:= text;
+         WebSocketRequestType =:= binary ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     Request = if
         OutputType =:= list ->
@@ -311,7 +376,52 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
             {reply, {WebSocketRequestType, <<>>}, Req, State}
     end.
 
-websocket_info(_Info, Req, State) ->
+websocket_info(response_timeout, Req,
+               #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = true} = WebSocketState
+                             } = State) ->
+    {ok, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+                            response_pending = false,
+                            response_timer = undefined,
+                            request_pending = undefined}
+                        }};
+
+websocket_info({'cloudi_service_send_async',
+                _Name, _Pattern, _RequestInfo, Request,
+                Timeout, _Priority, _TransId, _Source} = T, Req,
+               #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = false} = WebSocketState
+                             } = State)
+    when is_binary(Request) ->
+    ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    {reply, {binary, Request}, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+                            response_pending = true,
+                            response_timer = ResponseTimer,
+                            request_pending = T}
+                        }};
+
+websocket_info({'cloudi_service_send_sync',
+                _Name, _Pattern, _RequestInfo, Request,
+                Timeout, _Priority, _TransId, _Source} = T, Req,
+               #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = false} = WebSocketState
+                             } = State)
+    when is_binary(Request) ->
+    ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    {reply, {binary, Request}, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+                            response_pending = true,
+                            response_timer = ResponseTimer,
+                            request_pending = T}
+                        }};
+
+websocket_info(_Info, Req,
+               #cowboy_state{use_websockets = true} = State) ->
     {ok, Req, State}.
 
 websocket_terminate(_Reason, _Req, _State) ->
@@ -410,6 +520,9 @@ websocket_time_end_error(NameIncoming,
               [NameIncoming,
                (cloudi_x_uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
+
+websocket_request_end(Name, NewTimeout, OldTimeout) ->
+    ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
 
 return_response(NameIncoming, HeadersOutgoing, Response,
                 ReqN, OutputType, DefaultContentType,

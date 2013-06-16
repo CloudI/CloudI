@@ -224,7 +224,7 @@
         [{request_timeout_adjustment, true}]},
     % tests/http/ services
     {internal,
-        "/tests/http/",
+        "/tests/websockets/",
         cloudi_service_http_cowboy,
         [{port, 6464}, {output, external}, {use_websockets, true}],
         immediate_closest, 
@@ -315,6 +315,13 @@
         [],
         none, tcp, default,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
+    {external,
+        "/tests/",
+        "@PYTHON@",
+        "tests/websockets/websockets.py",
+        [],
+        immediate_local, tcp, default,
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []},
     % too many file descriptors being used here for a default config
     %% Zig-Zag test
     %% (separate configurations to avoid overwriting the ipc file)

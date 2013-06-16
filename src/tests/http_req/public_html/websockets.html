@@ -6,30 +6,46 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel="stylesheet" type="text/css" href="style.css" />
 <script type="text/javascript">
-var ws = null;
+var web_socket = undefined;
+
+function is(type, obj)
+{
+    if (obj === undefined)
+        return type === 'undefined';
+    else if (obj === null)
+        return type === 'null';
+    else
+        return type === Object.prototype.toString.call(obj).slice(8, -1);
+}
+
+String.prototype.startsWith = function (str)
+{
+    return this.slice(0, str.length) == str;
+};
 
 function view(connected)
 {
     document.getElementById("service_name").contentEditable = ! connected;
     document.getElementById("request").contentEditable = connected;
+    document.getElementById("response").contentEditable = connected;
 }
 
 function send()
 {
-    if (ws == null)
+    if (web_socket == undefined)
     {
         alert("Not connected!");
         return;
     }
     var request = document.getElementById("request").innerHTML.trim();
-    ws.send(request);
-    console.log('Request: ' + request);
+    web_socket.send(request);
+    console.log("Request (out): " + request);
     var br = document.createElement("br");
-    document.getElementById('responses').appendChild(br);
+    document.getElementById("responses").appendChild(br);
     var service_name = document.getElementById("service_name").innerHTML.trim();
     var text = document.createTextNode(service_name +
                                        " request(" + request + ")");
-    document.getElementById('responses').appendChild(text);
+    document.getElementById("responses").appendChild(text);
 }
 
 function open()
@@ -40,43 +56,119 @@ function open()
         return;
     }
     var service_name = document.getElementById("service_name").innerHTML.trim();
-    ws = new WebSocket("ws://127.0.0.1:6464" + service_name);
+    web_socket = new WebSocket("ws://127.0.0.1:6464" + service_name);
     console.log("Connecting to ws://127.0.0.1:6464" + service_name);
-    ws.onopen = function()
+    web_socket.onopen = function()
     {
-        console.log('Connected');
+        console.log("Connected");
         view(true);
+        document.getElementById("connection").style.backgroundColor = '#00FF00';
     };
-    ws.onmessage = function (evt)
+    handle_message = function (data)
     {
-        var response = evt.data;
-        console.log("Response: " + response);
-        var text = document.createTextNode(" -> response(" + response + ")");
-        document.getElementById('responses').appendChild(text);
+        if (data.startsWith("notification:"))
+        {
+            // client state check to determine this is an incoming
+            // service request, not an incoming response
+            console.log("Request (in): " + data);
+            var br = document.createElement("br");
+            document.getElementById("requests").appendChild(br);
+            var service_name =
+                document.getElementById("service_name").innerHTML.trim();
+            var text = document.createTextNode(service_name + "/websocket" +
+                                               " request(" + data + ")");
+            document.getElementById("requests").appendChild(text);
+            var response = document.getElementById("response").innerHTML.trim();
+            web_socket.send(response);
+            console.log("Response (in): " + response);
+            text = document.createTextNode(" -> response(" +
+                                           response + ")");
+            document.getElementById("requests").appendChild(text);
+        }
+        else
+        {
+            console.log("Response (out): " + data);
+            var text = document.createTextNode(" -> response(" + data + ")");
+            document.getElementById("responses").appendChild(text);
+        }
     };
-    ws.onclose = function()
+    web_socket.onmessage = function (evt)
     {
-        console.log('Connection closed');
+        var data = evt.data;
+        if (is("Blob", data))
+        {
+            // for the example, treat binary as text
+            var reader = new FileReader();
+            reader.readAsText(data, "text/plain");
+            reader.onload = function (reader_evt) {
+                data = reader_evt.target.result;
+                handle_message(data);
+            };
+        }
+        else
+        {
+            handle_message(data);
+        }
+    };
+    web_socket.onclose = function()
+    {
+        console.log("Connection closed");
         view(false);
+        document.getElementById("connection").style.backgroundColor = '#FF0000';
     };
+}
+
+function close()
+{
+    if (web_socket == undefined)
+    {
+        alert("Not connected!");
+        return;
+    }
+    web_socket.close();
+    web_socket = undefined;
+    var responses = document.getElementById("responses");
+    while (responses.firstChild !== responses.lastChild)
+    {
+        responses.removeChild(responses.lastChild);
+    }
+    var requests = document.getElementById("requests");
+    while (requests.firstChild !== requests.lastChild)
+    {
+        requests.removeChild(requests.lastChild);
+    }
 }
 </script>
 </head>
 <body>
-<div class="control">
+
+<div class="control" id="connection">
 <div id="service_name" contenteditable="true">
-/tests/echo
+/tests/websockets
 </div>
-<a href="javascript:open()">Websocket Connect</a>
+WebSocket <a href="javascript:open()">Connect</a> /
+<a href="javascript:close()">Disconnect</a>
 </div>
 
 <div class="control">
 <div id="request" contenteditable="false">
 42
 </div>
-<a href="javascript:send()">Websocket Request</a>
+WebSocket <a href="javascript:send()">Request</a>
 </div>
 <div id="responses">
+<h2>Responses</h2>
 </div>
+
+<div class="control">
+<div id="response" contenteditable="false">
+ok, sounds good
+</div>
+<strong>Websocket Response</strong>
+</div>
+<div id="requests">
+<h2>Requests</h2>
+</div>
+
 </body>
 </html>
