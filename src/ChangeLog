@@ -4,6 +4,7 @@
 2013-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Small fixes for dialyzer and type specs
+    * Make some release tweaks and add the hello_world2 example
 
 2013-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
