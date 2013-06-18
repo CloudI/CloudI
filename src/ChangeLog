@@ -1,6 +1,37 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Small fixes for dialyzer and type specs
+
+2013-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow service requests to websocket connections if their connect
+      URL matches the HTTP service prefix configuration value
+    * Make the websockets testing test service requests to websocket
+      connections
+
+2013-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update cpg
+    * Add cloudi_service_api module documentation
+    * Prevent service request response usage within an internal service's
+      init function for various technical reasons
+    * Fix retry service name lookup and timeout timers within an
+      internal service, during the init function execution
+
+2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add separate cloudi_service_api module to cloudi_core application
+      to provide a central interface module for the CloudI Service API
+    * Add websockets support to cloudi_service_http_cowboy
+    * Update cowboy to 0.8.5 and ranch to 0.8.3
+
+2013-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.2.3 (beta) released
+
 2013-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix services_remove CloudI Service API functions so that modules are

@@ -1,3 +1,22 @@
+June 8, 2013
+  Version 1.2.3 (beta) released.
+  * Added internal service purging when services are removed.
+    The service module, or service application modules are purged after the
+    service has been stopped, and the service applications (if any were used)
+    has been stopped.  The functionality works with modules, applications and
+    releases (within a .script file).  When applications are stopped and
+    purged, only applications which are not dependencies for other running
+    applications are removed.
+  * Focused on bugs/fixes, mainly for OSX.  The external service "local" 
+    protocol configuration option did not work properly on some installations
+    of OSX, so the default CloudI configuration file now uses the "tcp"
+    protocol configuration option (to be the same as releases before 1.2.2).
+    The problem with the "local" protocol configuration option may be limited
+    to slower machines (the problem is caused by execution spending too much
+    time within a socket accept function call within an Erlang NIF).
+    The "local" protocol configuration option on OSX will be addressed in a
+    later release.
+
 June 1, 2013
   Version 1.2.2 (beta) released.
   * Performance was improved further for external services with the addition

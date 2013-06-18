@@ -39,6 +39,25 @@
 -export([sockname/1]).
 -export([close/1]).
 
+-type opts() :: [{backlog, non_neg_integer()}
+	| {cacertfile, string()}
+	| {cacerts, [Der::binary()]}
+	| {cert, Der::binary()}
+	| {certfile, string()}
+	| {ciphers, [ssl:erl_cipher_suite()] | string()}
+	| {fail_if_no_peer_cert, boolean()}
+	| {ip, inet:ip_address()}
+	| {key, Der::binary()}
+	| {keyfile, string()}
+	| {next_protocols_advertised, [binary()]}
+	| {nodelay, boolean()}
+	| {password, string()}
+	| {port, inet:port_number()}
+	| {raw, non_neg_integer(), non_neg_integer(),
+		non_neg_integer() | binary()}
+	| {verify, ssl:verify_type()}].
+-export_type([opts/0]).
+
 %% @doc Name of this transport, <em>ssl</em>.
 name() -> ssl.
 
@@ -88,25 +107,19 @@ messages() -> {ssl, ssl_closed, ssl_error}.
 %% ranch:get_port/1 instead.
 %%
 %% @see ssl:listen/2
--spec listen([{backlog, non_neg_integer()} | {cacertfile, string()}
-	| {certfile, string()} | {ciphers, [ssl:erl_cipher_suite()] | string()}
-	| {fail_if_no_peer_cert, boolean()}
-	| {ip, inet:ip_address()} | {keyfile, string()}
-	| {next_protocols_advertised, [binary()]} | {nodelay, boolean()}
-	| {password, string()} | {port, inet:port_number()}
-	| {verify, ssl:verify_type()}])
-	-> {ok, ssl:sslsocket()} | {error, atom()}.
+-spec listen(opts()) -> {ok, ssl:sslsocket()} | {error, atom()}.
 listen(Opts) ->
 	ranch:require([crypto, public_key, ssl]),
-	{certfile, _} = lists:keyfind(certfile, 1, Opts),
+	true = lists:keymember(cert, 1, Opts)
+		orelse lists:keymember(certfile, 1, Opts),
 	Opts2 = ranch:set_option_default(Opts, backlog, 1024),
 	%% We set the port to 0 because it is given in the Opts directly.
 	%% The port in the options takes precedence over the one in the
 	%% first argument.
 	ssl:listen(0, ranch:filter_options(Opts2,
-		[backlog, cacertfile, certfile, ciphers, fail_if_no_peer_cert, ip,
-			keyfile, next_protocols_advertised, nodelay, password, port,
-			raw, verify],
+		[backlog, cacertfile, cacerts, cert, certfile, ciphers,
+			fail_if_no_peer_cert, ip, key, keyfile, next_protocols_advertised,
+			nodelay, password, port, raw, verify],
 		[binary, {active, false}, {packet, raw},
 			{reuseaddr, true}, {nodelay, true}])).
 
@@ -218,8 +231,13 @@ close(Socket) ->
 
 %% Internal.
 
+%% This call always times out, either because a numeric timeout value
+%% was given, or because we've decided to use 5000ms instead of infinity.
+%% This value should be reasonable enough for the moment.
 -spec ssl_accept(ssl:sslsocket(), timeout())
 	-> {ok, ssl:sslsocket()} | {error, {ssl_accept, atom()}}.
+ssl_accept(Socket, infinity) ->
+	ssl_accept(Socket, 5000);
 ssl_accept(Socket, Timeout) ->
 	case ssl:ssl_accept(Socket, Timeout) of
 		ok ->

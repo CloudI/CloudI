@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -140,7 +140,8 @@
 -export_type([scope/0, name/0, via_name/0]).
 
 -compile({nowarn_unused_function,
-          [{fake_put, 2}]}).
+          [{check_multi_call_replies, 1},
+           {fake_put, 2}]}).
 
 -ifdef(CPG_ETS_CACHE).
 -define(CPG_ETS_CACHE_PUT(G), cpg_ets:put(Scope, G)).
@@ -231,16 +232,14 @@ delete(Scope, _)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec join(name()) -> 'ok' | 'error'.
+-spec join(name()) -> 'ok'.
 
 join(GroupName) ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, self()}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {join, GroupName, self()},
+    ok = gen_server:call(?DEFAULT_SCOPE, Request),
+    gen_server:abcast(nodes(), ?DEFAULT_SCOPE, Request),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -252,27 +251,23 @@ join(GroupName) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec join(name() | scope(), pid() | name()) -> 'ok' | 'error'.
+-spec join(name() | scope(), pid() | name()) -> 'ok'.
 
 join(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(?DEFAULT_SCOPE, {join, GroupName, Pid}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end;
+    Request = {join, GroupName, Pid},
+    ok = gen_server:call(?DEFAULT_SCOPE, Request),
+    gen_server:abcast(nodes(), ?DEFAULT_SCOPE, Request),
+    ok;
 
 join(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(Scope, {join, GroupName, self()}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {join, GroupName, self()},
+    ok = gen_server:call(Scope, Request),
+    gen_server:abcast(nodes(), Scope, Request),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -284,18 +279,16 @@ join(Scope, GroupName)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec join(scope(), name(), pid()) -> 'ok' | 'error'.
+-spec join(scope(), name(), pid()) -> 'ok'.
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(Scope, {join, GroupName, Pid}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {join, GroupName, Pid},
+    ok = gen_server:call(Scope, Request),
+    gen_server:abcast(nodes(), Scope, Request),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -304,16 +297,14 @@ join(Scope, GroupName, Pid)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name()) -> 'ok' | 'error'.
+-spec leave(name()) -> 'ok'.
 
 leave(GroupName) ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, self()}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {leave, GroupName, self()},
+    ok = gen_server:call(?DEFAULT_SCOPE, Request),
+    gen_server:abcast(nodes(), ?DEFAULT_SCOPE, Request),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -325,27 +316,23 @@ leave(GroupName) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name() | scope(), pid() | name()) -> 'ok' | 'error'.
+-spec leave(name() | scope(), pid() | name()) -> 'ok'.
 
 leave(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(?DEFAULT_SCOPE, {leave, GroupName, Pid}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end;
+    Request = {leave, GroupName, Pid},
+    ok = gen_server:call(?DEFAULT_SCOPE, Request),
+    gen_server:abcast(nodes(), ?DEFAULT_SCOPE, Request),
+    ok;
 
 leave(Scope, GroupName)
     when is_atom(Scope) ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(Scope, {leave, GroupName, self()}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {leave, GroupName, self()},
+    ok = gen_server:call(Scope, Request),
+    gen_server:abcast(nodes(), Scope, Request),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -357,18 +344,16 @@ leave(Scope, GroupName)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(scope(), name(), pid()) -> 'ok' | 'error'.
+-spec leave(scope(), name(), pid()) -> 'ok'.
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
          node(Pid) =:= node() ->
     group_name_validate(GroupName),
-    case gen_server:multi_call(Scope, {leave, GroupName, Pid}) of
-        {[_ | _] = Replies, _} ->
-            check_multi_call_replies(Replies);
-        _ ->
-            error
-    end.
+    Request = {leave, GroupName, Pid},
+    ok = gen_server:call(Scope, Request),
+    gen_server:abcast(nodes(), Scope, Request),
+    ok.
 
 -else. % GROUP_NAME_WITH_LOCAL_PIDS_ONLY not defined
 
@@ -2203,6 +2188,24 @@ handle_call(Request, _, State) ->
 handle_cast({exchange, Node, ExternalState}, State) ->
     ?LOG_INFO("received state from ~p", [Node]),
     {noreply, store(ExternalState, State)};
+
+handle_cast({join, GroupName, Pid}, State) ->
+    {noreply, join_group(GroupName, Pid, State)};
+
+handle_cast({leave, GroupName, Pid},
+            #state{pids = Pids} = State) ->
+    Found = case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:member(GroupName, GroupNameList)
+    end,
+    if
+        Found ->
+            {noreply, leave_group(GroupName, Pid, State)};
+        true ->
+            {noreply, State}
+    end;
 
 handle_cast(_, State) ->
     {noreply, State}.

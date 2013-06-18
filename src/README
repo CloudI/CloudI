@@ -30,3 +30,14 @@ To stop CloudI:
 
     (sudo or /path/to/installation/directory/bin/)cloudi stop
 
+### Repository
+
+When updating the repository code or committing changes, make sure to first run
+the command:
+
+    make clean-configure
+
+The `"clean-configure"` makefile target will revert all external dependencies
+back to their original filenames, to bring the repository back into its
+original file/directory structure.
+

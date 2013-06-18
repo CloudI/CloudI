@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -99,7 +99,7 @@ start_link(SpawnName, MaxR, MaxT, ChildSpecs) ->
 
 start_nomad_child(_, MaxR, MaxT, _)
     when is_integer(MaxR) =:= false; is_integer(MaxT) =:= false ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 start_nomad_child(Name, MaxR, MaxT, ChildSpec)
     when MaxR >= 0, MaxT > 0 ->
     gen_server:call(cpg_random_pid(Name),
@@ -134,19 +134,19 @@ count_children(Name) ->
                     count_children, infinity).
 
 cpg_name({global, _, _, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_name({local, _, _, Instances})
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_name({global, _, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_name({local, _, Instances})
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_name({local, _, _} = Name) ->
     {via, cpg, Name};
 cpg_name({global, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_name({local, _} = Name) ->
     {via, cpg, Name};
 cpg_name({_, _} = Name) ->
@@ -270,19 +270,19 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 cpg_random_pid({global, _, _, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, _, _, Instances})
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({global, _, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, _, Instances})
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, Scope, GroupName}) ->
     cpg_random_pid(Scope, GroupName, undefined);
 cpg_random_pid({global, _}) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, GroupName}) ->
     cpg_random_pid(?DEFAULT_SCOPE, GroupName, undefined);
 cpg_random_pid({Scope, GroupName}) ->
@@ -291,19 +291,19 @@ cpg_random_pid(GroupName) ->
     cpg_random_pid(?DEFAULT_SCOPE, GroupName, undefined).
 
 cpg_random_pid({global, _, _, _}, _) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, _, _, Instances}, _)
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({global, _, _}, _) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, _, Instances}, _)
     when is_integer(Instances) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, Scope, GroupName}, Exclude) ->
     cpg_random_pid(Scope, GroupName, Exclude);
 cpg_random_pid({global, _}, _) ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 cpg_random_pid({local, GroupName}, Exclude) ->
     cpg_random_pid(?DEFAULT_SCOPE, GroupName, Exclude);
 cpg_random_pid({Scope, GroupName}, Exclude) ->

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Safe to tune without causing major internal problems
+% Safe to tune without causing major internal problems                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % recv_async null UUID strategy
@@ -7,9 +7,9 @@
 %-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Reasonable constants that are unlikely to need modification.
-% Possibly, in different environments, tuning may be beneficial, though
-% it has not yet been necessary to modify these settings during testing.
+% Reasonable constants that are unlikely to need modification.               %
+% Possibly, in different environments, tuning may be beneficial, though      %
+% it has not yet been necessary to modify these settings during testing.     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % interval at which asynchronous messages are checked
@@ -58,7 +58,7 @@
 -define(KEEPALIVE_UDP, 5000). % milliseconds
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Constants that should never be changed
+% Constants that should never be changed                                     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage

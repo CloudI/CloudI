@@ -31,9 +31,8 @@ request object.
 The following access functions are defined in `cowboy_req`:
 
  *  `method/1`: the request method (`<<"GET">>`, `<<"POST">>`...)
- *  `version/1`: the HTTP version (`{1,0}` or `{1,1}`)
+ *  `version/1`: the HTTP version (`'HTTP/1.0'` or `'HTTP/1.1'`)
  *  `peer/1`: the peer address and port number
- *  `peer_addr/1`: the peer address guessed using the request headers
  *  `host/1`: the hostname requested
  *  `host_info/1`: the result of the `[...]` match on the host
  *  `port/1`: the port number used for the connection
@@ -42,8 +41,7 @@ The following access functions are defined in `cowboy_req`:
  *  `qs/1`: the entire query string unmodified
  *  `qs_val/{2,3}`: the value for the requested query string key
  *  `qs_vals/1`: all key/values found in the query string
- *  `fragment/1`: the fragment part of the URL (e.g. `#nav-links`)
- *  `host_url/1`: the requested URL without the path, qs and fragment
+ *  `host_url/1`: the requested URL without the path and query string
  *  `url/1`: the requested URL
  *  `binding/{2,3}`: the value for the requested binding found during routing
  *  `bindings/1`: all key/values found during routing
@@ -104,9 +102,9 @@ and `body_qs/2` will return `{error, badlength}`. If the request
 contains chunked body, `body/1`, `body/2`, `body_qs/1`
 and `body_qs/2` will return `{error, chunked}`.
 If you get either of the above two errors, you will want to
-handle the body of the request using `stream_body/1` and
-`skip_body/1`, with the streaming process optionally
-initialized using `init_stream/4` or `init_stream/5`.
+handle the body of the request using `stream_body/1`,
+`stream_body/2` and `skip_body/1`, with the streaming process
+optionally initialized using `init_stream/4`.
 
 Multipart request body
 ----------------------

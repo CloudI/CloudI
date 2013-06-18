@@ -14,7 +14,7 @@
    <h3><a name="List_operations">List operations</a></h3>.
 <p>Copyright © 2009-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.2 Jun 1 2013 11:56:06
+<p><b>Version:</b> 1.2.3 Jun 14 2013 14:26:30
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -26,34 +26,10 @@
   <h4><a name="lists:delete/2_functionality,_but_all_instances_are_deleted.">lists:delete/2 functionality, but all instances are deleted.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#delete_checked-2">delete_checked/2</a></td><td>
   <h4><a name="lists:delete/2_functionality,_but_returns_false_when_an_element_is_not_deleted.">lists:delete/2 functionality, but returns false when an element is not deleted.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#index-2">index/2</a></td><td>
-  <h4><a name="Find_the_index_of_a_list_element.">Find the index of a list element.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#iter-3">iter/3</a></td><td>
-  <h4><a name="Iterate_on_elements_of_a_list.">Iterate on elements of a list.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#itera-3">itera/3</a></td><td>
   <h4><a name="Iterate_on_elements_of_a_list_with_an_accumulator.">Iterate on elements of a list with an accumulator.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#itera2-4">itera2/4</a></td><td>
   <h4><a name="Iterate_on_elements_of_a_list_with_two_accumulators.">Iterate on elements of a list with two accumulators.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#itera3-5">itera3/5</a></td><td>
-  <h4><a name="Iterate_on_elements_of_a_list_with_three_accumulators.">Iterate on elements of a list with three accumulators.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#keyptake-3">keyptake/3</a></td><td>
-  <h4><a name="lists:keytake/3_with_the_position_index_returned_in_the_value_tuple_if_the_key_is_found.">lists:keytake/3 with the position index returned in the value tuple if the key is found.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#keypttake-4">keypttake/4</a></td><td>
-  <h4><a name="lists:keyptake/3_with_a_positional_tuple_match.">lists:keyptake/3 with a positional tuple match.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#keyrsort-2">keyrsort/2</a></td><td>
-  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple_(in_reverse)_in_descending_order.">Sort a list of tuples based on an element (key) in the tuple (in reverse) in descending order.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#keysort-2">keysort/2</a></td><td>
-  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple_in_ascending_order.">Sort a list of tuples based on an element (key) in the tuple in ascending order.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#middle-1">middle/1</a></td><td>
-  <h4><a name="Find_the_middle_element_of_a_list.">Find the middle element of a list.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#middle-2">middle/2</a></td><td>
-  <h4><a name="Find_the_middle_segment_of_a_list.">Find the middle segment of a list.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#nth_take-2">nth_take/2</a></td><td>
-  <h4><a name="lists:nth/2_functionality,_but_removes_the_element.">lists:nth/2 functionality, but removes the element.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#rsort-1">rsort/1</a></td><td>
-  <h4><a name="Sort_a_list_(in_reverse)_in_descending_order.">Sort a list (in reverse) in descending order.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#sort-1">sort/1</a></td><td>
-  <h4><a name="Sort_a_list_in_ascending_order.">Sort a list in ascending order.</a></h4>.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -72,20 +48,6 @@
   <h4><a name="lists:delete/2_functionality,_but_returns_false_when_an_element_is_not_deleted.">lists:delete/2 functionality, but returns false when an element is not deleted.</a></h4>
 </p>
 
-<h3 class="function"><a name="index-2">index/2</a></h3>
-<div class="spec">
-<p><tt>index(Item::any(), L::list()) -&gt; pos_integer()</tt><br></p>
-</div><p>
-  <h4><a name="Find_the_index_of_a_list_element.">Find the index of a list element.</a></h4>
-</p>
-
-<h3 class="function"><a name="iter-3">iter/3</a></h3>
-<div class="spec">
-<p><tt>iter(F::fun((any(), fun(() -&gt; any())) -&gt; any()), D::any(), T::list()) -&gt; any()</tt><br></p>
-</div><p>
-  <h4><a name="Iterate_on_elements_of_a_list.">Iterate on elements of a list.</a></h4>
-</p>
-
 <h3 class="function"><a name="itera-3">itera/3</a></h3>
 <div class="spec">
 <p><tt>itera(F::fun((any(), any(), fun((any()) -&gt; any())) -&gt; any()), Acc::any(), T::list()) -&gt; any()</tt><br></p>
@@ -99,79 +61,9 @@
 </div><p>
   <h4><a name="Iterate_on_elements_of_a_list_with_two_accumulators.">Iterate on elements of a list with two accumulators.</a></h4>
 </p>
-
-<h3 class="function"><a name="itera3-5">itera3/5</a></h3>
-<div class="spec">
-<p><tt>itera3(F::fun((any(), any(), any(), any(), fun((any(), any(), any()) -&gt; {any(), any(), any()})) -&gt; {any(), any(), any()}), Acc0::any(), Acc1::any(), Acc2::any(), T::list()) -&gt; any()</tt><br></p>
-</div><p>
-  <h4><a name="Iterate_on_elements_of_a_list_with_three_accumulators.">Iterate on elements of a list with three accumulators.</a></h4>
-</p>
-
-<h3 class="function"><a name="keyptake-3">keyptake/3</a></h3>
-<div class="spec">
-<p><tt>keyptake(Key::any(), N::pos_integer(), L::list()) -&gt; {value, non_neg_integer(), tuple(), list()} | false</tt><br></p>
-</div><p>
-  <h4><a name="lists:keytake/3_with_the_position_index_returned_in_the_value_tuple_if_the_key_is_found.">lists:keytake/3 with the position index returned in the value tuple if the key is found.</a></h4>
-</p>
-
-<h3 class="function"><a name="keypttake-4">keypttake/4</a></h3>
-<div class="spec">
-<p><tt>keypttake(Key::any(), N::pos_integer(), Match::pos_integer(), L::list()) -&gt; {value, non_neg_integer(), tuple(), list()} | false</tt><br></p>
-</div><p>
-  <h4><a name="lists:keyptake/3_with_a_positional_tuple_match.">lists:keyptake/3 with a positional tuple match.</a></h4>
-</p>
-
-<h3 class="function"><a name="keyrsort-2">keyrsort/2</a></h3>
-<div class="spec">
-<p><tt>keyrsort(I::pos_integer(), L::list()) -&gt; list()</tt><br></p>
-</div><p>
-  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple_(in_reverse)_in_descending_order.">Sort a list of tuples based on an element (key) in the tuple (in reverse) in descending order.</a></h4>
-</p>
-
-<h3 class="function"><a name="keysort-2">keysort/2</a></h3>
-<div class="spec">
-<p><tt>keysort(I::pos_integer(), L::list()) -&gt; list()</tt><br></p>
-</div><p>
-  <h4><a name="Sort_a_list_of_tuples_based_on_an_element_(key)_in_the_tuple_in_ascending_order.">Sort a list of tuples based on an element (key) in the tuple in ascending order.</a></h4>
-</p>
-
-<h3 class="function"><a name="middle-1">middle/1</a></h3>
-<div class="spec">
-<p><tt>middle(L) -&gt; any()</tt></p>
-</div><p>
-  <h4><a name="Find_the_middle_element_of_a_list.">Find the middle element of a list.</a></h4>
-</p>
-
-<h3 class="function"><a name="middle-2">middle/2</a></h3>
-<div class="spec">
-<p><tt>middle(L, N) -&gt; any()</tt></p>
-</div><p>
-  <h4><a name="Find_the_middle_segment_of_a_list.">Find the middle segment of a list.</a></h4>
-</p>
-
-<h3 class="function"><a name="nth_take-2">nth_take/2</a></h3>
-<div class="spec">
-<p><tt>nth_take(I::pos_integer(), L::list()) -&gt; {value, any(), list()} | false</tt><br></p>
-</div><p>
-  <h4><a name="lists:nth/2_functionality,_but_removes_the_element.">lists:nth/2 functionality, but removes the element.</a></h4>
-</p>
-
-<h3 class="function"><a name="rsort-1">rsort/1</a></h3>
-<div class="spec">
-<p><tt>rsort(L::list()) -&gt; list()</tt><br></p>
-</div><p>
-  <h4><a name="Sort_a_list_(in_reverse)_in_descending_order.">Sort a list (in reverse) in descending order.</a></h4>
-</p>
-
-<h3 class="function"><a name="sort-1">sort/1</a></h3>
-<div class="spec">
-<p><tt>sort(L::list()) -&gt; list()</tt><br></p>
-</div><p>
-  <h4><a name="Sort_a_list_in_ascending_order.">Sort a list in ascending order.</a></h4>
-</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jun 1 2013, 11:56:06.</i></p>
+<p><i>Generated by EDoc, Jun 14 2013, 14:26:30.</i></p>
 </body>
 </html>
