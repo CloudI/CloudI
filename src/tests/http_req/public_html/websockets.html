@@ -112,6 +112,7 @@ function open()
     };
     web_socket.onclose = function()
     {
+        web_socket = undefined;
         console.log("Connection closed");
         view(false);
         document.getElementById("connection").style.backgroundColor = '#FF0000';
@@ -126,7 +127,6 @@ function close()
         return;
     }
     web_socket.close();
-    web_socket = undefined;
     var responses = document.getElementById("responses");
     while (responses.firstChild !== responses.lastChild)
     {

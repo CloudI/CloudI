@@ -185,7 +185,7 @@ cloudi_service_terminate(_, #state{}) ->
 
 format_erlang(F, Input, Timeout, _)
     when is_function(F) ->
-    Arity = erlang:fun_info(F, arity),
+    {arity, Arity} = erlang:fun_info(F, arity),
     format_erlang_f(F, Arity, Input, Timeout).
 
 format_erlang_f(F, 2, Input, Timeout) ->

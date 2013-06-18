@@ -72,7 +72,7 @@
         env                :: list({string(), string()}),
         dest_refresh       :: cloudi_service_api:dest_refresh(),
         protocol           :: 'default' | 'local' | 'tcp' | 'udp',
-        buffer_size        :: pos_integer(),
+        buffer_size        :: 'default' | pos_integer(),
         timeout_init       :: cloudi_service_api:timeout_milliseconds(),
         timeout_async      :: cloudi_service_api:timeout_milliseconds(),
         timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
