@@ -3,7 +3,9 @@
 ## PURPOSE
 
 Provide the simplest example of an Erlang application running within the same
-Erlang VM as CloudI, with a CloudI service (`hello_world1.erl`).
+Erlang VM as CloudI, with a CloudI service (`hello_world1.erl`).  The example
+uses separate OTP release generation for both CloudI and the internal
+CloudI service release, application, or module.
 
 ## DETAILS
 
