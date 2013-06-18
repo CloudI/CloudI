@@ -1,5 +1,5 @@
-%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
+%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -89,10 +89,13 @@
 
 -record(uuid_state,
     {
-        node_id,
-        clock_seq,
-        timestamp_type
+        node_id :: <<_:48>>,
+        clock_seq :: 0..16383,
+        timestamp_type :: 'os' | 'erlang'
     }).
+
+-type state() :: #uuid_state{}.
+-export_type([state/0]).
 
 -include("uuid.hrl").
 

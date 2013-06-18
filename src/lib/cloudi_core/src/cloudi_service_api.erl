@@ -83,7 +83,7 @@
 -export_type([dest_refresh/0]).
 
 -type timeout_milliseconds() :: ?TIMEOUT_DELTA..4294967295.
--export_type([timeout/0]).
+-export_type([timeout_milliseconds/0]).
 
 -type acl() :: list(atom() | string()).
 -export_type([acl/0]).
@@ -141,12 +141,13 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec acl_add(L :: list({atom(), list(acl())}), 
+-spec acl_add(L :: list({atom(), acl()}), 
               Timeout :: pos_integer()) ->
     ok.
 
 acl_add(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -163,7 +164,8 @@ acl_add(L, Timeout)
     ok.
 
 acl_remove(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -179,7 +181,8 @@ acl_remove(L, Timeout)
     ok.
 
 services_add(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -198,7 +201,8 @@ services_add(L, Timeout)
     ok.
 
 services_remove(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -219,7 +223,8 @@ services_remove(L, Timeout)
     ok.
 
 services_restart(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_restart(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -243,12 +248,13 @@ services(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_add(L :: list(atom()),
+-spec nodes_add(L :: list(node()),
                 Timeout :: pos_integer()) ->
     ok.
 
 nodes_add(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:nodes_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -257,12 +263,13 @@ nodes_add(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_remove(L :: list(atom()),
+-spec nodes_remove(L :: list(node()),
                    Timeout :: pos_integer()) ->
     ok.
 
 nodes_remove(L, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when length(L) >= 1,
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:nodes_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -272,7 +279,7 @@ nodes_remove(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_alive(Timeout :: pos_integer()) ->
-    list(atom()).
+    list(node()).
 
 nodes_alive(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -285,7 +292,7 @@ nodes_alive(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_dead(Timeout :: pos_integer()) ->
-    list(atom()).
+    list(node()).
 
 nodes_dead(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -298,7 +305,7 @@ nodes_dead(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes(Timeout :: pos_integer()) ->
-    list(atom()).
+    list(node()).
 
 nodes(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -317,7 +324,8 @@ nodes(Timeout)
     ok.
 
 loglevel_set(Level, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when is_atom(Level),
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_logger:change_loglevel(Level).
 
 %%-------------------------------------------------------------------------
@@ -328,12 +336,13 @@ loglevel_set(Level, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec log_redirect(Node :: atom(),
+-spec log_redirect(Node :: undefined | node(),
                    Timeout :: pos_integer()) ->
     ok.
 
 log_redirect(Node, Timeout)
-    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    when is_atom(Node),
+         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_nodes:logger_redirect(Node).
 
 %%-------------------------------------------------------------------------
@@ -346,11 +355,16 @@ log_redirect(Node, Timeout)
 
 -spec code_path_add(Dir :: file:filename(),
                     Timeout :: pos_integer()) ->
-    ok.
+    ok | {error, any()}.
 
 code_path_add(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
-    code:add_pathz(Dir).
+    case code:add_pathz(Dir) of
+        true ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -362,11 +376,18 @@ code_path_add(Dir, Timeout)
 
 -spec code_path_remove(Dir :: file:filename(),
                        Timeout :: pos_integer()) ->
-    ok.
+    ok | {error, any()}.
 
 code_path_remove(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
-    code:del_path(Dir).
+    case code:del_path(Dir) of
+        true ->
+            ok;
+        false ->
+            {error, does_not_exist};
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc

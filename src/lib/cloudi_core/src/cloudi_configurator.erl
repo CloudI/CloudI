@@ -217,7 +217,8 @@ handle_call({services_restart, L, Timeout}, _,
 
 handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    {reply, cloudi_configuration:services(Config), State};
+    L = cloudi_configuration:services(Config),
+    {reply, erlang:list_to_binary(cloudi_string:format("~p", [L])), State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
