@@ -1,7 +1,9 @@
-Items waiting for after the release of version 1.2.2
+Items waiting for after the release of version 1.2.3
 ----------------------------------------------------
 Add more examples, specifically one for including CloudI in an Erlang release
    with other Erlang applications
+Solve accept block on OSX in "local" protocol socket within NIF
+Add websockets cowboy integration
 Add to http://0install.net/ ?
 X-HTTP-Method-Override usage in cowboy integration
 Add https://github.com/Amadiro/erlang-statistics integration

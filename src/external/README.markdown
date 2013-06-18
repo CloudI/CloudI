@@ -10,8 +10,8 @@ to its integration and dependencies).
 --------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit cc507789bf1d9ea27e9fb53d06dc8a464672b7da (version 0.8.2)`
-- `Sun Mar 10 13:07:51 PDT 2013`
+- `commit bfbe1cc5c60471efe3e840f5658957ace0269dbd (version 0.8.5)`
+- `Mon Jun 10 13:42:33 PDT 2013`
 - `MIT`
 
 `dynamic_compile`
@@ -168,8 +168,8 @@ to its integration and dependencies).
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/extend/ranch`
-- `commit 809a12fdbe5ce355b06bcf197008e1b4e8ea9e21 (version 0.6.2)`
-- `Sun Mar 10 13:07:51 PDT 2013`
+- `commit 53be20d25f94095ec9b44c5bd03cf158dd5a6820 (version 0.8.3)`
+- `Tue Jun 11 08:44:33 PDT 2013`
 - `MIT`
 
 `rebar`

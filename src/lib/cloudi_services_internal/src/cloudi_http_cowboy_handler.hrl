@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%%
@@ -46,10 +46,13 @@
     {
         service,
         timeout_async,
+        prefix,
         output_type,
         default_content_type,
+        use_websockets,
         use_host_prefix,
         use_method_suffix,
-        content_type_lookup
+        content_type_lookup,
+        websocket_state
     }).
 

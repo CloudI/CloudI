@@ -17,24 +17,22 @@
 -behaviour(supervisor).
 
 %% API.
--export([start_link/5]).
+-export([start_link/4]).
 
 %% supervisor.
 -export([init/1]).
 
 %% API.
 
--spec start_link(any(), non_neg_integer(), module(), any(),
-	module()) -> {ok, pid()}.
-start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol) ->
-	supervisor:start_link(?MODULE, [Ref, NbAcceptors, Transport, TransOpts,
-		Protocol]).
+-spec start_link(ranch:ref(), non_neg_integer(), module(), any())
+	-> {ok, pid()}.
+start_link(Ref, NbAcceptors, Transport, TransOpts) ->
+	supervisor:start_link(?MODULE, [Ref, NbAcceptors, Transport, TransOpts]).
 
 %% supervisor.
 
-init([Ref, NbAcceptors, Transport, TransOpts, Protocol]) ->
-	ListenerPid = ranch_server:lookup_listener(Ref),
-	ConnsPid = ranch_server:lookup_connections_sup(Ref),
+init([Ref, NbAcceptors, Transport, TransOpts]) ->
+	ConnsSup = ranch_server:get_connections_sup(Ref),
 	LSocket = case proplists:get_value(socket, TransOpts) of
 		undefined ->
 			{ok, Socket} = Transport:listen(TransOpts),
@@ -43,10 +41,10 @@ init([Ref, NbAcceptors, Transport, TransOpts, Protocol]) ->
 			Socket
 	end,
 	{ok, {_, Port}} = Transport:sockname(LSocket),
-	ranch_listener:set_port(ListenerPid, Port),
+	ranch_server:set_port(Ref, Port),
 	Procs = [
 		{{acceptor, self(), N}, {ranch_acceptor, start_link, [
-			Ref, LSocket, Transport, Protocol, ListenerPid, ConnsPid
+			LSocket, Transport, ConnsSup
 		]}, permanent, brutal_kill, worker, []}
 			|| N <- lists:seq(1, NbAcceptors)],
 	{ok, {{one_for_one, 10, 10}, Procs}}.

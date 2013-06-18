@@ -58,6 +58,7 @@
                       "^erts.*/bin/(dialyzer|typer)",
                       "^erts.*/(doc|info|include|lib|man|src)"]},
   {app, hipe, [{incl_cond, exclude}]},
+  %{app, debugger, [{incl_cond, include}]}, % add debug_info
   % external dependencies
   @ZEROMQ_ERLZMQ_RELTOOL@
   {app, cloudi_x_combonodefinder, [{incl_cond, include}]},

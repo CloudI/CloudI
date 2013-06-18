@@ -1,12 +1,11 @@
 %% encoding: UTF-8
 {application,cloudi_core}.
 {packages,[]}.
-{modules,[cloudi,cloudi_app,cloudi_array,cloudi_configuration,
-          cloudi_configurator,cloudi_lists,cloudi_logger,
-          cloudi_logger_interface,cloudi_math,cloudi_nodes,cloudi_os_spawn,
-          cloudi_pool,cloudi_pool_sup,cloudi_proplists,cloudi_response,
-          cloudi_service,cloudi_services_external,
-          cloudi_services_external_sup,cloudi_services_internal,
-          cloudi_services_internal_init,cloudi_services_internal_sup,
-          cloudi_services_monitor,cloudi_socket,cloudi_spawn,cloudi_string,
-          cloudi_sup,cloudi_tuple]}.
+{modules,[cloudi,cloudi_app,cloudi_configuration,cloudi_configurator,
+          cloudi_lists,cloudi_logger,cloudi_logger_interface,cloudi_nodes,
+          cloudi_os_spawn,cloudi_pool,cloudi_pool_sup,cloudi_proplists,
+          cloudi_response,cloudi_service,cloudi_service_api,
+          cloudi_services_external,cloudi_services_external_sup,
+          cloudi_services_internal,cloudi_services_internal_init,
+          cloudi_services_internal_sup,cloudi_services_monitor,cloudi_socket,
+          cloudi_spawn,cloudi_string,cloudi_sup]}.

@@ -89,10 +89,13 @@
 
 -record(uuid_state,
     {
-        node_id,
-        clock_seq,
-        timestamp_type
+        node_id :: <<_:48>>,
+        clock_seq :: 0..16383,
+        timestamp_type :: 'os' | 'erlang'
     }).
+
+-type state() :: #uuid_state{}.
+-export_type([state/0]).
 
 -include("uuid.hrl").
 

@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%%
@@ -43,21 +43,23 @@
 
 -record(config_logging,
     {
-        level = trace,
-        file = "logs/cloudi.log",
-        redirect = undefined
+        level = trace :: cloudi_service_api:loglevel(),
+        file = "logs/cloudi.log" :: file:filename(),
+        redirect = undefined :: undefined | node()
     }).
 
 -record(config_service_options,
     {
+        % DEFAULT VALUES ASSIGNED BELOW
+
         % -128 (high) <= priority_default <= 127 (low)
-        priority_default = 0,
+        priority_default = 0 :: -128..127,
         % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
-        queue_limit = undefined,
+        queue_limit = undefined :: undefined | pos_integer(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
-        dest_refresh_start = 500, % milliseconds
+        dest_refresh_start = 500 :: 100..3600000, % milliseconds
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
         % (not an immediate destination refresh method).
@@ -65,35 +67,41 @@
         % service is mainly communicating with long-lived services
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
-        dest_refresh_delay = 300000, % milliseconds (5 minutes)
+        dest_refresh_delay = 300000 :: 100..3600000, % milliseconds (5 minutes)
         % should the service request handler execution time decrement the
         % request timeout to reduce the timeout of a forwarded request or
         % the timeout of a returned response
         % (if the request timeout is equal to the forward or return timeout,
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
-        request_timeout_adjustment = false,
+        request_timeout_adjustment = false :: boolean(),
         % should the service use internal timeout information to provide a
         % more accurate timeout value within the response provided
         % (n.b., this only affects the response timeout of a successful
         %  send_async request)
-        response_timeout_adjustment = false,
+        response_timeout_adjustment = false :: boolean(),
 
         % Only Relevant For Internal Services:
 
         % how many service requests should restart the Erlang process used for
         % handling the service requests
         % (an integer greater than 0 or the atom 'infinity' are valid values)
-        request_pid_uses = 1,
+        request_pid_uses = 1 :: infinity | pos_integer(),
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % service request handling Erlang process
-        request_pid_options = [],
+        request_pid_options = [] ::
+            list({fullsweep_after, non_neg_integer()} |
+                 {min_heap_size, non_neg_integer()} |
+                 {min_bin_vheap_size, non_neg_integer()}),
         % how many info messages should restart the Erlang process used for
         % handling the info message
         % (an integer greater than 0 or the atom 'infinity' are valid values)
-        info_pid_uses = infinity,
+        info_pid_uses = infinity :: infinity | pos_integer(),
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % info message handling Erlang process
-        info_pid_options = [],
+        info_pid_options = [] ::
+            list({fullsweep_after, non_neg_integer()} |
+                 {min_heap_size, non_neg_integer()} |
+                 {min_bin_vheap_size, non_neg_integer()}),
         % use two Erlang processes instead of one for an internal service to
         % keep send operations separate from receive operations.  better
         % throughput can be achieved with duo_mode, especially when sending to
@@ -103,58 +111,59 @@
         % is used in place of the info_pid and the process' message queue
         % is used directly (so info_pid_uses must be set to infinity when
         % duo_mode is true).
-        duo_mode = false
+        duo_mode = false :: boolean()
     }).
 
 % internal service parameters
 -record(config_service_internal,
     {
-        prefix,
-        module,
-        file_path,               % discovered if module was set as a string
-        args,
-        dest_refresh,
-        timeout_init,
-        timeout_async,
-        timeout_sync,
-        dest_list_deny,
-        dest_list_allow,
-        count_process,
-        max_r,
-        max_t,
-        options,
-        uuid
+        prefix             :: string(),
+        module             :: atom() | file:filename(),
+        file_path          :: undefined | string(), % if module was a path
+        args               :: list(),
+        dest_refresh       :: cloudi_service_api:dest_refresh(),
+        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny     :: cloudi_service_api:dest_list(),
+        dest_list_allow    :: cloudi_service_api:dest_list(),
+        count_process      :: pos_integer(),
+        max_r              :: non_neg_integer(),
+        max_t              :: cloudi_service_api:seconds(),
+        options            :: #config_service_options{},
+        uuid               :: <<_:128>>
     }).
 
 % external service parameters
 -record(config_service_external,
     {
-        prefix,
-        file_path,
-        args,
-        env,
-        dest_refresh,
-        protocol,
-        buffer_size,
-        timeout_init,
-        timeout_async,
-        timeout_sync,
-        dest_list_deny,
-        dest_list_allow,
-        count_process,
-        count_thread,
-        max_r,
-        max_t,
-        options,
-        uuid
+        prefix             :: string(),
+        file_path          :: string(),
+        args               :: string(),
+        env                :: list({string(), string()}),
+        dest_refresh       :: cloudi_service_api:dest_refresh(),
+        protocol           :: 'local' | 'tcp' | 'udp',
+        buffer_size        :: pos_integer(),
+        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny     :: cloudi_service_api:dest_list(),
+        dest_list_allow    :: cloudi_service_api:dest_list(),
+        count_process      :: pos_integer(),
+        count_thread       :: pos_integer(),
+        max_r              :: non_neg_integer(),
+        max_t              :: cloudi_service_api:seconds(),
+        options            :: #config_service_options{},
+        uuid               :: <<_:128>>
     }).
 
 -record(config,
     {
-        uuid_generator,
-        logging = #config_logging{},
+        uuid_generator :: cloudi_x_uuid:state(),
+        logging = #config_logging{} :: #config_logging{},
         acl = dict:new(),
-        services = [],
-        nodes = []
+        services = [] :: list(#config_service_internal{} |
+                              #config_service_external{}),
+        nodes = [] :: dynamic | list(node())
     }).
 

@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -917,6 +917,7 @@ modules_purged([], BusyModules, Timeout) ->
 modules_purged([Module | Modules], BusyModules, Timeout) ->
     case is_module_loaded(Module) of
         true ->
+            true = code:delete(Module),
             case code:soft_purge(Module) of
                 true ->
                     modules_purged(Modules, BusyModules, Timeout);
