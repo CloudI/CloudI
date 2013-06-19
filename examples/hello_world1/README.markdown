@@ -39,6 +39,7 @@ module name:
     EOF
     $ curl -X POST -d @hello_world1_app.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
 
 To use an Erlang source file path with an internal service implementation:
 
@@ -53,6 +54,7 @@ To use an Erlang source file path with an internal service implementation:
     EOF
     $ curl -X POST -d @hello_world1_erl.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
 
 To use a compiled Erlang BEAM file path with an internal service implementation:
 
@@ -67,6 +69,7 @@ To use a compiled Erlang BEAM file path with an internal service implementation:
     EOF
     $ curl -X POST -d @hello_world1_beam.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
 
 To use an Erlang/OTP script release file for an internal service with the
 same module name as the top-level application:
@@ -82,4 +85,5 @@ same module name as the top-level application:
     EOF
     $ curl -X POST -d @hello_world1_script.conf http://localhost:6467/cloudi/api/erlang/services_add
     $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
 
