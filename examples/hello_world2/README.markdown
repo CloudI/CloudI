@@ -22,15 +22,9 @@ To use an Erlang/OTP application file for an internal service with the same
 module name:
 
     $ make release
-    (run the release)
-    $ cat << EOF > hello_world2_app.conf
-    [{internal,
-      "/examples/",
-      "$PWD/ebin/hello_world2.app",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
-    EOF
-    $ curl -X POST -d @hello_world2_app.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ cd release
+    $ bin/cloudi_hello_world2 start
     $ curl http://localhost:6467/examples/hello_world2
+    Hello World!
+    $ bin/cloudi_hello_world2 stop
 

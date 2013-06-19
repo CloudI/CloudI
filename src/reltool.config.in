@@ -115,6 +115,8 @@
 
 {overlay,
  [
+  {mkdir, "bin"},
+  {mkdir, "etc"},
   {copy, "@srcdir@/rel/files/app.config", "etc/app.config"},
   {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
