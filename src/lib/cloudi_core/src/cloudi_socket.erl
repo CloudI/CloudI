@@ -45,15 +45,16 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_socket).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([local_listen/2,
-         local_accept/5]).
+-export([local/1,
+         set/2,
+         setsockopts/3]).
 
 -on_load(init/0).
 
@@ -65,11 +66,25 @@ init() ->
     Path = [_ | _] = code:priv_dir(cloudi_core),
     erlang:load_nif(filename:join([Path, "libcloudi_socket_drv"]), []).
 
-local_listen(_FileDescriptor, _SocketPath) ->
+-spec local(_SocketPath :: string()) ->
+    ok | {error, atom()}.
+
+local(_SocketPath) ->
     erlang:nif_error(not_loaded).
 
-local_accept(_FileDescriptorIn, _FileDescriptorOut, _SocketPath,
-             _ReceiveBufferSize, _SendBufferSize) ->
+-spec set(_FileDescriptorOld :: integer(),
+          _FileDescriptorNew :: integer()) ->
+    ok | {error, atom()}.
+
+set(_FileDescriptorOld, _FileDescriptorNew) ->
+    erlang:nif_error(not_loaded).
+
+-spec setsockopts(_FileDescriptor :: integer(),
+                  _RecBufSize :: pos_integer(),
+                  _SndBufSize :: pos_integer()) ->
+    ok | {error, atom()}.
+
+setsockopts(_FileDescriptor, _RecBufSize, _SndBufSize) ->
     erlang:nif_error(not_loaded).
 
 %%%------------------------------------------------------------------------
