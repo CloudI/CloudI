@@ -139,8 +139,8 @@ new(Pid, TimestampType)
       NodeD06, NodeD07, NodeD08, NodeD09, NodeD10,
       NodeD11, NodeD12, NodeD13, NodeD14, NodeD15,
       NodeD16, NodeD17, NodeD18, NodeD19, NodeD20>> =
-      crypto:sha(erlang:list_to_binary(mac_address() ++
-                                       erlang:atom_to_list(node()))),
+      crypto:hash(sha, erlang:list_to_binary(mac_address() ++
+                                             erlang:atom_to_list(node()))),
     PidBin = erlang:term_to_binary(Pid),
     % 72 bits for the Erlang pid
     <<PidID1:8, PidID2:8, PidID3:8, PidID4:8, % ID (Node specific, 15 bits)
@@ -272,7 +272,7 @@ get_v1_time(Value)
 
 get_v3(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:48>> =
-        crypto:md5(Data),
+        crypto:hash(md5, Data),
     B4 = (B4a bxor B4b) bxor B4c,
     <<B1:48,
       0:1, 0:1, 1:1, 1:1,  % version 3 bits
@@ -321,7 +321,7 @@ get_v3(Namespace, Data) when is_binary(Namespace) ->
 
 get_v3_compat(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48>> =
-        crypto:md5(Data),
+        crypto:hash(md5, Data),
     <<B1:48,
       0:1, 0:1, 1:1, 1:1,  % version 3 bits
       B2:12,
@@ -508,7 +508,7 @@ get_v4_urandom_native() ->
 
 get_v5(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:32, B4d:48>> =
-        crypto:sha(Data),
+        crypto:hash(sha, Data),
     B4 = ((B4a bxor B4b) bxor B4c) bxor B4d,
     <<B1:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
@@ -557,7 +557,7 @@ get_v5(Namespace, Data) when is_binary(Namespace) ->
 
 get_v5_compat(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48, _:32>> =
-        crypto:sha(<<Data/binary>>),
+        crypto:hash(sha, <<Data/binary>>),
     <<B1:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
       B2:12,
