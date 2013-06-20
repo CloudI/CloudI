@@ -3,6 +3,8 @@
 
 2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix local protocol option for external services
+      (confirmed to work on OSX now)
     * Add fixes for R16B01 usage
     * Update uuid, nodefinder, emysql, ranch, cowboy
 

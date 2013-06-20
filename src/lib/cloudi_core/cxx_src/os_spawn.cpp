@@ -870,10 +870,10 @@ int32_t spawn(char protocol,
                 ::_exit(spawn_status::errno_socket());
             if (domain == PF_INET && type == SOCK_STREAM)
             {
-                int tcp_nodelay_flag = 1;
+                int const tcp_nodelay_flag = 1;
                 // set TCP_NODELAY to turn off Nagle's algorithm
-                if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
-                               (char *) &tcp_nodelay_flag, sizeof(int)) == -1)
+                if (::setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+                                 &tcp_nodelay_flag, sizeof(int)) == -1)
                     ::_exit(spawn_status::socket_unknown);
             }
 
