@@ -34,6 +34,14 @@
 -export([sockname/1]).
 -export([close/1]).
 
+-type opts() :: [{backlog, non_neg_integer()}
+	| {ip, inet:ip_address()}
+	| {nodelay, boolean()}
+	| {port, inet:port_number()}
+	| {raw, non_neg_integer(), non_neg_integer(),
+		non_neg_integer() | binary()}].
+-export_type([opts/0]).
+
 %% @doc Name of this transport, <em>tcp</em>.
 name() -> tcp.
 
@@ -62,9 +70,7 @@ messages() -> {tcp, tcp_closed, tcp_error}.
 %% ranch:get_port/1 instead.
 %%
 %% @see gen_tcp:listen/2
--spec listen([{backlog, non_neg_integer()} | {ip, inet:ip_address()}
-	| {nodelay, boolean()} | {port, inet:port_number()}])
-	-> {ok, inet:socket()} | {error, atom()}.
+-spec listen(opts()) -> {ok, inet:socket()} | {error, atom()}.
 listen(Opts) ->
 	Opts2 = ranch:set_option_default(Opts, backlog, 1024),
 	%% We set the port to 0 because it is given in the Opts directly.
@@ -114,7 +120,15 @@ send(Socket, Packet) ->
 -spec sendfile(inet:socket(), file:name())
 	-> {ok, non_neg_integer()} | {error, atom()}.
 sendfile(Socket, Filename) ->
-	file:sendfile(Filename, Socket).
+	try file:sendfile(Filename, Socket) of
+		Result -> Result
+	catch
+		error:{badmatch, {error, enotconn}} ->
+			%% file:sendfile/2 might fail by throwing a {badmatch, {error, enotconn}}
+			%% this is because its internal implementation fails with a badmatch in
+			%% prim_file:sendfile/10 if the socket is not connected.
+			{error, closed}
+	end.
 
 %% @doc Set options on the given socket.
 %% @see inet:setopts/2

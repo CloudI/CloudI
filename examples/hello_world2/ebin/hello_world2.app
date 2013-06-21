@@ -1,0 +1,13 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+
+{application, hello_world2,
+  [{description, "Hello World Example Application"},
+   {vsn, "1.2.4"},
+   {modules, [
+        hello_world2]},
+   {applications, [
+        cloudi_core,
+        cloudi_services_internal,
+        stdlib,
+        kernel]}]}.

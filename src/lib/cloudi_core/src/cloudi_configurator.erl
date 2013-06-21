@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -68,9 +68,9 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("cloudi_logger.hrl").
 -include("cloudi_configuration.hrl").
 -include("cloudi_constants.hrl").
+-include("cloudi_logger.hrl").
 
 -record(state,
     {
@@ -217,7 +217,8 @@ handle_call({services_restart, L, Timeout}, _,
 
 handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    {reply, cloudi_configuration:services(Config), State};
+    L = cloudi_configuration:services(Config),
+    {reply, erlang:list_to_binary(cloudi_string:format("~p", [L])), State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->

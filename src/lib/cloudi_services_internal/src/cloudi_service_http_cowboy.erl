@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -80,6 +80,7 @@
 -define(DEFAULT_MAX_REQUEST_LINE_LENGTH,  4096).
 -define(DEFAULT_OUTPUT,               external).
 -define(DEFAULT_CONTENT_TYPE,        undefined). % force a content type
+-define(DEFAULT_USE_WEBSOCKETS,          false).
 -define(DEFAULT_USE_HOST_PREFIX,         false). % for virtual hosts
 -define(DEFAULT_USE_METHOD_SUFFIX,        true). % get/post/etc. name suffix
 
@@ -99,7 +100,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
@@ -117,12 +118,14 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {max_request_line_length,  ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
         {output,                   ?DEFAULT_OUTPUT},
         {content_type,             ?DEFAULT_CONTENT_TYPE},
+        {use_websockets,           ?DEFAULT_USE_WEBSOCKETS},
         {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
         {use_method_suffix,        ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, NoDelay, RecvTimeout, SSL, Compress,
      MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
-     OutputType, DefaultContentType0, UseHostPrefix, UseMethodSuffix] =
+     OutputType, DefaultContentType0,
+     UseWebSockets, UseHostPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_integer(Backlog),
@@ -146,6 +149,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         is_binary(DefaultContentType0) ->
             DefaultContentType0
     end,
+    true = is_boolean(UseWebSockets),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseMethodSuffix),
     Service = cloudi_service:self(Dispatcher),
@@ -155,8 +159,10 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{service = Service,
                               timeout_async = TimeoutAsync,
+                              prefix = Prefix,
                               output_type = OutputType,
                               default_content_type = DefaultContentType1,
+                              use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
                               use_method_suffix = UseMethodSuffix,
                               content_type_lookup = content_type_lookup()}}]}

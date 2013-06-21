@@ -158,11 +158,11 @@ bxor_binary(B1, B2) ->
 
 %% @private
 password_new(Password, Salt) ->
-    Stage1 = crypto:sha(Password),
-    Stage2 = crypto:sha(Stage1),
-    Res = crypto:sha_final(
-        crypto:sha_update(
-            crypto:sha_update(crypto:sha_init(), Salt),
+    Stage1 = crypto:hash(sha, Password),
+    Stage2 = crypto:hash(sha, Stage1),
+    Res = crypto:hash_final(sha,
+        crypto:hash_update(sha,
+            crypto:hash_update(sha, crypto:hash_init(sha), Salt),
             Stage2
         )
     ),

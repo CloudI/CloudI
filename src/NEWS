@@ -1,3 +1,38 @@
+June 20, 2013
+  Version 1.2.4 (beta) released.
+  * The external service "local" (i.e., "default") protocol configuration
+    option has been fixed and was tested on OSX successfully.  The problem was
+    with the unix domain socket initialization, so it doesn't affect the
+    loadtest results done for the 1.2.2 release
+    (see src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf).
+    The default configuration external service protocol configuration, as well
+    as the quickstart remain with the "tcp" option, to avoid blocking
+    people that are not concerned about the efficiency benefits and give
+    more time for testing it.
+  * WebSockets support was added to the cloudi_service_http_cowboy
+    internal service.  To handle websocket connections, just use the
+    "{use_websockets, true}" configuration option, as shown for port 6464
+    within the default configuration.  The example is at:
+    src/tests/http_req/public_html/websockets.html .
+  * Various fixes were added for the R16B01 release (crypto application usage)
+  * cowboy was updated to 0.8.6
+  * The cloudi_service_api module was added so that the CloudI Service API
+    can be accessed within the same VM with Erlang function calls
+    (the service providing JSON-RPC and HTTP integration for the CloudI
+     Service API had a name change from cloudi_service_api to
+     cloudi_service_api_requests)
+  * Two examples of different ways to release Erlang applications with
+    CloudI exist in the examples directory as hello_world1 and hello_world2.
+    hello_world1 shows how to let CloudI run your Erlang source code as a
+    service, while hello_world2 shows you a basic Erlang release that
+    with external source code that has CloudI as a dependency.
+  * Infrequent use cases of the internal service init function required some
+    fixes to prevent errnoeous usage.  The functions send_sync and recv_async
+    should not be used within an internal service init function, similar to
+    the restriction on gen_server:call for the gen_server OTP/Erlang
+    behaviour (you can always send a message to self() and handle it within
+    the cloudi_service_handle_info/3 to utilize these functions).
+
 June 8, 2013
   Version 1.2.3 (beta) released.
   * Added internal service purging when services are removed.

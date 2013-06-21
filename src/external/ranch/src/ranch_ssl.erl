@@ -16,10 +16,11 @@
 %%
 %% Wrapper around <em>ssl</em> implementing the Ranch transport API.
 %%
-%% This transport requires the <em>crypto</em>, <em>public_key</em>
-%% and <em>ssl</em> applications to be started. If they aren't started,
-%% it will try to start them itself before opening a port to listen.
-%% Applications aren't stopped when the listening socket is closed, though.
+%% This transport requires the <em>crypto</em>, <em>asn1</em>,
+%% <em>public_key</em> and <em>ssl</em> applications to be started.
+%% If they aren't started, it will try to start them itself before
+%% opening a port to listen. Applications aren't stopped when the
+%% listening socket is closed, though.
 %%
 %% @see ssl
 -module(ranch_ssl).
@@ -39,6 +40,29 @@
 -export([sockname/1]).
 -export([close/1]).
 
+-type opts() :: [{backlog, non_neg_integer()}
+	| {cacertfile, string()}
+	| {cacerts, [Der::binary()]}
+	| {cert, Der::binary()}
+	| {certfile, string()}
+	| {ciphers, [ssl:erl_cipher_suite()] | string()}
+	| {fail_if_no_peer_cert, boolean()}
+	| {ip, inet:ip_address()}
+	| {key, Der::binary()}
+	| {keyfile, string()}
+	| {next_protocols_advertised, [binary()]}
+	| {nodelay, boolean()}
+	| {password, string()}
+	| {port, inet:port_number()}
+	| {raw, non_neg_integer(), non_neg_integer(),
+		non_neg_integer() | binary()}
+	| {reuse_session, fun()}
+	| {reuse_sessions, boolean()}
+	| {secure_renegotiate, boolean()}
+	| {verify, ssl:verify_type()}
+	| {verify_fun, {fun(), InitialUserState::term()}}].
+-export_type([opts/0]).
+
 %% @doc Name of this transport, <em>ssl</em>.
 name() -> ssl.
 
@@ -56,6 +80,8 @@ messages() -> {ssl, ssl_closed, ssl_error}.
 %%  <dt>cacertfile</dt><dd>Optional. Path to file containing PEM encoded
 %%   CA certificates (trusted certificates used for verifying a peer
 %%   certificate).</dd>
+%%  <dt>cert</dt><dd>Optional. The DER encoded users certificate. If this
+%%   option is supplied it will override the certfile option.</dd>
 %%  <dt>certfile</dt><dd>Mandatory. Path to a file containing the user's
 %%   certificate.</dd>
 %%  <dt>ciphers</dt><dd>Optional. The cipher suites that should be supported.
@@ -68,6 +94,8 @@ messages() -> {ssl, ssl_closed, ssl_error}.
 %%   certificate is considered valid).</dd>
 %%  <dt>ip</dt><dd>Interface to listen on. Listen on all interfaces
 %%   by default.</dd>
+%%  <dt>key</dt><dd>Optional. The DER encoded users private key. If this option
+%%   is supplied it will override the keyfile option.</dd>
 %%  <dt>keyfile</dt><dd>Optional. Path to the file containing the user's
 %%   private PEM encoded key.</dd>
 %%  <dt>next_protocols_advertised</dt><dd>Optional. Erlang R16B+ required.
@@ -77,8 +105,22 @@ messages() -> {ssl, ssl_closed, ssl_error}.
 %%  <dt>password</dt><dd>Optional. String containing the user's password.
 %%   All private keyfiles must be password protected currently.</dd>
 %%  <dt>port</dt><dd>TCP port number to open. Defaults to 0 (see below)</dd>
+%%  <dt>reuse_session</dt><dd>Optional. Enables the ssl server to have a local
+%%   policy for deciding if a session should be reused or not, only meaningful
+%%   if reuse_sessions is set to true.</dd>
+%%  <dt>reuse_sessions</dt><dd>Optional. Specifies if the server should agree
+%%   to reuse sessions when the clients request to do so.</dd>
+%%  <dt>secure_renegotiate</dt><dd>Optional. Specifies if to reject renegotiation
+%%   attempt that does not live up to RFC 5746. By default secure_renegotiate is
+%%   set to false i.e. secure renegotiation will be used if possible but it will
+%%   fallback to unsecure renegotiation if the peer does not support RFC 5746.</dd>
 %%  <dt>verify</dt><dd>Optional. If set to verify_peer, performs an x509-path
 %%   validation and request the client for a certificate.</dd>
+%%  <dt>verify_fun</dt><dd>Optional. The verify fun will be called during the
+%%   X509-path validation when an error or an extension unknown to the ssl
+%%   application is encountered. Additionally it will be called when a certificate
+%%   is considered valid by the path validation to allow access to each certificate
+%%   in the path to the user application.</dd>
 %% </dl>
 %%
 %% You can listen to a random port by setting the port option to 0.
@@ -88,25 +130,20 @@ messages() -> {ssl, ssl_closed, ssl_error}.
 %% ranch:get_port/1 instead.
 %%
 %% @see ssl:listen/2
--spec listen([{backlog, non_neg_integer()} | {cacertfile, string()}
-	| {certfile, string()} | {ciphers, [ssl:erl_cipher_suite()] | string()}
-	| {fail_if_no_peer_cert, boolean()}
-	| {ip, inet:ip_address()} | {keyfile, string()}
-	| {next_protocols_advertised, [binary()]} | {nodelay, boolean()}
-	| {password, string()} | {port, inet:port_number()}
-	| {verify, ssl:verify_type()}])
-	-> {ok, ssl:sslsocket()} | {error, atom()}.
+-spec listen(opts()) -> {ok, ssl:sslsocket()} | {error, atom()}.
 listen(Opts) ->
-	ranch:require([crypto, public_key, ssl]),
-	{certfile, _} = lists:keyfind(certfile, 1, Opts),
+	ranch:require([crypto, asn1, public_key, ssl]),
+	true = lists:keymember(cert, 1, Opts)
+		orelse lists:keymember(certfile, 1, Opts),
 	Opts2 = ranch:set_option_default(Opts, backlog, 1024),
 	%% We set the port to 0 because it is given in the Opts directly.
 	%% The port in the options takes precedence over the one in the
 	%% first argument.
 	ssl:listen(0, ranch:filter_options(Opts2,
-		[backlog, cacertfile, certfile, ciphers, fail_if_no_peer_cert, ip,
-			keyfile, next_protocols_advertised, nodelay, password, port,
-			raw, verify],
+		[backlog, cacertfile, cacerts, cert, certfile, ciphers,
+			fail_if_no_peer_cert, ip, key, keyfile, next_protocols_advertised,
+			nodelay, password, port, raw, reuse_session, reuse_sessions,
+			secure_renegotiate, verify, verify_fun],
 		[binary, {active, false}, {packet, raw},
 			{reuseaddr, true}, {nodelay, true}])).
 
@@ -218,8 +255,13 @@ close(Socket) ->
 
 %% Internal.
 
+%% This call always times out, either because a numeric timeout value
+%% was given, or because we've decided to use 5000ms instead of infinity.
+%% This value should be reasonable enough for the moment.
 -spec ssl_accept(ssl:sslsocket(), timeout())
 	-> {ok, ssl:sslsocket()} | {error, {ssl_accept, atom()}}.
+ssl_accept(Socket, infinity) ->
+	ssl_accept(Socket, 5000);
 ssl_accept(Socket, Timeout) ->
 	case ssl:ssl_accept(Socket, Timeout) of
 		ok ->

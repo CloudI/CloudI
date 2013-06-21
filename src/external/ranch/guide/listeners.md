@@ -81,6 +81,17 @@ telnet> quit
 Connection closed.
 ```
 
+Default transport options
+-------------------------
+
+By default the socket will be set to return `binary` data, with the
+options `{active, false}`, `{packet, raw}`, `{reuseaddr, true}` set.
+These values can't be overriden when starting the listener, but
+they can be overriden using `Transport:setopts/2` in the protocol.
+
+It will also set `{backlog, 1024}` and `{nodelay, true}`, which
+can be overriden at listener startup.
+
 Listening on a random port
 --------------------------
 
@@ -162,11 +173,11 @@ connections are mostly waiting for messages, then they don't consume
 much resources and can safely be removed from the count.
 
 To remove the connection from the count, you must call the
-`ranch_listener:remove_connection/1` from within the connection process,
-with the listener pid as the only argument.
+`ranch:remove_connection/1` from within the connection process,
+with the name of the listener as the only argument.
 
 ``` erlang
-ranch_listener:remove_connection(ListenerPid).
+ranch:remove_connection(Ref).
 ```
 
 As seen in the chapter covering protocols, this pid is received as the

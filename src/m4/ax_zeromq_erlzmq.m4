@@ -1,5 +1,5 @@
-# -*- coding: utf-8; Mode: m4; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-# ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+#-*-Mode:m4;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+# ex: set ft=m4 fenc=utf-8 sts=4 ts=4 sw=4 et:
 #
 # SYNOPSIS
 #
@@ -82,7 +82,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
              SRCDIR=$abs_top_srcdir
              BUILDDIR=$abs_top_builddir])
-        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}@:>@},"
+        ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}, {mod_cond, all}, {app_file, keep}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
         ZEROMQ_ERLZMQ_PATH=',"external/zeromq/v'$ZEROMQ_VERSION_MAJOR'"'
     fi

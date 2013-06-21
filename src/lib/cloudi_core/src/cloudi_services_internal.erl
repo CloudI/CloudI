@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -83,6 +83,7 @@
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
+        receiver_pid,                  % receiver pid
         duo_mode_pid,                  % dual mode pid
         request_pid = undefined,       % request pid
         info_pid = undefined,          % info pid
@@ -173,6 +174,12 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
         true ->
             undefined
     end,
+    ReceiverPid = if
+        is_pid(DuoModePid) ->
+            DuoModePid;
+        true ->
+            Dispatcher
+    end,
     cloudi_x_quickrand:seed(),
     destination_refresh_first(DestRefresh, ConfigOptions),
     {ok, #state{dispatcher = Dispatcher,
@@ -181,6 +188,7 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
                 prefix = Prefix,
                 timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
+                receiver_pid = ReceiverPid,
                 duo_mode_pid = DuoModePid,
                 uuid_generator = cloudi_x_uuid:new(Dispatcher),
                 dest_refresh = DestRefresh,
@@ -191,39 +199,19 @@ init([ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync,
 handle_call(process_index, _, #state{process_index = ProcessIndex} = State) ->
     {reply, ProcessIndex, State};
 
-handle_call(self, _, #state{dispatcher = Dispatcher,
-                            duo_mode_pid = DuoModePid} = State) ->
-    if
-        is_pid(DuoModePid) ->
-            {reply, DuoModePid, State};
-        true ->
-            {reply, Dispatcher, State}
-    end;
+handle_call(self, _, #state{receiver_pid = ReceiverPid} = State) ->
+    {reply, ReceiverPid, State};
 
 handle_call({'subscribe', Pattern}, _,
-            #state{dispatcher = Dispatcher,
-                   prefix = Prefix,
-                   duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    ok = cloudi_x_cpg:join(Prefix ++ Pattern, Receiver),
+            #state{prefix = Prefix,
+                   receiver_pid = ReceiverPid} = State) ->
+    ok = cloudi_x_cpg:join(Prefix ++ Pattern, ReceiverPid),
     {reply, ok, State};
 
 handle_call({'unsubscribe', Pattern}, _,
-            #state{dispatcher = Dispatcher,
-                   prefix = Prefix,
-                   duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, Receiver),
+            #state{prefix = Prefix,
+                   receiver_pid = ReceiverPid} = State) ->
+    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, ReceiverPid),
     {reply, ok, State};
 
 handle_call({'get_pid', Name}, Client,
@@ -402,13 +390,12 @@ handle_call({'recv_async', TransId, Consume}, Client,
     handle_call({'recv_async', TimeoutSync, TransId, Consume}, Client, State);
 
 handle_call({'recv_async', Timeout, TransId, Consume}, Client,
-            #state{dispatcher = Dispatcher,
-                   async_responses = AsyncResponses} = State) ->
+            #state{async_responses = AsyncResponses} = State) ->
     if
         TransId == <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume, Client}),
@@ -432,7 +419,7 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
         true ->
             case dict:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume, Client}),
@@ -626,8 +613,7 @@ handle_info({'cloudi_service_mcast_async_retry',
 
 handle_info({'cloudi_service_forward_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, TransId, Source},
-            #state{dispatcher = Dispatcher,
-                   dest_refresh = DestRefresh,
+            #state{dest_refresh = DestRefresh,
                    cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
@@ -635,7 +621,7 @@ handle_info({'cloudi_service_forward_async_retry',
         true ->
             case destination_get(DestRefresh, Name, Source, Groups) of
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
-                    erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_async_retry',
                                        Name, RequestInfo, Request,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
@@ -658,8 +644,7 @@ handle_info({'cloudi_service_forward_async_retry',
 
 handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Source},
-            #state{dispatcher = Dispatcher,
-                   dest_refresh = DestRefresh,
+            #state{dest_refresh = DestRefresh,
                    cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
@@ -667,7 +652,7 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
         true ->
             case destination_get(DestRefresh, Name, Source, Groups) of
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
-                    erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_sync_retry',
                                        Name, RequestInfo, Request,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
@@ -690,13 +675,12 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
 
 handle_info({'cloudi_service_recv_async_retry',
              Timeout, TransId, Consume, Client},
-            #state{dispatcher = Dispatcher,
-                   async_responses = AsyncResponses} = State) ->
+            #state{async_responses = AsyncResponses} = State) ->
     if
         TransId == <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume, Client}),
@@ -724,7 +708,7 @@ handle_info({'cloudi_service_recv_async_retry',
         true ->
             case dict:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
                                        TransId, Consume, Client}),
@@ -828,16 +812,10 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId},
 handle_info({'cloudi_service_return_async',
              Name, Pattern, ResponseInfo, Response,
              OldTimeout, TransId, Source},
-            #state{dispatcher = Dispatcher,
-                   send_timeouts = SendTimeouts,
-                   duo_mode_pid = DuoModePid,
+            #state{send_timeouts = SendTimeouts,
+                   receiver_pid = ReceiverPid,
                    options = ConfigOptions} = State) ->
-    true = if
-        is_pid(DuoModePid) ->
-            Source =:= DuoModePid;
-        true ->
-            Source =:= Dispatcher
-    end,
+    true = Source =:= ReceiverPid,
     case dict:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
@@ -850,12 +828,7 @@ handle_info({'cloudi_service_return_async',
                 true ->
                     ok
             end,
-            if
-                is_pid(DuoModePid) ->
-                    DuoModePid ! {'timeout_async_active', TransId};
-                true ->
-                    Dispatcher ! {'timeout_async_active', TransId}
-            end,
+            ReceiverPid ! {'timeout_async_active', TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {active, Tref}} ->
             Timeout = if
@@ -870,14 +843,8 @@ handle_info({'cloudi_service_return_async',
                 true ->
                     OldTimeout
             end,
-            if
-                is_pid(DuoModePid) ->
-                    DuoModePid ! {'return_async_active', Name, Pattern,
-                                  ResponseInfo, Response, Timeout, TransId};
-                true ->
-                    Dispatcher ! {'return_async_active', Name, Pattern,
-                                  ResponseInfo, Response, Timeout, TransId}
-            end,
+            ReceiverPid ! {'return_async_active', Name, Pattern,
+                           ResponseInfo, Response, Timeout, TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} when Response == <<>> ->
             if
@@ -908,16 +875,10 @@ handle_info({'cloudi_service_return_async',
 
 handle_info({'cloudi_service_return_sync',
              _, _, ResponseInfo, Response, _, TransId, Source},
-            #state{dispatcher = Dispatcher,
-                   send_timeouts = SendTimeouts,
-                   duo_mode_pid = DuoModePid,
+            #state{send_timeouts = SendTimeouts,
+                   receiver_pid = ReceiverPid,
                    options = ConfigOptions} = State) ->
-    true = if
-        is_pid(DuoModePid) ->
-            Source =:= DuoModePid;
-        true ->
-            Source =:= Dispatcher
-    end,
+    true = Source =:= ReceiverPid,
     case dict:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
@@ -942,9 +903,8 @@ handle_info({'cloudi_service_return_sync',
     end;
 
 handle_info({'cloudi_service_send_async_timeout', TransId},
-            #state{dispatcher = Dispatcher,
-                   send_timeouts = SendTimeouts,
-                   duo_mode_pid = DuoModePid,
+            #state{send_timeouts = SendTimeouts,
+                   receiver_pid = ReceiverPid,
                    options = ConfigOptions} = State) ->
     case dict:find(TransId, SendTimeouts) of
         error ->
@@ -960,12 +920,7 @@ handle_info({'cloudi_service_send_async_timeout', TransId},
             end,
             {noreply, State};
         {ok, {active, _}} ->
-            if
-                is_pid(DuoModePid) ->
-                    DuoModePid ! {'timeout_async_active', TransId};
-                true ->
-                    Dispatcher ! {'timeout_async_active', TransId}
-            end,
+            ReceiverPid ! {'timeout_async_active', TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, _} ->
             {noreply, send_timeout_end(TransId, State)}
@@ -1034,19 +989,12 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 handle_get_pid(Name, Timeout, Client,
-               #state{dispatcher = Dispatcher,
+               #state{receiver_pid = ReceiverPid,
                       dest_refresh = DestRefresh,
-                      cpg_data = Groups,
-                      duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    case destination_get(DestRefresh, Name, Receiver, Groups) of
+                      cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-            erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
+            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_get_pid_retry',
                                Name, Timeout - ?SEND_SYNC_INTERVAL, Client}),
             {noreply, State};
@@ -1060,20 +1008,13 @@ handle_get_pid(Name, Timeout, Client,
 
 handle_send_async(Name, RequestInfo, Request,
                   Timeout, Priority, Client,
-                  #state{dispatcher = Dispatcher,
+                  #state{receiver_pid = ReceiverPid,
                          uuid_generator = UUID,
                          dest_refresh = DestRefresh,
-                         cpg_data = Groups,
-                         duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    case destination_get(DestRefresh, Name, Receiver, Groups) of
+                         cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
-            erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
+            erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'cloudi_service_send_async_retry',
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_ASYNC_INTERVAL,
@@ -1086,44 +1027,30 @@ handle_send_async(Name, RequestInfo, Request,
             TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Receiver},
+                   Timeout, Priority, TransId, ReceiverPid},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_timeout_start(Timeout, TransId, State)}
     end.
 
 handle_send_async_pid(Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, Pid,
-                      #state{dispatcher = Dispatcher,
-                             uuid_generator = UUID,
-                             duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
+                      #state{receiver_pid = ReceiverPid,
+                             uuid_generator = UUID} = State) ->
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Receiver},
+           Timeout, Priority, TransId, ReceiverPid},
     {reply, {ok, TransId}, send_async_timeout_start(Timeout, TransId, State)}.
 
 handle_send_async_active(Name, RequestInfo, Request,
                          Timeout, Priority, Client,
-                         #state{dispatcher = Dispatcher,
+                         #state{receiver_pid = ReceiverPid,
                                 uuid_generator = UUID,
                                 dest_refresh = DestRefresh,
-                                cpg_data = Groups,
-                                duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    case destination_get(DestRefresh, Name, Receiver, Groups) of
+                                cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
-            erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
+            erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'cloudi_service_send_async_active_retry',
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_ASYNC_INTERVAL,
@@ -1136,45 +1063,31 @@ handle_send_async_active(Name, RequestInfo, Request,
             TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Receiver},
+                   Timeout, Priority, TransId, ReceiverPid},
             gen_server:reply(Client, {ok, TransId}),
             {noreply, send_async_active_timeout_start(Timeout, TransId, State)}
     end.
 
 handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
                              Timeout, Priority, Pid,
-                             #state{dispatcher = Dispatcher,
-                                    uuid_generator = UUID,
-                                    duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
+                             #state{receiver_pid = ReceiverPid,
+                                    uuid_generator = UUID} = State) ->
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Receiver},
+           Timeout, Priority, TransId, ReceiverPid},
     {reply, {ok, TransId},
      send_async_active_timeout_start(Timeout, TransId, State)}.
 
 handle_send_sync(Name, RequestInfo, Request,
                  Timeout, Priority, Client,
-                 #state{dispatcher = Dispatcher,
+                 #state{receiver_pid = ReceiverPid,
                         uuid_generator = UUID,
                         dest_refresh = DestRefresh,
-                        cpg_data = Groups,
-                        duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    case destination_get(DestRefresh, Name, Receiver, Groups) of
+                        cpg_data = Groups} = State) ->
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-            erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
+            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_send_sync_retry',
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_SYNC_INTERVAL,
@@ -1187,43 +1100,29 @@ handle_send_sync(Name, RequestInfo, Request,
             TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_sync',
                    Name, Pattern, RequestInfo, Request,
-                   Timeout, Priority, TransId, Receiver},
+                   Timeout, Priority, TransId, ReceiverPid},
             {noreply, send_sync_timeout_start(Timeout, TransId, Client, State)}
     end.
 
 handle_send_sync_pid(Name, Pattern, RequestInfo, Request,
                      Timeout, Priority, Pid, Client,
-                     #state{dispatcher = Dispatcher,
-                            uuid_generator = UUID,
-                            duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
+                     #state{receiver_pid = ReceiverPid,
+                            uuid_generator = UUID} = State) ->
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Receiver},
+           Timeout, Priority, TransId, ReceiverPid},
     {noreply, send_sync_timeout_start(Timeout, TransId, Client, State)}.
 
 handle_mcast_async(Name, RequestInfo, Request,
                    Timeout, Priority, Client,
-                   #state{dispatcher = Dispatcher,
+                   #state{receiver_pid = ReceiverPid,
                           uuid_generator = UUID,
                           dest_refresh = DestRefresh,
-                          cpg_data = Groups,
-                          duo_mode_pid = DuoModePid} = State) ->
-    Receiver = if
-        is_pid(DuoModePid) ->
-            DuoModePid;
-        true ->
-            Dispatcher
-    end,
-    case destination_all(DestRefresh, Name, Receiver, Groups) of
+                          cpg_data = Groups} = State) ->
+    case destination_all(DestRefresh, Name, ReceiverPid, Groups) of
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
-            erlang:send_after(?MCAST_ASYNC_INTERVAL, Dispatcher,
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
                               {'cloudi_service_mcast_async_retry',
                                Name, RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL,
@@ -1237,7 +1136,7 @@ handle_mcast_async(Name, RequestInfo, Request,
                 TransId = cloudi_x_uuid:get_v1(UUID),
                 Pid ! {'cloudi_service_send_async',
                        Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Receiver},
+                       Timeout, Priority, TransId, ReceiverPid},
                 TransId
             end, PidList),
             gen_server:reply(Client, {ok, TransIdList}),
@@ -1488,12 +1387,11 @@ handle_module_info(Request, Module, Dispatcher, ServiceState) ->
     end.
 
 send_async_active_timeout_start(Timeout, TransId,
-                                #state{dispatcher = Self,
-                                       send_timeouts = SendTimeouts} = State)
+                                #state{send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
         send_timeouts = dict:store(TransId, {active,
-            erlang:send_after(Timeout, Self,
+            erlang:send_after(Timeout, self(),
                               {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
 

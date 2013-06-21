@@ -1,6 +1,166 @@
 CHANGELOG
 =========
 
+0.8.6
+-----
+
+ *  Make sure Cowboy compiles on R16B01
+
+ *  Update Ranch to 0.8.4
+
+ *  Add experimental support for the x-webkit-deflate-frame Websocket extension
+
+    This allows Cowboy to handle compressed Websocket frames,
+    lowering the amount of data that needs to be sent over the
+    socket.
+
+    The extension will only be used if compression was enabled
+    using the `compress` protocol option.
+
+ *  Add experimental SPDY support
+
+    SPDY is a new protocol implemented by most browsers. It is
+    the basis for what will become HTTP/2.0.
+
+    To use SPDY, you need to call `start_spdy` where you would
+    have used `start_https` before.
+
+    This protocol is still incomplete. It cannot accept request
+    bodies yet, making most methods other than GET and HEAD
+    not too useful at this point.
+
+ *  Allow an empty method list in allowed_methods
+
+ *  The charset parameter of content-types is now always lowercase
+
+ *  Don't overwrite the stacktrace when a REST handler crashes
+
+ *  Don't crash when the Cookie header is empty
+
+ *  Don't crash on invalid Accept-Encoding header when replying
+
+0.8.5
+-----
+
+ *  Add the Cowboy Function Reference
+
+    Everything documented in the function reference is the API
+    that will make it to Cowboy 1.0.
+
+ *  Use erlang.mk
+
+    The project is of course still compatible with rebar
+    and can be used as a dependency just fine.
+
+ *  Update Ranch to 0.8.3
+
+ *  Remove cowboy_req:fragment/1
+
+    No well-written client is sending the fragment with the URL.
+
+ *  Add cowboy_req:set_resp_body_fun(chunked, Fun, Req)
+
+ *  Improve various typespecs
+
+ *  Change the return value of cowboy_req:version/1
+
+    We now have 'HTTP/1.1' instead of {1, 1} and 'HTTP/1.0'
+    instead of {1, 0}.
+
+ *  Change the return value of REST accept callbacks
+
+    The Path return value becomes {true, Path}.
+
+ *  Change the return value of REST charsets_provided/2
+
+    It was incorrectly expecting a list of tuples instead of
+    a list of charsets.
+
+ *  Move various types to the cowboy module
+   *  cowboy_http:version() to cowboy:http_version()
+   *  cowboy_http:headers() to cowboy:http_headers()
+   *  cowboy_http:status() to cowboy:http_status()
+   *  cowboy_protocol:onrequest_fun() to cowboy:onrequest_fun()
+   *  cowboy_protocol:onresponse_fun() to cowboy:onresponse_fun()
+
+ *  Add type cowboy_protocol:opts()
+
+ *  Fix a REST bug with the OPTIONS method
+
+ *  Fix a REST bug where iso-8859-1 would be incoditionally selected
+
+0.8.4
+-----
+
+ *  Cookie names are now back to being case sensitive
+
+    This should be more in line with what browsers do and what
+    users would expect.
+
+ *  REST is no longer experimental and is documented
+
+ *  REST behavior fixed when used with the POST method
+
+    Removes process_post, post_is_create, create_path, created_path
+    callbacks. It is up to the resource accept callback to decide
+    what to do when the POST method is used. Depending on the return
+    value Cowboy will determine if the resource was created or not.
+
+ *  Removes the put_path meta value in REST
+
+ *  Fix an issue in REST with the PATCH method
+
+    Content-types were not normalized as expected, preventing the
+    use of the binary form for content-types.
+
+ *  Add default operations for the OPTIONS method in REST
+
+    The default will be to set the Allow header in the response
+    based on the return value from allowed_methods.
+
+ *  Add default content_types_provided "text/html" maps to to_html
+
+    This allows non-HEAD/GET methods to work without defining
+    the callback explicitly.
+
+ *  Reject invalid content-types explicitly in REST
+
+ *  Don't accept TRACE or CONNECT methods by default in REST
+
+ *  Remove cowboy_req:peer_addr/1
+
+    Because each server's proxy situation differs, it is better
+    that this function is implemented by the application directly.
+
+    The X-Forwarded-For header can now be parsed using
+    cowboy_req:parse_header/2.
+
+ *  Switch the arguments to cowboy_req:stream_body/2
+
+    They were in the wrong order compared to the rest of the module.
+
+ *  Add parser for the Range header
+
+ *  Do not crash if connection times out while sending a file using sendfile
+
+ *  Ensure we can fetch the body in the info/3 function of loop handlers
+
+ *  Update Ranch to 0.8.1
+
+ *  Reorganize and optimize the test suites
+
+0.8.3
+-----
+
+ *  Remove init_stream/5, add stream_body/2
+
+    It's better to allow configuring the streamed chunk size on
+    a per chunk basis. Also easier to use.
+
+ *  Update Ranch to 0.8.0
+
+    Much faster. Also improved stability.
+
 0.8.2
 -----
 

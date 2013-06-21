@@ -1,5 +1,5 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -526,19 +526,16 @@ handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
                                         acceptor = undefined,
                                         socket = Socket}};
 
-handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
+handle_info({inet_async, undefined, undefined, {ok, FileDescriptor}}, StateName,
             #state{protocol = local,
-                   listener = Listener,
-                   acceptor = Acceptor,
-                   socket_path = SocketPath,
                    socket_options = SocketOptions} = State) ->
-    {ok, NewSocket} = local_accept(Listener, Socket,
-                                   SocketPath, SocketOptions),
-    catch gen_tcp:close(Listener),
-    catch gen_tcp:close(Acceptor), % inet client to get Socket
-    {next_state, StateName, State#state{listener = undefined,
-                                        acceptor = undefined,
-                                        socket = NewSocket}};
+    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
+    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
+    ok = cloudi_socket:setsockopts(FileDescriptor,
+                                   ReceiveBufferSize, SendBufferSize),
+    {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
+    ok = inet:setopts(Socket, [{active, once}]),
+    {next_state, StateName, State#state{socket = Socket}};
 
 handle_info({inet_async, Listener, Acceptor, Error}, StateName,
             #state{protocol = Protocol,
@@ -1169,49 +1166,33 @@ socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
                      {nodelay, true}, {delay_send, false}, {keepalive, false},
                      {send_timeout, 5000}, {send_timeout_close, true}],
     ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
-    {ok, State} = local_listen(ThreadSocketPath,
-                               [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
-                                {backlog, 0}, {active, false} | SocketOptions],
-                               SocketOptions),
-    {ok, State#state{port = ThreadIndex}}.
+    ok = cloudi_socket:local(ThreadSocketPath),
+    {ok, #state{protocol = local,
+                port = ThreadIndex,
+                socket_path = ThreadSocketPath,
+                socket_options = SocketOptions}}.
 
-local_listen(SocketPath, InetOptions, SocketOptions) ->
-    % carefully grafting unix domain socket support onto an Erlang listener
-    {ok, Listener} = gen_tcp:listen(0, InetOptions),
-    {ok, FileDescriptor} = prim_inet:getfd(Listener),
-    ok = cloudi_socket:local_listen(FileDescriptor, SocketPath),
+cloudi_socket_set(FileDescriptor, SocketOptions) ->
+    % setup an inet socket within Erlang whose file descriptor can be used
+    % for an unsupported socket type
+    InetOptions = [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
+                   {backlog, 0}, {active, false} | SocketOptions],
     {ok, ListenerInet} = gen_tcp:listen(0, InetOptions),
     {ok, Port} = inet:port(ListenerInet),
     {ok, Client} = gen_tcp:connect({127,0,0,1}, Port, [{active, false}]),
     {ok, Socket} = gen_tcp:accept(ListenerInet, 100),
     ok = inet:setopts(Socket, [{active, false} | SocketOptions]),
     catch gen_tcp:close(ListenerInet),
-    erlang:send_after(10, self(),
-                      {inet_async, Listener, Client, {ok, Socket}}),
-    {ok, #state{protocol = local,
-                listener = Listener,
-                acceptor = Client,
-                socket_path = SocketPath,
-                socket_options = SocketOptions}}.
-
-local_accept(Listener, Socket, SocketPath, SocketOptions) ->
-    % carefully grafting unix domain socket support onto an Erlang socket
-    {ok, FileDescriptorIn} = prim_inet:getfd(Listener),
-    {ok, FileDescriptorOut} = prim_inet:getfd(Socket),
+    {ok, FileDescriptorInternal} = prim_inet:getfd(Socket),
     ok = prim_inet:ignorefd(Socket, true),
-    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
-    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
-    {ok, NewSocket} = gen_tcp:fdopen(FileDescriptorOut,
+    {ok, NewSocket} = gen_tcp:fdopen(FileDescriptorInternal,
                                      [binary, {packet, 4},
                                       {active, false} | SocketOptions]),
-    ok = cloudi_socket:local_accept(FileDescriptorIn,
-                                    FileDescriptorOut,
-                                    SocketPath,
-                                    ReceiveBufferSize,
-                                    SendBufferSize),
-    ok = inet:setopts(NewSocket, [{active, once}]),
-    % NewSocket is used instead of Socket because it is internally marked as
-    % prebound (in ERTS) so that Erlang will not attempt to reconnect
-    % or make other assumptions about the socket file descriptor
+    % NewSocket is internally marked as prebound (in ERTS) so that Erlang
+    % will not attempt to reconnect or make other assumptions about the
+    % socket file descriptor
+    ok = cloudi_socket:set(FileDescriptorInternal, FileDescriptor),
+    catch gen_tcp:close(Client),
+    % do not close Socket!
     {ok, NewSocket}.
 

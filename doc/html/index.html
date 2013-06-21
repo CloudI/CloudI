@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title>CloudI: A Cloud as an Interface</title>
+  <title>CloudI: A Cloud at the lowest level</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
@@ -54,9 +54,9 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <h3>Get CloudI Running</h3>
 
 <pre>
-$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.3.tar.gz
-$ tar zxvf cloudi-1.2.3.tar.gz
-$ cd cloudi-1.2.3/src
+$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.4.tar.gz
+$ tar zxvf cloudi-1.2.4.tar.gz
+$ cd cloudi-1.2.4/src
 $ ./configure
 $ make
 $ sudo make install
@@ -110,7 +110,7 @@ cloudi_service_handle_info(Request, State, _) -&gt;
 cloudi_service_terminate(_, #state{}) -&gt;
     ok.
 EOF
-$ erlc -pz /usr/local/lib/cloudi-1.2.3/lib/cloudi_core-1.2.3 -pz /usr/local/lib/cloudi-1.2.3/lib/cloudi_core-1.2.3/ebin hello_world.erl
+$ erlc -pz /usr/local/lib/cloudi-1.2.4/lib/cloudi_core-1.2.4 -pz /usr/local/lib/cloudi-1.2.4/lib/cloudi_core-1.2.4/ebin hello_world.erl
 </pre>
 
     <p>
@@ -138,7 +138,7 @@ $ curl -X POST -d @hello_world.conf http://localhost:6467/cloudi/api/erlang/serv
 </pre>
 
     <p>
-      These HTTP requests communicate with src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at /usr/local/etc/cloudi/cloudi.conf).  The request becomes a CloudI request, within the cloudi_service_http_cowboy internal CloudI service, which is sent to src/lib/cloudi_services_internal/src/cloudi_service_api.erl.  The cloudi_service_api internal CloudI service provides runtime configuration of CloudI.
+      These HTTP requests communicate with src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at /usr/local/etc/cloudi/cloudi.conf).  The request becomes a CloudI request, within the cloudi_service_http_cowboy internal CloudI service, which is sent to src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl.  The cloudi_service_api_requests internal CloudI service provides runtime configuration of CloudI.
     </p>
 
     <p>
@@ -167,7 +167,7 @@ Hello World!
 <pre>
 $ cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.2.3/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.2.4/api/python/')
 from cloudi_c import API
 
 class Task(object):
@@ -196,7 +196,7 @@ $ cat &lt;&lt; EOF &gt; hello_world_python.conf
   "$PYTHON_PATH",
   "$PWD/hello_world.py",
   [],
-  none, default, default,
+  none, tcp, default,
   5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
 EOF
 $ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
