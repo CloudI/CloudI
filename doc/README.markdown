@@ -7,9 +7,9 @@
 
 ### Get CloudI Running
 
-    $ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.3.tar.gz
-    $ tar zxvf cloudi-1.2.3.tar.gz
-    $ cd cloudi-1.2.3/src
+    $ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.2.4.tar.gz
+    $ tar zxvf cloudi-1.2.4.tar.gz
+    $ cd cloudi-1.2.4/src
     $ ./configure
     $ make
     $ sudo make install
@@ -56,7 +56,7 @@ The Quick Start guide below shows how to create both an internal (Erlang) CloudI
     cloudi_service_terminate(_, #state{}) ->
         ok.
     EOF
-    $ erlc -pz /usr/local/lib/cloudi-1.2.3/lib/cloudi_core-1.2.3 -pz /usr/local/lib/cloudi-1.2.3/lib/cloudi_core-1.2.3/ebin hello_world.erl
+    $ erlc -pz /usr/local/lib/cloudi-1.2.4/lib/cloudi_core-1.2.4 -pz /usr/local/lib/cloudi-1.2.4/lib/cloudi_core-1.2.4/ebin hello_world.erl
 
 You now have a compiled internal CloudI service which is ready to run.  You can also provide an OTP application file with the same name, if the internal CloudI service has application dependencies.
 
@@ -75,7 +75,7 @@ While you are still in the cloudi-quickstart directory, use the CloudI Service A
     EOF
     $ curl -X POST -d @hello_world.conf http://localhost:6467/cloudi/api/erlang/services_add
 
-These HTTP requests communicate with `src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl` which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at `/usr/local/etc/cloudi/cloudi.conf`).  The request becomes a CloudI request, within the `cloudi_service_http_cowboy` internal CloudI service, which is sent to `src/lib/cloudi_services_internal/src/cloudi_service_api.erl`.  The `cloudi_service_api` internal CloudI service provides runtime configuration of CloudI.
+These HTTP requests communicate with `src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl` which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at `/usr/local/etc/cloudi/cloudi.conf`).  The request becomes a CloudI request, within the `cloudi_service_http_cowboy` internal CloudI service, which is sent to `src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl`.  The `cloudi_service_api_requests` internal CloudI service provides runtime configuration of CloudI.
 
 You will notice that the syntax used to start the CloudI service in the `hello_world.conf` file is the same as what is specified in the "services" section of `/usr/local/etc/cloudi/cloudi.conf`.
 
@@ -92,7 +92,7 @@ You can get the same behavior with an external CloudI service, which is written 
 
     $ cat << EOF > hello_world.py
     import sys
-    sys.path.append('/usr/local/lib/cloudi-1.2.3/api/python/')
+    sys.path.append('/usr/local/lib/cloudi-1.2.4/api/python/')
     from cloudi_c import API
     
     class Task(object):
@@ -121,7 +121,7 @@ You can get the same behavior with an external CloudI service, which is written 
       "$PYTHON_PATH",
       "$PWD/hello_world.py",
       [],
-      none, default, default,
+      none, tcp, default,
       5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
     EOF
     $ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
