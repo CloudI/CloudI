@@ -60,8 +60,17 @@ init([]) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
     PoolName = erlasticsearch:get_env(pool_name, ?DEFAULT_POOL_NAME),
-    PoolOptions = erlasticsearch:get_env(pool_options, ?DEFAULT_POOL_OPTIONS),
-    ConnectionOptions = erlasticsearch:get_env(connection_options, ?DEFAULT_CONNECTION_OPTIONS),
+    % We need this to be a one_for_one supervisor, because of the way the 
+    % connection_options trickle through to the workers (and hence, our
+    % gen-server).  To simplify things, I start a default pool of size 0. This
+    % ensures that even if ElasticSearch is not up, the application still starts
+    % up.
+    % NOTE: You can have the pool actually connect and do something by passing
+    % in pool_name / pool_options / connection_options in the environment (or by
+    % setting it in your app.config)
+    PoolOptions = erlasticsearch:get_env(pool_options, [{size, 0},
+                                                        {max_overflow, 0}]),
+    ConnectionOptions = erlasticsearch:get_env(connection_options, []),
     PoolSpecs = pool_spec(PoolName, PoolOptions, ConnectionOptions),
     {ok, {SupFlags, [PoolSpecs]}}.
 
