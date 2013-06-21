@@ -24,33 +24,32 @@
 %%%        {stop, Reason, NewState}  
 %%%               Reason = normal | shutdown | Term terminate(State) is called
 %%%
-%%%   cloudi_service_handle_info(Info, State)
+%%%   cloudi_service_handle_info(Request, State, Dispatcher)
 %%%
 %%%    ==> {noreply, State}
 %%%        {stop, Reason, NewState} 
 %%%               Reason = normal | shutdown | Term, terminate(State) is called
 %%%
 %%%   cloudi_service_terminate(Reason, State) Let the user module clean up
-%%%        always called when server terminates
+%%%        always called when the service terminates
 %%%
 %%%    ==> ok
 %%%
 %%%
-%%% The work flow (of the server) can be described as follows:
+%%% The work flow (of the service) can be described as follows:
 %%%
-%%%   User module                          Generic
-%%%   -----------                          -------
-%%%    init             <-----              .
+%%%    User module                                          Generic
+%%%    -----------                                          -------
+%%%    cloudi_service_init              <-----              .
 %%%
-%%%                                        loop
-%%%    handle_call      <-----              .
-%%%                     ----->             reply
+%%%                                                         loop
+%%%    cloudi_service_handle_request    <-----              .
+%%%                                     ----->              reply
 %%%
-%%%    handle_info      <-----              .
+%%%    cloudi_service_handle_info       <-----              .
 %%%
-%%%    terminate        <-----              .
+%%%    cloudi_service_terminate         <-----              .
 %%%
-%%%                     ----->             reply
 %%% '''
 %%% @end
 %%%
@@ -92,7 +91,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
