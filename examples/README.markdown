@@ -3,4 +3,5 @@
 ## Erlang/OTP applications as internal CloudI services
 
 * `hello_world1` - Using CloudI configuration or the CloudI Service API
+* `hello_world2` - Including CloudI in your Erlang OTP/reltool release
 

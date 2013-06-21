@@ -18,17 +18,17 @@
 
 %% API.
 -export([start_link/0]).
--export([insert_listener/2]).
--export([lookup_listener/1]).
+-export([set_new_listener_opts/3]).
+-export([cleanup_listener_opts/1]).
 -export([set_connections_sup/2]).
--export([lookup_connections_sup/1]).
--export([add_acceptor/2]).
--export([send_to_acceptors/2]).
--export([add_connection/1]).
+-export([get_connections_sup/1]).
+-export([set_port/2]).
+-export([get_port/1]).
+-export([set_max_connections/2]).
+-export([get_max_connections/1]).
+-export([set_protocol_options/2]).
+-export([get_protocol_options/1]).
 -export([count_connections/1]).
--export([remove_connection/1]).
--export([add_connections_counter/1]).
--export([remove_connections_counter/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -40,8 +40,7 @@
 
 -define(TAB, ?MODULE).
 
--type key() :: {listener | acceptors, any()}.
--type monitors() :: [{{reference(), pid()}, key()}].
+-type monitors() :: [{{reference(), pid()}, any()}].
 -record(state, {
 	monitors = [] :: monitors()
 }).
@@ -53,112 +52,114 @@
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-%% @doc Insert a listener into the database.
--spec insert_listener(any(), pid()) -> ok.
-insert_listener(Ref, Pid) ->
-	true = ets:insert_new(?TAB, {{listener, Ref}, Pid, undefined}),
-	gen_server:cast(?MODULE, {insert_listener, Ref, Pid}).
+%% @private
+-spec set_new_listener_opts(ranch:ref(), ranch:max_conns(), any()) -> ok.
+set_new_listener_opts(Ref, MaxConns, Opts) ->
+	gen_server:call(?MODULE, {set_new_listener_opts, Ref, MaxConns, Opts}).
 
-%% @doc Lookup a listener in the database.
--spec lookup_listener(any()) -> pid().
-lookup_listener(Ref) ->
-	ets:lookup_element(?TAB, {listener, Ref}, 2).
+%% @doc Cleanup listener options after it has been stopped.
+-spec cleanup_listener_opts(ranch:ref()) -> ok.
+cleanup_listener_opts(Ref) ->
+	_ = ets:delete(?TAB, {port, Ref}),
+	_ = ets:delete(?TAB, {max_conns, Ref}),
+	_ = ets:delete(?TAB, {opts, Ref}),
+	ok.
 
 %% @doc Set a connection supervisor associated with specific listener.
--spec set_connections_sup(any(), pid()) -> ok.
+-spec set_connections_sup(ranch:ref(), pid()) -> ok.
 set_connections_sup(Ref, Pid) ->
-	true = ets:update_element(?TAB, {listener, Ref}, {3, Pid}),
+	true = gen_server:call(?MODULE, {set_connections_sup, Ref, Pid}),
 	ok.
 
-%% @doc Lookup a connection supervisor used by specific listener.
--spec lookup_connections_sup(any()) -> pid() | undefined.
-lookup_connections_sup(Ref) ->
-	ets:lookup_element(?TAB, {listener, Ref}, 3).
+%% @doc Return the connection supervisor used by specific listener.
+-spec get_connections_sup(ranch:ref()) -> pid().
+get_connections_sup(Ref) ->
+	ets:lookup_element(?TAB, {conns_sup, Ref}, 2).
 
-%% @doc Add an acceptor for the given listener.
--spec add_acceptor(any(), pid()) -> ok.
-add_acceptor(Ref, Pid) ->
-	gen_server:cast(?MODULE, {add_acceptor, Ref, Pid}).
+%% @private
+-spec set_port(ranch:ref(), inet:port_number()) -> ok.
+set_port(Ref, Port) ->
+	gen_server:call(?MODULE, {set_port, Ref, Port}).
 
-%% @doc Send a message to all acceptors of the given listener.
--spec send_to_acceptors(any(), any()) -> ok.
-send_to_acceptors(Ref, Msg) ->
-	Acceptors = ets:lookup_element(?TAB, {acceptors, Ref}, 2),
-	_ = [Pid ! Msg || Pid <- Acceptors],
-	ok.
+%% @doc Return the listener's port.
+-spec get_port(ranch:ref()) -> inet:port_number().
+get_port(Ref) ->
+	ets:lookup_element(?TAB, {port, Ref}, 2).
 
-%% @doc Add a connection to the connection pool.
-%%
-%% Also return the number of connections in the pool after this operation.
--spec add_connection(pid()) -> non_neg_integer().
-add_connection(ListenerPid) ->
-	ets:update_counter(?TAB, {connections, ListenerPid}, 1).
+%% @doc Set the max number of connections allowed concurrently.
+-spec set_max_connections(ranch:ref(), ranch:max_conns()) -> ok.
+set_max_connections(Ref, MaxConnections) ->
+	gen_server:call(?MODULE, {set_max_conns, Ref, MaxConnections}).
+
+%% @doc Return the max number of connections allowed concurrently.
+-spec get_max_connections(ranch:ref()) -> ranch:max_conns().
+get_max_connections(Ref) ->
+	ets:lookup_element(?TAB, {max_conns, Ref}, 2).
+
+%% @doc Upgrade the protocol options.
+-spec set_protocol_options(ranch:ref(), any()) -> ok.
+set_protocol_options(Ref, ProtoOpts) ->
+	gen_server:call(?MODULE, {set_opts, Ref, ProtoOpts}).
+
+%% @doc Return the current protocol options.
+-spec get_protocol_options(ranch:ref()) -> any().
+get_protocol_options(Ref) ->
+	ets:lookup_element(?TAB, {opts, Ref}, 2).
 
 %% @doc Count the number of connections in the connection pool.
--spec count_connections(pid()) -> non_neg_integer().
-count_connections(ListenerPid) ->
-	try
-		ets:update_counter(?TAB, {connections, ListenerPid}, 0)
-	catch
-		error:badarg -> % Max conns = infinity
-			0
-	end.
-
-%% @doc Remove a connection from the connection pool.
-%%
-%% Also return the number of connections in the pool after this operation.
--spec remove_connection(pid()) -> non_neg_integer().
-remove_connection(ListenerPid) ->
-	ets:update_counter(?TAB, {connections, ListenerPid}, -1).
-
-
-%% @doc Add a connections counter to the connection pool
-%%
-%% Should only be used by ranch listeners when settings regarding the max
-%% number of connections change.
-add_connections_counter(Pid) ->
-	true = ets:insert_new(?TAB, {{connections, Pid}, 0}).
-
-%% @doc remove a connections counter from the connection pool
-%%
-%% Should only be used by ranch listeners when settings regarding the max
-%% number of connections change.
-remove_connections_counter(Pid) ->
-	true = ets:delete(?TAB, {connections, Pid}).
+-spec count_connections(ranch:ref()) -> non_neg_integer().
+count_connections(Ref) ->
+	ranch_conns_sup:active_connections(get_connections_sup(Ref)).
 
 %% gen_server.
 
 %% @private
 init([]) ->
-	{ok, #state{}}.
+	Monitors = [{{erlang:monitor(process, Pid), Pid}, Ref} ||
+		[Ref, Pid] <- ets:match(?TAB, {{conns_sup, '$1'}, '$2'})],
+	{ok, #state{monitors=Monitors}}.
 
 %% @private
+handle_call({set_new_listener_opts, Ref, MaxConns, Opts}, _, State) ->
+	ets:insert(?TAB, {{max_conns, Ref}, MaxConns}),
+	ets:insert(?TAB, {{opts, Ref}, Opts}),
+	{reply, ok, State};
+handle_call({set_connections_sup, Ref, Pid}, _,
+		State=#state{monitors=Monitors}) ->
+	case ets:insert_new(?TAB, {{conns_sup, Ref}, Pid}) of
+		true ->
+			MonitorRef = erlang:monitor(process, Pid),
+			{reply, true,
+				State#state{monitors=[{{MonitorRef, Pid}, Ref}|Monitors]}};
+		false ->
+			{reply, false, State}
+	end;
+handle_call({set_port, Ref, Port}, _, State) ->
+	true = ets:insert(?TAB, {{port, Ref}, Port}),
+	{reply, ok, State};
+handle_call({set_max_conns, Ref, MaxConns}, _, State) ->
+	ets:insert(?TAB, {{max_conns, Ref}, MaxConns}),
+	ConnsSup = get_connections_sup(Ref),
+	ConnsSup ! {set_max_conns, MaxConns},
+	{reply, ok, State};
+handle_call({set_opts, Ref, Opts}, _, State) ->
+	ets:insert(?TAB, {{opts, Ref}, Opts}),
+	ConnsSup = get_connections_sup(Ref),
+	ConnsSup ! {set_opts, Opts},
+	{reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignore, State}.
 
 %% @private
-handle_cast({insert_listener, Ref, Pid}, State=#state{monitors=Monitors}) ->
-	true = ets:insert_new(?TAB, {{acceptors, Ref}, []}),
-	MonitorRef = erlang:monitor(process, Pid),
-	{noreply, State#state{
-		monitors=[{{MonitorRef, Pid}, {listener, Ref}}|Monitors]}};
-handle_cast({add_acceptor, Ref, Pid}, State=#state{monitors=Monitors}) ->
-	MonitorRef = erlang:monitor(process, Pid),
-	Acceptors = ets:lookup_element(?TAB, {acceptors, Ref}, 2),
-	true = ets:insert(?TAB, {{acceptors, Ref}, [Pid|Acceptors]}),
-	{noreply, State#state{
-		monitors=[{{MonitorRef, Pid}, {acceptors, Ref}}|Monitors]}};
-handle_cast({add_connection, Pid}, State) ->
-	_ = erlang:monitor(process, Pid),
-	{noreply, State};
 handle_cast(_Request, State) ->
 	{noreply, State}.
 
 %% @private
 handle_info({'DOWN', MonitorRef, process, Pid, _},
 		State=#state{monitors=Monitors}) ->
-	{_, Key} = lists:keyfind({MonitorRef, Pid}, 1, Monitors),
-	Monitors2 = remove_process(Key, MonitorRef, Pid, Monitors),
+	{_, Ref} = lists:keyfind({MonitorRef, Pid}, 1, Monitors),
+	true = ets:delete(?TAB, {conns_sup, Ref}),
+	Monitors2 = lists:keydelete({MonitorRef, Pid}, 1, Monitors),
 	{noreply, State#state{monitors=Monitors2}};
 handle_info(_Info, State) ->
 	{noreply, State}.
@@ -170,22 +171,3 @@ terminate(_Reason, _State) ->
 %% @private
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
-
-%% Internal.
-
--spec remove_process(key(), reference(), pid(), Monitors)
-	-> Monitors when Monitors::monitors() .
-remove_process(Key = {listener, Ref}, MonitorRef, Pid, Monitors) ->
-	true = ets:delete(?TAB, Key),
-	true = ets:delete(?TAB, {acceptors, Ref}),
-	remove_connections_counter(Pid),
-	lists:keydelete({MonitorRef, Pid}, 1, Monitors);
-remove_process(Key = {acceptors, _}, MonitorRef, Pid, Monitors) ->
-	try
-		Acceptors = ets:lookup_element(?TAB, Key, 2),
-		true = ets:update_element(?TAB, Key, {2, lists:delete(Pid, Acceptors)})
-	catch
-		error:_ ->
-			ok
-	end,
-	lists:keydelete({MonitorRef, Pid}, 1, Monitors).

@@ -21,7 +21,7 @@
         % prefix specified for all subscriptions
         "/cloudi/api/",
         % module name of a module in a reachable path
-        cloudi_service_api,
+        cloudi_service_api_requests,
         % module arguments are supplied as a list for the
         % cloudi_service_init/2 function
         [],
@@ -224,6 +224,13 @@
         [{request_timeout_adjustment, true}]},
     % tests/http/ services
     {internal,
+        "/tests/websockets/",
+        cloudi_service_http_cowboy,
+        [{port, 6464}, {output, external}, {use_websockets, true}],
+        immediate_closest, 
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300,
+        [{duo_mode, true}]},
+    {internal,
         "/tests/http/",
         cloudi_service_http_cowboy,
         [{port, 6466}, {output, external}],
@@ -301,6 +308,20 @@
         [{directory, "tests/http_req/public_html/"}],
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
+    {external,
+        "/tests/",
+        "@PYTHON@",
+        "tests/echo/echo.py",
+        [],
+        none, tcp, default,
+        5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
+    {external,
+        "/tests/",
+        "@PYTHON@",
+        "tests/websockets/websockets.py",
+        [],
+        immediate_local, tcp, default,
+        5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []},
     % too many file descriptors being used here for a default config
     %% Zig-Zag test
     %% (separate configurations to avoid overwriting the ipc file)

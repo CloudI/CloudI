@@ -24,29 +24,27 @@
 
 %% API.
 
--spec start_link(any(), non_neg_integer(), module(), any(), module(), any())
+-spec start_link(ranch:ref(), non_neg_integer(), module(), any(), module(), any())
 	-> {ok, pid()}.
 start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts) ->
 	MaxConns = proplists:get_value(max_connections, TransOpts, 1024),
+	ranch_server:set_new_listener_opts(Ref, MaxConns, ProtoOpts),
 	supervisor:start_link(?MODULE, {
-		Ref, NbAcceptors, MaxConns, Transport, TransOpts, Protocol, ProtoOpts
-		}).
+		Ref, NbAcceptors, Transport, TransOpts, Protocol
+	}).
 
 %% supervisor.
 
-init({Ref, NbAcceptors, MaxConns, Transport, TransOpts, Protocol, ProtoOpts}) ->
+init({Ref, NbAcceptors, Transport, TransOpts, Protocol}) ->
+	ConnType = proplists:get_value(connection_type, TransOpts, worker),
 	ChildSpecs = [
-		%% listener
-		{ranch_listener, {ranch_listener, start_link,
-			[Ref, MaxConns, ProtoOpts]},
-		 permanent, 5000, worker, [ranch_listener]},
 		%% conns_sup
-		{ranch_conns_sup, {ranch_conns_sup, start_link, [Ref]},
-		 permanent, infinity, supervisor, [ranch_conns_sup]},
+		{ranch_conns_sup, {ranch_conns_sup, start_link,
+				[Ref, ConnType, Transport, Protocol]},
+			permanent, infinity, supervisor, [ranch_conns_sup]},
 		%% acceptors_sup
 		{ranch_acceptors_sup, {ranch_acceptors_sup, start_link,
-			[Ref, NbAcceptors, Transport, TransOpts, Protocol]
-		 }, permanent, infinity, supervisor, [ranch_acceptors_sup]}
+				[Ref, NbAcceptors, Transport, TransOpts]
+			}, permanent, infinity, supervisor, [ranch_acceptors_sup]}
 	],
 	{ok, {{rest_for_one, 10, 10}, ChildSpecs}}.
-
