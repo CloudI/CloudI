@@ -44,7 +44,7 @@
 %%%
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% @copyright 2013 Mahesh Paolini-Subramanya
-%%% @version 1.1 {@date} {@time}
+%%% @version 1.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_elasticsearch).
