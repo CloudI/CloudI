@@ -6,9 +6,10 @@
    {vsn, "@VERSION@"},
    {modules, [
         cloudi,
-        cloudi_app,
         cloudi_configuration,
         cloudi_configurator,
+        cloudi_core_app,
+        cloudi_core_sup,
         cloudi_lists,
         cloudi_logger,
         cloudi_logger_interface,
@@ -28,8 +29,7 @@
         cloudi_services_monitor,
         cloudi_socket,
         cloudi_spawn,
-        cloudi_string,
-        cloudi_sup
+        cloudi_string
         ]},
    {registered,[
         cloudi_configurator,
@@ -38,12 +38,15 @@
         cloudi_os_spawn,
         cloudi_services_external_sup,
         cloudi_services_internal_sup,
-        cloudi_services
+        cloudi_services_monitor
         ]},
    {included_applications, [
         cloudi_services_databases,
         cloudi_services_messaging,
-        cloudi_services_internal
+        cloudi_services_internal,
+        cloudi_x_combonodefinder,
+        cloudi_x_ec2nodefinder,
+        cloudi_x_nodefinder
         ]},
    {applications, [
         % nodefinder dependencies are started manually
@@ -59,6 +62,6 @@
         stdlib,
         kernel
         ]},
-   {mod, {cloudi_app,[]}},
+   {mod, {cloudi_core_app,[]}},
    {start_phases, []}]}.
 
