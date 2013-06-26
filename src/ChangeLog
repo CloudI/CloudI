@@ -1,9 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.2.4 (beta) released
+    * Fix local protocol option for external services
+      (confirmed to work on OSX now)
+    * Add fixes for R16B01 usage
+    * Update uuid, nodefinder, emysql, ranch, cowboy
+
 2013-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Small fixes for dialyzer and type specs
+    * Make some release tweaks and add the hello_world2 example
 
 2013-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
