@@ -346,25 +346,34 @@ install-exec-hook: cloudi-prefix-install \
 	(cd "$(DESTDIR)$(cloudi_prefix)"; \
      test ! -e etc && $(LN_S) "$(cloudi_confdir)" etc || exit 0; \
      test ! -e logs && $(LN_S) "$(cloudi_logdir)" logs || exit 0)
+	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" \
+             "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old"
 	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
-                    "$(DESTDIR)$(cloudi_confdir)"
+                  "$(DESTDIR)$(cloudi_confdir)"
 	$(ESCRIPT) $(abs_top_builddir)/rebar generate || exit 0
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
-        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
-              "$(DESTDIR)$(cloudi_prefix)" || exit 0
+       mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
+             "$(DESTDIR)$(cloudi_prefix)" || exit 0
 	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
-                      "$(DESTDIR)$(cloudi_bindir)/"
+                    "$(DESTDIR)$(cloudi_bindir)/"
 	echo "#!/bin/sh"               > /tmp/cloudi
 	echo "cd $(cloudi_bindir)"     >> /tmp/cloudi
 	echo "exec ./cloudi \$$*"      >> /tmp/cloudi
 	$(INSTALL_SCRIPT) /tmp/cloudi "$(DESTDIR)$(bindir)/"
+	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/app.config" \
+             "$(DESTDIR)$(cloudi_confdir)/app.config.old"
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/app.config" \
-                    "$(DESTDIR)$(cloudi_confdir)/"
+                  "$(DESTDIR)$(cloudi_confdir)/"
+	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/vm.args" \
+             "$(DESTDIR)$(cloudi_confdir)/vm.args.old"
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
-                    "$(DESTDIR)$(cloudi_confdir)/"
+                  "$(DESTDIR)$(cloudi_confdir)/"
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/1" && \
-        mv -f "$(top_builddir)/rel/cloudi/releases/1" \
-              "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
+       mv -f "$(top_builddir)/rel/cloudi/releases/1" \
+             "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/releases/start_erl.data" \
                     "$(DESTDIR)$(cloudi_prefix)/releases/"
 	list0=`ls "$(top_builddir)/rel/cloudi/lib/"`; \

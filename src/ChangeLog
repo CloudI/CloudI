@@ -8,6 +8,8 @@
     * The cloudi module now only accepts immediate destination refresh
       methods so that the configuration accurately reflects the functionality
     * Fix the console log output destination in the startup script
+    * Do not clobber the configuration files when the
+      installation occurs twice
 
 2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
