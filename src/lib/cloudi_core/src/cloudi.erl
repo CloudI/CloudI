@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -130,22 +130,14 @@ new(Settings)
     [DestRefresh, DefaultTimeoutAsync, DefaultTimeoutSync,
      PriorityDefault] =
         cloudi_proplists:take_values(Defaults, Settings),
-    % the distinction between "immediate" and "lazy" is ignored
-    % (all usage of the cloudi module is immediate)
+    % all usage of the cloudi module is immediate
     true = (DestRefresh =:= immediate_closest) orelse
-           (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
-           (DestRefresh =:= lazy_furthest) orelse
            (DestRefresh =:= immediate_random) orelse
-           (DestRefresh =:= lazy_random) orelse
            (DestRefresh =:= immediate_local) orelse
-           (DestRefresh =:= lazy_local) orelse
            (DestRefresh =:= immediate_remote) orelse
-           (DestRefresh =:= lazy_remote) orelse
            (DestRefresh =:= immediate_newest) orelse
-           (DestRefresh =:= lazy_newest) orelse
            (DestRefresh =:= immediate_oldest) orelse
-           (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     true = is_integer(DefaultTimeoutAsync) and
            (DefaultTimeoutAsync > 0),
@@ -750,44 +742,37 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= immediate_closest) ->
+         DestRefresh =:= immediate_closest ->
     cloudi_x_cpg:get_closest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= immediate_furthest) ->
+         DestRefresh =:= immediate_furthest ->
     cloudi_x_cpg:get_furthest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_random orelse
-          DestRefresh =:= immediate_random) ->
+         DestRefresh =:= immediate_random ->
     cloudi_x_cpg:get_random_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_local orelse
-          DestRefresh =:= immediate_local) ->
+         DestRefresh =:= immediate_local ->
     cloudi_x_cpg:get_local_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= immediate_remote) ->
+         DestRefresh =:= immediate_remote ->
     cloudi_x_cpg:get_remote_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= immediate_newest) ->
+         DestRefresh =:= immediate_newest ->
     cloudi_x_cpg:get_newest_pid(Name);
 
 destination_get(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_oldest orelse
-          DestRefresh =:= immediate_oldest) ->
+         DestRefresh =:= immediate_oldest ->
     cloudi_x_cpg:get_oldest_pid(Name);
 
 destination_get(DestRefresh, _) ->
@@ -797,28 +782,21 @@ destination_get(DestRefresh, _) ->
 
 destination_all(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= lazy_furthest orelse
+         (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= lazy_random orelse
           DestRefresh =:= immediate_random orelse
-          DestRefresh =:= lazy_newest orelse
           DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= lazy_oldest orelse
           DestRefresh =:= immediate_oldest) ->
     cloudi_x_cpg:get_members(Name);
 
 destination_all(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_local orelse
-          DestRefresh =:= immediate_local) ->
+         DestRefresh =:= immediate_local ->
     cloudi_x_cpg:get_local_members(Name);
 
 destination_all(DestRefresh, Name)
     when is_list(Name),
-         (DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= immediate_remote) ->
+         DestRefresh =:= immediate_remote ->
     cloudi_x_cpg:get_remote_members(Name);
 
 destination_all(DestRefresh, _) ->

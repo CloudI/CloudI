@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -388,40 +388,52 @@ websocket_info(response_timeout, Req,
                             request_pending = undefined}
                         }};
 
-websocket_info({'cloudi_service_send_async',
-                _Name, _Pattern, _RequestInfo, Request,
+websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
-               #cowboy_state{use_websockets = true,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
                              } = State)
-    when is_binary(Request) ->
+    when (OutputType =:= list), (is_list(Request) orelse is_binary(Request)),
+         (Type =:= 'cloudi_service_send_async' orelse
+          Type =:= 'cloudi_service_send_sync') ->
+    RequestBinary = if
+        is_list(Request) ->
+            erlang:list_to_binary(Request);
+        is_binary(Request) ->
+            Request
+    end,
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
-    {reply, {binary, Request}, Req,
+    {reply, {text, RequestBinary}, Req,
      State#cowboy_state{websocket_state = WebSocketState#websocket_state{
                             response_pending = true,
                             response_timer = ResponseTimer,
                             request_pending = T}
                         }};
 
-websocket_info({'cloudi_service_send_sync',
-                _Name, _Pattern, _RequestInfo, Request,
+websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
-               #cowboy_state{use_websockets = true,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
                              } = State)
-    when is_binary(Request) ->
+    when (OutputType =:= internal orelse OutputType =:= external orelse
+          OutputType =:= binary), is_binary(RequestBinary),
+         (Type =:= 'cloudi_service_send_async' orelse
+          Type =:= 'cloudi_service_send_sync') ->
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
-    {reply, {binary, Request}, Req,
+    {reply, {binary, RequestBinary}, Req,
      State#cowboy_state{websocket_state = WebSocketState#websocket_state{
                             response_pending = true,
                             response_timer = ResponseTimer,
                             request_pending = T}
                         }};
 
-websocket_info(_Info, Req,
+websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
+    ?LOG_ERROR("Unknown info \"~p\"", [Info]),
     {ok, Req, State}.
 
 websocket_terminate(_Reason, _Req, _State) ->

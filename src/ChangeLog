@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Outgoing websocket service requests now use the list output_type
+      (output configuration setting) to provide text requests instead of binary
+    * The cloudi module now only accepts immediate destination refresh
+      methods so that the configuration accurately reflects the functionality
+    * Fix the console log output destination in the startup script
+
 2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.4 (beta) released
