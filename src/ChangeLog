@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add elli HTTP web server for comparison
+      (performance shows that cowboy should be used instead)
+    * Fix makefile issue with configuration files
+
 2013-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Outgoing websocket service requests now use the list output_type

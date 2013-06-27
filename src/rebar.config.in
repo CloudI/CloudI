@@ -5,6 +5,7 @@
             "external/cowboy",
             "external/dynamic_compile",
             "external/ecouchdb",
+            "external/elli",
             "external/ememcached",
             "external/emysql",
             "external/epgsql",
