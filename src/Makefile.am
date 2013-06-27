@@ -19,6 +19,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(abs_top_srcdir)/external/nodefinder/ec2nodefinder/src \
      -d $(abs_top_srcdir)/external/nodefinder/nodefinder/src \
      -d $(abs_top_srcdir)/external/cowboy/src \
+     -d $(abs_top_srcdir)/external/elli/src \
      -d $(abs_top_srcdir)/external/dynamic_compile/src \
      -d $(abs_top_srcdir)/external/ecouchdb/src \
      -d $(abs_top_srcdir)/external/ememcached/src \
@@ -60,6 +61,7 @@ all-local: rebar \
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
+	$(MKDIR_P) external/elli/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
 	$(ESCRIPT) $(abs_top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS)
 	(cd $(top_srcdir)/lib/cloudi_core/src; \
@@ -146,6 +148,9 @@ all-local: rebar \
 	(cd $(top_srcdir)/external/cowboy; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/elli; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/elli/ebin || exit 0)
 	(cd $(top_srcdir)/external/dynamic_compile; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/dynamic_compile/ebin || exit 0)
@@ -179,6 +184,7 @@ clean-local: rebar
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
+          $(top_builddir)/external/elli/ebin \
           $(top_builddir)/external/dynamic_compile/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
@@ -202,6 +208,7 @@ clean-local: rebar
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
           $(top_srcdir)/external/cowboy/ebin \
+          $(top_srcdir)/external/elli/ebin \
           $(top_srcdir)/external/dynamic_compile/ebin
 
 clean-configure: config.log clean
@@ -275,6 +282,7 @@ dialyze: all-local dialyzer.plt
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
               external/cowboy/ebin \
+              external/elli/ebin \
               external/dynamic_compile/ebin \
               external/epgsql/ebin \
               external/etokyotyrant/ebin \
@@ -346,9 +354,9 @@ install-exec-hook: cloudi-prefix-install \
 	(cd "$(DESTDIR)$(cloudi_prefix)"; \
      test ! -e etc && $(LN_S) "$(cloudi_confdir)" etc || exit 0; \
      test ! -e logs && $(LN_S) "$(cloudi_logdir)" logs || exit 0)
-	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+	test -e "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" \
-             "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old"
+             "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
                   "$(DESTDIR)$(cloudi_confdir)"
 	$(ESCRIPT) $(abs_top_builddir)/rebar generate || exit 0
@@ -361,14 +369,14 @@ install-exec-hook: cloudi-prefix-install \
 	echo "cd $(cloudi_bindir)"     >> /tmp/cloudi
 	echo "exec ./cloudi \$$*"      >> /tmp/cloudi
 	$(INSTALL_SCRIPT) /tmp/cloudi "$(DESTDIR)$(bindir)/"
-	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+	test -e "$(DESTDIR)$(cloudi_confdir)/app.config" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/app.config" \
-             "$(DESTDIR)$(cloudi_confdir)/app.config.old"
+             "$(DESTDIR)$(cloudi_confdir)/app.config.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/app.config" \
                   "$(DESTDIR)$(cloudi_confdir)/"
-	test -e "$(DESTDIR)$(cloudi_confdir)" && \
+	test -e "$(DESTDIR)$(cloudi_confdir)/vm.args" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/vm.args" \
-             "$(DESTDIR)$(cloudi_confdir)/vm.args.old"
+             "$(DESTDIR)$(cloudi_confdir)/vm.args.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
                   "$(DESTDIR)$(cloudi_confdir)/"
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/1" && \

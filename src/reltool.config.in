@@ -17,6 +17,7 @@
     cloudi_x_dynamic_compile,
     % ec2nodefinder not started automatically
     cloudi_x_ecouchdb,
+    cloudi_x_elli,
     cloudi_x_ememcached,
     cloudi_x_emysql,
     cloudi_x_epgsql,
@@ -70,6 +71,8 @@
   {app, cloudi_x_ec2nodefinder,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_x_ecouchdb,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_elli,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_x_ememcached,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},

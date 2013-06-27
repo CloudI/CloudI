@@ -31,6 +31,14 @@ to its integration and dependencies).
 - `October 14, 2009`
 - `BSD`
 
+`elli`
+--------
+`Erlang HTTP Server`
+- `https://github.com/knutin/elli/`
+- `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (version 0.4.1)`
+- `Thu Jun 27 09:13:14 PDT 2013`
+- `MIT`
+
 `ememcached (previously mcerlang)`
 ----------------------------------
 `Erlang memcached Driver`
