@@ -24,7 +24,7 @@ June 20, 2013
   * Two examples of different ways to release Erlang applications with
     CloudI exist in the examples directory as hello_world1 and hello_world2.
     hello_world1 shows how to let CloudI run your Erlang source code as a
-    service, while hello_world2 shows you a basic Erlang release that
+    service, while hello_world2 shows you a basic Erlang release
     with external source code that has CloudI as a dependency.
   * Infrequent use cases of the internal service init function required some
     fixes to prevent errnoeous usage.  The functions send_sync and recv_async
