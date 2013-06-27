@@ -433,7 +433,7 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
 
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
-    ?LOG_ERROR("Unknown info \"~p\"", [Info]),
+    ?LOG_ERROR("Invalid websocket request state: \"~p\"", [Info]),
     {ok, Req, State}.
 
 websocket_terminate(_Reason, _Req, _State) ->
