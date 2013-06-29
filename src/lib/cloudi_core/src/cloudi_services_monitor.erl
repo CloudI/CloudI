@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_monitor).
@@ -58,7 +58,8 @@
 -export([start_link/0,
          monitor/7,
          shutdown/2,
-         restart/2]).
+         restart/2,
+         search/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -67,12 +68,13 @@
 
 -include("cloudi_logger.hrl").
 
--define(CATCH_TIMEOUT(F),
-        try F catch exit:{timeout, _} -> {error, timeout} end).
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
 
 -record(state,
     {
-        services = cloudi_x_key2value:new(dict) % {cloudi_x_uuid, pid}  -> configuration
+        services = cloudi_x_key2value:new(dict) % {cloudi_x_uuid, pid} ->
+                                                %     configuration
     }).
 
 -record(service,
@@ -100,21 +102,26 @@ monitor(M, F, A, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
-                                   {monitor, M, F, A, MaxR, MaxT, ServiceId},
-                                   Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {monitor, M, F, A, MaxR, MaxT, ServiceId},
+                                Timeout)).
 
 shutdown(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
-                                   {shutdown, ServiceId},
-                                   Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {shutdown, ServiceId},
+                                Timeout)).
 
 restart(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
-    ?CATCH_TIMEOUT(gen_server:call(?MODULE,
-                                   {restart, ServiceId},
-                                   Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {restart, ServiceId},
+                                Timeout)).
+
+search([_ | _] = PidList, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {search, PidList},
+                                Timeout)).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -130,25 +137,25 @@ handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pid]),
             NewServices =
                 cloudi_x_key2value:store(ServiceId, Pid,
-                                #service{service_m = M,
-                                         service_f = F,
-                                         service_a = A,
-                                         pids = [Pid],
-                                         monitor = erlang:monitor(process, Pid),
-                                         max_r = MaxR,
-                                         max_t = MaxT}, Services),
+                    #service{service_m = M,
+                             service_f = F,
+                             service_a = A,
+                             pids = [Pid],
+                             monitor = erlang:monitor(process, Pid),
+                             max_r = MaxR,
+                             max_t = MaxT}, Services),
             {reply, ok, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p ~p -> ~p", [F, A, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
-                                #service{service_m = M,
-                                         service_f = F,
-                                         service_a = A,
-                                         pids = Pids,
-                                         monitor = erlang:monitor(process, P),
-                                         max_r = MaxR,
-                                         max_t = MaxT}, D)
+                    #service{service_m = M,
+                             service_f = F,
+                             service_a = A,
+                             pids = Pids,
+                             monitor = erlang:monitor(process, P),
+                             max_r = MaxR,
+                             max_t = MaxT}, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
         {error, _} = Error ->
@@ -179,6 +186,23 @@ handle_call({restart, ServiceId}, _,
         error ->
             {reply, {error, not_found}, State}
     end;
+
+handle_call({search, PidList}, _,
+            #state{services = Services} = State) ->
+    ServiceIdList = lists:foldl(fun(Pid, L) ->
+        case cloudi_x_key2value:find2(Pid, Services) of
+            {ok, {[ServiceId], _}} ->
+                case lists:member(ServiceId, L) of
+                    true ->
+                        L;
+                    false ->
+                        [ServiceId | L]
+                end;
+            error ->
+                L
+        end
+    end, [], PidList),
+    {reply, {ok, lists:reverse(ServiceIdList)}, State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -279,11 +303,10 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
-                            Service#service{pids = [Pid],
-                                            monitor = Monitor,
-                                            restart_count = 1,
-                                            restart_times = [Now]},
-                            Services);
+                Service#service{pids = [Pid],
+                                monitor = Monitor,
+                                restart_count = 1,
+                                restart_times = [Now]}, Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now one of ~p)~n"
@@ -291,11 +314,10 @@ restart_stage2(#service{service_m = M,
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
-                                Service#service{pids = Pids,
-                                                monitor = Monitor,
-                                                restart_count = 1,
-                                                restart_times = [Now]},
-                                D)
+                    Service#service{pids = Pids,
+                                    monitor = Monitor,
+                                    restart_count = 1,
+                                    restart_times = [Now]}, D)
             end, Services, Pids);
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
@@ -351,12 +373,11 @@ restart_stage2(#service{service_m = M,
                       " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
-                            Service#service{pids = [Pid],
-                                            monitor = Monitor,
-                                            restart_count = R,
-                                            restart_times =
-                                                [Now | RestartTimes]},
-                            Services);
+                Service#service{pids = [Pid],
+                                monitor = Monitor,
+                                restart_count = R,
+                                restart_times = [Now | RestartTimes]},
+                Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now one of ~p)~n"
@@ -364,12 +385,10 @@ restart_stage2(#service{service_m = M,
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
-                                Service#service{pids = Pids,
-                                                monitor = Monitor,
-                                                restart_count = R,
-                                                restart_times =
-                                                    [Now | RestartTimes]},
-                                D)
+                    Service#service{pids = Pids,
+                                    monitor = Monitor,
+                                    restart_count = R,
+                                    restart_times = [Now | RestartTimes]}, D)
             end, Services, Pids);
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),

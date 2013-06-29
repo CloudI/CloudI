@@ -7,6 +7,8 @@
       configuration options to the cloudi_service_http_cowboy service
     * Add validation to the CloudI Service API that doesn't cause internal
       process execution exceptions
+    * Add the CloudI Service API function services_search for searching
+      services based on a service name
 
 2013-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

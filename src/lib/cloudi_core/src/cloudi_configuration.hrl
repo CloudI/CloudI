@@ -119,7 +119,7 @@
     {
         prefix             :: string(),
         module             :: atom() | file:filename(),
-        file_path          :: undefined | string(), % if module was a path
+        file_path          :: undefined | file:filename(), % if module a path
         args               :: list(),
         dest_refresh       :: cloudi_service_api:dest_refresh(),
         timeout_init       :: cloudi_service_api:timeout_milliseconds(),
@@ -138,7 +138,7 @@
 -record(config_service_external,
     {
         prefix             :: string(),
-        file_path          :: string(),
+        file_path          :: file:filename(),
         args               :: string(),
         env                :: list({string(), string()}),
         dest_refresh       :: cloudi_service_api:dest_refresh(),

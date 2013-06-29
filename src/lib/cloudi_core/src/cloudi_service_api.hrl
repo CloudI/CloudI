@@ -67,7 +67,7 @@
 -record(external,
     {
         prefix             :: string(),
-        file_path          :: string(),
+        file_path          :: file:filename(),
         args               :: string(),
         env                :: list({string(), string()}),
         dest_refresh       :: cloudi_service_api:dest_refresh(),

@@ -51,10 +51,17 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([open/0, open/1,
-         acl_add/2, acl_remove/2,
-         services_add/3, services_remove/3, services_restart/3, services/1,
-         nodes_add/2, nodes_remove/2]).
+-export([open/0,
+         open/1,
+         acl_add/2,
+         acl_remove/2,
+         services_add/3,
+         services_remove/3,
+         services_restart/3,
+         services_search/2,
+         services/1,
+         nodes_add/2,
+         nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_constants.hrl").
@@ -238,7 +245,7 @@ acl_remove(Value, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_add(Value :: list(#internal{} | #external{}),
+-spec services_add(Value :: list(#internal{} | #external{} | any()),
                    Config :: #config{},
                    Timeout :: cloudi_service_api:timeout_milliseconds()) ->
     {ok, #config{}} |
@@ -316,6 +323,22 @@ services_restart([ID | _] = Value,
     end;
 services_restart(Value, _, _) ->
     {error, {services_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Search services based on their UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_search(Value :: list(<<_:128>>),
+                      Config :: #config{}) ->
+    list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}}).
+
+services_search([ID | _] = Value, Config)
+    when is_binary(ID), byte_size(ID) == 16 ->
+    lists:filter(fun({CheckID, _}) ->
+        lists:member(CheckID, Value)
+    end, services(Config)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -616,11 +639,71 @@ services_acl_update_list(Output, [E | L], Lookup)
             services_acl_update_list([E ++ "*" | Output], L, Lookup)
     end.
 
+-spec services_validate(Services :: list(#internal{} | #external{}),
+                        UUID :: cloudi_x_uuid:state()) ->
+    {ok, list(#config_service_internal{} | #config_service_external{})} |
+    {error, any()}.
+
 services_validate([_ | _] = Services, UUID) ->
     services_validate([], Services, UUID).
 
 services_validate(Output, [], _) ->
     {ok, lists:reverse(Output)};
+services_validate(_, [#internal{prefix = Prefix} | _], _)
+    when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
+    {error, {service_internal_prefix_invalid, Prefix}};
+services_validate(_, [#internal{module = Module} | _], _)
+    when not (is_atom(Module) or
+              (is_list(Module) andalso is_integer(hd(Module)))) ->
+    {error, {service_internal_module_invalid, Module}};
+services_validate(_, [#internal{args = Args} | _], _)
+    when not is_list(Args) ->
+    {error, {service_internal_args_invalid, Args}};
+services_validate(_, [#internal{dest_refresh = DestRefresh} | _], _)
+    when not (is_atom(DestRefresh) andalso
+              ((DestRefresh =:= immediate_closest) orelse
+               (DestRefresh =:= lazy_closest) orelse
+               (DestRefresh =:= immediate_furthest) orelse
+               (DestRefresh =:= lazy_furthest) orelse
+               (DestRefresh =:= immediate_random) orelse
+               (DestRefresh =:= lazy_random) orelse
+               (DestRefresh =:= immediate_local) orelse
+               (DestRefresh =:= lazy_local) orelse
+               (DestRefresh =:= immediate_remote) orelse
+               (DestRefresh =:= lazy_remote) orelse
+               (DestRefresh =:= immediate_newest) orelse
+               (DestRefresh =:= lazy_newest) orelse
+               (DestRefresh =:= immediate_oldest) orelse
+               (DestRefresh =:= lazy_oldest) orelse
+               (DestRefresh =:= none))) ->
+    {error, {service_internal_dest_refresh_invalid, DestRefresh}};
+services_validate(_, [#internal{timeout_init = TimeoutInit} | _], _)
+    when not (is_integer(TimeoutInit) andalso TimeoutInit > 0) ->
+    {error, {service_internal_timeout_init_invalid, TimeoutInit}};
+services_validate(_, [#internal{timeout_async = TimeoutAsync} | _], _)
+    when not (is_integer(TimeoutAsync) andalso TimeoutAsync > 0) ->
+    {error, {service_internal_timeout_async_invalid, TimeoutAsync}};
+services_validate(_, [#internal{timeout_sync = TimeoutSync} | _], _)
+    when not (is_integer(TimeoutSync) andalso TimeoutSync > 0) ->
+    {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
+services_validate(_, [#internal{dest_list_deny = DestListDeny} | _], _)
+    when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
+    {error, {service_internal_dest_list_deny_invalid, DestListDeny}};
+services_validate(_, [#internal{dest_list_allow = DestListAllow} | _], _)
+    when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
+    {error, {service_internal_dest_list_allow_invalid, DestListAllow}};
+services_validate(_, [#internal{count_process = CountProcess} | _], _)
+    when not (is_number(CountProcess) andalso CountProcess > 0) ->
+    {error, {service_internal_count_process_invalid, CountProcess}};
+services_validate(_, [#internal{max_r = MaxR} | _], _)
+    when not (is_integer(MaxR) andalso MaxR >= 0) ->
+    {error, {service_internal_max_r_invalid, MaxR}};
+services_validate(_, [#internal{max_t = MaxT} | _], _)
+    when not (is_integer(MaxT) andalso MaxT >= 0) ->
+    {error, {service_internal_max_t_invalid, MaxT}};
+services_validate(_, [#internal{options = Options} | _], _)
+    when not is_list(Options) ->
+    {error, {service_internal_options_invalid, Options}};
 services_validate(Output,
                   [#internal{
                       prefix = Prefix,
@@ -635,40 +718,12 @@ services_validate(Output,
                       count_process = CountProcess,
                       max_r = MaxR,
                       max_t = MaxT,
-                      options = Options} | L], UUID)
-    when is_list(Prefix), is_integer(hd(Prefix)),
-         (is_atom(Module) orelse is_list(Module)),
-         is_list(Args),
-         is_atom(DestRefresh),
-         ((DestRefresh =:= immediate_closest) orelse
-          (DestRefresh =:= lazy_closest) orelse
-          (DestRefresh =:= immediate_furthest) orelse
-          (DestRefresh =:= lazy_furthest) orelse
-          (DestRefresh =:= immediate_random) orelse
-          (DestRefresh =:= lazy_random) orelse
-          (DestRefresh =:= immediate_local) orelse
-          (DestRefresh =:= lazy_local) orelse
-          (DestRefresh =:= immediate_remote) orelse
-          (DestRefresh =:= lazy_remote) orelse
-          (DestRefresh =:= immediate_newest) orelse
-          (DestRefresh =:= lazy_newest) orelse
-          (DestRefresh =:= immediate_oldest) orelse
-          (DestRefresh =:= lazy_oldest) orelse
-          (DestRefresh =:= none)),
-         is_integer(TimeoutInit), TimeoutInit > 0,
-         is_integer(TimeoutAsync), TimeoutAsync > 0,
-         is_integer(TimeoutSync), TimeoutSync > 0,
-         (is_list(DestListDeny) orelse (DestListDeny =:= undefined)),
-         (is_list(DestListAllow) orelse (DestListAllow =:= undefined)),
-         is_number(CountProcess), CountProcess > 0,
-         is_integer(MaxR), MaxR >= 0,
-         is_integer(MaxT), MaxT >= 0,
-         is_list(Options) ->
+                      options = Options} | L], UUID) ->
     FilePath = if
+        is_atom(Module) ->
+            undefined;
         is_list(Module) ->
-            Module;
-        true ->
-            undefined
+            Module
     end,
     case services_validate_options_internal(Options) of
         {ok, NewOptions} ->
@@ -692,6 +747,77 @@ services_validate(Output,
         {error, _} = Error ->
             Error
     end;
+services_validate(_, [#external{prefix = Prefix} | _], _)
+    when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
+    {error, {service_external_prefix_invalid, Prefix}};
+services_validate(_, [#external{file_path = FilePath} | _], _)
+    when not (is_list(FilePath) andalso is_integer(hd(FilePath))) ->
+    {error, {service_external_file_path_invalid, FilePath}};
+services_validate(_, [#external{args = Args} | _], _)
+    when not (is_list(Args) andalso
+              (Args == "" orelse is_integer(hd(Args)))) ->
+    {error, {service_external_args_invalid, Args}};
+services_validate(_, [#external{env = Env} | _], _)
+    when not is_list(Env) ->
+    {error, {service_external_env_invalid, Env}};
+services_validate(_, [#external{dest_refresh = DestRefresh} | _], _)
+    when not (is_atom(DestRefresh) andalso
+              ((DestRefresh =:= immediate_closest) orelse
+               (DestRefresh =:= lazy_closest) orelse
+               (DestRefresh =:= immediate_furthest) orelse
+               (DestRefresh =:= lazy_furthest) orelse
+               (DestRefresh =:= immediate_random) orelse
+               (DestRefresh =:= lazy_random) orelse
+               (DestRefresh =:= immediate_local) orelse
+               (DestRefresh =:= lazy_local) orelse
+               (DestRefresh =:= immediate_remote) orelse
+               (DestRefresh =:= lazy_remote) orelse
+               (DestRefresh =:= immediate_newest) orelse
+               (DestRefresh =:= lazy_newest) orelse
+               (DestRefresh =:= immediate_oldest) orelse
+               (DestRefresh =:= lazy_oldest) orelse
+               (DestRefresh =:= none))) ->
+    {error, {service_external_dest_refresh_invalid, DestRefresh}};
+services_validate(_, [#external{protocol = Protocol} | _], _)
+    when not ((Protocol =:= default) orelse
+              (Protocol =:= tcp) orelse
+              (Protocol =:= udp) orelse
+              (Protocol =:= local)) ->
+    {error, {service_external_protocol_invalid, Protocol}};
+services_validate(_, [#external{buffer_size = BufferSize} | _], _)
+    when not ((BufferSize =:= default) orelse
+              (is_integer(BufferSize) andalso (BufferSize >= 1024))) ->
+    {error, {service_external_buffer_size_invalid, BufferSize}};
+services_validate(_, [#external{timeout_init = TimeoutInit} | _], _)
+    when not (is_integer(TimeoutInit) andalso TimeoutInit > 0) ->
+    {error, {service_external_timeout_init_invalid, TimeoutInit}};
+services_validate(_, [#external{timeout_async = TimeoutAsync} | _], _)
+    when not (is_integer(TimeoutAsync) andalso TimeoutAsync > 0) ->
+    {error, {service_external_timeout_async_invalid, TimeoutAsync}};
+services_validate(_, [#external{timeout_sync = TimeoutSync} | _], _)
+    when not (is_integer(TimeoutSync) andalso TimeoutSync > 0) ->
+    {error, {service_external_timeout_sync_invalid, TimeoutSync}};
+services_validate(_, [#external{dest_list_deny = DestListDeny} | _], _)
+    when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
+    {error, {service_external_dest_list_deny_invalid, DestListDeny}};
+services_validate(_, [#external{dest_list_allow = DestListAllow} | _], _)
+    when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
+    {error, {service_external_dest_list_allow_invalid, DestListAllow}};
+services_validate(_, [#external{count_process = CountProcess} | _], _)
+    when not (is_number(CountProcess) andalso CountProcess > 0) ->
+    {error, {service_external_count_process_invalid, CountProcess}};
+services_validate(_, [#external{count_thread = CountThread} | _], _)
+    when not (is_number(CountThread) andalso CountThread > 0) ->
+    {error, {service_external_count_thread_invalid, CountThread}};
+services_validate(_, [#external{max_r = MaxR} | _], _)
+    when not (is_integer(MaxR) andalso MaxR >= 0) ->
+    {error, {service_external_max_r_invalid, MaxR}};
+services_validate(_, [#external{max_t = MaxT} | _], _)
+    when not (is_integer(MaxT) andalso MaxT >= 0) ->
+    {error, {service_external_max_t_invalid, MaxT}};
+services_validate(_, [#external{options = Options} | _], _)
+    when not is_list(Options) ->
+    {error, {service_external_options_invalid, Options}};
 services_validate(Output,
                   [#external{
                       prefix = Prefix,
@@ -710,43 +836,7 @@ services_validate(Output,
                       count_thread = CountThread,
                       max_r = MaxR,
                       max_t = MaxT,
-                      options = Options} | L], UUID)
-    when is_list(Prefix), is_integer(hd(Prefix)),
-         is_list(FilePath), is_integer(hd(FilePath)),
-         is_list(Args), (Args == "" orelse is_integer(hd(Args))),
-         is_list(Env),
-         is_atom(DestRefresh),
-         ((DestRefresh =:= immediate_closest) orelse
-          (DestRefresh =:= lazy_closest) orelse
-          (DestRefresh =:= immediate_furthest) orelse
-          (DestRefresh =:= lazy_furthest) orelse
-          (DestRefresh =:= immediate_random) orelse
-          (DestRefresh =:= lazy_random) orelse
-          (DestRefresh =:= immediate_local) orelse
-          (DestRefresh =:= lazy_local) orelse
-          (DestRefresh =:= immediate_remote) orelse
-          (DestRefresh =:= lazy_remote) orelse
-          (DestRefresh =:= immediate_newest) orelse
-          (DestRefresh =:= lazy_newest) orelse
-          (DestRefresh =:= immediate_oldest) orelse
-          (DestRefresh =:= lazy_oldest) orelse
-          (DestRefresh =:= none)),
-         ((Protocol =:= default) orelse
-          (Protocol =:= tcp) orelse
-          (Protocol =:= udp) orelse
-          (Protocol =:= local)),
-         ((BufferSize =:= default) orelse
-          (is_integer(BufferSize) andalso (BufferSize >= 1024))),
-         is_integer(TimeoutInit), TimeoutInit > 0,
-         is_integer(TimeoutAsync), TimeoutAsync > 0,
-         is_integer(TimeoutSync), TimeoutSync > 0,
-         (is_list(DestListDeny) orelse (DestListDeny =:= undefined)),
-         (is_list(DestListAllow) orelse (DestListAllow =:= undefined)),
-         is_number(CountProcess), CountProcess > 0,
-         is_number(CountThread), CountThread > 0,
-         is_integer(MaxR), MaxR >= 0,
-         is_integer(MaxT), MaxT >= 0,
-         is_list(Options) ->
+                      options = Options} | L], UUID) ->
     NewProtocol = if
         Protocol =:= default ->
             local;
