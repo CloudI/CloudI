@@ -57,6 +57,7 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_search/2,
          services/1,
          nodes_add/2,
          nodes_remove/2,
@@ -124,6 +125,13 @@
 
 -type loglevel() :: fatal | error | warn | info | debug | trace | off.
 -export_type([loglevel/0]).
+
+-type service_internal() :: #internal{}.
+-type service_external() :: #external{}.
+-type service() :: #internal{} | #external{}.
+-export_type([service_internal/0,
+              service_external/0,
+              service/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -229,12 +237,29 @@ services_restart([_ | _] = L, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Search service instances for matches on the provided service name.===
+%% Multiple services may be returned for a single service name.  Only service
+%% instances on the local Erlang node are searched.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_search(ServiceName :: string(),
+                      Timeout :: pos_integer()) ->
+    {ok, list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}})} |
+    {error, any()}.
+
+services_search([_ | _] = ServiceName, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    cloudi_configurator:services_search(ServiceName, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===List all service instances with each service's UUID.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec services(Timeout :: pos_integer()) ->
-    {ok, binary()} |
+    {ok, list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}})} |
     {error, any()}.
 
 services(Timeout)

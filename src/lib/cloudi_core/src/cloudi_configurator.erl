@@ -55,9 +55,15 @@
 
 %% external interface
 -export([start_link/1,
-         acl_add/2, acl_remove/2,
-         services_add/2, services_remove/2, services_restart/2, services/1,
-         nodes_add/2, nodes_remove/2,
+         acl_add/2,
+         acl_remove/2,
+         services_add/2,
+         services_remove/2,
+         services_restart/2,
+         services_search/2,
+         services/1,
+         nodes_add/2,
+         nodes_remove/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -110,6 +116,11 @@ services_remove(L, Timeout) ->
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_restart, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+
+services_search(ServiceName, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_search, ServiceName,
                                  Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 services(Timeout) ->
@@ -227,11 +238,27 @@ handle_call({services_restart, L, Timeout}, _,
             {reply, Error, State}
     end;
 
+handle_call({services_search, ServiceName, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_x_cpg:get_local_members(ServiceName) of
+        {ok, _, PidList} ->
+            case cloudi_services_monitor:search(PidList, Timeout) of
+                {ok, []} ->
+                    {reply, {ok, []}, State};
+                {ok, L} ->
+                    {reply, 
+                     {ok, cloudi_configuration:services_search(L, Config)},
+                     State};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} ->
+            {reply, {ok, []}, State}
+    end;
+
 handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    L = cloudi_configuration:services(Config),
-    {reply,
-     {ok, erlang:list_to_binary(cloudi_string:format("~p", [L]))}, State};
+    {reply, {ok, cloudi_configuration:services(Config)}, State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->

@@ -76,6 +76,8 @@
              fun cloudi_service_api:services_remove/2},
             {"services_restart",
              fun cloudi_service_api:services_restart/2},
+            {"services_search",
+             fun cloudi_service_api:services_search/2},
             {"services",
              fun cloudi_service_api:services/1},
             {"nodes_add",
@@ -118,41 +120,20 @@
 
 cloudi_service_init(_Args, Prefix, Dispatcher) ->
     % names are [prefix]format/[method] (i.e., request format)
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_restart"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_restart/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_alive"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_alive/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_dead"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_dead/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/loglevel_set"),
-    cloudi_service:subscribe(Dispatcher, "erlang/loglevel_set/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/log_redirect"),
-    cloudi_service:subscribe(Dispatcher, "erlang/log_redirect/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path/get"),
+    State = #state{suffix_index = erlang:length(Prefix) + 1},
+    cloudi_x_trie:foreach(fun(Method, F) ->
+        FormatMethod = "erlang/" ++ Method,
+        cloudi_service:subscribe(Dispatcher, FormatMethod),
+        case erlang:fun_info(F, arity) of
+            {arity, 1} ->
+                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/get");
+            {arity, 2} ->
+                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/post")
+        end
+    end, State#state.functions),
     cloudi_service:subscribe(Dispatcher, "json_rpc/"),
     cloudi_service:subscribe(Dispatcher, "json_rpc//post"),
-    {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
+    {ok, State}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
