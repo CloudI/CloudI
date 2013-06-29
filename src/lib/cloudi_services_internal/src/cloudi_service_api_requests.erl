@@ -65,42 +65,7 @@
 
 -record(state,
     {
-        functions = cloudi_x_trie:new([
-            {"acl_add",
-             fun cloudi_service_api:acl_add/2},
-            {"acl_remove",
-             fun cloudi_service_api:acl_remove/2},
-            {"services_add",
-             fun cloudi_service_api:services_add/2},
-            {"services_remove",
-             fun cloudi_service_api:services_remove/2},
-            {"services_restart",
-             fun cloudi_service_api:services_restart/2},
-            {"services_search",
-             fun cloudi_service_api:services_search/2},
-            {"services",
-             fun cloudi_service_api:services/1},
-            {"nodes_add",
-             fun cloudi_service_api:nodes_add/2},
-            {"nodes_remove",
-             fun cloudi_service_api:nodes_remove/2},
-            {"nodes_alive",
-             fun cloudi_service_api:alive/1},
-            {"nodes_dead",
-             fun cloudi_service_api:dead/1},
-            {"nodes",
-             fun cloudi_service_api:nodes/1},
-            {"loglevel_set",
-             fun cloudi_service_api:loglevel_set/2},
-            {"log_redirect",
-             fun cloudi_service_api:log_redirect/2},
-            {"code_path_add",
-             fun cloudi_service_api:code_path_add/2},
-            {"code_path_remove",
-             fun cloudi_service_api:code_path_remove/2},
-            {"code_path",
-             fun cloudi_service_api:code_path/1}
-        ]),
+        functions, % method -> function lookup
         formats = cloudi_x_trie:new([
             {"erlang",
              fun format_erlang/4},
@@ -119,21 +84,25 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, Dispatcher) ->
-    % names are [prefix]format/[method] (i.e., request format)
-    State = #state{suffix_index = erlang:length(Prefix) + 1},
-    cloudi_x_trie:foreach(fun(Method, F) ->
-        FormatMethod = "erlang/" ++ Method,
+    CloudIServiceAPI = lists:foldl(fun({Method, Arity}, Functions) ->
+        F = fun cloudi_service_api:Method/Arity,
+        MethodString = erlang:atom_to_list(Method),
+        FormatMethod = "erlang/" ++ MethodString,
+        % service names are [prefix]format/[method] (i.e., request format)
         cloudi_service:subscribe(Dispatcher, FormatMethod),
-        case erlang:fun_info(F, arity) of
-            {arity, 1} ->
+        if
+            Arity == 1 ->
                 cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/get");
-            {arity, 2} ->
+            Arity == 2 ->
                 cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/post")
-        end
-    end, State#state.functions),
+        end,
+        cloudi_x_trie:store(MethodString, F, Functions)
+    end, cloudi_x_trie:new(),
+    cloudi_x_reltool_util:module_exports(cloudi_service_api)),
     cloudi_service:subscribe(Dispatcher, "json_rpc/"),
     cloudi_service:subscribe(Dispatcher, "json_rpc//post"),
-    {ok, State}.
+    {ok, #state{functions = CloudIServiceAPI,
+                suffix_index = erlang:length(Prefix) + 1}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,

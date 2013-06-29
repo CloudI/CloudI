@@ -69,6 +69,7 @@
          module_loaded/1,
          module_purged/1,
          module_purged/2,
+         module_exports/1,
          script_start/1,
          script_remove/1,
          script_remove/2]).
@@ -434,6 +435,22 @@ module_purged(Module) ->
 module_purged(Module, Timeout)
     when is_atom(Module) ->
     modules_purged([Module], Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List the exported functions of a module.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_exports(Module :: atom()) ->
+    list({atom(), pos_integer()}).
+
+module_exports(Module)
+    when is_atom(Module) ->
+    {exports, L0} = lists:keyfind(exports, 1, Module:module_info()),
+    {value, _, L1} = lists:keytake(module_info, 1, L0),
+    {value, _, L2} = lists:keytake(module_info, 1, L1),
+    L2.
 
 %%-------------------------------------------------------------------------
 %% @doc
