@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.4.0 {@date} {@time}
+%%% @version 0.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -63,6 +63,9 @@
          application_running/1,
          application_running/2,
          application_loaded/1,
+         ensure_application_loaded/1,
+         ensure_application_started/1,
+         ensure_application_stopped/1,
          module_loaded/1,
          module_purged/1,
          module_purged/2,
@@ -312,6 +315,73 @@ application_loaded(Application)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Make sure an application is loaded.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_loaded(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_loaded(Application) ->
+    case application:load(Application) of
+        ok ->
+            case application:get_key(Application, modules) of
+                {ok, Modules} ->
+                    lists:foreach(fun(M) ->
+                        ok = module_loaded(M)
+                    end, Modules);
+                undefined ->
+                    ok
+            end;
+        {error, {already_loaded, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure an application is started.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_started(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_started(Application) ->
+    case application:start(Application, temporary) of
+        ok ->
+            ok;
+        {error, {already_started, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure an application is stopped.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_stopped(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_stopped(Application) ->
+    case application:stop(Application) of
+        ok ->
+            ok;
+        {error, {not_started, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Make sure a module is loaded.===
 %% If the module is not loaded, attempt to load it.
 %% @end
@@ -484,43 +554,6 @@ script_remove(FilePath, Timeout)
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-ensure_application_loaded(A) ->
-    case application:load(A) of
-        ok ->
-            case application:get_key(A, modules) of
-                {ok, Modules} ->
-                    lists:foreach(fun(M) ->
-                        ok = module_loaded(M)
-                    end, Modules);
-                undefined ->
-                    ok
-            end;
-        {error, {already_loaded, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-     end.
-
-ensure_application_started(A) ->
-    case application:start(A, temporary) of
-        ok ->
-            ok;
-        {error, {already_started, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-ensure_application_stopped(A) ->
-    case application:stop(A) of
-        ok ->
-            ok;
-        {error, {not_started, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
 
 application_start_set_env([], _, _) ->
     ok;
