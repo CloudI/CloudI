@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_nodes).
@@ -79,6 +79,9 @@
         nodes = []
     }).
 
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -87,17 +90,18 @@ start_link(Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 reconfigure(Config, Timeout) ->
-    gen_server:call(?MODULE, {reconfigure, Config,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {reconfigure, Config,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 alive(Timeout) ->
-    gen_server:call(?MODULE, alive, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE, alive, Timeout)).
 
 dead(Timeout) ->
-    gen_server:call(?MODULE, dead, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE, dead, Timeout)).
 
 nodes(Timeout) ->
-    gen_server:call(?MODULE, nodes, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE, nodes, Timeout)).
 
 logger_redirect(Node) when is_atom(Node) ->
     gen_server:cast(?MODULE, {logger_redirect, Node}).
@@ -167,15 +171,15 @@ handle_call({reconfigure, Config, _}, _,
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
-    {reply, NodesAlive, State};
+    {reply, {ok, NodesAlive}, State};
 
 handle_call(dead, _,
             #state{nodes_dead = NodesDead} = State) ->
-    {reply, NodesDead, State};
+    {reply, {ok, NodesDead}, State};
 
 handle_call(nodes, _,
             #state{nodes = Nodes} = State) ->
-    {reply, Nodes, State};
+    {reply, {ok, Nodes}, State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

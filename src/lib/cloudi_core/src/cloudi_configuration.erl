@@ -78,7 +78,7 @@
 %%   `off, fatal, error, warn, info, debug, trace'
 %%
 %% ====services:====
-%%   `{services, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT}]}'
+%%   `{services, [{internal, ServiceNamePrefix, ErlangModuleName, ModuleInitializationList, DestinationRefreshMethod, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, MaxR, MaxT, ServiceOptions}, {external, ServiceNamePrefix, ExecutableFilePath, ExecutableCommandLineArguments, ExecutableEnvironmentalVariables, DestinationRefreshMethod, Protocol, ProtocolBufferSize, InitializationTimeout, DefaultAsynchronousTimeout, DefaultSynchronousTimeout, DestinationDenyList, DestinationAllowList, ProcessCount, ThreadCount, MaxR, MaxT, ServiceOptions}]}'
 %%
 %%   Services configuration defines all the necessary information for the
 %%   lifetime of running the service.
@@ -167,18 +167,30 @@
 %%-------------------------------------------------------------------------
 
 -spec open() ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 open() ->
-    {ok, Terms} = file:consult(?CONFIGURATION_FILE_NAME),
-    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
+    case file:consult(?CONFIGURATION_FILE_NAME) of
+        {ok, Terms} ->
+            new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
+        {error, _} = Error ->
+            Error
+    end.
 
 -spec open(Path :: string()) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 open(Path) when is_list(Path) ->
-    {ok, Terms} = file:consult(Path),
-    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())}).
+    case file:consult(Path) of
+        {ok, Terms} ->
+            new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
+        {error, _} = Error ->
+            Error
+    end;
+open(Path) ->
+    {error, {path_invalid, Path}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -188,11 +200,19 @@ open(Path) when is_list(Path) ->
 
 -spec acl_add(Value :: list({atom(), cloudi_service_api:acl()}),
               Config :: #config{}) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
-    Config#config{acl = acl_lookup_add(Value, ACL)}.
+    case acl_lookup_add(Value, ACL) of
+        {ok, NewACL} ->
+            {ok, Config#config{acl = NewACL}};
+        {error, _} = Error ->
+            Error
+    end;
+acl_add(Value, _) ->
+    {error, {acl_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -202,13 +222,15 @@ acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
 
 -spec acl_remove(Value :: list(atom()),
                  Config :: #config{}) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
-    Config#config{acl = lists:foldl(fun(E, D) ->
-                                        dict:erase(E, D)
-                                    end, ACL, Value)}.
+    NewACL = lists:foldl(fun(E, D) -> dict:erase(E, D) end, ACL, Value),
+    {ok, Config#config{acl = NewACL}};
+acl_remove(Value, _) ->
+    {error, {acls_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -219,18 +241,33 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
 -spec services_add(Value :: list(#internal{} | #external{}),
                    Config :: #config{},
                    Timeout :: cloudi_service_api:timeout_milliseconds()) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
-services_add([], _, _) ->
-    erlang:exit(badarg);
 services_add([T | _] = Value,
              #config{uuid_generator = UUID,
                      services = Services,
                      acl = ACL} = Config, Timeout)
     when is_record(T, internal); is_record(T, external) ->
-    NextServices = services_acl_update(services_validate(Value, UUID), ACL),
-    NewServices = services_add_service(NextServices, Timeout),
-    Config#config{services = Services ++ NewServices}.
+    case services_validate(Value, UUID) of
+        {ok, ValidatedServices} ->
+            case services_acl_update(ValidatedServices, ACL) of
+                {ok, NextServices} ->
+                    case services_add_service(NextServices, Timeout) of
+                        {ok, NewServices} ->
+                            {ok, Config#config{services = Services ++
+                                                          NewServices}};
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+services_add(Value, _, _) ->
+    {error, {services_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -241,48 +278,20 @@ services_add([T | _] = Value,
 -spec services_remove(Value :: list(<<_:128>>),
                       Config :: #config{},
                       Timeout :: cloudi_service_api:timeout_milliseconds()) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
-services_remove([UUID | _] = Value,
+services_remove([ID | _] = Value,
                 #config{services = Services} = Config, Timeout)
-    when is_binary(UUID), byte_size(UUID) == 16 ->
-    NewServices = lists:foldl(fun(ID, L) ->
-        {ServiceList, NewL} = lists:partition(fun(S) ->
-            if
-                is_record(S, config_service_internal),
-                S#config_service_internal.uuid == ID ->
-                    true;
-                is_record(S, config_service_external),
-                S#config_service_external.uuid == ID ->
-                    true;
-                true ->
-                    false
-            end
-        end, L),
-        case ServiceList of
-            [] ->
-                ok;
-            [Service] ->
-                Remove = if
-                    is_record(Service, config_service_internal) ->
-                        not lists:any(fun(S) ->
-                            if
-                                is_record(S, config_service_internal),
-                                S#config_service_internal.module == 
-                                Service#config_service_internal.module ->
-                                    true;
-                                true ->
-                                    false
-                            end
-                        end, NewL);
-                    true ->
-                        false
-                end,
-                cloudi_configurator:service_stop(Service, Remove, Timeout)
-        end,
-        NewL
-    end, Services, Value),
-    Config#config{services = NewServices}.
+    when is_binary(ID), byte_size(ID) == 16 ->
+    case services_remove_uuid(Value, Services, Timeout) of
+        {ok, NewServices} ->
+            {ok, Config#config{services = NewServices}};
+        {error, _} = Error ->
+            Error
+    end;
+services_remove(Value, _, _) ->
+    {error, {services_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -293,32 +302,20 @@ services_remove([UUID | _] = Value,
 -spec services_restart(Value :: list(<<_:128>>),
                        Config :: #config{},
                        Timeout :: cloudi_service_api:timeout_milliseconds()) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
-services_restart([UUID | _] = Value,
+services_restart([ID | _] = Value,
                  #config{services = Services} = Config, Timeout)
-    when is_binary(UUID), byte_size(UUID) == 16 ->
-    lists:foreach(fun(ID) ->
-        ServiceList = lists:filter(fun(S) ->
-            if
-                is_record(S, config_service_internal),
-                S#config_service_internal.uuid == ID ->
-                    true;
-                is_record(S, config_service_external),
-                S#config_service_external.uuid == ID ->
-                    true;
-                true ->
-                    false
-            end
-        end, Services),
-        case ServiceList of
-            [] ->
-                ok;
-            [Service] ->
-                cloudi_configurator:service_restart(Service, Timeout)
-        end
-    end, Value),
-    Config.
+    when is_binary(ID), byte_size(ID) == 16 ->
+    case services_restart_uuid(Value, Services, Timeout) of
+        ok ->
+            {ok, Config};
+        {error, _} = Error ->
+            Error
+    end;
+services_restart(Value, _, _) ->
+    {error, {services_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -407,11 +404,19 @@ services(#config{services = Services}) ->
 
 -spec nodes_add(Value :: list(node()),
                 Config :: #config{}) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
     when is_atom(A) ->
-    Config#config{nodes = Nodes ++ Value}.
+    case nodes_validate(Value) of
+        ok ->
+            {ok, Config#config{nodes = Nodes ++ Value}};
+        {error, _} = Error ->
+            Error
+    end;
+nodes_add(Value, _) ->
+    {error, {nodes_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -421,14 +426,19 @@ nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
 
 -spec nodes_remove(Value :: list(node()),
                    Config :: #config{}) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
     when is_atom(A) ->
-    NewNodes = lists:foldl(fun(N, L) ->
-        lists:delete(N, L)
-    end, Nodes, Value),
-    Config#config{nodes = NewNodes}.
+    case nodes_remove_elements(Value, Nodes) of
+        {ok, NewNodes} ->
+            {ok, Config#config{nodes = NewNodes}};
+        {error, _} = Error ->
+            Error
+    end;
+nodes_remove(Value, _) ->
+    {error, {nodes_invalid, Value}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -436,95 +446,169 @@ nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
 
 -spec new(Terms :: list({atom(), any()}),
           Config :: #config{}) ->
-    #config{}.
+    {ok, #config{}} |
+    {error, any()}.
 
 new([], #config{services = Services, acl = ACL} = Config) ->
-    Config#config{services = services_acl_update(Services, ACL)};
-
+    case services_acl_update(Services, ACL) of
+        {ok, NewServices} ->
+            {ok, Config#config{services = NewServices}};
+        {error, _} = Error ->
+            Error
+    end;
 new([{'services', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external) ->
-    new(Terms, Config#config{services = services_validate(Value, UUID)});
+    case services_validate(Value, UUID) of
+        {ok, NewServices} ->
+            new(Terms, Config#config{services = NewServices});
+        {error, _} = Error ->
+            Error
+    end;
 new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
     when is_atom(A) ->
-    new(Terms, Config#config{acl = acl_lookup_new(Value)});
+    case acl_lookup_new(Value) of
+        {ok, NewACL} ->
+            new(Terms, Config#config{acl = NewACL});
+        {error, _} = Error ->
+            Error
+    end;
 new([{'nodes', automatic} | Terms], Config) ->
+%XXX change reltool_util for this
     application:start(cloudi_x_combonodefinder),
     new(Terms, Config);
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'nodes', [A | _] = Value} | Terms], Config)
     when is_atom(A) ->
-    new(Terms, Config#config{nodes = lists:delete(node(), Value)});
+    Nodes = lists:delete(node(), lists:usort(Value)),
+    case nodes_validate(Nodes) of
+        ok ->
+            new(Terms, Config#config{nodes = Nodes});
+        {error, _} = Error ->
+            Error
+    end;
 new([{'logging', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'logging', [T | _] = Value} | Terms], Config)
-    when is_atom(erlang:element(1, T)) ->
+    when is_atom(element(1, T)) ->
     Defaults = [
         {level, (Config#config.logging)#config_logging.level},
         {file, (Config#config.logging)#config_logging.file},
         {redirect, (Config#config.logging)#config_logging.redirect}],
-    [Level, File, Redirect] = cloudi_proplists:take_values(Defaults, Value),
-    true = ((Level =:= fatal) or (Level =:= error) or (Level =:= warn) or
-            (Level =:= info) or (Level =:= debug) or (Level =:= trace) or
-            (Level =:= off)),
-    true = is_list(File),
-    true = is_atom(Redirect),
-    new(Terms, Config#config{logging = #config_logging{level = Level,
-                                                       file = File,
-                                                       redirect = Redirect}}).
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Level, _, _ | _]
+            when not ((Level =:= fatal) orelse (Level =:= error) orelse
+                      (Level =:= warn) orelse (Level =:= info) orelse
+                      (Level =:= debug) orelse (Level =:= trace) orelse
+                      (Level =:= off)) ->
+            {error, {logging_level_invalid, Level}};
+        [_, File, _ | _]
+            when not (is_list(File) andalso is_integer(hd(File))) ->
+            {error, {logging_file_invalid, File}};
+        [Level, File, Redirect] ->
+            if
+                Redirect =:= undefined ->
+                    new(Terms,
+                        Config#config{
+                            logging = #config_logging{
+                                level = Level,
+                                file = File,
+                                redirect = Redirect}});
+                true ->
+                    case nodes_validate([Redirect]) of
+                        ok ->
+                            new(Terms,
+                                Config#config{
+                                    logging = #config_logging{
+                                        level = Level,
+                                        file = File,
+                                        redirect = Redirect}});
+                        {error, _} = Error ->
+                            Error
+                    end
+            end;
+        [_, _, _ | Extra] ->
+            {error, {logging_invalid, Extra}}
+    end;
+new([Term | _], _) ->
+    {error, {invalid, Term}}.
 
 services_add_service(NextServices, Timeout) ->
     services_add_service(NextServices, [], Timeout).
 
 services_add_service([], Added, _) ->
-    lists:reverse(Added);
+    {ok, lists:reverse(Added)};
 services_add_service([Service | Services], Added, Timeout) ->
-    services_add_service(Services,
-                         [cloudi_configurator:service_start(Service, Timeout) |
-                          Added], Timeout).
+    case cloudi_configurator:service_start(Service, Timeout) of
+        {ok, NewService} ->
+            services_add_service(Services, [NewService | Added], Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 services_acl_update([], _) ->
-    [];
+    {ok, []};
 services_acl_update([_ | _] = Services, Lookup) ->
     services_acl_update([], Services, Lookup).
 
 services_acl_update(Output, [], _) ->
-    lists:reverse(Output);
-services_acl_update(Output, [Service | L], Lookup)
-    when is_record(Service, config_service_internal) ->
-    Deny = services_acl_update_list([],
-        Service#config_service_internal.dest_list_deny, Lookup),
-    Allow = services_acl_update_list([],
-        Service#config_service_internal.dest_list_allow, Lookup),
-    services_acl_update(
-        [Service#config_service_internal{dest_list_deny = Deny,
-                                         dest_list_allow = Allow} | Output],
-        L, Lookup);
-services_acl_update(Output, [Service | L], Lookup)
-    when is_record(Service, config_service_external) ->
-    Deny = services_acl_update_list([],
-        Service#config_service_external.dest_list_deny, Lookup),
-    Allow = services_acl_update_list([],
-        Service#config_service_external.dest_list_allow, Lookup),
-    services_acl_update(
-        [Service#config_service_external{dest_list_deny = Deny,
-                                         dest_list_allow = Allow} | Output],
-        L, Lookup).
+    {ok, lists:reverse(Output)};
+services_acl_update(Output,
+                    [#config_service_internal{
+                        dest_list_deny = Deny,
+                        dest_list_allow = Allow} = Service | L], Lookup) ->
+    case services_acl_update_list([], Deny, Lookup) of
+        {ok, NewDeny} ->
+            case services_acl_update_list([], Allow, Lookup) of
+                {ok, NewAllow} ->
+                    services_acl_update(
+                        [Service#config_service_internal{
+                            dest_list_deny = NewDeny,
+                            dest_list_allow = NewAllow} | Output], L, Lookup);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+services_acl_update(Output,
+                    [#config_service_external{
+                        dest_list_deny = Deny,
+                        dest_list_allow = Allow} = Service | L], Lookup) ->
+    case services_acl_update_list([], Deny, Lookup) of
+        {ok, NewDeny} ->
+            case services_acl_update_list([], Allow, Lookup) of
+                {ok, NewAllow} ->
+                    services_acl_update(
+                        [Service#config_service_external{
+                            dest_list_deny = NewDeny,
+                            dest_list_allow = NewAllow} | Output], L, Lookup);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
 
 services_acl_update_list(_, undefined, _) ->
-    undefined;
+    {ok, undefined};
 services_acl_update_list(Output, [], _) ->
-    Output;
+    {ok, lists:reverse(Output)};
 services_acl_update_list(Output, [E | L], Lookup)
     when is_atom(E) ->
-    services_acl_update_list(dict:fetch(E, Lookup) ++ Output, L, Lookup);
+    case dict:find(E, Lookup) of
+        {ok, Value} ->
+            services_acl_update_list(Value ++ Output, L, Lookup);
+        error ->
+            {error, {acl_not_found, E}}
+    end;
 services_acl_update_list(Output, [E | L], Lookup)
-    when is_list(E), is_integer(erlang:hd(E)) ->
+    when is_list(E), is_integer(hd(E)) ->
     case cloudi_x_trie:is_pattern(E) of
         true ->
             services_acl_update_list([E | Output], L, Lookup);
@@ -536,171 +620,184 @@ services_validate([_ | _] = Services, UUID) ->
     services_validate([], Services, UUID).
 
 services_validate(Output, [], _) ->
-    lists:reverse(Output);
-services_validate(Output, [Service | L], UUID)
-    when is_record(Service, internal),
-         is_list(Service#internal.prefix),
-         is_list(Service#internal.args),
-         is_atom(Service#internal.dest_refresh),
-         is_integer(Service#internal.timeout_init),
-         is_integer(Service#internal.timeout_async),
-         is_integer(Service#internal.timeout_sync),
-         is_number(Service#internal.count_process),
-         is_integer(Service#internal.max_r),
-         is_integer(Service#internal.max_t),
-         is_list(Service#internal.options) ->
-    true = is_atom(Service#internal.module) orelse
-           is_list(Service#internal.module),
-    true = (Service#internal.dest_refresh =:= immediate_closest) orelse
-           (Service#internal.dest_refresh =:= lazy_closest) orelse
-           (Service#internal.dest_refresh =:= immediate_furthest) orelse
-           (Service#internal.dest_refresh =:= lazy_furthest) orelse
-           (Service#internal.dest_refresh =:= immediate_random) orelse
-           (Service#internal.dest_refresh =:= lazy_random) orelse
-           (Service#internal.dest_refresh =:= immediate_local) orelse
-           (Service#internal.dest_refresh =:= lazy_local) orelse
-           (Service#internal.dest_refresh =:= immediate_remote) orelse
-           (Service#internal.dest_refresh =:= lazy_remote) orelse
-           (Service#internal.dest_refresh =:= immediate_newest) orelse
-           (Service#internal.dest_refresh =:= lazy_newest) orelse
-           (Service#internal.dest_refresh =:= immediate_oldest) orelse
-           (Service#internal.dest_refresh =:= lazy_oldest) orelse
-           (Service#internal.dest_refresh =:= none),
-    true = Service#internal.timeout_init > 0,
-    true = Service#internal.timeout_async > 0,
-    true = Service#internal.timeout_sync > 0,
-    true = is_list(Service#internal.dest_list_deny) orelse
-           (Service#internal.dest_list_deny =:= undefined),
-    true = is_list(Service#internal.dest_list_allow) orelse
-           (Service#internal.dest_list_allow =:= undefined),
-    true = Service#internal.max_r >= 0,
-    true = Service#internal.max_t >= 0,
-    C = #config_service_internal{
-        prefix = Service#internal.prefix,
-        module = Service#internal.module,
-        args = Service#internal.args,
-        dest_refresh = Service#internal.dest_refresh,
-        timeout_init = Service#internal.timeout_init,
-        timeout_async = Service#internal.timeout_async,
-        timeout_sync = Service#internal.timeout_sync,
-        dest_list_deny = Service#internal.dest_list_deny,
-        dest_list_allow = Service#internal.dest_list_allow,
-        count_process = Service#internal.count_process,
-        max_r = Service#internal.max_r,
-        max_t = Service#internal.max_t,
-        options = services_validate_options_internal(
-            Service#internal.options
-        ),
-        uuid = cloudi_x_uuid:get_v1(UUID)},
-    services_validate([C | Output], L, UUID);
-services_validate(Output, [Service | L], UUID)
-    when is_record(Service, external),
-         is_list(Service#external.prefix),
-         is_integer(erlang:hd(Service#external.file_path)),
-         is_list(Service#external.file_path),
-         is_list(Service#external.args),
-         is_list(Service#external.env),
-         is_atom(Service#external.dest_refresh),
-         is_atom(Service#external.protocol),
-         is_integer(Service#external.timeout_init),
-         is_integer(Service#external.timeout_async),
-         is_integer(Service#external.timeout_sync),
-         is_number(Service#external.count_process),
-         is_number(Service#external.count_thread),
-         is_integer(Service#external.max_r),
-         is_integer(Service#external.max_t),
-         is_list(Service#external.options) ->
-    true = (Service#external.prefix == []) orelse
-           is_integer(erlang:hd(Service#external.prefix)),
-    true = (Service#external.args == []) orelse
-           is_integer(erlang:hd(Service#external.args)),
-    true = (Service#external.dest_refresh =:= immediate_closest) orelse
-           (Service#external.dest_refresh =:= lazy_closest) orelse
-           (Service#external.dest_refresh =:= immediate_furthest) orelse
-           (Service#external.dest_refresh =:= lazy_furthest) orelse
-           (Service#external.dest_refresh =:= immediate_random) orelse
-           (Service#external.dest_refresh =:= lazy_random) orelse
-           (Service#external.dest_refresh =:= immediate_local) orelse
-           (Service#external.dest_refresh =:= lazy_local) orelse
-           (Service#external.dest_refresh =:= immediate_remote) orelse
-           (Service#external.dest_refresh =:= lazy_remote) orelse
-           (Service#external.dest_refresh =:= immediate_newest) orelse
-           (Service#external.dest_refresh =:= lazy_newest) orelse
-           (Service#external.dest_refresh =:= immediate_oldest) orelse
-           (Service#external.dest_refresh =:= lazy_oldest) orelse
-           (Service#external.dest_refresh =:= none),
-    true = (Service#external.protocol =:= default) orelse
-           (Service#external.protocol =:= tcp) orelse
-           (Service#external.protocol =:= udp) orelse
-           (Service#external.protocol =:= local),
-    true = (Service#external.buffer_size =:= default) orelse
-           (is_integer(Service#external.buffer_size) andalso
-            Service#external.buffer_size >= 1024),
-    true = Service#external.timeout_init > 0,
-    true = Service#external.timeout_async > 0,
-    true = Service#external.timeout_sync > 0,
-    true = is_list(Service#external.dest_list_deny) orelse
-           (Service#external.dest_list_deny =:= undefined),
-    true = is_list(Service#external.dest_list_allow) orelse
-           (Service#external.dest_list_allow =:= undefined),
-    true = Service#external.max_r >= 0,
-    true = Service#external.max_t >= 0,
-    % service options only relevant to internal services
-    undefined = proplists:get_value(request_pid_uses,
-                                    Service#external.options),
-    undefined = proplists:get_value(request_pid_options,
-                                    Service#external.options),
-    undefined = proplists:get_value(info_pid_uses,
-                                    Service#external.options),
-    undefined = proplists:get_value(info_pid_options,
-                                    Service#external.options),
-    undefined = proplists:get_value(duo_mode,
-                                    Service#external.options),
-    Protocol = if
-        Service#external.protocol =:= default ->
+    {ok, lists:reverse(Output)};
+services_validate(Output,
+                  [#internal{
+                      prefix = Prefix,
+                      module = Module,
+                      args = Args,
+                      dest_refresh = DestRefresh,
+                      timeout_init = TimeoutInit,
+                      timeout_async = TimeoutAsync,
+                      timeout_sync = TimeoutSync,
+                      dest_list_deny = DestListDeny,
+                      dest_list_allow = DestListAllow,
+                      count_process = CountProcess,
+                      max_r = MaxR,
+                      max_t = MaxT,
+                      options = Options} | L], UUID)
+    when is_list(Prefix), is_integer(hd(Prefix)),
+         (is_atom(Module) orelse is_list(Module)),
+         is_list(Args),
+         is_atom(DestRefresh),
+         ((DestRefresh =:= immediate_closest) orelse
+          (DestRefresh =:= lazy_closest) orelse
+          (DestRefresh =:= immediate_furthest) orelse
+          (DestRefresh =:= lazy_furthest) orelse
+          (DestRefresh =:= immediate_random) orelse
+          (DestRefresh =:= lazy_random) orelse
+          (DestRefresh =:= immediate_local) orelse
+          (DestRefresh =:= lazy_local) orelse
+          (DestRefresh =:= immediate_remote) orelse
+          (DestRefresh =:= lazy_remote) orelse
+          (DestRefresh =:= immediate_newest) orelse
+          (DestRefresh =:= lazy_newest) orelse
+          (DestRefresh =:= immediate_oldest) orelse
+          (DestRefresh =:= lazy_oldest) orelse
+          (DestRefresh =:= none)),
+         is_integer(TimeoutInit), TimeoutInit > 0,
+         is_integer(TimeoutAsync), TimeoutAsync > 0,
+         is_integer(TimeoutSync), TimeoutSync > 0,
+         (is_list(DestListDeny) orelse (DestListDeny =:= undefined)),
+         (is_list(DestListAllow) orelse (DestListAllow =:= undefined)),
+         is_number(CountProcess), CountProcess > 0,
+         is_integer(MaxR), MaxR >= 0,
+         is_integer(MaxT), MaxT >= 0,
+         is_list(Options) ->
+    FilePath = if
+        is_list(Module) ->
+            Module;
+        true ->
+            undefined
+    end,
+    case services_validate_options_internal(Options) of
+        {ok, NewOptions} ->
+            ID = cloudi_x_uuid:get_v1(UUID),
+            services_validate([#config_service_internal{
+                                   prefix = Prefix,
+                                   module = Module,
+                                   file_path = FilePath,
+                                   args = Args,
+                                   dest_refresh = DestRefresh,
+                                   timeout_init = TimeoutInit,
+                                   timeout_async = TimeoutAsync,
+                                   timeout_sync = TimeoutSync,
+                                   dest_list_deny = DestListDeny,
+                                   dest_list_allow = DestListAllow,
+                                   count_process = CountProcess,
+                                   max_r = MaxR,
+                                   max_t = MaxT,
+                                   options = NewOptions,
+                                   uuid = ID} | Output], L, UUID);
+        {error, _} = Error ->
+            Error
+    end;
+services_validate(Output,
+                  [#external{
+                      prefix = Prefix,
+                      file_path = FilePath,
+                      args = Args,
+                      env = Env,
+                      dest_refresh = DestRefresh,
+                      protocol = Protocol,
+                      buffer_size = BufferSize,
+                      timeout_init = TimeoutInit,
+                      timeout_async = TimeoutAsync,
+                      timeout_sync = TimeoutSync,
+                      dest_list_deny = DestListDeny,
+                      dest_list_allow = DestListAllow,
+                      count_process = CountProcess,
+                      count_thread = CountThread,
+                      max_r = MaxR,
+                      max_t = MaxT,
+                      options = Options} | L], UUID)
+    when is_list(Prefix), is_integer(hd(Prefix)),
+         is_list(FilePath), is_integer(hd(FilePath)),
+         is_list(Args), (Args == "" orelse is_integer(hd(Args))),
+         is_list(Env),
+         is_atom(DestRefresh),
+         ((DestRefresh =:= immediate_closest) orelse
+          (DestRefresh =:= lazy_closest) orelse
+          (DestRefresh =:= immediate_furthest) orelse
+          (DestRefresh =:= lazy_furthest) orelse
+          (DestRefresh =:= immediate_random) orelse
+          (DestRefresh =:= lazy_random) orelse
+          (DestRefresh =:= immediate_local) orelse
+          (DestRefresh =:= lazy_local) orelse
+          (DestRefresh =:= immediate_remote) orelse
+          (DestRefresh =:= lazy_remote) orelse
+          (DestRefresh =:= immediate_newest) orelse
+          (DestRefresh =:= lazy_newest) orelse
+          (DestRefresh =:= immediate_oldest) orelse
+          (DestRefresh =:= lazy_oldest) orelse
+          (DestRefresh =:= none)),
+         ((Protocol =:= default) orelse
+          (Protocol =:= tcp) orelse
+          (Protocol =:= udp) orelse
+          (Protocol =:= local)),
+         ((BufferSize =:= default) orelse
+          (is_integer(BufferSize) andalso (BufferSize >= 1024))),
+         is_integer(TimeoutInit), TimeoutInit > 0,
+         is_integer(TimeoutAsync), TimeoutAsync > 0,
+         is_integer(TimeoutSync), TimeoutSync > 0,
+         (is_list(DestListDeny) orelse (DestListDeny =:= undefined)),
+         (is_list(DestListAllow) orelse (DestListAllow =:= undefined)),
+         is_number(CountProcess), CountProcess > 0,
+         is_number(CountThread), CountThread > 0,
+         is_integer(MaxR), MaxR >= 0,
+         is_integer(MaxT), MaxT >= 0,
+         is_list(Options) ->
+    NewProtocol = if
+        Protocol =:= default ->
             local;
         true ->
-            Service#external.protocol
+            Protocol
     end,
-    BufferSize = if
-        Service#external.buffer_size =:= default ->
+    NewBufferSize = if
+        BufferSize =:= default ->
             if
-                Protocol =:= tcp ->
+                NewProtocol =:= tcp ->
                     16384; % Linux localhost (inet) MTU
-                Protocol =:= udp ->
+                NewProtocol =:= udp ->
                     16384; % Linux localhost (inet) MTU
-                Protocol =:= local ->
+                NewProtocol =:= local ->
                     16384  % Linux localhost (inet) MTU for testing/comparison
             end;
         true ->
-            Service#external.buffer_size
+            BufferSize
     end,
-    C = #config_service_external{
-        prefix = Service#external.prefix,
-        file_path = Service#external.file_path,
-        args = Service#external.args,
-        env = Service#external.env,
-        dest_refresh = Service#external.dest_refresh,
-        protocol = Protocol,
-        buffer_size = BufferSize,
-        timeout_init = Service#external.timeout_init,
-        timeout_async = Service#external.timeout_async,
-        timeout_sync = Service#external.timeout_sync,
-        dest_list_deny = Service#external.dest_list_deny,
-        dest_list_allow = Service#external.dest_list_allow,
-        count_process = Service#external.count_process,
-        count_thread = Service#external.count_thread,
-        max_r = Service#external.max_r,
-        max_t = Service#external.max_t,
-        options = services_validate_options_external(
-            Service#external.options
-        ),
-        uuid = cloudi_x_uuid:get_v1(UUID)},
-    services_validate([C | Output], L, UUID).
+    case services_validate_options_external(Options) of
+        {ok, NewOptions} ->
+            ID = cloudi_x_uuid:get_v1(UUID),
+            services_validate([#config_service_external{
+                                   prefix = Prefix,
+                                   file_path = FilePath,
+                                   args = Args,
+                                   env = Env,
+                                   dest_refresh = DestRefresh,
+                                   protocol = NewProtocol,
+                                   buffer_size = NewBufferSize,
+                                   timeout_init = TimeoutInit,
+                                   timeout_async = TimeoutAsync,
+                                   timeout_sync = TimeoutSync,
+                                   dest_list_deny = DestListDeny,
+                                   dest_list_allow = DestListAllow,
+                                   count_process = CountProcess,
+                                   count_thread = CountThread,
+                                   max_r = MaxR,
+                                   max_t = MaxT,
+                                   options = NewOptions,
+                                   uuid = ID} | Output], L, UUID);
+        {error, _} = Error ->
+            Error
+    end;
+services_validate(_, [Service | _], _) ->
+    {error, {services_invalid, Service}}.
 
 -spec services_validate_options_internal(OptionsList ::
     cloudi_service_api:service_options_internal()) ->
-    #config_service_options{}.
+    {ok, #config_service_options{}} |
+    {error, any()}.
 
 services_validate_options_internal(OptionsList) ->
     Options = #config_service_options{},
@@ -727,43 +824,109 @@ services_validate_options_internal(OptionsList) ->
          Options#config_service_options.info_pid_options},
         {duo_mode,
          Options#config_service_options.duo_mode}],
-    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-     RequestTimeoutAdjustment, ResponseTimeoutAdjustment,
-     RequestPidUses, RequestPidOptions, InfoPidUses, InfoPidOptions,
-     DuoMode] =
-        cloudi_proplists:take_values(Defaults, OptionsList),
-    true = (PriorityDefault >= ?PRIORITY_HIGH) and
-           (PriorityDefault =< ?PRIORITY_LOW),
-    true = (QueueLimit =:= undefined) orelse
-           (is_integer(QueueLimit) and (QueueLimit >= 1)),
-    true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
-    true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
-    true = is_boolean(RequestTimeoutAdjustment),
-    true = is_boolean(ResponseTimeoutAdjustment),
-    true = (RequestPidUses =:= infinity) orelse
-           (is_integer(RequestPidUses) and (RequestPidUses >= 1)),
-    true = (InfoPidUses =:= infinity) orelse
-           (is_integer(InfoPidUses) and (InfoPidUses >= 1)),
-    true = is_boolean(DuoMode),
-    false = (DuoMode =:= true) and (InfoPidUses =/= infinity),
-    Options#config_service_options{
-        priority_default = PriorityDefault,
-        queue_limit = QueueLimit,
-        dest_refresh_start = DestRefreshStart,
-        dest_refresh_delay = DestRefreshDelay,
-        request_timeout_adjustment = RequestTimeoutAdjustment,
-        response_timeout_adjustment = ResponseTimeoutAdjustment,
-        request_pid_uses = RequestPidUses,
-        request_pid_options =
-            services_validate_option_pid_options(RequestPidOptions),
-        info_pid_uses = InfoPidUses,
-        info_pid_options =
-            services_validate_option_pid_options(InfoPidOptions),
-        duo_mode = DuoMode}.
+    case cloudi_proplists:take_values(Defaults, OptionsList) of
+        [PriorityDefault, _, _, _, _, _, _, _, _, _, _]
+        when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
+                  (PriorityDefault =< ?PRIORITY_LOW)) ->
+            {error, {service_options_priority_default_invalid,
+                     PriorityDefault}};
+        [_, QueueLimit, _, _, _, _, _, _, _, _, _]
+        when not ((QueueLimit =:= undefined) orelse
+                  (is_integer(QueueLimit) andalso
+                   (QueueLimit >= 1))) ->
+            {error, {service_options_queue_limit_invalid,
+                     QueueLimit}};
+        [_, _, DestRefreshStart, _, _, _, _, _, _, _, _]
+        when not (is_integer(DestRefreshStart) andalso
+                  (DestRefreshStart > 0)) ->
+            {error, {service_options_dest_refresh_start_invalid,
+                     DestRefreshStart}};
+        [_, _, _, DestRefreshDelay, _, _, _, _, _, _, _]
+        when not (is_integer(DestRefreshDelay) andalso
+                  (DestRefreshDelay > 0)) ->
+            {error, {service_options_dest_refresh_delay_invalid,
+                     DestRefreshDelay}};
+        [_, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _]
+        when not is_boolean(RequestTimeoutAdjustment) ->
+            {error, {service_options_request_timeout_adjustment_invalid,
+                     RequestTimeoutAdjustment}};
+        [_, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _]
+        when not is_boolean(ResponseTimeoutAdjustment) ->
+            {error, {service_options_response_timeout_adjustment_invalid,
+                     ResponseTimeoutAdjustment}};
+        [_, _, _, _, _, _, RequestPidUses, _, _, _, _]
+        when not ((RequestPidUses =:= infinity) orelse
+                  (is_integer(RequestPidUses) andalso
+                   (RequestPidUses >= 1))) ->
+            {error, {service_options_request_pid_uses_invalid,
+                     RequestPidUses}};
+        [_, _, _, _, _, _, _, RequestPidOptions, _, _, _]
+        when not is_list(RequestPidOptions) ->
+            {error, {service_options_request_pid_options_invalid,
+                     RequestPidOptions}};
+        [_, _, _, _, _, _, _, _, InfoPidUses, _, _]
+        when not ((InfoPidUses =:= infinity) orelse
+                  (is_integer(InfoPidUses) andalso
+                   (InfoPidUses >= 1))) ->
+            {error, {service_options_info_pid_uses_invalid,
+                     InfoPidUses}};
+        [_, _, _, _, _, _, _, _, _, InfoPidOptions, _]
+        when not is_list(InfoPidOptions) ->
+            {error, {service_options_info_pid_options_invalid,
+                     InfoPidOptions}};
+        [_, _, _, _, _, _, _, _, _, _, DuoMode]
+        when not is_boolean(DuoMode) ->
+            {error, {service_options_duo_mode_invalid,
+                     DuoMode}};
+        [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
+         RequestTimeoutAdjustment, ResponseTimeoutAdjustment,
+         RequestPidUses, RequestPidOptions, InfoPidUses, InfoPidOptions,
+         DuoMode]
+        when not ((DuoMode =:= true) andalso
+                  (InfoPidUses =/= infinity)) ->
+            case services_validate_option_pid_options(RequestPidOptions) of
+                {ok, NewRequestPidOptions} ->
+                    case services_validate_option_pid_options(InfoPidOptions) of
+                        {ok, NewInfoPidOptions} ->
+                            {ok, Options#config_service_options{
+                                priority_default =
+                                    PriorityDefault,
+                                queue_limit =
+                                    QueueLimit,
+                                dest_refresh_start =
+                                    DestRefreshStart,
+                                dest_refresh_delay =
+                                    DestRefreshDelay,
+                                request_timeout_adjustment =
+                                    RequestTimeoutAdjustment,
+                                response_timeout_adjustment =
+                                    ResponseTimeoutAdjustment,
+                                request_pid_uses =
+                                    RequestPidUses,
+                                request_pid_options =
+                                    NewRequestPidOptions,
+                                info_pid_uses =
+                                    InfoPidUses,
+                                info_pid_options =
+                                    NewInfoPidOptions,
+                                duo_mode =
+                                    DuoMode}};
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _, _, _, _, _, _, _] ->
+            {error, {service_options_invalid, OptionsList}};
+        [_, _, _, _, _, _, _, _, _, _, _ | Extra] ->
+            {error, {service_options_invalid, Extra}}
+    end.
 
 -spec services_validate_options_external(OptionsList ::
     cloudi_service_api:service_options_external()) ->
-    #config_service_options{}.
+    {ok, #config_service_options{}} |
+    {error, any()}.
 
 services_validate_options_external(OptionsList) ->
     Options = #config_service_options{},
@@ -780,99 +943,250 @@ services_validate_options_external(OptionsList) ->
          Options#config_service_options.request_timeout_adjustment},
         {response_timeout_adjustment,
          Options#config_service_options.response_timeout_adjustment}],
-    [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-     RequestTimeoutAdjustment, ResponseTimeoutAdjustment] =
-        cloudi_proplists:take_values(Defaults, OptionsList),
-    true = (PriorityDefault >= ?PRIORITY_HIGH) and
-           (PriorityDefault =< ?PRIORITY_LOW),
-    true = (QueueLimit =:= undefined) orelse
-           (is_integer(QueueLimit) and (QueueLimit >= 1)),
-    true = is_integer(DestRefreshStart) and (DestRefreshStart > 0),
-    true = is_integer(DestRefreshDelay) and (DestRefreshDelay > 0),
-    true = is_boolean(RequestTimeoutAdjustment),
-    true = is_boolean(ResponseTimeoutAdjustment),
-    Options#config_service_options{
-        priority_default = PriorityDefault,
-        queue_limit = QueueLimit,
-        dest_refresh_start = DestRefreshStart,
-        dest_refresh_delay = DestRefreshDelay,
-        request_timeout_adjustment = RequestTimeoutAdjustment,
-        response_timeout_adjustment = ResponseTimeoutAdjustment}.
+    case cloudi_proplists:take_values(Defaults, OptionsList) of
+        [PriorityDefault, _, _, _, _, _]
+        when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
+                  (PriorityDefault =< ?PRIORITY_LOW)) ->
+            {error, {service_options_priority_default_invalid,
+                     PriorityDefault}};
+        [_, QueueLimit, _, _, _, _]
+        when not ((QueueLimit =:= undefined) orelse
+                  (is_integer(QueueLimit) andalso
+                   (QueueLimit >= 1))) ->
+            {error, {service_options_queue_limit_invalid,
+                     QueueLimit}};
+        [_, _, DestRefreshStart, _, _, _]
+        when not (is_integer(DestRefreshStart) andalso
+                  (DestRefreshStart > 0)) ->
+            {error, {service_options_dest_refresh_start_invalid,
+                     DestRefreshStart}};
+        [_, _, _, DestRefreshDelay, _, _]
+        when not (is_integer(DestRefreshDelay) andalso
+                  (DestRefreshDelay > 0)) ->
+            {error, {service_options_dest_refresh_delay_invalid,
+                     DestRefreshDelay}};
+        [_, _, _, _, RequestTimeoutAdjustment, _]
+        when not is_boolean(RequestTimeoutAdjustment) ->
+            {error, {service_options_request_timeout_adjustment_invalid,
+                     RequestTimeoutAdjustment}};
+        [_, _, _, _, _, ResponseTimeoutAdjustment]
+        when not is_boolean(ResponseTimeoutAdjustment) ->
+            {error, {service_options_response_timeout_adjustment_invalid,
+                     ResponseTimeoutAdjustment}};
+        [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
+         RequestTimeoutAdjustment, ResponseTimeoutAdjustment] ->
+            {ok, Options#config_service_options{
+                priority_default =
+                    PriorityDefault,
+                queue_limit =
+                    QueueLimit,
+                dest_refresh_start =
+                    DestRefreshStart,
+                dest_refresh_delay =
+                    DestRefreshDelay,
+                request_timeout_adjustment =
+                    RequestTimeoutAdjustment,
+                response_timeout_adjustment =
+                    ResponseTimeoutAdjustment}};
+        [_, _, _, _, _, _ | Extra] ->
+            {error, {service_options_invalid, Extra}}
+    end.
 
-services_validate_option_pid_options([]) ->
-    [link];
-services_validate_option_pid_options([_ | _] = L) ->
-    PidOptions0 = [link],
-    PidOptions1 = case proplists:get_value(fullsweep_after, L) of
-        undefined ->
-            PidOptions0;
-        V1 when is_integer(V1), V1 >= 0 ->
-            [{fullsweep_after, V1} | PidOptions0]
-    end,
-    PidOptions2 = case proplists:get_value(min_heap_size, L) of
-        undefined ->
-            PidOptions1;
-        V2 when is_integer(V2), V2 >= 0 ->
-            [{min_heap_size, V2} | PidOptions1]
-    end,
-    PidOptions3 = case proplists:get_value(min_bin_vheap_size, L) of
-        undefined ->
-            PidOptions2;
-        V3 when is_integer(V3), V3 >= 0 ->
-            [{min_bin_vheap_size, V3} | PidOptions2]
-    end,
-    case proplists:get_value(priority, L) of
-        undefined ->
-            ok;
-        _ ->
-            ?LOG_WARN("priority ignored in pid_options", [])
-    end,
-    PidOptions3.
+services_validate_option_pid_options(OptionsList) ->
+    services_validate_option_pid_options([link], OptionsList).
+
+services_validate_option_pid_options(Output, []) ->
+    {ok, lists:reverse(Output)};
+services_validate_option_pid_options(Output,
+                                     [{fullsweep_after, V} = PidOption |
+                                      OptionsList])
+    when is_integer(V), V >= 0 ->
+    services_validate_option_pid_options([PidOption | Output], OptionsList);
+services_validate_option_pid_options(Output,
+                                     [{min_heap_size, V} = PidOption |
+                                      OptionsList])
+    when is_integer(V), V >= 0 ->
+    services_validate_option_pid_options([PidOption | Output], OptionsList);
+services_validate_option_pid_options(Output,
+                                     [{min_bin_vheap_size, V} = PidOption |
+                                      OptionsList])
+    when is_integer(V), V >= 0 ->
+    services_validate_option_pid_options([PidOption | Output], OptionsList);
+services_validate_option_pid_options(_, [PidOption | _]) ->
+    {error, {service_options_pid_invalid, PidOption}}.
 
 acl_lookup_new(L) ->
     acl_lookup_add(L, dict:new()).
 
 acl_lookup_add(L, OldLookup) ->
-    acl_expand(L, OldLookup, acl_store(L, OldLookup)).
+    case acl_store(L, OldLookup) of
+        {ok, NewLookup} ->
+            acl_expand(L, OldLookup, NewLookup);
+        {error, _} = Error ->
+            Error
+    end.
 
 acl_store([], Lookup) ->
-    Lookup;
+    {ok, Lookup};
 acl_store([{Key, [E | _] = Value} | L], Lookup)
-    when is_atom(E); is_list(E) ->
-    acl_store(L, dict:store(Key, Value, Lookup)).
+    when is_atom(E); (is_list(E) andalso is_integer(hd(E))) ->
+    acl_store(L, dict:store(Key, Value, Lookup));
+acl_store([H | _], _) ->
+    {error, {acl_invalid, H}}.
 
 acl_expand([], LookupFinal, _) ->
-    LookupFinal;
+    {ok, LookupFinal};
 acl_expand([{Key, Value} | L], LookupFinal, LookupConfig) ->
-    NewValue = acl_expand_values([], Value, [], Key, LookupConfig),
-    acl_expand(L, dict:store(Key, NewValue, LookupFinal), LookupConfig).
+    case acl_expand_values([], Value, [], Key, LookupConfig) of
+        {ok, NewValue} ->
+            acl_expand(L, dict:store(Key, NewValue, LookupFinal),
+                       LookupConfig);
+        {error, _} = Error ->
+            Error
+    end.
 
 acl_expand_values(Output, [], _Path, _Key, _Lookup) ->
-    lists:reverse(Output);
+    {ok, lists:reverse(Output)};
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_atom(E) ->
     case lists:member(E, Path) of
         true ->
-            ?LOG_ERROR("cyclic ACL definition of ~p with ~p", [Key, E]),
-            acl_expand_values(Output, L, Path, Key, Lookup);
+            {error, {acl_cyclic, Key, E}};
         false ->
             case dict:find(E, Lookup) of
                 error ->
-                    ?LOG_ERROR("ACL definition of ~p missing", [E]),
-                    acl_expand_values(Output, L, Path, Key, Lookup);
+                    {error, {acl_not_found, E}};
                 {ok, OtherL} ->
-                    acl_expand_values(acl_expand_values(Output, OtherL,
-                                                        [E | Path], Key,
-                                                        Lookup),
-                                      L, Path, Key, Lookup)
+                    case acl_expand_values(Output, OtherL,
+                                           [E | Path], Key, Lookup) of
+                        {ok, NewOutput} ->
+                            acl_expand_values(NewOutput, L, Path, Key, Lookup);
+                        {error, _} = Error ->
+                            Error
+                    end
             end
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
-    when is_list(E), is_integer(erlang:hd(E)) ->
+    when is_list(E), is_integer(hd(E)) ->
     case cloudi_x_trie:is_pattern(E) of
         true ->
             acl_expand_values([E | Output], L, Path, Key, Lookup);
         false ->
             acl_expand_values([E ++ "*" | Output], L, Path, Key, Lookup)
+    end;
+acl_expand_values(_, [E | _], _, _, _) ->
+    {error, {acl_invalid, E}}.
+
+services_remove_uuid(Value, Services, Timeout) ->
+    services_remove_uuid(Value, [], Services, Timeout).
+
+services_remove_uuid([], RemoveServices, Services, Timeout) ->
+    case services_remove_all(lists:reverse(RemoveServices),
+                             Services, Timeout) of
+        {ok, _} = Success ->
+            Success;
+        {error, _} = Error ->
+            Error
+    end;
+services_remove_uuid([ID | IDs], RemoveServices, Services, Timeout)
+    when is_binary(ID), byte_size(ID) == 16 ->
+    {ServiceList, NextServices} = lists:partition(fun(S) ->
+        (is_record(S, config_service_internal) andalso
+         (S#config_service_internal.uuid == ID)) orelse
+        (is_record(S, config_service_external) andalso
+         (S#config_service_external.uuid == ID))
+    end, Services),
+    case ServiceList of
+        [] ->
+            {error, {service_not_found, ID}};
+        [Service] ->
+            services_remove_uuid(IDs, [Service | RemoveServices],
+                                 NextServices, Timeout)
+    end;
+services_remove_uuid([ID | _], _, _, _) ->
+    {error, {service_invalid, ID}}.
+
+services_remove_all([], Services, _) ->
+    {ok, Services};
+services_remove_all([Service | RemoveServices], Services, Timeout) ->
+    Remove = if
+        is_record(Service, config_service_internal) ->
+            not lists:any(fun(S) ->
+                is_record(S, config_service_internal) andalso
+                (S#config_service_internal.module == 
+                 Service#config_service_internal.module)
+            end, Services);
+        true ->
+            false
+    end,
+    case cloudi_configurator:service_stop(Service, Remove, Timeout) of
+        ok ->
+            services_remove_all(RemoveServices, Services, Timeout);
+        {error, _} = Error ->
+            Error
     end.
+
+services_restart_uuid(Value, Services, Timeout) ->
+    services_restart_uuid(Value, [], Services, Timeout).
+
+services_restart_uuid([], RestartServices, _, Timeout) ->
+    case services_restart_all(lists:reverse(RestartServices), Timeout) of
+        ok ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end;
+services_restart_uuid([ID | IDs], RestartServices, Services, Timeout)
+    when is_binary(ID), byte_size(ID) == 16 ->
+    ServiceList = lists:filter(fun(S) ->
+        (is_record(S, config_service_internal) andalso
+         (S#config_service_internal.uuid == ID)) orelse
+        (is_record(S, config_service_external) andalso
+         (S#config_service_external.uuid == ID))
+    end, Services),
+    case ServiceList of
+        [] ->
+            {error, {service_not_found, ID}};
+        [Service] ->
+            services_restart_uuid(IDs, [Service | RestartServices],
+                                  Services, Timeout)
+    end;
+services_restart_uuid([ID | _], _, _, _) ->
+    {error, {service_invalid, ID}}.
+
+services_restart_all([], _) ->
+    ok;
+services_restart_all([Service | RestartServices], Timeout) ->
+    case cloudi_configurator:service_restart(Service, Timeout) of
+        ok ->
+            services_restart_all(RestartServices, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+nodes_validate([]) ->
+    ok;
+nodes_validate([A | As])
+    when is_atom(A) ->
+    case lists:member($@, erlang:atom_to_list(A)) of
+        true ->
+            nodes_validate(As);
+        false ->
+            {error, {node_invalid, A}}
+    end;
+nodes_validate([A | _]) ->
+    {error, {node_invalid, A}}.
+
+nodes_remove_elements([], Nodes) ->
+    {ok, Nodes};
+nodes_remove_elements([A | As], Nodes)
+    when is_atom(A) ->
+    case cloudi_lists:delete_checked(A, Nodes) of
+        false ->
+            {error, {node_not_found, A}};
+        NewNodes ->
+            nodes_remove_elements(As, NewNodes)
+    end;
+nodes_remove_elements([A | _], _) ->
+    {error, {node_invalid, A}}.
 

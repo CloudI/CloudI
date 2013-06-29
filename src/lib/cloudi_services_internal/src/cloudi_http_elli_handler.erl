@@ -84,8 +84,8 @@ handle(Req, #elli_state{service = Service,
     HeadersIncoming = cloudi_x_elli_request:headers(Req),
     [PathRaw | _] = binary:split(cloudi_x_elli_request:raw_path(Req),
                                  [<<"?">>]),
-    HostRaw = case lists:keyfind('Host', 1, HeadersIncoming) of
-        {'Host', H} ->
+    HostRaw = case lists:keyfind(<<"Host">>, 1, HeadersIncoming) of
+        {<<"Host">>, H} ->
             H;
         false ->
             undefined
@@ -114,9 +114,9 @@ handle(Req, #elli_state{service = Service,
         Method =:= 'TRACE' ->
             NameIncoming ++ "/trace";
         Method =:= 'OPTIONS' ->
-            NameIncoming ++ "/options";
-        Method =:= 'CONNECT' ->
-            NameIncoming ++ "/connect"
+            NameIncoming ++ "/options"%;
+        %Method =:= 'CONNECT' ->
+        %    NameIncoming ++ "/connect"
     end,
     RequestBinary = if
         Method =:= 'GET' ->
@@ -220,10 +220,10 @@ handle_event(_Event, _Args, _Config) ->
 %%%------------------------------------------------------------------------
 
 header_content_type(Headers) ->
-    case lists:keyfind('Content-Type', 1, Headers) of
+    case lists:keyfind(<<"Content-Type">>, 1, Headers) of
         false ->
             <<>>;
-        {'Content-Type', Value} ->
+        {<<"Content-Type">>, Value} ->
             hd(binary:split(Value, <<",">>))
     end.
 
@@ -233,9 +233,6 @@ headers_external_incoming(L) ->
 
 headers_external_incoming(Result, []) ->
     Result;
-headers_external_incoming(Result, [{K, V} | L]) when is_atom(K) ->
-    headers_external_incoming([[erlang:atom_to_binary(K, utf8), 0,
-                                V, 0] | Result], L);
 headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
     headers_external_incoming([[K, 0, V, 0] | Result], L).
 

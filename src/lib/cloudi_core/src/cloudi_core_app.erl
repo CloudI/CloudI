@@ -76,7 +76,12 @@
 start(_, _) ->
     cloudi_x_quickrand:seed(),
     {ok, Path} = application:get_env(configuration),
-    cloudi_core_sup:start_link(cloudi_configuration:open(Path)).
+    case cloudi_configuration:open(Path) of
+        {ok, Config} ->
+            cloudi_core_sup:start_link(Config);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
