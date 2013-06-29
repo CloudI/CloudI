@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -69,6 +69,7 @@
 -define(DEFAULT_BACKLOG,                   128).
 -define(DEFAULT_NODELAY,                  true).
 -define(DEFAULT_RECV_TIMEOUT,        30 * 1000). % milliseconds
+-define(DEFAULT_WEBSOCKET_TIMEOUT,    infinity). % milliseconds
 -define(DEFAULT_SSL,                     false).
 -define(DEFAULT_COMPRESS,                false).
 -define(DEFAULT_MAX_CONNECTIONS,          4096).
@@ -82,6 +83,7 @@
 -define(DEFAULT_CONTENT_TYPE,        undefined). % force a content type
 -define(DEFAULT_USE_WEBSOCKETS,          false).
 -define(DEFAULT_USE_HOST_PREFIX,         false). % for virtual hosts
+-define(DEFAULT_USE_CLIENT_IP_PREFIX,    false).
 -define(DEFAULT_USE_METHOD_SUFFIX,        true). % get/post/etc. name suffix
 
 
@@ -107,6 +109,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {backlog,                  ?DEFAULT_BACKLOG},
         {nodelay,                  ?DEFAULT_NODELAY},
         {recv_timeout,             ?DEFAULT_RECV_TIMEOUT},
+        {websocket_timeout,        ?DEFAULT_WEBSOCKET_TIMEOUT},
         {ssl,                      ?DEFAULT_SSL},
         {compress,                 ?DEFAULT_COMPRESS},
         {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
@@ -120,17 +123,21 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {content_type,             ?DEFAULT_CONTENT_TYPE},
         {use_websockets,           ?DEFAULT_USE_WEBSOCKETS},
         {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
+        {use_client_ip_prefix,     ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_method_suffix,        ?DEFAULT_USE_METHOD_SUFFIX}],
-    [Interface, Port, Backlog, NoDelay, RecvTimeout, SSL, Compress,
-     MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
+    [Interface, Port, Backlog, NoDelay, RecvTimeout, WebsocketTimeout,
+     SSL, Compress, MaxConnections,
+     MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, DefaultContentType0,
-     UseWebSockets, UseHostPrefix, UseMethodSuffix] =
+     UseWebSockets, UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
-    true = is_integer(RecvTimeout),
+    true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
+    true = (WebsocketTimeout =:= infinity) orelse
+           (is_integer(WebsocketTimeout) andalso WebsocketTimeout > 0),
     true = is_boolean(Compress),
     true = is_integer(MaxConnections),
     true = is_integer(MaxEmptyLines),
@@ -151,6 +158,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     end,
     true = is_boolean(UseWebSockets),
     true = is_boolean(UseHostPrefix),
+    true = is_boolean(UseClientIpPrefix),
     true = is_boolean(UseMethodSuffix),
     Service = cloudi_service:self(Dispatcher),
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
@@ -160,10 +168,12 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 #cowboy_state{service = Service,
                               timeout_async = TimeoutAsync,
                               prefix = Prefix,
+                              timeout_websocket = WebsocketTimeout,
                               output_type = OutputType,
                               default_content_type = DefaultContentType1,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
+                              use_client_ip_prefix = UseClientIpPrefix,
                               use_method_suffix = UseMethodSuffix,
                               content_type_lookup = content_type_lookup()}}]}
     ]),

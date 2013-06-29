@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -143,11 +143,11 @@
 
 -spec acl_add(L :: list({atom(), acl()}), 
               Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
-acl_add(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+acl_add([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -161,11 +161,11 @@ acl_add(L, Timeout)
 
 -spec acl_remove(L :: list(atom()),
                  Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
-acl_remove(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+acl_remove([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -178,11 +178,11 @@ acl_remove(L, Timeout)
 
 -spec services_add(L :: list(#internal{} | #external{}),
                    Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
-services_add(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_add([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -198,11 +198,11 @@ services_add(L, Timeout)
 
 -spec services_remove(L :: list(<<_:128>>),
                       Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
-services_remove(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_remove([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -220,11 +220,11 @@ services_remove(L, Timeout)
 
 -spec services_restart(L :: list(<<_:128>>), 
                        Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
-services_restart(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_restart([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_restart(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -234,7 +234,8 @@ services_restart(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services(Timeout :: pos_integer()) ->
-    ok.
+    {ok, binary()} |
+    {error, any()}.
 
 services(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -250,7 +251,8 @@ services(Timeout)
 
 -spec nodes_add(L :: list(node()),
                 Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
 nodes_add(L, Timeout)
     when length(L) >= 1,
@@ -265,7 +267,8 @@ nodes_add(L, Timeout)
 
 -spec nodes_remove(L :: list(node()),
                    Timeout :: pos_integer()) ->
-    ok.
+    ok |
+    {error, any()}.
 
 nodes_remove(L, Timeout)
     when length(L) >= 1,
@@ -279,7 +282,8 @@ nodes_remove(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_alive(Timeout :: pos_integer()) ->
-    list(node()).
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes_alive(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -292,7 +296,8 @@ nodes_alive(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_dead(Timeout :: pos_integer()) ->
-    list(node()).
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes_dead(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -305,7 +310,8 @@ nodes_dead(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes(Timeout :: pos_integer()) ->
-    list(node()).
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -355,7 +361,8 @@ log_redirect(Node, Timeout)
 
 -spec code_path_add(Dir :: file:filename(),
                     Timeout :: pos_integer()) ->
-    ok | {error, any()}.
+    ok |
+    {error, any()}.
 
 code_path_add(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -376,7 +383,8 @@ code_path_add(Dir, Timeout)
 
 -spec code_path_remove(Dir :: file:filename(),
                        Timeout :: pos_integer()) ->
-    ok | {error, any()}.
+    ok |
+    {error, any()}.
 
 code_path_remove(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -397,11 +405,11 @@ code_path_remove(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path(Timeout :: pos_integer()) ->
-    list(file:filename()).
+    {ok, list(file:filename())}.
 
 code_path(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
-    code:get_path().
+    {ok, code:get_path()}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

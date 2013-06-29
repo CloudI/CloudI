@@ -180,7 +180,7 @@ cloudi_service_handle_info(Request, State, _) ->
 
 cloudi_service_terminate(_, #state{listener = ListenerPid,
                                    requests = Requests}) ->
-    cloudi_x_elli:stop(ListenerPid),
+    (catch cloudi_x_elli:stop(ListenerPid)),
     dict:map(fun(_, HandlerPid) ->
         HandlerPid ! {elli_error, timeout}
     end, Requests),

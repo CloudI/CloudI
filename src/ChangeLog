@@ -1,11 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-06-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add websocket_timeout and use_client_ip_prefix
+      configuration options to the cloudi_service_http_cowboy service
+    * Add validation to the CloudI Service API that doesn't cause internal
+      process execution exceptions
+
 2013-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Add elli HTTP web server for comparison
+    * Add the elli HTTP server for comparison
       (performance shows that cowboy should be used instead)
-    * Fix makefile issue with configuration files
+    * Fix the makefile issue with configuration files
 
 2013-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -192,15 +192,19 @@ format_erlang_f(F, 2, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(cloudi_string:binary_to_term(Input), Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     Result;
+                {ok, Result} ->
+                    cloudi_string:term_to_binary(Result);
                 Result ->
                     cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
             case F(cloudi_string:list_to_term(Input), Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     erlang:binary_to_list(Result);
+                {ok, Result} ->
+                    cloudi_string:term_to_list(Result);
                 Result ->
                     cloudi_string:term_to_list(Result)
             end
@@ -210,15 +214,19 @@ format_erlang_f(F, 1, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     Result;
+                {ok, Result} ->
+                    cloudi_string:term_to_binary(Result);
                 Result ->
                     cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
             case F(Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     erlang:binary_to_list(Result);
+                {ok, Result} ->
+                    cloudi_string:term_to_list(Result);
                 Result ->
                     cloudi_string:term_to_list(Result)
             end
@@ -237,9 +245,13 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
         F when length(Params) == 1, is_function(F, 2) ->
             F(cloudi_string:binary_to_term(erlang:hd(Params)), Timeout)
          end) of
-        Result when is_binary(Result) ->
+        {ok, Result} when is_binary(Result) ->
             cloudi_json_rpc:response_to_json(
                 Result, Id
+            );
+        {ok, Result} ->
+            cloudi_json_rpc:response_to_json(
+                cloudi_string:term_to_binary(Result), Id
             );
         Result ->
             cloudi_json_rpc:response_to_json(
