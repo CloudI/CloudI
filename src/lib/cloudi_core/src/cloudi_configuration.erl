@@ -501,9 +501,13 @@ new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
             Error
     end;
 new([{'nodes', automatic} | Terms], Config) ->
-%XXX change reltool_util for this
-    application:start(cloudi_x_combonodefinder),
-    new(Terms, Config);
+    case cloudi_x_reltool_util:ensure_application_started(
+        cloudi_x_combonodefinder) of
+        ok ->
+            new(Terms, Config);
+        {error, _} = Error ->
+            Error
+    end;
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'nodes', [A | _] = Value} | Terms], Config)
