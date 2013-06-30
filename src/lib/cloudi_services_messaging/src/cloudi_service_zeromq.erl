@@ -157,7 +157,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                              [[I2 | _] | _] = EndpointL}}, D) ->
         true = is_integer(I1) and is_integer(I2),
         cloudi_service:subscribe(Dispatcher, Name),
-        {ok, S} = erlzmq:socket(Context, [push, {active_pid, Service}]),
+        {ok, S} = erlzmq:socket(Context, push),
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:bind(S, Endpoint)
         end, EndpointL),
