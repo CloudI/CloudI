@@ -82,7 +82,9 @@
         % for a service request exiting CloudI
         response_pending = false,
         response_timer,
-        request_pending
+        request_pending,
+        queued = cloudi_x_pqueue4:new(),
+        recv_timeouts = dict:new()
     }).
 
 %%%------------------------------------------------------------------------
@@ -313,12 +315,13 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
             ?LOG_TRACE_APPLY(fun websocket_request_end/3,
                              [Name, Timeout, OldTimeout])
     end,
-    {ok, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-                            response_pending = false,
-                            response_timer = undefined,
-                            request_pending = undefined}
-                        }};
+    process_queue(Req,
+                  State#cowboy_state{websocket_state =
+                      WebSocketState#websocket_state{
+                          response_pending = false,
+                          response_timer = undefined,
+                          request_pending = undefined}
+                      });
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{service = Service,
@@ -377,12 +380,13 @@ websocket_info(response_timeout, Req,
                              websocket_state = #websocket_state{
                                  response_pending = true} = WebSocketState
                              } = State) ->
-    {ok, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-                            response_pending = false,
-                            response_timer = undefined,
-                            request_pending = undefined}
-                        }};
+    process_queue(Req,
+                  State#cowboy_state{websocket_state =
+                      WebSocketState#websocket_state{
+                          response_pending = false,
+                          response_timer = undefined,
+                          request_pending = undefined}
+                      });
 
 websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
@@ -426,6 +430,57 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
                             response_timer = ResponseTimer,
                             request_pending = T}
                         }};
+
+websocket_info({Type, _, _, _, Request,
+                Timeout, Priority, TransId, _} = T, Req,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = true,
+                                 queued = Queue,
+                                 recv_timeouts = RecvTimeouts} = WebSocketState
+                             } = State)
+    when (((OutputType =:= list) andalso
+           (is_list(Request) orelse is_binary(Request))) or
+          ((OutputType =:= internal orelse OutputType =:= external orelse
+            OutputType =:= binary) andalso is_binary(Request))),
+         (Type =:= 'cloudi_service_send_async' orelse
+          Type =:= 'cloudi_service_send_sync'),
+         (Timeout > 0) ->
+    {ok, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+         recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, self(),
+                 {'cloudi_service_recv_timeout', Priority, TransId}),
+             RecvTimeouts),
+         queued = cloudi_x_pqueue4:in(T, Priority, Queue)}
+     }};
+
+websocket_info({Type, _, _, _, _, _, _, _, _}, Req,
+               #cowboy_state{use_websockets = true} = State)
+    when Type =:= 'cloudi_service_send_async';
+         Type =:= 'cloudi_service_send_sync' ->
+    {ok, Req, State};
+
+websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
+               #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 queued = Queue,
+                                 recv_timeouts = RecvTimeouts} = WebSocketState
+                             } = State) ->
+    NewQueue = cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
+                   Id /= TransId
+               end, Priority, Queue),
+    {ok, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+         recv_timeouts = dict:erase(TransId, RecvTimeouts),
+         queued = NewQueue}
+     }};
+
+websocket_info({cowboy_response, _ResponseInfo, _Response}, Req, State) ->
+    {ok, Req, State};
+
+websocket_info({cowboy_error, _Reason}, Req, State) ->
+    {ok, Req, State};
 
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
@@ -613,4 +668,33 @@ ip_address_string({N1, N2, N3, N4, N5, N6, N7, N8}) ->
     cloudi_string:format("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
                          "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
                          [N1, N2, N3, N4, N5, N6, N7, N8]).
+
+process_queue(Req,
+              #cowboy_state{websocket_state =
+                  #websocket_state{
+                      response_pending = false,
+                      recv_timeouts = RecvTimeouts,
+                      queued = Queue} = WebSocketState} = State) ->
+    case cloudi_x_pqueue4:out(Queue) of
+        {empty, NewQueue} ->
+            {ok, Req,
+             State#cowboy_state{websocket_state =
+                 WebSocketState#websocket_state{queued = NewQueue}}};
+        {{value, {Type, Name, Pattern, RequestInfo, Request,
+                  _, Priority, TransId, Pid}}, NewQueue} ->
+            Timeout = case erlang:cancel_timer(dict:fetch(TransId,
+                                                          RecvTimeouts)) of
+                false ->
+                    0;
+                V ->
+                    V
+            end,
+            websocket_info({Type, Name, Pattern, RequestInfo, Request,
+                            Timeout, Priority, TransId, Pid}, Req,
+                           State#cowboy_state{websocket_state =
+                               WebSocketState#websocket_state{
+                                   recv_timeouts = dict:erase(TransId,
+                                                              RecvTimeouts),
+                                   queued = NewQueue}})
+    end.
 
