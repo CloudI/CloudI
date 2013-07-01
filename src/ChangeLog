@@ -4,6 +4,7 @@
 2013-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix for internal services so that the terminate function is always called
+    * Fix queuing on websocket connection for outgoing service requests
 
 2013-06-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
