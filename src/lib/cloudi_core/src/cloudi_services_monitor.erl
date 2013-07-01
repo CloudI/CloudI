@@ -70,6 +70,8 @@
 
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
+-define(TERMINATE_DELAY_MIN,  1000). % milliseconds
+-define(TERMINATE_DELAY_MAX, 60000). % milliseconds
 
 -record(state,
     {
@@ -165,9 +167,12 @@ handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
 handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {Pids, _}} ->
+        {ok, {Pids, #service{max_r = MaxR,
+                             max_t = MaxT}}} ->
+            Self = self(),
             NewServices = lists:foldl(fun(P, D) ->
-                erlang:exit(P, kill),
+                erlang:exit(P, shutdown),
+                erlang:send_after(terminate_delay(MaxT, MaxR), Self, {kill, P}),
                 cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
@@ -227,7 +232,6 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             end, Services, Pids),
             {noreply, State#state{services = NewServices}};
         error ->
-            ?LOG_INFO("Service pid ~p does not exist for shutdown", [Pid]),
             {noreply, State}
     end;
 
@@ -251,6 +255,15 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
             #state{services = Services} = State) ->
     {noreply, restart_stage2(Service, Services, State, ServiceId, OldPid)};
 
+handle_info({kill, Pid}, State) ->
+    case erlang:is_process_alive(Pid) of
+        true ->
+            erlang:exit(Pid, kill);
+        false ->
+            ok
+    end,
+    {noreply, State};
+
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -268,10 +281,14 @@ code_change(_, State, _) ->
 restart(Service, Services, State, ServiceId, OldPid) ->
     restart_stage1(Service, Services, State, ServiceId, OldPid).
 
-restart_stage1(#service{pids = Pids} = Service, Services,
+restart_stage1(#service{pids = Pids,
+                        max_r = MaxR,
+                        max_t = MaxT} = Service, Services,
                State, ServiceId, OldPid) ->
+    Self = self(),
     NewServices = lists:foldl(fun(P, D) ->
-        erlang:exit(P, kill),
+        erlang:exit(P, shutdown),
+        erlang:send_after(terminate_delay(MaxT, MaxR), Self, {kill, P}),
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
@@ -400,4 +417,13 @@ restart_stage2(#service{service_m = M,
             Services
     end,
     State#state{services = NewServices}.
+
+terminate_delay(_, 0) ->
+    ?TERMINATE_DELAY_MIN;
+terminate_delay(0, _) ->
+    ?TERMINATE_DELAY_MIN;
+terminate_delay(MaxT, MaxR) ->
+    erlang:min(erlang:max(erlang:round((1000 * MaxT) / MaxR),
+                          ?TERMINATE_DELAY_MIN),
+               ?TERMINATE_DELAY_MAX).
 
