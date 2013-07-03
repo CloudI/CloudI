@@ -4,4 +4,5 @@
 
 * `hello_world1` - Using CloudI configuration or the CloudI Service API
 * `hello_world2` - Including CloudI in your Erlang OTP/reltool release
+* `hello_world3` - Including CloudI as a rebar dependency
 

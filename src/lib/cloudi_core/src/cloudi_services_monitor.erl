@@ -168,11 +168,13 @@ handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, #service{max_r = MaxR,
-                             max_t = MaxT}}} ->
+                             max_t = MaxT} = Service}} ->
             Self = self(),
+            Shutdown = terminate_delay(MaxT, MaxR),
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
-                erlang:send_after(terminate_delay(MaxT, MaxR), Self, {kill, P}),
+                erlang:send_after(Shutdown, Self,
+                                  {kill, Shutdown, P, Service}),
                 cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
@@ -255,9 +257,14 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
             #state{services = Services} = State) ->
     {noreply, restart_stage2(Service, Services, State, ServiceId, OldPid)};
 
-handle_info({kill, Pid}, State) ->
+handle_info({kill, Shutdown, Pid,
+             #service{service_m = M,
+                      service_f = F,
+                      service_a = A}}, State) ->
     case erlang:is_process_alive(Pid) of
         true ->
+            ?LOG_ERROR("Service pid ~p brutal_kill after ~p ms (MaxT/MaxR)~n"
+                       " ~p:~p~p~n", [Pid, Shutdown, M, F, A]),
             erlang:exit(Pid, kill);
         false ->
             ok
