@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% Encoding: latin-1
 %%% File    : mysql_recv.erl
 %%% Author  : Fredrik Thulin <ft@it.su.se>
 %%% Descrip.: Handles data being received on a MySQL socket. Decodes
