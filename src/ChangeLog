@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the build system so that it can use an external rebar executable
+      specified by the configuration
+
+2013-07-03 Lukas Larsson   <garazdawi [at] gmail (dot) com>
+
+    * Fix emysql source file encoding for R17
+
 2013-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix for internal services so that the terminate function is always called
