@@ -1,3 +1,6 @@
+#-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+# ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
+
 AC_INIT([CloudI], [1.2.4], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
@@ -70,16 +73,16 @@ AC_ARG_WITH([python-debug],
         [use the debug version of python libraries and the
          python executable (ARG=yes), or use the normal version (ARG=no)
          @<:@ARG=no@:>@ ])],
-        [
-        if test "x$withval" = "xno"; then
-            PYTHON_DEBUG="no"
-        elif test "x$withval" = "xyes"; then
-            PYTHON_DEBUG="yes"
-        else
-            PYTHON_DEBUG="yes"
-        fi
-        ],
-        [PYTHON_DEBUG="no"])
+    [
+    if test "x$withval" = "xno"; then
+        PYTHON_DEBUG="no"
+    elif test "x$withval" = "xyes"; then
+        PYTHON_DEBUG="yes"
+    else
+        PYTHON_DEBUG="yes"
+    fi
+    ],
+    [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
 AS_IF([test "x$PYTHON_DEBUG" == "xno"],
     [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
@@ -90,7 +93,8 @@ AX_PROG_PYTHON_VERSION([2.7.0],
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
-AC_PATH_PROGS([RUBY],[ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
+AC_PATH_PROGS([RUBY],
+              [ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 
@@ -109,14 +113,29 @@ AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 
 # rebar dependency
-AC_CONFIG_COMMANDS([rebar],
-    [(cd $SRCDIR/external/rebar/ && \
-      $ESCRIPT bootstrap && \
-      mv ./rebar $BUILDDIR && \
-      echo "Rebar built" || exit 1)],
-    [ESCRIPT=$ESCRIPT
-     SRCDIR=$abs_top_srcdir
-     BUILDDIR=$abs_top_builddir])
+AC_ARG_VAR([REBAR],[rebar executable])
+AC_ARG_WITH([rebar],
+    [AS_HELP_STRING([--with-rebar@<:@=ARG@:>@],
+        [compile rebar executable for erlang dependency compilation (ARG=yes),
+         or use a preexisting rebar executable (ARG=no) @<:@ARG=yes@:>@ ])],
+    [want_rebar="$withval"], [want_rebar="yes"])
+if test "x$want_rebar" = "xyes"; then
+    AC_CONFIG_COMMANDS([rebar],
+        [(cd $SRCDIR/external/rebar/ && \
+          $ESCRIPT bootstrap && \
+          mv ./rebar $BUILDDIR && \
+          echo "Rebar built" || exit 1)],
+        [ESCRIPT=$ESCRIPT
+         SRCDIR=$abs_top_srcdir
+         BUILDDIR=$abs_top_builddir])
+fi
+AC_PATH_PROGS([REBAR], [rebar], , ["$abs_top_builddir"])
+if test "x$want_rebar" != "xyes" -a -z "$REBAR"; then
+    AC_MSG_ERROR([rebar not found (use --with-rebar)])
+else
+    REBAR="$abs_top_builddir/rebar"
+fi
+AC_SUBST(REBAR)
 
 # ZeroMQ dependency
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
