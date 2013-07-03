@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% Encoding: latin-1
 %%% File    : mysql_auth.erl
 %%% Author  : Fredrik Thulin <ft@it.su.se>
 %%% Descrip.: MySQL client authentication functions.
