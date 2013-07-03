@@ -129,11 +129,14 @@ if test "x$want_rebar" = "xyes"; then
          SRCDIR=$abs_top_srcdir
          BUILDDIR=$abs_top_builddir])
 fi
-AC_PATH_PROGS([REBAR], [rebar], , ["$abs_top_builddir"])
-if test "x$want_rebar" != "xyes" -a -z "$REBAR"; then
-    AC_MSG_ERROR([rebar not found (use --with-rebar)])
-else
-    REBAR="$abs_top_builddir/rebar"
+AC_PATH_PROGS([REBAR], [rebar], ,
+              ["$abs_top_builddir" "$abs_top_builddir/../.."])
+if test -z "$REBAR"; then
+    if test "x$want_rebar" != "xyes"; then
+        AC_MSG_ERROR([rebar not found (use --with-rebar)])
+    else
+        REBAR="$abs_top_builddir/rebar"
+    fi
 fi
 AC_SUBST(REBAR)
 
@@ -143,7 +146,7 @@ AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([
     cloudi.conf
-    rebar.config
+    rebar_src.config
     reltool.config
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_services_internal/src/cloudi_services_internal.app.src

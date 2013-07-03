@@ -5,6 +5,9 @@
 
     * Fix the build system so that it can use an external rebar executable
       specified by the configuration
+    * Add root rebar.config for using CloudI as a rebar dependency
+    * Add the hello_world3 example for rebar integration with CloudI
+      as a dependency for a release
 
 2013-07-03 Lukas Larsson   <garazdawi [at] gmail (dot) com>
 
