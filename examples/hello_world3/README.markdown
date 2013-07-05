@@ -26,8 +26,8 @@ module name:
 
     $ rebar get-deps
     $ export ERL_LIBS=deps/cloudi/install_local/lib/cloudi-1.2.4/lib/
-    $ rebar compile (or) erlc -o ebin/ src/hello_world3.erl
-    $ rebar generate (or) ../../src/lib/reltool_util/release
+    $ rebar compile
+    $ rebar generate
     $ cd release
     $ bin/cloudi_hello_world3 start
     $ curl http://localhost:6467/examples/hello_world3
