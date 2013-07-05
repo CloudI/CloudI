@@ -25,7 +25,7 @@ To use an Erlang/OTP application file for an internal service with the same
 module name:
 
     $ rebar get-deps
-    $ export ERL_LIBS=deps/cloudi_core/install_local/lib/cloudi-1.2.4/lib/
+    $ export ERL_LIBS=deps/cloudi/install_local/lib/cloudi-1.2.4/lib/
     $ rebar compile (or) erlc -o ebin/ src/hello_world3.erl
     $ rebar generate (or) ../../src/lib/reltool_util/release
     $ cd release
