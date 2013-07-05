@@ -67,6 +67,15 @@ to its integration and dependencies).
 - `Fri Jul  6 19:45:00 PDT 2012`
 - `BSD`
 
+`erlasticsearch`
+--------
+`Erlang ElasticSearch (thrift) Driver`
+
+- `https://github.com/dieswaytoofast/erlasticsearch`
+- `tag v1.3`
+- `Mon Jun 10 08:01:52 EST 2013`
+- `BSD`
+
 `etokyotyrant (medici)`
 -----------------------
 `Erlang TokyoTyrant (native) Driver`
@@ -153,6 +162,15 @@ to its integration and dependencies).
 - `2012-06-16 23:10:00 PST`
 - `New BSD`
 
+`poolboy`
+------------
+`Poolboy - A hunky Erlang worker pool factory`
+
+- `https://github.com/devinus/poolboy`
+- `1.0.0`
+- `Tue Apr 16 13:47:17 EDT 2013`
+- `Apache License`
+
 `ranch`
 -------
 `Erlang Socket acceptor pool for TCP protocols`
@@ -169,6 +187,15 @@ to its integration and dependencies).
 - `https://github.com/rebar/rebar`
 - `commit ebb474b7593527969a8ce7d43b42f00e4498c391 (2.1.0-pre)`
 - `Tue Feb 12 12:32:53 PST 2013`
+- `Apache License`
+
+`thrift`
+------------
+`Erlang Thrift software library`
+
+- `https://github.com/dieswaytoofast/thrift`
+- `commit f367c54ffcd522d9522c8ed0872c397be24da967`
+- `Sun May 19 17:13:30 EDT 2013`
 - `Apache License`
 
 `zeromq/v?/erlzmq`

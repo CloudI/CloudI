@@ -27,9 +27,12 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/ememcached/src \
      -d $(top_srcdir)/external/emysql/src \
      -d $(top_srcdir)/external/epgsql/src \
+     -d $(top_srcdir)/external/erlasticsearch/src \
      -d $(top_srcdir)/external/etokyotyrant/src \
      -d $(top_srcdir)/external/jsx/src \
-     -d $(top_srcdir)/external/ranch/src
+     -d $(top_srcdir)/external/poolboy/src \
+     -d $(top_srcdir)/external/ranch/src \
+     -d $(top_srcdir)/external/thrift/src
 
 all-local: rel/files/app.config \
            erlang-applications-scope-add \
@@ -61,6 +64,9 @@ rebar-directories-compile:
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
 	$(MKDIR_P) external/jsx/ebin
 	$(MKDIR_P) external/etokyotyrant/ebin
+	$(MKDIR_P) external/poolboy/ebin
+	$(MKDIR_P) external/thrift/ebin
+	$(MKDIR_P) external/erlasticsearch/ebin
 	$(MKDIR_P) external/epgsql/ebin
 	$(MKDIR_P) external/emysql/ebin
 	$(MKDIR_P) external/ememcached/ebin
@@ -159,7 +165,16 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/etokyotyrant && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
-	(cd $(top_srcdir)/external/epgsql && \
+	(cd $(top_srcdir)/external/poolboy; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/poolboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/thrift; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/thrift/ebin || exit 0)
+	(cd $(top_srcdir)/external/erlasticsearch; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/erlasticsearch/ebin || exit 0)
+	(cd $(top_srcdir)/external/epgsql; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
 	(cd $(top_srcdir)/external/emysql && \
@@ -239,6 +254,9 @@ rebar-directories-clean: rebar-clean
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
           $(top_builddir)/external/jsx/ebin \
           $(top_builddir)/external/etokyotyrant/ebin \
+          $(top_builddir)/external/poolboy/ebin \
+          $(top_builddir)/external/thrift/ebin \
+          $(top_builddir)/external/erlasticsearch/ebin \
           $(top_builddir)/external/epgsql/ebin \
           $(top_builddir)/external/emysql/ebin \
           $(top_builddir)/external/ememcached/ebin \
@@ -264,6 +282,9 @@ rebar-directories-clean: rebar-clean
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
           $(top_srcdir)/external/jsx/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
+          $(top_srcdir)/external/poolboy/ebin \
+          $(top_srcdir)/external/poolboy/ebin \
+          $(top_srcdir)/external/erlasticsearch/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
@@ -358,8 +379,9 @@ dialyze: all-local \
               external/cowboy/ebin \
               external/elli/ebin \
               external/dynamic_compile/ebin \
-              external/epgsql/ebin \
               external/etokyotyrant/ebin \
+              external/erlasticsearch/ebin \
+              external/epgsql/ebin \
               external/ememcached/ebin \
               external/ecouchdb/ebin \
               external/emysql/ebin \
@@ -371,7 +393,10 @@ dialyzer.plt:
                        compiler debugger ssl tools
 
 doc:
-	$(ESCRIPT) $(REBAR) doc || exit 0
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config doc || exit 0
+
+xref:
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config xref || exit 0
 
 run:
 	@echo

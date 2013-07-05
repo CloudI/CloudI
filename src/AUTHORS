@@ -1,20 +1,28 @@
 CloudI Contributors (chronological order):
-Michael Truog       <mjtruog [at] gmail (dot) com>
-Michael T. Richter  <ttmrichter [at] gmail (dot) com>
-Hardy Jones         <jones3.hardy [at] gmail (dot) com>
-Lukas Larsson       <garazdawi [at] gmail (dot) com>
+Michael Truog               <mjtruog [at] gmail (dot) com>
+Michael T. Richter          <ttmrichter [at] gmail (dot) com>
+Hardy Jones                 <jones3.hardy [at] gmail (dot) com>
+Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+Juan Jose Comellas
+Lukas Larsson               <garazdawi [at] gmail (dot) com>
 
 CloudI Integration Dependencies:
-cowboy        Loïc Hoguin <essen@ninenines.eu>
-ecouchdb      Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
-ememcached    Nick Gerakines <nick@gerakines.net>
-emysql        Magnus Ahltorp <ahltorp@nada.kth.se>
-epgsql        Will Glozer
-erlzmq        Yurii Rashkovskii <yrashk@gmail.com>
-etokyotyrant  Jim McCoy <mccoy@mad-scientist.com>
-jinterface    Ericsson's OTP Team
-jsonlib       Josh Marshall
-jsx           Alisdair Sullivan <alisdairsullivan@yahoo.ca>
-rebar         Dave Smith <dizzyd@dizzyd.com>
-zeromq        Martin Sustrik <sustrik@250bpm.com>
+cowboy           Loïc Hoguin <essen@ninenines.eu>
+ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
+elli             Knut Nesheim <knutin@gmail.com>
+ememcached       Nick Gerakines <nick@gerakines.net>
+emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
+epgsql           Will Glozer
+erlasticsearch   Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
+erlzmq           Yurii Rashkovskii <yrashk@gmail.com>
+etokyotyrant     Jim McCoy <mccoy@mad-scientist.com>
+jinterface       Ericsson's OTP Team
+jsonlib          Josh Marshall
+jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+poolboy          Devin Torres (devinus) devin@devintorres.com,
+                 Andrew Thompson (Vagabond) andrew@hijacked.us,
+                 Kurt Williams (onkel-dirtus) kurt.r.williams@gmail.com
+rebar            Dave Smith <dizzyd@dizzyd.com>
+thrift           https://github.com/apache/thrift/blob/0.1.x/CONTRIBUTORS
+zeromq           Martin Sustrik <sustrik@250bpm.com>
 
