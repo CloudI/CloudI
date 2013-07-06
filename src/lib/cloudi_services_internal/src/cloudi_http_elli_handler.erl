@@ -60,7 +60,7 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_http_elli_handler.hrl").
--include("../../external/elli/include/cloudi_x_elli.hrl").
+-include_lib("elli/include/cloudi_x_elli.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

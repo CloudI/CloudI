@@ -10,16 +10,62 @@
 <hr>
 
 <h1>Module cloudi</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="CloudI_Erlang_Interface">CloudI Erlang Interface</a></h3>.
 <p>Copyright © 2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.2 Jun 20 2013 17:14:24
+<p><b>Version:</b> 1.2.5 Jul 5 2013 21:23:13
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
    <h3><a name="CloudI_Erlang_Interface">CloudI Erlang Interface</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-context">context()</a></h3>
+<p><tt>context() = #cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-pattern_pid">pattern_pid()</a></h3>
+<p><tt>pattern_pid() = {<a href="#type-service_name_pattern">service_name_pattern()</a>, pid()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-priority">priority()</a></h3>
+<p><tt>priority() = -128..127</tt></p>
+<p> (high)..(low)</p>
+
+<h3 class="typedecl"><a name="type-request">request()</a></h3>
+<p><tt>request() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-request_info">request_info()</a></h3>
+<p><tt>request_info() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-response">response()</a></h3>
+<p><tt>response() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-response_info">response_info()</a></h3>
+<p><tt>response_info() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-service_name">service_name()</a></h3>
+<p><tt>service_name() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-service_name_pattern">service_name_pattern()</a></h3>
+<p><tt>service_name_pattern() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-timeout_milliseconds">timeout_milliseconds()</a></h3>
+<p><tt>timeout_milliseconds() = 0..4294967295</tt></p>
+
+
+<h3 class="typedecl"><a name="type-trans_id">trans_id()</a></h3>
+<p><tt>trans_id() = &lt;&lt;_:128&gt;&gt;</tt></p>
+<p> version 1 UUID</p>
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_pid-2">get_pid/2</a></td><td>
@@ -96,14 +142,14 @@
 
 <h3 class="function"><a name="get_pid-2">get_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_pid(Context::#cloudi_context{}, Name::string()) -&gt; {ok, PatternPid::{string(), pid()}} | {error, Reason::any()}</tt><br></p>
+<p><tt>get_pid(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
 </p>
 
 <h3 class="function"><a name="mcast_async-3">mcast_async/3</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Context::#cloudi_context{}, Name::string(), Request::any()) -&gt; {ok, TransIdList::[&lt;&lt;_:128&gt;&gt;]} | {error, Reason::any()}</tt><br></p>
+<p><tt>mcast_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -111,7 +157,7 @@
 
 <h3 class="function"><a name="mcast_async-4">mcast_async/4</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined) -&gt; {ok, TransIdList::[&lt;&lt;_:128&gt;&gt;]} | {error, Reason::any()}</tt><br></p>
+<p><tt>mcast_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -119,7 +165,7 @@
 
 <h3 class="function"><a name="mcast_async-6">mcast_async/6</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, TransIdList::[&lt;&lt;_:128&gt;&gt;]} | {error, Reason::any()}</tt><br></p>
+<p><tt>mcast_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -127,21 +173,21 @@
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
-<p><tt>new() -&gt; #cloudi_context{}</tt><br></p>
+<p><tt>new() -&gt; #cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Create_a_CloudI_context.">Create a CloudI context.</a></h4>
 </p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Settings::[{atom(), any()}]) -&gt; #cloudi_context{}</tt><br></p>
+<p><tt>new(Settings::[{atom(), any()}]) -&gt; #cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Create_a_CloudI_context.">Create a CloudI context.</a></h4>
 </p>
 
 <h3 class="function"><a name="recv_async-1">recv_async/1</a></h3>
 <div class="spec">
-<p><tt>recv_async(Context::#cloudi_context{}) -&gt; {ok, ResponseInfo::any(), Response::any(), TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Use a null TransId to receive the oldest service request.  Consume is
@@ -149,7 +195,7 @@
 
 <h3 class="function"><a name="recv_async-2">recv_async/2</a></h3>
 <div class="spec">
-<p><tt>recv_async(Context::#cloudi_context{}, TransId::non_neg_integer() | binary()) -&gt; {ok, ResponseInfo::any(), Response::any(), TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, TransId::<a href="#type-trans_id">trans_id()</a> | <a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Either use the supplied TransId to receive the specific service request
@@ -158,7 +204,7 @@
 
 <h3 class="function"><a name="recv_async-3">recv_async/3</a></h3>
 <div class="spec">
-<p><tt>recv_async(Context::#cloudi_context{}, Timeout::non_neg_integer() | undefined, TransId::binary()) -&gt; {ok, ResponseInfo::any(), Response::any(), TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, TransId::<a href="#type-trans_id">trans_id()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Either use the supplied TransId to receive the specific service request
@@ -167,42 +213,42 @@
 
 <h3 class="function"><a name="send_async-3">send_async/3</a></h3>
 <div class="spec">
-<p><tt>send_async(Context::#cloudi_context{}, Name::string(), Request::any()) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-4">send_async/4</a></h3>
 <div class="spec">
-<p><tt>send_async(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-5">send_async/5</a></h3>
 <div class="spec">
-<p><tt>send_async(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-6">send_async/6</a></h3>
 <div class="spec">
-<p><tt>send_async(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-7">send_async/7</a></h3>
 <div class="spec">
-<p><tt>send_async(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()} | undefined) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async_passive-3">send_async_passive/3</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Context::#cloudi_context{}, Name::string(), Request::any()) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async_passive(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -210,7 +256,7 @@
 
 <h3 class="function"><a name="send_async_passive-4">send_async_passive/4</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async_passive(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -218,7 +264,7 @@
 
 <h3 class="function"><a name="send_async_passive-5">send_async_passive/5</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async_passive(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -226,7 +272,7 @@
 
 <h3 class="function"><a name="send_async_passive-6">send_async_passive/6</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async_passive(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -234,7 +280,7 @@
 
 <h3 class="function"><a name="send_async_passive-7">send_async_passive/7</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, TransId::&lt;&lt;_:128&gt;&gt;} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_async_passive(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -242,55 +288,55 @@
 
 <h3 class="function"><a name="send_sync-3">send_sync/3</a></h3>
 <div class="spec">
-<p><tt>send_sync(Context::#cloudi_context{}, Name::string(), Request::any()) -&gt; {ok, ResponseInfo::any(), Response::any()} | {ok, Response::any()} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-4">send_sync/4</a></h3>
 <div class="spec">
-<p><tt>send_sync(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined) -&gt; {ok, ResponseInfo::any(), Response::any()} | {ok, Response::any()} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-5">send_sync/5</a></h3>
 <div class="spec">
-<p><tt>send_sync(Context::#cloudi_context{}, Name::string(), Request::any(), Timeout::non_neg_integer() | undefined, PatternPid::{string(), pid()}) -&gt; {ok, ResponseInfo::any(), Response::any()} | {ok, Response::any()} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-6">send_sync/6</a></h3>
 <div class="spec">
-<p><tt>send_sync(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined) -&gt; {ok, ResponseInfo::any(), Response::any()} | {ok, Response::any()} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-7">send_sync/7</a></h3>
 <div class="spec">
-<p><tt>send_sync(Context::#cloudi_context{}, Name::string(), RequestInfo::any(), Request::any(), Timeout::non_neg_integer() | undefined, Priority::integer() | undefined, PatternPid::{string(), pid()} | undefined) -&gt; {ok, ResponseInfo::any(), Response::any()} | {ok, Response::any()} | {error, Reason::any()}</tt><br></p>
+<p><tt>send_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | undefined, Priority::<a href="#type-priority">priority()</a> | undefined, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::any()}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="timeout_async-1">timeout_async/1</a></h3>
 <div class="spec">
-<p><tt>timeout_async(Context::#cloudi_context{}) -&gt; TimeoutAsync::pos_integer()</tt><br></p>
+<p><tt>timeout_async(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}) -&gt; TimeoutAsync::<a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a></tt><br></p>
 </div><p>
   <h4><a name="Configured_service_default_asynchronous_timeout_(in_milliseconds).">Configured service default asynchronous timeout (in milliseconds).</a></h4>
 </p>
 
 <h3 class="function"><a name="timeout_sync-1">timeout_sync/1</a></h3>
 <div class="spec">
-<p><tt>timeout_sync(Context::#cloudi_context{}) -&gt; TimeoutSync::pos_integer()</tt><br></p>
+<p><tt>timeout_sync(Context::#cloudi_context{dest_refresh = undefined | <a href="cloudi_service_api.html#type-dest_refresh">cloudi_service_api:dest_refresh()</a>, timeout_async = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, timeout_sync = undefined | <a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a>, priority_default = undefined | <a href="#type-priority">priority()</a>, receiver = undefined | pid(), uuid_generator = undefined | <a href="cloudi_x_uuid.html#type-state">cloudi_x_uuid:state()</a>}) -&gt; TimeoutSync::<a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a></tt><br></p>
 </div><p>
   <h4><a name="Configured_service_default_synchronous_timeout_(in_milliseconds).">Configured service default synchronous timeout (in milliseconds).</a></h4>
 </p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jun 20 2013, 17:14:24.</i></p>
+<p><i>Generated by EDoc, Jul 5 2013, 21:23:13.</i></p>
 </body>
 </html>

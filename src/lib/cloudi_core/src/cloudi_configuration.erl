@@ -64,9 +64,9 @@
          nodes_remove/2]).
 
 -include("cloudi_configuration.hrl").
--include("cloudi_constants.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_service_api.hrl").
+-include("cloudi_constants.hrl").
 
 -define(CONFIGURATION_FILE_NAME, "cloudi.conf").
 
@@ -282,7 +282,7 @@ services_add(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(Value :: list(<<_:128>>),
+-spec services_remove(Value :: list(cloudi_service:trans_id()),
                       Config :: #config{},
                       Timeout :: cloudi_service_api:timeout_milliseconds()) ->
     {ok, #config{}} |
@@ -306,7 +306,7 @@ services_remove(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(Value :: list(<<_:128>>),
+-spec services_restart(Value :: list(cloudi_service:trans_id()),
                        Config :: #config{},
                        Timeout :: cloudi_service_api:timeout_milliseconds()) ->
     {ok, #config{}} |
@@ -330,9 +330,10 @@ services_restart(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_search(Value :: list(<<_:128>>),
+-spec services_search(Value :: list(cloudi_service:trans_id()),
                       Config :: #config{}) ->
-    list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}}).
+    list({cloudi_service:trans_id(), #internal{}} |
+         {cloudi_service:trans_id(), #external{}}).
 
 services_search([ID | _] = Value, Config)
     when is_binary(ID), byte_size(ID) == 16 ->
@@ -347,7 +348,8 @@ services_search([ID | _] = Value, Config)
 %%-------------------------------------------------------------------------
 
 -spec services(#config{}) ->
-    list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}}).
+    list({cloudi_service:trans_id(), #internal{}} |
+         {cloudi_service:trans_id(), #external{}}).
 
 services(#config{services = Services}) ->
     lists:map(fun(Service) ->
@@ -682,13 +684,16 @@ services_validate(_, [#internal{dest_refresh = DestRefresh} | _], _)
                (DestRefresh =:= none))) ->
     {error, {service_internal_dest_refresh_invalid, DestRefresh}};
 services_validate(_, [#internal{timeout_init = TimeoutInit} | _], _)
-    when not (is_integer(TimeoutInit) andalso TimeoutInit > 0) ->
+    when not (is_integer(TimeoutInit) andalso
+              (TimeoutInit > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_init_invalid, TimeoutInit}};
 services_validate(_, [#internal{timeout_async = TimeoutAsync} | _], _)
-    when not (is_integer(TimeoutAsync) andalso TimeoutAsync > 0) ->
+    when not (is_integer(TimeoutAsync) andalso
+              (TimeoutAsync > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_async_invalid, TimeoutAsync}};
 services_validate(_, [#internal{timeout_sync = TimeoutSync} | _], _)
-    when not (is_integer(TimeoutSync) andalso TimeoutSync > 0) ->
+    when not (is_integer(TimeoutSync) andalso
+              (TimeoutSync > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
 services_validate(_, [#internal{dest_list_deny = DestListDeny} | _], _)
     when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
@@ -793,13 +798,16 @@ services_validate(_, [#external{buffer_size = BufferSize} | _], _)
               (is_integer(BufferSize) andalso (BufferSize >= 1024))) ->
     {error, {service_external_buffer_size_invalid, BufferSize}};
 services_validate(_, [#external{timeout_init = TimeoutInit} | _], _)
-    when not (is_integer(TimeoutInit) andalso TimeoutInit > 0) ->
+    when not (is_integer(TimeoutInit) andalso
+              (TimeoutInit > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_init_invalid, TimeoutInit}};
 services_validate(_, [#external{timeout_async = TimeoutAsync} | _], _)
-    when not (is_integer(TimeoutAsync) andalso TimeoutAsync > 0) ->
+    when not (is_integer(TimeoutAsync) andalso
+              (TimeoutAsync > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_async_invalid, TimeoutAsync}};
 services_validate(_, [#external{timeout_sync = TimeoutSync} | _], _)
-    when not (is_integer(TimeoutSync) andalso TimeoutSync > 0) ->
+    when not (is_integer(TimeoutSync) andalso
+              (TimeoutSync > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_sync_invalid, TimeoutSync}};
 services_validate(_, [#external{dest_list_deny = DestListDeny} | _], _)
     when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
@@ -932,12 +940,12 @@ services_validate_options_internal(OptionsList) ->
                      QueueLimit}};
         [_, _, DestRefreshStart, _, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
-                  (DestRefreshStart > 0)) ->
+                  (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, DestRefreshDelay, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshDelay) andalso
-                  (DestRefreshDelay > 0)) ->
+                  (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _]
@@ -1051,12 +1059,12 @@ services_validate_options_external(OptionsList) ->
                      QueueLimit}};
         [_, _, DestRefreshStart, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
-                  (DestRefreshStart > 0)) ->
+                  (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, DestRefreshDelay, _, _]
         when not (is_integer(DestRefreshDelay) andalso
-                  (DestRefreshDelay > 0)) ->
+                  (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, RequestTimeoutAdjustment, _]

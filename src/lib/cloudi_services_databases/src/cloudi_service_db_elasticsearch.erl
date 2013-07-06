@@ -22,7 +22,8 @@
 %%%       distribution.
 %%%     * All advertising materials mentioning features or use of this
 %%%       software must display the following acknowledgment:
-%%%         This product includes software developed by Michael Truog
+%%%         This product includes
+%%%         software developed by Mahesh Paolini-Subramanya
 %%%     * The name of the author may not be used to endorse or promote
 %%%       products derived from this software without specific prior
 %%%       written permission
@@ -117,8 +118,8 @@
 -type doc()             :: binary().
 -type params()          :: [tuple()].
 -type pool_name()       :: binary().
--type dispatcher()      :: pid().
--type name()            :: string().
+-type dispatcher()      :: cloudi_service:dispatcher().
+-type name()            :: cloudi_service:service_name().
 -type database()        :: atom() | string() | binary().
 
 -record(state, {
@@ -141,7 +142,7 @@
 health(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     cloudi_service:send_sync(Dispatcher, Name, {health}).
 
-%% @equiv state(Dispatcher, Name, []).
+%% _equiv state(Dispatcher, Name, []).
 -spec state(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 state(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     state(Dispatcher, Name, []).
@@ -151,16 +152,16 @@ state(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
 state(Dispatcher, Name, Params) when is_pid(Dispatcher), is_list(Name), is_list(Params) ->
     cloudi_service:send_sync(Dispatcher, Name, {state, Params}).
 
-%% @equiv nodes_info(Dispatcher, Name, [], []).
+%% _equiv nodes_info(Dispatcher, Name, [], []).
 -spec nodes_info(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 nodes_info(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     nodes_info(Dispatcher, Name, [], []).
 
-%% @equiv nodes_info(Dispatcher, Name, [NodeName], []).
+%% _equiv nodes_info(Dispatcher, Name, [NodeName], []).
 -spec nodes_info(dispatcher(), name(), node_name()) -> {ok, response()} | {error, any()}.
 nodes_info(Dispatcher, Name, NodeName) when is_pid(Dispatcher), is_list(Name), is_binary(NodeName) ->
     nodes_info(Dispatcher, Name, [NodeName], []);
-%% @equiv nodes_info(Dispatcher, Name, NodeNames, []).
+%% _equiv nodes_info(Dispatcher, Name, NodeNames, []).
 nodes_info(Dispatcher, Name, NodeNames) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames) ->
     nodes_info(Dispatcher, Name, NodeNames, []).
 
@@ -169,16 +170,16 @@ nodes_info(Dispatcher, Name, NodeNames) when is_pid(Dispatcher), is_list(Name), 
 nodes_info(Dispatcher, Name, NodeNames, Params) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames), is_list(Params) ->
     cloudi_service:send_sync(Dispatcher, Name, {nodes_info, NodeNames, Params}).
 
-%% @equiv nodes_stats(Dispatcher, Name, [], []).
+%% _equiv nodes_stats(Dispatcher, Name, [], []).
 -spec nodes_stats(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 nodes_stats(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     nodes_stats(Dispatcher, Name, [], []).
 
-%% @equiv nodes_stats(Dispatcher, Name, [NodeName], []).
+%% _equiv nodes_stats(Dispatcher, Name, [NodeName], []).
 -spec nodes_stats(dispatcher(), name(), node_name()) -> {ok, response()} | {error, any()}.
 nodes_stats(Dispatcher, Name, NodeName) when is_pid(Dispatcher), is_list(Name), is_binary(NodeName) ->
     nodes_stats(Dispatcher, Name, [NodeName], []);
-%% @equiv nodes_stats(Dispatcher, Name, NodeNames, []).
+%% _equiv nodes_stats(Dispatcher, Name, NodeNames, []).
 nodes_stats(Dispatcher, Name, NodeNames) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames) ->
     nodes_stats(Dispatcher, Name, NodeNames, []).
 
@@ -194,7 +195,7 @@ status(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binar
 status(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes)->
     cloudi_service:send_sync(Dispatcher, Name, {status, Indexes}).
 
-%% @equiv create_index(Dispatcher, Name, Index, <<>>)
+%% _equiv create_index(Dispatcher, Name, Index, <<>>)
 -spec create_index(dispatcher(), name(), index()) -> {ok, response()} | {error, any()}.
 create_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
     create_index(Dispatcher, Name, Index, <<>>).
@@ -233,17 +234,17 @@ is_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_bin
 is_index(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
     cloudi_service:send_sync(Dispatcher, Name, {is_index, Indexes}).
 
-%% @equiv count(Dispatcher, Name, ?ALL, [], Doc []).
+%% _equiv count(Dispatcher, Name, ?ALL, [], Doc []).
 -spec count(dispatcher(), name(), doc()) -> {ok, boolean()} | {error, any()}.
 count(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
     count(Dispatcher, Name, ?ALL, [], Doc, []).
 
-%% @equiv count(Dispatcher, Name, ?ALL, [], Doc, Params).
+%% _equiv count(Dispatcher, Name, ?ALL, [], Doc, Params).
 -spec count(dispatcher(), name(), doc(), params()) -> {ok, boolean()} | {error, any()}.
 count(Dispatcher, Name, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, ?ALL, [], Doc, Params).
 
-%% @equiv count(Dispatcher, Name, Index, [], Doc, Params).
+%% _equiv count(Dispatcher, Name, Index, [], Doc, Params).
 -spec count(dispatcher(), name(), index() | [index()], doc(), params()) -> {ok, boolean()} | {error, any()}.
 count(Dispatcher, Name, Index, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, [Index], [], Doc, Params);
@@ -261,17 +262,17 @@ count(Dispatcher, Name, Index, Types, Doc, Params) when is_pid(Dispatcher), is_l
 count(Dispatcher, Name, Indexes, Types, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Types), is_binary(Doc), is_list(Params) ->
     cloudi_service:send_sync(Dispatcher, Name, {count, Indexes, Types, Doc, Params}).
 
-%% @equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc []).
+%% _equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc []).
 -spec delete_by_query(dispatcher(), name(), doc()) -> {ok, boolean()} | {error, any()}.
 delete_by_query(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, []).
 
-%% @equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
+%% _equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
 -spec delete_by_query(dispatcher(), name(), doc(), params()) -> {ok, boolean()} | {error, any()}.
 delete_by_query(Dispatcher, Name, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
 
-%% @equiv delete_by_query(Dispatcher, Name, Index, [], Doc, Params).
+%% _equiv delete_by_query(Dispatcher, Name, Index, [], Doc, Params).
 -spec delete_by_query(dispatcher(), name(), index() | [index()], doc(), params()) -> {ok, boolean()} | {error, any()}.
 delete_by_query(Dispatcher, Name, Index, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [], Doc, Params);
@@ -300,7 +301,7 @@ is_type(Dispatcher, Name, Index, Types) when is_pid(Dispatcher), is_list(Name), 
 is_type(Dispatcher, Name, Indexes, Types) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Types) ->
     cloudi_service:send_sync(Dispatcher, Name, {is_type, Indexes, Types}).
 
-%% @equiv insert_doc(Index, Type, Id, Doc, []).
+%% _equiv insert_doc(Index, Type, Id, Doc, []).
 -spec insert_doc(dispatcher(), name(), index(), type(), id(), doc()) -> {ok, response()} | {error, any()}.
 insert_doc(Dispatcher, Name, Index, Type, Id, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
     insert_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
@@ -315,7 +316,7 @@ insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params) when is_pid(Dispatche
 is_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
     cloudi_service:send_sync(Dispatcher, Name, {is_doc, Index, Type, Id}).
 
-%% @equiv get_doc(Dispatcher, Name, Index, Type, Id, []).
+%% _equiv get_doc(Dispatcher, Name, Index, Type, Id, []).
 -spec get_doc(dispatcher(), name(), index(), type(), id()) -> {ok, response()} | {error, any()}.
 get_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
     get_doc(Dispatcher, Name, Index, Type, Id, []).
@@ -325,12 +326,12 @@ get_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name
 get_doc(Dispatcher, Name, Index, Type, Id, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_list(Params)->
     cloudi_service:send_sync(Dispatcher, Name, {get_doc, Index, Type, Id, Params}).
 
-%% @equiv mget_doc(Dispatcher, Name, <<>>, <<>>, Doc)
+%% _equiv mget_doc(Dispatcher, Name, <<>>, <<>>, Doc)
 -spec mget_doc(dispatcher(), name(), doc()) -> {ok, response()} | {error, any()}.
 mget_doc(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
     mget_doc(Dispatcher, Name, <<>>, <<>>, Doc).
 
-%% @equiv mget_doc(Dispatcher, Name, Index, <<>>, Doc)
+%% _equiv mget_doc(Dispatcher, Name, Index, <<>>, Doc)
 -spec mget_doc(dispatcher(), name(), index(), doc()) -> {ok, response()} | {error, any()}.
 mget_doc(Dispatcher, Name, Index, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc)->
     mget_doc(Dispatcher, Name, Index, <<>>, Doc).
@@ -340,7 +341,7 @@ mget_doc(Dispatcher, Name, Index, Doc) when is_pid(Dispatcher), is_list(Name), i
 mget_doc(Dispatcher, Name, Index, Type, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc)->
     cloudi_service:send_sync(Dispatcher, Name, {mget_doc, Index, Type, Doc}).
 
-%% @equiv delete_doc(Dispatcher, Name, Index, Type, Id, []).
+%% _equiv delete_doc(Dispatcher, Name, Index, Type, Id, []).
 -spec delete_doc(dispatcher(), name(), index(), type(), id()) -> {ok, response()} | {error, any()}.
 delete_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
     delete_doc(Dispatcher, Name, Index, Type, Id, []).
@@ -349,7 +350,7 @@ delete_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(N
 delete_doc(Dispatcher, Name, Index, Type, Id, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_list(Params)->
     cloudi_service:send_sync(Dispatcher, Name, {delete_doc, Index, Type, Id, Params}).
 
-%% @equiv search(Dispatcher, Name, Index, Type, Doc, []).
+%% _equiv search(Dispatcher, Name, Index, Type, Doc, []).
 -spec search(dispatcher(), name(), index(), type(), doc()) -> {ok, response()} | {error, any()}.
 search(Dispatcher, Name, Index, Type, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc)->
     search(Dispatcher, Name, Index, Type, Doc, []).
@@ -358,7 +359,7 @@ search(Dispatcher, Name, Index, Type, Doc) when is_pid(Dispatcher), is_list(Name
 search(Dispatcher, Name, Index, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
     cloudi_service:send_sync(Dispatcher, Name, {search, Index, Type, Doc, Params}).
 
-%% @equiv refresh(Dispatcher, Name, ?ALL).
+%% _equiv refresh(Dispatcher, Name, ?ALL).
 %% @doc Refresh all indices
 -spec refresh(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 refresh(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
@@ -372,7 +373,7 @@ refresh(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_li
     cloudi_service:send_sync(Dispatcher, Name, {refresh, Indexes}).
 
 %% @doc Flush all indices
-%% @equiv flush(Dispatcher, Name, ?ALL).
+%% _equiv flush(Dispatcher, Name, ?ALL).
 -spec flush(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 flush(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     flush(Dispatcher, Name, ?ALL).
@@ -384,7 +385,7 @@ flush(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary
 flush(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
     cloudi_service:send_sync(Dispatcher, Name, {flush, Indexes}).
 
-%% @equiv optimize(Dispatcher, Name, ?ALL).
+%% _equiv optimize(Dispatcher, Name, ?ALL).
 %% @doc Optimize all indices
 -spec optimize(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 optimize(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
@@ -397,7 +398,7 @@ optimize(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_bin
 optimize(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
     cloudi_service:send_sync(Dispatcher, Name, {optimize, Indexes}).
 
-%% @equiv segments(Dispatcher, Name, ?ALL).
+%% _equiv segments(Dispatcher, Name, ?ALL).
 %% @doc Optimize all indices
 -spec segments(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 segments(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
@@ -410,20 +411,20 @@ segments(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_bin
 segments(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
     cloudi_service:send_sync(Dispatcher, Name, {segments, Indexes}).
 
-%% @equiv clear_cache(Dispatcher, Name, ?ALL, []).
+%% _equiv clear_cache(Dispatcher, Name, ?ALL, []).
 %% @doc Clear all the caches
 -spec clear_cache(dispatcher(), name()) -> {ok, response()} | {error, any()}.
 clear_cache(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
     clear_cache(Dispatcher, Name, ?ALL, []).
 
-%% @equiv clear_cache(Dispatcher, Name, Indexes, []).
+%% _equiv clear_cache(Dispatcher, Name, Indexes, []).
 -spec clear_cache(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
 clear_cache(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
     clear_cache(Dispatcher, Name, [Index], []);
 clear_cache(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
     clear_cache(Dispatcher, Name, Indexes, []).
 
-%% @equiv clear_cache(Dispatcher, Name, Indexes, []).
+%% _equiv clear_cache(Dispatcher, Name, Indexes, []).
 -spec clear_cache(dispatcher(), name(), index() | [index()], params()) -> {ok, response()} | {error, any()}.
 clear_cache(Dispatcher, Name, Index, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_list(Params) ->
     clear_cache(Dispatcher, Name, [Index], Params);
