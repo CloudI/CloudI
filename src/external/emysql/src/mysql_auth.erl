@@ -161,9 +161,9 @@ bxor_binary(B1, B2) ->
 password_new(Password, Salt) ->
     Stage1 = crypto:hash(sha, Password),
     Stage2 = crypto:hash(sha, Stage1),
-    Res = crypto:hash_final(sha,
-        crypto:hash_update(sha,
-            crypto:hash_update(sha, crypto:hash_init(sha), Salt),
+    Res = crypto:hash_final(
+        crypto:hash_update(
+            crypto:hash_update(crypto:hash_init(sha), Salt),
             Stage2
         )
     ),

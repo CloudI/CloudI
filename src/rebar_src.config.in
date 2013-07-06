@@ -28,11 +28,14 @@
   "lib/key2value"]}.
 {edoc_opts,
  [{preprocess, true},
-  {includes, ["@abs_top_srcdir@/lib"]}]}.
+  {includes,
+   ["@abs_top_srcdir@/lib",
+    "@abs_top_srcdir@/external"]}]}.
 {erl_opts,
  [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
   {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
   {i, "@abs_top_srcdir@/lib"},
+  {i, "@abs_top_srcdir@/external"},
 %  debug_info,
   warnings_as_errors,
   strict_validation,

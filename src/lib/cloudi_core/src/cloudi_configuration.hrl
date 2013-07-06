@@ -53,13 +53,14 @@
         % DEFAULT VALUES ASSIGNED BELOW
 
         % -128 (high) <= priority_default <= 127 (low)
-        priority_default = 0 :: -128..127,
+        priority_default = 0 :: cloudi_service:priority(),
         % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined :: undefined | pos_integer(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
-        dest_refresh_start = 500 :: 100..3600000, % milliseconds
+        dest_refresh_start = 500 % 0.5 seconds
+            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
         % (not an immediate destination refresh method).
@@ -67,7 +68,8 @@
         % service is mainly communicating with long-lived services
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
-        dest_refresh_delay = 300000 :: 100..3600000, % milliseconds (5 minutes)
+        dest_refresh_delay = 300000 % 5 minutes
+            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % should the service request handler execution time decrement the
         % request timeout to reduce the timeout of a forwarded request or
         % the timeout of a returned response

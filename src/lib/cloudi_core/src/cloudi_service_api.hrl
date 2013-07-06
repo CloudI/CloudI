@@ -46,7 +46,7 @@
 %  since it is used within all configuration data)
 -record(internal,
     {
-        prefix             :: string(),
+        prefix             :: cloudi:service_name_pattern(),
         module             :: atom() | file:filename(),
         args               :: list(),
         dest_refresh       :: cloudi_service_api:dest_refresh(),
@@ -66,7 +66,7 @@
 %  since it is used within all configuration data)
 -record(external,
     {
-        prefix             :: string(),
+        prefix             :: cloudi:service_name_pattern(),
         file_path          :: file:filename(),
         args               :: string(),
         env                :: list({string(), string()}),

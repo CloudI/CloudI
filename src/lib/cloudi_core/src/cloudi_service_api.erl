@@ -83,10 +83,13 @@
                         none.
 -export_type([dest_refresh/0]).
 
--type timeout_milliseconds() :: ?TIMEOUT_DELTA..4294967295.
+-type dest_refresh_delay_milliseconds() :: (?TIMEOUT_DELTA+1)..3600000.
+-export_type([dest_refresh_delay_milliseconds/0]).
+
+-type timeout_milliseconds() :: (?TIMEOUT_DELTA+1)..4294967295.
 -export_type([timeout_milliseconds/0]).
 
--type acl() :: list(atom() | string()).
+-type acl() :: list(atom() | cloudi:service_name_pattern()).
 -export_type([acl/0]).
 
 -type dest_list() :: undefined | acl().
@@ -96,10 +99,10 @@
 -export_type([seconds/0]).
 
 -type service_options_internal() ::
-    list({priority_default, -128..127} |
+    list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |
-         {dest_refresh_start, 100..3600000} |
-         {dest_refresh_delay, 100..3600000} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()} |
          {request_pid_uses, infinity | pos_integer()} |
@@ -114,10 +117,10 @@
                {min_bin_vheap_size, non_neg_integer()})} |
          {duo_mode, boolean()}).
 -type service_options_external() ::
-    list({priority_default, -128..127} |
+    list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |
-         {dest_refresh_start, 100..3600000} |
-         {dest_refresh_delay, 100..3600000} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()}).
 -export_type([service_options_internal/0,
@@ -150,7 +153,7 @@
 %%-------------------------------------------------------------------------
 
 -spec acl_add(L :: list({atom(), acl()}), 
-              Timeout :: pos_integer()) ->
+              Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -168,7 +171,7 @@ acl_add([_ | _] = L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec acl_remove(L :: list(atom()),
-                 Timeout :: pos_integer()) ->
+                 Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -185,7 +188,7 @@ acl_remove([_ | _] = L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services_add(L :: list(#internal{} | #external{}),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -204,8 +207,8 @@ services_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(L :: list(<<_:128>>),
-                      Timeout :: pos_integer()) ->
+-spec services_remove(L :: list(cloudi_service:trans_id()),
+                      Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -226,8 +229,8 @@ services_remove([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: list(<<_:128>>), 
-                       Timeout :: pos_integer()) ->
+-spec services_restart(L :: list(cloudi_service:trans_id()), 
+                       Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -244,8 +247,9 @@ services_restart([_ | _] = L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services_search(ServiceName :: string(),
-                      Timeout :: pos_integer()) ->
-    {ok, list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}})} |
+                      Timeout :: timeout_milliseconds()) ->
+    {ok, list({cloudi_service:trans_id(), #internal{}} |
+              {cloudi_service:trans_id(), #external{}})} |
     {error, any()}.
 
 services_search([_ | _] = ServiceName, Timeout)
@@ -258,8 +262,9 @@ services_search([_ | _] = ServiceName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services(Timeout :: pos_integer()) ->
-    {ok, list({<<_:128>>, #internal{}} | {<<_:128>>, #external{}})} |
+-spec services(Timeout :: timeout_milliseconds()) ->
+    {ok, list({cloudi_service:trans_id(), #internal{}} |
+              {cloudi_service:trans_id(), #external{}})} |
     {error, any()}.
 
 services(Timeout)
@@ -275,7 +280,7 @@ services(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_add(L :: list(node()),
-                Timeout :: pos_integer()) ->
+                Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -291,7 +296,7 @@ nodes_add(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_remove(L :: list(node()),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -306,7 +311,7 @@ nodes_remove(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_alive(Timeout :: pos_integer()) ->
+-spec nodes_alive(Timeout :: timeout_milliseconds()) ->
     {ok, list(node())} |
     {error, any()}.
 
@@ -320,7 +325,7 @@ nodes_alive(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_dead(Timeout :: pos_integer()) ->
+-spec nodes_dead(Timeout :: timeout_milliseconds()) ->
     {ok, list(node())} |
     {error, any()}.
 
@@ -334,7 +339,7 @@ nodes_dead(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes(Timeout :: pos_integer()) ->
+-spec nodes(Timeout :: timeout_milliseconds()) ->
     {ok, list(node())} |
     {error, any()}.
 
@@ -351,7 +356,7 @@ nodes(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec loglevel_set(Level :: loglevel(),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok.
 
 loglevel_set(Level, Timeout)
@@ -368,7 +373,7 @@ loglevel_set(Level, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec log_redirect(Node :: undefined | node(),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok.
 
 log_redirect(Node, Timeout)
@@ -385,7 +390,7 @@ log_redirect(Node, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path_add(Dir :: file:filename(),
-                    Timeout :: pos_integer()) ->
+                    Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -407,7 +412,7 @@ code_path_add(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path_remove(Dir :: file:filename(),
-                       Timeout :: pos_integer()) ->
+                       Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
 
@@ -429,7 +434,7 @@ code_path_remove(Dir, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec code_path(Timeout :: pos_integer()) ->
+-spec code_path(Timeout :: timeout_milliseconds()) ->
     {ok, list(file:filename())}.
 
 code_path(Timeout)
