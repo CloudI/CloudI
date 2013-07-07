@@ -55,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -67,23 +67,28 @@
          get_v1/1,
          get_v1_time/0,
          get_v1_time/1,
+         is_v1/1,
          get_v3/1,
          get_v3/2,
          get_v3_compat/1,
          get_v3_compat/2,
+         is_v3/1,
          get_v4/0,
          get_v4/1,
          get_v4_urandom/0,
          get_v4_urandom_bigint/0,
          get_v4_urandom_native/0,
+         is_v4/1,
          get_v5/1,
          get_v5/2,
          get_v5_compat/1,
          get_v5_compat/2,
+         is_v5/1,
          uuid_to_list/1,
          uuid_to_string/1,
          uuid_to_string/2,
          string_to_uuid/1,
+         is_uuid/1,
          increment/1,
          test/0]).
 
@@ -263,6 +268,25 @@ get_v1_time(Value)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Is the binary a v1 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v1(Value :: any()) ->
+    boolean().
+
+is_v1(<<_TimeLow:32, _TimeMid:16,
+        0:1, 0:1, 0:1, 1:1,  % version 1 bits
+        _TimeHigh:12,
+        1:1, 0:1,            % RFC 4122 variant bits
+        _ClockSeq:14,
+        _NodeId:48>>) ->
+    true;
+is_v1(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get a v3 UUID.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -357,6 +381,24 @@ get_v3_compat(Namespace, Data) when is_binary(Namespace) ->
             erlang:list_to_binary(Data)
     end,
     get_v3_compat(<<Namespace/binary, DataBin/binary>>).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is the binary a v3 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v3(Value :: any()) ->
+    boolean().
+
+is_v3(<<_:48,
+        0:1, 0:1, 1:1, 1:1,  % version 3 bits
+        _:12,
+        1:1, 0:1,            % RFC 4122 variant bits
+        _:62>>) ->
+    true;
+is_v3(_) ->
+    false.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -499,6 +541,24 @@ get_v4_urandom_native() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Is the binary a v4 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v4(Value :: any()) ->
+    boolean().
+
+is_v4(<<_:48,
+        0:1, 1:1, 0:1, 0:1,  % version 4 bits
+        _:12,
+        1:1, 0:1,            % RFC 4122 variant bits
+        _:62>>) ->
+    true;
+is_v4(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get a v5 UUID.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -593,6 +653,24 @@ get_v5_compat(Namespace, Data) when is_binary(Namespace) ->
             erlang:list_to_binary(Data)
     end,
     get_v5_compat(<<Namespace/binary, DataBin/binary>>).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is the binary a v5 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v5(Value :: any()) ->
+    boolean().
+
+is_v5(<<_:48,
+        0:1, 1:1, 0:1, 1:1,  % version 5 bits
+        _:12,
+        1:1, 0:1,            % RFC 4122 variant bits
+        _:62>>) ->
+    true;
+is_v5(_) ->
+    false.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -723,6 +801,21 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Is the binary a UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_uuid(Value :: any()) ->
+    boolean().
+
+is_uuid(Value)
+    when is_binary(Value), byte_size(Value) == 16 ->
+    is_v1(Value) orelse is_v3(Value) orelse is_v4(Value) orelse is_v5(Value);
+is_uuid(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Increment the clock sequence of v1 UUID state.===
 %% The RFC said to increment the clock sequence counter
 %% if the system clock was set backwards.  However, erlang:now/0 always
@@ -777,6 +870,8 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V1ClockSeq1:14,
       V1NodeId1/binary>> = V1uuid1,
+    true = uuid:is_uuid(V1uuid1),
+    true = uuid:is_v1(V1uuid1),
     <<V1Time1:60>> = <<V1TimeHigh1:12, V1TimeMid1:16, V1TimeLow1:32>>,
     V1Time1total = erlang:trunc((V1Time1 - 16#01b21dd213814000) / 10),
     V1Time1mega = erlang:trunc(V1Time1total / 1000000000000),
@@ -798,6 +893,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V1ClockSeq2:14,
       V1NodeId2/binary>> = V1uuid2,
+    true = uuid:is_v1(V1uuid2),
     <<V1Time2:60>> = <<V1TimeHigh2:12, V1TimeMid2:16, V1TimeLow2:32>>,
     V1Time2total = erlang:trunc((V1Time2 - 16#01b21dd213814000) / 10),
     V1Time2Amega = erlang:trunc(V1Time2total / 1000000000000),
@@ -841,6 +937,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V3uuid1C:14,
       V3uuid1D:48>> = V3uuid1,
+    true = uuid:is_v3(V3uuid1),
     V3uuid2 = uuid:get_v3(?UUID_NAMESPACE_DNS, <<"test">>),
     true = (V3uuid2 == uuid:get_v3(dns, <<"test">>)),
     <<V3uuid2A:48,
@@ -849,6 +946,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V3uuid2C:14,
       V3uuid2D:48>> = V3uuid2,
+    true = uuid:is_v3(V3uuid2),
     true = ((V3uuid1A == V3uuid2A) and
             (V3uuid1B == V3uuid2B) and
             (V3uuid1C == V3uuid2C)),
@@ -878,6 +976,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V4Rand1C:14,
       V4Rand1D:48>> = V4uuid1,
+    true = uuid:is_v4(V4uuid1),
     % $ python
     % >>> import uuid
     % >>> uuid.uuid4().hex
@@ -889,6 +988,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V4Rand2C:14,
       V4Rand2D:48>> = V4uuid2,
+    true = uuid:is_v4(V4uuid2),
     V4uuid3 = uuid:get_v4(strong),
     <<_:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
@@ -896,6 +996,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       _:14,
       _:48>> = V4uuid3,
+    true = uuid:is_v4(V4uuid3),
     true = (V4Rand1A /= V4Rand2A),
     true = (V4Rand1B /= V4Rand2B),
     true = (V4Rand1C /= V4Rand2C),
@@ -913,6 +1014,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V5uuid1C:14,
       V5uuid1D:48>> = V5uuid1,
+    true = uuid:is_v5(V5uuid1),
     V5uuid2 = uuid:get_v5(?UUID_NAMESPACE_DNS, <<"test">>),
     true = (V5uuid2 == uuid:get_v5(dns, <<"test">>)),
     <<V5uuid2A:48,
@@ -921,6 +1023,7 @@ test() ->
       1:1, 0:1,            % RFC 4122 variant bits
       V5uuid2C:14,
       V5uuid2D:48>> = V5uuid2,
+    true = uuid:is_v5(V5uuid2),
     true = ((V5uuid1A == V5uuid2A) and
             (V5uuid1B == V5uuid2B) and
             (V5uuid1C == V5uuid2C)),

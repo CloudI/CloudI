@@ -30,7 +30,8 @@ Perl CloudI API
       binary erlang binary term format, similar to
       http://search.cpan.org/~hio/Erlang-Port-0.04/lib/Erlang/Port.pm
 R CloudI API
-    * R w/C integration(?)
+    * R w/C++ integration using Rcpp
+      http://cran.r-project.org/web/packages/Rcpp/vignettes/Rcpp-introduction.pdf
 Ocaml CloudI API
     * all-Ocaml implementation
     * see https://github.com/EchoTeam/ocaml-erlang-port
