@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add service prefix configuration validation
+    * Add ACL configuration validation
+    * Update uuid
+
 2013-07-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add type specifications to the cloudi module and the

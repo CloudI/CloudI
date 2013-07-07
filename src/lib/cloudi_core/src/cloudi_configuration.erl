@@ -638,11 +638,14 @@ services_acl_update_list(Output, [E | L], Lookup)
     end;
 services_acl_update_list(Output, [E | L], Lookup)
     when is_list(E), is_integer(hd(E)) ->
-    case cloudi_x_trie:is_pattern(E) of
+    try cloudi_x_trie:is_pattern(E) of
         true ->
             services_acl_update_list([E | Output], L, Lookup);
         false ->
             services_acl_update_list([E ++ "*" | Output], L, Lookup)
+    catch
+        exit:badarg ->
+            {error, {acl_invalid, E}}
     end.
 
 -spec services_validate(Services :: list(#internal{} | #external{}),
@@ -734,25 +737,30 @@ services_validate(Output,
         is_list(Module) ->
             Module
     end,
-    case services_validate_options_internal(Options) of
-        {ok, NewOptions} ->
-            ID = cloudi_x_uuid:get_v1(UUID),
-            services_validate([#config_service_internal{
-                                   prefix = Prefix,
-                                   module = Module,
-                                   file_path = FilePath,
-                                   args = Args,
-                                   dest_refresh = DestRefresh,
-                                   timeout_init = TimeoutInit,
-                                   timeout_async = TimeoutAsync,
-                                   timeout_sync = TimeoutSync,
-                                   dest_list_deny = DestListDeny,
-                                   dest_list_allow = DestListAllow,
-                                   count_process = CountProcess,
-                                   max_r = MaxR,
-                                   max_t = MaxT,
-                                   options = NewOptions,
-                                   uuid = ID} | Output], L, UUID);
+    case service_name_valid(Prefix, service_internal_prefix_invalid) of
+        ok ->
+            case services_validate_options_internal(Options) of
+                {ok, NewOptions} ->
+                    ID = cloudi_x_uuid:get_v1(UUID),
+                    services_validate([#config_service_internal{
+                                           prefix = Prefix,
+                                           module = Module,
+                                           file_path = FilePath,
+                                           args = Args,
+                                           dest_refresh = DestRefresh,
+                                           timeout_init = TimeoutInit,
+                                           timeout_async = TimeoutAsync,
+                                           timeout_sync = TimeoutSync,
+                                           dest_list_deny = DestListDeny,
+                                           dest_list_allow = DestListAllow,
+                                           count_process = CountProcess,
+                                           max_r = MaxR,
+                                           max_t = MaxT,
+                                           options = NewOptions,
+                                           uuid = ID} | Output], L, UUID);
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end;
@@ -868,28 +876,33 @@ services_validate(Output,
         true ->
             BufferSize
     end,
-    case services_validate_options_external(Options) of
-        {ok, NewOptions} ->
-            ID = cloudi_x_uuid:get_v1(UUID),
-            services_validate([#config_service_external{
-                                   prefix = Prefix,
-                                   file_path = FilePath,
-                                   args = Args,
-                                   env = Env,
-                                   dest_refresh = DestRefresh,
-                                   protocol = NewProtocol,
-                                   buffer_size = NewBufferSize,
-                                   timeout_init = TimeoutInit,
-                                   timeout_async = TimeoutAsync,
-                                   timeout_sync = TimeoutSync,
-                                   dest_list_deny = DestListDeny,
-                                   dest_list_allow = DestListAllow,
-                                   count_process = CountProcess,
-                                   count_thread = CountThread,
-                                   max_r = MaxR,
-                                   max_t = MaxT,
-                                   options = NewOptions,
-                                   uuid = ID} | Output], L, UUID);
+    case service_name_valid(Prefix, service_external_prefix_invalid) of
+        ok ->
+            case services_validate_options_external(Options) of
+                {ok, NewOptions} ->
+                    ID = cloudi_x_uuid:get_v1(UUID),
+                    services_validate([#config_service_external{
+                                           prefix = Prefix,
+                                           file_path = FilePath,
+                                           args = Args,
+                                           env = Env,
+                                           dest_refresh = DestRefresh,
+                                           protocol = NewProtocol,
+                                           buffer_size = NewBufferSize,
+                                           timeout_init = TimeoutInit,
+                                           timeout_async = TimeoutAsync,
+                                           timeout_sync = TimeoutSync,
+                                           dest_list_deny = DestListDeny,
+                                           dest_list_allow = DestListAllow,
+                                           count_process = CountProcess,
+                                           count_thread = CountThread,
+                                           max_r = MaxR,
+                                           max_t = MaxT,
+                                           options = NewOptions,
+                                           uuid = ID} | Output], L, UUID);
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end;
@@ -1170,11 +1183,14 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
     end;
 acl_expand_values(Output, [E | L], Path, Key, Lookup)
     when is_list(E), is_integer(hd(E)) ->
-    case cloudi_x_trie:is_pattern(E) of
+    try cloudi_x_trie:is_pattern(E) of
         true ->
             acl_expand_values([E | Output], L, Path, Key, Lookup);
         false ->
             acl_expand_values([E ++ "*" | Output], L, Path, Key, Lookup)
+    catch
+        exit:badarg ->
+            {error, {acl_invalid, E}}
     end;
 acl_expand_values(_, [E | _], _, _, _) ->
     {error, {acl_invalid, E}}.
@@ -1292,3 +1308,11 @@ nodes_remove_elements([A | As], Nodes)
 nodes_remove_elements([A | _], _) ->
     {error, {node_invalid, A}}.
 
+service_name_valid(Name, ErrorReason) ->
+    try cloudi_x_trie:is_pattern(Name) of
+        _ ->
+            ok
+    catch
+        exit:badarg ->
+            {error, {ErrorReason, Name}}
+    end.
