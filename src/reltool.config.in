@@ -1,101 +1,30 @@
 {sys,
  [
-  {lib_dirs,
-   [
-    "lib",
-    "external",
-    "external/nodefinder"
-    @ZEROMQ_ERLZMQ_PATH@
-   ]},
-  {erts, [{mod_cond, all}, {app_file, keep}]},
-  {app_file, keep},
-  {rel, "cloudi", "1",
-   [
-    % external dependencies
-    cloudi_x_cowboy,
-    % combonodefinder not started automatically
-    cloudi_x_dynamic_compile,
-    % ec2nodefinder not started automatically
-    cloudi_x_ecouchdb,
-    cloudi_x_elli,
-    cloudi_x_ememcached,
-    cloudi_x_emysql,
-    cloudi_x_epgsql,
-    cloudi_x_erlasticsearch,
-    cloudi_x_etokyotyrant,
-    cloudi_x_jsx,
-    % nodefinder not started automatically
-    cloudi_x_poolboy,
-    cloudi_x_ranch, % required for cowboy
-    cloudi_x_thrift,
-    % CloudI
-    cloudi_core,
-    cloudi_services_internal,
-    cloudi_services_databases,
-    cloudi_services_messaging,
-    cloudi_x_pqueue,
-    cloudi_x_quickrand,
-    cloudi_x_cpg,
-    cloudi_x_uuid,
-    cloudi_x_trie,
-    cloudi_x_reltool_util,
-    cloudi_x_key2value,
-    % Erlang
-    sasl,
-    stdlib,
-    kernel
-   ]},
-  {rel, "start_clean", "",
-   [
-    kernel,
-    stdlib
-   ]},
-  {boot_rel, "cloudi"},
+  % typical defaults
   {profile, embedded},
   {incl_cond, derived},
   {mod_cond, all},
-  {excl_archive_filters, [".*"]},
+  {app_file, keep},
   {excl_sys_filters, ["^bin/.*",
                       "^erts.*/bin/(dialyzer|typer)",
                       "^erts.*/(doc|info|include|lib|man|src)"]},
+
+  % keep beam files exposed for module loading of internal services
+  {excl_archive_filters, [".*"]},
+
+  % Erlang dependencies
+  {erts,
+   [{incl_cond, derived}, {mod_cond, all}, {app_file, keep}]},
   {app, hipe,
    [{incl_cond, exclude}]},
-  %{app, debugger, % add debug_info
+  {debug_info, strip}, % required for debugger
+  %{app, debugger,
   % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, sasl,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
-  % external dependencies
-  @ZEROMQ_ERLZMQ_RELTOOL@
-  {app, cloudi_x_combonodefinder,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_cowboy,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_dynamic_compile,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_ec2nodefinder,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_ecouchdb,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_elli,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_ememcached,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_emysql,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_epgsql,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_erlasticsearch,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_etokyotyrant,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_jsx,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_nodefinder,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_poolboy,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_x_thrift,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  % CloudI
+  {boot_rel, "cloudi"},
+  % CloudI source code, including supporting applications
   {app, cloudi_core,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_services_internal,
@@ -118,9 +47,92 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_x_key2value,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  % Erlang
-  {app, sasl,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]}
+
+  % cloudi_core dependencies
+  {app, cloudi_x_combonodefinder,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_dynamic_compile,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_ec2nodefinder,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_nodefinder,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+
+  % cloudi_services_internal dependencies
+  {app, cloudi_x_cowboy,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_elli,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_jsx,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+
+  % cloudi_services_databases dependencies
+  {app, cloudi_x_ecouchdb,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_ememcached,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_emysql,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_epgsql,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_erlasticsearch,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_etokyotyrant,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_poolboy,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_thrift,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+
+  % cloudi_services_messaging dependencies
+  @ZEROMQ_ERLZMQ_RELTOOL@
+
+  % application directories
+  {lib_dirs,
+   [
+    "lib",
+    "external",
+    "external/nodefinder"
+    @ZEROMQ_ERLZMQ_PATH@
+   ]},
+  % application startup for release generation
+  {rel, "cloudi", "1",
+   [
+    % external dependencies
+    cloudi_x_cowboy,
+    % combonodefinder not started automatically
+    cloudi_x_dynamic_compile,
+    % ec2nodefinder not started automatically
+    cloudi_x_ecouchdb,
+    cloudi_x_ememcached,
+    cloudi_x_emysql,
+    cloudi_x_epgsql,
+    cloudi_x_etokyotyrant,
+    cloudi_x_jsx,
+    % nodefinder not started automatically
+    cloudi_x_ranch, % required for cowboy
+    % CloudI
+    cloudi_core,
+    cloudi_services_internal,
+    cloudi_services_databases,
+    cloudi_services_messaging,
+    cloudi_x_pqueue,
+    cloudi_x_quickrand,
+    cloudi_x_cpg,
+    cloudi_x_uuid,
+    cloudi_x_trie,
+    cloudi_x_reltool_util,
+    cloudi_x_key2value,
+    % Erlang
+    sasl,
+    stdlib,
+    kernel
+   ]},
+  {rel, "start_clean", "",
+   [
+    kernel,
+    stdlib
+   ]}
  ]}.
 
 {target_dir, "rel/cloudi"}.
@@ -129,7 +141,7 @@
  [
   {mkdir, "bin"},
   {mkdir, "etc"},
-  {copy, "@builddir@/rel/files/app.config", "etc/app.config"},
+  {copy, "@srcdir@/rel/files/app.config", "etc/app.config"},
   {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
   {copy, "@srcdir@/rel/files/install_upgrade.escript",

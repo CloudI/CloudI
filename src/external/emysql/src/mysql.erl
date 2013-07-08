@@ -69,6 +69,25 @@
 -module(mysql).
 -behaviour(gen_server).
 
+-export([start_link/7,
+         connect/7,
+         fetch/2,
+         fetch/3,
+         prepare/2,
+         execute/4,
+         get_result_field_info/1,
+         get_result_rows/1,
+         get_result_affected_rows/1,
+         get_result_insert_id/1,
+         get_result_reason/1,
+         call_server/1,
+         encode/1,
+         encode/2,
+         two_digits/1,
+         quote/1,
+         quote/2,
+         asciz_binary/2]).
+
 %% Internal exports - gen_server callbacks
 -export([
     init/1,
@@ -78,7 +97,6 @@
     terminate/2,
     code_change/3
 ]).
--compile(export_all).
 
 %% Records
 -include("mysql.hrl").

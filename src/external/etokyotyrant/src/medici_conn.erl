@@ -227,28 +227,28 @@ get_db_type(Socket, Timeout)
     {error, Reason} ->
         {error, Reason};
     StatList ->
-        case proplists:get_value(bigend, StatList) of
+        Endian = case proplists:get_value(bigend, StatList) of
         "0" ->
-            Endian = little;
+            little;
         _ ->
-            Endian = big
+            big
         end,
-        case proplists:get_value(type, StatList) of
+        Type = case proplists:get_value(type, StatList) of
         "on-memory hash" -> 
-            Type = hash;
+            hash;
         "table" -> 
-            Type = table;
+            table;
         "on-memory tree" -> 
-            Type = tree;
+            tree;
         "B+ tree" -> 
-            Type = tree;
+            tree;
         "hash" ->
-            Type = hash;
+            hash;
         "fixed-length" ->
-            Type = fixed;
+            fixed;
         _ -> 
             ?DEBUG_LOG("~p:get_db_type returned ~p~n", [?MODULE, proplists:get_value(type, StatList)]),
-            Type = error
+            error
         end,
         case Type of
         error ->

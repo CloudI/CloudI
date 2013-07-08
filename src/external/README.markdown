@@ -50,25 +50,24 @@ to its integration and dependencies).
 
 `emysql (erlang_mysql)`
 -----------------------
-`Erlang MySQL (native) Driver`
-
+ `Erlang MySQL (native) Driver`
+ 
 - `http://github.com/ngerakines/erlang_mysql`
-- `alternatives are: https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl, https://github.com/dizzyd/erlang-mysql-driver`
+- `alternative: https://github.com/Eonblast/Emysql`
 - `commit 712f8ead7585e6d3736a`
 - `October 14, 2009`
-- `BSD`
 
 `epgsql`
 --------
 `Erlang PostgreSQL (native) Driver`
 
-- `https://github.com/wg/epgsql`
-- `commit 3318bd5d646cad0623ae9dcc6df015bb85258a63`
-- `Fri Jul  6 19:45:00 PDT 2012`
+- `https://github.com/okeuday/epgsql`
+- `commit b1118003b70c9c71ca8f24a246275b0ce9a9b0a0`
+- `Mon Jul  8 11:10:51 PDT 2013`
 - `BSD`
 
 `erlasticsearch`
---------
+----------------
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
@@ -163,7 +162,7 @@ to its integration and dependencies).
 - `New BSD`
 
 `poolboy`
-------------
+---------
 `Poolboy - A hunky Erlang worker pool factory`
 
 - `https://github.com/devinus/poolboy`
@@ -190,7 +189,7 @@ to its integration and dependencies).
 - `Apache License`
 
 `thrift`
-------------
+--------
 `Erlang Thrift software library`
 
 - `https://github.com/dieswaytoofast/thrift`

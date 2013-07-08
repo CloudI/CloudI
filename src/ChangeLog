@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add all the warnings previously excluded in the rebar_src.config.in file
+    * Fix the various warnings within the external dependencies
+    * Reformat the reltool.config.in file to be simpler
+
 2013-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add service prefix configuration validation
