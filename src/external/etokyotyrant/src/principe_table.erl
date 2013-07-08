@@ -343,9 +343,9 @@ putcat(Socket, Key, Cols, Timeout) ->
 %%
 %% TODO: better way would be to use a lua server script to perform the merge?
 update(Socket, Key, Cols, Timeout) ->
-    case principe:misc(Socket, <<"get">>, [Key], Timeout) of
+    UpdatedProps = case principe:misc(Socket, <<"get">>, [Key], Timeout) of
 	{error, _Reason} ->
-	    UpdatedProps = Cols;
+	    Cols;
 	ExistingData ->
 	    OldProps = decode_table(ExistingData),
 	    NewProps = lists:foldl(fun({K, V}, AccIn) when is_list(K) ->
@@ -354,7 +354,7 @@ update(Socket, Key, Cols, Timeout) ->
 					   [{list_to_binary(atom_to_list(K)), V} | AccIn];
 				      (Other, AccIn) -> [Other | AccIn]
 				   end, OldProps, Cols),
-	    UpdatedProps = [{K, proplists:get_value(K, NewProps)} || K <- proplists:get_keys(NewProps)]
+	    [{K, proplists:get_value(K, NewProps)} || K <- proplists:get_keys(NewProps)]
     end,
     Data = encode_table(UpdatedProps),
     ?TSimple(<<"put">>, [Key | Data], Timeout).
