@@ -20,12 +20,6 @@ AC_PROG_CXX
 AC_PROG_SED
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
-AX_CHECK_PRIVATE_HEADER(gmp.h, ,
-    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
-    $PATHS_NONSYSTEM_INC)
-AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
-    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
-    $PATHS_NONSYSTEM_LIB)
 AX_CLOCK_GETTIME
 
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -128,17 +122,18 @@ if test "x$want_rebar" = "xyes"; then
         [ESCRIPT=$ESCRIPT
          SRCDIR=$abs_top_srcdir
          BUILDDIR=$abs_top_builddir])
-fi
-AC_PATH_PROGS([REBAR], [rebar], ,
-              ["$abs_top_builddir" "$abs_top_builddir/../.."])
-if test -z "$REBAR"; then
-    if test "x$want_rebar" != "xyes"; then
+    REBAR="$abs_top_builddir/rebar"
+else
+    AC_PATH_PROGS([REBAR], [rebar], ,
+                  ["$abs_top_builddir" "$abs_top_builddir/../.."])
+    if test -z "$REBAR"; then
         AC_MSG_ERROR([rebar not found (use --with-rebar)])
-    else
-        REBAR="$abs_top_builddir/rebar"
     fi
 fi
 AC_SUBST(REBAR)
+
+# hexpi test
+AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 
 # ZeroMQ dependency
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)

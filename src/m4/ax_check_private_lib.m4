@@ -3,7 +3,7 @@
 #
 # SYNOPSIS
 #
-# AX_CHECK_PRIVATE_LIB(LIBRARY, FUNCTION,
+# AX_CHECK_PRIVATE_LIB(LIBRARY, FUNCTION, SOURCE,
 #                      [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
 #                      [OTHER-LIBRARIES], [OTHER-PATHS])
 #
@@ -14,7 +14,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog
+# Copyright (c) 2011-2013, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@
 
 AC_DEFUN([AX_CHECK_PRIVATE_LIB],
 [
-    m4_ifval([$3], , [AH_CHECK_LIB([$1])])
+    m4_ifval([$4], , [AH_CHECK_LIB([$1])])
     AS_LITERAL_IF([$1],
                   [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1_$2])],
                   [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1''_$2])])
@@ -61,16 +61,16 @@ AC_DEFUN([AX_CHECK_PRIVATE_LIB],
          ac_check_lib_save_LIBS=$LIBS
          ldflags_prefix=""
          lib_path=""
-         LIBS="-l$1 $5 $LIBS"
+         LIBS="-l$1 $6 $LIBS"
          AC_LINK_IFELSE(
-             [AC_LANG_CALL([], [$2])],
+             [$3],
              [AS_VAR_SET(ac_Lib, yes)],
              [AS_VAR_SET(ac_Lib, no)
-              for path in $6 ; do
+              for path in $7 ; do
                   ldflags_prefix="-L$path"
                   lib_path=$path
                   LDFLAGS="$ac_check_lib_save_LDFLAGS $ldflags_prefix"
-                  AC_LINK_IFELSE([AC_LANG_CALL([], [$2])],
+                  AC_LINK_IFELSE([$3],
                                  [AS_VAR_SET(ac_Lib, yes)
                                   break],
                                  [])
@@ -85,8 +85,8 @@ AC_DEFUN([AX_CHECK_PRIVATE_LIB],
            dnl only set if searched for
            m4_toupper($1_PATH)=$lib_path
            AC_SUBST(m4_toupper($1_PATH))
-           m4_default([$3], [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_LIB$1))])],
-          [$4])
+           m4_default([$4], [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_LIB$1))])],
+          [$5])
     AS_VAR_POPDEF([ac_Lib])
 ])
 
