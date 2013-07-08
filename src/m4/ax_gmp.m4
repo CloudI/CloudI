@@ -54,6 +54,7 @@
 #
 AC_DEFUN([AX_GMP],
 [
+    AC_LANG_PUSH([C])
     AX_CHECK_PRIVATE_HEADER(gmp.h, ,
         [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
         $1)
@@ -74,4 +75,5 @@ mpz_add(a, a, b);
         $2)
     CFLAGS="$CFLAGS_SAVED"
     export CFLAGS
+    AC_LANG_POP([C])
 ])
