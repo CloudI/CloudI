@@ -3,22 +3,27 @@
 #
 # SYNOPSIS
 #
-#   AX_SEARCH_PRIVATE_LIBS(FUNCTION, SOURCE, SEARCH-LIBS,
-#                          [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
-#                          [OTHER-LIBRARIES])
+#   AX_GMP([OTHER-INC_PATHS], [OTHER-LIB_PATHS])
 #
 # DESCRIPTION
 #
-#   AC_SEARCH_LIBS functionality that does not modify the LIBS variable
+#   Determine if GMP can be found on the system
+#
+#   This macro sets:
+#
+#     GMP_H_CFLAGS
+#     GMP_LDFLAGS
+#     GMP_LIB
+#     GMP_PATH
 #
 # BSD LICENSE
-# 
-# Copyright (c) 2011-2013, Michael Truog
+#
+# Copyright (c) 2013, Michael Truog
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -31,7 +36,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -47,25 +52,26 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE.
 #
-
-AC_DEFUN([AX_SEARCH_PRIVATE_LIBS],
+AC_DEFUN([AX_GMP],
 [
-    AC_CACHE_CHECK([for library containing $1], [ac_cv_search_$1],
-                   [ac_func_search_save_LIBS=$LIBS
-                    ac_cv_search_$1=no
-                    AC_LINK_IFELSE([$2],
-                                   [ac_cv_search_$1="none required"])
-                    if test "$ac_cv_search_$1" = no; then
-                        for ac_lib in $3; do
-                            LIBS="-l$ac_lib $6 $ac_func_search_save_LIBS"
-                            AC_LINK_IFELSE([$2],
-                                           [ac_cv_search_$1="-l$ac_lib"
-                                            break])
-                        done
-                    fi
-                    LIBS=$ac_func_search_save_LIBS])
-    AS_IF([test "$ac_cv_search_$1" != no],
-          [test "$ac_cv_search_$1" = "none required" || $4],
-          [$5])
+    AX_CHECK_PRIVATE_HEADER(gmp.h, ,
+        [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
+        $1)
+    CFLAGS_SAVED="$CFLAGS"
+    CFLAGS="$GMP_H_CFLAGS $CFLAGS"
+    export CFLAGS
+    AX_CHECK_PRIVATE_LIB(gmp, gmpz_init,
+        [AC_LANG_PROGRAM([[
+#include <gmp.h>
+         ]], [[
+mpz_t a;
+mpz_init_set_str(a, "12345678901234567890", 10);
+mpz_t b;
+mpz_init_set_str(b,  "9876543210987654321", 10);
+mpz_add(a, a, b);
+         ]])], ,
+        [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
+        $2)
+    CFLAGS="$CFLAGS_SAVED"
+    export CFLAGS
 ])
-
