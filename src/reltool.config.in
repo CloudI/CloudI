@@ -102,15 +102,19 @@
     cloudi_x_cowboy,
     % combonodefinder not started automatically
     cloudi_x_dynamic_compile,
+    cloudi_x_elli,
     % ec2nodefinder not started automatically
     cloudi_x_ecouchdb,
     cloudi_x_ememcached,
     cloudi_x_emysql,
     cloudi_x_epgsql,
+    cloudi_x_erlasticsearch, 
     cloudi_x_etokyotyrant,
     cloudi_x_jsx,
     % nodefinder not started automatically
-    cloudi_x_ranch, % required for cowboy
+    cloudi_x_poolboy,    % required for erlasticsearch
+    cloudi_x_ranch,      % required for cowboy
+    cloudi_x_thrift,     % required for erlasticsearch
     % CloudI
     cloudi_core,
     cloudi_services_internal,
@@ -141,7 +145,7 @@
  [
   {mkdir, "bin"},
   {mkdir, "etc"},
-  {copy, "@srcdir@/rel/files/app.config", "etc/app.config"},
+  {copy, "@builddir@/rel/files/app.config", "etc/app.config"},
   {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
   {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
   {copy, "@srcdir@/rel/files/install_upgrade.escript",
