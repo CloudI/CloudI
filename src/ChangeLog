@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Java http_req test
+    * Fix reltool_util:modules_purged/2 functionality
+
 2013-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add all the warnings previously excluded in the rebar_src.config.in file

@@ -967,15 +967,15 @@ modules_purged([], BusyModules, Timeout) ->
 modules_purged([Module | Modules], BusyModules, Timeout) ->
     case is_module_loaded(Module) of
         true ->
-            true = code:delete(Module),
-            case code:soft_purge(Module) of
-                true ->
-                    modules_purged(Modules, BusyModules, Timeout);
-                false ->
-                    modules_purged(Modules, [Module | BusyModules], Timeout)
-            end;
+            true = code:delete(Module);
         false ->
-            modules_purged(Modules, BusyModules, Timeout)
+            ok
+    end,
+    case code:soft_purge(Module) of
+        true ->
+            modules_purged(Modules, BusyModules, Timeout);
+        false ->
+            modules_purged(Modules, [Module | BusyModules], Timeout)
     end.
 
 load_all_modules([]) ->

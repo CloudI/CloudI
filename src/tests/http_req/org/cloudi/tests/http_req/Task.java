@@ -66,7 +66,7 @@ public class Task implements Runnable
     {
         HashMap<String, List<String> > http_qs =
             api.request_http_qs_parse(request);
-        final String value = http_qs.remove("value").get(0);
+        final List<String> value = http_qs.remove("value");
         String response;
         if (value == null)
         {
@@ -75,7 +75,7 @@ public class Task implements Runnable
         }
         else
         {
-            final long value_long = Long.parseLong(value, 10);
+            final long value_long = Long.parseLong(value.get(0), 10);
             response =
                 "<http_test><value>" +
                 Long.toString(value_long) +
