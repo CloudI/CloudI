@@ -42,8 +42,6 @@
 %%%------------------------------------------------------------------------
 
 % internal service parameters
-% (same as the config_service_internal record, but the order is significant
-%  since it is used within all configuration data)
 -record(internal,
     {
         prefix             :: cloudi:service_name_pattern(),
@@ -62,8 +60,6 @@
     }).
     
 % external service parameters
-% (same as the config_service_external record, but the order is significant
-%  since it is used within all configuration data)
 -record(external,
     {
         prefix             :: cloudi:service_name_pattern(),

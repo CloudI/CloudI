@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -802,6 +802,8 @@ interface(trace, Process) ->
     ", [Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(Level, Destination) when is_atom(Level) ->
+    {Module, Binary} =
+        cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
     case code:is_loaded(cloudi_logger_interface) of
         {file, _} ->
             code:soft_purge(cloudi_logger_interface);
@@ -810,8 +812,6 @@ load_interface_module(Level, Destination) when is_atom(Level) ->
     end,
     code:delete(cloudi_logger_interface),
     % do not purge the module, but let it get purged after the new one is loaded
-    {Module, Binary} =
-        cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
     case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
         {module, Module} ->
             {ok, Binary};
