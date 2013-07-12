@@ -21,6 +21,3 @@
 % so that global locking is unnecessary
 -define(GROUP_NAME_WITH_LOCAL_PIDS_ONLY, undefined).
 
-% define if you want to use ETS for less contention on a CPG scope process
-%-define(CPG_ETS_CACHE, cpg_state).
-

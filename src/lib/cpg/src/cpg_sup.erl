@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_sup).
@@ -59,36 +59,6 @@
 -export([init/1]).
 
 -include("cpg_constants.hrl").
-
--ifdef(CPG_ETS_CACHE).
--define(CPG_ETS_CACHE_START(R),
-        ChildSpec1 = {cpg_ets1,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec2 = {cpg_ets2,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec3 = {cpg_ets3,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ok = cpg_ets:table_create(),
-        case R of
-            {ok, SupervisorPid} = Result ->
-                {ok, Child1} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec1),
-                {ok, Child2} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec2),
-                {ok, _} = supervisor:start_child(SupervisorPid,
-                                                 ChildSpec3),
-                ok = cpg_ets:table_owners(Child1, Child2),
-                Result;
-            Result ->
-                Result
-        end).
--else.
--define(CPG_ETS_CACHE_START(R),
-        R).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -105,7 +75,7 @@
     {'error', any()}.
 
 start_link([A | _] = ScopeList) when is_atom(A) ->
-    ?CPG_ETS_CACHE_START(supervisor:start_link(?MODULE, [ScopeList])).
+    supervisor:start_link(?MODULE, [ScopeList]).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor

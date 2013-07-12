@@ -54,6 +54,7 @@
 -export([new/0,
          new/1,
          get_pid/2,
+         get_pid/3,
          send_async/3,
          send_async/4,
          send_async/5,
@@ -188,9 +189,31 @@ new(Settings)
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: any()}.
 
-get_pid(#cloudi_context{dest_refresh = DestRefresh}, Name)
+get_pid(#cloudi_context{dest_refresh = DestRefresh,
+                        timeout_sync = DefaultTimeoutSync}, Name)
     when is_list(Name) ->
-    case destination_get(DestRefresh, Name) of
+    case destination_get(DestRefresh, Name, DefaultTimeoutSync) of
+        {error, _} = Error ->
+            Error;
+        {ok, Pattern, Pid} ->
+            {ok, {Pattern, Pid}}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a service destination based on a service name.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_pid(Context :: #cloudi_context{},
+              Name :: service_name(),
+              Timeout :: timeout_milliseconds()) ->
+    {'ok', PatternPid :: pattern_pid()} |
+    {'error', Reason :: any()}.
+
+get_pid(#cloudi_context{dest_refresh = DestRefresh}, Name, Timeout)
+    when is_list(Name) ->
+    case destination_get(DestRefresh, Name, Timeout) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -288,7 +311,7 @@ send_async(#cloudi_context{dest_refresh = DestRefresh} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, undefined)
     when is_list(Name) ->
-    case destination_get(DestRefresh, Name) of
+    case destination_get(DestRefresh, Name, Timeout) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -516,7 +539,7 @@ send_sync(#cloudi_context{dest_refresh = DestRefresh} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, undefined)
     when is_list(Name) ->
-    case destination_get(DestRefresh, Name) of
+    case destination_get(DestRefresh, Name, Timeout) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -634,7 +657,7 @@ mcast_async(#cloudi_context{dest_refresh = DestRefresh,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    case destination_all(DestRefresh, Name) of
+    case destination_all(DestRefresh, Name, Timeout) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, PidList} ->
@@ -765,66 +788,70 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_closest ->
-    cloudi_x_cpg:get_closest_pid(Name);
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_furthest ->
-    cloudi_x_cpg:get_furthest_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_closest,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Name, Timeout));
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_random ->
-    cloudi_x_cpg:get_random_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_furthest,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_furthest_pid(Name, Timeout));
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_local ->
-    cloudi_x_cpg:get_local_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_random,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_random_pid(Name, Timeout));
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_remote ->
-    cloudi_x_cpg:get_remote_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_local,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_local_pid(Name, Timeout));
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_newest ->
-    cloudi_x_cpg:get_newest_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_remote,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_remote_pid(Name, Timeout));
 
-destination_get(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_oldest ->
-    cloudi_x_cpg:get_oldest_pid(Name);
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_newest,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_newest_pid(Name, Timeout));
 
-destination_get(DestRefresh, _) ->
+destination_get(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_oldest,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Name, Timeout));
+
+destination_get(DestRefresh, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).
 
-destination_all(DestRefresh, Name)
-    when is_list(Name),
-         (DestRefresh =:= immediate_closest orelse
+destination_all(DestRefresh, Name, Timeout)
+    when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    cloudi_x_cpg:get_members(Name);
+          DestRefresh =:= immediate_oldest),
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_members(Name, Timeout));
 
-destination_all(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_local ->
-    cloudi_x_cpg:get_local_members(Name);
+destination_all(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_local,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_local_members(Name, Timeout));
 
-destination_all(DestRefresh, Name)
-    when is_list(Name),
-         DestRefresh =:= immediate_remote ->
-    cloudi_x_cpg:get_remote_members(Name);
+destination_all(DestRefresh, Name, Timeout)
+    when DestRefresh =:= immediate_remote,
+         is_list(Name) ->
+    ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Name, Timeout));
 
-destination_all(DestRefresh, _) ->
+destination_all(DestRefresh, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).
+
