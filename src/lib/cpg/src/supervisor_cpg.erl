@@ -8,6 +8,10 @@
 %%% for a supervisor.  Use as an interface, not a behaviour (i.e., it is just
 %%% a supervisor you can call functions on).  cpg_supervisor only provides the
 %%% one_for_one supervisor strategy to avoid complexity.
+%%%
+%%% Meant to provide better functionality than:
+%%% https://github.com/jbrisbin/rabbit_common/blob/master/src/mirrored_supervisor.erl
+%%% (mnesia is avoided and state is minimized)
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -48,7 +52,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supervisor_cpg).
@@ -82,7 +86,7 @@ start_link(Name, MaxR, MaxT) ->
 
 start_link(_, MaxR, MaxT, _)
     when is_integer(MaxR) =:= false; is_integer(MaxT) =:= false ->
-    erlang:exit(self(), badarg);
+    erlang:exit(badarg);
 start_link(Name, MaxR, MaxT, ChildSpecs)
     when MaxR >= 0, MaxT > 0, is_list(ChildSpecs) ->
     supervisor:start_link(?MODULE,

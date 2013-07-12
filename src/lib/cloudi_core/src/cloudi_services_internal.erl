@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -205,13 +205,13 @@ handle_call(self, _, #state{receiver_pid = ReceiverPid} = State) ->
 handle_call({'subscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid} = State) ->
-    ok = cloudi_x_cpg:join(Prefix ++ Pattern, ReceiverPid),
+    ok = cloudi_x_cpg:join(Prefix ++ Pattern, ReceiverPid, infinity),
     {reply, ok, State};
 
 handle_call({'unsubscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid} = State) ->
-    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, ReceiverPid),
+    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, ReceiverPid, infinity),
     {reply, ok, State};
 
 handle_call({'get_pid', Name}, Client,
@@ -619,7 +619,9 @@ handle_info({'cloudi_service_forward_async_retry',
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups) of
+            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                {error, timeout} ->
+                    ok;
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_async_retry',
@@ -650,7 +652,9 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
                    dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups) of
+            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                {error, timeout} ->
+                    ok;
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_sync_retry',
@@ -992,7 +996,10 @@ handle_get_pid(Name, Timeout, Client,
                #state{receiver_pid = ReceiverPid,
                       dest_refresh = DestRefresh,
                       cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_get_pid_retry',
@@ -1012,7 +1019,10 @@ handle_send_async(Name, RequestInfo, Request,
                          uuid_generator = UUID,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'cloudi_service_send_async_retry',
@@ -1048,7 +1058,10 @@ handle_send_async_active(Name, RequestInfo, Request,
                                 uuid_generator = UUID,
                                 dest_refresh = DestRefresh,
                                 cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
                               {'cloudi_service_send_async_active_retry',
@@ -1085,7 +1098,10 @@ handle_send_sync(Name, RequestInfo, Request,
                         uuid_generator = UUID,
                         dest_refresh = DestRefresh,
                         cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, ReceiverPid, Groups) of
+    case destination_get(DestRefresh, Name, ReceiverPid, Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_send_sync_retry',
@@ -1120,7 +1136,10 @@ handle_mcast_async(Name, RequestInfo, Request,
                           uuid_generator = UUID,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups} = State) ->
-    case destination_all(DestRefresh, Name, ReceiverPid, Groups) of
+    case destination_all(DestRefresh, Name, ReceiverPid, Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
                               {'cloudi_service_mcast_async_retry',

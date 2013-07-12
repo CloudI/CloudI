@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cpg timeout usage to internal and external services so that the
+      service request timeout provides an absolute limit for
+      any service name lookup
+    * Update cpg
+
 2013-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Java http_req test

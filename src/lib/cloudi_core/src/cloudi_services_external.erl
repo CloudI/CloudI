@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -247,13 +247,13 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
 'HANDLE'({'subscribe', Pattern},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix} = State) ->
-    ok = cloudi_x_cpg:join(Prefix ++ Pattern, Dispatcher),
+    ok = cloudi_x_cpg:join(Prefix ++ Pattern, Dispatcher, infinity),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix} = State) ->
-    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, Dispatcher),
+    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, Dispatcher, infinity),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
@@ -301,7 +301,9 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
                 dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups) of
+            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                {error, timeout} ->
+                    ok;
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
                                       {'cloudi_service_forward_async_retry',
@@ -334,7 +336,9 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
                 dest_allow = DestAllow} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups) of
+            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                {error, timeout} ->
+                    ok;
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
                                       {'cloudi_service_forward_sync_retry',
@@ -573,7 +577,9 @@ handle_info({'cloudi_service_forward_async_retry', Name, RequestInfo, Request,
             #state{dispatcher = Dispatcher,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+        {error, timeout} ->
+            ok;
         {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
             erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_forward_async_retry',
@@ -598,7 +604,9 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
             #state{dispatcher = Dispatcher,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Source, Groups) of
+    case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+        {error, timeout} ->
+            ok;
         {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
             erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_forward_sync_retry',
@@ -859,7 +867,10 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                          uuid_generator = UUID,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Dispatcher, Groups) of
+    case destination_get(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+        {error, timeout} ->
+            send('return_async_out'(), State),
+            {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_send_async_retry',
@@ -884,7 +895,10 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
                         uuid_generator = UUID,
                         dest_refresh = DestRefresh,
                         cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Dispatcher, Groups) of
+    case destination_get(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+        {error, timeout} ->
+            send('return_sync_out'(), State),
+            {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_send_sync_retry',
@@ -908,7 +922,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                           uuid_generator = UUID,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups} = State) ->
-    case destination_all(DestRefresh, Name, Dispatcher, Groups) of
+    case destination_all(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+        {error, timeout} ->
+            send('returns_async_out'(), State),
+            {next_state, StateName, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, Dispatcher,
                               {'cloudi_service_mcast_async_retry',
