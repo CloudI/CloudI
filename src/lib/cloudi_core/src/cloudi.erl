@@ -307,18 +307,6 @@ send_async(Context, Name, RequestInfo, Request,
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: any()}.
 
-send_async(#cloudi_context{dest_refresh = DestRefresh} = Context,
-           Name, RequestInfo, Request,
-           Timeout, Priority, undefined)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name, Timeout) of
-        {error, _} = Error ->
-            Error;
-        {ok, Pattern, Pid} ->
-            send_async(Context, Name, RequestInfo, Request,
-                       Timeout, Priority, {Pattern, Pid})
-    end;
-
 send_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
            Name, RequestInfo, Request,
            undefined, Priority, PatternPid) ->
@@ -330,6 +318,18 @@ send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
            Timeout, undefined, PatternPid) ->
     send_async(Context, Name, RequestInfo, Request,
                Timeout, PriorityDefault, PatternPid);
+
+send_async(#cloudi_context{dest_refresh = DestRefresh} = Context,
+           Name, RequestInfo, Request,
+           Timeout, Priority, undefined)
+    when is_list(Name) ->
+    case destination_get(DestRefresh, Name, Timeout) of
+        {error, _} = Error ->
+            Error;
+        {ok, Pattern, Pid} ->
+            send_async(Context, Name, RequestInfo, Request,
+                       Timeout, Priority, {Pattern, Pid})
+    end;
 
 send_async(#cloudi_context{receiver = Receiver,
                            uuid_generator = UUID},
@@ -535,18 +535,6 @@ send_sync(Context, Name, RequestInfo, Request,
     {'ok', Response :: response()} |
     {'error', Reason :: any()}.
 
-send_sync(#cloudi_context{dest_refresh = DestRefresh} = Context,
-          Name, RequestInfo, Request,
-          Timeout, Priority, undefined)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name, Timeout) of
-        {error, _} = Error ->
-            Error;
-        {ok, Pattern, Pid} ->
-            send_sync(Context, Name, RequestInfo, Request,
-                      Timeout, Priority, {Pattern, Pid})
-    end;
-
 send_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
           Name, RequestInfo, Request,
           undefined, Priority, PatternPid) ->
@@ -558,6 +546,18 @@ send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
           Timeout, undefined, PatternPid) ->
     send_sync(Context, Name, RequestInfo, Request,
               Timeout, PriorityDefault, PatternPid);
+
+send_sync(#cloudi_context{dest_refresh = DestRefresh} = Context,
+          Name, RequestInfo, Request,
+          Timeout, Priority, undefined)
+    when is_list(Name) ->
+    case destination_get(DestRefresh, Name, Timeout) of
+        {error, _} = Error ->
+            Error;
+        {ok, Pattern, Pid} ->
+            send_sync(Context, Name, RequestInfo, Request,
+                      Timeout, Priority, {Pattern, Pid})
+    end;
 
 send_sync(#cloudi_context{receiver = Receiver,
                           uuid_generator = UUID},
