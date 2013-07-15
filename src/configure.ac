@@ -6,8 +6,16 @@ AC_INIT([CloudI], [1.2.4], [mjtruog at gmail dot com],
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
-PATHS_NONSYSTEM_INC="/opt/local/include /usr/local/include"
-PATHS_NONSYSTEM_LIB="/opt/local/lib /usr/local/lib"
+PATHS_NONSYSTEM_INC=""
+AC_CHECK_FILE("/opt/local/include",
+              [PATHS_NONSYSTEM_INC="/opt/local/include $PATHS_NONSYSTEM_INC"])
+AC_CHECK_FILE("/usr/local/include",
+              [PATHS_NONSYSTEM_INC="/usr/local/include $PATHS_NONSYSTEM_INC"])
+PATHS_NONSYSTEM_LIB=""
+AC_CHECK_FILE("/opt/local/lib",
+              [PATHS_NONSYSTEM_LIB="/opt/local/lib $PATHS_NONSYSTEM_LIB"])
+AC_CHECK_FILE("/usr/local/lib",
+              [PATHS_NONSYSTEM_LIB="/usr/local/lib $PATHS_NONSYSTEM_LIB"])
 
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
