@@ -93,10 +93,14 @@ AC_DEFUN([AX_ZEROMQ],
         AC_LANG_PUSH([C])
         local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq/v$want_zeromq_version"
         if test "x$ac_zeromq_path" != "x"; then
+            ac_zeromq_path_include="$ac_zeromq_path/include"
+            ac_zeromq_path_lib="$ac_zeromq_path/lib"
             ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
             ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
         elif test -f "$local_zeromq_path/include/zmq.h"; then
             ac_zeromq_path="$local_zeromq_path"
+            ac_zeromq_path_include="$ac_zeromq_path/include"
+            ac_zeromq_path_lib="$ac_zeromq_path/lib"
             ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
             ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
         else
@@ -105,9 +109,14 @@ AC_DEFUN([AX_ZEROMQ],
                 dnl old v2 installation
                 zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
                 ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
+                ac_zeromq_path_include="$ac_zeromq_path/include"
+                ac_zeromq_path_lib="$ac_zeromq_path/lib"
                 ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
                 ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
             else
+                ac_zeromq_path=""
+                ac_zeromq_path_include=""
+                ac_zeromq_path_lib=""
                 AX_CHECK_PRIVATE_HEADER(zmq.h,
                     [ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
                      ZEROMQ_LDFLAGS=""
@@ -121,8 +130,11 @@ AC_DEFUN([AX_ZEROMQ],
         CFLAGS_SAVED="$CFLAGS"
         CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
         export CFLAGS
-        AC_DEFINE([VERSION_MAJOR_MIN], [$want_zeromq_version],
-                  [Requested ZeroMQ major version])
+        CPPFLAGS_SAVED="$CPPFLAGS"
+        CPPFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
+        export CPPFLAGS
+        AC_DEFINE_UNQUOTED([VERSION_MAJOR_MIN], $want_zeromq_version,
+                           [Requested ZeroMQ major version])
         AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
 #include <zmq.h>
 #if ZMQ_VERSION_MAJOR < VERSION_MAJOR_MIN
@@ -138,16 +150,19 @@ AC_DEFUN([AX_ZEROMQ],
             AX_CHECK_PRIVATE_LIB(zmq, zmq_init, [AC_LANG_PROGRAM([[
 #include <zmq.h>
                                   ]], [[
-void * ctx = zmq_init(1, 1, ZMQ_POLL);
+void * ctx = zmq_init(1);
 void * socket = zmq_socket(ctx, ZMQ_REQ);
 zmq_close(socket);
 zmq_term(ctx);
-                                  ]])], , [build_zeromq="yes"], $2)
+                                  ]])], , [build_zeromq="yes"], ,
+                                 $ac_zeromq_path_lib $2)
             LDFLAGS="$LDFLAGS_SAVED"
             export LDFLAGS
         fi
         CFLAGS="$CFLAGS_SAVED"
         export CFLAGS
+        CPPFLAGS="$CPPFLAGS_SAVED"
+        export CPPFLAGS
         AC_LANG_POP([C])
 
         if test "x$build_zeromq" = "xyes"; then
