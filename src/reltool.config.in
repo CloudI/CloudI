@@ -17,7 +17,8 @@
    [{incl_cond, derived}, {mod_cond, all}, {app_file, keep}]},
   {app, hipe,
    [{incl_cond, exclude}]},
-  {debug_info, strip}, % required for debugger
+  % sometimes external services need the debug_info in OTP applications
+  {debug_info, keep},
   %{app, debugger,
   % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, sasl,
