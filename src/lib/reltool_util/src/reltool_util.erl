@@ -954,6 +954,8 @@ modules_purged([], [], _) ->
 modules_purged([], BusyModules, Timeout) ->
     case erlang:max(Timeout - ?MODULES_PURGED_DELTA, 0) of
         0 ->
+            % attempt to force the purge, killing any processes that remain
+            % executing the code
             case lists:dropwhile(fun code:purge/1, BusyModules) of
                 [] ->
                     ok;
@@ -967,10 +969,14 @@ modules_purged([], BusyModules, Timeout) ->
 modules_purged([Module | Modules], BusyModules, Timeout) ->
     case is_module_loaded(Module) of
         true ->
+            % if there is old code for Module, purge it before delete
+            code:soft_purge(Module),
+            % mark Module code as old
             true = code:delete(Module);
         false ->
             ok
     end,
+    % purge the Module if no processes remain executing the code
     case code:soft_purge(Module) of
         true ->
             modules_purged(Modules, BusyModules, Timeout);
