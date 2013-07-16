@@ -401,16 +401,20 @@ dialyzer.plt:
                        compiler debugger ssl tools
 
 doc: all
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
-        || exit 0
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
+        || exit 0)
 
 xref: all
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
-        || exit 0
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
+        || exit 0)
 
 test: all
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit \
+        || exit 0)
 
 uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
