@@ -157,9 +157,9 @@ get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #cpg_data{local_count = 0,
-                                remote_count = 0}} ->
-            {ok, Pattern, []};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local = Local,
                                 remote = Remote}} ->
             {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->

@@ -11,8 +11,10 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_services_internal/src \
      -d $(top_srcdir)/lib/cloudi_services_messaging/src \
      -d $(top_srcdir)/lib/cpg/src \
+     -d $(top_srcdir)/lib/cpg/test \
      -d $(top_srcdir)/lib/key2value/src \
      -d $(top_srcdir)/lib/pqueue/src \
+     -d $(top_srcdir)/lib/pqueue/test \
      -d $(top_srcdir)/lib/quickrand/src \
      -d $(top_srcdir)/lib/reltool_util/src \
      -d $(top_srcdir)/lib/trie/src \
@@ -21,7 +23,9 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/nodefinder/ec2nodefinder/src \
      -d $(top_srcdir)/external/nodefinder/nodefinder/src \
      -d $(top_srcdir)/external/cowboy/src \
+     -d $(top_srcdir)/external/cowboy/test \
      -d $(top_srcdir)/external/elli/src \
+     -d $(top_srcdir)/external/elli/test \
      -d $(top_srcdir)/external/dynamic_compile/src \
      -d $(top_srcdir)/external/ecouchdb/src \
      -d $(top_srcdir)/external/ememcached/src \
@@ -31,8 +35,11 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/etokyotyrant/src \
      -d $(top_srcdir)/external/jsx/src \
      -d $(top_srcdir)/external/poolboy/src \
+     -d $(top_srcdir)/external/poolboy/test \
      -d $(top_srcdir)/external/ranch/src \
-     -d $(top_srcdir)/external/thrift/src
+     -d $(top_srcdir)/external/ranch/test \
+     -d $(top_srcdir)/external/thrift/src \
+     -d $(top_srcdir)/external/thrift/test
 
 all-local: rel/files/app.config \
            erlang-applications-scope-add \
@@ -327,6 +334,7 @@ clean-configure: config.log \
         $(top_srcdir)/m4/lt~obsolete.m4 \
         $(top_builddir)/rel/files/app.config \
         $(top_builddir)/rebar_src.config \
+        $(top_builddir)/rebar_src_test.config \
         $(top_builddir)/reltool.config \
         $(top_builddir)/cloudi.conf
 	rm -rf $(top_srcdir)/autom4te.cache
@@ -360,7 +368,7 @@ rebar-directories-clean-configure:
 erlang-applications-scope-remove:
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 
-dialyze: all-local \
+dialyze: all \
          dialyzer.plt
 	$(DIALYZER) --plt dialyzer.plt \
               -Wno_return -Wno_unused \
@@ -392,37 +400,20 @@ dialyzer.plt:
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
                        compiler debugger ssl tools
 
-doc:
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config doc || exit 0
+doc: all
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
+        || exit 0
 
-xref:
-	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config xref || exit 0
+xref: all
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
+        || exit 0
 
-run:
-	@echo
-	@echo "********************"
-	@echo "* USE make install *"
-	@echo "********************"
-	@echo
-	@exit 1
-
-distdir:
-	@echo
-	@echo "*************************************"
-	@echo "* AUTOMAKE DISTRIBUTION IS NOT USED *"
-	@echo "*************************************"
-	@echo
-	@exit 1
-
-dist: distdir
+test: all
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct
+	$(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit
 
 uninstall:
-	@echo
-	@echo "**********************************"
-	@echo "* AUTOMAKE UNINSTALL IS NOT USED *"
-	@echo "**********************************"
-	@echo
-	@exit 1
+	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
 install-exec-hook: cloudi-prefix-install \
                    tests-install \
@@ -739,4 +730,21 @@ service_api-python-install:
         "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
         "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 
+run:
+	@echo
+	@echo "********************"
+	@echo "* USE make install *"
+	@echo "********************"
+	@echo
+	@exit 1
+
+distdir:
+	@echo
+	@echo "*************************************"
+	@echo "* AUTOMAKE DISTRIBUTION IS NOT USED *"
+	@echo "*************************************"
+	@echo
+	@exit 1
+
+dist: distdir
 

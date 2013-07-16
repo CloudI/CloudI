@@ -170,6 +170,15 @@ to its integration and dependencies).
 - `Tue Apr 16 13:47:17 EDT 2013`
 - `Apache License`
 
+`proper`
+--------
+`PropEr (PROPerty-based testing tool for ERlang)`
+
+- `https://github.com/manopapad/proper`
+- `commit aa6b088607a08b82ef765dfdfcb6f20f0735915f (version 1.1)`
+- `Tue Jul 16 11:26:20 PDT 2013`
+- `GPLv3`
+
 `ranch`
 -------
 `Erlang Socket acceptor pool for TCP protocols`

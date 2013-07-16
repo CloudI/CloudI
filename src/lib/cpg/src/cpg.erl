@@ -175,7 +175,9 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec start_link() -> {ok, pid()} | {error, term()}.
+-spec start_link() ->
+    {ok, pid()} |
+    {error, term()}.
 
 start_link() ->
     start_link(?DEFAULT_SCOPE).
@@ -186,7 +188,9 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec start_link(atom()) -> {ok, pid()} | {error, term()}.
+-spec start_link(atom()) ->
+    {ok, pid()} |
+    {error, term()}.
 
 start_link(Scope) when is_atom(Scope) ->
     true = (Scope /= local andalso
@@ -202,7 +206,8 @@ start_link(Scope) when is_atom(Scope) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create(name()) -> ok.
+-spec create(name()) ->
+    ok.
 
 create(_) ->
     ok.
@@ -214,7 +219,8 @@ create(_) ->
 %%-------------------------------------------------------------------------
 
 -spec create(scope(),
-             name()) -> ok.
+             name()) ->
+    ok.
 
 create(_, _) ->
     ok.
@@ -227,7 +233,8 @@ create(_, _) ->
 
 -spec create(scope(),
              name(),
-             pos_integer() | infinity) -> ok.
+             pos_integer() | infinity) ->
+    ok.
 
 create(_, _, _) ->
     ok.
@@ -238,7 +245,8 @@ create(_, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(name()) -> ok.
+-spec delete(name()) ->
+    ok.
 
 delete(_) ->
     ok.
@@ -250,7 +258,8 @@ delete(_) ->
 %%-------------------------------------------------------------------------
 
 -spec delete(scope(),
-             name()) -> ok.
+             name()) ->
+    ok.
 
 delete(_, _) ->
     ok.
@@ -263,7 +272,8 @@ delete(_, _) ->
 
 -spec delete(scope(),
              name(),
-             pos_integer() | infinity) -> ok.
+             pos_integer() | infinity) ->
+    ok.
 
 delete(_, _, _) ->
     ok.
@@ -275,7 +285,8 @@ delete(_, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec join(name()) -> ok.
+-spec join(name()) ->
+    ok.
 
 join(GroupName) ->
     join_impl(?DEFAULT_SCOPE, GroupName, self(), ?DEFAULT_TIMEOUT).
@@ -291,7 +302,8 @@ join(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec join(name() | scope(),
-           pid() | name()) -> ok.
+           pid() | name()) ->
+    ok.
 
 join(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
@@ -313,7 +325,8 @@ join(Scope, GroupName)
 
 -spec join(scope() | name(),
            name() | pid(),
-           pid() | pos_integer() | infinity) -> ok.
+           pid() | pos_integer() | infinity) ->
+    ok.
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
@@ -337,7 +350,8 @@ join(GroupName, Pid, Timeout)
 -spec join(scope(),
            name(),
            pid(),
-           pos_integer() | infinity) -> ok.
+           pos_integer() | infinity) ->
+    ok.
 
 join(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid),
@@ -358,7 +372,8 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name()) -> ok.
+-spec leave(name()) ->
+    ok | error.
 
 leave(GroupName) ->
     leave(?DEFAULT_SCOPE, GroupName, self(), ?DEFAULT_TIMEOUT).
@@ -374,7 +389,8 @@ leave(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec leave(name() | scope(),
-            pid() | name()) -> ok.
+            pid() | name()) ->
+    ok | error.
 
 leave(GroupName, Pid)
     when is_pid(Pid), node(Pid) =:= node() ->
@@ -396,7 +412,8 @@ leave(Scope, GroupName)
 
 -spec leave(scope() | name(),
             name() | pid(),
-            pid() | pos_integer() | infinity) -> ok.
+            pid() | pos_integer() | infinity) ->
+    ok | error.
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid),
@@ -420,7 +437,8 @@ leave(GroupName, Pid, Timeout)
 -spec leave(scope(),
             name(),
             pid(),
-            pos_integer() | infinity) -> ok.
+            pos_integer() | infinity) ->
+    ok | error.
 
 leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid),
@@ -430,9 +448,13 @@ leave(Scope, GroupName, Pid, Timeout)
 leave_impl(Scope, GroupName, Pid, Timeout) ->
     group_name_validate(GroupName),
     Request = {leave, GroupName, Pid},
-    ok = gen_server:call(Scope, Request, Timeout),
-    gen_server:abcast(nodes(), Scope, Request),
-    ok.
+    case gen_server:call(Scope, Request, Timeout) of
+        ok ->
+            gen_server:abcast(nodes(), Scope, Request),
+            ok;
+        error ->
+            error
+    end.
 
 -else. % GROUP_NAME_WITH_LOCAL_PIDS_ONLY not defined
 -define(MEMBERSHIP_CHECK(F, TRUE, FALSE), case F of ok -> TRUE;
@@ -446,7 +468,8 @@ leave_impl(Scope, GroupName, Pid, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create(name()) -> ok | error.
+-spec create(name()) ->
+    ok | error.
 
 create(GroupName) ->
     create(?DEFAULT_SCOPE, GroupName, infinity).
@@ -460,7 +483,8 @@ create(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec create(scope(),
-             name()) -> ok | error.
+             name()) ->
+    ok | error.
 
 create(Scope, GroupName)
     when is_atom(Scope) ->
@@ -476,7 +500,8 @@ create(Scope, GroupName)
 
 -spec create(scope(),
              name(),
-             pos_integer() | infinity) -> ok | error.
+             pos_integer() | infinity) ->
+    ok | error.
 
 create(Scope, GroupName, Timeout)
     when is_atom(Scope) ->
@@ -501,7 +526,8 @@ create(Scope, GroupName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(name()) -> ok | error.
+-spec delete(name()) ->
+    ok | error.
 
 delete(GroupName) ->
     delete(?DEFAULT_SCOPE, GroupName, infinity).
@@ -515,7 +541,8 @@ delete(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec delete(scope(),
-             name()) -> ok | error.
+             name()) ->
+    ok | error.
 
 delete(Scope, GroupName)
     when is_atom(Scope) ->
@@ -531,7 +558,8 @@ delete(Scope, GroupName)
 
 -spec delete(scope(),
              name(),
-             pos_integer() | infinity) -> ok | error.
+             pos_integer() | infinity) ->
+    ok | error.
 
 delete(Scope, GroupName, Timeout)
     when is_atom(Scope) ->
@@ -554,7 +582,8 @@ delete(Scope, GroupName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec join(name()) -> ok | error.
+-spec join(name()) ->
+    ok | error.
 
 join(GroupName) ->
     join_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
@@ -568,7 +597,8 @@ join(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec join(name(),
-           pid()) -> ok | error.
+           pid()) ->
+    ok | error.
 
 join(GroupName, Pid)
     when is_pid(Pid) ->
@@ -584,7 +614,8 @@ join(GroupName, Pid)
 
 -spec join(scope() | name(),
            name() | pid(),
-           pid() | pos_integer() | infinity) -> ok | error.
+           pid() | pos_integer() | infinity) ->
+    ok | error.
 
 join(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
@@ -605,7 +636,8 @@ join(GroupName, Pid, Timeout)
 -spec join(scope(),
            name(),
            pid(),
-           pos_integer() | infinity) -> ok | error.
+           pos_integer() | infinity) ->
+    ok | error.
 
 join(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
@@ -631,7 +663,8 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name()) -> ok | error.
+-spec leave(name()) ->
+    ok | error.
 
 leave(GroupName) ->
     leave_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
@@ -645,7 +678,8 @@ leave(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec leave(name(),
-            pid()) -> ok | error.
+            pid()) ->
+    ok | error.
 
 leave(GroupName, Pid)
     when is_pid(Pid) ->
@@ -661,7 +695,8 @@ leave(GroupName, Pid)
 
 -spec leave(scope() | name(),
             name() | pid(),
-            pid() | pos_integer() | infinity) -> ok | error.
+            pid() | pos_integer() | infinity) ->
+    ok | error.
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
@@ -682,7 +717,8 @@ leave(GroupName, Pid, Timeout)
 -spec leave(scope(),
             name(),
             pid(),
-            pos_integer() | infinity) -> ok | error.
+            pos_integer() | infinity) ->
+    ok | error.
 
 leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
@@ -712,7 +748,8 @@ leave_impl(Scope, GroupName, Pid, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec whereis_name(via_name()) -> pid() | undefined.
+-spec whereis_name(via_name()) ->
+    pid() | undefined.
 
 whereis_name({global, Scope, GroupName, random})
     when is_atom(Scope) ->
@@ -902,7 +939,8 @@ whereis_name(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec register_name(via_name(),
-                    pid()) -> yes | no.
+                    pid()) ->
+    yes | no.
 
 register_name({RegistrationType, Scope, GroupName, Lookup}, Pid)
     when (RegistrationType =:= global orelse
@@ -951,7 +989,8 @@ register_name(GroupName, Pid) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec unregister_name(via_name()) -> ok | error.
+-spec unregister_name(via_name()) ->
+    ok | error.
 
 unregister_name({RegistrationType, Scope, GroupName, Lookup})
     when (RegistrationType =:= global orelse
@@ -1001,7 +1040,8 @@ unregister_name(GroupName) ->
 %%-------------------------------------------------------------------------
 
 -spec send(via_name(),
-           any()) -> pid().
+           any()) ->
+    pid().
 
 send(ViaName, Msg) ->
     case whereis_name(ViaName) of

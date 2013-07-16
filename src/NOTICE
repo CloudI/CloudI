@@ -449,6 +449,14 @@ external/poolboy
 
 (full license below)
 
+---------------------------------------------------------------------------- GPL
+external/proper
+
+ GPLv3 (only used for running tests, not a runtime dependency,
+        similar to autoconf/automake which are used for the build system)
+
+(full license below)
+
 ----------------------------------------------------------------- Apache License
 external/rebar
 
