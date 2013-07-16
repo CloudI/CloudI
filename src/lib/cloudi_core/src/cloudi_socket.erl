@@ -62,9 +62,15 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-ifdef(TEST).
+init() ->
+    ok.
+-else.
 init() ->
     Path = [_ | _] = code:priv_dir(cloudi_core),
-    erlang:load_nif(filename:join([Path, "libcloudi_socket_drv"]), []).
+    erlang:load_nif(filename:join([Path,
+                                   "libcloudi_socket_drv"]), []).
+-endif.
 
 -spec local(_SocketPath :: string()) ->
     ok | {error, atom()}.

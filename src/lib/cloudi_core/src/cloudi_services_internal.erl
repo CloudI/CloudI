@@ -205,14 +205,14 @@ handle_call(self, _, #state{receiver_pid = ReceiverPid} = State) ->
 handle_call({'subscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid} = State) ->
-    ok = cloudi_x_cpg:join(Prefix ++ Pattern, ReceiverPid, infinity),
-    {reply, ok, State};
+    Result = cloudi_x_cpg:join(Prefix ++ Pattern, ReceiverPid, infinity),
+    {reply, Result, State};
 
 handle_call({'unsubscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid} = State) ->
-    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, ReceiverPid, infinity),
-    {reply, ok, State};
+    Result = cloudi_x_cpg:leave(Prefix ++ Pattern, ReceiverPid, infinity),
+    {reply, Result, State};
 
 handle_call({'get_pid', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->

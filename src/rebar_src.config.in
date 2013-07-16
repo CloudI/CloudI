@@ -17,6 +17,7 @@
   "external/nodefinder/ec2nodefinder",
   "external/nodefinder/combonodefinder",
   "external/poolboy",
+  "external/proper",
   "external/ranch",
   "external/thrift",
   "lib/pqueue",

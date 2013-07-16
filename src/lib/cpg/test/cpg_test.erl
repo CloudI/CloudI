@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_test).
@@ -145,14 +145,22 @@ supervisor_via_test() ->
     {cpg_test_server1, ChildPid1b, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
+    ChildPid1bRef = erlang:monitor(process, ChildPid1b),
     erlang:exit(ChildPid1b, kill),
-    timer:sleep(500),
+    receive
+        {'DOWN', ChildPid1bRef, process, ChildPid1b, killed} ->
+            timer:sleep(500)
+    end,
     {cpg_test_server1, ChildPid1c, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
     true = is_pid(ChildPid1c),
+    ChildPid1cRef = erlang:monitor(process, ChildPid1c),
     erlang:exit(ChildPid1c, kill),
-    timer:sleep(500),
+    receive
+        {'DOWN', ChildPid1cRef, process, ChildPid1c, killed} ->
+            timer:sleep(500)
+    end,
     {cpg_test_server1, ChildPid1d, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
@@ -165,7 +173,12 @@ supervisor_via_test() ->
                                                         cpg_test_server1),
     {error, not_found} = supervisor_cpg:delete_child(SupViaName,
                                                      cpg_test_server1),
+    ChildPid3Ref = erlang:monitor(process, ChildPid3),
     erlang:exit(ChildPid3, kill),
+    receive
+        {'DOWN', ChildPid3Ref, process, ChildPid3, killed} ->
+            timer:sleep(500)
+    end,
     [{active, 1},
      {specs, 1},
      {supervisors, 0},
@@ -186,8 +199,12 @@ pid_age_test() ->
     {ok, "GroupA", Pid1} = cpg:get_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid1} = cpg:get_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA", Pid1),
+    Pid1Ref = erlang:monitor(process, Pid1),
     erlang:exit(Pid1, kill),
-    timer:sleep(1000),
+    receive
+        {'DOWN', Pid1Ref, process, Pid1, killed} ->
+            timer:sleep(500)
+    end,
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
     erlang:exit(Pid2, kill),

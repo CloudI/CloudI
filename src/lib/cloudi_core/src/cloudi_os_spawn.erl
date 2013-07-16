@@ -364,6 +364,11 @@ call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
         error:Reason -> {error, Reason}
     end.
 
+-ifdef(TEST).
+load_path(File) when is_list(File) ->
+    Path = [_ | _] = code:lib_dir(cloudi_core),
+    filename:join([Path, "cxx_src", File]).
+-else.
 load_path(File) when is_list(File) ->
     case code:priv_dir(cloudi_core) of
         {error, _} ->
@@ -376,6 +381,7 @@ load_path(File) when is_list(File) ->
                     {error, enoent}
             end
     end.
+-endif.
 
 %% exit status messages
 

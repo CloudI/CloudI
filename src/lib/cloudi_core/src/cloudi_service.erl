@@ -256,7 +256,8 @@ self(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec subscribe(Dispatcher :: dispatcher(),
-                Pattern :: service_name_pattern()) -> ok.
+                Pattern :: service_name_pattern()) ->
+    ok.
 
 subscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
@@ -269,7 +270,8 @@ subscribe(Dispatcher, Pattern)
 %%-------------------------------------------------------------------------
 
 -spec unsubscribe(Dispatcher :: dispatcher(),
-                  Pattern :: service_name_pattern()) -> ok.
+                  Pattern :: service_name_pattern()) ->
+    ok | error.
 
 unsubscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->

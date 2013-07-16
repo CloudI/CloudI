@@ -150,6 +150,7 @@ AX_ZEROMQ_ERLZMQ
 AC_CONFIG_FILES([
     cloudi.conf
     rebar_src.config
+    rebar_src_test.config
     reltool.config
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_services_internal/src/cloudi_services_internal.app.src

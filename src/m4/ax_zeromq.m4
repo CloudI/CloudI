@@ -167,7 +167,7 @@ zmq_term(ctx);
 
         if test "x$build_zeromq" = "xyes"; then
             AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
-            AC_MSG_RESULT(local installation)
+            AC_MSG_RESULT(building)
             abs_top_srcdir=`cd $srcdir; pwd`
             AC_CONFIG_COMMANDS([zeromq],
                 [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/zeromq/ && \
@@ -184,7 +184,7 @@ zmq_term(ctx);
             ZEROMQ_LIB_PATH="$local_zeromq_path/lib"
         else
             AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
-            AC_MSG_RESULT(system installation)
+            AC_MSG_RESULT(found)
             ZEROMQ_LDFLAGS=$ZMQ_LDFLAGS
             dnl empty if not in one of $2
             ZEROMQ_LIB_PATH=$ZMQ_PATH
