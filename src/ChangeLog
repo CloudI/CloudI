@@ -4,6 +4,8 @@
 2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add "build" ZeroMQ option value
+    * Add cloudi_service:service_name_parse/2 to make it simpler to utilize
+      service name patterns
 
 2013-07-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 

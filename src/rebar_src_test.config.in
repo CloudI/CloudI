@@ -1,9 +1,11 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+
 {lib_dirs,
  ["external",
   "lib"]}.
 {sub_dirs,
- ["tests/eunit",
-  "tests/ct",
+ ["tests",
   "lib/cloudi_core",
   "lib/cloudi_services_internal",
   "lib/cloudi_services_databases",
