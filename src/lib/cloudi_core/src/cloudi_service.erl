@@ -141,6 +141,7 @@
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
+         service_name_parse/2,
          request_http_qs_parse/1,
          request_info_key_value_parse/1,
          % functions to trigger edoc, until -callback works with edoc
@@ -1398,6 +1399,19 @@ timeout_async(Dispatcher) ->
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a service name pattern.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_name_parse(Pattern :: string(),
+                         Name :: string()) ->
+    list(string()) | error.
+
+service_name_parse(Pattern, Name) ->
+    cloudi_x_trie:pattern_parse(Pattern, Name).
 
 %%-------------------------------------------------------------------------
 %% @doc
