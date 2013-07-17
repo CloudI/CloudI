@@ -290,7 +290,7 @@ rebar-directories-clean: rebar-clean
           $(top_srcdir)/external/jsx/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
           $(top_srcdir)/external/poolboy/ebin \
-          $(top_srcdir)/external/poolboy/ebin \
+          $(top_srcdir)/external/thrift/ebin \
           $(top_srcdir)/external/erlasticsearch/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \

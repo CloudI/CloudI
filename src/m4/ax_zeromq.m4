@@ -59,18 +59,26 @@ AC_DEFUN([AX_ZEROMQ],
     AC_ARG_WITH([zeromq],
         [AS_HELP_STRING([--with-zeromq@<:@=ARG@:>@],
             [use ZeroMQ library from a standard location (ARG=yes),
+             from a local installation (ARG=build),
              from the specified location (ARG=<path>),
              or disable it (ARG=no)
              @<:@ARG=no@:>@ ])],
             [
             if test "$withval" = "no"; then
                 want_zeromq="no"
+                build_zeromq=""
             elif test "$withval" = "yes"; then
                 want_zeromq="yes"
                 ac_zeromq_path=""
+                build_zeromq=""
+            elif test "$withval" = "build"; then
+                want_zeromq="yes"
+                ac_zeromq_path=""
+                build_zeromq="yes"
             else
                 want_zeromq="yes"
                 ac_zeromq_path="$withval"
+                build_zeromq=""
             fi
             ],
             [want_zeromq="no"])
@@ -88,82 +96,83 @@ AC_DEFUN([AX_ZEROMQ],
             fi
             ],
             [want_zeromq_version=$default_zeromq_version])
-
     if test "x$want_zeromq" = "xyes"; then
-        AC_LANG_PUSH([C])
         local_zeromq_path=`(cd $srcdir; pwd)`"/../install/zeromq/v$want_zeromq_version"
-        if test "x$ac_zeromq_path" != "x"; then
-            ac_zeromq_path_include="$ac_zeromq_path/include"
-            ac_zeromq_path_lib="$ac_zeromq_path/lib"
-            ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
-            ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
-        elif test -f "$local_zeromq_path/include/zmq.h"; then
-            ac_zeromq_path="$local_zeromq_path"
-            ac_zeromq_path_include="$ac_zeromq_path/include"
-            ac_zeromq_path_lib="$ac_zeromq_path/lib"
-            ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
-            ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
-        else
-            AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
-            if test "x$zeromq_path_bin_queue" != "x"; then
-                dnl old v2 installation
-                zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
-                ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
+        if test "x$build_zeromq" != "xyes"; then
+            AC_LANG_PUSH([C])
+            if test "x$ac_zeromq_path" != "x"; then
                 ac_zeromq_path_include="$ac_zeromq_path/include"
                 ac_zeromq_path_lib="$ac_zeromq_path/lib"
                 ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
                 ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
+            elif test -f "$local_zeromq_path/include/zmq.h"; then
+                ac_zeromq_path="$local_zeromq_path"
+                ac_zeromq_path_include="$ac_zeromq_path/include"
+                ac_zeromq_path_lib="$ac_zeromq_path/lib"
+                ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
+                ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
             else
-                ac_zeromq_path=""
-                ac_zeromq_path_include=""
-                ac_zeromq_path_lib=""
-                AX_CHECK_PRIVATE_HEADER(zmq.h,
-                    [ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
-                     ZEROMQ_LDFLAGS=""
-                    ],
-                    [ZEROMQ_CFLAGS=""
-                     ZEROMQ_LDFLAGS=""], , $1)
+                AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
+                if test "x$zeromq_path_bin_queue" != "x"; then
+                    dnl old v2 installation
+                    zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
+                    ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
+                    ac_zeromq_path_include="$ac_zeromq_path/include"
+                    ac_zeromq_path_lib="$ac_zeromq_path/lib"
+                    ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
+                    ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
+                else
+                    ac_zeromq_path=""
+                    ac_zeromq_path_include=""
+                    ac_zeromq_path_lib=""
+                    AX_CHECK_PRIVATE_HEADER(zmq.h,
+                        [ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
+                         ZEROMQ_LDFLAGS=""
+                        ],
+                        [ZEROMQ_CFLAGS=""
+                         ZEROMQ_LDFLAGS=""], , $1)
+                fi
             fi
-        fi
-
-        dnl check ZeroMQ installation
-        CFLAGS_SAVED="$CFLAGS"
-        CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
-        export CFLAGS
-        CPPFLAGS_SAVED="$CPPFLAGS"
-        CPPFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
-        export CPPFLAGS
-        AC_DEFINE_UNQUOTED([VERSION_MAJOR_MIN], $want_zeromq_version,
-                           [Requested ZeroMQ major version])
-        AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
+    
+            dnl check ZeroMQ installation
+            CFLAGS_SAVED="$CFLAGS"
+            CFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
+            export CFLAGS
+            CPPFLAGS_SAVED="$CPPFLAGS"
+            CPPFLAGS="$CFLAGS $ZEROMQ_CFLAGS"
+            export CPPFLAGS
+            AC_DEFINE_UNQUOTED([VERSION_MAJOR_MIN], $want_zeromq_version,
+                               [Requested ZeroMQ major version])
+            AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
 #include <zmq.h>
 #if ZMQ_VERSION_MAJOR < VERSION_MAJOR_MIN
 #error ZeroMQ version is too old
 #endif
-             ]], [[]])],
-            [build_zeromq="no"],
-            [build_zeromq="yes"])
-        if test "x$build_zeromq" = "xno"; then
-            LDFLAGS_SAVED="$LDFLAGS"
-            LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
-            export LDFLAGS
-            AX_CHECK_PRIVATE_LIB(zmq, zmq_init, [AC_LANG_PROGRAM([[
+                 ]], [[]])],
+                [build_zeromq="no"],
+                [build_zeromq="yes"])
+            if test "x$build_zeromq" = "xno"; then
+                LDFLAGS_SAVED="$LDFLAGS"
+                LDFLAGS="$LDFLAGS $ZEROMQ_LDFLAGS"
+                export LDFLAGS
+                AX_CHECK_PRIVATE_LIB(zmq, zmq_init, [AC_LANG_PROGRAM([[
 #include <zmq.h>
-                                  ]], [[
+                                      ]], [[
 void * ctx = zmq_init(1);
 void * socket = zmq_socket(ctx, ZMQ_REQ);
 zmq_close(socket);
 zmq_term(ctx);
-                                  ]])], , [build_zeromq="yes"], ,
-                                 $ac_zeromq_path_lib $2)
-            LDFLAGS="$LDFLAGS_SAVED"
-            export LDFLAGS
+                                      ]])], , [build_zeromq="yes"], ,
+                                     $ac_zeromq_path_lib $2)
+                LDFLAGS="$LDFLAGS_SAVED"
+                export LDFLAGS
+            fi
+            CFLAGS="$CFLAGS_SAVED"
+            export CFLAGS
+            CPPFLAGS="$CPPFLAGS_SAVED"
+            export CPPFLAGS
+            AC_LANG_POP([C])
         fi
-        CFLAGS="$CFLAGS_SAVED"
-        export CFLAGS
-        CPPFLAGS="$CPPFLAGS_SAVED"
-        export CPPFLAGS
-        AC_LANG_POP([C])
 
         if test "x$build_zeromq" = "xyes"; then
             AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
