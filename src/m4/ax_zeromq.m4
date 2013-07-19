@@ -112,7 +112,7 @@ AC_DEFUN([AX_ZEROMQ],
                 ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
                 ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
             else
-                AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue], , )
+                AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue])
                 if test "x$zeromq_path_bin_queue" != "x"; then
                     dnl old v2 installation
                     zeromq_path_bin=`AS_DIRNAME([$zeromq_path_bin_queue])`
