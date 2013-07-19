@@ -337,7 +337,10 @@ clean-configure: config.log \
         $(top_builddir)/rebar_src_test.config \
         $(top_builddir)/reltool.config \
         $(top_builddir)/cloudi.conf
-	rm -rf $(top_srcdir)/autom4te.cache
+	rm -rf $(top_srcdir)/autom4te.cache \
+           $(top_srcdir)/tests/.eunit \
+           $(top_srcdir)/tests/ct/logs \
+           $(top_srcdir)/lib/cloudi_services_databases/test_ct/logs
 	rm -rf $(top_builddir)/api/c/.deps/ \
          $(top_builddir)/api/python/.deps/ \
          $(top_builddir)/lib/cloudi_core/cxx_src/.deps/ \

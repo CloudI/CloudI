@@ -2,8 +2,10 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {lib_dirs,
- ["external",
-  "lib"]}.
+ ["lib",
+  "external",
+  "external/nodefinder"
+  @ZEROMQ_ERLZMQ_PATH@]}.
 {sub_dirs,
  ["tests",
   "lib/cloudi_core",
