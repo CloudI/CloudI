@@ -364,24 +364,24 @@ call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
         error:Reason -> {error, Reason}
     end.
 
--ifdef(TEST).
 load_path(File) when is_list(File) ->
-    Path = [_ | _] = code:lib_dir(cloudi_core),
-    filename:join([Path, "cxx_src", File]).
--else.
-load_path(File) when is_list(File) ->
-    case code:priv_dir(cloudi_core) of
-        {error, _} ->
-            {error, enotdir};
-        Path ->
-            case file:read_file_info(filename:join([Path, File])) of
-                {ok, _} ->
-                    {ok, Path};
-                _ ->
-                    {error, enoent}
+    case cloudi_core_app:test() of
+        true ->
+            Path = [_ | _] = code:lib_dir(cloudi_core),
+            filename:join([Path, "cxx_src", File]);
+        false ->
+            case code:priv_dir(cloudi_core) of
+                {error, _} ->
+                    {error, enotdir};
+                Path ->
+                    case file:read_file_info(filename:join([Path, File])) of
+                        {ok, _} ->
+                            {ok, Path};
+                        _ ->
+                            {error, enoent}
+                    end
             end
     end.
--endif.
 
 %% exit status messages
 
