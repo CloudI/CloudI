@@ -368,7 +368,7 @@ load_path(File) when is_list(File) ->
     case cloudi_core_app:test() of
         true ->
             Path = [_ | _] = code:lib_dir(cloudi_core),
-            filename:join([Path, "cxx_src", File]);
+            {ok, filename:join(Path, "cxx_src")};
         false ->
             case code:priv_dir(cloudi_core) of
                 {error, _} ->
