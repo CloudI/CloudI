@@ -36,6 +36,7 @@
 
 % blocking operations must decrement the timeout to make sure timeouts
 % have time to unravel all synchronous calls
+% (should be less than all INTERVAL constants)
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
 % maximum wait time before a reconnect is attempted with a node
