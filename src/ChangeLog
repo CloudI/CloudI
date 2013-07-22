@@ -11,6 +11,10 @@
     * Add cloudi_service_db_pgsql_SUITE ct test module
     * Update cpg and reltool_util
     * Fix duo_mode internal service terminate after init returns stop
+    * Fix timeout usage within cloudi module to imitate the cloudi_service
+      module usage of TIMEOUT_DELTA for service name lookups
+    * Make cloudi_service_db_pgsql_SUITE execution conditional so that
+      postgres configuration isn't required
 
 2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

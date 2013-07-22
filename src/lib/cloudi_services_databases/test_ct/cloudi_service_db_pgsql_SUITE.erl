@@ -51,17 +51,23 @@ init_per_testcase(_TestCase, Config) ->
 end_per_testcase(_TestCase, Config) ->
     Config.
 
-t_create_table_1(Config) ->
+t_create_table_1(_Config) ->
     ?LOG_INFO("~p", [?FUNCTION]),
     Context = cloudi:new(),
-    {ok, _Response} = cloudi:send_sync(Context, ?DB,
-        % from hexpi test
-        <<"DROP TABLE IF EXISTS incoming_results; "
-          "CREATE TABLE incoming_results ("
-          "digit_index   NUMERIC(30) PRIMARY KEY,"
-          "data          TEXT"
-          ");">>),
-    ok.
+    case cloudi:get_pid(Context, ?DB, 0) of
+        {ok, _} ->
+            {ok, _Response} = cloudi:send_sync(Context, ?DB,
+                % from hexpi test
+                <<"DROP TABLE IF EXISTS incoming_results; "
+                  "CREATE TABLE incoming_results ("
+                  "digit_index   NUMERIC(30) PRIMARY KEY,"
+                  "data          TEXT"
+                  ");">>),
+            ok;
+        {error, _} ->
+            error_logger:error_msg("Postgres isn't setup"),
+            ok
+    end.
     
 
 

@@ -192,7 +192,8 @@ new(Settings)
 get_pid(#cloudi_context{dest_refresh = DestRefresh,
                         timeout_sync = DefaultTimeoutSync}, Name)
     when is_list(Name) ->
-    case destination_get(DestRefresh, Name, DefaultTimeoutSync) of
+    case destination_get(DestRefresh, Name,
+                         DefaultTimeoutSync + ?TIMEOUT_DELTA) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -212,8 +213,10 @@ get_pid(#cloudi_context{dest_refresh = DestRefresh,
     {'error', Reason :: any()}.
 
 get_pid(#cloudi_context{dest_refresh = DestRefresh}, Name, Timeout)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name, Timeout) of
+    when is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    case destination_get(DestRefresh, Name,
+                         Timeout + ?TIMEOUT_DELTA) of
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -322,8 +325,10 @@ send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
 send_async(#cloudi_context{dest_refresh = DestRefresh} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, undefined)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name, Timeout) of
+    when is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    case destination_get(DestRefresh, Name,
+                         Timeout + ?TIMEOUT_DELTA) of
         {error, {no_process, Name}} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             receive after ?SEND_ASYNC_INTERVAL -> ok end,
             send_async(Context, Name, RequestInfo, Request,
@@ -555,8 +560,10 @@ send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
 send_sync(#cloudi_context{dest_refresh = DestRefresh} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, undefined)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name, Timeout) of
+    when is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    case destination_get(DestRefresh, Name,
+                         Timeout + ?TIMEOUT_DELTA) of
         {error, {no_process, Name}} when Timeout >= ?SEND_SYNC_INTERVAL ->
             receive after ?SEND_SYNC_INTERVAL -> ok end,
             send_sync(Context, Name, RequestInfo, Request,
@@ -674,7 +681,8 @@ mcast_async(#cloudi_context{dest_refresh = DestRefresh,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    case destination_all(DestRefresh, Name, Timeout) of
+    case destination_all(DestRefresh, Name,
+                         Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             receive after ?MCAST_ASYNC_INTERVAL -> ok end,
             mcast_async(Context, Name, RequestInfo, Request,
