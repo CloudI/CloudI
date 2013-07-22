@@ -10,6 +10,7 @@
     * Fix cloudi_service_db_pgsql list results
     * Add cloudi_service_db_pgsql_SUITE ct test module
     * Update cpg and reltool_util
+    * Fix duo_mode internal service terminate after init returns stop
 
 2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
