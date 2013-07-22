@@ -1015,6 +1015,8 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
+cloudi_service_terminate(_, undefined) ->
+    ok;
 cloudi_service_terminate(_, #state{connection = Connection}) ->
     cloudi_x_ecouchdb:close(Connection),
     ok.

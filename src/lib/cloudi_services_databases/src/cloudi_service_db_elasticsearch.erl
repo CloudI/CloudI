@@ -578,6 +578,8 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
+cloudi_service_terminate(_, undefined) ->
+    ok;
 cloudi_service_terminate(_, #state{pool_name = PoolName,
                                    binary_pool_name = BinaryPoolName}) ->
     cloudi_x_erlasticsearch:stop_pool(PoolName),
