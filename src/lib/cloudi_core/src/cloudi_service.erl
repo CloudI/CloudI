@@ -11,6 +11,7 @@
 %%%   cloudi_service_init(Args, Prefix, Dispatcher)  
 %%%    ==> {ok, State}
 %%%        {stop, Reason}
+%%%        {stop, Reason, State}
 %%%
 %%%   cloudi_service_handle_request(Type, Name, Pattern,
 %%%                                 RequestInfo, Request, Timeout, Priority,
@@ -1478,7 +1479,8 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
                                    Prefix :: service_name_pattern(),
                                    Dispatcher :: dispatcher()) ->
     {'ok', State :: any()} |
-    {'stop', Reason :: any()}.
+    {'stop', Reason :: any()} |
+    {'stop', Reason :: any(), State :: any()}.
 
 'Module:cloudi_service_init'(_, _, _) ->
     {ok, state}.

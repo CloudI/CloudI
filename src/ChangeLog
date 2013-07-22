@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi module retry of service requests and context checking
+    * Add cloudi_logger.hrl FUNCTION macro
+    * Add service state parameter for cloudi_service_init/3 stop return value
+      (optional for usage in cloudi_service_terminate/2, otherwise undefined)
+    * Fix cloudi_service_db_pgsql list results
+    * Add cloudi_service_db_pgsql_SUITE ct test module
+    * Update cpg and reltool_util
+
 2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add "build" ZeroMQ option value

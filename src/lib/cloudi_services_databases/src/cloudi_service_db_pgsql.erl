@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -155,7 +155,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             cloudi_service:subscribe(Dispatcher, Database),
             {ok, #state{connection = Connection}};
         {error, Reason} ->
-            {stop, Reason}
+            {stop, Reason, #state{}}
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
@@ -172,6 +172,8 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 {ok, _, _, _} = Response ->
                     {reply, response_internal(Response, Request), State};
                 {error, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                Response when is_list(Response) ->
                     {reply, response_internal(Response, Request), State}
             end;
         [String | _] = QueryList when is_list(String) ->
@@ -192,6 +194,8 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 {error, Reason} = Response ->
                     ?LOG_ERROR("request ~p error ~p",
                                [TransId, Reason#error.message]),
+                    {reply, response_external(Response, Request), State};
+                Response when is_list(Response) ->
                     {reply, response_external(Response, Request), State}
             end;
         String when is_list(String) ->
@@ -203,6 +207,8 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 {ok, _, _, _} = Response ->
                     {reply, response_internal(Response, Request), State};
                 {error, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                Response when is_list(Response) ->
                     {reply, response_internal(Response, Request), State}
             end
     end.
@@ -211,6 +217,8 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
+cloudi_service_terminate(_, #state{connection = undefined}) ->
+    ok;
 cloudi_service_terminate(_, #state{connection = Connection}) ->
     cloudi_x_pgsql:close(Connection),
     ok.
@@ -228,7 +236,9 @@ response_internal({ok, _Columns, _Data} = Response, _) ->
 response_internal({ok, _I, _Columns, _Data} = Response, _) ->
     Response;
 response_internal({error, Reason}, _) ->
-    {error, Reason#error.message}.
+    {error, Reason#error.message};
+response_internal(Response, _) when is_list(Response) ->
+    Response.
 
 response_external({ok, I}, Input) ->
     % SQL UPDATE
@@ -247,7 +257,11 @@ response_external({ok, I, _Columns, _Rows}, Input) ->
     % SQL INSERT
     cloudi_response:new(Input, <<I:32/unsigned-integer-native>>);
 response_external({error, _} = Error, Input) ->
-    cloudi_response:new(Input, Error).
+    cloudi_response:new(Input, Error);
+response_external(Response, Input) when is_list(Response) ->
+    erlang:iolist_to_binary(lists:map(fun(T) ->
+        cloudi_response:new(Input, response_external(T, Input))
+    end, Response)).
 
 %% do a single query and return a boolean to determine if the query succeeded
 do_query(Query, Connection) when is_list(Query) ->
@@ -264,7 +278,18 @@ do_query(Query, Connection) ->
         {error, Reason} ->
             % cause a transaction rollback
             % (since a partial success can not be tolerated)
-            throw(Reason#error.message)
+            throw(Reason#error.message);
+        Result when is_list(Result) ->
+            lists:map(fun(T) ->
+                if
+                    erlang:element(1, T) =:= error ->
+                        Reason = erlang:element(2, T),
+                        throw(Reason#error.message);
+                    true ->
+                        true
+                end
+            end, Result),
+            true
     end.
 
 %% do all queries in the list until an error is encountered

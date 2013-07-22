@@ -708,7 +708,10 @@ applications_dependencies([A | Rest], As) ->
                 {ok, []} ->
                     applications_dependencies(Rest, As);
                 {ok, NextAs} ->
-                    case applications_dependencies(NextAs, NextAs ++ As) of
+                    OtherAs = lists:foldl(fun(NextA, L) ->
+                        lists:delete(NextA, L)
+                    end, As, NextAs),
+                    case applications_dependencies(NextAs, NextAs ++ OtherAs) of
                         {ok, NewAs} ->
                             applications_dependencies(Rest, NewAs);
                         {error, _} = Error ->

@@ -193,7 +193,9 @@ open(Path) when is_list(Path) ->
     case file:consult(Path) of
         {ok, Terms} ->
             new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
-        {error, _} = Error ->
+        {error, Reason} = Error ->
+            error_logger:error_msg("configuration file \"~s\" not found: ~p",
+                                   [Path, Reason]),
             Error
     end;
 open(Path) ->

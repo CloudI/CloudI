@@ -473,8 +473,11 @@ handle_info({'cloudi_service_init', Args, Timeout},
                 true ->
                     {noreply, process_queues(ServiceState, NewState)}
             end;
+        {stop, Reason, ServiceState} ->
+            {stop, Reason, NewState#state{service_state = ServiceState,
+                                          duo_mode_pid = undefined}};
         {stop, Reason} ->
-            {stop, Reason, NewState}
+            {stop, Reason, NewState#state{duo_mode_pid = undefined}}
     end;
 
 handle_info({'cloudi_service_request_success', RequestResponse,

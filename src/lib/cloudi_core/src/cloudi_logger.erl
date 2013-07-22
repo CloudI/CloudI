@@ -54,6 +54,7 @@
 
 %% external interface
 -export([start_link/1,
+         current_function/0,
          change_loglevel/1,
          redirect/1,
          fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
@@ -97,6 +98,19 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current function name being executed.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec current_function() ->
+    atom().
+
+current_function() ->
+    catch throw(x), [_, {_, F, _, _} | _] = erlang:get_stacktrace(),
+    F.
 
 %%-------------------------------------------------------------------------
 %% @doc

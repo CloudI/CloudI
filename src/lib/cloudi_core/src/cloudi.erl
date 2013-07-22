@@ -324,6 +324,11 @@ send_async(#cloudi_context{dest_refresh = DestRefresh} = Context,
            Timeout, Priority, undefined)
     when is_list(Name) ->
     case destination_get(DestRefresh, Name, Timeout) of
+        {error, {no_process, Name}} when Timeout >= ?SEND_ASYNC_INTERVAL ->
+            receive after ?SEND_ASYNC_INTERVAL -> ok end,
+            send_async(Context, Name, RequestInfo, Request,
+                       Timeout - ?SEND_ASYNC_INTERVAL,
+                       Priority, undefined);
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -552,6 +557,11 @@ send_sync(#cloudi_context{dest_refresh = DestRefresh} = Context,
           Timeout, Priority, undefined)
     when is_list(Name) ->
     case destination_get(DestRefresh, Name, Timeout) of
+        {error, {no_process, Name}} when Timeout >= ?SEND_SYNC_INTERVAL ->
+            receive after ?SEND_SYNC_INTERVAL -> ok end,
+            send_sync(Context, Name, RequestInfo, Request,
+                      Timeout - ?SEND_SYNC_INTERVAL,
+                      Priority, undefined);
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->
@@ -566,6 +576,13 @@ send_sync(#cloudi_context{receiver = Receiver,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("send_sync called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
@@ -652,12 +669,17 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
 
 mcast_async(#cloudi_context{dest_refresh = DestRefresh,
                             receiver = Receiver,
-                            uuid_generator = UUID},
+                            uuid_generator = UUID} = Context,
             Name, RequestInfo, Request, Timeout, Priority)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     case destination_all(DestRefresh, Name, Timeout) of
+        {error, {no_such_group, Name}} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+            receive after ?MCAST_ASYNC_INTERVAL -> ok end,
+            mcast_async(Context, Name, RequestInfo, Request,
+                        Timeout - ?MCAST_ASYNC_INTERVAL,
+                        Priority);
         {error, _} = Error ->
             Error;
         {ok, Pattern, PidList} ->
@@ -733,6 +755,13 @@ recv_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
 recv_async(#cloudi_context{receiver = Receiver},
            Timeout, <<0:128>>)
     when is_integer(Timeout), Timeout >= 0 ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("recv_async called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
     receive
         {'cloudi_service_return_async',
          _, _, _, <<>>, _, _, Receiver} ->
@@ -748,6 +777,13 @@ recv_async(#cloudi_context{receiver = Receiver},
 recv_async(#cloudi_context{receiver = Receiver},
            Timeout, TransId)
     when is_integer(Timeout), is_binary(TransId), Timeout >= 0 ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("recv_async called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
     receive
         {'cloudi_service_return_async',
          _, _, _, <<>>, _, TransId, Receiver} ->
