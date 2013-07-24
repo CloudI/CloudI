@@ -46,6 +46,7 @@
 %% external interface
 -export([start_link/0,
          start_link/1,
+         scope_exists/1,
          create/1,
          create/2,
          create/3,
@@ -196,6 +197,26 @@ start_link(Scope) when is_atom(Scope) ->
     true = (Scope /= local andalso
             Scope /= global),
     gen_server:start_link({local, Scope}, ?MODULE, [Scope], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Confirm a scope exists.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec scope_exists(Scope :: atom()) ->
+    ok |
+    {error, term()}.
+
+scope_exists(Scope) ->
+    case cpg_sup:start_scope(Scope) of
+        ok ->
+            ok;
+        {error, {already_started, Scope}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
 
 -ifdef(GROUP_NAME_WITH_LOCAL_PIDS_ONLY).
 -define(MEMBERSHIP_CHECK(F, TRUE, FALSE), case F of ok -> TRUE end).

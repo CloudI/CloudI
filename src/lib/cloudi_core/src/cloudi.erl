@@ -189,16 +189,8 @@ new(Settings)
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: any()}.
 
-get_pid(#cloudi_context{dest_refresh = DestRefresh,
-                        timeout_sync = DefaultTimeoutSync}, Name)
-    when is_list(Name) ->
-    case destination_get(DestRefresh, Name,
-                         DefaultTimeoutSync + ?TIMEOUT_DELTA) of
-        {error, _} = Error ->
-            Error;
-        {ok, Pattern, Pid} ->
-            {ok, {Pattern, Pid}}
-    end.
+get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context, Name) ->
+    get_pid(Context, Name, DefaultTimeoutSync).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -212,11 +204,15 @@ get_pid(#cloudi_context{dest_refresh = DestRefresh,
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: any()}.
 
-get_pid(#cloudi_context{dest_refresh = DestRefresh}, Name, Timeout)
+get_pid(#cloudi_context{dest_refresh = DestRefresh} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
     case destination_get(DestRefresh, Name,
                          Timeout + ?TIMEOUT_DELTA) of
+        {error, {no_process, Name}} when Timeout >= ?SEND_SYNC_INTERVAL ->
+            receive after ?SEND_SYNC_INTERVAL -> ok end,
+            get_pid(Context, Name,
+                    Timeout - ?SEND_SYNC_INTERVAL);
         {error, _} = Error ->
             Error;
         {ok, Pattern, Pid} ->

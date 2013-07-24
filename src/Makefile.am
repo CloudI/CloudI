@@ -425,6 +425,7 @@ uninstall:
 install-exec-hook: cloudi-prefix-install \
                    tests-install \
                    tests-echo-install \
+                   tests-environment-install \
                    tests-flood-install \
                    tests-hexpi-install \
                    tests-http-install \
@@ -507,6 +508,11 @@ tests-echo-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/echo"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/echo/echo.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/echo/"
+
+tests-environment-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/environment"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/environment/environment.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/environment/"
 
 tests-flood-install: $(top_builddir)/tests/flood/service/flood \
                      $(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam \
