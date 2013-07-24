@@ -415,8 +415,7 @@ log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
                                     level_to_string(Level),
                                     Module, Line, Pid, Node, Description]),
     case file:read_file_info(FilePath) of
-        {ok, FileInfo} ->
-            CurrentInode = FileInfo#file_info.inode,
+        {ok, #file_info{inode = CurrentInode}} ->
             if
                 CurrentInode == OldInode ->
                     file:write(OldFd, Message),
@@ -451,8 +450,7 @@ log_open(FilePath, State) ->
     case file:open(FilePath, [append, raw]) of
         {ok, Fd} ->
             case file:read_file_info(FilePath) of
-                {ok, FileInfo} ->
-                    Inode = FileInfo#file_info.inode,
+                {ok, #file_info{inode = Inode}} ->
                     {ok, State#state{file_path = FilePath,
                                      fd = Fd,
                                      inode = Inode}};

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Substitute Erlang VM shell environmental variables in
+      ExecutableFilePath, ExecutableCommandLineArguments, and
+      ExecutableEnvironmentalVariables parameters for external services
+    * Update cpg and reltool_util
+    * Add listen parameter to cloudi_service_db_pgsql
+
 2013-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi module retry of service requests and context checking

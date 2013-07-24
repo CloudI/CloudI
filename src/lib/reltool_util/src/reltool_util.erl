@@ -63,6 +63,8 @@
          application_running/1,
          application_running/2,
          application_loaded/1,
+         application_modules/1,
+         application_modules/2,
          ensure_application_loaded/1,
          ensure_application_started/1,
          ensure_application_stopped/1,
@@ -237,7 +239,7 @@ application_purged(Application, Timeout)
         {ok, _} ->
             case ensure_application_stopped(Application) of
                 ok ->
-                    case application:get_key(Application, modules) of
+                    case application_modules(Application) of
                         {ok, Modules} ->
                             case modules_purged(Modules, Timeout) of
                                 ok ->
@@ -245,8 +247,8 @@ application_purged(Application, Timeout)
                                 {error, _} = Error ->
                                     Error
                             end;
-                        undefined ->
-                            {error, {modules_missing, Application}}
+                        {error, _} = Error ->
+                            Error
                     end;
                 {error, _} = Error ->
                     Error
@@ -312,6 +314,39 @@ application_loaded(Application)
             {ok, {Application, VSN}};
         false ->
             {error, {not_found, Application}}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a list of application modules.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+application_modules(Application) ->
+    application_modules(Application, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a list of application modules with filter options.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom(),
+                          Options :: list({atom(), any()})) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+application_modules(Application, Options)
+    when is_atom(Application), is_list(Options) ->
+    case application:get_key(Application, modules) of
+        {ok, Modules} ->
+            {ok, modules_filter(Options, Modules, false)};
+        undefined ->
+            {error, {modules_missing, Application}}
     end.
 
 %%-------------------------------------------------------------------------
@@ -986,6 +1021,42 @@ modules_purged([Module | Modules], BusyModules, Timeout) ->
         false ->
             modules_purged(Modules, [Module | BusyModules], Timeout)
     end.
+
+modules_filter([], Modules, _) ->
+    Modules;
+modules_filter([{Behaviour, Name} | Options], Modules, Loaded)
+    when Behaviour =:= behaviour; Behaviour =:= behavior ->
+    NewModules = lists:filter(fun(Module) ->
+        Attributes = if
+            Loaded =:= true ->
+                lists:keyfind(attributes, 1, Module:module_info());
+            Loaded =:= false ->
+                case code:is_loaded(Module) of
+                    {file, _} ->
+                        lists:keyfind(attributes, 1, Module:module_info());
+                    false ->
+                        false
+                end
+        end,
+        case Attributes of
+            false ->
+                false;
+            {attributes, []} ->
+                false;
+            {attributes, AttributesL} ->
+                case lists:keyfind(behaviour, 1, AttributesL) of
+                    false ->
+                        false;
+                    {behaviour, []} ->
+                        false;
+                    {behaviour, Names} ->
+                        lists:member(Name, Names)
+                end
+        end
+    end, Modules),
+    modules_filter(Options, NewModules, true);
+modules_filter([_ | _], _, _) ->
+    erlang:exit(badarg).
 
 load_all_modules([]) ->
     ok;

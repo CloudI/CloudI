@@ -53,7 +53,8 @@
 -behaviour(supervisor).
 
 %% external interface
--export([start_link/1]).
+-export([start_link/1,
+         start_scope/1]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -74,8 +75,35 @@
     {'ok', pid()} |
     {'error', any()}.
 
-start_link([A | _] = ScopeList) when is_atom(A) ->
-    supervisor:start_link(?MODULE, [ScopeList]).
+start_link([A | _] = ScopeList)
+    when is_atom(A) ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [ScopeList]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start a CPG scope.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_scope(Scope :: atom()) ->
+    'ok' |
+    {'error', any()}.
+
+start_scope(Scope)
+    when is_atom(Scope) ->
+    case erlang:whereis(Scope) of
+        undefined ->
+            case supervisor:start_child(?MODULE, child_specification(Scope)) of
+                {ok, _} ->
+                    ok;
+                {ok, _, _} ->
+                    ok;
+                {error, Reason} ->
+                    {error, {start_error, Reason}}
+            end;
+        _ ->
+            {error, {already_started, Scope}}
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -102,10 +130,13 @@ child_specifications([_ | _] = ScopeList) ->
 child_specifications(ChildSpecs, []) ->
     ChildSpecs;
 
-child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
+child_specifications(ChildSpecs, [Scope | L]) ->
+    child_specifications([child_specification(Scope) | ChildSpecs], L).
+
+child_specification(Scope)
+    when is_atom(Scope) ->
     Shutdown = 2000, % milliseconds
-    ChildSpec = {Scope,
-                 {cpg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg]},
-    child_specifications([ChildSpec | ChildSpecs], L).
+    {Scope,
+     {cpg, start_link, [Scope]},
+     permanent, Shutdown, worker, [cpg]}.
 

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -58,8 +58,6 @@
 
 -define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
 -define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
-
--define(SOCKET_DIRECTORY, "/tmp"). % local protocol
 
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
@@ -156,74 +154,205 @@ start_external(ThreadsPerProcess,
         is_list(DestAllowList) ->
             cloudi_x_trie:new(DestAllowList)
     end,
-    SocketPath = create_socket_path(UUID),
-    {Pids, Ports} = cloudi_lists:itera2(fun(I, L1, L2, F) ->
-        case ?CREATE_EXTERNAL(Protocol, SocketPath, I, BufferSize, Timeout,
-                              Prefix, TimeoutAsync, TimeoutSync,
-                              DestRefresh, DestDeny, DestAllow,
-                              ConfigOptions) of
-            {ok, Pid, Port} ->
-                F([Pid | L1], [Port | L2]);
-            {error, _} = Error ->
-                lists:foreach(fun(P) -> erlang:exit(P, kill) end, L1),
-                Error
-        end
-    end, [], [], lists:seq(1, ThreadsPerProcess)),
-    NewEnvironment = environment_update(Environment,
-                                        ThreadsPerProcess,
-                                        Protocol,
-                                        BufferSize),
-    if
-        Pids == error ->
-            % an error occurred within ?CREATE_EXTERNAL
-            {error, Ports};
-        true ->
+    TemporaryDirectory = case os:getenv("TMPDIR") of
+        false ->
+            "/tmp";
+        L ->
+            L
+    end,
+    SocketPath = create_socket_path(TemporaryDirectory, UUID),
+    case start_external_threads(ThreadsPerProcess,
+                                Protocol, SocketPath, BufferSize, Timeout,
+                                Prefix, TimeoutAsync, TimeoutSync,
+                                DestRefresh, DestDeny, DestAllow,
+                                ConfigOptions) of
+        {ok, Pids, Ports} ->
             SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
-            ProtocolChar = if
+            SpawnProtocol = if
                 Protocol =:= tcp ->
                     $t; % inet
                 Protocol =:= udp ->
                     $u; % inet
                 Protocol =:= local ->
-                    $l  % tcp local
+                    $l  % tcp local (unix domain socket)
             end,
-            case cloudi_os_spawn:spawn(SpawnProcess,
-                                       ProtocolChar,
-                                       string_terminate(SocketPath),
-                                       Ports,
-                                       string_terminate(Filename),
-                                       arguments_parse(Arguments),
-                                       environment_format(NewEnvironment)) of
-                {ok, _} ->
-                    {ok, Pids};
+            SpawnSocketPath = string_terminate(SocketPath),
+            EnvironmentLookup = environment_lookup(),
+            case filename_parse(Filename, EnvironmentLookup) of
+                {ok, SpawnFilename} ->
+                    case arguments_parse(Arguments, EnvironmentLookup) of
+                        {ok, SpawnArguments} ->
+                            case environment_parse(Environment,
+                                                   ThreadsPerProcess,
+                                                   Protocol,
+                                                   BufferSize,
+                                                   EnvironmentLookup) of
+                                {ok, SpawnEnvironment} ->
+                                    case cloudi_os_spawn:spawn(SpawnProcess,
+                                                               SpawnProtocol,
+                                                               SpawnSocketPath,
+                                                               Ports,
+                                                               SpawnFilename,
+                                                               SpawnArguments,
+                                                               SpawnEnvironment)
+                                                               of
+                                        {ok, _OsPid} ->
+                                            {ok, Pids};
+                                        {error, _} = Error ->
+                                            Error
+                                    end;
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
-            end
+            end;
+        {error, _} = Error ->
+            Error
     end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-create_socket_path(UUID)
+create_socket_path(TemporaryDirectory, UUID)
     when is_binary(UUID) ->
-    Path = filename:join([?SOCKET_DIRECTORY,
+    Path = filename:join([TemporaryDirectory,
                           "cloudi_socket_" ++
                           cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
     false = filelib:is_file(Path),
     Path.
 
+start_external_threads(ThreadsPerProcess,
+                       Protocol, SocketPath, BufferSize, Timeout,
+                       Prefix, TimeoutAsync, TimeoutSync,
+                       DestRefresh, DestDeny, DestAllow,
+                       ConfigOptions) ->
+    start_external_thread(ThreadsPerProcess, [], [],
+                          Protocol, SocketPath, BufferSize, Timeout,
+                          Prefix, TimeoutAsync, TimeoutSync,
+                          DestRefresh, DestDeny, DestAllow,
+                          ConfigOptions).
+
+start_external_thread(0, Pids, Ports, _, _, _, _, _, _, _, _, _, _, _) ->
+    {ok, lists:reverse(Pids), lists:reverse(Ports)};
+
+start_external_thread(I, Pids, Ports,
+                      Protocol, SocketPath, BufferSize, Timeout,
+                      Prefix, TimeoutAsync, TimeoutSync,
+                      DestRefresh, DestDeny, DestAllow,
+                      ConfigOptions) ->
+    case ?CREATE_EXTERNAL(Protocol, SocketPath, I, BufferSize, Timeout,
+                          Prefix, TimeoutAsync, TimeoutSync,
+                          DestRefresh, DestDeny, DestAllow,
+                          ConfigOptions) of
+        {ok, Pid, Port} ->
+            start_external_thread(I - 1, [Pid | Pids], [Port | Ports],
+                                  Protocol, SocketPath, BufferSize, Timeout,
+                                  Prefix, TimeoutAsync, TimeoutSync,
+                                  DestRefresh, DestDeny, DestAllow,
+                                  ConfigOptions);
+        {error, _} = Error ->
+            lists:foreach(fun(P) -> erlang:exit(P, kill) end, Pids),
+            Error
+    end.
+
+% terminate the string for easy access within C/C++
 string_terminate([_ | _] = L) ->
     L ++ [0].
 
-arguments_parse([32 | Args]) ->
-    arguments_parse(Args);
+% all environment variables currently in the Erlang VM shell
+% are used as possible substitution values
+environment_lookup() ->
+    cloudi_x_trie:new(lists:map(fun(Entry) ->
+        cloudi_string:splitl($=, Entry, input)
+    end, os:getenv())).
 
-arguments_parse(Args) ->
-    arguments_parse([], none, Args).
+% update external service strings based on the Erlang VM shell
+% environmental variables
+environment_transform(String, EnvironmentLookup) ->
+    environment_transform(String, [], undefined, EnvironmentLookup).
+
+environment_transform([], Output,
+                      undefined, _) ->
+    lists:reverse(Output);
+
+environment_transform([$\\, $$ | String], Output,
+                      undefined, EnvironmentLookup) ->
+    environment_transform(String, [$$ | Output],
+                          undefined, EnvironmentLookup);
+
+environment_transform([$$ | String], Output,
+                      undefined, EnvironmentLookup) ->
+    case String of
+        [${ | Rest] ->
+            environment_transform(Rest, Output, [], EnvironmentLookup);
+        _ ->
+            environment_transform(String, Output, [], EnvironmentLookup)
+    end;
+
+environment_transform([C | String], Output,
+                      undefined, EnvironmentLookup) ->
+    environment_transform(String, [C | Output],
+                          undefined, EnvironmentLookup);
+
+environment_transform([$} | String], Output,
+                      Key, EnvironmentLookup) ->
+    environment_transform_value(Key, String, Output, EnvironmentLookup);
+
+environment_transform([C | String], Output,
+                      Key, EnvironmentLookup)
+    when (C >= $A andalso C =< $Z); (C == $_);
+         (C >= $a andalso C =< $z);
+         (C >= $0 andalso C =< $9) ->
+    % handles ASCII only
+    environment_transform(String, Output, [C | Key], EnvironmentLookup);
+
+environment_transform(String, Output,
+                      Key, EnvironmentLookup) ->
+    environment_transform_value(Key, String, Output, EnvironmentLookup).
+
+environment_transform_value([], String, Output, EnvironmentLookup) ->
+    environment_transform(String, Output,
+                          undefined, EnvironmentLookup);
+
+environment_transform_value(Key, String, Output, EnvironmentLookup) ->
+    case cloudi_x_trie:find(lists:reverse(Key), EnvironmentLookup) of
+        {ok, Value} ->
+            environment_transform(String, lists:reverse(Value) ++ Output,
+                                  undefined, EnvironmentLookup);
+        error ->
+            environment_transform(String, Output,
+                                  undefined, EnvironmentLookup)
+    end.
+
+% update filename, including path
+filename_parse(Filename, EnvironmentLookup) ->
+    NewFilename = environment_transform(Filename, EnvironmentLookup),
+    {ok, string_terminate(NewFilename)}.
+
+% remove beginning whitespace and validate delimiters
+% within the command-line arguments
+arguments_parse([32 | Arguments], EnvironmentLookup) ->
+    arguments_parse(Arguments, EnvironmentLookup);
+
+arguments_parse(Arguments, EnvironmentLookup) ->
+    NewArguments = environment_transform(Arguments, EnvironmentLookup),
+    case arguments_parse([], none, NewArguments) of
+        {ok, _} = Success ->
+            Success;
+        Reason when is_atom(Reason) ->
+            {error, {Reason, Arguments}}
+    end.
 
 arguments_parse(Output, none, []) ->
-    lists:reverse([0 | Output]);
+    {ok, lists:reverse([0 | Output])};
+
+arguments_parse(_, _, []) ->
+    service_external_args_malformed;
 
 arguments_parse(Output, none, [$' | T]) ->
     arguments_parse(Output, $', T);
@@ -252,10 +381,10 @@ arguments_parse(Output, $`, [$` | T]) ->
 arguments_parse(Output, Delim, [H | T]) ->
     arguments_parse([H | Output], Delim, T).
 
-environment_update(Environment0,
-                   ThreadsPerProcess,
-                   Protocol,
-                   BufferSize) ->
+% add CloudI API environmental variables and format into a single
+% string that is easy to use in C/C++
+environment_parse(Environment0, ThreadsPerProcess,
+                  Protocol, BufferSize, EnvironmentLookup) ->
     Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1, Environment0,
                                   {?ENVIRONMENT_THREAD_COUNT,
                                    erlang:integer_to_list(ThreadsPerProcess)}),
@@ -265,14 +394,18 @@ environment_update(Environment0,
     Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1, Environment2,
                                   {?ENVIRONMENT_BUFFER_SIZE,
                                    erlang:integer_to_list(BufferSize)}),
-    Environment3.
+    {ok, environment_format(Environment3, EnvironmentLookup)}.
 
-environment_format(Environment) ->
-    environment_format([], Environment).
+environment_format(Environment, EnvironmentLookup) ->
+    environment_format([], Environment, EnvironmentLookup).
 
-environment_format(Output, []) ->
+environment_format(Output, [], _) ->
     Output;
 
-environment_format(Output, [{K, V} | Environment]) ->
-    environment_format(Output ++ K ++ [$=] ++ V ++ [0], Environment).
+environment_format(Output, [{K, V} | Environment], EnvironmentLookup) ->
+    environment_format(Output ++
+                       environment_transform(K, EnvironmentLookup) ++ [$=] ++
+                       environment_transform(V, EnvironmentLookup) ++ [0],
+                       Environment,
+                       EnvironmentLookup).
 

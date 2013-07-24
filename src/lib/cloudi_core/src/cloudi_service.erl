@@ -186,7 +186,8 @@
                               Prefix :: service_name_pattern(),
                               Dispatcher :: dispatcher()) ->
     {'ok', State :: any()} |
-    {'stop', Reason :: any()}.
+    {'stop', Reason :: any()} |
+    {'stop', Reason :: any(), State :: any()}.
 
 -callback cloudi_service_handle_request(Type :: 'send_async' | 'send_sync',
                                         Name :: service_name(),

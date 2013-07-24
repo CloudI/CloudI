@@ -68,6 +68,7 @@
 -define(DEFAULT_USER_NAME, "cloudi").
 -define(DEFAULT_PASSWORD,  "").
 -define(DEFAULT_PORT,      5432).
+-define(DEFAULT_LISTEN,    false). % async epgsql option (LISTEN/NOTIFY)
 -define(DEFAULT_TIMEOUT,   20000). % 20 seconds
 
 -record(state,
@@ -142,12 +143,21 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {username, ?DEFAULT_USER_NAME},
         {password, ?DEFAULT_PASSWORD},
         {port, ?DEFAULT_PORT},
+        {listen, ?DEFAULT_LISTEN},
         {timeout, ?DEFAULT_TIMEOUT},
         {database, undefined}],
-    [HostName, UserName, Password, Port, Timeout, Database | NewArgs] =
+    [HostName, UserName, Password, Port,
+     Listen, Timeout, Database | NewArgs] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Database),
-    FinalArgs = [{port, Port},
+    AsyncArg = if
+        Listen =:= true ->
+            [{async, self()}];
+        Listen =:= false ->
+            []
+    end,
+    FinalArgs = AsyncArg ++
+                [{port, Port},
                  {timeout, Timeout},
                  {database, Database} | NewArgs],
     case cloudi_x_pgsql:connect(HostName, UserName, Password, FinalArgs) of

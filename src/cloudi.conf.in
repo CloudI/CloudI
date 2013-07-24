@@ -322,6 +322,19 @@
         [],
         immediate_local, tcp, default,
         5000, 5000, 5000, [api], undefined, 1, 4, 5, 300, []},
+    {external,
+        "/tests/environment/",
+        "@PYTHON@",
+        "tests/environment/environment.py",
+        [{"USER", "${USER}"},
+         {"$USER", "user"},
+         {"${USER}_$USER", "user_user"},
+         {"$USER${USER}", "useruser"},
+         {"${USER}123$USER", "user123user"},
+         {"USER_D", "user_\\$"}, % \\ is needed to escape $
+         {"USER_", "user_$"}], % "$" is ignored
+        immediate_local, tcp, default,
+        5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
     % too many file descriptors being used here for a default config
     %% Zig-Zag test
     %% (separate configurations to avoid overwriting the ipc file)
