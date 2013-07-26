@@ -1601,7 +1601,7 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                        RequestPidOptions}, ResultPid) ->
     if
         OldRequestPid =:= undefined ->
-            proc_lib:spawn_opt(fun() ->
+            erlang:spawn_opt(fun() ->
                 handle_module_request_loop(RequestPidUses,
                                            ModuleRequest, ResultPid)
             end, RequestPidOptions);
@@ -1652,7 +1652,7 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
                                     InfoPidOptions}, ResultPid) ->
     if
         OldInfoPid =:= undefined ->
-            proc_lib:spawn_opt(fun() ->
+            erlang:spawn_opt(fun() ->
                 handle_module_info_loop(InfoPidUses,
                                         ModuleInfo, ResultPid)
             end, InfoPidOptions);
