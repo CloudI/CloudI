@@ -44,11 +44,12 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_messaging_sequence1).
 -author('mjtruog [at] gmail (dot) com').
+-vsn("1.2.5").
 
 -behaviour(cloudi_service).
 
