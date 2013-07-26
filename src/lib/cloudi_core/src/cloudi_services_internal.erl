@@ -62,6 +62,14 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+%% duo_mode callbacks
+-export([duo_mode_loop_init/1,
+         duo_mode_loop/1]).
+
+%% cloudi_services_internal callbacks
+-export([handle_module_request_loop/3,
+         handle_module_info_loop/3]).
+
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
@@ -206,11 +214,13 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
                 dest_allow = DestAllow,
                 options = ConfigOptions}}.
 
-handle_call(process_index, _, #state{process_index = ProcessIndex} = State) ->
-    {reply, ProcessIndex, State};
+handle_call(process_index, _,
+            #state{process_index = ProcessIndex} = State) ->
+    hibernate_check({reply, ProcessIndex, State});
 
-handle_call(self, _, #state{receiver_pid = ReceiverPid} = State) ->
-    {reply, ReceiverPid, State};
+handle_call(self, _,
+            #state{receiver_pid = ReceiverPid} = State) ->
+    hibernate_check({reply, ReceiverPid, State});
 
 handle_call({'subscribe', Pattern}, _,
             #state{prefix = Prefix,
@@ -219,7 +229,7 @@ handle_call({'subscribe', Pattern}, _,
                        scope = Scope}} = State) ->
     Result = cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
                                ReceiverPid, infinity),
-    {reply, Result, State};
+    hibernate_check({reply, Result, State});
 
 handle_call({'unsubscribe', Pattern}, _,
             #state{prefix = Prefix,
@@ -228,7 +238,7 @@ handle_call({'unsubscribe', Pattern}, _,
                        scope = Scope}} = State) ->
     Result = cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
                                 ReceiverPid, infinity),
-    {reply, Result, State};
+    hibernate_check({reply, Result, State});
 
 handle_call({'get_pid', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
@@ -237,12 +247,12 @@ handle_call({'get_pid', Name}, Client,
 handle_call({'get_pid', Name, Timeout}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_get_pid(Name, Timeout, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'get_pids', Name}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
@@ -251,12 +261,12 @@ handle_call({'get_pids', Name}, Client,
 handle_call({'get_pids', Name, Timeout}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_get_pids(Name, Timeout, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'send_async', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -275,13 +285,13 @@ handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async(Name, RequestInfo, Request,
                               Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'send_async', Name, RequestInfo, Request,
              undefined, Priority, PatternPid}, Client,
@@ -299,8 +309,8 @@ handle_call({'send_async', Name, RequestInfo, Request,
 handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, _,
             State) ->
-    handle_send_async_pid(Name, Pattern, RequestInfo, Request,
-                          Timeout, Priority, Pid, State);
+    hibernate_check(handle_send_async_pid(Name, Pattern, RequestInfo, Request,
+                                          Timeout, Priority, Pid, State));
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -319,13 +329,13 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async_active(Name, RequestInfo, Request,
                                      Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'send_async_active', Name, RequestInfo, Request,
              undefined, Priority, PatternPid}, Client,
@@ -343,8 +353,10 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, _,
             State) ->
-    handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
-                                 Timeout, Priority, Pid, State);
+    hibernate_check(handle_send_async_active_pid(Name, Pattern,
+                                                 RequestInfo, Request,
+                                                 Timeout, Priority,
+                                                 Pid, State));
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -363,13 +375,13 @@ handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_sync(Name, RequestInfo, Request,
                              Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              undefined, Priority, PatternPid}, Client,
@@ -387,8 +399,10 @@ handle_call({'send_sync', Name, RequestInfo, Request,
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, Client,
             State) ->
-    handle_send_sync_pid(Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, Pid, Client, State);
+    hibernate_check(handle_send_sync_pid(Name, Pattern,
+                                         RequestInfo, Request,
+                                         Timeout, Priority,
+                                         Pid, Client, State));
 
 handle_call({'mcast_async', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -407,13 +421,13 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_mcast_async(Name, RequestInfo, Request,
                                Timeout, Priority, Client, State);
         false ->
             {reply, {error, timeout}, State}
-    end;
+    end);
 
 handle_call({'recv_async', TransId, Consume}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
@@ -421,7 +435,7 @@ handle_call({'recv_async', TransId, Consume}, Client,
 
 handle_call({'recv_async', Timeout, TransId, Consume}, Client,
             #state{async_responses = AsyncResponses} = State) ->
-    if
+    hibernate_check(if
         TransId == <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
@@ -464,19 +478,19 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
                     {reply, {ok, ResponseInfo, Response, TransId},
                      State}
             end
-    end;
+    end);
 
 handle_call(prefix, _,
             #state{prefix = Prefix} = State) ->
-    {reply, Prefix, State};
+    hibernate_check({reply, Prefix, State});
 
 handle_call(timeout_async, _,
             #state{timeout_async = TimeoutAsync} = State) ->
-    {reply, TimeoutAsync, State};
+    hibernate_check({reply, TimeoutAsync, State});
 
 handle_call(timeout_sync, _,
             #state{timeout_sync = TimeoutSync} = State) ->
-    {reply, TimeoutSync, State};
+    hibernate_check({reply, TimeoutSync, State});
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -485,7 +499,7 @@ handle_call(Request, _, State) ->
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
-    {noreply, State}.
+    hibernate_check({noreply, State}).
 
 handle_info({'cloudi_service_init', Args, Timeout},
             #state{queue_requests = true,
@@ -496,7 +510,7 @@ handle_info({'cloudi_service_init', Args, Timeout},
                                                                      State),
     Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
     NewState = cloudi_services_internal_init:stop_link(DispatcherProxy),
-    case Result of
+    hibernate_check(case Result of
         {ok, ServiceState} ->
             erlang:process_flag(trap_exit, true),
             if
@@ -511,7 +525,7 @@ handle_info({'cloudi_service_init', Args, Timeout},
                                           duo_mode_pid = undefined}};
         {stop, Reason} ->
             {stop, Reason, NewState#state{duo_mode_pid = undefined}}
-    end;
+    end);
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              NewServiceState},
@@ -528,11 +542,11 @@ handle_info({'cloudi_service_request_success', RequestResponse,
         {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _} = T ->
             Dispatcher ! T
     end,
-    {noreply, process_queues(NewServiceState, State)};
+    hibernate_check({noreply, process_queues(NewServiceState, State)});
 
 handle_info({'cloudi_service_info_success',
              NewServiceState}, State) ->
-    {noreply, process_queues(NewServiceState, State)};
+    hibernate_check({noreply, process_queues(NewServiceState, State)});
 
 handle_info({'cloudi_service_request_failure',
              Type, Error, Stack, NewServiceState}, State) ->
@@ -622,33 +636,37 @@ handle_info({cloudi_x_cpg_data, Groups},
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),
-    {noreply, State#state{cpg_data = Groups}};
+    hibernate_check({noreply, State#state{cpg_data = Groups}});
 
 handle_info({'cloudi_service_get_pid_retry', Name, Timeout, Client}, State) ->
-    handle_get_pid(Name, Timeout, Client, State);
+    hibernate_check(handle_get_pid(Name, Timeout,
+                                   Client, State));
 
 handle_info({'cloudi_service_get_pids_retry', Name, Timeout, Client}, State) ->
-    handle_get_pids(Name, Timeout, Client, State);
+    hibernate_check(handle_get_pids(Name, Timeout,
+                                    Client, State));
 
 handle_info({'cloudi_service_send_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
-    handle_send_async(Name, RequestInfo, Request,
-                      Timeout, Priority, Client, State);
+    hibernate_check(handle_send_async(Name, RequestInfo, Request,
+                                      Timeout, Priority,
+                                      Client, State));
 
 handle_info({'cloudi_service_send_async_active_retry',
              Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
-    handle_send_async_active(Name, RequestInfo, Request,
-                             Timeout, Priority, Client, State);
+    hibernate_check(handle_send_async_active(Name, RequestInfo, Request,
+                                             Timeout, Priority,
+                                             Client, State));
 
 handle_info({'cloudi_service_send_sync_retry',
              Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
-    handle_send_sync(Name, RequestInfo, Request,
-                     Timeout, Priority, Client, State);
+    hibernate_check(handle_send_sync(Name, RequestInfo, Request,
+                                     Timeout, Priority, Client, State));
 
 handle_info({'cloudi_service_mcast_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
-    handle_mcast_async(Name, RequestInfo, Request,
-                       Timeout, Priority, Client, State);
+    hibernate_check(handle_mcast_async(Name, RequestInfo, Request,
+                                       Timeout, Priority, Client, State));
 
 handle_info({'cloudi_service_forward_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, TransId, Source},
@@ -684,7 +702,7 @@ handle_info({'cloudi_service_forward_async_retry',
         false ->
             ok
     end,
-    {noreply, State};
+    hibernate_check({noreply, State});
 
 handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Source},
@@ -720,12 +738,12 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
         false ->
             ok
     end,
-    {noreply, State};
+    hibernate_check({noreply, State});
 
 handle_info({'cloudi_service_recv_async_retry',
              Timeout, TransId, Consume, Client},
             #state{async_responses = AsyncResponses} = State) ->
-    if
+    hibernate_check(if
         TransId == <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
@@ -776,7 +794,7 @@ handle_info({'cloudi_service_recv_async_retry',
                                      {ok, ResponseInfo, Response, TransId}),
                     {noreply, State}
             end
-    end;
+    end);
 
 handle_info({'cloudi_service_send_async',
              Name, Pattern, RequestInfo, Request,
@@ -787,7 +805,7 @@ handle_info({'cloudi_service_send_async',
                    service_state = ServiceState,
                    request_pid = RequestPid,
                    options = ConfigOptions} = State) ->
-    {noreply, State#state{
+    hibernate_check({noreply, State#state{
         queue_requests = true,
         request_pid = handle_module_request_loop_pid(RequestPid,
             {'cloudi_service_request_loop',
@@ -795,7 +813,7 @@ handle_info({'cloudi_service_send_async',
              RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              Module, Dispatcher, ConfigOptions,
-             ServiceState}, ConfigOptions, Dispatcher)}};
+             ServiceState}, ConfigOptions, Dispatcher)}});
 
 handle_info({'cloudi_service_send_sync',
              Name, Pattern, RequestInfo, Request,
@@ -806,7 +824,7 @@ handle_info({'cloudi_service_send_sync',
                    service_state = ServiceState,
                    request_pid = RequestPid,
                    options = ConfigOptions} = State) ->
-    {noreply, State#state{
+    hibernate_check({noreply, State#state{
         queue_requests = true,
         request_pid = handle_module_request_loop_pid(RequestPid,
             {'cloudi_service_request_loop',
@@ -814,13 +832,13 @@ handle_info({'cloudi_service_send_sync',
              RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              Module, Dispatcher, ConfigOptions,
-             ServiceState}, ConfigOptions, Dispatcher)}};
+             ServiceState}, ConfigOptions, Dispatcher)}});
 
 handle_info({Type, _, _, _, _, 0, _, _, _},
             #state{queue_requests = true} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
-    {noreply, State};
+    hibernate_check({noreply, State});
 
 handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
             #state{queue_requests = true,
@@ -835,13 +853,13 @@ handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
         true ->
             true
     end,
-    if
+    hibernate_check(if
         QueueLimitOk ->
             {noreply, recv_timeout_start(Timeout, Priority, TransId, T, State)};
         true ->
             % message is discarded since too many messages have been queued
             {noreply, State}
-    end;
+    end);
 
 handle_info({'cloudi_service_recv_timeout', Priority, TransId},
             #state{recv_timeouts = RecvTimeouts,
@@ -855,8 +873,10 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId},
         true ->
             Queue
     end,
-    {noreply, State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                          queued = NewQueue}};
+    hibernate_check({noreply,
+                     State#state{
+                         recv_timeouts = dict:erase(TransId, RecvTimeouts),
+                         queued = NewQueue}});
 
 handle_info({'cloudi_service_return_async',
              Name, Pattern, ResponseInfo, Response,
@@ -867,7 +887,7 @@ handle_info({'cloudi_service_return_async',
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= ReceiverPid,
-    case dict:find(TransId, SendTimeouts) of
+    hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
@@ -918,7 +938,7 @@ handle_info({'cloudi_service_return_async',
             {noreply, send_timeout_end(TransId,
                 async_response_timeout_start(ResponseInfo, Response, Timeout,
                                              TransId, State))}
-    end;
+    end);
 
 handle_info({'cloudi_service_return_sync',
              _, _, ResponseInfo, Response, _, TransId, Source},
@@ -928,7 +948,7 @@ handle_info({'cloudi_service_return_sync',
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= ReceiverPid,
-    case dict:find(TransId, SendTimeouts) of
+    hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
@@ -948,7 +968,7 @@ handle_info({'cloudi_service_return_sync',
                     gen_server:reply(Client, {ok, ResponseInfo, Response})
             end,
             {noreply, send_timeout_end(TransId, State)}
-    end;
+    end);
 
 handle_info({'cloudi_service_send_async_timeout', TransId},
             #state{send_timeouts = SendTimeouts,
@@ -956,7 +976,7 @@ handle_info({'cloudi_service_send_async_timeout', TransId},
                    options = #config_service_options{
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
-    case dict:find(TransId, SendTimeouts) of
+    hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
             if
                 ResponseTimeoutAdjustment ->
@@ -973,14 +993,14 @@ handle_info({'cloudi_service_send_async_timeout', TransId},
             {noreply, send_timeout_end(TransId, State)};
         {ok, _} ->
             {noreply, send_timeout_end(TransId, State)}
-    end;
+    end);
 
 handle_info({'cloudi_service_send_sync_timeout', TransId},
             #state{send_timeouts = SendTimeouts,
                    options = #config_service_options{
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
-    case dict:find(TransId, SendTimeouts) of
+    hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
             if
                 ResponseTimeoutAdjustment ->
@@ -995,17 +1015,21 @@ handle_info({'cloudi_service_send_sync_timeout', TransId},
         {ok, {Client, _}} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, send_timeout_end(TransId, State)}
-    end;
+    end);
 
 handle_info({'cloudi_service_recv_async_timeout', TransId},
             #state{async_responses = AsyncResponses} = State) ->
-    {noreply,
-     State#state{async_responses = dict:erase(TransId, AsyncResponses)}};
+    hibernate_check({noreply,
+                     State#state{
+                         async_responses =
+                             dict:erase(TransId, AsyncResponses)}});
 
 handle_info(Request,
             #state{queue_requests = true,
                    queued_info = QueueInfo} = State) ->
-    {noreply, State#state{queued_info = queue:in(Request, QueueInfo)}};
+    hibernate_check({noreply,
+                     State#state{
+                         queued_info = queue:in(Request, QueueInfo)}});
 
 handle_info(Request,
             #state{dispatcher = Dispatcher,
@@ -1014,12 +1038,12 @@ handle_info(Request,
                    info_pid = InfoPid,
                    duo_mode_pid = undefined,
                    options = ConfigOptions} = State) ->
-    {noreply, State#state{
+    hibernate_check({noreply, State#state{
         queue_requests = true,
         info_pid = handle_module_info_loop_pid(InfoPid,
             {'cloudi_service_info_loop',
              Request, Module, Dispatcher, ServiceState},
-            ConfigOptions, Dispatcher)}}.
+            ConfigOptions, Dispatcher)}}).
 
 terminate(Reason,
           #state{module = Module,
@@ -1593,24 +1617,50 @@ process_queues(NewServiceState, State) ->
             NewState
     end.
 
+hibernate_check({reply, _,
+                 #state{options = #config_service_options{
+                            hibernate = false}}} = Result) ->
+    Result;
+hibernate_check({noreply,
+                 #state{options = #config_service_options{
+                            hibernate = false}}} = Result) ->
+    Result;
+hibernate_check({stop, _, _} = Result) ->
+    Result;
+hibernate_check({reply, Reply,
+                 #state{options = #config_service_options{
+                            hibernate = true}} = State}) ->
+    {reply, Reply, State, hibernate};
+hibernate_check({noreply,
+                 #state{options = #config_service_options{
+                            hibernate = true}} = State}) ->
+    {noreply, State, hibernate}.
+
 handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                #config_service_options{
                                    request_pid_uses =
                                        RequestPidUses,
                                    request_pid_options =
-                                       RequestPidOptions}, ResultPid) ->
+                                       RequestPidOptions,
+                                   hibernate =
+                                       Hibernate}, ResultPid) ->
     if
         OldRequestPid =:= undefined ->
             erlang:spawn_opt(fun() ->
                 handle_module_request_loop(RequestPidUses,
-                                           ModuleRequest, ResultPid)
+                                           ModuleRequest, ResultPid, Hibernate)
             end, RequestPidOptions);
         is_pid(OldRequestPid) ->
             OldRequestPid ! ModuleRequest,
             OldRequestPid
     end.
 
-handle_module_request_loop(Uses, ResultPid) ->
+-spec handle_module_request_loop(Uses :: infinity | pos_integer(),
+                                 ResultPid :: pid(),
+                                 Hibernate :: boolean()) ->
+    no_return().
+
+handle_module_request_loop(Uses, ResultPid, Hibernate) ->
     receive
         {'cloudi_service_request_loop',
          _Type, _Name, _Pattern,
@@ -1618,7 +1668,8 @@ handle_module_request_loop(Uses, ResultPid) ->
          _Timeout, _Priority, _TransId, _Pid,
          _Module, _Dispatcher, _ConfigOptions,
          _NewServiceState} = ModuleRequest ->
-            handle_module_request_loop(Uses, ModuleRequest, ResultPid)
+            handle_module_request_loop(Uses,
+                                       ModuleRequest, ResultPid, Hibernate)
     end.
 
 handle_module_request_loop(Uses,
@@ -1627,7 +1678,7 @@ handle_module_request_loop(Uses,
                             RequestInfo, Request,
                             Timeout, Priority, TransId, Pid,
                             Module, Dispatcher, ConfigOptions,
-                            NewServiceState}, ResultPid) ->
+                            NewServiceState}, ResultPid, Hibernate) ->
     Result = handle_module_request(Type, Name, Pattern,
                                    RequestInfo, Request,
                                    Timeout, Priority, TransId, Pid,
@@ -1638,10 +1689,24 @@ handle_module_request_loop(Uses,
             erlang:exit(Result);
         is_integer(Uses) ->
             ResultPid ! Result,
-            handle_module_request_loop(Uses - 1, ResultPid);
+            if
+                Hibernate =:= true ->
+                    erlang:hibernate(?MODULE, handle_module_request_loop,
+                                     [Uses - 1, ResultPid, Hibernate]);
+                Hibernate =:= false ->
+                    % XXX ignore spurious dialyzer error
+                    handle_module_request_loop(Uses - 1, ResultPid, Hibernate)
+            end;
         Uses =:= infinity ->
             ResultPid ! Result,
-            handle_module_request_loop(Uses, ResultPid)
+            if
+                Hibernate =:= true ->
+                    erlang:hibernate(?MODULE, handle_module_request_loop,
+                                     [Uses, ResultPid, Hibernate]);
+                Hibernate =:= false ->
+                    % XXX ignore spurious dialyzer error
+                    handle_module_request_loop(Uses, ResultPid, Hibernate)
+            end
     end.
 
 handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
@@ -1649,30 +1714,38 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
                                 info_pid_uses =
                                     InfoPidUses,
                                 info_pid_options =
-                                    InfoPidOptions}, ResultPid) ->
+                                    InfoPidOptions,
+                                hibernate =
+                                    Hibernate}, ResultPid) ->
     if
         OldInfoPid =:= undefined ->
             erlang:spawn_opt(fun() ->
                 handle_module_info_loop(InfoPidUses,
-                                        ModuleInfo, ResultPid)
+                                        ModuleInfo, ResultPid, Hibernate)
             end, InfoPidOptions);
         is_pid(OldInfoPid) ->
             OldInfoPid ! ModuleInfo,
             OldInfoPid
     end.
 
-handle_module_info_loop(Uses, ResultPid) ->
+-spec handle_module_info_loop(Uses :: infinity | pos_integer(),
+                              ResultPid :: pid(),
+                              Hibernate :: boolean()) ->
+    no_return().
+
+handle_module_info_loop(Uses, ResultPid, Hibernate) ->
     receive
         {'cloudi_service_info_loop',
          _Request, _Module, _Dispatcher,
          _NewServiceState} = ModuleInfo ->
-            handle_module_info_loop(Uses, ModuleInfo, ResultPid)
+            handle_module_info_loop(Uses,
+                                    ModuleInfo, ResultPid, Hibernate)
     end.
 
 handle_module_info_loop(Uses,
                         {'cloudi_service_info_loop',
                          Request, Module, Dispatcher,
-                         NewServiceState}, ResultPid) ->
+                         NewServiceState}, ResultPid, Hibernate) ->
     Result = handle_module_info(Request, Module, Dispatcher,
                                 NewServiceState),
     if
@@ -1680,19 +1753,42 @@ handle_module_info_loop(Uses,
             erlang:exit(Result);
         is_integer(Uses) ->
             ResultPid ! Result,
-            handle_module_info_loop(Uses - 1, ResultPid);
+            if
+                Hibernate =:= true ->
+                    erlang:hibernate(?MODULE, handle_module_info_loop,
+                                     [Uses - 1, ResultPid, Hibernate]);
+                Hibernate =:= false ->
+                    % XXX ignore spurious dialyzer error
+                    handle_module_info_loop(Uses - 1, ResultPid, Hibernate)
+            end;
         Uses =:= infinity ->
             ResultPid ! Result,
-            handle_module_info_loop(Uses, ResultPid)
+            if
+                Hibernate =:= true ->
+                    erlang:hibernate(?MODULE, handle_module_info_loop,
+                                     [Uses, ResultPid, Hibernate]);
+                Hibernate =:= false ->
+                    % XXX ignore spurious dialyzer error
+                    handle_module_info_loop(Uses, ResultPid, Hibernate)
+            end
     end.
 
 % duo_mode specific logic
 
-duo_mode_loop_init(#state_duo{dispatcher = Dispatcher} = State) ->
+duo_mode_loop_init(#state_duo{dispatcher = Dispatcher,
+                              options = #config_service_options{
+                                  hibernate = Hibernate}} = State) ->
     receive
         {'cloudi_service_init', {ok, ServiceState}} ->
             erlang:process_flag(trap_exit, true),
-            duo_mode_loop(duo_process_queues(ServiceState, State));
+            if
+                Hibernate =:= true ->
+                    proc_lib:hibernate(?MODULE, duo_mode_loop,
+                                       [duo_process_queues(ServiceState,
+                                                           State)]);
+                Hibernate =:= false ->
+                    duo_mode_loop(duo_process_queues(ServiceState, State))
+            end;
         Request ->
             % mimic a gen_server handle_info for code reuse
             case duo_handle_info(Request, State) of
@@ -1701,11 +1797,19 @@ duo_mode_loop_init(#state_duo{dispatcher = Dispatcher} = State) ->
                     % since init has not completed yet
                     erlang:exit(Dispatcher, Reason);
                 {noreply, NewState} ->
-                    duo_mode_loop_init(NewState)
+                    if
+                        Hibernate =:= true ->
+                            proc_lib:hibernate(?MODULE, duo_mode_loop_init,
+                                               [NewState]);
+                        Hibernate =:= false ->
+                            duo_mode_loop_init(NewState)
+                    end
             end
     end.
 
-duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
+duo_mode_loop(#state_duo{dispatcher = Dispatcher,
+                         options = #config_service_options{
+                             hibernate = Hibernate}} = State) ->
     receive
         Request ->
             % mimic a gen_server handle_info for code reuse
@@ -1715,7 +1819,13 @@ duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
                     Module:cloudi_service_terminate(Reason, ServiceState),
                     erlang:exit(Dispatcher, Reason);
                 {noreply, NewState} ->
-                    duo_mode_loop(NewState)
+                    if
+                        Hibernate =:= true ->
+                            proc_lib:hibernate(?MODULE, duo_mode_loop,
+                                               [NewState]);
+                        Hibernate =:= false ->
+                            duo_mode_loop(NewState)
+                    end
             end
     end.
 
