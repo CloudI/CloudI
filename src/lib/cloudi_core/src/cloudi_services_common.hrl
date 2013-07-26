@@ -90,7 +90,9 @@ destination_allowed(Name, DestDeny, DestAllow) ->
     end.
 
 destination_refresh_first(DestRefresh,
-                          #config_service_options{dest_refresh_start = Delay})
+                          #config_service_options{
+                              dest_refresh_start = Delay,
+                              scope = Scope})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
@@ -98,7 +100,7 @@ destination_refresh_first(DestRefresh,
           DestRefresh =:= lazy_remote orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Delay);
+    cloudi_x_cpg_data:get_groups(Scope, Delay);
 
 destination_refresh_first(DestRefresh, _)
     when (DestRefresh =:= immediate_closest orelse
@@ -114,7 +116,9 @@ destination_refresh_first(none, _) ->
     ok.
 
 destination_refresh_start(DestRefresh,
-                          #config_service_options{dest_refresh_delay = Delay})
+                          #config_service_options{
+                              dest_refresh_delay = Delay,
+                              scope = Scope})
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
@@ -122,7 +126,7 @@ destination_refresh_start(DestRefresh,
           DestRefresh =:= lazy_remote orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Delay);
+    cloudi_x_cpg_data:get_groups(Scope, Delay);
 
 destination_refresh_start(DestRefresh, _)
     when (DestRefresh =:= immediate_closest orelse
@@ -137,68 +141,68 @@ destination_refresh_start(DestRefresh, _)
 destination_refresh_start(none, _) ->
     ok.
 
-destination_get(lazy_closest, Name, Pid, Groups, _)
+destination_get(lazy_closest, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_closest_pid(Name, Pid, Groups);
 
-destination_get(lazy_furthest, Name, Pid, Groups, _)
+destination_get(lazy_furthest, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_furthest_pid(Name, Pid, Groups);
 
-destination_get(lazy_random, Name, Pid, Groups, _)
+destination_get(lazy_random, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_random_pid(Name, Pid, Groups);
 
-destination_get(lazy_local, Name, Pid, Groups, _)
+destination_get(lazy_local, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_local_pid(Name, Pid, Groups);
 
-destination_get(lazy_remote, Name, Pid, Groups, _)
+destination_get(lazy_remote, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_remote_pid(Name, Pid, Groups);
 
-destination_get(lazy_newest, Name, Pid, Groups, _)
+destination_get(lazy_newest, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_newest_pid(Name, Pid, Groups);
 
-destination_get(lazy_oldest, Name, Pid, Groups, _)
+destination_get(lazy_oldest, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_oldest_pid(Name, Pid, Groups);
 
-destination_get(immediate_closest, Name, Pid, _, Timeout)
+destination_get(immediate_closest, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_furthest, Name, Pid, _, Timeout)
+destination_get(immediate_furthest, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_furthest_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_furthest_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_random, Name, Pid, _, Timeout)
+destination_get(immediate_random, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_random_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_random_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_local, Name, Pid, _, Timeout)
+destination_get(immediate_local, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_local_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_local_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_remote, Name, Pid, _, Timeout)
+destination_get(immediate_remote, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_remote_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_remote_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_newest, Name, Pid, _, Timeout)
+destination_get(immediate_newest, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_newest_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_newest_pid(Scope, Name, Pid, Timeout));
 
-destination_get(immediate_oldest, Name, Pid, _, Timeout)
+destination_get(immediate_oldest, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Scope, Name, Pid, Timeout));
 
-destination_get(DestRefresh, _, _, _, _) ->
+destination_get(DestRefresh, _, _, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).
 
-destination_all(DestRefresh, Name, Pid, Groups, _)
+destination_all(DestRefresh, _, Name, Pid, Groups, _)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
@@ -207,36 +211,36 @@ destination_all(DestRefresh, Name, Pid, Groups, _)
           DestRefresh =:= lazy_oldest) ->
     cloudi_x_cpg_data:get_members(Name, Pid, Groups);
 
-destination_all(DestRefresh, Name, Pid, Groups, _)
+destination_all(DestRefresh, _, Name, Pid, Groups, _)
     when is_list(Name),
          DestRefresh =:= lazy_local ->
     cloudi_x_cpg_data:get_local_members(Name, Pid, Groups);
 
-destination_all(DestRefresh, Name, Pid, Groups, _)
+destination_all(DestRefresh, _, Name, Pid, Groups, _)
     when is_list(Name),
          DestRefresh =:= lazy_remote ->
     cloudi_x_cpg_data:get_remote_members(Name, Pid, Groups);
 
-destination_all(DestRefresh, Name, Pid, _, Timeout)
+destination_all(DestRefresh, Scope, Name, Pid, _, Timeout)
     when is_list(Name),
          (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_newest orelse
           DestRefresh =:= immediate_oldest) ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_members(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_members(Scope, Name, Pid, Timeout));
 
-destination_all(DestRefresh, Name, Pid, _, Timeout)
+destination_all(DestRefresh, Scope, Name, Pid, _, Timeout)
     when is_list(Name),
          DestRefresh =:= immediate_local ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_local_members(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_local_members(Scope, Name, Pid, Timeout));
 
-destination_all(DestRefresh, Name, Pid, _, Timeout)
+destination_all(DestRefresh, Scope, Name, Pid, _, Timeout)
     when is_list(Name),
          DestRefresh =:= immediate_remote ->
-    ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Name, Pid, Timeout));
+    ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Scope, Name, Pid, Timeout));
 
-destination_all(DestRefresh, _, _, _, _) ->
+destination_all(DestRefresh, _, _, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).

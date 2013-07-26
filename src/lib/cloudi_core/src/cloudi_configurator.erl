@@ -55,6 +55,7 @@
 
 %% external interface
 -export([start_link/1,
+         configure/0,
          acl_add/2,
          acl_remove/2,
          services_add/2,
@@ -92,6 +93,9 @@
 
 start_link(#config{} = Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+
+configure() ->
+    gen_server:call(?MODULE, configure, infinity).
 
 acl_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -144,10 +148,20 @@ nodes_remove(L, Timeout) ->
                                Timeout - ?TIMEOUT_DELTA}, Timeout)
     end)).
 
-service_start(#config_service_internal{count_process = Count} = Service,
+service_start(#config_service_internal{
+                  count_process = Count,
+                  options = #config_service_options{
+                      reload = Reload}} = Service,
               Timeout) ->
     case service_start_find_internal(Service) of
-        {ok, FoundService} ->
+        {ok, #config_service_internal{
+                 module = Module} = FoundService} ->
+            if
+                Reload =:= true ->
+                    ok = cloudi_services_internal_reload:service_add(Module);
+                Reload =:= false ->
+                    ok
+            end,
             service_start_internal(concurrency(Count),
                                    FoundService, Timeout);
         {error, _} = Error ->
@@ -190,8 +204,16 @@ concurrency(I)
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
-    self() ! configure,
     {ok, #state{configuration = Config}}.
+
+handle_call(configure, _,
+            #state{configuration = Config} = State) ->
+    case configure(Config, infinity) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({acl_add, L, _}, _,
             #state{configuration = Config} = State) ->
@@ -296,14 +318,6 @@ handle_call(Request, _, State) ->
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
-
-handle_info(configure, #state{configuration = Config} = State) ->
-    case configure(Config, infinity) of
-        {ok, NewConfig} ->
-            {noreply, State#state{configuration = NewConfig}};
-        {error, Reason} ->
-            {stop, Reason, State}
-    end;
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -554,15 +568,27 @@ service_start_external(Count0,
     end.
 
 service_stop_internal(#config_service_internal{
+                          module = Module,
+                          options = #config_service_options{
+                              reload = Reload},
                           uuid = ID} = Service, Remove, Timeout) ->
     case cloudi_services_monitor:shutdown(ID, Timeout) of
-        ok when Remove =:= true ->
-            % no service processes are using the service module
-            % so it is safe to remove the service module
-            % dependencies (applications, if they were used)
-            service_stop_remove_internal(Service, Timeout);
-        ok when Remove =:= false ->
-            ok;
+        ok ->
+            if
+                Reload =:= true ->
+                    ok = cloudi_services_internal_reload:service_remove(Module);
+                Reload =:= false ->
+                    ok
+            end,
+            if
+                Remove =:= true ->
+                    % no service processes are using the service module
+                    % so it is safe to remove the service module
+                    % dependencies (applications, if they were used)
+                    service_stop_remove_internal(Service, Timeout);
+                Remove =:= false ->
+                    ok
+            end;
         {error, _} = Error ->
             Error
     end.

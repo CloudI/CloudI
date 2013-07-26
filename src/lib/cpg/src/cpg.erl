@@ -1435,7 +1435,14 @@ get_closest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_closest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_closest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_closest_pid, GroupName},
                     Timeout).
+
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1520,6 +1527,12 @@ get_furthest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_furthest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_furthest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_furthest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1605,6 +1618,12 @@ get_random_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_random_pid, GroupName, Exclude},
+                    Timeout);
+
+get_random_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_random_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1690,6 +1709,12 @@ get_local_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_local_pid, GroupName, Exclude},
+                    Timeout);
+
+get_local_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1775,6 +1800,12 @@ get_remote_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_remote_pid, GroupName, Exclude},
+                    Timeout);
+
+get_remote_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1860,6 +1891,12 @@ get_oldest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_oldest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_oldest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_oldest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1945,6 +1982,12 @@ get_local_oldest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_local_oldest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_local_oldest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_oldest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2030,6 +2073,12 @@ get_remote_oldest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_remote_oldest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_remote_oldest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_oldest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2115,6 +2164,12 @@ get_newest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_newest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_newest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_newest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2200,6 +2255,12 @@ get_local_newest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_local_newest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_local_newest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_newest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2285,6 +2346,12 @@ get_remote_newest_pid(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_remote_newest_pid, GroupName, Exclude},
+                    Timeout);
+
+get_remote_newest_pid(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_newest_pid, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------

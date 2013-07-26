@@ -81,6 +81,11 @@
         % (n.b., this only affects the response timeout of a successful
         %  send_async request)
         response_timeout_adjustment = false :: boolean(),
+        % provide a scope for all subscribe/unsubscribe and messaging
+        % (i.e., all service name usage is within the scope).  Using a
+        % different scope can help avoid contention when using an immediate
+        % destination refresh method.
+        scope = default :: atom(),
 
         % Only Relevant For Internal Services:
 
@@ -113,7 +118,14 @@
         % is used in place of the info_pid and the process' message queue
         % is used directly (so info_pid_uses must be set to infinity when
         % duo_mode is true).
-        duo_mode = false :: boolean()
+        duo_mode = false :: boolean(),
+        % should a mostly idle service hibernate automatically to conserve
+        % memory at the expense of extra garbage collections and an empty
+        % stack trace.
+        hibernate = false :: boolean(),
+        % should the service be reloaded automatically when an Erlang module
+        % file changes?  should only be used during service development.
+        reload = false :: boolean()
     }).
 
 % internal service parameters

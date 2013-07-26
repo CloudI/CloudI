@@ -38,6 +38,7 @@
         cloudi_nodes,
         cloudi_os_spawn,
         cloudi_services_external_sup,
+        cloudi_services_internal_reload,
         cloudi_services_internal_sup,
         cloudi_services_monitor
         ]},

@@ -70,3 +70,13 @@
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
 
+-define(ASSIGN_SCOPE(Scope),
+        if
+            Scope =:= default ->
+                % DEFAULT_SCOPE in cpg application
+                cpg_default_scope;
+            true ->
+                erlang:list_to_atom("cloudi_x_cpg_x_" ++
+                                    erlang:atom_to_list(Scope))
+        end).
+

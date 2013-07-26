@@ -105,6 +105,7 @@
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()} |
+         {scope, atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({fullsweep_after, non_neg_integer()} |
@@ -115,14 +116,17 @@
           list({fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()})} |
-         {duo_mode, boolean()}).
+         {duo_mode, boolean()} |
+         {hibernate, boolean()} |
+         {reload, boolean()}).
 -type service_options_external() ::
     list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
-         {response_timeout_adjustment, boolean()}).
+         {response_timeout_adjustment, boolean()} |
+         {scope, atom()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 

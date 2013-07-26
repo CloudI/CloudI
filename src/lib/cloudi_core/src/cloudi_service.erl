@@ -105,6 +105,8 @@
          unsubscribe/2,
          get_pid/2,
          get_pid/3,
+         get_pids/2,
+         get_pids/3,
          send_async/3,
          send_async/4,
          send_async/5,
@@ -312,6 +314,40 @@ get_pid(Dispatcher, Name, Timeout)
          Timeout >= 0 ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'get_pid', Name,
+                                    Timeout}, Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get all service destinations based on a service name.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_pids(Dispatcher :: dispatcher(),
+               Name :: service_name()) ->
+    {'ok', PatternPids :: list(pattern_pid())} |
+    {'error', Reason :: atom()}.
+
+get_pids(Dispatcher, Name)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pids', Name}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a service destination based on a service name.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_pids(Dispatcher :: dispatcher(),
+               Name :: service_name(),
+               Timeout :: timeout_milliseconds()) ->
+    {'ok', PatternPids :: list(pattern_pid())} |
+    {'error', Reason :: atom()}.
+
+get_pids(Dispatcher, Name, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'get_pids', Name,
                                     Timeout}, Timeout + ?TIMEOUT_DELTA)).
 
 %%-------------------------------------------------------------------------
