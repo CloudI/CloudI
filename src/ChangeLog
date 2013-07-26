@@ -13,6 +13,8 @@
     * Provide a more descriptive error for an erroneous unsubscribe
       CloudI API call in an external service
     * Update cpg
+    * Add internal service module "hibernate" option to the
+      service configuration options
 
 2013-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
