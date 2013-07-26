@@ -169,15 +169,13 @@ handle_info(reload, #state{services = Services,
             {ok, #file_info{mtime = Mtime}}
                 when Mtime >= ReloadStartOld,
                      Mtime < ReloadStartNew ->
-                % if there is old code for Module, purge it before delete
-                code:soft_purge(Module),
-                % mark Module code as old
-                true = code:delete(Module),
-                % reload the module
+                % make sure no old code exists
+                code:purge(Module),
+                % load the new current code
                 case code:load_file(Module) of
                     {module, Module} ->
-                        % remove old Module
-                        code:purge(Module),
+                        % remove the old code
+                        code:soft_purge(Module),
                         ok;
                     {error, _} ->
                         ok

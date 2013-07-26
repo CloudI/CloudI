@@ -816,16 +816,13 @@ interface(trace, Process) ->
 load_interface_module(Level, Destination) when is_atom(Level) ->
     {Module, Binary} =
         cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
-    case code:is_loaded(cloudi_logger_interface) of
-        {file, _} ->
-            code:soft_purge(cloudi_logger_interface);
-        false ->
-            ok
-    end,
-    code:delete(cloudi_logger_interface),
-    % do not purge the module, but let it get purged after the new one is loaded
+    % make sure no old code exists
+    code:purge(cloudi_logger_interface),
+    % load the new current code
     case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
         {module, Module} ->
+            % remove the old code
+            code:soft_purge(cloudi_logger_interface),
             {ok, Binary};
         {error, _} = Error ->
             Error

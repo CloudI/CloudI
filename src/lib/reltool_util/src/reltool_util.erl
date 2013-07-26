@@ -1005,15 +1005,6 @@ modules_purged([], BusyModules, Timeout) ->
             modules_purged(lists:reverse(BusyModules), [], NextTimeout)
     end;
 modules_purged([Module | Modules], BusyModules, Timeout) ->
-    case is_module_loaded(Module) of
-        true ->
-            % if there is old code for Module, purge it before delete
-            code:soft_purge(Module),
-            % mark Module code as old
-            true = code:delete(Module);
-        false ->
-            ok
-    end,
     % purge the Module if no processes remain executing the code
     case code:soft_purge(Module) of
         true ->
