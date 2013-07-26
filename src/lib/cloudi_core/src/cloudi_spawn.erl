@@ -105,7 +105,7 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
     end,
     case code:is_loaded(Module) of
         false ->
-            {error, not_loaded};
+            {error, {service_internal_module_not_loaded, Module}};
         {file, _} ->
             ?CREATE_INTERNAL(ProcessIndex, Module, Args, Timeout,
                              Prefix, TimeoutAsync, TimeoutSync,
@@ -178,32 +178,21 @@ start_external(ThreadsPerProcess,
             end,
             SpawnSocketPath = string_terminate(SocketPath),
             EnvironmentLookup = environment_lookup(),
-            case filename_parse(Filename, EnvironmentLookup) of
-                {ok, SpawnFilename} ->
-                    case arguments_parse(Arguments, EnvironmentLookup) of
-                        {ok, SpawnArguments} ->
-                            case environment_parse(Environment,
-                                                   ThreadsPerProcess,
-                                                   Protocol,
-                                                   BufferSize,
-                                                   EnvironmentLookup) of
-                                {ok, SpawnEnvironment} ->
-                                    case cloudi_os_spawn:spawn(SpawnProcess,
-                                                               SpawnProtocol,
-                                                               SpawnSocketPath,
-                                                               Ports,
-                                                               SpawnFilename,
-                                                               SpawnArguments,
-                                                               SpawnEnvironment)
-                                                               of
-                                        {ok, _OsPid} ->
-                                            {ok, Pids};
-                                        {error, _} = Error ->
-                                            Error
-                                    end;
-                                {error, _} = Error ->
-                                    Error
-                            end;
+            SpawnFilename = filename_parse(Filename, EnvironmentLookup),
+            case arguments_parse(Arguments, EnvironmentLookup) of
+                {ok, SpawnArguments} ->
+                    SpawnEnvironment = environment_parse(
+                        Environment, ThreadsPerProcess,
+                        Protocol, BufferSize, EnvironmentLookup),
+                    case cloudi_os_spawn:spawn(SpawnProcess,
+                                               SpawnProtocol,
+                                               SpawnSocketPath,
+                                               Ports,
+                                               SpawnFilename,
+                                               SpawnArguments,
+                                               SpawnEnvironment) of
+                        {ok, _OsPid} ->
+                            {ok, Pids};
                         {error, _} = Error ->
                             Error
                     end;
@@ -332,7 +321,7 @@ environment_transform_value(Key, String, Output, EnvironmentLookup) ->
 % update filename, including path
 filename_parse(Filename, EnvironmentLookup) ->
     NewFilename = environment_transform(Filename, EnvironmentLookup),
-    {ok, string_terminate(NewFilename)}.
+    string_terminate(NewFilename).
 
 % remove beginning whitespace and validate delimiters
 % within the command-line arguments
@@ -394,7 +383,7 @@ environment_parse(Environment0, ThreadsPerProcess,
     Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1, Environment2,
                                   {?ENVIRONMENT_BUFFER_SIZE,
                                    erlang:integer_to_list(BufferSize)}),
-    {ok, environment_format(Environment3, EnvironmentLookup)}.
+    environment_format(Environment3, EnvironmentLookup).
 
 environment_format(Environment, EnvironmentLookup) ->
     environment_format([], Environment, EnvironmentLookup).

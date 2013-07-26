@@ -137,13 +137,15 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
-           Prefix, TimeoutAsync, TimeoutSync,
-           DestRefresh, DestDeny, DestAllow, ConfigOptions)
+start_link(Protocol, SocketPath,
+           ThreadIndex, BufferSize, Timeout, Prefix,
+           TimeoutAsync, TimeoutSync, DestRefresh,
+           DestDeny, DestAllow,
+           #config_service_options{
+               scope = Scope} = ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_record(ConfigOptions, config_service_options) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (Protocol =:= tcp) orelse
            (Protocol =:= udp) orelse
            (Protocol =:= local),
@@ -162,10 +164,16 @@ start_link(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
-    gen_fsm:start_link(?MODULE,
-                       [Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
-                        Prefix, TimeoutAsync, TimeoutSync, DestRefresh,
-                        DestDeny, DestAllow, ConfigOptions], []).
+    case cloudi_x_cpg:scope_exists(Scope) of
+        ok ->
+            gen_fsm:start_link(?MODULE,
+                               [Protocol, SocketPath,
+                                ThreadIndex, BufferSize, Timeout, Prefix,
+                                TimeoutAsync, TimeoutSync, DestRefresh,
+                                DestDeny, DestAllow, ConfigOptions], []);
+        {error, Reason} ->
+            {error, {service_options_scope_invalid, Reason}}
+    end.
 
 port(Process) when is_pid(Process) ->
     gen_fsm:sync_send_all_state_event(Process, port).
@@ -174,9 +182,10 @@ port(Process) when is_pid(Process) ->
 %%% Callback functions from gen_fsm
 %%%------------------------------------------------------------------------
 
-init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
-      Prefix, TimeoutAsync, TimeoutSync,
-      DestRefresh, DestDeny, DestAllow, ConfigOptions])
+init([Protocol, SocketPath,
+      ThreadIndex, BufferSize, Timeout, Prefix,
+      TimeoutAsync, TimeoutSync, DestRefresh,
+      DestDeny, DestAllow, ConfigOptions])
     when Protocol =:= tcp;
          Protocol =:= udp;
          Protocol =:= local ->
@@ -210,18 +219,19 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', State#state{os_pid = OsPid}};
 
-'CONNECT'('init', #state{dispatcher = Dispatcher,
-                         protocol = Protocol,
-                         prefix = Prefix,
-                         timeout_async = TimeoutAsync,
-                         timeout_sync = TimeoutSync,
-                         options = ConfigOptions} = State) ->
+'CONNECT'('init',
+          #state{dispatcher = Dispatcher,
+                 protocol = Protocol,
+                 prefix = Prefix,
+                 timeout_async = TimeoutAsync,
+                 timeout_sync = TimeoutSync,
+                 options = #config_service_options{
+                     priority_default =
+                         PriorityDefault,
+                     request_timeout_adjustment =
+                         RequestTimeoutAdjustment}} = State) ->
     % first message within the CloudI API received during
     % the object construction or init API function
-    PriorityDefault =
-        ConfigOptions#config_service_options.priority_default,
-    RequestTimeoutAdjustment =
-        ConfigOptions#config_service_options.request_timeout_adjustment,
     send('init_out'(Prefix, TimeoutAsync, TimeoutSync,
                     PriorityDefault, RequestTimeoutAdjustment),
          State),
@@ -246,15 +256,23 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
 
 'HANDLE'({'subscribe', Pattern},
          #state{dispatcher = Dispatcher,
-                prefix = Prefix} = State) ->
-    ok = cloudi_x_cpg:join(Prefix ++ Pattern, Dispatcher, infinity),
+                prefix = Prefix,
+                options = #config_service_options{
+                    scope = Scope}} = State) ->
+    ok = cloudi_x_cpg:join(Scope, Prefix ++ Pattern, Dispatcher, infinity),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
          #state{dispatcher = Dispatcher,
-                prefix = Prefix} = State) ->
-    ok = cloudi_x_cpg:leave(Prefix ++ Pattern, Dispatcher, infinity),
-    {next_state, 'HANDLE', State};
+                prefix = Prefix,
+                options = #config_service_options{
+                    scope = Scope}} = State) ->
+    case cloudi_x_cpg:leave(Scope, Prefix ++ Pattern, Dispatcher, infinity) of
+        ok ->
+            {next_state, 'HANDLE', State};
+        error ->
+            {stop, {error, {unsubscribe_invalid, Pattern}}, State}
+    end;
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
@@ -298,10 +316,13 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
-                dest_allow = DestAllow} = State) ->
+                dest_allow = DestAllow,
+                options = #config_service_options{
+                    scope = Scope}} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+            case destination_get(DestRefresh, Scope, Name, Source,
+                                 Groups, Timeout) of
                 {error, timeout} ->
                     ok;
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
@@ -333,10 +354,13 @@ init([Protocol, SocketPath, ThreadIndex, BufferSize, Timeout,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
-                dest_allow = DestAllow} = State) ->
+                dest_allow = DestAllow,
+                options = #config_service_options{
+                    scope = Scope}} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+            case destination_get(DestRefresh, Scope, Name, Source,
+                                 Groups, Timeout) of
                 {error, timeout} ->
                     ok;
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
@@ -576,8 +600,10 @@ handle_info({'cloudi_service_forward_async_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Source}, StateName,
             #state{dispatcher = Dispatcher,
                    dest_refresh = DestRefresh,
-                   cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                   cpg_data = Groups,
+                   options = #config_service_options{
+                       scope = Scope}} = State) ->
+    case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
         {error, timeout} ->
             ok;
         {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
@@ -603,8 +629,10 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
              Timeout, Priority, TransId, Source}, StateName,
             #state{dispatcher = Dispatcher,
                    dest_refresh = DestRefresh,
-                   cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Source, Groups, Timeout) of
+                   cpg_data = Groups,
+                   options = #config_service_options{
+                       scope = Scope}} = State) ->
+    case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
         {error, timeout} ->
             ok;
         {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
@@ -661,10 +689,10 @@ handle_info({'cloudi_service_send_sync', Name, Pattern, RequestInfo, Request,
 handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T, StateName,
             #state{queue_requests = true,
                    queued = Queue,
-                   options = ConfigOptions} = State)
+                   options = #config_service_options{
+                       queue_limit = QueueLimit}} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
-    QueueLimit = ConfigOptions#config_service_options.queue_limit,
     QueueLimitOk = if
         QueueLimit /= undefined ->
             cloudi_x_pqueue4:len(Queue) < QueueLimit;
@@ -704,7 +732,9 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
              ResponseInfo, Response, OldTimeout, TransId, Pid}, StateName,
             #state{dispatcher = Dispatcher,
                    send_timeouts = SendTimeouts,
-                   options = ConfigOptions} = State) ->
+                   options = #config_service_options{
+                       response_timeout_adjustment =
+                           ResponseTimeoutAdjustment}} = State) ->
     true = Pid =:= Dispatcher,
     case dict:find(TransId, SendTimeouts) of
         error ->
@@ -712,8 +742,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
             {next_state, StateName, State};
         {ok, {passive, Tref}} when Response == <<>> ->
             if
-                ConfigOptions
-                #config_service_options.response_timeout_adjustment ->
+                ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);
                 true ->
                     ok
@@ -722,8 +751,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
              send_timeout_end(TransId, State)};
         {ok, {passive, Tref}} ->
             Timeout = if
-                ConfigOptions
-                #config_service_options.response_timeout_adjustment ->
+                ResponseTimeoutAdjustment ->
                     case erlang:cancel_timer(Tref) of
                         false ->
                             0;
@@ -748,7 +776,9 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
              ResponseInfo, Response, _Timeout, TransId, Pid}, StateName,
             #state{dispatcher = Dispatcher,
                    send_timeouts = SendTimeouts,
-                   options = ConfigOptions} = State) ->
+                   options = #config_service_options{
+                       response_timeout_adjustment =
+                           ResponseTimeoutAdjustment}} = State) ->
     true = Pid =:= Dispatcher,
     case dict:find(TransId, SendTimeouts) of
         error ->
@@ -756,8 +786,7 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
             {next_state, StateName, State};
         {ok, {_, Tref}} ->
             if
-                ConfigOptions
-                #config_service_options.response_timeout_adjustment ->
+                ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);
                 true ->
                     ok
@@ -768,12 +797,13 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
 
 handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
             #state{send_timeouts = SendTimeouts,
-                   options = ConfigOptions} = State) ->
+                   options = #config_service_options{
+                       response_timeout_adjustment =
+                           ResponseTimeoutAdjustment}} = State) ->
     case dict:find(TransId, SendTimeouts) of
         error ->
             if
-                ConfigOptions
-                #config_service_options.response_timeout_adjustment ->
+                ResponseTimeoutAdjustment ->
                     % should never happen, timer should have been cancelled
                     % if the send_async already returned
                     ?LOG_WARN("send timeout not found (trans_id=~s)",
@@ -788,12 +818,13 @@ handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
 
 handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
             #state{send_timeouts = SendTimeouts,
-                   options = ConfigOptions} = State) ->
+                   options = #config_service_options{
+                       response_timeout_adjustment =
+                           ResponseTimeoutAdjustment}} = State) ->
     case dict:find(TransId, SendTimeouts) of
         error ->
             if
-                ConfigOptions
-                #config_service_options.response_timeout_adjustment ->
+                ResponseTimeoutAdjustment ->
                     % should never happen, timer should have been cancelled
                     % if the send_sync already returned
                     ?LOG_WARN("send timeout not found (trans_id=~s)",
@@ -866,8 +897,11 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                   #state{dispatcher = Dispatcher,
                          uuid_generator = UUID,
                          dest_refresh = DestRefresh,
-                         cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+                         cpg_data = Groups,
+                         options = #config_service_options{
+                            scope = Scope}} = State) ->
+    case destination_get(DestRefresh, Scope, Name, Dispatcher,
+                         Groups, Timeout) of
         {error, timeout} ->
             send('return_async_out'(), State),
             {next_state, StateName, State};
@@ -894,8 +928,11 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
                  #state{dispatcher = Dispatcher,
                         uuid_generator = UUID,
                         dest_refresh = DestRefresh,
-                        cpg_data = Groups} = State) ->
-    case destination_get(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+                        cpg_data = Groups,
+                        options = #config_service_options{
+                            scope = Scope}} = State) ->
+    case destination_get(DestRefresh, Scope, Name, Dispatcher,
+                         Groups, Timeout) of
         {error, timeout} ->
             send('return_sync_out'(), State),
             {next_state, StateName, State};
@@ -921,8 +958,11 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                    #state{dispatcher = Dispatcher,
                           uuid_generator = UUID,
                           dest_refresh = DestRefresh,
-                          cpg_data = Groups} = State) ->
-    case destination_all(DestRefresh, Name, Dispatcher, Groups, Timeout) of
+                          cpg_data = Groups,
+                          options = #config_service_options{
+                              scope = Scope}} = State) ->
+    case destination_all(DestRefresh, Scope, Name, Dispatcher,
+                         Groups, Timeout) of
         {error, timeout} ->
             send('returns_async_out'(), State),
             {next_state, StateName, State};

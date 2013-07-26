@@ -931,6 +931,8 @@ services_validate_options_internal(OptionsList) ->
          Options#config_service_options.request_timeout_adjustment},
         {response_timeout_adjustment,
          Options#config_service_options.response_timeout_adjustment},
+        {scope,
+         Options#config_service_options.scope},
         {request_pid_uses,
          Options#config_service_options.request_pid_uses},
         {request_pid_options,
@@ -940,65 +942,81 @@ services_validate_options_internal(OptionsList) ->
         {info_pid_options,
          Options#config_service_options.info_pid_options},
         {duo_mode,
-         Options#config_service_options.duo_mode}],
+         Options#config_service_options.duo_mode},
+        {hibernate,
+         Options#config_service_options.hibernate},
+        {reload,
+         Options#config_service_options.reload}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
         [PriorityDefault, _, _, _, _, _, _, _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
-        [_, QueueLimit, _, _, _, _, _, _, _, _, _]
+        [_, QueueLimit, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
                    (QueueLimit >= 1))) ->
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
-        [_, _, DestRefreshStart, _, _, _, _, _, _, _, _]
+        [_, _, DestRefreshStart, _, _, _, _, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
                   (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
-        [_, _, _, DestRefreshDelay, _, _, _, _, _, _, _]
+        [_, _, _, DestRefreshDelay, _, _, _, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshDelay) andalso
                   (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
-        [_, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _]
+        [_, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _, _, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
-        [_, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _]
+        [_, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _, _, _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
-        [_, _, _, _, _, _, RequestPidUses, _, _, _, _]
+        [_, _, _, _, _, _, Scope, _, _, _, _, _, _, _]
+        when not is_atom(Scope) ->
+            {error, {service_options_scope_invalid,
+                     Scope}};
+        [_, _, _, _, _, _, _, RequestPidUses, _, _, _, _, _, _]
         when not ((RequestPidUses =:= infinity) orelse
                   (is_integer(RequestPidUses) andalso
                    (RequestPidUses >= 1))) ->
             {error, {service_options_request_pid_uses_invalid,
                      RequestPidUses}};
-        [_, _, _, _, _, _, _, RequestPidOptions, _, _, _]
+        [_, _, _, _, _, _, _, _, RequestPidOptions, _, _, _, _, _]
         when not is_list(RequestPidOptions) ->
             {error, {service_options_request_pid_options_invalid,
                      RequestPidOptions}};
-        [_, _, _, _, _, _, _, _, InfoPidUses, _, _]
+        [_, _, _, _, _, _, _, _, _, InfoPidUses, _, _, _, _]
         when not ((InfoPidUses =:= infinity) orelse
                   (is_integer(InfoPidUses) andalso
                    (InfoPidUses >= 1))) ->
             {error, {service_options_info_pid_uses_invalid,
                      InfoPidUses}};
-        [_, _, _, _, _, _, _, _, _, InfoPidOptions, _]
+        [_, _, _, _, _, _, _, _, _, _, InfoPidOptions, _, _, _]
         when not is_list(InfoPidOptions) ->
             {error, {service_options_info_pid_options_invalid,
                      InfoPidOptions}};
-        [_, _, _, _, _, _, _, _, _, _, DuoMode]
+        [_, _, _, _, _, _, _, _, _, _, _, DuoMode, _, _]
         when not is_boolean(DuoMode) ->
             {error, {service_options_duo_mode_invalid,
                      DuoMode}};
+        [_, _, _, _, _, _, _, _, _, _, _, _, Hibernate, _]
+        when not is_boolean(Hibernate) ->
+            {error, {service_options_hibernate_invalid,
+                     Hibernate}};
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, Reload]
+        when not is_boolean(Reload) ->
+            {error, {service_options_reload_invalid,
+                     Reload}};
         [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-         RequestTimeoutAdjustment, ResponseTimeoutAdjustment,
+         RequestTimeoutAdjustment, ResponseTimeoutAdjustment, Scope,
          RequestPidUses, RequestPidOptions, InfoPidUses, InfoPidOptions,
-         DuoMode]
+         DuoMode, Hibernate, Reload]
         when not ((DuoMode =:= true) andalso
                   (InfoPidUses =/= infinity)) ->
             case services_validate_option_pid_options(RequestPidOptions) of
@@ -1018,6 +1036,8 @@ services_validate_options_internal(OptionsList) ->
                                     RequestTimeoutAdjustment,
                                 response_timeout_adjustment =
                                     ResponseTimeoutAdjustment,
+                                scope =
+                                    ?ASSIGN_SCOPE(Scope),
                                 request_pid_uses =
                                     RequestPidUses,
                                 request_pid_options =
@@ -1027,16 +1047,20 @@ services_validate_options_internal(OptionsList) ->
                                 info_pid_options =
                                     NewInfoPidOptions,
                                 duo_mode =
-                                    DuoMode}};
+                                    DuoMode,
+                                hibernate =
+                                    Hibernate,
+                                reload =
+                                    Reload}};
                         {error, _} = Error ->
                             Error
                     end;
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _, _, _, _, _] ->
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, _] ->
             {error, {service_options_invalid, OptionsList}};
-        [_, _, _, _, _, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
 
@@ -1059,39 +1083,45 @@ services_validate_options_external(OptionsList) ->
         {request_timeout_adjustment,
          Options#config_service_options.request_timeout_adjustment},
         {response_timeout_adjustment,
-         Options#config_service_options.response_timeout_adjustment}],
+         Options#config_service_options.response_timeout_adjustment},
+        {scope,
+         Options#config_service_options.scope}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
-        [PriorityDefault, _, _, _, _, _]
+        [PriorityDefault, _, _, _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
-        [_, QueueLimit, _, _, _, _]
+        [_, QueueLimit, _, _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
                    (QueueLimit >= 1))) ->
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
-        [_, _, DestRefreshStart, _, _, _]
+        [_, _, DestRefreshStart, _, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
                   (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
-        [_, _, _, DestRefreshDelay, _, _]
+        [_, _, _, DestRefreshDelay, _, _, _]
         when not (is_integer(DestRefreshDelay) andalso
                   (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
-        [_, _, _, _, RequestTimeoutAdjustment, _]
+        [_, _, _, _, RequestTimeoutAdjustment, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
-        [_, _, _, _, _, ResponseTimeoutAdjustment]
+        [_, _, _, _, _, ResponseTimeoutAdjustment, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
+        [_, _, _, _, _, _, Scope]
+        when not is_atom(Scope) ->
+            {error, {service_options_scope_invalid,
+                     Scope}};
         [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-         RequestTimeoutAdjustment, ResponseTimeoutAdjustment] ->
+         RequestTimeoutAdjustment, ResponseTimeoutAdjustment, Scope] ->
             {ok, Options#config_service_options{
                 priority_default =
                     PriorityDefault,
@@ -1104,8 +1134,10 @@ services_validate_options_external(OptionsList) ->
                 request_timeout_adjustment =
                     RequestTimeoutAdjustment,
                 response_timeout_adjustment =
-                    ResponseTimeoutAdjustment}};
-        [_, _, _, _, _, _ | Extra] ->
+                    ResponseTimeoutAdjustment,
+                scope =
+                    ?ASSIGN_SCOPE(Scope)}};
+        [_, _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
 
