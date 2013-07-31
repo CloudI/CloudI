@@ -2,12 +2,10 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {application, cloudi_services_messaging, 
-  [{description, "Cloudi Services Messaging Integration"},
+  [{description, "CloudI Services Messaging Integration"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_service_zeromq
-        ]},
-   {registered,[
         ]},
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
@@ -15,6 +13,5 @@
         cloudi_x_trie,
         stdlib,
         kernel
-        ]},
-   {start_phases, []}]}.
+        ]}]}.
 

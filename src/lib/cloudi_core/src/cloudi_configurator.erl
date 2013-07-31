@@ -206,14 +206,11 @@ concurrency(I)
 init([Config]) ->
     {ok, #state{configuration = Config}}.
 
-handle_call(configure, _,
-            #state{configuration = Config} = State) ->
-    case configure(Config, infinity) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
-        {error, _} = Error ->
-            {reply, Error, State}
-    end;
+handle_call(configure, _, State) ->
+    % the application startup configuration must not block
+    % application startup (executing the cloudi.conf)
+    self() ! configure,
+    {reply, ok, State};
 
 handle_call({acl_add, L, _}, _,
             #state{configuration = Config} = State) ->
@@ -318,6 +315,17 @@ handle_call(Request, _, State) ->
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
+
+handle_info(configure,
+            #state{configuration = Config} = State) ->
+    case configure(Config, infinity) of
+        {ok, NewConfig} ->
+            {noreply, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            % cloudi_core application startup failed due to a problem
+            % with the cloudi.conf file
+            {stop, Error, State}
+    end;
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

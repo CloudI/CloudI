@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {application, cloudi_services_internal, 
-  [{description, "Cloudi Services Internal Integration"},
+  [{description, "CloudI Services Internal Integration"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_http_cowboy_handler,
@@ -17,8 +17,6 @@
         cloudi_service_work_manager,
         cloudi_task_size
         ]},
-   {registered,[
-        ]},
    {included_applications, [
         cloudi_x_elli
         ]},
@@ -30,6 +28,5 @@
         cloudi_x_uuid,
         stdlib,
         kernel
-        ]},
-   {start_phases, []}]}.
+        ]}]}.
 
