@@ -38,7 +38,7 @@ else
     fi
 fi
 
-RUNNER_LOG_DIR=$USE_DIR/log
+RUNNER_LOG_DIR=$USE_DIR/logs
 # Make sure log directory exists
 mkdir -p $RUNNER_LOG_DIR
 
@@ -79,7 +79,7 @@ fi
 cd $USE_DIR
 
 # Make sure log directory exists
-mkdir -p $USE_DIR/log
+mkdir -p $USE_DIR/logs
 
 
 # Add ERTS bin dir to our path

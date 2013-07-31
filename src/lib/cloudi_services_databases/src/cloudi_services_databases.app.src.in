@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {application, cloudi_services_databases, 
-  [{description, "Cloudi Services Databases Integration"},
+  [{description, "CloudI Services Databases Integration"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_service_db_couchdb,
@@ -11,8 +11,6 @@
         cloudi_service_db_mysql,
         cloudi_service_db_pgsql,
         cloudi_service_db_tokyotyrant
-        ]},
-   {registered,[
         ]},
    {applications, [
         cloudi_core,
@@ -26,6 +24,5 @@
         cloudi_x_etokyotyrant,
         stdlib,
         kernel
-        ]},
-   {start_phases, []}]}.
+        ]}]}.
 

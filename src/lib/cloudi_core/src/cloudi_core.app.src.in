@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {application, cloudi_core, 
-  [{description, "Cloudi Core Application"},
+  [{description, "CloudI Core Application"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi,
@@ -64,6 +64,5 @@
         stdlib,
         kernel
         ]},
-   {mod, {cloudi_core_app,[]}},
-   {start_phases, []}]}.
+   {mod, {cloudi_core_app,[]}}]}.
 

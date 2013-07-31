@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-07-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Simplify CloudI Erlang release
+    * Fix configure sequence, so it remains decoupled from application startup
+
 2013-07-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add get_pids function to the internal service CloudI API
