@@ -7,6 +7,5 @@
    {modules, [hello_world3]},
    {applications, [
         cloudi_core,
-        cloudi_services_internal,
         stdlib,
         kernel]}]}.

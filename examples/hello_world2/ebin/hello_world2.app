@@ -8,6 +8,5 @@
         hello_world2]},
    {applications, [
         cloudi_core,
-        cloudi_services_internal,
         stdlib,
         kernel]}]}.
