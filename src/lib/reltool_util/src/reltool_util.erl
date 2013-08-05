@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.5.0 {@date} {@time}
+%%% @version 0.6.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -55,6 +55,8 @@
 -export([application_start/1,
          application_start/2,
          application_start/3,
+         applications_start/1,
+         applications_start/2,
          application_stop/1,
          application_remove/1,
          application_remove/2,
@@ -146,6 +148,33 @@ application_start(Application, Env, Timeout)
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()})) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications) ->
+    applications_start(Applications, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()}),
+                         Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications, Timeout) ->
+    applications_start_element(Applications, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -626,6 +655,25 @@ application_start_dependencies([A | As]) ->
     case ensure_application_started(A) of
         ok ->
             application_start_dependencies(As);
+        {error, _} = Error ->
+            Error
+    end.
+
+applications_start_element([], _) ->
+    ok;
+applications_start_element([Application | Applications], Timeout)
+    when is_atom(Application) ->
+    case application_start(Application, [], Timeout) of
+        ok ->
+            applications_start_element(Applications, Timeout);
+        {error, _} = Error ->
+            Error
+    end;
+applications_start_element([{Application, Env} | Applications], Timeout)
+    when is_atom(Application), is_list(Env) ->
+    case application_start(Application, Env, Timeout) of
+        ok ->
+            applications_start_element(Applications, Timeout);
         {error, _} = Error ->
             Error
     end.

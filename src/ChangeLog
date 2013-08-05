@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move cloudi_core startup of cloudi_services_internal,
+      cloudi_services_databases, and cloudi_services_messaging into the
+      cloudi_core configuration sequence
+
 2013-07-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify CloudI Erlang release

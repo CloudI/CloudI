@@ -25,14 +25,8 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   {boot_rel, "cloudi"},
-  % CloudI source code, including supporting applications
+  % CloudI source code, including dependencies
   {app, cloudi_core,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_services_internal,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_services_databases,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_services_messaging,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   % application directories
@@ -48,9 +42,6 @@
    [
     % CloudI
     cloudi_core,
-    cloudi_services_internal,
-    cloudi_services_databases,
-    cloudi_services_messaging,
     % Erlang
     sasl,
     stdlib,
