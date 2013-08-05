@@ -8,5 +8,6 @@
    {applications, [
         cloudi_core,
         cloudi_services_internal,
+        cloudi_services_databases,
         stdlib,
         kernel]}]}.
