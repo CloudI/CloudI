@@ -466,7 +466,7 @@ install-exec-hook: cloudi-prefix-install \
 	echo "#!/bin/sh"               > "$(CLOUDI_TMP_BIN_SCRIPT)"
 	echo "cd $(cloudi_bindir)"     >> "$(CLOUDI_TMP_BIN_SCRIPT)"
 	echo "exec ./cloudi \$$*"      >> "$(CLOUDI_TMP_BIN_SCRIPT)"
-	$(INSTALL_SCRIPT) "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/"
+	$(INSTALL_SCRIPT) "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/cloudi"
 	rm -f "$(CLOUDI_TMP_BIN_SCRIPT)"
 	test -e "$(DESTDIR)$(cloudi_confdir)/app.config" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/app.config" \
