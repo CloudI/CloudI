@@ -38,6 +38,9 @@ AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
 AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 
+AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
+         m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
+
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
     [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])

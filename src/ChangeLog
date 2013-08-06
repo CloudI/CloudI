@@ -6,6 +6,7 @@
     * Move cloudi_core startup of cloudi_services_internal,
       cloudi_services_databases, and cloudi_services_messaging into the
       cloudi_core configuration sequence
+    * Do not use the /tmp/cloudi path
 
 2013-07-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
