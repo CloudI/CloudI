@@ -67,8 +67,8 @@
          duo_mode_loop/1]).
 
 %% cloudi_services_internal callbacks
--export([handle_module_request_loop/3,
-         handle_module_info_loop/3]).
+-export([handle_module_request_loop_hibernate/2,
+         handle_module_info_loop_hibernate/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -1646,21 +1646,26 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                        Hibernate}, ResultPid) ->
     if
         OldRequestPid =:= undefined ->
-            erlang:spawn_opt(fun() ->
-                handle_module_request_loop(RequestPidUses,
-                                           ModuleRequest, ResultPid, Hibernate)
-            end, RequestPidOptions);
+            if
+                Hibernate =:= false ->
+                    erlang:spawn_opt(fun() ->
+                        handle_module_request_loop_normal(RequestPidUses,
+                                                          ModuleRequest,
+                                                          ResultPid)
+                    end, RequestPidOptions);
+                Hibernate =:= true ->
+                    erlang:spawn_opt(fun() ->
+                        handle_module_request_loop_hibernate(RequestPidUses,
+                                                             ModuleRequest,
+                                                             ResultPid)
+                    end, RequestPidOptions)
+            end;
         is_pid(OldRequestPid) ->
             OldRequestPid ! ModuleRequest,
             OldRequestPid
     end.
 
--spec handle_module_request_loop(Uses :: infinity | pos_integer(),
-                                 ResultPid :: pid(),
-                                 Hibernate :: boolean()) ->
-    no_return().
-
-handle_module_request_loop(Uses, ResultPid, Hibernate) ->
+handle_module_request_loop_normal(Uses, ResultPid) ->
     receive
         {'cloudi_service_request_loop',
          _Type, _Name, _Pattern,
@@ -1668,17 +1673,32 @@ handle_module_request_loop(Uses, ResultPid, Hibernate) ->
          _Timeout, _Priority, _TransId, _Pid,
          _Module, _Dispatcher, _ConfigOptions,
          _NewServiceState} = ModuleRequest ->
-            handle_module_request_loop(Uses,
-                                       ModuleRequest, ResultPid, Hibernate)
+            handle_module_request_loop_normal(Uses,
+                                              ModuleRequest,
+                                              ResultPid)
     end.
 
-handle_module_request_loop(Uses,
-                           {'cloudi_service_request_loop',
-                            Type, Name, Pattern,
-                            RequestInfo, Request,
-                            Timeout, Priority, TransId, Pid,
-                            Module, Dispatcher, ConfigOptions,
-                            NewServiceState}, ResultPid, Hibernate) ->
+handle_module_request_loop_hibernate(Uses, ResultPid) ->
+    receive
+        {'cloudi_service_request_loop',
+         _Type, _Name, _Pattern,
+         _RequestInfo, _Request,
+         _Timeout, _Priority, _TransId, _Pid,
+         _Module, _Dispatcher, _ConfigOptions,
+         _NewServiceState} = ModuleRequest ->
+            handle_module_request_loop_hibernate(Uses,
+                                                 ModuleRequest,
+                                                 ResultPid)
+    end.
+
+handle_module_request_loop_normal(Uses,
+                                  {'cloudi_service_request_loop',
+                                   Type, Name, Pattern,
+                                   RequestInfo, Request,
+                                   Timeout, Priority, TransId, Pid,
+                                   Module, Dispatcher, ConfigOptions,
+                                   NewServiceState},
+                                  ResultPid) ->
     Result = handle_module_request(Type, Name, Pattern,
                                    RequestInfo, Request,
                                    Timeout, Priority, TransId, Pid,
@@ -1689,24 +1709,36 @@ handle_module_request_loop(Uses,
             erlang:exit(Result);
         is_integer(Uses) ->
             ResultPid ! Result,
-            if
-                Hibernate =:= true ->
-                    erlang:hibernate(?MODULE, handle_module_request_loop,
-                                     [Uses - 1, ResultPid, Hibernate]);
-                Hibernate =:= false ->
-                    % XXX ignore spurious dialyzer error
-                    handle_module_request_loop(Uses - 1, ResultPid, Hibernate)
-            end;
+            handle_module_request_loop_normal(Uses - 1, ResultPid);
         Uses =:= infinity ->
             ResultPid ! Result,
-            if
-                Hibernate =:= true ->
-                    erlang:hibernate(?MODULE, handle_module_request_loop,
-                                     [Uses, ResultPid, Hibernate]);
-                Hibernate =:= false ->
-                    % XXX ignore spurious dialyzer error
-                    handle_module_request_loop(Uses, ResultPid, Hibernate)
-            end
+            handle_module_request_loop_normal(Uses, ResultPid)
+    end.
+
+handle_module_request_loop_hibernate(Uses,
+                                     {'cloudi_service_request_loop',
+                                      Type, Name, Pattern,
+                                      RequestInfo, Request,
+                                      Timeout, Priority, TransId, Pid,
+                                      Module, Dispatcher, ConfigOptions,
+                                      NewServiceState},
+                                     ResultPid) ->
+    Result = handle_module_request(Type, Name, Pattern,
+                                   RequestInfo, Request,
+                                   Timeout, Priority, TransId, Pid,
+                                   Module, Dispatcher, ConfigOptions,
+                                   NewServiceState),
+    if
+        Uses == 1 ->
+            erlang:exit(Result);
+        is_integer(Uses) ->
+            ResultPid ! Result,
+            erlang:hibernate(?MODULE, handle_module_request_loop_hibernate,
+                             [Uses - 1, ResultPid]);
+        Uses =:= infinity ->
+            ResultPid ! Result,
+            erlang:hibernate(?MODULE, handle_module_request_loop_hibernate,
+                             [Uses, ResultPid])
     end.
 
 handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
@@ -1719,33 +1751,50 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
                                     Hibernate}, ResultPid) ->
     if
         OldInfoPid =:= undefined ->
-            erlang:spawn_opt(fun() ->
-                handle_module_info_loop(InfoPidUses,
-                                        ModuleInfo, ResultPid, Hibernate)
-            end, InfoPidOptions);
+            if
+                Hibernate =:= false ->
+                    erlang:spawn_opt(fun() ->
+                        handle_module_info_loop_normal(InfoPidUses,
+                                                       ModuleInfo,
+                                                       ResultPid)
+                    end, InfoPidOptions);
+                Hibernate =:= true ->
+                    erlang:spawn_opt(fun() ->
+                        handle_module_info_loop_hibernate(InfoPidUses,
+                                                          ModuleInfo,
+                                                          ResultPid)
+                    end, InfoPidOptions)
+            end;
         is_pid(OldInfoPid) ->
             OldInfoPid ! ModuleInfo,
             OldInfoPid
     end.
 
--spec handle_module_info_loop(Uses :: infinity | pos_integer(),
-                              ResultPid :: pid(),
-                              Hibernate :: boolean()) ->
-    no_return().
-
-handle_module_info_loop(Uses, ResultPid, Hibernate) ->
+handle_module_info_loop_normal(Uses, ResultPid) ->
     receive
         {'cloudi_service_info_loop',
          _Request, _Module, _Dispatcher,
          _NewServiceState} = ModuleInfo ->
-            handle_module_info_loop(Uses,
-                                    ModuleInfo, ResultPid, Hibernate)
+            handle_module_info_loop_normal(Uses,
+                                           ModuleInfo,
+                                           ResultPid)
     end.
 
-handle_module_info_loop(Uses,
-                        {'cloudi_service_info_loop',
-                         Request, Module, Dispatcher,
-                         NewServiceState}, ResultPid, Hibernate) ->
+handle_module_info_loop_hibernate(Uses, ResultPid) ->
+    receive
+        {'cloudi_service_info_loop',
+         _Request, _Module, _Dispatcher,
+         _NewServiceState} = ModuleInfo ->
+            handle_module_info_loop_hibernate(Uses,
+                                              ModuleInfo,
+                                              ResultPid)
+    end.
+
+handle_module_info_loop_normal(Uses,
+                               {'cloudi_service_info_loop',
+                                Request, Module, Dispatcher,
+                                NewServiceState},
+                               ResultPid) ->
     Result = handle_module_info(Request, Module, Dispatcher,
                                 NewServiceState),
     if
@@ -1753,24 +1802,30 @@ handle_module_info_loop(Uses,
             erlang:exit(Result);
         is_integer(Uses) ->
             ResultPid ! Result,
-            if
-                Hibernate =:= true ->
-                    erlang:hibernate(?MODULE, handle_module_info_loop,
-                                     [Uses - 1, ResultPid, Hibernate]);
-                Hibernate =:= false ->
-                    % XXX ignore spurious dialyzer error
-                    handle_module_info_loop(Uses - 1, ResultPid, Hibernate)
-            end;
+            handle_module_info_loop_normal(Uses - 1, ResultPid);
         Uses =:= infinity ->
             ResultPid ! Result,
-            if
-                Hibernate =:= true ->
-                    erlang:hibernate(?MODULE, handle_module_info_loop,
-                                     [Uses, ResultPid, Hibernate]);
-                Hibernate =:= false ->
-                    % XXX ignore spurious dialyzer error
-                    handle_module_info_loop(Uses, ResultPid, Hibernate)
-            end
+            handle_module_info_loop_normal(Uses, ResultPid)
+    end.
+
+handle_module_info_loop_hibernate(Uses,
+                                  {'cloudi_service_info_loop',
+                                   Request, Module, Dispatcher,
+                                   NewServiceState},
+                                  ResultPid) ->
+    Result = handle_module_info(Request, Module, Dispatcher,
+                                NewServiceState),
+    if
+        Uses == 1 ->
+            erlang:exit(Result);
+        is_integer(Uses) ->
+            ResultPid ! Result,
+            erlang:hibernate(?MODULE, handle_module_info_loop_hibernate,
+                             [Uses - 1, ResultPid]);
+        Uses =:= infinity ->
+            ResultPid ! Result,
+            erlang:hibernate(?MODULE, handle_module_info_loop_hibernate,
+                             [Uses, ResultPid])
     end.
 
 % duo_mode specific logic
