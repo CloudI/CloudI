@@ -174,7 +174,7 @@ new(Settings)
     true = (PriorityDefault >= ?PRIORITY_HIGH) and
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
-    ConfiguredScope = ?ASSIGN_SCOPE(Scope),
+    ConfiguredScope = ?SCOPE_ASSIGN(Scope),
     ok = cloudi_x_cpg:scope_exists(ConfiguredScope),
     Self = self(),
     #cloudi_context{
