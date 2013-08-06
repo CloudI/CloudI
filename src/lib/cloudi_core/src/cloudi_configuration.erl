@@ -382,8 +382,8 @@ services(#config{services = Services}) ->
                                Service#config_service_internal.max_r,
                            max_t =
                                Service#config_service_internal.max_t,
-                           options =
-                               Service#config_service_internal.options}};
+                           options = services_format_options_internal(
+                               Service#config_service_internal.options)}};
             is_record(Service, config_service_external) ->
                 {Service#config_service_external.uuid,
                  #external{prefix =
@@ -418,8 +418,8 @@ services(#config{services = Services}) ->
                                Service#config_service_external.max_r,
                            max_t =
                                Service#config_service_external.max_t,
-                           options =
-                               Service#config_service_external.options}}
+                           options = services_format_options_external(
+                               Service#config_service_external.options)}}
         end
     end, Services).
 
@@ -649,6 +649,139 @@ services_acl_update_list(Output, [E | L], Lookup)
         exit:badarg ->
             {error, {acl_invalid, E}}
     end.
+
+services_format_options_internal(Options) ->
+    Defaults = #config_service_options{},
+    OptionsList0 = lists:reverse(services_format_options_external(Options)),
+    OptionsList1 = if
+        Options#config_service_options.request_pid_uses /=
+        Defaults#config_service_options.request_pid_uses ->
+            [{request_pid_uses,
+              Options#config_service_options.request_pid_uses} |
+             OptionsList0];
+        true ->
+            OptionsList0
+    end,
+    OptionsList2 = if
+        Options#config_service_options.request_pid_options /= [link] ->
+            [{request_pid_options, lists:delete(link,
+              Options#config_service_options.request_pid_options)} |
+             OptionsList1];
+        true ->
+            OptionsList1
+    end,
+    OptionsList3 = if
+        Options#config_service_options.info_pid_uses /=
+        Defaults#config_service_options.info_pid_uses ->
+            [{info_pid_uses,
+              Options#config_service_options.info_pid_uses} |
+             OptionsList2];
+        true ->
+            OptionsList2
+    end,
+    OptionsList4 = if
+        Options#config_service_options.info_pid_options /= [link] ->
+            [{info_pid_options, lists:delete(link,
+              Options#config_service_options.info_pid_options)} |
+             OptionsList3];
+        true ->
+            OptionsList3
+    end,
+    OptionsList5 = if
+        Options#config_service_options.duo_mode /=
+        Defaults#config_service_options.duo_mode ->
+            [{duo_mode,
+              Options#config_service_options.duo_mode} |
+             OptionsList4];
+        true ->
+            OptionsList4
+    end,
+    OptionsList6 = if
+        Options#config_service_options.hibernate /=
+        Defaults#config_service_options.hibernate ->
+            [{hibernate,
+              Options#config_service_options.hibernate} |
+             OptionsList5];
+        true ->
+            OptionsList5
+    end,
+    OptionsList7 = if
+        Options#config_service_options.reload /=
+        Defaults#config_service_options.reload ->
+            [{reload,
+              Options#config_service_options.reload} |
+             OptionsList6];
+        true ->
+            OptionsList6
+    end,
+    lists:reverse(OptionsList7).
+
+services_format_options_external(Options) ->
+    Defaults = #config_service_options{},
+    OptionsList0 = [],
+    OptionsList1 = if
+        Options#config_service_options.priority_default /=
+        Defaults#config_service_options.priority_default ->
+            [{priority_default,
+              Options#config_service_options.priority_default} |
+             OptionsList0];
+        true ->
+            OptionsList0
+    end,
+    OptionsList2 = if
+        Options#config_service_options.queue_limit /=
+        Defaults#config_service_options.queue_limit ->
+            [{queue_limit,
+              Options#config_service_options.queue_limit} |
+             OptionsList1];
+        true ->
+            OptionsList1
+    end,
+    OptionsList3 = if
+        Options#config_service_options.dest_refresh_start /=
+        Defaults#config_service_options.dest_refresh_start ->
+            [{dest_refresh_start,
+              Options#config_service_options.dest_refresh_start} |
+             OptionsList2];
+        true ->
+            OptionsList2
+    end,
+    OptionsList4 = if
+        Options#config_service_options.dest_refresh_delay /=
+        Defaults#config_service_options.dest_refresh_delay ->
+            [{dest_refresh_delay,
+              Options#config_service_options.dest_refresh_delay} |
+             OptionsList3];
+        true ->
+            OptionsList3
+    end,
+    OptionsList5 = if
+        Options#config_service_options.request_timeout_adjustment /=
+        Defaults#config_service_options.request_timeout_adjustment ->
+            [{request_timeout_adjustment,
+              Options#config_service_options.request_timeout_adjustment} |
+             OptionsList4];
+        true ->
+            OptionsList4
+    end,
+    OptionsList6 = if
+        Options#config_service_options.response_timeout_adjustment /=
+        Defaults#config_service_options.response_timeout_adjustment ->
+            [{response_timeout_adjustment,
+              Options#config_service_options.response_timeout_adjustment} |
+             OptionsList5];
+        true ->
+            OptionsList5
+    end,
+    OptionsList7 = if
+        Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
+            [{scope,
+              Options#config_service_options.scope} |
+             OptionsList6];
+        true ->
+            OptionsList6
+    end,
+    lists:reverse(OptionsList7).
 
 -spec services_validate(Services :: list(#internal{} | #external{}),
                         UUID :: cloudi_x_uuid:state()) ->
@@ -1037,7 +1170,7 @@ services_validate_options_internal(OptionsList) ->
                                 response_timeout_adjustment =
                                     ResponseTimeoutAdjustment,
                                 scope =
-                                    ?ASSIGN_SCOPE(Scope),
+                                    ?SCOPE_ASSIGN(Scope),
                                 request_pid_uses =
                                     RequestPidUses,
                                 request_pid_options =
@@ -1136,7 +1269,7 @@ services_validate_options_external(OptionsList) ->
                 response_timeout_adjustment =
                     ResponseTimeoutAdjustment,
                 scope =
-                    ?ASSIGN_SCOPE(Scope)}};
+                    ?SCOPE_ASSIGN(Scope)}};
         [_, _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
