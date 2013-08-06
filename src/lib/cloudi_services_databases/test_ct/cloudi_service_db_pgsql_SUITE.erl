@@ -28,11 +28,9 @@ init_per_suite(Config) ->
                                                  [{configuration,
                                                    CloudIConfigPath}],
                                                  1000),
-    ok = cloudi_x_reltool_util:application_start(cloudi_services_databases),
     Config.
 
 end_per_suite(_Config) ->
-    ok = cloudi_x_reltool_util:application_stop(cloudi_services_databases),
     ok = cloudi_x_reltool_util:application_stop(cloudi_core),
     ok.
 
