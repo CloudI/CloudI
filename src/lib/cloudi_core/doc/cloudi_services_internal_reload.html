@@ -2,19 +2,19 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Module cloudi_services_internal</title>
+<title>Module cloudi_services_internal_reload</title>
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
 <body bgcolor="white">
 <div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
 <hr>
 
-<h1>Module cloudi_services_internal</h1>
+<h1>Module cloudi_services_internal_reload</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
-   <h3><a name="CloudI_Internal_Service">CloudI Internal Service</a></h3>
-   Erlang process which manages internal service requests and info messages
-   for modules that implement the cloudi_service behavior.
-<p>Copyright © 2011-2013 Michael Truog</p>
+   <h3><a name="CloudI_Internal_Service_Reload">CloudI Internal Service Reload</a></h3>
+   Perform module reloading for internal services, during service
+   development.
+<p>Copyright © 2013 Michael Truog</p>
 
 <p><b>Version:</b> 1.2.5 Aug 7 2013 18:04:12
   ------------------------------------------------------------------------</p>
@@ -22,20 +22,18 @@
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
-   <h3><a name="CloudI_Internal_Service">CloudI Internal Service</a></h3>
-   Erlang process which manages internal service requests and info messages
-   for modules that implement the cloudi_service behavior.
+   <h3><a name="CloudI_Internal_Service_Reload">CloudI Internal Service Reload</a></h3>
+   Perform module reloading for internal services, during service
+   development.
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#duo_mode_loop-1">duo_mode_loop/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#duo_mode_loop_init-1">duo_mode_loop_init/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_module_info_loop_hibernate-2">handle_module_info_loop_hibernate/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#handle_module_request_loop_hibernate-2">handle_module_request_loop_hibernate/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#start_link-11">start_link/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_add-1">service_add/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_remove-1">service_remove/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td></td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
 </table>
 
@@ -46,19 +44,9 @@
 <p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="duo_mode_loop-1">duo_mode_loop/1</a></h3>
-<div class="spec">
-<p><tt>duo_mode_loop(State_duo) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="duo_mode_loop_init-1">duo_mode_loop_init/1</a></h3>
-<div class="spec">
-<p><tt>duo_mode_loop_init(State_duo) -&gt; any()</tt></p>
-</div>
-
 <h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
 <div class="spec">
-<p><tt>handle_call(Request, Client, State) -&gt; any()</tt></p>
+<p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
@@ -68,17 +56,7 @@
 
 <h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
 <div class="spec">
-<p><tt>handle_info(T, State) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="handle_module_info_loop_hibernate-2">handle_module_info_loop_hibernate/2</a></h3>
-<div class="spec">
-<p><tt>handle_module_info_loop_hibernate(Uses, ResultPid) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="handle_module_request_loop_hibernate-2">handle_module_request_loop_hibernate/2</a></h3>
-<div class="spec">
-<p><tt>handle_module_request_loop_hibernate(Uses, ResultPid) -&gt; any()</tt></p>
+<p><tt>handle_info(Request, State) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="init-1">init/1</a></h3>
@@ -86,14 +64,24 @@
 <p><tt>init(X1) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="start_link-11">start_link/11</a></h3>
+<h3 class="function"><a name="service_add-1">service_add/1</a></h3>
 <div class="spec">
-<p><tt>start_link(ProcessIndex, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync, DestRefresh, DestDeny, DestAllow, Config_service_options) -&gt; any()</tt></p>
+<p><tt>service_add(Service) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="service_remove-1">service_remove/1</a></h3>
+<div class="spec">
+<p><tt>service_remove(Service) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="terminate-2">terminate/2</a></h3>
 <div class="spec">
-<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+<p><tt>terminate(X1, X2) -&gt; any()</tt></p>
 </div>
 <hr>
 

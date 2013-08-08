@@ -1,4 +1,4 @@
 %% encoding: UTF-8
-{application,quickrand}.
+{application,cloudi_x_quickrand}.
 {packages,[]}.
-{modules,[quickrand,random_wh06_int]}.
+{modules,[cloudi_x_quickrand,cloudi_x_random_wh06_int]}.
