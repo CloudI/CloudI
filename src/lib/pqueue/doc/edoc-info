@@ -1,4 +1,4 @@
 %% encoding: UTF-8
-{application,pqueue}.
+{application,cloudi_x_pqueue}.
 {packages,[]}.
-{modules,[pqueue,pqueue2,pqueue3,pqueue4]}.
+{modules,[cloudi_x_pqueue,cloudi_x_pqueue2,cloudi_x_pqueue3,cloudi_x_pqueue4]}.

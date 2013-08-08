@@ -15,7 +15,7 @@
    The interface which all internal services must implement.
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.2.5 Jul 5 2013 21:23:13
+<p><b>Version:</b> 1.2.5 Aug 7 2013 18:04:12
   ------------------------------------------------------------------------</p>
 <p><b>This module defines the <tt>cloudi_service</tt> behaviour.</b><br> Required callback functions: <tt>cloudi_service_init/3</tt>, <tt>cloudi_service_handle_request/11</tt>, <tt>cloudi_service_handle_info/3</tt>, <tt>cloudi_service_terminate/2</tt>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -28,6 +28,7 @@
      cloudi_service_init(Args, Prefix, Dispatcher)
       ==&gt; {ok, State}
           {stop, Reason}
+          {stop, Reason, State}
   
      cloudi_service_handle_request(Type, Name, Pattern,
                                    RequestInfo, Request, Timeout, Priority,
@@ -131,6 +132,10 @@
 <tr><td valign="top"><a href="#get_pid-2">get_pid/2</a></td><td>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_pid-3">get_pid/3</a></td><td>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pids-2">get_pids/2</a></td><td>
+  <h4><a name="Get_all_service_destinations_based_on_a_service_name.">Get all service destinations based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pids-3">get_pids/3</a></td><td>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#mcast_async-3">mcast_async/3</a></td><td>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
@@ -245,6 +250,8 @@
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#send_sync-7">send_sync/7</a></td><td>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#service_name_parse-2">service_name_parse/2</a></td><td>
+  <h4><a name="Parse_a_service_name_pattern.">Parse a service name pattern.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#subscribe-2">subscribe/2</a></td><td>
   <h4><a name="Subscribe_to_a_service_name_pattern.">Subscribe to a service name pattern.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#timeout_async-1">timeout_async/1</a></td><td>
@@ -273,7 +280,7 @@
 
 <h3 class="function"><a name="Module%3acloudi_service_init-3">'Module:cloudi_service_init'/3</a></h3>
 <div class="spec">
-<p><tt>'Module:cloudi_service_init'(Args::list(), Prefix::<a href="#type-service_name_pattern">service_name_pattern()</a>, Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, State::any()} | {stop, Reason::any()}</tt><br></p>
+<p><tt>'Module:cloudi_service_init'(Args::list(), Prefix::<a href="#type-service_name_pattern">service_name_pattern()</a>, Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, State::any()} | {stop, Reason::any()} | {stop, Reason::any(), State::any()}</tt><br></p>
 </div><p>
   <h4><a name="Initialize_the_internal_service.">Initialize the internal service.</a></h4>
   Create the internal service state.  Do any initial service subscriptions
@@ -317,6 +324,20 @@
 <h3 class="function"><a name="get_pid-3">get_pid/3</a></h3>
 <div class="spec">
 <p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pids-2">get_pids/2</a></h3>
+<div class="spec">
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_all_service_destinations_based_on_a_service_name.">Get all service destinations based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pids-3">get_pids/3</a></h3>
+<div class="spec">
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
 </p>
@@ -602,6 +623,13 @@
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
+<h3 class="function"><a name="service_name_parse-2">service_name_parse/2</a></h3>
+<div class="spec">
+<p><tt>service_name_parse(Pattern::string(), Name::string()) -&gt; [string()] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_service_name_pattern.">Parse a service name pattern.</a></h4>
+</p>
+
 <h3 class="function"><a name="subscribe-2">subscribe/2</a></h3>
 <div class="spec">
 <p><tt>subscribe(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>) -&gt; ok</tt><br></p>
@@ -625,13 +653,13 @@
 
 <h3 class="function"><a name="unsubscribe-2">unsubscribe/2</a></h3>
 <div class="spec">
-<p><tt>unsubscribe(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>) -&gt; ok</tt><br></p>
+<p><tt>unsubscribe(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Unsubscribe_from_a_service_name_pattern.">Unsubscribe from a service name pattern.</a></h4>
 </p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jul 5 2013, 21:23:13.</i></p>
+<p><i>Generated by EDoc, Aug 7 2013, 18:04:12.</i></p>
 </body>
 </html>
