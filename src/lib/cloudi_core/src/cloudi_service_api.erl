@@ -258,7 +258,15 @@ services_restart([_ | _] = L, Timeout)
 
 services_search([_ | _] = ServiceName, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
-    cloudi_configurator:services_search(ServiceName, Timeout).
+    try cloudi_x_trie:is_pattern(ServiceName) of
+        false ->
+            cloudi_configurator:services_search(ServiceName, Timeout);
+        true ->
+            {error, service_name_invalid}
+    catch
+        exit:badarg ->
+            {error, service_name_invalid}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc

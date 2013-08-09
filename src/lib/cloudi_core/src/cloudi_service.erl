@@ -1525,6 +1525,8 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Handle an incoming service request.===
+%% The request_pid_uses and request_pid_options service configuration options
+%% control the Erlang process used to call this function.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1558,6 +1560,8 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Handle an incoming Erlang message.===
+%% The info_pid_uses and info_pid_options service configuration options
+%% control the Erlang process used to call this function.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1573,6 +1577,14 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Handle service termination.===
+%% cloudi_service_terminate/2 is always called, even when cloudi_service_init/3
+%% returns a stop tuple.  When State is unset in the stop tuple, the
+%% cloudi_service_terminate/2 function is called with State equal to
+%% 'undefined'.  Always calling the cloudi_service_terminate/2 function differs
+%% from how Erlang/OTP behaviours handle the init/1 function returning a stop
+%% tuple, but this approach can help prevent problems managing any global
+%% state that might exist that is connected to a service, or simply services
+%% that are only partially initialized.
 %% @end
 %%-------------------------------------------------------------------------
 
