@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.2.4b<br />last updated on June 20 2013</h3></center>
+  <center><h3>version 1.2.5b<br />last updated on August 9<sup>th</sup> 2013</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -59,17 +59,18 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_services_add"      >2.3 - services_add</a></li>
     <li><a href="#2_services_remove"   >2.4 - services_remove</a></li>
     <li><a href="#2_services_restart"  >2.5 - services_restart</a></li>
-    <li><a href="#2_services"          >2.6 - services</a></li>
-    <li><a href="#2_nodes_add"         >2.7 - nodes_add</a></li>
-    <li><a href="#2_nodes_remove"      >2.8 - nodes_remove</a></li>
-    <li><a href="#2_nodes_alive"       >2.9 - nodes_alive</a></li>
-    <li><a href="#2_nodes_dead"        >2.10 - nodes_dead</a></li>
-    <li><a href="#2_nodes"             >2.11 - nodes</a></li>
-    <li><a href="#2_loglevel_set"      >2.12 - loglevel_set</a></li>
-    <li><a href="#2_log_redirect"      >2.13 - log_redirect</a></li>
-    <li><a href="#2_code_path_add"     >2.14 - code_path_add</a></li>
-    <li><a href="#2_code_path_remove"  >2.15 - code_path_remove</a></li>
-    <li><a href="#2_code_path"         >2.16 - code_path</a></li>
+    <li><a href="#2_services_search"   >2.6 - services_search</a></li>
+    <li><a href="#2_services"          >2.7 - services</a></li>
+    <li><a href="#2_nodes_add"         >2.8 - nodes_add</a></li>
+    <li><a href="#2_nodes_remove"      >2.9 - nodes_remove</a></li>
+    <li><a href="#2_nodes_alive"       >2.10 - nodes_alive</a></li>
+    <li><a href="#2_nodes_dead"        >2.11 - nodes_dead</a></li>
+    <li><a href="#2_nodes"             >2.12 - nodes</a></li>
+    <li><a href="#2_loglevel_set"      >2.13 - loglevel_set</a></li>
+    <li><a href="#2_log_redirect"      >2.14 - log_redirect</a></li>
+    <li><a href="#2_code_path_add"     >2.15 - code_path_add</a></li>
+    <li><a href="#2_code_path_remove"  >2.16 - code_path_remove</a></li>
+    <li><a href="#2_code_path"         >2.17 - code_path</a></li>
   </ul>
 
   <hr \>
@@ -97,6 +98,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>All CloudI API programming language integration makes CloudI services first-class actors within the Erlang VM's actor model to provide consistent functionality and fault-tolerance</li>
       <li>Every CloudI API request contains a priority</li>
       <li>Every CloudI API request contains a unique v1 UUID for identifying the request and its response</li>
+      <li>Every CloudI API request contains a timeout which is updated based on the queuing and processing delays the request encounters</li>
     </ul>
   </p>
   <p class="paragraph">
@@ -111,6 +113,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     the destination is picked based on the sending service's "destination
     refresh method", which can be any of the following:
   </p>
+  <a name="1_Intro_dest"></a>
   <table><tr><th>
     Destination Refresh Method
   </th><th>
@@ -246,40 +249,19 @@ CloudI::API.thread_count()
     explicit service name patterns for allowing or denying service
     destinations when the service sends a service request.  The ACLs along
     with the destination refresh method determine how service requests are
-    sent while other service options can tweak default settings:
+    sent while other <a href="#2_services_add_config_opts">service options</a>
+    can tweak default settings.
   </p>
-  <table><tr><th>
-    Service Configuration Parameter w/Default
-  </th><th>
-    Details
-  </th></tr><tr><td>
-    priority_default=0
-  </td><td>
-    -128 (high) &#8804; priority_default &#8804; 127 (low)
-  </td></tr><tr><td>
-    queue_limit=undefined
-  </td><td>
-    A limit on the total number of incoming service requests that
-    are queued while the service is busy (limits memory consumption)
-  </td></tr><tr><td>
-    dest_refresh_start=500
-  </td><td>
-    Delay after startup before requesting the initial service
-    group membership (when using a lazy destination refresh method),
-    specified in milliseconds.
-  </td></tr><tr><td>
-    dest_refresh_delay=300000
-  </td><td>
-    Maximum possible time for a service death to remove service
-    group membership (when using a lazy destination refresh method),
-    specified in milliseconds.
-  </td></tr></table>
   <p class="paragraph">
     External (non-Erlang) services are provided both the command line and
     the environmental variables specified within the service configuration.
     External sevice configuration uses the full path to the executable while
     internal services use the module name (and the OTP application name)
-    within the code search paths.
+    within the code search paths.  All environmental variables set in the
+    shell executing the Erlang VM can be used within the executable path,
+    arguments and environment set in the configuration of an external service,
+    using standard shell syntax (e.g., "${USER}" or "$USER",
+    where "\\$" is a literal "$" character).
   </p>
   <p>
   Please see <a href="#2_services_add">the CloudI Service API (services_add)</a>
@@ -292,12 +274,13 @@ CloudI::API.thread_count()
     parameters in cloudi_service but functions with less parameters do
     exist and they utilize default values for timeouts and request
     priority.  Please see the
-    <a href="api/cloudi_core-1.2.4/cloudi_service.html#index" target="_blank">cloudi_service module</a>
-    to see all the available functions.  The cloudi_service module is used
-    within CloudI services, however, it is also possible to use CloudI
+    <a href="api/cloudi_core-1.2.5/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    to see all the available functions and the behavior interface functions
+    that are implemented within an Erlang service.  The cloudi_service module
+    is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.2.4/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.2.5/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -309,7 +292,7 @@ CloudI::API.thread_count()
     supported with overloaded functions.
   </p>
   <p class="paragraph">
-    The Java CloudI API avoids any C or C++ integration.  It only uses
+    The Java CloudI API doesn't have any C or C++ integration.  It only uses
     reflection to utilize the low-level file descriptor object and
     store object function pointers.
   </p>
@@ -923,7 +906,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.2.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.2.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
@@ -1317,7 +1300,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.2.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1420,7 +1403,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.2.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1512,12 +1495,13 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [
     <a href="#2_code_path_add">code_path_add</a>).  The syntax of the
     configuration entries is shown below:
   </p>
+  <a name="2_services_add_config"></a>
 <pre>
 {internal,
  (ServiceNamePrefix),
  (ErlangModuleName),
  (ModuleInitializationList),
- (<a href="#1_Intro">DestinationRefreshMethod</a>),
+ (<a href="#1_Intro_dest">DestinationRefreshMethod</a>),
  (InitializationTimeout in milliseconds),
  (DefaultAsynchronousTimeout in milliseconds),
  (DefaultSynchronousTimeout in milliseconds),
@@ -1533,7 +1517,7 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [
  (ExecutableFilePath),
  (ExecutableCommandLineArguments),
  (ExecutableEnvironmentalVariables),
- (<a href="#1_Intro">DestinationRefreshMethod</a>),
+ (<a href="#1_Intro_dest">DestinationRefreshMethod</a>),
  (Protocol, use 'default'),
  (ProtocolBufferSize, use 'default'),
  (InitializationTimeout in milliseconds),
@@ -1558,6 +1542,7 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [
     supervisors).  The ServiceOptionsPropList provides the configurable
     defaults:
   </p>
+  <a name="2_services_add_config_opts"></a>
   <table><tr><th>
     Option
   </th><th>
@@ -1606,6 +1591,15 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [
     Should the service's incoming response timeout be automatically decremented
     based on the sender-side's timing (more accurate).
   </td></tr><tr><td>
+    scope
+  </td><td>
+    default
+  </td><td>
+    The scope (an Erlang atom) is the scope which is used for all service
+    name lookups and subscriptions.  If you use a unique scope, you can
+    isolate your service and reduce contention when using an immediate
+    <a href="#1_Intro_dest">destination refresh method</a>.
+  </td></tr><tr><td>
     duo_mode
   </td><td>
     false
@@ -1613,6 +1607,21 @@ curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [
     (internal services only) Use two Erlang processes instead of one Erlang
     process, so that more incoming service throughput can be handled with
     low latency.
+  </td></tr><tr><td>
+    hibernate
+  </td><td>
+    false
+  </td><td>
+    (internal services only) Always make the service Erlang processes hibernate
+    to conserve memory by using more frequent garbage collections.
+  </td></tr><tr><td>
+    reload
+  </td><td>
+    false
+  </td><td>
+    (internal services only) Automatically reload the service module or any of
+    the modules within a service application when the module's beam file is
+    updated on the filesystem.
   </td></tr><tr><td>
     request_pid_uses
   </td><td>
@@ -1700,8 +1709,19 @@ curl -X POST -d '[&lt;&lt;106,103,84,112,122,31,17,226,212,14,165,221,0,0,0,88&g
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
+  <a name="2_services_search"></a>
+  <h3>2.6 - services_search</h3>
+<p class="code">
+curl -X POST -d '"/tests/http/text/post"' http://localhost:6467/cloudi/api/erlang/services_search
+</p>
+  <p class="paragraph">
+    List the service configuration parameters with each service's UUID that
+    are receiving service requests for a given service name.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
   <a name="2_services"></a>
-  <h3>2.6 - services</h3>
+  <h3>2.7 - services</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/services
 </p>
@@ -1711,7 +1731,7 @@ curl http://localhost:6467/cloudi/api/erlang/services
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_add"></a>
-  <h3>2.7 - nodes_add</h3>
+  <h3>2.8 - nodes_add</h3>
 <p class="code">
 curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/nodes_add
 </p>
@@ -1722,7 +1742,7 @@ curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_remove"></a>
-  <h3>2.8 - nodes_remove</h3>
+  <h3>2.9 - nodes_remove</h3>
 <p class="code">
 curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/nodes_remove
 </p>
@@ -1732,7 +1752,7 @@ curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_alive"></a>
-  <h3>2.9 - nodes_alive</h3>
+  <h3>2.10 - nodes_alive</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes_alive
 </p>
@@ -1742,7 +1762,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes_alive
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_dead"></a>
-  <h3>2.10 - nodes_dead</h3>
+  <h3>2.11 - nodes_dead</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes_dead
 </p>
@@ -1753,7 +1773,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes_dead
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes"></a>
-  <h3>2.11 - nodes</h3>
+  <h3>2.12 - nodes</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes
 </p>
@@ -1763,7 +1783,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_loglevel_set"></a>
-  <h3>2.12 - loglevel_set</h3>
+  <h3>2.13 - loglevel_set</h3>
 <p class="code">
 curl -X POST -d 'warn' http://localhost:6467/cloudi/api/erlang/loglevel_set
 </p>
@@ -1775,7 +1795,7 @@ curl -X POST -d 'warn' http://localhost:6467/cloudi/api/erlang/loglevel_set
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_log_redirect"></a>
-  <h3>2.13 - log_redirect</h3>
+  <h3>2.14 - log_redirect</h3>
 <p class="code">
 curl -X POST -d 'cloudi@host' http://localhost:6467/cloudi/api/erlang/log_redirect
 </p>
@@ -1786,7 +1806,7 @@ curl -X POST -d 'cloudi@host' http://localhost:6467/cloudi/api/erlang/log_redire
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_add"></a>
-  <h3>2.14 - code_path_add</h3>
+  <h3>2.15 - code_path_add</h3>
 <p class="code">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_add
 </p>
@@ -1798,7 +1818,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/er
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_remove"></a>
-  <h3>2.15 - code_path_remove</h3>
+  <h3>2.16 - code_path_remove</h3>
 <p class="code">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_remove
 </p>
@@ -1810,7 +1830,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/er
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path"></a>
-  <h3>2.16 - code_path</h3>
+  <h3>2.17 - code_path</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/code_path
 </p>
