@@ -1,3 +1,42 @@
+August 9, 2013
+  Version 1.2.5 (beta) released.
+  * elasticsearch integration was added in cloudi_service_db_elasticsearch.
+  * External service configuration strings provided for the executable
+    file path, the executable command line arguments, and the executable
+    environment variables, now can expand environment variables set in the
+    shell executing the Erlang VM (e.g., "$USER" or "${USER}" syntax).
+  * Internal services now have a few more service configuration options:
+    * hibernate - always makes the service processes hibernate to conserve
+      memory by doing extra garbage collection processing
+    * reload - will automatically reload the service module or all modules
+      within a service application when the beam file is updated
+  * Both external and internal services can set the scope
+    service configuration option to give service name lookups and subscriptions
+    a separate scope, minimizing contention when using an immediate destination
+    refresh method.
+  * Tests with common test, eunit, and PropEr are now used to validate the
+    build.  An initial common test was added to test cloudi_service_db_pgsql.
+  * The cloudi Erlang module received fixes so that it is a better match to the
+    subset of the CloudI API (the cloudi_service Erlang module) it implements.
+  * The services_search function was added to the CloudI Service API which
+    returns the services that have subscribed to a service name.
+  * cloudi_service:service_name_parse/2 was added to make it simpler to
+    parse service name patterns.
+  * The cloudi_core Erlang application is now the only dependency required
+    when including CloudI in an Erlang release.  See the hello_world2
+    example for details.
+  * rebar integration for using the CloudI repository as a rebar dependency
+    was added.  See the hello_world3 example for details.
+  * Added a lot of configuration validation to prevent any problems with
+    invalid configuration data for services, ACLs, etc.
+  * Small fixes and additions were added to the websockets integration within
+    cloudi_service_http_cowboy.  use_client_ip_prefix is a new option
+    within cloudi_service_http_cowboy.
+  * cloudi_service_http_elli was added to provide elli integration.
+    More load testing is required to determine how it compares to
+    cloudi_service_http_cowboy.
+  * ZeroMQ detection on OSX was fixed.
+
 June 20, 2013
   Version 1.2.4 (beta) released.
   * The external service "local" (i.e., "default") protocol configuration
