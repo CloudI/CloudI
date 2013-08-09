@@ -31,6 +31,14 @@ to its integration and dependencies).
 - `October 14, 2009`
 - `BSD`
 
+`elli`
+--------
+`Erlang HTTP Server`
+- `https://github.com/knutin/elli/`
+- `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (version 0.4.1)`
+- `Thu Jun 27 09:13:14 PDT 2013`
+- `MIT`
+
 `ememcached (previously mcerlang)`
 ----------------------------------
 `Erlang memcached Driver`
@@ -42,21 +50,29 @@ to its integration and dependencies).
 
 `emysql (erlang_mysql)`
 -----------------------
-`Erlang MySQL (native) Driver`
-
+ `Erlang MySQL (native) Driver`
+ 
 - `http://github.com/ngerakines/erlang_mysql`
-- `alternatives are: https://github.com/joearms/elib1/blob/master/lib/src/elib1_mysql.erl, https://github.com/dizzyd/erlang-mysql-driver`
+- `alternative: https://github.com/Eonblast/Emysql`
 - `commit 712f8ead7585e6d3736a`
 - `October 14, 2009`
-- `BSD`
 
 `epgsql`
 --------
 `Erlang PostgreSQL (native) Driver`
 
-- `https://github.com/wg/epgsql`
-- `commit 3318bd5d646cad0623ae9dcc6df015bb85258a63`
-- `Fri Jul  6 19:45:00 PDT 2012`
+- `https://github.com/okeuday/epgsql`
+- `commit b1118003b70c9c71ca8f24a246275b0ce9a9b0a0`
+- `Mon Jul  8 11:10:51 PDT 2013`
+- `BSD`
+
+`erlasticsearch`
+----------------
+`Erlang ElasticSearch (thrift) Driver`
+
+- `https://github.com/dieswaytoofast/erlasticsearch`
+- `tag v1.3`
+- `Mon Jun 10 08:01:52 EST 2013`
 - `BSD`
 
 `etokyotyrant (medici)`
@@ -145,6 +161,24 @@ to its integration and dependencies).
 - `2012-06-16 23:10:00 PST`
 - `New BSD`
 
+`poolboy`
+---------
+`Poolboy - A hunky Erlang worker pool factory`
+
+- `https://github.com/devinus/poolboy`
+- `1.0.0`
+- `Tue Apr 16 13:47:17 EDT 2013`
+- `Apache License`
+
+`proper`
+--------
+`PropEr (PROPerty-based testing tool for ERlang)`
+
+- `https://github.com/manopapad/proper`
+- `commit aa6b088607a08b82ef765dfdfcb6f20f0735915f (version 1.1)`
+- `Tue Jul 16 11:26:20 PDT 2013`
+- `GPLv3`
+
 `ranch`
 -------
 `Erlang Socket acceptor pool for TCP protocols`
@@ -161,6 +195,15 @@ to its integration and dependencies).
 - `https://github.com/rebar/rebar`
 - `commit ebb474b7593527969a8ce7d43b42f00e4498c391 (2.1.0-pre)`
 - `Tue Feb 12 12:32:53 PST 2013`
+- `Apache License`
+
+`thrift`
+--------
+`Erlang Thrift software library`
+
+- `https://github.com/dieswaytoofast/thrift`
+- `commit f367c54ffcd522d9522c8ed0872c397be24da967`
+- `Sun May 19 17:13:30 EDT 2013`
 - `Apache License`
 
 `zeromq/v?/erlzmq`

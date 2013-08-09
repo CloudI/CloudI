@@ -1,0 +1,11 @@
+{application, elli,
+ [
+  {description, "Fast and robust web server for building high-throughput, low-latency apps"},
+  {vsn, "0.4.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.

@@ -41,10 +41,9 @@ start_link(SupervisorPid, Options) ->
 %%--------------------------------------------------------------------
 init([SupervisorPid, Options]) ->
     ClientCount = proplists:get_value(num_connections, Options, ?NUM_CLIENTS),
-    case proplists:get_bool(native, Options) of
+    ChildList = case proplists:get_bool(native, Options) of
     	false ->
-    	    ChildList = [{
-                  ChildNum, 
+    	    [{ChildNum, 
     			  {medici_conn, start_link,
                    [SupervisorPid, Options]},
     			  permanent,
@@ -53,8 +52,7 @@ init([SupervisorPid, Options]) ->
     			  [medici_conn]} || ChildNum <-
                    lists:seq(1, ClientCount)];
     	true ->
-    	    ChildList = [{
-                  ChildNum, 
+    	    [{ChildNum, 
     			  {medici_native_conn, start_link,
                    [SupervisorPid, Options]},
     			  permanent,

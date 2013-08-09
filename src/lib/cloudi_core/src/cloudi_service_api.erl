@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -57,6 +57,7 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_search/2,
          services/1,
          nodes_add/2,
          nodes_remove/2,
@@ -82,10 +83,13 @@
                         none.
 -export_type([dest_refresh/0]).
 
--type timeout_milliseconds() :: ?TIMEOUT_DELTA..4294967295.
+-type dest_refresh_delay_milliseconds() :: (?TIMEOUT_DELTA+1)..3600000.
+-export_type([dest_refresh_delay_milliseconds/0]).
+
+-type timeout_milliseconds() :: (?TIMEOUT_DELTA+1)..4294967295.
 -export_type([timeout_milliseconds/0]).
 
--type acl() :: list(atom() | string()).
+-type acl() :: list(atom() | cloudi:service_name_pattern()).
 -export_type([acl/0]).
 
 -type dest_list() :: undefined | acl().
@@ -95,12 +99,13 @@
 -export_type([seconds/0]).
 
 -type service_options_internal() ::
-    list({priority_default, -128..127} |
+    list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |
-         {dest_refresh_start, 100..3600000} |
-         {dest_refresh_delay, 100..3600000} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()} |
+         {scope, atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({fullsweep_after, non_neg_integer()} |
@@ -111,19 +116,29 @@
           list({fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()})} |
-         {duo_mode, boolean()}).
+         {duo_mode, boolean()} |
+         {hibernate, boolean()} |
+         {reload, boolean()}).
 -type service_options_external() ::
-    list({priority_default, -128..127} |
+    list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |
-         {dest_refresh_start, 100..3600000} |
-         {dest_refresh_delay, 100..3600000} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
-         {response_timeout_adjustment, boolean()}).
+         {response_timeout_adjustment, boolean()} |
+         {scope, atom()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 
 -type loglevel() :: fatal | error | warn | info | debug | trace | off.
 -export_type([loglevel/0]).
+
+-type service_internal() :: #internal{}.
+-type service_external() :: #external{}.
+-type service() :: #internal{} | #external{}.
+-export_type([service_internal/0,
+              service_external/0,
+              service/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -142,12 +157,12 @@
 %%-------------------------------------------------------------------------
 
 -spec acl_add(L :: list({atom(), acl()}), 
-              Timeout :: pos_integer()) ->
-    ok.
+              Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
-acl_add(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+acl_add([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -160,12 +175,12 @@ acl_add(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec acl_remove(L :: list(atom()),
-                 Timeout :: pos_integer()) ->
-    ok.
+                 Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
-acl_remove(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+acl_remove([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:acl_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -177,12 +192,12 @@ acl_remove(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services_add(L :: list(#internal{} | #external{}),
-                   Timeout :: pos_integer()) ->
-    ok.
+                   Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
-services_add(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_add([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -196,13 +211,13 @@ services_add(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(L :: list(<<_:128>>),
-                      Timeout :: pos_integer()) ->
-    ok.
+-spec services_remove(L :: list(cloudi_service:trans_id()),
+                      Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
-services_remove(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_remove([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -218,14 +233,40 @@ services_remove(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: list(<<_:128>>), 
-                       Timeout :: pos_integer()) ->
-    ok.
+-spec services_restart(L :: list(cloudi_service:trans_id()), 
+                       Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
-services_restart(L, Timeout)
-    when length(L) >= 1,
-         is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+services_restart([_ | _] = L, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
     cloudi_configurator:services_restart(L, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Search service instances for matches on the provided service name.===
+%% Multiple services may be returned for a single service name.  Only service
+%% instances on the local Erlang node are searched.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_search(ServiceName :: string(),
+                      Timeout :: timeout_milliseconds()) ->
+    {ok, list({cloudi_service:trans_id(), #internal{}} |
+              {cloudi_service:trans_id(), #external{}})} |
+    {error, any()}.
+
+services_search([_ | _] = ServiceName, Timeout)
+    when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
+    try cloudi_x_trie:is_pattern(ServiceName) of
+        false ->
+            cloudi_configurator:services_search(ServiceName, Timeout);
+        true ->
+            {error, service_name_invalid}
+    catch
+        exit:badarg ->
+            {error, service_name_invalid}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -233,8 +274,10 @@ services_restart(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services(Timeout :: pos_integer()) ->
-    ok.
+-spec services(Timeout :: timeout_milliseconds()) ->
+    {ok, list({cloudi_service:trans_id(), #internal{}} |
+              {cloudi_service:trans_id(), #external{}})} |
+    {error, any()}.
 
 services(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -249,8 +292,9 @@ services(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_add(L :: list(node()),
-                Timeout :: pos_integer()) ->
-    ok.
+                Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
 nodes_add(L, Timeout)
     when length(L) >= 1,
@@ -264,8 +308,9 @@ nodes_add(L, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec nodes_remove(L :: list(node()),
-                   Timeout :: pos_integer()) ->
-    ok.
+                   Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
 nodes_remove(L, Timeout)
     when length(L) >= 1,
@@ -278,8 +323,9 @@ nodes_remove(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_alive(Timeout :: pos_integer()) ->
-    list(node()).
+-spec nodes_alive(Timeout :: timeout_milliseconds()) ->
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes_alive(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -291,8 +337,9 @@ nodes_alive(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_dead(Timeout :: pos_integer()) ->
-    list(node()).
+-spec nodes_dead(Timeout :: timeout_milliseconds()) ->
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes_dead(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -304,8 +351,9 @@ nodes_dead(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes(Timeout :: pos_integer()) ->
-    list(node()).
+-spec nodes(Timeout :: timeout_milliseconds()) ->
+    {ok, list(node())} |
+    {error, any()}.
 
 nodes(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -320,7 +368,7 @@ nodes(Timeout)
 %%-------------------------------------------------------------------------
 
 -spec loglevel_set(Level :: loglevel(),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok.
 
 loglevel_set(Level, Timeout)
@@ -337,7 +385,7 @@ loglevel_set(Level, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec log_redirect(Node :: undefined | node(),
-                   Timeout :: pos_integer()) ->
+                   Timeout :: timeout_milliseconds()) ->
     ok.
 
 log_redirect(Node, Timeout)
@@ -354,8 +402,9 @@ log_redirect(Node, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path_add(Dir :: file:filename(),
-                    Timeout :: pos_integer()) ->
-    ok | {error, any()}.
+                    Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
 code_path_add(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -375,8 +424,9 @@ code_path_add(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path_remove(Dir :: file:filename(),
-                       Timeout :: pos_integer()) ->
-    ok | {error, any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
 
 code_path_remove(Dir, Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
@@ -396,12 +446,12 @@ code_path_remove(Dir, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec code_path(Timeout :: pos_integer()) ->
-    list(file:filename()).
+-spec code_path(Timeout :: timeout_milliseconds()) ->
+    {ok, list(file:filename())}.
 
 code_path(Timeout)
     when is_integer(Timeout), Timeout > ?TIMEOUT_DELTA ->
-    code:get_path().
+    {ok, code:get_path()}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_sup).
@@ -75,7 +75,18 @@
     {'error', any()}.
 
 start_link(Config) when is_record(Config, config) ->
-    supervisor:start_link(?MODULE, [Config]).
+    case supervisor:start_link(?MODULE, [Config]) of
+        {ok, Pid} = Success ->
+            case cloudi_configurator:configure() of
+                ok ->
+                    Success;
+                {error, _} = Error ->
+                    erlang:exit(Pid, configure_failed),
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -92,7 +103,8 @@ init([Config]) when is_record(Config, config) ->
        child_specification(cloudi_services_external_sup),
        child_specification(cloudi_services_internal_sup),
        child_specification(cloudi_os_spawn_pool),
-       child_specification(cloudi_configurator, Config)]}}.
+       child_specification(cloudi_configurator, Config),
+       child_specification(cloudi_services_internal_reload)]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -117,13 +129,19 @@ child_specification(cloudi_configurator, Config)
     Shutdown = 2000, % milliseconds
     {cloudi_configurator,
      {cloudi_configurator, start_link, [Config]},
-     transient, Shutdown, worker, [cloud_configurator]}.
+     permanent, Shutdown, worker, [cloud_configurator]}.
 
 child_specification(cloudi_services_monitor) ->
     Shutdown = 2000, % milliseconds
     {cloudi_services_monitor,
      {cloudi_services_monitor, start_link, []},
      permanent, Shutdown, worker, [cloudi_services_monitor]};
+
+child_specification(cloudi_services_internal_reload) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_services_internal_reload,
+     {cloudi_services_internal_reload, start_link, []},
+     permanent, Shutdown, worker, [cloudi_services_internal_reload]};
 
 child_specification(cloudi_services_internal_sup) ->
     {cloudi_services_internal_sup,

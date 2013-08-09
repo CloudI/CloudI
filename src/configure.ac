@@ -1,10 +1,21 @@
-AC_INIT([CloudI], [1.2.4], [mjtruog at gmail dot com],
+#-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+# ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
+
+AC_INIT([CloudI], [1.2.5], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
-PATHS_NONSYSTEM_INC="/opt/local/include /usr/local/include"
-PATHS_NONSYSTEM_LIB="/opt/local/lib /usr/local/lib"
+PATHS_NONSYSTEM_INC=""
+AC_CHECK_FILE("/opt/local/include",
+              [PATHS_NONSYSTEM_INC="/opt/local/include $PATHS_NONSYSTEM_INC"])
+AC_CHECK_FILE("/usr/local/include",
+              [PATHS_NONSYSTEM_INC="/usr/local/include $PATHS_NONSYSTEM_INC"])
+PATHS_NONSYSTEM_LIB=""
+AC_CHECK_FILE("/opt/local/lib",
+              [PATHS_NONSYSTEM_LIB="/opt/local/lib $PATHS_NONSYSTEM_LIB"])
+AC_CHECK_FILE("/usr/local/lib",
+              [PATHS_NONSYSTEM_LIB="/usr/local/lib $PATHS_NONSYSTEM_LIB"])
 
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
@@ -17,12 +28,6 @@ AC_PROG_CXX
 AC_PROG_SED
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
-AX_CHECK_PRIVATE_HEADER(gmp.h, ,
-    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
-    $PATHS_NONSYSTEM_INC)
-AX_CHECK_PRIVATE_LIB(gmp, __gmpz_init, ,
-    [AC_MSG_ERROR([GNU MP not found, see http://gmplib.org/])], ,
-    $PATHS_NONSYSTEM_LIB)
 AX_CLOCK_GETTIME
 
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -32,6 +37,9 @@ AC_SUBST(cloudi_prefix, ["$libdir/cloudi-$VERSION"])
 AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
 AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
+
+AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
+         m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
 
 # c++ boost checks
 AX_BOOST_BASE([1.36], ,
@@ -70,16 +78,16 @@ AC_ARG_WITH([python-debug],
         [use the debug version of python libraries and the
          python executable (ARG=yes), or use the normal version (ARG=no)
          @<:@ARG=no@:>@ ])],
-        [
-        if test "x$withval" = "xno"; then
-            PYTHON_DEBUG="no"
-        elif test "x$withval" = "xyes"; then
-            PYTHON_DEBUG="yes"
-        else
-            PYTHON_DEBUG="yes"
-        fi
-        ],
-        [PYTHON_DEBUG="no"])
+    [
+    if test "x$withval" = "xno"; then
+        PYTHON_DEBUG="no"
+    elif test "x$withval" = "xyes"; then
+        PYTHON_DEBUG="yes"
+    else
+        PYTHON_DEBUG="yes"
+    fi
+    ],
+    [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
 AS_IF([test "x$PYTHON_DEBUG" == "xno"],
     [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
@@ -90,7 +98,8 @@ AX_PROG_PYTHON_VERSION([2.7.0],
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
-AC_PATH_PROGS([RUBY],[ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
+AC_PATH_PROGS([RUBY],
+              [ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 
@@ -109,14 +118,33 @@ AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 
 # rebar dependency
-AC_CONFIG_COMMANDS([rebar],
-    [(cd $SRCDIR/external/rebar/ && \
-      $ESCRIPT bootstrap && \
-      mv ./rebar $BUILDDIR && \
-      echo "Rebar built" || exit 1)],
-    [ESCRIPT=$ESCRIPT
-     SRCDIR=$abs_top_srcdir
-     BUILDDIR=$abs_top_builddir])
+AC_ARG_VAR([REBAR],[rebar executable])
+AC_ARG_WITH([rebar],
+    [AS_HELP_STRING([--with-rebar@<:@=ARG@:>@],
+        [compile rebar executable for erlang dependency compilation (ARG=yes),
+         or use a preexisting rebar executable (ARG=no) @<:@ARG=yes@:>@ ])],
+    [want_rebar="$withval"], [want_rebar="yes"])
+if test "x$want_rebar" = "xyes"; then
+    AC_CONFIG_COMMANDS([rebar],
+        [(cd $SRCDIR/external/rebar/ && \
+          $ESCRIPT bootstrap && \
+          mv ./rebar $BUILDDIR && \
+          echo "Rebar built" || exit 1)],
+        [ESCRIPT=$ESCRIPT
+         SRCDIR=$abs_top_srcdir
+         BUILDDIR=$abs_top_builddir])
+    REBAR="$abs_top_builddir/rebar"
+else
+    AC_PATH_PROG([REBAR], [rebar], ,
+                 ["$abs_top_builddir" "$abs_top_builddir/../.." $PATH])
+    if test -z "$REBAR"; then
+        AC_MSG_ERROR([rebar not found (use --with-rebar)])
+    fi
+fi
+AC_SUBST(REBAR)
+
+# hexpi test
+AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 
 # ZeroMQ dependency
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
@@ -124,7 +152,8 @@ AX_ZEROMQ_ERLZMQ
 
 AC_CONFIG_FILES([
     cloudi.conf
-    rebar.config
+    rebar_src.config
+    rebar_src_test.config
     reltool.config
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_services_internal/src/cloudi_services_internal.app.src

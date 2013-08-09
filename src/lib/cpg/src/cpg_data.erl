@@ -51,7 +51,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -157,9 +157,10 @@ get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #cpg_data{local_count = 0,
-                                remote_count = 0}} ->
-            {ok, Pattern, []};
+        {ok, _, #cpg_data{local_count = 0,
+                          remote_count = 0}} ->
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local,
                                 remote = Remote}} ->
             {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
@@ -181,7 +182,8 @@ get_members(GroupName, Exclude, Groups)
             {error, {'no_such_group', GroupName}};
         {ok, _, #cpg_data{local_count = 0,
                           remote_count = 0}} ->
-            {error, {'no_process', GroupName}};
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local,
                                 remote = Remote}} ->
             Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
@@ -194,7 +196,8 @@ get_members(GroupName, Exclude, Groups)
             end, [], Remote ++ Local),
             if
                 Members == [] ->
-                    {error, {'no_process', GroupName}};
+                    % to keep return values consistent with pg2
+                    {error, {'no_such_group', GroupName}};
                 true ->
                     {ok, Pattern, Members}
             end
@@ -211,7 +214,8 @@ get_local_members(GroupName, Groups) ->
         error ->
             {error, {'no_such_group', GroupName}};
         {ok, _, #cpg_data{local_count = 0}} ->
-            {error, {'no_process', GroupName}};
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
             {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
@@ -231,7 +235,8 @@ get_local_members(GroupName, Exclude, Groups)
         error ->
             {error, {'no_such_group', GroupName}};
         {ok, _, #cpg_data{local_count = 0}} ->
-            {error, {'no_process', GroupName}};
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
             Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 if
@@ -243,7 +248,8 @@ get_local_members(GroupName, Exclude, Groups)
             end, [], Local),
             if
                 Members == [] ->
-                    {error, {'no_process', GroupName}};
+                    % to keep return values consistent with pg2
+                    {error, {'no_such_group', GroupName}};
                 true ->
                     {ok, Pattern, Members}
             end
@@ -260,7 +266,8 @@ get_remote_members(GroupName, Groups) ->
         error ->
             {error, {'no_such_group', GroupName}};
         {ok, _, #cpg_data{remote_count = 0}} ->
-            {error, {'no_process', GroupName}};
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
             {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 [Pid | L]
@@ -280,7 +287,8 @@ get_remote_members(GroupName, Exclude, Groups)
         error ->
             {error, {'no_such_group', GroupName}};
         {ok, _, #cpg_data{remote_count = 0}} ->
-            {error, {'no_process', GroupName}};
+            % to keep return values consistent with pg2
+            {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
             Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
                 if
@@ -292,7 +300,8 @@ get_remote_members(GroupName, Exclude, Groups)
             end, [], Remote),
             if
                 Members == [] ->
-                    {error, {'no_process', GroupName}};
+                    % to keep return values consistent with pg2
+                    {error, {'no_such_group', GroupName}};
                 true ->
                     {ok, Pattern, Members}
             end

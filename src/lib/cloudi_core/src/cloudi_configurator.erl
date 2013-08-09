@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.3 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -55,9 +55,16 @@
 
 %% external interface
 -export([start_link/1,
-         acl_add/2, acl_remove/2,
-         services_add/2, services_remove/2, services_restart/2, services/1,
-         nodes_add/2, nodes_remove/2,
+         configure/0,
+         acl_add/2,
+         acl_remove/2,
+         services_add/2,
+         services_remove/2,
+         services_restart/2,
+         services_search/2,
+         services/1,
+         nodes_add/2,
+         nodes_remove/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -77,95 +84,105 @@
         configuration
     }).
 
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Config)
-    when is_record(Config, config) ->
+start_link(#config{} = Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
+configure() ->
+    gen_server:call(?MODULE, configure, infinity).
+
 acl_add(L, Timeout) ->
-    gen_server:call(?MODULE, {acl_add, L,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {acl_add, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 acl_remove(L, Timeout) ->
-    gen_server:call(?MODULE, {acl_remove, L,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {acl_remove, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 services_add(L, Timeout) ->
-    gen_server:call(?MODULE, {services_add, L,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_add, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 services_remove(L, Timeout) ->
-    gen_server:call(?MODULE, {services_remove, L,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_remove, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 services_restart(L, Timeout) ->
-    gen_server:call(?MODULE, {services_restart, L,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_restart, L,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+
+services_search(ServiceName, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_search, ServiceName,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 services(Timeout) ->
-    gen_server:call(?MODULE, {services,
-                              Timeout - ?TIMEOUT_DELTA}, Timeout).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services,
+                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
 
 nodes_add(L, Timeout) ->
     Nodes = [node() | nodes()],
-    global:trans({{?MODULE, L}, self()},
-                 fun() ->
-                     gen_server:multi_call(Nodes, ?MODULE,
-                                           {nodes_add, L,
-                                            Timeout - ?TIMEOUT_DELTA}, Timeout)
-                 end),
-    ok.
+    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+        gen_server:multi_call(Nodes, ?MODULE,
+                              {nodes_add, L,
+                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+    end)).
 
 nodes_remove(L, Timeout) ->
     Nodes = [node() | nodes()],
-    global:trans({{?MODULE, L}, self()},
-                 fun() ->
-                     gen_server:multi_call(Nodes, ?MODULE,
-                                           {nodes_remove, L,
-                                            Timeout - ?TIMEOUT_DELTA}, Timeout)
-                 end),
-    ok.
+    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+        gen_server:multi_call(Nodes, ?MODULE,
+                              {nodes_remove, L,
+                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+    end)).
 
-service_start(#config_service_internal{module = Module,
-                                       count_process = Count} = Service,
+service_start(#config_service_internal{
+                  count_process = Count,
+                  options = #config_service_options{
+                      reload = Reload}} = Service,
               Timeout) ->
     case service_start_find_internal(Service) of
-        {ok, FoundService} ->
-            service_start_internal(concurrency(Count), FoundService, Timeout),
+        {ok, #config_service_internal{
+                 module = Module} = FoundService} ->
             if
-                is_list(Module) ->
-                    FoundService#config_service_internal{file_path = Module};
-                true ->
-                    FoundService
-            end;
-        {error, Reason} ->
-            ?LOG_ERROR("error finding internal service (~p):~n ~p",
-                       [Module, Reason]),
-            Service
+                Reload =:= true ->
+                    ok = cloudi_services_internal_reload:service_add(Module);
+                Reload =:= false ->
+                    ok
+            end,
+            service_start_internal(concurrency(Count),
+                                   FoundService, Timeout);
+        {error, _} = Error ->
+            Error
     end;
 
 service_start(#config_service_external{count_process = Count} = Service,
               Timeout) ->
-    service_start_external(concurrency(Count), Service, Timeout),
-    Service.
+    service_start_external(concurrency(Count), Service, Timeout).
 
-service_stop(Service, Remove, Timeout)
-    when is_record(Service, config_service_internal), is_boolean(Remove) ->
+service_stop(#config_service_internal{} = Service, Remove, Timeout)
+    when is_boolean(Remove) ->
     service_stop_internal(Service, Remove, Timeout);
 
-service_stop(Service, false, Timeout)
-    when is_record(Service, config_service_external) ->
+service_stop(#config_service_external{} = Service, false, Timeout) ->
     service_stop_external(Service, Timeout).
 
-service_restart(Service, Timeout)
-    when is_record(Service, config_service_internal) ->
+service_restart(#config_service_internal{} = Service, Timeout) ->
     service_restart_internal(Service, Timeout);
 
-service_restart(Service, Timeout)
-    when is_record(Service, config_service_external) ->
+service_restart(#config_service_external{} = Service, Timeout) ->
     service_restart_external(Service, Timeout).
 
 concurrency(I)
@@ -187,50 +204,108 @@ concurrency(I)
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
-    self() ! configure,
     {ok, #state{configuration = Config}}.
+
+handle_call(configure, _, State) ->
+    % the application startup configuration must not block
+    % application startup (executing the cloudi.conf)
+    self() ! configure,
+    {reply, ok, State};
 
 handle_call({acl_add, L, _}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:acl_add(L, Config),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:acl_add(L, Config) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({acl_remove, L, _}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:acl_remove(L, Config),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:acl_remove(L, Config) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({services_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_add(L, Config, Timeout),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:services_add(L, Config, Timeout) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({services_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_remove(L, Config, Timeout),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:services_remove(L, Config, Timeout) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({services_restart, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:services_restart(L, Config, Timeout),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:services_restart(L, Config, Timeout) of
+        {ok, NewConfig} ->
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({services_search, ServiceName, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_x_cpg:get_local_members(ServiceName) of
+        {ok, _, PidList} ->
+            case cloudi_services_monitor:search(PidList, Timeout) of
+                {ok, []} ->
+                    {reply, {ok, []}, State};
+                {ok, L} ->
+                    {reply, 
+                     {ok, cloudi_configuration:services_search(L, Config)},
+                     State};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} ->
+            {reply, {ok, []}, State}
+    end;
 
 handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    L = cloudi_configuration:services(Config),
-    {reply, erlang:list_to_binary(cloudi_string:format("~p", [L])), State};
+    {reply, {ok, cloudi_configuration:services(Config)}, State};
 
 handle_call({nodes_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:nodes_add(L, Config),
-    cloudi_nodes:reconfigure(NewConfig, Timeout),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:nodes_add(L, Config) of
+        {ok, NewConfig} ->
+            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
+                ok ->
+                    {reply, ok, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call({nodes_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    NewConfig = cloudi_configuration:nodes_remove(L, Config),
-    cloudi_nodes:reconfigure(NewConfig, Timeout),
-    {reply, ok, State#state{configuration = NewConfig}};
+    case cloudi_configuration:nodes_remove(L, Config) of
+        {ok, NewConfig} ->
+            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
+                ok ->
+                    {reply, ok, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -241,8 +316,26 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
-handle_info(configure, #state{configuration = Config} = State) ->
-    {noreply, State#state{configuration = configure(Config, infinity)}};
+handle_info(configure,
+            #state{configuration = Config} = State) ->
+    case cloudi_x_reltool_util:applications_start([cloudi_services_internal,
+                                                   cloudi_services_databases,
+                                                   cloudi_services_messaging],
+                                                  infinity) of
+        ok ->
+            case configure(Config, infinity) of
+                {ok, NewConfig} ->
+                    {noreply, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    % cloudi_core application startup failed due to a problem
+                    % with the cloudi.conf file
+                    {stop, Error, State}
+            end;
+        {error, _} = Error ->
+            % cloudi_core included_application startup failed for
+            % Erlang applications that contain included internal services
+            {stop, Error, State}
+    end;
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -259,24 +352,34 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(#config{services = Services} = Config, Timeout) ->
-    Config#config{services = configure_service(Services, [], Timeout)}.
+    case configure_service(Services, [], Timeout) of
+        {ok, NewServices} ->
+            {ok, Config#config{services = NewServices}};
+        {error, _} = Error ->
+            Error
+    end.
 
 configure_service([], Configured, _) ->
-    lists:reverse(Configured);
+    {ok, lists:reverse(Configured)};
 configure_service([Service | Services], Configured, Timeout) ->
-    configure_service(Services,
-                      [service_start(Service, Timeout) | Configured],
-                      Timeout).
+    case service_start(Service, Timeout) of
+        {ok, NewService} ->
+            configure_service(Services, [NewService | Configured], Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
-service_start_find_internal(#config_service_internal{module = Path} = Service)
-    when is_list(Path) ->
-    case filename:extension(Path) of
+service_start_find_internal(#config_service_internal{
+                                module = FilePath} = Service)
+    when is_list(FilePath) ->
+    case filename:extension(FilePath) of
         ".erl" ->
-            Module = erlang:list_to_atom(filename:basename(Path, ".erl")),
-            case service_start_find_internal_add_pathz(Path) of
-                {ok, FullPath} ->
-                    case compile:file(FullPath,
-                                      compiler_options(FullPath)) of
+            Module = erlang:list_to_atom(filename:basename(FilePath,
+                                                           ".erl")),
+            case service_start_find_internal_add_pathz(FilePath) of
+                {ok, FullFilePath} ->
+                    case compile:file(FullFilePath,
+                                      compiler_options(FullFilePath)) of
                         {ok, Module} ->
                             service_start_find_internal_module(Module, Service);
                         error ->
@@ -288,16 +391,18 @@ service_start_find_internal(#config_service_internal{module = Path} = Service)
                     Error
             end;
         ".beam" ->
-            Module = erlang:list_to_atom(filename:basename(Path, ".beam")),
-            case service_start_find_internal_add_pathz(Path) of
+            Module = erlang:list_to_atom(filename:basename(FilePath,
+                                                           ".beam")),
+            case service_start_find_internal_add_pathz(FilePath) of
                 {ok, _} ->
                     service_start_find_internal_module(Module, Service);
                 {error, _} = Error ->
                     Error
             end;
         ".app" ->
-            Application = erlang:list_to_atom(filename:basename(Path, ".app")),
-            case service_start_find_internal_add_pathz(Path) of
+            Application = erlang:list_to_atom(filename:basename(FilePath,
+                                                                ".app")),
+            case service_start_find_internal_add_pathz(FilePath) of
                 {ok, _} ->
                     service_start_find_internal_application(Application,
                                                             Service);
@@ -305,20 +410,20 @@ service_start_find_internal(#config_service_internal{module = Path} = Service)
                     Error
             end;
         ".script" ->
-            case filename:dirname(Path) of
+            case filename:dirname(FilePath) of
                 "." ->
-                    case code:where_is_file(Path) of
+                    case code:where_is_file(FilePath) of
                         non_existing ->
-                            {error, {non_existing, Path}};
-                        FullPath ->
-                            service_start_find_internal_script(FullPath,
+                            {error, {non_existing, FilePath}};
+                        FullFilePath ->
+                            service_start_find_internal_script(FullFilePath,
                                                                Service)
                     end;
                 _ ->
-                    service_start_find_internal_script(Path, Service)
+                    service_start_find_internal_script(FilePath, Service)
             end;
         Extension ->
-            {error, {invalid_extension, Extension}}
+            {error, {internal_service_module_extension_invalid, Extension}}
     end;
 service_start_find_internal(#config_service_internal{module = Module} = Service)
     when is_atom(Module) ->
@@ -389,10 +494,10 @@ service_start_find_internal_script(ScriptPath, Service)
     end.
 
 service_stop_remove_internal(#config_service_internal{module = Module,
-                                                      file_path = Path},
+                                                      file_path = FilePath},
                              Timeout)
-    when is_atom(Module), is_list(Path) ->
-    case filename:extension(Path) of
+    when is_atom(Module), is_list(FilePath) ->
+    case filename:extension(FilePath) of
         ".erl" ->
             cloudi_x_reltool_util:module_purged(Module, Timeout);
         ".beam" ->
@@ -400,7 +505,7 @@ service_stop_remove_internal(#config_service_internal{module = Module,
         ".app" ->
             cloudi_x_reltool_util:application_remove(Module, Timeout);
         ".script" ->
-            cloudi_x_reltool_util:script_remove(Path, Timeout)
+            cloudi_x_reltool_util:script_remove(FilePath, Timeout)
     end;
 service_stop_remove_internal(#config_service_internal{module = Module},
                              Timeout)
@@ -414,8 +519,8 @@ service_stop_remove_internal(#config_service_internal{module = Module},
             Error
     end.
 
-service_start_internal(0, _, _) ->
-    ok;
+service_start_internal(0, Service, _) ->
+    {ok, Service};
 service_start_internal(Count0,
                        #config_service_internal{
                            module = Module,
@@ -430,26 +535,23 @@ service_start_internal(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = UUID} = Service, Timeout) ->
+                           uuid = ID} = Service, Timeout) ->
     Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
                                          [Count1,
                                           Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
-                                          DestListAllow, Options, UUID],
-                                         MaxR, MaxT, UUID, Timeout) of
+                                          DestListAllow, Options, ID],
+                                         MaxR, MaxT, ID, Timeout) of
         ok ->
-            ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error starting internal service (~p):~n ~p",
-                       [Module, Reason]),
-            ok
-    end,
-    service_start_internal(Count1, Service, Timeout).
+            service_start_internal(Count1, Service, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
-service_start_external(0, _, _) ->
-    ok;
+service_start_external(0, Service, _) ->
+    {ok, Service};
 service_start_external(Count0,
                        #config_service_external{
                            count_thread = CountThread,
@@ -468,81 +570,78 @@ service_start_external(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = UUID} = Service, Timeout) ->
+                           uuid = ID} = Service, Timeout) ->
     case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
                                          [concurrency(CountThread),
                                           FilePath, Args, Env,
                                           Protocol, BufferSize, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
-                                          DestListAllow, Options, UUID],
-                                         MaxR, MaxT, UUID, Timeout) of
+                                          DestListAllow, Options, ID],
+                                         MaxR, MaxT, ID, Timeout) of
         ok ->
-            ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error starting external service (~p):~n ~p",
-                       [FilePath, Reason]),
-            ok
-    end,
-    service_start_external(Count0 - 1, Service, Timeout).
+            service_start_external(Count0 - 1, Service, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 service_stop_internal(#config_service_internal{
                           module = Module,
-                          uuid = UUID} = Service, Remove, Timeout) ->
-    case cloudi_services_monitor:shutdown(UUID, Timeout) of
-        ok when Remove =:= true ->
-            % no service processes are using the service module
-            % so it is safe to remove the service module
-            % dependencies (applications, if they were used)
-            case service_stop_remove_internal(Service, Timeout) of
-                ok ->
-                    ok;
-                {error, Reason} ->
-                    ?LOG_ERROR("error removing internal service (~p):~n ~p",
-                               [Module, Reason])
+                          options = #config_service_options{
+                              reload = Reload},
+                          uuid = ID} = Service, Remove, Timeout) ->
+    case cloudi_services_monitor:shutdown(ID, Timeout) of
+        ok ->
+            if
+                Reload =:= true ->
+                    ok = cloudi_services_internal_reload:service_remove(Module);
+                Reload =:= false ->
+                    ok
             end,
-            ok;
-        ok when Remove =:= false ->
-            ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error stopping internal service (~p):~n ~p",
-                       [Module, Reason]),
-            ok
+            if
+                Remove =:= true ->
+                    % no service processes are using the service module
+                    % so it is safe to remove the service module
+                    % dependencies (applications, if they were used)
+                    service_stop_remove_internal(Service, Timeout);
+                Remove =:= false ->
+                    ok
+            end;
+        {error, _} = Error ->
+            Error
     end.
 
 service_stop_external(#config_service_external{
-                          file_path = FilePath,
-                          uuid = UUID}, Timeout) ->
-    case cloudi_services_monitor:shutdown(UUID, Timeout) of
+                          uuid = ID}, Timeout) ->
+    case cloudi_services_monitor:shutdown(ID, Timeout) of
         ok ->
             ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error stopping external service (~p):~n ~p",
-                       [FilePath, Reason]),
-            ok
+        {error, _} = Error ->
+            Error
     end.
 
 service_restart_internal(#config_service_internal{
-                             module = Module,
-                             uuid = UUID}, Timeout) ->
-    case cloudi_services_monitor:restart(UUID, Timeout) of
+                             uuid = ID}, Timeout) ->
+    case cloudi_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error restarting internal service (~p):~n ~p",
-                       [Module, Reason]),
-            ok
+        {error, _} = Error ->
+            Error
     end.
 
 service_restart_external(#config_service_external{
-                             file_path = FilePath,
-                             uuid = UUID}, Timeout) ->
-    case cloudi_services_monitor:restart(UUID, Timeout) of
+                             uuid = ID}, Timeout) ->
+    case cloudi_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
-        {error, Reason} ->
-            ?LOG_ERROR("error restarting external service (~p):~n ~p",
-                       [FilePath, Reason]),
-            ok
+        {error, _} = Error ->
+            Error
     end.
+
+check_multi_call_replies([]) ->
+    ok;
+check_multi_call_replies([{_, ok} | Replies]) ->
+    check_multi_call_replies(Replies);
+check_multi_call_replies([{_, Result} | _]) ->
+    Result.
 

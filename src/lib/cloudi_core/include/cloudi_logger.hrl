@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -94,4 +94,9 @@
 
 -define(LOG_TRACE_APPLY(M, F, A),
     cloudi_logger_interface:trace_apply(M, F, A)).
+
+-ifndef(FUNCTION).
+-define(FUNCTION,
+    cloudi_logger:current_function()).
+-endif.
 

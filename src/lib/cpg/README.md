@@ -39,11 +39,12 @@ network topology and is only meant for a Local Area Network (LAN).
 Since a fully-connected network topology is created that requires a
 net tick time average of 60 seconds (the net tick time is not changed
 because of the problems that occur due to the assumptions based on its
-default value, which impacts typical Erlang OTP functionality) the
-distributed Erlang node connections are limited to roughly 50-100 nodes.
-So, that means these process group solutions are only targeting a cluster
-of Erlang nodes, given the constraints of distributed Erlang and a
-fully-connected network topology.
+default value, which impacts typical Erlang OTP functionality, e.g.,
+Erlang process links between distributed Erlang nodes) the distributed
+Erlang node connections are limited to roughly 50-100 nodes.  So, that
+means these process group solutions are only targeting a cluster of Erlang
+nodes, given the constraints of distributed Erlang and a fully-connected
+network topology.
 
 Build
 -----
@@ -54,30 +55,44 @@ Build
 Example
 -------
 
-    $ erl -sname cpg@localhost -pz deps/quickrand/ebin/ -pz deps/trie/ebin/ -pz ebin/
+    $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
     Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
 
     Eshell V5.10.1  (abort with ^G)
-    (cpg@localhost)1> application:start(crypto).
+    (cpg@localhost)1> reltool_util:application_start(cpg).
     ok
-    (cpg@localhost)2> application:start(quickrand).
+    (cpg@localhost)2> cpg:join(groups_scope1, "Hello", self()).
     ok
-    (cpg@localhost)3> application:start(trie).
+    (cpg@localhost)3> cpg:join(groups_scope1, "World!", self()).
     ok
-    (cpg@localhost)4> application:start(cpg).
-    ok
-    (cpg@localhost)5> cpg:join(process_group1, "Hello", self()).
-    ok
-    (cpg@localhost)6> cpg:join(process_group1, "World", self()).
-    ok
-    (cpg@localhost)7> cpg:get_local_members(process_group1, "Hello").
-    {ok,"Hello",[<0.39.0>]}
-    (cpg@localhost)8> cpg:get_local_members(process_group1, "World").
-    {ok,"World",[<0.39.0>]}
-    (cpg@localhost)9> cpg:which_groups(process_group1).
-    ["Hello","World"]
-    (cpg@localhost)10> cpg:which_groups(process_group2).
+    (cpg@localhost)4> cpg:get_local_members(groups_scope1, "Hello").
+    {ok,"Hello",[<0.33.0>]}
+    (cpg@localhost)5> cpg:get_local_members(groups_scope1, "World!").
+    {ok,"World!",[<0.33.0>]}
+    (cpg@localhost)6> cpg:which_groups(groups_scope1).
+    ["Hello","World!"]
+    (cpg@localhost)7> cpg:which_groups(groups_scope2).
     []
+
+What does this example mean?  The cpg interface allows you to define groups of
+Erlang processes and each group exists within a scope.  A scope is represented
+as an atom which is used to locally register a cpg Erlang process using
+`start_link/1`.  For a given cpg scope, any Erlang process can join or leave
+a group.  The group name is a string (list of integers) due to usage of the trie
+data structure, but that can be changed within the `cpg_constants.hrl` file.
+If the scope is not specified, the default scope is used: `cpg_default_scope`.
+
+In the example, both the process group "Hello" and the process group "World!"
+are created within the `groups_scope1` scope.  Within both progress groups,
+a single Erlang process is added once.  If more scopes were required, they
+could be created automatically by being provided within the cpg application
+scope list.  There is no restriction on the number of process groups that
+can be created within a scope, and there is nothing limiting the number
+of Erlang processes that can be added to a single group.  A single Erlang
+process can be added to a single process group in a single scope multiple times
+to change the probability of returning a particular Erlang process, when
+only a single process is requested from the cpg interface (e.g., from
+the `get_closest_pid` function).
     
 Author
 ------

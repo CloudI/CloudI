@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -54,6 +54,7 @@
 
 %% external interface
 -export([start_link/1,
+         current_function/0,
          change_loglevel/1,
          redirect/1,
          fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
@@ -97,6 +98,19 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current function name being executed.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec current_function() ->
+    atom().
+
+current_function() ->
+    catch throw(x), [_, {_, F, _, _} | _] = erlang:get_stacktrace(),
+    F.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -401,8 +415,7 @@ log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
                                     level_to_string(Level),
                                     Module, Line, Pid, Node, Description]),
     case file:read_file_info(FilePath) of
-        {ok, FileInfo} ->
-            CurrentInode = FileInfo#file_info.inode,
+        {ok, #file_info{inode = CurrentInode}} ->
             if
                 CurrentInode == OldInode ->
                     file:write(OldFd, Message),
@@ -437,8 +450,7 @@ log_open(FilePath, State) ->
     case file:open(FilePath, [append, raw]) of
         {ok, Fd} ->
             case file:read_file_info(FilePath) of
-                {ok, FileInfo} ->
-                    Inode = FileInfo#file_info.inode,
+                {ok, #file_info{inode = Inode}} ->
                     {ok, State#state{file_path = FilePath,
                                      fd = Fd,
                                      inode = Inode}};
@@ -802,18 +814,15 @@ interface(trace, Process) ->
     ", [Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(Level, Destination) when is_atom(Level) ->
-    case code:is_loaded(cloudi_logger_interface) of
-        {file, _} ->
-            code:soft_purge(cloudi_logger_interface);
-        false ->
-            ok
-    end,
-    code:delete(cloudi_logger_interface),
-    % do not purge the module, but let it get purged after the new one is loaded
     {Module, Binary} =
         cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
+    % make sure no old code exists
+    code:purge(cloudi_logger_interface),
+    % load the new current code
     case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
         {module, Module} ->
+            % remove the old code
+            code:soft_purge(cloudi_logger_interface),
             {ok, Binary};
         {error, _} = Error ->
             Error

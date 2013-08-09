@@ -15,7 +15,7 @@
    Method of using cpg instead of pg2.
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.1.1 Feb 6 2013 20:45:30
+<p><b>Version:</b> 1.2.2 Jul 11 2013 19:11:32
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -58,6 +58,19 @@
   of the process groups.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-2">get_local_members/2</a></td><td>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_members-3">get_local_members/3</a></td><td>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the local members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-2">get_local_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-3">get_local_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid.">Get the newest local group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-2">get_local_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-3">get_local_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid.">Get the oldest local group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_local_pid-2">get_local_pid/2</a></td><td>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_local_pid-3">get_local_pid/3</a></td><td>
@@ -68,10 +81,35 @@
 <tr><td valign="top"><a href="#get_members-3">get_members/3</a></td><td>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-2">get_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-3">get_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid.">Get the newest group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-2">get_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-3">get_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid.">Get the oldest group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-2">get_random_pid/2</a></td><td>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-3">get_random_pid/3</a></td><td>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-2">get_remote_members/2</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-3">get_remote_members/3</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the remote members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-2">get_remote_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-3">get_remote_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid.">Get the newest remote group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid.">Get the oldest remote group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_remote_pid-2">get_remote_pid/2</a></td><td>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>.</td></tr>
@@ -153,6 +191,41 @@
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
 </p>
 
+<h3 class="function"><a name="get_local_members-3">get_local_members/3</a></h3>
+<div class="spec">
+<p><tt>get_local_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the local members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_local_newest_pid-3">get_local_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid.">Get the newest local group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-2">get_local_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-3">get_local_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid.">Get the oldest local group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
 <p><tt>get_local_pid(GroupName, Groups) -&gt; any()</tt></p>
@@ -181,6 +254,34 @@
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
+<h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_newest_pid-3">get_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid.">Get the newest group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_oldest_pid-2">get_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_oldest_pid-3">get_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid.">Get the oldest group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
 <p><tt>get_random_pid(GroupName, Groups) -&gt; any()</tt></p>
@@ -193,6 +294,48 @@
 <p><tt>get_random_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_members-2">get_remote_members/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_members-3">get_remote_members/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the remote members of a specific group while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-3">get_remote_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid.">Get the newest remote group member while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid.">Get the oldest remote group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
@@ -218,6 +361,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Feb 6 2013, 20:45:30.</i></p>
+<p><i>Generated by EDoc, Jul 11 2013, 19:11:32.</i></p>
 </body>
 </html>

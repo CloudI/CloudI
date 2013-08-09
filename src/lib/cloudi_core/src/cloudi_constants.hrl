@@ -36,6 +36,7 @@
 
 % blocking operations must decrement the timeout to make sure timeouts
 % have time to unravel all synchronous calls
+% (should be less than all INTERVAL constants)
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
 % maximum wait time before a reconnect is attempted with a node
@@ -43,6 +44,10 @@
 
 % time to wait before the first reconnect is attempted with a node
 -define(NODE_RECONNECT_START, 300000). % milliseconds
+
+% interval to reload all internal services which have been configured to
+% reload their modules automatically
+-define(SERVICE_INTERNAL_RELOAD, 1000). % milliseconds
 
 % maximum average time inbetween CloudI logger calls during 10 seconds
 % to trigger logger flooding prevention, so that logging messages are discarded
@@ -64,4 +69,15 @@
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
+
+-define(SCOPE_DEFAULT, cpg_default_scope).
+-define(SCOPE_ASSIGN(Scope),
+        if
+            Scope =:= default ->
+                % DEFAULT_SCOPE in cpg application
+                ?SCOPE_DEFAULT;
+            true ->
+                erlang:list_to_atom("cloudi_x_cpg_x_" ++
+                                    erlang:atom_to_list(Scope))
+        end).
 

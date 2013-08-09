@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_app).
@@ -52,10 +52,35 @@
 
 -behaviour(application).
 
+%% external interface
+-export([test/0]).
+
 %% application callbacks
--export([start/2, stop/1]).
+-export([start/2,
+         stop/1]).
 
 -include("cloudi_configuration.hrl").
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is cloudi_core being ran during a test with eunit or ct?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec test() ->
+    boolean().
+
+-ifdef(TEST).
+test() ->
+    true.
+-else.
+test() ->
+    (init:get_argument(test) /= error).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from application
@@ -76,7 +101,12 @@
 start(_, _) ->
     cloudi_x_quickrand:seed(),
     {ok, Path} = application:get_env(configuration),
-    cloudi_core_sup:start_link(cloudi_configuration:open(Path)).
+    case cloudi_configuration:open(Path) of
+        {ok, Config} ->
+            cloudi_core_sup:start_link(Config);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc

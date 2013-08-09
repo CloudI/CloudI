@@ -47,10 +47,12 @@
         service,
         timeout_async,
         prefix,
+        timeout_websocket,
         output_type,
         default_content_type,
         use_websockets,
         use_host_prefix,
+        use_client_ip_prefix,
         use_method_suffix,
         content_type_lookup,
         websocket_state

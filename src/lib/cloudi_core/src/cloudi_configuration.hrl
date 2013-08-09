@@ -53,13 +53,14 @@
         % DEFAULT VALUES ASSIGNED BELOW
 
         % -128 (high) <= priority_default <= 127 (low)
-        priority_default = 0 :: -128..127,
+        priority_default = 0 :: cloudi_service:priority(),
         % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined :: undefined | pos_integer(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
-        dest_refresh_start = 500 :: 100..3600000, % milliseconds
+        dest_refresh_start = 500 % 0.5 seconds
+            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
         % (not an immediate destination refresh method).
@@ -67,7 +68,8 @@
         % service is mainly communicating with long-lived services
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
-        dest_refresh_delay = 300000 :: 100..3600000, % milliseconds (5 minutes)
+        dest_refresh_delay = 300000 % 5 minutes
+            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % should the service request handler execution time decrement the
         % request timeout to reduce the timeout of a forwarded request or
         % the timeout of a returned response
@@ -79,6 +81,11 @@
         % (n.b., this only affects the response timeout of a successful
         %  send_async request)
         response_timeout_adjustment = false :: boolean(),
+        % provide a scope for all subscribe/unsubscribe and messaging
+        % (i.e., all service name usage is within the scope).  Using a
+        % different scope can help avoid contention when using an immediate
+        % destination refresh method.
+        scope = default :: atom(),
 
         % Only Relevant For Internal Services:
 
@@ -111,7 +118,14 @@
         % is used in place of the info_pid and the process' message queue
         % is used directly (so info_pid_uses must be set to infinity when
         % duo_mode is true).
-        duo_mode = false :: boolean()
+        duo_mode = false :: boolean(),
+        % should a mostly idle service hibernate automatically to conserve
+        % memory at the expense of extra garbage collections and an empty
+        % stack trace.
+        hibernate = false :: boolean(),
+        % should the service be reloaded automatically when an Erlang module
+        % file changes?  should only be used during service development.
+        reload = false :: boolean()
     }).
 
 % internal service parameters
@@ -119,7 +133,7 @@
     {
         prefix             :: string(),
         module             :: atom() | file:filename(),
-        file_path          :: undefined | string(), % if module was a path
+        file_path          :: undefined | file:filename(), % if module a path
         args               :: list(),
         dest_refresh       :: cloudi_service_api:dest_refresh(),
         timeout_init       :: cloudi_service_api:timeout_milliseconds(),
@@ -138,7 +152,7 @@
 -record(config_service_external,
     {
         prefix             :: string(),
-        file_path          :: string(),
+        file_path          :: file:filename(),
         args               :: string(),
         env                :: list({string(), string()}),
         dest_refresh       :: cloudi_service_api:dest_refresh(),

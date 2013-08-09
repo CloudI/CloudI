@@ -54,21 +54,21 @@ get_controller(SupervisorRef) ->
 %% specifications.
 %%--------------------------------------------------------------------
 init(Options) ->
-    case proplists:get_bool(native, Options) of
+    MediciController = case proplists:get_bool(native, Options) of
     false ->
-        MediciController = {controller,
-                            {medici_controller, start_link, [Options]},
-                            permanent,
-                            2000,
-                            worker,
-                            [medici_controller]};
+        {controller,
+         {medici_controller, start_link, [Options]},
+         permanent,
+         2000,
+         worker,
+         [medici_controller]};
     true ->
-        MediciController = {controller,
-                            {medici_native_controller, start_link, [Options]},
-                            permanent,
-                            2000,
-                            worker,
-                            [medici_native_controller]}
+        {controller,
+         {medici_native_controller, start_link, [Options]},
+         permanent,
+         2000,
+         worker,
+         [medici_native_controller]}
     end,
     MediciConnSupervisor = {connection_supervisor,
                             {medici_conn_sup, start_link, [self(), Options]},

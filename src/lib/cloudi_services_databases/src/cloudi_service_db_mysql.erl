@@ -233,6 +233,8 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
+cloudi_service_terminate(_, undefined) ->
+    ok;
 cloudi_service_terminate(_, #state{process = Process}) ->
     cloudi_x_mysql_conn:close_socket(Process),
     ok.
