@@ -1,4 +1,6 @@
 %% encoding: UTF-8
-{application,cpg}.
+{application,cloudi_x_cpg}.
 {packages,[]}.
-{modules,[cpg,cpg_app,cpg_data,cpg_sup]}.
+{modules,[cloudi_x_cpg_app,cloudi_x_cpg_data,cloudi_x_cpg_ets,
+          cloudi_x_cpg_sup,cloudi_x_supervisor_cpg,
+          cloudi_x_supervisor_cpg_spawn,cloudi_x_supervisor_cpg_sup]}.

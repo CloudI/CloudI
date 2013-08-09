@@ -1,0 +1,53 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+
+{lib_dirs,
+ ["lib",
+  "external",
+  "external/nodefinder"
+  @ZEROMQ_ERLZMQ_PATH@]}.
+{sub_dirs,
+ ["tests",
+  "lib/cloudi_core",
+  "lib/cloudi_services_internal",
+  "lib/cloudi_services_databases",
+  "lib/cloudi_services_messaging",
+  "lib/pqueue",
+  "lib/quickrand",
+  "lib/cpg",
+  "lib/uuid",
+  "lib/trie",
+  "lib/reltool_util",
+  "lib/key2value"]}.
+{edoc_opts,
+ [{preprocess, true},
+  {includes,
+   ["@abs_top_srcdir@/lib",
+    "@abs_top_srcdir@/external"]}]}.
+{erl_opts,
+ [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
+  {d, 'ERLANG_OTP_VER_R@ERLANG_OTP_VER_MAJOR@'},
+  {i, "@abs_top_srcdir@/lib"},
+  {i, "@abs_top_srcdir@/external"},
+  debug_info,
+  warnings_as_errors,
+  strict_validation,
+  warn_bif_clash,
+  warn_deprecated_function,
+  warn_export_all,
+  warn_export_vars,
+  warn_exported_vars,
+  warn_obsolete_guard,
+  warn_shadow_vars,
+  %warn_unused_import, % using proper's automatic imports
+  warn_unused_function,
+  warn_unused_record,
+  warn_unused_vars]}.
+{xref_checks,
+ [exports_not_used,
+  undefined_function_calls]}.
+{xref_warnings, true}.
+{cover_enabled, true}.
+{cover_print_enabled, true}.
+{cover_export_enabled, true}.
+

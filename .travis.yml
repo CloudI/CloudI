@@ -8,12 +8,16 @@ rvm:
 before_install:
   - sudo apt-get update
   - sudo apt-get install g++ default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev make autoconf automake libtool git
+  - rm rebar.config
 before_script:
-  - cd src && ./autogen.sh
-  - mkdir build && cd build && ../configure --with-zeromq
-script: ../make_dev
+  - mkdir build
+  - cd build
+  - ../src/autogen.sh
+  - ../src/configure --with-zeromq --prefix=`pwd`/../install_local
+script: ../src/make_dev test install
 after_script:
-  - sudo make install
+  - make clean
+  - make clean-configure
 branches:
   only:
     - master

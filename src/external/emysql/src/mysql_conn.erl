@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% Encoding: latin-1
 %%% File    : mysql_conn.erl
 %%% Author  : Fredrik Thulin <ft@it.su.se>
 %%% Descrip.: MySQL connection handler, handles de-framing of messages

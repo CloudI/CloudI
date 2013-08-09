@@ -1,0 +1,3 @@
+{application, fake_rebar_application, 
+  [{description, "Fake Rebar Application to allow eunit/ct usage"}]}.
+

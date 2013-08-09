@@ -1,6 +1,162 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.2.5 (beta) released
+
+2013-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Provide a readable format for the CloudI Service API output of
+      services and services_search when returning a service's service options
+
+2013-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move cloudi_core startup of cloudi_services_internal,
+      cloudi_services_databases, and cloudi_services_messaging into the
+      cloudi_core configuration sequence
+    * Do not use the /tmp/cloudi path
+
+2013-07-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Simplify CloudI Erlang release
+    * Fix configure sequence, so it remains decoupled from application startup
+
+2013-07-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add get_pids function to the internal service CloudI API
+      (the cloudi_service module)
+    * Add internal service module reload functionality with the
+      "reload" to the service configuration options
+    * Add the possibility of changing the service scope to alter what
+      cpg scope is used for service name lookup operations, with the
+      "scope" option in the service configuration options
+    * Provide a more descriptive error for an erroneous unsubscribe
+      CloudI API call in an external service
+    * Update cpg
+    * Add internal service module "hibernate" option to the
+      service configuration options
+
+2013-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Substitute Erlang VM shell environmental variables in
+      ExecutableFilePath, ExecutableCommandLineArguments, and
+      ExecutableEnvironmentalVariables parameters for external services
+    * Update cpg and reltool_util
+    * Add listen parameter to cloudi_service_db_pgsql
+
+2013-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi module retry of service requests and context checking
+    * Add cloudi_logger.hrl FUNCTION macro
+    * Add service state parameter for cloudi_service_init/3 stop return value
+      (optional for usage in cloudi_service_terminate/2, otherwise undefined)
+    * Fix cloudi_service_db_pgsql list results
+    * Add cloudi_service_db_pgsql_SUITE ct test module
+    * Update cpg and reltool_util
+    * Fix duo_mode internal service terminate after init returns stop
+    * Fix timeout usage within cloudi module to imitate the cloudi_service
+      module usage of TIMEOUT_DELTA for service name lookups
+    * Make cloudi_service_db_pgsql_SUITE execution conditional so that
+      postgres configuration isn't required
+
+2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add "build" ZeroMQ option value
+    * Add cloudi_service:service_name_parse/2 to make it simpler to utilize
+      service name patterns
+
+2013-07-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add eunit/ct integration for handling unit tests
+    * Add PropEr as a dependency for running tests
+    * Add a basic uninstall makefile target
+
+2013-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cpg timeout usage to internal and external services so that the
+      service request timeout provides an absolute limit for
+      any service name lookup
+    * Update cpg
+
+2013-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Java http_req test
+    * Fix reltool_util:modules_purged/2 functionality
+
+2013-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add all the warnings previously excluded in the rebar_src.config.in file
+    * Fix the various warnings within the external dependencies
+    * Reformat the reltool.config.in file to be simpler
+    * Fix autoconf macros so that AC_LANG_CALL is no longer used to fix
+      ZeroMQ library detection (and GMP library detection)
+
+2013-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add service prefix configuration validation
+    * Add ACL configuration validation
+    * Update uuid
+
+2013-07-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add type specifications to the cloudi module and the
+      cloudi_service module, for use with Erlang CloudI services
+    * Fix emysql crypto hash usage (error is in 1.2.4)
+    * Update edoc documentation
+
+2013-07-05 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+
+    * Merge elasticsearch database integration
+
+2013-07-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the build system so that it can use an external rebar executable
+      specified by the configuration
+    * Add root rebar.config for using CloudI as a rebar dependency
+    * Add the hello_world3 example for rebar integration with CloudI
+      as a dependency for a release
+
+2013-07-03 Lukas Larsson   <garazdawi [at] gmail (dot) com>
+
+    * Fix emysql source file encoding for R17
+
+2013-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix for internal services so that the terminate function is always called
+    * Fix queuing on websocket connection for outgoing service requests
+
+2013-06-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the CloudI Service API automatically discover its functions
+      from the exports of the module cloudi_service_api within
+      cloudi_service_api_requests
+
+2013-06-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add websocket_timeout and use_client_ip_prefix
+      configuration options to the cloudi_service_http_cowboy service
+    * Add validation to the CloudI Service API that doesn't cause internal
+      process execution exceptions
+    * Add the CloudI Service API function services_search for searching
+      services based on a service name
+
+2013-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the elli HTTP server for comparison
+      (performance shows that cowboy should be used instead)
+    * Fix the makefile issue with configuration files
+
+2013-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Outgoing websocket service requests now use the list output_type
+      (output configuration setting) to provide text requests instead of binary
+    * The cloudi module now only accepts immediate destination refresh
+      methods so that the configuration accurately reflects the functionality
+    * Fix the console log output destination in the startup script
+    * Do not clobber the configuration files when the
+      installation occurs twice
+
 2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.4 (beta) released

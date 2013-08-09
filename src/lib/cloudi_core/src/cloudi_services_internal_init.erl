@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_init).
@@ -132,15 +132,15 @@ handle_call(Request, From, #state{service_state = InternalState} = State) ->
         {reply, Reply, NewInternalState} ->
             {reply, Reply,
              State#state{service_state = NewInternalState}};
-        %{reply, Reply, NewInternalState, Timeout} ->
-        %    {reply, Reply,
-        %     State#state{service_state = NewInternalState}, Timeout};
+        {reply, Reply, NewInternalState, Timeout} ->
+            {reply, Reply,
+             State#state{service_state = NewInternalState}, Timeout};
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};
-        %{noreply, NewInternalState, Timeout} ->
-        %    {noreply,
-        %     State#state{service_state = NewInternalState}, Timeout};
+        {noreply, NewInternalState, Timeout} ->
+            {noreply,
+             State#state{service_state = NewInternalState}, Timeout};
         {stop, Reason, Reply, NewInternalState} ->
             {stop, Reason, Reply,
              State#state{service_state = NewInternalState}}%;
@@ -153,10 +153,10 @@ handle_cast(Request, #state{service_state = InternalState} = State) ->
     case cloudi_services_internal:handle_cast(Request, InternalState) of
         {noreply, NewInternalState} ->
             {noreply,
-             State#state{service_state = NewInternalState}}%;
-        %{noreply, NewInternalState, Timeout} ->
-        %    {noreply,
-        %     State#state{service_state = NewInternalState}, Timeout};
+             State#state{service_state = NewInternalState}};
+        {noreply, NewInternalState, Timeout} ->
+            {noreply,
+             State#state{service_state = NewInternalState}, Timeout}%;
         %{stop, Reason, NewInternalState} ->
         %    {stop, Reason,
         %     State#state{service_state = NewInternalState}}
@@ -170,9 +170,9 @@ handle_info(Request, #state{service_state = InternalState} = State) ->
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};
-        %{noreply, NewInternalState, Timeout} ->
-        %    {noreply,
-        %     State#state{service_state = NewInternalState}, Timeout};
+        {noreply, NewInternalState, Timeout} ->
+            {noreply,
+             State#state{service_state = NewInternalState}, Timeout};
         {stop, Reason, NewInternalState} ->
             {stop, Reason,
              State#state{service_state = NewInternalState}}

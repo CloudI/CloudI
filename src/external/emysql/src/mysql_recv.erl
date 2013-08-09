@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% Encoding: latin-1
 %%% File    : mysql_recv.erl
 %%% Author  : Fredrik Thulin <ft@it.su.se>
 %%% Descrip.: Handles data being received on a MySQL socket. Decodes
@@ -28,7 +29,10 @@
 %%%-------------------------------------------------------------------
 -module(mysql_recv).
 
--compile(export_all).
+-export([start_link/3,
+         init/3,
+         loop/1,
+         sendpacket/2]).
 
 -record(state, {socket, parent, data}).
 -define(SECURE_CONNECTION, 32768).

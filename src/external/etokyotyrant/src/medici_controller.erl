@@ -148,12 +148,12 @@ task(State, sync, true) when State#state.auto_sync =/= nil ->
     State;
 task(State, sync, true) ->
     {OldTRef, OldPeriod} = State#state.auto_sync,
-    case OldPeriod =/= ?DEFAULT_SYNC_PERIOD of
+    TRef = case OldPeriod =/= ?DEFAULT_SYNC_PERIOD of
     true ->
         {ok, cancel} = timer:cancel(OldTRef),
-        TRef = timer:send_interval(?DEFAULT_SYNC_PERIOD, {sync});
+        timer:send_interval(?DEFAULT_SYNC_PERIOD, {sync});
     _ ->
-        TRef = OldTRef
+        OldTRef
     end,
     State#state{auto_sync={TRef, ?DEFAULT_SYNC_PERIOD}};
 task(State, sync, Period) when is_integer(Period), Period > 0 ->
@@ -179,12 +179,12 @@ task(State, tune, true) when State#state.auto_tune =/= nil ->
     State;
 task(State, tune, true) ->
     {OldTRef, OldPeriod} = State#state.auto_tune,
-    case OldPeriod =/= ?DEFAULT_TUNE_PERIOD of
+    TRef = case OldPeriod =/= ?DEFAULT_TUNE_PERIOD of
     true ->
         {ok, cancel} = timer:cancel(OldTRef),
-        TRef = timer:send_interval(?DEFAULT_TUNE_PERIOD, {tune});
+        timer:send_interval(?DEFAULT_TUNE_PERIOD, {tune});
     _ ->
-        TRef = OldTRef
+        OldTRef
     end,
     State#state{auto_tune={TRef, ?DEFAULT_SYNC_PERIOD}};
 task(State, tune, Period) when is_integer(Period), Period > 0 ->

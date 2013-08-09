@@ -58,13 +58,14 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
     AC_REQUIRE([AX_ERLANG_REQUIRE_OTP_VER])
     AC_REQUIRE([AX_ZEROMQ])
 
-    AC_MSG_CHECKING(for ZeroMQ's Erlang interface)
+    AC_MSG_CHECKING(for ZeroMQ)
     if test "x$ZEROMQ_VERSION_MAJOR" = "x"; then
         AC_MSG_RESULT(no)
         ZEROMQ_ERLZMQ_RELTOOL=""
         ZEROMQ_ERLZMQ_APPCONF=""
+        ZEROMQ_ERLZMQ_PATH=""
     else
-        AC_MSG_RESULT(building)
+        AC_MSG_RESULT(yes)
         AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
             [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_service_zeromq])])
         abs_top_srcdir=`cd $srcdir; pwd`

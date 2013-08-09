@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.4.0 {@date} {@time}
+%%% @version 0.6.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -55,6 +55,8 @@
 -export([application_start/1,
          application_start/2,
          application_start/3,
+         applications_start/1,
+         applications_start/2,
          application_stop/1,
          application_remove/1,
          application_remove/2,
@@ -63,9 +65,15 @@
          application_running/1,
          application_running/2,
          application_loaded/1,
+         application_modules/1,
+         application_modules/2,
+         ensure_application_loaded/1,
+         ensure_application_started/1,
+         ensure_application_stopped/1,
          module_loaded/1,
          module_purged/1,
          module_purged/2,
+         module_exports/1,
          script_start/1,
          script_remove/1,
          script_remove/2]).
@@ -140,6 +148,33 @@ application_start(Application, Env, Timeout)
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()})) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications) ->
+    applications_start(Applications, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()}),
+                         Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications, Timeout) ->
+    applications_start_element(Applications, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -233,7 +268,7 @@ application_purged(Application, Timeout)
         {ok, _} ->
             case ensure_application_stopped(Application) of
                 ok ->
-                    case application:get_key(Application, modules) of
+                    case application_modules(Application) of
                         {ok, Modules} ->
                             case modules_purged(Modules, Timeout) of
                                 ok ->
@@ -241,8 +276,8 @@ application_purged(Application, Timeout)
                                 {error, _} = Error ->
                                     Error
                             end;
-                        undefined ->
-                            {error, {modules_missing, Application}}
+                        {error, _} = Error ->
+                            Error
                     end;
                 {error, _} = Error ->
                     Error
@@ -312,6 +347,106 @@ application_loaded(Application)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Retrieve a list of application modules.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+application_modules(Application) ->
+    application_modules(Application, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a list of application modules with filter options.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom(),
+                          Options :: list({atom(), any()})) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+application_modules(Application, Options)
+    when is_atom(Application), is_list(Options) ->
+    case application:get_key(Application, modules) of
+        {ok, Modules} ->
+            {ok, modules_filter(Options, Modules, false)};
+        undefined ->
+            {error, {modules_missing, Application}}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure an application is loaded.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_loaded(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_loaded(Application) ->
+    case application:load(Application) of
+        ok ->
+            case application:get_key(Application, modules) of
+                {ok, Modules} ->
+                    lists:foreach(fun(M) ->
+                        ok = module_loaded(M)
+                    end, Modules);
+                undefined ->
+                    ok
+            end;
+        {error, {already_loaded, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure an application is started.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_started(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_started(Application) ->
+    case application:start(Application, temporary) of
+        ok ->
+            ok;
+        {error, {already_started, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure an application is stopped.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ensure_application_stopped(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+ensure_application_stopped(Application) ->
+    case application:stop(Application) of
+        ok ->
+            ok;
+        {error, {not_started, Application}} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Make sure a module is loaded.===
 %% If the module is not loaded, attempt to load it.
 %% @end
@@ -364,6 +499,22 @@ module_purged(Module) ->
 module_purged(Module, Timeout)
     when is_atom(Module) ->
     modules_purged([Module], Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List the exported functions of a module.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_exports(Module :: atom()) ->
+    list({atom(), pos_integer()}).
+
+module_exports(Module)
+    when is_atom(Module) ->
+    {exports, L0} = lists:keyfind(exports, 1, Module:module_info()),
+    {value, _, L1} = lists:keytake(module_info, 1, L0),
+    {value, _, L2} = lists:keytake(module_info, 1, L1),
+    L2.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -485,43 +636,6 @@ script_remove(FilePath, Timeout)
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-ensure_application_loaded(A) ->
-    case application:load(A) of
-        ok ->
-            case application:get_key(A, modules) of
-                {ok, Modules} ->
-                    lists:foreach(fun(M) ->
-                        ok = module_loaded(M)
-                    end, Modules);
-                undefined ->
-                    ok
-            end;
-        {error, {already_loaded, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-     end.
-
-ensure_application_started(A) ->
-    case application:start(A, temporary) of
-        ok ->
-            ok;
-        {error, {already_started, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-ensure_application_stopped(A) ->
-    case application:stop(A) of
-        ok ->
-            ok;
-        {error, {not_started, A}} ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
 application_start_set_env([], _, _) ->
     ok;
 application_start_set_env([{K, V} | L], Application, Timeout) ->
@@ -541,6 +655,25 @@ application_start_dependencies([A | As]) ->
     case ensure_application_started(A) of
         ok ->
             application_start_dependencies(As);
+        {error, _} = Error ->
+            Error
+    end.
+
+applications_start_element([], _) ->
+    ok;
+applications_start_element([Application | Applications], Timeout)
+    when is_atom(Application) ->
+    case application_start(Application, [], Timeout) of
+        ok ->
+            applications_start_element(Applications, Timeout);
+        {error, _} = Error ->
+            Error
+    end;
+applications_start_element([{Application, Env} | Applications], Timeout)
+    when is_atom(Application), is_list(Env) ->
+    case application_start(Application, Env, Timeout) of
+        ok ->
+            applications_start_element(Applications, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -658,7 +791,10 @@ applications_dependencies([A | Rest], As) ->
                 {ok, []} ->
                     applications_dependencies(Rest, As);
                 {ok, NextAs} ->
-                    case applications_dependencies(NextAs, NextAs ++ As) of
+                    OtherAs = lists:foldl(fun(NextA, L) ->
+                        lists:delete(NextA, L)
+                    end, As, NextAs),
+                    case applications_dependencies(NextAs, NextAs ++ OtherAs) of
                         {ok, NewAs} ->
                             applications_dependencies(Rest, NewAs);
                         {error, _} = Error ->
@@ -904,6 +1040,8 @@ modules_purged([], [], _) ->
 modules_purged([], BusyModules, Timeout) ->
     case erlang:max(Timeout - ?MODULES_PURGED_DELTA, 0) of
         0 ->
+            % attempt to force the purge, killing any processes that remain
+            % executing the code
             case lists:dropwhile(fun code:purge/1, BusyModules) of
                 [] ->
                     ok;
@@ -915,18 +1053,49 @@ modules_purged([], BusyModules, Timeout) ->
             modules_purged(lists:reverse(BusyModules), [], NextTimeout)
     end;
 modules_purged([Module | Modules], BusyModules, Timeout) ->
-    case is_module_loaded(Module) of
+    % purge the Module if no processes remain executing the code
+    case code:soft_purge(Module) of
         true ->
-            true = code:delete(Module),
-            case code:soft_purge(Module) of
-                true ->
-                    modules_purged(Modules, BusyModules, Timeout);
-                false ->
-                    modules_purged(Modules, [Module | BusyModules], Timeout)
-            end;
+            modules_purged(Modules, BusyModules, Timeout);
         false ->
-            modules_purged(Modules, BusyModules, Timeout)
+            modules_purged(Modules, [Module | BusyModules], Timeout)
     end.
+
+modules_filter([], Modules, _) ->
+    Modules;
+modules_filter([{Behaviour, Name} | Options], Modules, Loaded)
+    when Behaviour =:= behaviour; Behaviour =:= behavior ->
+    NewModules = lists:filter(fun(Module) ->
+        Attributes = if
+            Loaded =:= true ->
+                lists:keyfind(attributes, 1, Module:module_info());
+            Loaded =:= false ->
+                case code:is_loaded(Module) of
+                    {file, _} ->
+                        lists:keyfind(attributes, 1, Module:module_info());
+                    false ->
+                        false
+                end
+        end,
+        case Attributes of
+            false ->
+                false;
+            {attributes, []} ->
+                false;
+            {attributes, AttributesL} ->
+                case lists:keyfind(behaviour, 1, AttributesL) of
+                    false ->
+                        false;
+                    {behaviour, []} ->
+                        false;
+                    {behaviour, Names} ->
+                        lists:member(Name, Names)
+                end
+        end
+    end, Modules),
+    modules_filter(Options, NewModules, true);
+modules_filter([_ | _], _, _) ->
+    erlang:exit(badarg).
 
 load_all_modules([]) ->
     ok;

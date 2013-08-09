@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_sup).
@@ -53,42 +53,13 @@
 -behaviour(supervisor).
 
 %% external interface
--export([start_link/1]).
+-export([start_link/1,
+         start_scope/1]).
 
 %% supervisor callbacks
 -export([init/1]).
 
 -include("cpg_constants.hrl").
-
--ifdef(CPG_ETS_CACHE).
--define(CPG_ETS_CACHE_START(R),
-        ChildSpec1 = {cpg_ets1,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec2 = {cpg_ets2,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ChildSpec3 = {cpg_ets3,
-                      {cpg_ets, start_link, []},
-                      permanent, brutal_kill, worker, [cpg_ets]},
-        ok = cpg_ets:table_create(),
-        case R of
-            {ok, SupervisorPid} = Result ->
-                {ok, Child1} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec1),
-                {ok, Child2} = supervisor:start_child(SupervisorPid,
-                                                      ChildSpec2),
-                {ok, _} = supervisor:start_child(SupervisorPid,
-                                                 ChildSpec3),
-                ok = cpg_ets:table_owners(Child1, Child2),
-                Result;
-            Result ->
-                Result
-        end).
--else.
--define(CPG_ETS_CACHE_START(R),
-        R).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -104,8 +75,35 @@
     {'ok', pid()} |
     {'error', any()}.
 
-start_link([A | _] = ScopeList) when is_atom(A) ->
-    ?CPG_ETS_CACHE_START(supervisor:start_link(?MODULE, [ScopeList])).
+start_link([A | _] = ScopeList)
+    when is_atom(A) ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [ScopeList]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start a CPG scope.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_scope(Scope :: atom()) ->
+    'ok' |
+    {'error', any()}.
+
+start_scope(Scope)
+    when is_atom(Scope) ->
+    case erlang:whereis(Scope) of
+        undefined ->
+            case supervisor:start_child(?MODULE, child_specification(Scope)) of
+                {ok, _} ->
+                    ok;
+                {ok, _, _} ->
+                    ok;
+                {error, Reason} ->
+                    {error, {start_error, Reason}}
+            end;
+        _ ->
+            {error, {already_started, Scope}}
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -132,10 +130,13 @@ child_specifications([_ | _] = ScopeList) ->
 child_specifications(ChildSpecs, []) ->
     ChildSpecs;
 
-child_specifications(ChildSpecs, [Scope | L]) when is_atom(Scope) ->
+child_specifications(ChildSpecs, [Scope | L]) ->
+    child_specifications([child_specification(Scope) | ChildSpecs], L).
+
+child_specification(Scope)
+    when is_atom(Scope) ->
     Shutdown = 2000, % milliseconds
-    ChildSpec = {Scope,
-                 {cpg, start_link, [Scope]},
-                 permanent, Shutdown, worker, [cpg]},
-    child_specifications([ChildSpec | ChildSpecs], L).
+    {Scope,
+     {cpg, start_link, [Scope]},
+     permanent, Shutdown, worker, [cpg]}.
 

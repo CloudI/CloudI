@@ -1,34 +1,51 @@
+#-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
+# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
 SCOPE_EXTERNAL = cloudi_x_
 SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
-     -c $(abs_top_srcdir)/lib/ \
-     -d $(abs_top_srcdir)/lib/cloudi_core/src \
-     -d $(abs_top_srcdir)/lib/cloudi_services_databases/src \
-     -d $(abs_top_srcdir)/lib/cloudi_services_internal/src \
-     -d $(abs_top_srcdir)/lib/cloudi_services_messaging/src \
-     -d $(abs_top_srcdir)/lib/cpg/src \
-     -d $(abs_top_srcdir)/lib/key2value/src \
-     -d $(abs_top_srcdir)/lib/pqueue/src \
-     -d $(abs_top_srcdir)/lib/quickrand/src \
-     -d $(abs_top_srcdir)/lib/reltool_util/src \
-     -d $(abs_top_srcdir)/lib/trie/src \
-     -d $(abs_top_srcdir)/lib/uuid/src \
-     -d $(abs_top_srcdir)/external/nodefinder/combonodefinder/src \
-     -d $(abs_top_srcdir)/external/nodefinder/ec2nodefinder/src \
-     -d $(abs_top_srcdir)/external/nodefinder/nodefinder/src \
-     -d $(abs_top_srcdir)/external/cowboy/src \
-     -d $(abs_top_srcdir)/external/dynamic_compile/src \
-     -d $(abs_top_srcdir)/external/ecouchdb/src \
-     -d $(abs_top_srcdir)/external/ememcached/src \
-     -d $(abs_top_srcdir)/external/emysql/src \
-     -d $(abs_top_srcdir)/external/epgsql/src \
-     -d $(abs_top_srcdir)/external/etokyotyrant/src \
-     -d $(abs_top_srcdir)/external/jsx/src \
-     -d $(abs_top_srcdir)/external/ranch/src
+     -c $(top_srcdir)/lib/ \
+     -d $(top_srcdir)/lib/cloudi_core/src \
+     -d $(top_srcdir)/lib/cloudi_services_databases/src \
+     -d $(top_srcdir)/lib/cloudi_services_internal/src \
+     -d $(top_srcdir)/lib/cloudi_services_messaging/src \
+     -d $(top_srcdir)/lib/cpg/src \
+     -d $(top_srcdir)/lib/cpg/test \
+     -d $(top_srcdir)/lib/key2value/src \
+     -d $(top_srcdir)/lib/pqueue/src \
+     -d $(top_srcdir)/lib/pqueue/test \
+     -d $(top_srcdir)/lib/quickrand/src \
+     -d $(top_srcdir)/lib/reltool_util/src \
+     -d $(top_srcdir)/lib/trie/src \
+     -d $(top_srcdir)/lib/uuid/src \
+     -d $(top_srcdir)/external/nodefinder/combonodefinder/src \
+     -d $(top_srcdir)/external/nodefinder/ec2nodefinder/src \
+     -d $(top_srcdir)/external/nodefinder/nodefinder/src \
+     -d $(top_srcdir)/external/cowboy/src \
+     -d $(top_srcdir)/external/cowboy/test \
+     -d $(top_srcdir)/external/elli/src \
+     -d $(top_srcdir)/external/elli/test \
+     -d $(top_srcdir)/external/dynamic_compile/src \
+     -d $(top_srcdir)/external/ecouchdb/src \
+     -d $(top_srcdir)/external/ememcached/src \
+     -d $(top_srcdir)/external/emysql/src \
+     -d $(top_srcdir)/external/epgsql/src \
+     -d $(top_srcdir)/external/erlasticsearch/src \
+     -d $(top_srcdir)/external/etokyotyrant/src \
+     -d $(top_srcdir)/external/jsx/src \
+     -d $(top_srcdir)/external/poolboy/src \
+     -d $(top_srcdir)/external/poolboy/test \
+     -d $(top_srcdir)/external/ranch/src \
+     -d $(top_srcdir)/external/ranch/test \
+     -d $(top_srcdir)/external/thrift/src \
+     -d $(top_srcdir)/external/thrift/test
 
-# automake expand all nested variables
+all-local: rel/files/app.config \
+           erlang-applications-scope-add \
+           rebar-directories-compile \
+           rebar-compile
+
 rel/files/app.config: rel/files/app.config.in
 	$(MKDIR_P) rel/files
 	$(SED) -e "s![@]cloudi_confdir[@]!$(cloudi_confdir)!g" \
@@ -36,8 +53,7 @@ rel/files/app.config: rel/files/app.config.in
            $(top_srcdir)/rel/files/app.config.in > \
            $(top_builddir)/$@
 
-all-local: rebar \
-           rel/files/app.config
+rebar-directories-compile:
 	$(MKDIR_P) external
 	$(MKDIR_P) lib/cloudi_core/ebin
 	$(MKDIR_P) lib/cloudi_services_internal/ebin
@@ -55,109 +71,180 @@ all-local: rebar \
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
 	$(MKDIR_P) external/jsx/ebin
 	$(MKDIR_P) external/etokyotyrant/ebin
+	$(MKDIR_P) external/poolboy/ebin
+	$(MKDIR_P) external/thrift/ebin
+	$(MKDIR_P) external/erlasticsearch/ebin
 	$(MKDIR_P) external/epgsql/ebin
 	$(MKDIR_P) external/emysql/ebin
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
+	$(MKDIR_P) external/ranch/ebin
+	$(MKDIR_P) external/elli/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
-	$(ESCRIPT) $(abs_top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS)
-	(cd $(top_srcdir)/lib/cloudi_core/src; \
+	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_internal/src; \
+	(cd $(top_srcdir)/lib/cloudi_services_internal/src && \
         test ! -e cloudi_services_internal.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_databases/src; \
+	(cd $(top_srcdir)/lib/cloudi_services_databases/src && \
         test ! -e cloudi_services_databases.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_messaging/src; \
+	(cd $(top_srcdir)/lib/cloudi_services_messaging/src && \
         test ! -e cloudi_services_messaging.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src || exit 0)
-	(cd $(top_srcdir)/lib/pqueue/src; \
+	(cd $(top_srcdir)/lib/pqueue/src && \
         test ! -e $(SCOPE_EXTERNAL)pqueue.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/pqueue/src/$(SCOPE_EXTERNAL)pqueue.app.src || exit 0)
-	(cd $(top_srcdir)/lib/quickrand/src; \
+	(cd $(top_srcdir)/lib/quickrand/src && \
         test ! -e $(SCOPE_EXTERNAL)quickrand.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/quickrand/src/$(SCOPE_EXTERNAL)quickrand.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cpg/src; \
+	(cd $(top_srcdir)/lib/cpg/src && \
         test ! -e $(SCOPE_EXTERNAL)cpg.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cpg/src/$(SCOPE_EXTERNAL)cpg.app.src || exit 0)
-	(cd $(top_srcdir)/lib/uuid/src; \
+	(cd $(top_srcdir)/lib/uuid/src && \
         test ! -e $(SCOPE_EXTERNAL)uuid.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/uuid/src/$(SCOPE_EXTERNAL)uuid.app.src || exit 0)
-	(cd $(top_srcdir)/lib/trie/src; \
+	(cd $(top_srcdir)/lib/trie/src && \
         test ! -e $(SCOPE_EXTERNAL)trie.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/trie/src/$(SCOPE_EXTERNAL)trie.app.src || exit 0)
-	(cd $(top_srcdir)/lib/reltool_util/src; \
+	(cd $(top_srcdir)/lib/reltool_util/src && \
         test ! -e $(SCOPE_EXTERNAL)reltool_util.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/reltool_util/src/$(SCOPE_EXTERNAL)reltool_util.app.src || exit 0)
-	(cd $(top_srcdir)/lib/key2value/src; \
+	(cd $(top_srcdir)/lib/key2value/src && \
         test ! -e $(SCOPE_EXTERNAL)key2value.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/key2value/src/$(SCOPE_EXTERNAL)key2value.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_core; \
+	(cd $(top_srcdir)/lib/cloudi_core && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_internal; \
+	(cd $(top_srcdir)/lib/cloudi_services_internal && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_databases; \
+	(cd $(top_srcdir)/lib/cloudi_services_databases && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_messaging; \
+	(cd $(top_srcdir)/lib/cloudi_services_messaging && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/ebin || exit 0)
+	(cd $(top_srcdir)/lib/pqueue && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/pqueue/ebin || exit 0)
+	(cd $(top_srcdir)/lib/quickrand && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/quickrand/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cpg && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cpg/ebin || exit 0)
+	(cd $(top_srcdir)/lib/uuid && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/uuid/ebin || exit 0)
+	(cd $(top_srcdir)/lib/trie && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/trie/ebin || exit 0)
+	(cd $(top_srcdir)/lib/reltool_util && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/reltool_util/ebin || exit 0)
+	(cd $(top_srcdir)/lib/key2value && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/key2value/ebin || exit 0)
 	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
-       $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
-       cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR); \
+       $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
+       cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
         test ! -e erlzmq && \
         $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0; \
    fi)
-	(cd $(top_srcdir)/external/nodefinder/nodefinder; \
+	(cd $(top_srcdir)/external/nodefinder/nodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/nodefinder/ebin || \
         exit 0)
-	(cd $(top_srcdir)/external/nodefinder/ec2nodefinder; \
+	(cd $(top_srcdir)/external/nodefinder/ec2nodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/ec2nodefinder/ebin || \
         exit 0)
-	(cd $(top_srcdir)/external/nodefinder/combonodefinder; \
+	(cd $(top_srcdir)/external/nodefinder/combonodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/combonodefinder/ebin || \
         exit 0)
-	(cd $(top_srcdir)/external/jsx; \
+	(cd $(top_srcdir)/external/jsx && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
-	(cd $(top_srcdir)/external/etokyotyrant; \
+	(cd $(top_srcdir)/external/etokyotyrant && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
+	(cd $(top_srcdir)/external/poolboy; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/poolboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/thrift; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/thrift/ebin || exit 0)
+	(cd $(top_srcdir)/external/erlasticsearch; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/erlasticsearch/ebin || exit 0)
 	(cd $(top_srcdir)/external/epgsql; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
-	(cd $(top_srcdir)/external/emysql; \
+	(cd $(top_srcdir)/external/emysql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/emysql/ebin || exit 0)
-	(cd $(top_srcdir)/external/ememcached; \
+	(cd $(top_srcdir)/external/ememcached && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/ememcached/ebin || exit 0)
-	(cd $(top_srcdir)/external/ecouchdb; \
+	(cd $(top_srcdir)/external/ecouchdb && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/ecouchdb/ebin || exit 0)
-	(cd $(top_srcdir)/external/cowboy; \
+	(cd $(top_srcdir)/external/cowboy && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
-	(cd $(top_srcdir)/external/dynamic_compile; \
+	(cd $(top_srcdir)/external/ranch && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/ranch/ebin || exit 0)
+	(cd $(top_srcdir)/external/elli && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/elli/ebin || exit 0)
+	(cd $(top_srcdir)/external/dynamic_compile && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/dynamic_compile/ebin || exit 0)
-	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(abs_top_builddir)/rebar \
-                -C $(abs_top_builddir)/rebar.config compile)
+	(cd $(top_builddir)/external/epgsql && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/epgsql/include || exit 0)
+	(cd $(top_builddir)/external/epgsql && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/epgsql/include || exit 0)
+	(cd $(top_builddir)/external/emysql && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/emysql/include || exit 0)
+	(cd $(top_builddir)/external/elli && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/elli/include || exit 0)
+	(cd $(top_builddir)/lib/uuid && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/lib/uuid/include || exit 0)
+	(cd $(top_builddir)/lib/cpg && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/lib/cpg/include || exit 0)
+	(cd $(top_builddir)/lib/cloudi_core && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/lib/cloudi_core/include || exit 0)
 
-clean-local: rebar
+erlang-applications-scope-add:
+	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS)
+
+rebar-compile: erlang-applications-scope-add \
+               rebar-directories-compile
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(abs_top_builddir)/rebar \
-                -C $(abs_top_builddir)/rebar.config clean || \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config compile)
+
+clean-local: rebar-clean \
+             rebar-directories-clean
+	rm -rf $(top_builddir)/rel/cloudi || exit 0
+
+rebar-clean:
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
      exit 0)
+
+rebar-directories-clean: rebar-clean
 	rmdir $(top_builddir)/lib/cloudi_core/ebin \
           $(top_builddir)/lib/cloudi_services_internal/ebin \
           $(top_builddir)/lib/cloudi_services_databases/ebin \
@@ -174,11 +261,16 @@ clean-local: rebar
           $(top_builddir)/external/nodefinder/combonodefinder/ebin \
           $(top_builddir)/external/jsx/ebin \
           $(top_builddir)/external/etokyotyrant/ebin \
+          $(top_builddir)/external/poolboy/ebin \
+          $(top_builddir)/external/thrift/ebin \
+          $(top_builddir)/external/erlasticsearch/ebin \
           $(top_builddir)/external/epgsql/ebin \
           $(top_builddir)/external/emysql/ebin \
           $(top_builddir)/external/ememcached/ebin \
           $(top_builddir)/external/ecouchdb/ebin \
           $(top_builddir)/external/cowboy/ebin \
+          $(top_builddir)/external/ranch/ebin \
+          $(top_builddir)/external/elli/ebin \
           $(top_builddir)/external/dynamic_compile/ebin \
           || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
@@ -197,69 +289,90 @@ clean-local: rebar
           $(top_srcdir)/external/nodefinder/combonodefinder/ebin \
           $(top_srcdir)/external/jsx/ebin \
           $(top_srcdir)/external/etokyotyrant/ebin \
+          $(top_srcdir)/external/poolboy/ebin \
+          $(top_srcdir)/external/thrift/ebin \
+          $(top_srcdir)/external/erlasticsearch/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
           $(top_srcdir)/external/ecouchdb/ebin \
           $(top_srcdir)/external/cowboy/ebin \
+          $(top_srcdir)/external/ranch/ebin \
+          $(top_srcdir)/external/elli/ebin \
           $(top_srcdir)/external/dynamic_compile/ebin
 
-clean-configure: config.log clean
+clean-configure: config.log \
+                 clean \
+                 rebar-directories-clean-configure \
+                 erlang-applications-scope-remove
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
      make clean || exit 0)
 	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
-     $(abs_top_builddir)/rebar -C $(abs_top_builddir)/rebar.config clean || \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
      exit 0)
-	$(ESCRIPT) $(abs_top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 	rm -f $(top_srcdir)/aclocal.m4 \
-          $(top_srcdir)/config.h.in \
-          $(top_srcdir)/config.h.in~ \
-          $(top_builddir)/config.h \
-          $(top_builddir)/config.log \
-          $(top_builddir)/config.status \
-          $(top_builddir)/stamp-h1 \
-          $(top_srcdir)/config/config.guess \
-          $(top_srcdir)/config/config.sub \
-          $(top_srcdir)/config/depcomp \
-          $(top_srcdir)/config/install-sh \
-          $(top_srcdir)/config/ltmain.sh \
-          $(top_srcdir)/config/missing \
-          $(top_builddir)/libtool \
-          $(top_builddir)/rebar \
-          $(top_builddir)/Makefile \
-          $(top_builddir)/Makefile.in \
-          $(top_srcdir)/configure \
-          $(top_srcdir)/m4/libtool.m4 \
-          $(top_srcdir)/m4/ltoptions.m4 \
-          $(top_srcdir)/m4/ltsugar.m4 \
-          $(top_srcdir)/m4/ltversion.m4 \
-          $(top_srcdir)/m4/lt~obsolete.m4 \
-          $(top_srcdir)/external/rebar/ebin/*.beam \
-          $(top_builddir)/lib/cloudi_core/src/cloudi_core.app.src \
-          $(top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
-          $(top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
-          $(top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src \
-          $(top_builddir)/rel/files/app.config \
-          $(top_builddir)/rebar.config \
-          $(top_builddir)/reltool.config \
-          $(top_builddir)/cloudi.conf
-	rm -rf $(top_srcdir)/autom4te.cache
+        $(top_srcdir)/config.h.in \
+        $(top_srcdir)/config.h.in~ \
+        $(top_builddir)/config.h \
+        $(top_builddir)/config.log \
+        $(top_builddir)/config.status \
+        $(top_builddir)/stamp-h1 \
+        $(top_srcdir)/config/config.guess \
+        $(top_srcdir)/config/config.sub \
+        $(top_srcdir)/config/depcomp \
+        $(top_srcdir)/config/install-sh \
+        $(top_srcdir)/config/ltmain.sh \
+        $(top_srcdir)/config/missing \
+        $(top_builddir)/libtool \
+        $(top_srcdir)/Makefile.in \
+        $(top_builddir)/Makefile \
+        $(top_srcdir)/configure \
+        $(top_srcdir)/m4/libtool.m4 \
+        $(top_srcdir)/m4/ltoptions.m4 \
+        $(top_srcdir)/m4/ltsugar.m4 \
+        $(top_srcdir)/m4/ltversion.m4 \
+        $(top_srcdir)/m4/lt~obsolete.m4 \
+        $(top_builddir)/rel/files/app.config \
+        $(top_builddir)/rebar_src.config \
+        $(top_builddir)/rebar_src_test.config \
+        $(top_builddir)/reltool.config \
+        $(top_builddir)/cloudi.conf
+	rm -rf $(top_srcdir)/autom4te.cache \
+           $(top_srcdir)/tests/.eunit \
+           $(top_srcdir)/tests/ct/logs \
+           $(top_srcdir)/lib/cloudi_services_databases/test_ct/logs
 	rm -rf $(top_builddir)/api/c/.deps/ \
-           $(top_builddir)/api/python/.deps/ \
-           $(top_builddir)/lib/cloudi_core/cxx_src/.deps/ \
-           $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
-           $(top_builddir)/tests/http_req/c_src/.deps/ \
-           $(top_builddir)/tests/flood/service/.deps/ \
-           $(top_builddir)/tests/messaging/cxx_src/.deps/ \
-           $(top_builddir)/tests/msg_size/cxx_src/.deps/
-	find $(top_builddir)/api \
-         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
-	find $(top_builddir)/lib \
-         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
-	find $(top_builddir)/tests \
-         -name "Makefile.in" -o -name "Makefile" | xargs rm -f
+         $(top_builddir)/api/python/.deps/ \
+         $(top_builddir)/lib/cloudi_core/cxx_src/.deps/ \
+         $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
+         $(top_builddir)/tests/http_req/c_src/.deps/ \
+         $(top_builddir)/tests/flood/service/.deps/ \
+         $(top_builddir)/tests/messaging/cxx_src/.deps/ \
+         $(top_builddir)/tests/msg_size/cxx_src/.deps/
+	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
+	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
+	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
+	find $(top_builddir)/api -name "Makefile" | xargs rm -f
+	find $(top_builddir)/lib -name "Makefile" | xargs rm -f
+	find $(top_builddir)/tests -name "Makefile" | xargs rm -f
 
-dialyze: all-local dialyzer.plt
+rebar-directories-clean-configure:
+	rm -f $(top_srcdir)/external/rebar/ebin/*.beam \
+        $(top_srcdir)/lib/cloudi_core/src/cloudi_core.app.src \
+        $(top_builddir)/lib/cloudi_core/src/cloudi_core.app.src \
+        $(top_srcdir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
+        $(top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
+        $(top_srcdir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
+        $(top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
+        $(top_srcdir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src \
+        $(top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src
+	test -e $(top_builddir)/rebar && rm -f $(top_builddir)/rebar || exit 0
+
+erlang-applications-scope-remove:
+	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
+
+dialyze: all \
+         dialyzer.plt
 	$(DIALYZER) --plt dialyzer.plt \
               -Wno_return -Wno_unused \
               -I lib/cloudi_core/include/ \
@@ -275,9 +388,11 @@ dialyze: all-local dialyzer.plt
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
               external/cowboy/ebin \
+              external/elli/ebin \
               external/dynamic_compile/ebin \
-              external/epgsql/ebin \
               external/etokyotyrant/ebin \
+              external/erlasticsearch/ebin \
+              external/epgsql/ebin \
               external/ememcached/ebin \
               external/ecouchdb/ebin \
               external/emysql/ebin \
@@ -288,38 +403,29 @@ dialyzer.plt:
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
                        compiler debugger ssl tools
 
-doc:
-	$(ESCRIPT) $(abs_top_builddir)/rebar doc || exit 0
+doc: all
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
+        || exit 0)
 
-run:
-	@echo
-	@echo "********************"
-	@echo "* USE make install *"
-	@echo "********************"
-	@echo
-	@exit 1
+xref: all
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
+        || exit 0)
 
-distdir:
-	@echo
-	@echo "*************************************"
-	@echo "* AUTOMAKE DISTRIBUTION IS NOT USED *"
-	@echo "*************************************"
-	@echo
-	@exit 1
-
-dist: distdir
+test: all
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit \
+        || exit 0)
 
 uninstall:
-	@echo
-	@echo "**********************************"
-	@echo "* AUTOMAKE UNINSTALL IS NOT USED *"
-	@echo "**********************************"
-	@echo
-	@exit 1
+	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
 install-exec-hook: cloudi-prefix-install \
                    tests-install \
                    tests-echo-install \
+                   tests-environment-install \
                    tests-flood-install \
                    tests-hexpi-install \
                    tests-http-install \
@@ -343,28 +449,38 @@ install-exec-hook: cloudi-prefix-install \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/lib"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/releases"
-	(cd "$(DESTDIR)$(cloudi_prefix)"; \
-     test ! -e etc && $(LN_S) "$(cloudi_confdir)" etc || exit 0; \
+	(cd "$(DESTDIR)$(cloudi_prefix)" && \
+     test ! -e etc && $(LN_S) "$(cloudi_confdir)" etc || exit 0 && \
      test ! -e logs && $(LN_S) "$(cloudi_logdir)" logs || exit 0)
+	test -e "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" \
+             "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
-                    "$(DESTDIR)$(cloudi_confdir)"
-	$(ESCRIPT) $(abs_top_builddir)/rebar generate || exit 0
+                  "$(DESTDIR)$(cloudi_confdir)"
+	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/release
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
-        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
-              "$(DESTDIR)$(cloudi_prefix)" || exit 0
+       mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
+             "$(DESTDIR)$(cloudi_prefix)" || exit 0
 	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
-                      "$(DESTDIR)$(cloudi_bindir)/"
-	echo "#!/bin/sh"               > /tmp/cloudi
-	echo "cd $(cloudi_bindir)"     >> /tmp/cloudi
-	echo "exec ./cloudi \$$*"      >> /tmp/cloudi
-	$(INSTALL_SCRIPT) /tmp/cloudi "$(DESTDIR)$(bindir)/"
+                    "$(DESTDIR)$(cloudi_bindir)/"
+	echo "#!/bin/sh"               > "$(CLOUDI_TMP_BIN_SCRIPT)"
+	echo "cd $(cloudi_bindir)"     >> "$(CLOUDI_TMP_BIN_SCRIPT)"
+	echo "exec ./cloudi \$$*"      >> "$(CLOUDI_TMP_BIN_SCRIPT)"
+	$(INSTALL_SCRIPT) "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/cloudi"
+	rm -f "$(CLOUDI_TMP_BIN_SCRIPT)"
+	test -e "$(DESTDIR)$(cloudi_confdir)/app.config" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/app.config" \
+             "$(DESTDIR)$(cloudi_confdir)/app.config.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/app.config" \
-                    "$(DESTDIR)$(cloudi_confdir)/"
+                  "$(DESTDIR)$(cloudi_confdir)/"
+	test -e "$(DESTDIR)$(cloudi_confdir)/vm.args" && \
+       mv -f "$(DESTDIR)$(cloudi_confdir)/vm.args" \
+             "$(DESTDIR)$(cloudi_confdir)/vm.args.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
-                    "$(DESTDIR)$(cloudi_confdir)/"
+                  "$(DESTDIR)$(cloudi_confdir)/"
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/1" && \
-        mv -f "$(top_builddir)/rel/cloudi/releases/1" \
-              "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
+       mv -f "$(top_builddir)/rel/cloudi/releases/1" \
+             "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/releases/start_erl.data" \
                     "$(DESTDIR)$(cloudi_prefix)/releases/"
 	list0=`ls "$(top_builddir)/rel/cloudi/lib/"`; \
@@ -393,6 +509,11 @@ tests-echo-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/echo"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/echo/echo.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/echo/"
+
+tests-environment-install:
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/environment"
+	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/environment/environment.py" \
+                      "$(DESTDIR)$(cloudi_prefix)/tests/environment/"
 
 tests-flood-install: $(top_builddir)/tests/flood/service/flood \
                      $(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam \
@@ -623,4 +744,21 @@ service_api-python-install:
         "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
         "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 
+run:
+	@echo
+	@echo "********************"
+	@echo "* USE make install *"
+	@echo "********************"
+	@echo
+	@exit 1
+
+distdir:
+	@echo
+	@echo "*************************************"
+	@echo "* AUTOMAKE DISTRIBUTION IS NOT USED *"
+	@echo "*************************************"
+	@echo
+	@exit 1
+
+dist: distdir
 

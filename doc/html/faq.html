@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.2.4b<br />last updated on June 20 2013</h3></center>
+  <center><h3>version 1.2.5b<br />last updated on August 9<sup>th</sup> 2013</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -83,9 +83,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_ACLs"       >4.6 - How do I use Access Control Lists (ACLs)?</a></li>
     <li><a href="#4_ServiceFail">4.7 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
     <li><a href="#4_URLregex"   >4.8 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
-    <li><a href="#4_ThreadSafe" >4.9 - Is the CloudI API thread-safe?</a></li>
-    <li><a href="#4_Speed"      >4.10 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
-    <li><a href="#4_Erlang"     >4.11 - Why not just use Erlang directly?</a></li>
+    <li><a href="#4_NamePattern">4.9 - How do service name patterns work?</a></li>
+    <li><a href="#4_ThreadSafe" >4.10 - Is the CloudI API thread-safe?</a></li>
+    <li><a href="#4_Speed"      >4.11 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
+    <li><a href="#4_Erlang"     >4.12 - Why not just use Erlang directly?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -142,7 +143,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     independence.  CloudI is referred to as "A Cloud as an Interface" because
     a light-weight interface facilitates Cloud functionality.
     The interface supports multiple programming languages and is called the
-    CloudI API.  CloudI supports private cloud development and deployment,
+    <a href="api.html#Service" target="_blank">CloudI API</a>.
+    CloudI supports private cloud development and deployment,
     so only one Cloud is necessary for Cloud functionality with implicit
     security.  CloudI is also able to facilitate online services and offers
     extreme connection scalability.
@@ -257,7 +259,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <p class="paragraph">
     CloudI was architected to easily integrate with other services, software,
-    and frameworks.  The CloudI API provides a light-weight interface for
+    and frameworks.  The <a href="api.html#Service">CloudI API</a>
+    provides a light-weight interface for
     creating services in C++/C, Erlang, Java, Python, and Ruby.  By using
     CloudI, external software can become more scalable and fault-tolerant
     by utilizing CloudI's load balancing of CloudI requests.  CloudI
@@ -275,11 +278,13 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     are provided as integration tests or internal services.
   </p>
   <p class="paragraph">
-    The Service API provides dynamic configuration which is accessible from any
+    The <a href="api.html#CloudI">CloudI Service API</a>
+    provides dynamic configuration which is accessible from any
     allowed CloudI service (i.e., allowed based on the ACL entries).  The
-    Service API is accessible remotely by using Erlang terms or JSON-RPC
-    over HTTP.
-    <a href="https://github.com/okeuday/CloudI/tree/master/src/service_api#readme" target="_blank">Examples of using the Service API</a>
+    CloudI Service API is accessible remotely by using Erlang terms or JSON-RPC
+    over HTTP when using the cloudi_service_api_requests service with the
+    cloudi_service_http_cowboy service.
+    <a href="https://github.com/okeuday/CloudI/tree/master/src/service_api#readme" target="_blank">Examples of using the CloudI Service API</a>
     are provided as separate integration tests.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
@@ -365,8 +370,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     either a CloudI service interface to a database driver or a
     CloudI service interface to a messaging bus (i.e., to a persistent
     message queue).  In both cases, a request can be sent to the CloudI
-    service with the CloudI API (if the response is stored, the request
-    succeeded).
+    service with the <a href="api.html#Service">CloudI API</a>
+    (if a response is returned, the request succeeded).
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -648,7 +653,8 @@ sudo cloudi stop
     The Services configuration specifies both the services that are ran
     and the order in which the services should be started.  The "internal"
     Services are Erlang modules that use the cloudi_service behavior.  The
-    "external" Services are all non-Erlang languages that use the CloudI API.
+    "external" Services are all non-Erlang languages that use the
+    <a href="api.html#Service">CloudI API</a>.
     There is more information about service integration in
     <a href="#6_C">"6 - Services"</a> and
     <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
@@ -667,7 +673,8 @@ sudo cloudi stop
     redirected to the CloudI node automatically, when it is connected).
   </p>
   <p>
-    Below is a summary of the layout of the CloudI configuration file.  The
+    Below is a summary of the layout of the CloudI
+    <a href="api.html#CloudI">configuration</a> file.  The
     ()s have been used to specify the configuration parameters that are
     supplied.  You can find this file in
     <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">src/cloudi.conf.in</a>
@@ -766,16 +773,18 @@ sudo cloudi stop
       </li>
     </ul>
   </p>
-  <h4>CloudI API</h4>
+  <h4><a href="api.html#Service">CloudI API</a></h4>
   <p class="paragraph">
     The CloudI API provides a light-weight interface for creating services
     in C++/C, Erlang, Java, Python, and Ruby.  Services subscribe to receive
-    requests from other services using the CloudI API "subscribe" function
+    requests from other services using the CloudI API
+    "<a href="api.html#1_subscribe">subscribe</a>" function
     call.  The subscribe function call takes a suffix string that is expected
     to contain a path using a forward slash '/' (e.g., /cloudi/api/json_rpc/).
     However, the service configuration provides the prefix for the subscription
     function call, so "/cloudi/api/" is provided as a configuration prefix
-    (for the Service API service) but the subscribe function call only needs to
+    (for the <a href="api.html#CloudI">CloudI Service API</a> service)
+    but the subscribe function call only needs to
     be called with the string "json_rpc/" so that a subscription takes place
     for any services sending requests to "/cloudi/api/json_rpc/",
     which is called a "name".
@@ -822,9 +831,9 @@ sudo cloudi stop
   <p class="paragraph">
     The following functions exist in the CloudI API for sending a request:
     <ul>
-      <li>send_async</li>
-      <li>send_sync</li>
-      <li>mcast_async</li>
+      <li><a href="api.html#1_send_async">send_async</a></li>
+      <li><a href="api.html#1_send_sync">send_sync</a></li>
+      <li><a href="api.html#1_mcast_async">mcast_async</a></li>
     </ul>
     The "send" prefix functions send a binary message (uninterpreted raw data)
     to a single service name (which is then load balanced among the available
@@ -845,7 +854,9 @@ sudo cloudi stop
     (since returning no data is equivalent to a timeout).  The "async" suffix
     functions (i.e., asynchronous) only return the transaction id of the
     sent request(s) so that the response may be queried with the
-    "recv_async" function.  The "recv_async" function can also be used with a
+    "<a href="api.html#1_recv_async">recv_async</a>" function.
+    The "<a href="api.html#1_recv_async">recv_async</a>" function
+    can also be used with a
     null UUID to return the oldest response that was received.
     If no services are available for the name of
     the destination, the "async" suffix function will block until the
@@ -860,15 +871,19 @@ sudo cloudi stop
   <p class="paragraph">
     When a service receives a request, it is passed as a parameter to the
     callback function.  The callback function was specified as an argument
-    to the "subscribe" function.  However, in Erlang all requests use the
+    to the "<a href="api.html#1_subscribe">subscribe</a>" function.
+    However, in Erlang all requests use the
     same callback function which is cloudi_service_handle_request/11.
     Within the callback function any send or receive operations can take place.
     When the callback function wants to terminate it can either return a result
     or forward the request to another service name by using the "return"
-    function or the "forward" function, respectively.  If the service does not
-    want to return a response, the service can simply call "return" with
+    function or the "<a href="api.html#1_forward">forward</a>" function,
+    respectively.  If the service does not
+    want to return a response, the service can simply call
+    "<a href="api.html#1_return">return</a>" with
     an empty binary response value and it will be interpreted as if the
-    request timeout elapsed.  Using the "forward" function will decrease the
+    request timeout elapsed.  Using the
+    "<a href="api.html#1_forward">forward</a>" function will decrease the
     request timeout slightly (by 100ms) to prevent requests from causing
     persistent traffic.
   </p>
@@ -909,7 +924,8 @@ sudo cloudi stop
     and the ZeroMQ destinations.  To use ZeroMQ with CloudI, you need to make
     sure and enable ZeroMQ with the configuration script (with
     "./configure --with-zeromq").  The cloudi_service_zeromq configuration
-    (in the cloudi.conf file or through the Service API services_add/1 function)
+    (in the cloudi.conf file or through the CloudI Service API
+     <a href="api.html#2_services_add">services_add/2</a> function)
     allows key/value tuples with the following key atoms: outbound, inbound,
     publish, subscribe, push, and pull, which are the following ZeroMQ
     equivalents: ZMQ_REQ, ZMQ_REP, ZMQ_PUB, ZMQ_SUB, ZMQ_PUSH, and ZMQ_PULL,
@@ -962,7 +978,7 @@ sudo cloudi stop
   <a name="4_API_HTTP"></a>
   <h4>HTTP</h4>
   <p class="paragraph">
-    The Erlang service cloudi_service_http accepts HTTP traffic and
+    The Erlang service cloudi_service_http_cowboy accepts HTTP traffic and
     makes the HTTP requests CloudI requests where the HTTP path in the URL
     is used as the service name.
     By default, the HTTP method is specified as a suffix on the HTTP path
@@ -993,11 +1009,16 @@ sudo cloudi stop
   <h3>4.2 - How do I control CloudI dynamically?</h3>
   <p class="paragraph">
     CloudI's configuration can be changed dynamically while it is running
-    by using the Service API.  The Service API can be used by any CloudI
-    services.  However, typical usage of the Service API would use raw HTTP
-    requests or JSON-RPC over HTTP.  A complex example of using the Service
-    API through JSON-RPC over HTTP with python code can be found in <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/run.py" target="_blank">src/tests/service_api/run.py</a>.
-    Some simpler examples of using the Service API can be found at
+    by using the <a href="api.html#CloudI">CloudI Service API</a>.
+    The CloudI Service API can be used by any CloudI
+    services with service requests to the configured
+    cloudi_service_api_requests service or as Erlang function calls to the
+    cloudi_service_api module.  However, typical usage of the
+    CloudI Service API would use raw HTTP requests or JSON-RPC over HTTP, using
+    both a configured cloudi_service_http_cowboy service and a configured
+    cloudi_service_api_requests service.  A complex example of using the
+    CloudI Service API through JSON-RPC over HTTP with python code can be found in <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/run.py" target="_blank">src/tests/service_api/run.py</a>.
+    Some simpler examples of using the CloudI Service API can be found at
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/path.py" target="_blank">src/tests/service_api/path.py</a>,
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_off.py" target="_blank">src/tests/service_api/logging_off.py</a> and
     <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_on.py" target="_blank">src/tests/service_api/logging_on.py</a>.
@@ -1008,7 +1029,8 @@ sudo cloudi stop
   <h3>4.3 - How do I use Publisher/Subscriber messaging?</h3>
   <p class="paragraph">
     The simplest way to use publisher/subscriber functionality is to use the
-    CloudI API functions "mcast_async" for publishing and "subscribe" for
+    CloudI API functions "<a href="api.html#1_mcast_async">mcast_async</a>"
+    for publishing and "<a href="api.html#1_subscribe">subscribe</a>" for
     subscribing.  For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
@@ -1017,7 +1039,8 @@ sudo cloudi stop
   <h3>4.4 - How do I use Remote Procedure Calls (RPC)?</h3>
   <p class="paragraph">
     Remote procedure calls can easily be used within CloudI services with a
-    CloudI API "send_sync" function call.  The RPC procedure name is used
+    CloudI API "<a href="api.html#1_send_sync">send_sync</a>" function call.
+    The RPC procedure name is used
     as a service name suffix and the RPC parameters are stored in the
     request body.  The request body is simply uninterpreted
     binary data, so no format is imposed on the user of the CloudI API.
@@ -1032,8 +1055,8 @@ sudo cloudi stop
   <h3>4.5 - How do I create Web Services?</h3>
   <p class="paragraph">
     Web Services are simply CloudI services that accept incoming HTTP traffic
-    coming from the cloudi_service_http service.  The request body is either
-    the body of the uncompressed PUT or POST request, or it is the
+    coming from the cloudi_service_http_cowboy service.  The request body is
+    either the body of the uncompressed PUT or POST request, or it is the
     GET query string.
     For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
   </p>
@@ -1112,10 +1135,11 @@ sudo cloudi stop
 </pre>
   </p>
   <p class="paragraph">
-    The Service API supports dynamically starting services by supplying a
-    'services' list in the same format as the configuration file.  The Service
-    API also supports defining multiple 'acl' aliases that may be referenced
-    from dynamically configured services.
+    The <a href="api.html#2_services_add">CloudI Service API</a>
+    supports dynamically starting services by supplying a
+    'services' list in the same format as the configuration file.
+    The CloudI Service API also supports defining multiple 'acl' aliases that
+    may be referenced from dynamically configured services.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
@@ -1128,7 +1152,8 @@ sudo cloudi stop
     service implementation dictates that services will only cache data.
     All dynamic state a service uses should be accessed and/or stored by a
     database.  To communicate with a database, a service should use the
-    CloudI API to send requests to a configured CloudI database integration
+    <a href="api.html#Service">CloudI API</a>
+    to send requests to a configured CloudI database integration
     service.  The implementation of services that avoids state-keeping within
     the service's data structures is required to make sure a service is
     scalable, fault-tolerant and can recover from a failure without losing
@@ -1139,7 +1164,7 @@ sudo cloudi stop
     failed there are many possible courses of action:
     <ul>
       <li>Shutdown CloudI on the Failed Node</li>
-      <li>Stop the Service on the Failed Node by using the Service API</li>
+      <li>Stop the Service on the Failed Node by using the <a href="api.html#CloudI">CloudI Service API</a></li>
       <li>Disconnect the Failed Node from the Network to Diagnose in Isolation</li>
     </ul>
     Since services are replicated on other nodes the system is fault-tolerant
@@ -1155,11 +1180,13 @@ sudo cloudi stop
     used to match 1 or more character within a service name
     (i.e., a regex of '.+').  However, the sequence "**" is invalid and
     will cause the operation to fail.  Any number of wildcard characters can
-    be used with the subscribe and unsubscribe CloudI API functions
+    be used with the <a href="api.html#1_subscribe">subscribe</a>
+    and <a href="api.html#1_unsubscribe">unsubscribe</a> CloudI API functions
     to create service names that match many patterns.  While this approach
     may seem unusual, it helps keep service name lookups both efficient
     and parallel (i.e., within the Erlang code, without any need to call an
-    external regex integration library).
+    external regex integration library).  For more details refer to
+    <a href="4_NamePattern">"4.9 - How do service name patterns work?"</a>.
   </p>
   <p class="paragraph">
     Another possibility is just using explicit service names, even when the
@@ -1174,32 +1201,89 @@ sudo cloudi stop
     structure, so that will increase the node's memory consumption.
     So, depending on your needs and your memory limitations, you may want to
     use explicit service names or service names with wildcard characters.
+    Using the wildcard character is normally a more efficient choice due
+    to the memory consumption and its impact on caching but it puts the burden
+    of validation on the source code handling the service request.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_NamePattern"></a>
+  <h3>4.9 - How do service name patterns work?</h3>
+  <p class="paragraph">
+    Service name patterns are service names that contain any number of "*"
+    character (while "**" is invalid).  The "*" character (a wildcard character)
+    matches 1 or more character within a service name used within a service
+    request.  A CloudI API
+    <a href="api.html#1_subscribe">subscribe</a>
+    function call can take a service name
+    pattern which then matches an exact (non-pattern) service name provided
+    to a CloudI API <a href="api.html#1_send_async">send_async</a>,
+    <a href="api.html#1_send_sync">send_sync</a>, or
+    <a href="api.html#1_mcast_async">mcast_async</a> function.
+  </p>
+  <p class="paragraph">
+    When a service name pattern exists that overlaps an exact service name,
+    the most exact service name match is preferred, e.g.:
+    <ul>
+      <li>Service A subscribes to "/accounting/balances/*"</li>
+      <li>Service B subscribes to "/accounting/balances/fred"</li>
+    </ul>
+    Service B will receive a service request sent to
+    "/accounting/balances/fred" but Service A will receive all other service
+    requests that match the prefix "/accounting/balances/".
+  </p>
+  <p class="paragraph">
+    When several wildcard characters are used, the most exact service name
+    match is preferred, where left-most characters are given more
+    significance, e.g.:
+    <ul>
+      <li>Service A subscribes to "/permissions/*/accounts/*"</li>
+      <li>Service B subscribes to "/permissions/fred/accounts/*"</li>
+      <li>Service C subscribes to "/permissions/*/accounts/add"</li>
+      <li>Service D subscribes to "/permissions/fred/accounts/remove"</li>
+    </ul>
+    Service B will receive a service request sent to
+    "/permissions/fred/accounts/add", instead of Service C, because
+    the left-most characters provide a more exact match.  Service name
+    prefixes within the service configuration provide a scope for the service
+    name subscriptions and the prefix shows the significance of the left-most
+    characters being used.  The service name subscriptions can be checked by
+    using the <a href="api.html#2_services_search">services_search</a>
+    CloudI Service API function.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_ThreadSafe"></a>
-  <h3>4.9 - Is the CloudI API thread-safe?</h3>
+  <h3>4.10 - Is the CloudI API thread-safe?</h3>
   <p class="paragraph">
-    The CloudI API is not thread-safe (i.e., it is not reentrant)
+    The <a href="api.html#Service">CloudI API</a> is not thread-safe
+    (i.e., it is not reentrant)
     because it is meant to be used by individual threads that are configured
     within the CloudI service configuration (e.g., using the CloudI
-    configuration file or the CloudI Service API).  This approach avoids any
-    lock contention issues outside of the Erlang VM.
+    configuration file or the
+    <a href="api.html#2_services_add_config">CloudI Service API</a>).
+    This approach avoids any lock contention issues outside of the Erlang VM.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_Speed"></a>
-  <h3>4.10 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</h3>
+  <h3>4.11 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</h3>
   <p class="paragraph">
     To provide better computing node grouping, service names should uniquely
     describe the context of the node.  If the context is provided, then there
-    is a natural grouping for CloudI requests with any CloudI API usage that
-    uses the associated service name(s).
+    is a natural grouping for CloudI requests with any
+    <a href="api.html#Service">CloudI API</a>
+    usage that uses the associated service name(s).
+    <a href="#4_NamePattern">Service name patterns</a>
+    can provide extra flexibility for grouping service functionality.
+    The destination refresh method can minimize network latency by preferring
+    local services before using remote services (i.e., a "closest"
+    <a href="api.html#1_Intro_dest">destination refresh method</a>).
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_Erlang"></a>
-  <h3>4.11 - Why not just use Erlang directly?</h3>
+  <h3>4.12 - Why not just use Erlang directly?</h3>
   <p class="block">
     Erlang does naturally support integration in the following ways:
     <ul>
@@ -1225,22 +1309,27 @@ sudo cloudi stop
     integration.  However, CloudI provides many additional features for
     external services that are normally not present:
     <ul>
-      <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development</li>
-      <li>Protocol agnostic transactional communication with a small consistent API (i.e., the CloudI API)</li>
-      <li>Service name grouping with <a href="#4_URLregex">pattern matching</a></li>
-      <li>Every service request receives a unique UUID (Universally Unique IDentifier)</li>
-      <li>All external services are managed with fault-tolerance constraints, in the same way as Erlang/OTP supervisors</li>
+      <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development.</li>
+      <li>Protocol agnostic transactional communication with a small consistent API (i.e., the <a href="api.html#Service" target="_blank">CloudI API</a>).</li>
+      <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM; Erlang's Actor model is extended into the external languages to eliminate contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
+      <li>All external services are managed with fault-tolerance constraints, in the same way as Erlang/OTP supervisors.</li>
+      <li>A service can use service configuration options to easily adjust efficiency and memory consumption (e.g., <a href="api.html#2_services_add_config_opts" target="_blank">queue_limit, hibernate, request_pid_options, etc.</a>).</li>
+      <li>Erlang source code within a service can automatically handle more throughput than Erlang/OTP behaviors with <a href="api.html#2_services_add_config_opts" target="_blank">duo_mode</a> set within the service configuration options.</li>
+      <li>Every service request receives a unique UUID (Universally Unique IDentifier).</li>
+      <li>A service request timeout is decreased by any queuing or processing delays to provide better soft-realtime timeout enforcement than what Erlang/OTP provides.</li>
+      <li>Service name grouping with <a href="#4_URLregex">pattern matching</a>.</li>
       <li>Every service request can utilize 255 possible request priorities</li>
-      <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF))</li>
-      <li>stdout and stderr output is logged automatically to the single CloudI log</li>
-      <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology)</li>
-      <li>UNIX domain socket integration is provided for external CloudI services with the "local" protocol (the default) service configuration option despite the fact Core Erlang/OTP does not provide UNIX domain socket integration</a>
+      <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF)).</li>
+      <li>stdout and stderr output is logged automatically to the single CloudI log.</li>
+      <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology).</li>
+      <li>UNIX domain socket integration is provided for external CloudI services with the "local" protocol (the default) service configuration option despite the fact Core Erlang/OTP does not provide UNIX domain socket integration.</a>
       <li>A long-running CloudI service can be contrary to the Erlang VM scheduling and garbage collection, when under heavy load, if implemented without CloudI.  This is especially true when attempting to integrate with C or C++ which can cause the schedulers to lock-up if a NIF or port driver is used for longer operations (&ge; 1 ms), causing poor Erlang VM performance.</li>
       <li>Core Erlang/OTP source code does not handle node-splits (global name registration, global transactions and mnesia are common examples), but CloudI provides master-less fault-tolerance for a cluster of any number of CloudI nodes on an unreliable network.</li>
     </ul>
   </p>
   <p class="paragraph">
-    The CloudI API is consistent for all the supported programming languages,
+    The <a href="api.html#Service" target="_blank">CloudI API</a> is
+    consistent for all the supported programming languages,
     which makes it easier to move service functionality inbetween programming
     languages or inbetween services.  All external CloudI services communicate
     in the same way and all service requests are processed in the same way,
@@ -1366,7 +1455,8 @@ sudo cloudi stop
   <p class="paragraph">
     The stdout and stderr of any non-Erlang CloudI service is captured and
     sent separately to be logged by CloudI with the associated Operating System
-    (OS) process id.  The CloudI API makes sure that both the stdout and the
+    (OS) process id.  The <a href="api.html#Service">CloudI API</a>
+    makes sure that both the stdout and the
     stderr streams are unbuffered within an external CloudI service, so the
     output will be logged as quickly as possible within the CloudI log as
     error data (for stderr data) or as info data (for stdout data).
@@ -1466,7 +1556,8 @@ sudo cloudi stop
     (<a href="https://github.com/okeuday/CloudI/blob/master/src/api/c/cloudi.hpp" target="_blank">cloudi.hpp</a>) which are mutually exclusive.  The header
     files do not bring in external dependencies but both require the standard
     C++ library as a link-time dependency.  Some of the integration
-    tests that provide example usage of the C++/C CloudI API are:
+    tests that provide example usage of the C++/C
+    <a href="api.html#Service">CloudI API</a> are:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++ example with threads)</a>
           <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/" target="_blank">Hexadecimal PI Test</a></li>
@@ -1497,8 +1588,9 @@ sudo cloudi stop
     Many examples of Erlang CloudI services exist within the CloudI source code
     because the Erlang CloudI services provide integration with external
     systems like the supported databases (CouchDB, PostgreSQL, etc.),
-    the supported messaging (HTTP, ZeroMQ, etc.), and the Service API
-    functionality.  Some example usage of the Erlang CloudI API includes:
+    the supported messaging (HTTP, ZeroMQ, etc.), and the CloudI Service API
+    functionality.  Some example usage of the Erlang
+    <a href="api.html#Service">CloudI API</a> includes:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem Service for Caching Static File Data</a></li>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_work_manager.erl" target="_blank">cloudi_service_work_manager Service For Caching Database Updates</a></li>
@@ -1516,7 +1608,8 @@ sudo cloudi stop
   <p class="paragraph">
     The Java CloudI API uses synchronous IO on file descriptors for
     an efficient light-weight interface.  Some of the integration tests
-    that provide example usage of the Java CloudI API include:
+    that provide example usage of the Java
+    <a href="api.html#Service">CloudI API</a> include:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">src/tests/http</a>
           <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/" target="_blank">HTTP Test</a></li>
@@ -1532,7 +1625,8 @@ sudo cloudi stop
   <p class="paragraph">
     The Python CloudI API provides a simple interface for making Python
     CloudI services.  Some of the integration tests that provide example usage
-    of the Python CloudI API include:
+    of the Python
+    <a href="api.html#Service">CloudI API</a> include:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">src/tests/http</a>
           <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
@@ -1567,7 +1661,7 @@ sudo cloudi stop
   <p class="paragraph">
     The Ruby CloudI API provides a simple interface for making Ruby
     CloudI services.  Some of the integration tests that provide example
-    usage of the Ruby CloudI API include:
+    usage of the Ruby <a href="api.html#Service">CloudI API</a> include:
     <ul>
       <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">src/tests/http</a>
           <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
@@ -1599,11 +1693,12 @@ sudo cloudi stop
     in the path tests/http_req/public_html/ are browsable at <a href="http://127.0.0.1:6464/tests/http_req/" target="_blank">http://127.0.0.1:6464/tests/http_req/</a>.
   </p>
   <p class="paragraph">
-    The incoming HTTP traffic goes through the cloudi_service_http Erlang
+    The incoming HTTP traffic goes through the cloudi_service_http_cowboy Erlang
     CloudI service and simply uses the URL path to send a request to
     the subscribing CloudI service, where the prefix of the service name
     was set in the service configuration but the suffix of the service name
-    was declared programmatically by calling the CloudI API subscribe function.
+    was declared programmatically by calling the CloudI API
+    <a href="api.html#1_subscribe">subscribe</a> function.
   </p>
   <p class="paragraph">
     Quicker access to static files can be provided by nginx or other simple HTTP
@@ -1624,7 +1719,8 @@ sudo cloudi stop
   </p>
   <p class="paragraph">
     To prevent HTTP requests from going to internal services, Access Control
-    List (ACL) entries can be added that prevent the cloudi_service_http Erlang
+    List (ACL) entries can be added that prevent the cloudi_service_http_cowboy
+    Erlang
     CloudI service from sending to the internal services.  The ACL entries
     would be service name patterns that include the internal services in a
     list that is referenced directly (i.e., literally as a list of string) or

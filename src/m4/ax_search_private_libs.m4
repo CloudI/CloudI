@@ -3,7 +3,7 @@
 #
 # SYNOPSIS
 #
-#   AX_SEARCH_PRIVATE_LIBS(FUNCTION, SEARCH-LIBS,
+#   AX_SEARCH_PRIVATE_LIBS(FUNCTION, SOURCE, SEARCH-LIBS,
 #                          [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
 #                          [OTHER-LIBRARIES])
 #
@@ -13,7 +13,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog
+# Copyright (c) 2011-2013, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -53,19 +53,19 @@ AC_DEFUN([AX_SEARCH_PRIVATE_LIBS],
     AC_CACHE_CHECK([for library containing $1], [ac_cv_search_$1],
                    [ac_func_search_save_LIBS=$LIBS
                     ac_cv_search_$1=no
-                    AC_LINK_IFELSE([AC_LANG_CALL([], [$1])],
+                    AC_LINK_IFELSE([$2],
                                    [ac_cv_search_$1="none required"])
                     if test "$ac_cv_search_$1" = no; then
-                        for ac_lib in $2; do
-                            LIBS="-l$ac_lib $5 $ac_func_search_save_LIBS"
-                            AC_LINK_IFELSE([AC_LANG_CALL([], [$1])],
+                        for ac_lib in $3; do
+                            LIBS="-l$ac_lib $6 $ac_func_search_save_LIBS"
+                            AC_LINK_IFELSE([$2],
                                            [ac_cv_search_$1="-l$ac_lib"
                                             break])
                         done
                     fi
                     LIBS=$ac_func_search_save_LIBS])
     AS_IF([test "$ac_cv_search_$1" != no],
-          [test "$ac_cv_search_$1" = "none required" || $3],
-          [$4])
+          [test "$ac_cv_search_$1" = "none required" || $4],
+          [$5])
 ])
 

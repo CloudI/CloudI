@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -65,40 +65,7 @@
 
 -record(state,
     {
-        functions = cloudi_x_trie:new([
-            {"acl_add",
-             fun cloudi_service_api:acl_add/2},
-            {"acl_remove",
-             fun cloudi_service_api:acl_remove/2},
-            {"services_add",
-             fun cloudi_service_api:services_add/2},
-            {"services_remove",
-             fun cloudi_service_api:services_remove/2},
-            {"services_restart",
-             fun cloudi_service_api:services_restart/2},
-            {"services",
-             fun cloudi_service_api:services/1},
-            {"nodes_add",
-             fun cloudi_service_api:nodes_add/2},
-            {"nodes_remove",
-             fun cloudi_service_api:nodes_remove/2},
-            {"nodes_alive",
-             fun cloudi_service_api:alive/1},
-            {"nodes_dead",
-             fun cloudi_service_api:dead/1},
-            {"nodes",
-             fun cloudi_service_api:nodes/1},
-            {"loglevel_set",
-             fun cloudi_service_api:loglevel_set/2},
-            {"log_redirect",
-             fun cloudi_service_api:log_redirect/2},
-            {"code_path_add",
-             fun cloudi_service_api:code_path_add/2},
-            {"code_path_remove",
-             fun cloudi_service_api:code_path_remove/2},
-            {"code_path",
-             fun cloudi_service_api:code_path/1}
-        ]),
+        functions, % method -> function lookup
         formats = cloudi_x_trie:new([
             {"erlang",
              fun format_erlang/4},
@@ -117,42 +84,25 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, Dispatcher) ->
-    % names are [prefix]format/[method] (i.e., request format)
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/acl_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_restart"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services_restart/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services"),
-    cloudi_service:subscribe(Dispatcher, "erlang/services/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_alive"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_alive/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_dead"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes_dead/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes"),
-    cloudi_service:subscribe(Dispatcher, "erlang/nodes/get"),
-    cloudi_service:subscribe(Dispatcher, "erlang/loglevel_set"),
-    cloudi_service:subscribe(Dispatcher, "erlang/loglevel_set/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/log_redirect"),
-    cloudi_service:subscribe(Dispatcher, "erlang/log_redirect/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_add"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_add/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_remove"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path_remove/post"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path"),
-    cloudi_service:subscribe(Dispatcher, "erlang/code_path/get"),
+    CloudIServiceAPI = lists:foldl(fun({Method, Arity}, Functions) ->
+        F = fun cloudi_service_api:Method/Arity,
+        MethodString = erlang:atom_to_list(Method),
+        FormatMethod = "erlang/" ++ MethodString,
+        % service names are [prefix]format/[method] (i.e., request format)
+        cloudi_service:subscribe(Dispatcher, FormatMethod),
+        if
+            Arity == 1 ->
+                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/get");
+            Arity == 2 ->
+                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/post")
+        end,
+        cloudi_x_trie:store(MethodString, F, Functions)
+    end, cloudi_x_trie:new(),
+    cloudi_x_reltool_util:module_exports(cloudi_service_api)),
     cloudi_service:subscribe(Dispatcher, "json_rpc/"),
     cloudi_service:subscribe(Dispatcher, "json_rpc//post"),
-    {ok, #state{suffix_index = erlang:length(Prefix) + 1}}.
+    {ok, #state{functions = CloudIServiceAPI,
+                suffix_index = erlang:length(Prefix) + 1}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
@@ -192,15 +142,19 @@ format_erlang_f(F, 2, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(cloudi_string:binary_to_term(Input), Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     Result;
+                {ok, Result} ->
+                    cloudi_string:term_to_binary(Result);
                 Result ->
                     cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
             case F(cloudi_string:list_to_term(Input), Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     erlang:binary_to_list(Result);
+                {ok, Result} ->
+                    cloudi_string:term_to_list(Result);
                 Result ->
                     cloudi_string:term_to_list(Result)
             end
@@ -210,15 +164,19 @@ format_erlang_f(F, 1, Input, Timeout) ->
     if
         is_binary(Input) ->
             case F(Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     Result;
+                {ok, Result} ->
+                    cloudi_string:term_to_binary(Result);
                 Result ->
                     cloudi_string:term_to_binary(Result)
             end;
         is_list(Input) ->
             case F(Timeout) of
-                Result when is_binary(Result) ->
+                {ok, Result} when is_binary(Result) ->
                     erlang:binary_to_list(Result);
+                {ok, Result} ->
+                    cloudi_string:term_to_list(Result);
                 Result ->
                     cloudi_string:term_to_list(Result)
             end
@@ -237,9 +195,13 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
         F when length(Params) == 1, is_function(F, 2) ->
             F(cloudi_string:binary_to_term(erlang:hd(Params)), Timeout)
          end) of
-        Result when is_binary(Result) ->
+        {ok, Result} when is_binary(Result) ->
             cloudi_json_rpc:response_to_json(
                 Result, Id
+            );
+        {ok, Result} ->
+            cloudi_json_rpc:response_to_json(
+                cloudi_string:term_to_binary(Result), Id
             );
         Result ->
             cloudi_json_rpc:response_to_json(

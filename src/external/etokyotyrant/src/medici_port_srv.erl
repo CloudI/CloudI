@@ -64,11 +64,11 @@ handle_call({optimize, TuningOpts}, _From, State) ->
     % update tuning options in application environment
 
     % update tuning options in State
-    case lists:keysearch(tuning_opts, 1, State#state.options) of
+    NewState = case lists:keysearch(tuning_opts, 1, State#state.options) of
     false ->
-        NewState = State#state{options=State#state.options ++ {tuning_opts, TuningOpts}};
+        State#state{options=State#state.options ++ {tuning_opts, TuningOpts}};
     _ ->
-        NewState = State#state{options=lists:keyreplace(tuning_opts, 1, 
+        State#state{options=lists:keyreplace(tuning_opts, 1, 
                                 State#state.options, 
                                 {tuning_opts, TuningOpts})
                   }
@@ -119,28 +119,28 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 start_server(StartOpts, State) ->
     TyrantBin = proplists:get_value(tyrant_bin, StartOpts, ?TYRANT_BIN),
-    case proplists:get_value(data_file, StartOpts, ?DATA_FILE) of
+    DataFileBase = case proplists:get_value(data_file, StartOpts, ?DATA_FILE) of
     "*" ->
-        DataFileBase = "\"*\"";
+        "\"*\"";
     "+" ->
-        DataFileBase = "\"*\"";
+        "\"*\"";
     OtherFile ->
-        DataFileBase = OtherFile
+        OtherFile
     end,
     TuningOpts = proplists:get_value(tuning_opts, StartOpts, ?TUNING_OPTS),
-    case TuningOpts of
+    DataFile = case TuningOpts of
     [] ->
-        DataFile = DataFileBase;
+        DataFileBase;
     _HasTuningOpts ->
-        DataFile = DataFileBase ++ "#" ++ TuningOpts
+        DataFileBase ++ "#" ++ TuningOpts
     end,
     PortOpts = proplists:get_value(port_opts, StartOpts, ?PORT_OPTS),
     TyrantOpts = proplists:get_value(tyrant_opts, StartOpts, ?TYRANT_OPTS),
-    case TyrantOpts of
+    TyrantCommand = case TyrantOpts of
     [] ->
-        TyrantCommand = TyrantBin ++ " " ++ DataFile;
+        TyrantBin ++ " " ++ DataFile;
     _HasTyrantOpts ->
-        TyrantCommand = TyrantBin ++ " " ++ TyrantOpts ++ " " ++ DataFile
+        TyrantBin ++ " " ++ TyrantOpts ++ " " ++ DataFile
     end,
     Port = open_port({spawn, TyrantCommand}, PortOpts),
     {ok, #state{port=Port,

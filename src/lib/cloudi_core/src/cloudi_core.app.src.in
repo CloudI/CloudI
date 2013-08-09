@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 
 {application, cloudi_core, 
-  [{description, "Cloudi Core Application"},
+  [{description, "CloudI Core Application"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi,
@@ -25,6 +25,7 @@
         cloudi_services_external_sup,
         cloudi_services_internal,
         cloudi_services_internal_init,
+        cloudi_services_internal_reload,
         cloudi_services_internal_sup,
         cloudi_services_monitor,
         cloudi_socket,
@@ -37,6 +38,7 @@
         cloudi_nodes,
         cloudi_os_spawn,
         cloudi_services_external_sup,
+        cloudi_services_internal_reload,
         cloudi_services_internal_sup,
         cloudi_services_monitor
         ]},
@@ -62,6 +64,5 @@
         stdlib,
         kernel
         ]},
-   {mod, {cloudi_core_app,[]}},
-   {start_phases, []}]}.
+   {mod, {cloudi_core_app,[]}}]}.
 

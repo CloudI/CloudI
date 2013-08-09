@@ -63,8 +63,14 @@
 %%%------------------------------------------------------------------------
 
 init() ->
-    Path = [_ | _] = code:priv_dir(cloudi_core),
-    erlang:load_nif(filename:join([Path, "libcloudi_socket_drv"]), []).
+    case cloudi_core_app:test() of
+        true ->
+            ok;
+        false ->
+            Path = [_ | _] = code:priv_dir(cloudi_core),
+            erlang:load_nif(filename:join([Path,
+                                           "libcloudi_socket_drv"]), [])
+    end.
 
 -spec local(_SocketPath :: string()) ->
     ok | {error, atom()}.

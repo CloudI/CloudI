@@ -16,7 +16,7 @@
    (lib/kernel-x.x.x/src/pg2.erl).
 <p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.1.1 Feb 6 2013 20:45:31
+<p><b>Version:</b> 1.2.5 Jul 11 2013 19:11:32
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -37,44 +37,67 @@
 
 
 <h3 class="typedecl"><a name="type-get_members_ret">get_members_ret()</a></h3>
-<p><tt>get_members_ret() = [pid()] | {error, {no_such_group, <a href="#type-name">name()</a>}}</tt></p>
+<p><tt>get_members_ret() = {ok, <a href="#type-name">name()</a>, [pid()]} | {error, {no_such_group, <a href="#type-name">name()</a>}}</tt></p>
 
 
 <h3 class="typedecl"><a name="type-name">name()</a></h3>
-<p><tt>name() = string()</tt></p>
-
+<p><tt>name() = any()</tt></p>
+<p> GROUP_STORAGE macro controls this</p>
 
 <h3 class="typedecl"><a name="type-scope">scope()</a></h3>
 <p><tt>scope() = atom()</tt></p>
 
 
+<h3 class="typedecl"><a name="type-via_name">via_name()</a></h3>
+<p><tt>via_name() = {global, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, random} | {global, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, oldest} | {global, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, pos_integer()} | {local, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, random} | {local, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, oldest} | {local, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>, pos_integer()} | {global, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>} | {local, <a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>} | {global, <a href="#type-name">name()</a>, pos_integer()} | {local, <a href="#type-name">name()</a>, pos_integer()} | {global, <a href="#type-name">name()</a>} | {local, <a href="#type-name">name()</a>} | {<a href="#type-scope">scope()</a>, <a href="#type-name">name()</a>} | {<a href="#type-name">name()</a>, pos_integer()} | <a href="#type-name">name()</a></tt></p>
+<p> for OTP behaviors</p>
+
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#create-1">create/1</a></td><td>
+  <h4><a name="Create_a_group_explicitly_no-op.">Create a group explicitly no-op.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#create-1">create/1</a></td><td>
   <h4><a name="Create_a_group_explicitly.">Create a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#create-2">create/2</a></td><td>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#create-2">create/2</a></td><td>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#create-3">create/3</a></td><td>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#create-3">create/3</a></td><td>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#delete-1">delete/1</a></td><td>
+  <h4><a name="Delete_a_group_explicitly_no-op.">Delete a group explicitly no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#delete-1">delete/1</a></td><td>
   <h4><a name="Delete_a_group_explicitly.">Delete a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#delete-2">delete/2</a></td><td>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#delete-2">delete/2</a></td><td>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#delete-3">delete/3</a></td><td>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#delete-3">delete/3</a></td><td>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-1">get_closest_pid/1</a></td><td>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-2">get_closest_pid/2</a></td><td>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_closest_pid-3">get_closest_pid/3</a></td><td>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_closest_pid-4">get_closest_pid/4</a></td><td>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_furthest_pid-1">get_furthest_pid/1</a></td><td>
@@ -85,16 +108,51 @@
 <tr><td valign="top"><a href="#get_furthest_pid-3">get_furthest_pid/3</a></td><td>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_furthest_pid-4">get_furthest_pid/4</a></td><td>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-1">get_local_members/1</a></td><td>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-2">get_local_members/2</a></td><td>
-  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope.">Get only the local members of a specific group within a specific scope.</a></h4>.</td></tr>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the local members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_members-3">get_local_members/3</a></td><td>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_members-4">get_local_members/4</a></td><td>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-1">get_local_newest_pid/1</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-2">get_local_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-3">get_local_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_newest_pid-4">get_local_newest_pid/4</a></td><td>
+  <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-1">get_local_oldest_pid/1</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-2">get_local_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-3">get_local_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_oldest_pid-4">get_local_oldest_pid/4</a></td><td>
+  <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_local_pid-1">get_local_pid/1</a></td><td>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_local_pid-2">get_local_pid/2</a></td><td>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_local_pid-3">get_local_pid/3</a></td><td>
+  <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_local_pid-4">get_local_pid/4</a></td><td>
   <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_members-1">get_members/1</a></td><td>
@@ -105,6 +163,31 @@
 <tr><td valign="top"><a href="#get_members-3">get_members/3</a></td><td>
   <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_members-4">get_members/4</a></td><td>
+  <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-1">get_newest_pid/1</a></td><td>
+  <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-2">get_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-3">get_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_newest_pid-4">get_newest_pid/4</a></td><td>
+  <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-1">get_oldest_pid/1</a></td><td>
+  <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-2">get_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-3">get_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_oldest_pid-4">get_oldest_pid/4</a></td><td>
+  <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-1">get_random_pid/1</a></td><td>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-2">get_random_pid/2</a></td><td>
@@ -112,6 +195,42 @@
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_random_pid-3">get_random_pid/3</a></td><td>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_random_pid-4">get_random_pid/4</a></td><td>
+  <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-1">get_remote_members/1</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-2">get_remote_members/2</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the remote members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-3">get_remote_members/3</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_members-4">get_remote_members/4</a></td><td>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-1">get_remote_newest_pid/1</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-2">get_remote_newest_pid/2</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-3">get_remote_newest_pid/3</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_newest_pid-4">get_remote_newest_pid/4</a></td><td>
+  <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-1">get_remote_oldest_pid/1</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_oldest_pid-4">get_remote_oldest_pid/4</a></td><td>
+  <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_remote_pid-1">get_remote_pid/1</a></td><td>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>.</td></tr>
@@ -121,55 +240,98 @@
 <tr><td valign="top"><a href="#get_remote_pid-3">get_remote_pid/3</a></td><td>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#get_remote_pid-4">get_remote_pid/4</a></td><td>
+  <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#join-1">join/1</a></td><td>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</td></tr>
+<tr><td valign="top"><a href="#join-1">join/1</a></td><td>
+  <h4><a name="Join_a_specific_group_with_self().">Join a specific group with self().</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#join-2">join/2</a></td><td>
   <h4><a name="Join_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#join-2">join/2</a></td><td>
   <h4><a name="Join_a_specific_group.">Join a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#join-3">join/3</a></td><td>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#join-3">join/3</a></td><td>
   <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#join-4">join/4</a></td><td>
+  <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
+<tr><td valign="top"><a href="#join-4">join/4</a></td><td>
+  <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#leave-1">leave/1</a></td><td>
   <h4><a name="Leave_a_specific_group_with_a_local_pid.">Leave a specific group with a local pid.</a></h4>
   The group is automatically removed if it becomes empty.</td></tr>
+<tr><td valign="top"><a href="#leave-1">leave/1</a></td><td>
+  <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#leave-2">leave/2</a></td><td>
   <h4><a name="Leave_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#leave-2">leave/2</a></td><td>
   <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
 <tr><td valign="top"><a href="#leave-3">leave/3</a></td><td>
   <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.</td></tr>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
 <tr><td valign="top"><a href="#leave-3">leave/3</a></td><td>
   <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</td></tr>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#leave-4">leave/4</a></td><td>
+  <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.</td></tr>
+<tr><td valign="top"><a href="#leave-4">leave/4</a></td><td>
+  <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</td></tr>
+<tr><td valign="top"><a href="#register_name-2">register_name/2</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
+<tr><td valign="top"><a href="#send-2">send/2</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
 <tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>
   <h4><a name="Start_process_groups_storage_for_the_default_scope.">Start process groups storage for the default scope.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>
   <h4><a name="Start_process_groups_storage_for_a_specific_scope.">Start process groups storage for a specific scope.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#unregister_name-1">unregister_name/1</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
+<tr><td valign="top"><a href="#whereis_name-1">whereis_name/1</a></td><td>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
 <tr><td valign="top"><a href="#which_groups-0">which_groups/0</a></td><td>
   <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#which_groups-1">which_groups/1</a></td><td>
+  <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#which_groups-2">which_groups/2</a></td><td>
   <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>.</td></tr>
 </table>
 
@@ -177,78 +339,146 @@
 
 <h3 class="function"><a name="create-1">create/1</a></h3>
 <div class="spec">
+<p><tt>create(X1::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_group_explicitly_no-op.">Create a group explicitly no-op.</a></h4>
+</p>
+
+<h3 class="function"><a name="create-1">create/1</a></h3>
+<div class="spec">
 <p><tt>create(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Create_a_group_explicitly.">Create a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="create-2">create/2</a></h3>
+<div class="spec">
+<p><tt>create(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>
+</p>
 
 <h3 class="function"><a name="create-2">create/2</a></h3>
 <div class="spec">
 <p><tt>create(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="create-3">create/3</a></h3>
+<div class="spec">
+<p><tt>create(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>, X3::pos_integer() | infinity) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>
+</p>
+
+<h3 class="function"><a name="create-3">create/3</a></h3>
+<div class="spec">
+<p><tt>create(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_group_explicitly_in_a_specific_scope.">Create a group explicitly in a specific scope.</a></h4>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="delete-1">delete/1</a></h3>
+<div class="spec">
+<p><tt>delete(X1::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_group_explicitly_no-op.">Delete a group explicitly no-op.</a></h4>
+</p>
 
 <h3 class="function"><a name="delete-1">delete/1</a></h3>
 <div class="spec">
 <p><tt>delete(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly.">Delete a group explicitly.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="delete-2">delete/2</a></h3>
+<div class="spec">
+<p><tt>delete(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>
+</p>
 
 <h3 class="function"><a name="delete-2">delete/2</a></h3>
 <div class="spec">
 <p><tt>delete(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="delete-3">delete/3</a></h3>
+<div class="spec">
+<p><tt>delete(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>, X3::pos_integer() | infinity) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>
+</p>
+
+<h3 class="function"><a name="delete-3">delete/3</a></h3>
+<div class="spec">
+<p><tt>delete(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_group_explicitly_in_a_specific_scope.">Delete a group explicitly in a specific scope.</a></h4>
+  The calling pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="get_closest_pid-1">get_closest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_closest_pid-4">get_closest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-1">get_furthest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-3">get_furthest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_furthest_pid-4">get_furthest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -262,28 +492,105 @@
 
 <h3 class="function"><a name="get_local_members-2">get_local_members/2</a></h3>
 <div class="spec">
-<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
-  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope.">Get only the local members of a specific group within a specific scope.</a></h4>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the local members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_members-3">get_local_members/3</a></h3>
+<div class="spec">
+<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_members-4">get_local_members/4</a></h3>
+<div class="spec">
+<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_newest_pid-1">get_local_newest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>
 </p>
+
+<h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_newest_pid-3">get_local_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_newest_pid-4">get_local_newest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-1">get_local_oldest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-2">get_local_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest local group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-3">get_local_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_oldest_pid-4">get_local_oldest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-1">get_local_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-3">get_local_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_local_pid-4">get_local_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -297,145 +604,372 @@
 
 <h3 class="function"><a name="get_members-2">get_members/2</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_members-3">get_members/3</a></h3>
 <div class="spec">
-<p><tt>get_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+<p><tt>get_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
+<h3 class="function"><a name="get_members-4">get_members/4</a></h3>
+<div class="spec">
+<p><tt>get_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_newest_pid-1">get_newest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_newest_pid-3">get_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_newest_pid-4">get_newest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_oldest_pid-1">get_oldest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_oldest_pid-2">get_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_oldest_pid-3">get_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_oldest_pid-4">get_oldest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
 <h3 class="function"><a name="get_random_pid-1">get_random_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-3">get_random_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
+<h3 class="function"><a name="get_random_pid-4">get_random_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_members-1">get_remote_members/1</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_members-2">get_remote_members/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the remote members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_members-3">get_remote_members/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_members-4">get_remote_members/4</a></h3>
+<div class="spec">
+<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="#type-get_members_ret">get_members_ret()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-1">get_remote_newest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-3">get_remote_newest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_newest_pid-4">get_remote_newest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-1">get_remote_oldest_pid/1</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest remote group member while excluding a specific pid or within a specific scope.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_oldest_pid-4">get_remote_oldest_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
 <h3 class="function"><a name="get_remote_pid-1">get_remote_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a>) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-3">get_remote_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid()) -&gt; pid() | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
+  Usually the self() pid is excluded with this function call.</p>
+
+<h3 class="function"><a name="get_remote_pid-4">get_remote_pid/4</a></h3>
+<div class="spec">
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="#type-gcp_error_reason">gcp_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="join-1">join/1</a></h3>
 <div class="spec">
-<p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+<p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</p>
 
+<h3 class="function"><a name="join-1">join/1</a></h3>
+<div class="spec">
+<p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Join_a_specific_group_with_self().">Join a specific group with self().</a></h4>
+</p>
+
 <h3 class="function"><a name="join-2">join/2</a></h3>
 <div class="spec">
-<p><tt>join(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+<p><tt>join(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  A group is automatically created
-  if it does not already exist.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  A group is automatically
+  created if it does not already exist.</p>
 
 <h3 class="function"><a name="join-2">join/2</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group.">Join a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="join-3">join/3</a></h3>
 <div class="spec">
-<p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
+<p><tt>join(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  A group is automatically created
-  if it does not already exist.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  A group is automatically
+  created if it does not already exist.</p>
 
 <h3 class="function"><a name="join-3">join/3</a></h3>
 <div class="spec">
-<p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
+<p><tt>join(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="join-4">join/4</a></h3>
+<div class="spec">
+<p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  A group is automatically
+  created if it does not already exist.</p>
+
+<h3 class="function"><a name="join-4">join/4</a></h3>
+<div class="spec">
+<p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Join_a_specific_group_in_a_specific_scope.">Join a specific group in a specific scope.</a></h4>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="leave-1">leave/1</a></h3>
+<div class="spec">
+<p><tt>leave(GroupName::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Leave_a_specific_group_with_a_local_pid.">Leave a specific group with a local pid.</a></h4>
+  The group is automatically removed if it becomes empty.</p>
 
 <h3 class="function"><a name="leave-1">leave/1</a></h3>
 <div class="spec">
 <p><tt>leave(GroupName::<a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
 </div><p>
-  <h4><a name="Leave_a_specific_group_with_a_local_pid.">Leave a specific group with a local pid.</a></h4>
-  The group is automatically removed if it becomes empty.</p>
+  <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
+</p>
 
 <h3 class="function"><a name="leave-2">leave/2</a></h3>
 <div class="spec">
-<p><tt>leave(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+<p><tt>leave(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  The group will automatically be
-  removed if it becomes empty.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  The group will automatically
+  be removed if it becomes empty.</p>
 
 <h3 class="function"><a name="leave-2">leave/2</a></h3>
 <div class="spec">
 <p><tt>leave(GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group.">Leave a specific group.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
 
 <h3 class="function"><a name="leave-3">leave/3</a></h3>
 <div class="spec">
-<p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
+<p><tt>leave(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
-  The local pid must have a one-to-one relationship with self() to justify
-  not using a distributed transaction.  The group will automatically be
-  removed if it becomes empty.</p>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  The group will automatically
+  be removed if it becomes empty.</p>
 
 <h3 class="function"><a name="leave-3">leave/3</a></h3>
 <div class="spec">
-<p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid()) -&gt; ok | error</tt><br></p>
+<p><tt>leave(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
 </div><p>
   <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
-  The pid does not need to be a local pid with a one-to-one relationship
-  with self() (this function uses a distributed transaction to enforce
-  consistency).</p>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="leave-4">leave/4</a></h3>
+<div class="spec">
+<p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Leave_a_specific_group_within_a_specific_scope_with_a_local_pid.">Leave a specific group within a specific scope with a local pid.</a></h4>
+  The pid must be a local pid to justify not using a distributed transaction
+  since the cpg gen_server process acts like mutex lock, enforcing consistent
+  local state for all local pid process groups.  The group will automatically
+  be removed if it becomes empty.</p>
+
+<h3 class="function"><a name="leave-4">leave/4</a></h3>
+<div class="spec">
+<p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Leave_a_specific_group_in_a_specific_scope.">Leave a specific group in a specific scope.</a></h4>
+  The pid does not need to be a local pid because the function uses a
+  distributed transaction to enforce global consistency.</p>
+
+<h3 class="function"><a name="register_name-2">register_name/2</a></h3>
+<div class="spec">
+<p><tt>register_name(GroupName::<a href="#type-via_name">via_name()</a>, Pid::pid()) -&gt; yes | no</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
+
+<h3 class="function"><a name="send-2">send/2</a></h3>
+<div class="spec">
+<p><tt>send(ViaName::<a href="#type-via_name">via_name()</a>, Msg::any()) -&gt; pid()</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
 
 <h3 class="function"><a name="start_link-0">start_link/0</a></h3>
 <div class="spec">
@@ -451,6 +985,22 @@
   <h4><a name="Start_process_groups_storage_for_a_specific_scope.">Start process groups storage for a specific scope.</a></h4>
 </p>
 
+<h3 class="function"><a name="unregister_name-1">unregister_name/1</a></h3>
+<div class="spec">
+<p><tt>unregister_name(GroupName::<a href="#type-via_name">via_name()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
+
+<h3 class="function"><a name="whereis_name-1">whereis_name/1</a></h3>
+<div class="spec">
+<p><tt>whereis_name(GroupName::<a href="#type-via_name">via_name()</a>) -&gt; pid() | undefined</tt><br></p>
+</div><p>
+  <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
+  Use within an OTP behavior by specifying {via, cpg, via_name()} for the
+  process registration (instead of {local, atom()} or {global, atom()})</p>
+
 <h3 class="function"><a name="which_groups-0">which_groups/0</a></h3>
 <div class="spec">
 <p><tt>which_groups() -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
@@ -460,13 +1010,20 @@
 
 <h3 class="function"><a name="which_groups-1">which_groups/1</a></h3>
 <div class="spec">
-<p><tt>which_groups(Scope::<a href="#type-scope">scope()</a>) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+<p><tt>which_groups(Scope::<a href="#type-scope">scope()</a> | pos_integer() | infinity) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+</div><p>
+  <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>
+</p>
+
+<h3 class="function"><a name="which_groups-2">which_groups/2</a></h3>
+<div class="spec">
+<p><tt>which_groups(Scope::<a href="#type-scope">scope()</a>, Timeout::pos_integer() | infinity) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>
 </p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Feb 6 2013, 20:45:31.</i></p>
+<p><i>Generated by EDoc, Jul 11 2013, 19:11:32.</i></p>
 </body>
 </html>

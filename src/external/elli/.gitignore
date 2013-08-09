@@ -1,0 +1,7 @@
+deps/**
+ebin/**
+*.beam
+.eunit
+*~
+#*
+.dialyzer.plt
