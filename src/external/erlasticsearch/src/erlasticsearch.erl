@@ -76,6 +76,7 @@
 -record(state, {
         client_name                         :: client_name(),
         binary_response = false             :: boolean(),
+        connection_options = []             :: params(),
         connection                          :: connection()}).
 
 %% ------------------------------------------------------------------
@@ -85,7 +86,7 @@
 %% @doc Start the application and all its dependencies.
 -spec start() -> ok.
 start() ->
-    start_deps(?APP).
+    reltool_util:application_start(?APP).
 
 %% @doc To start up a 'simple' client
 -spec start(params()) -> {ok, pid()}.
@@ -95,7 +96,7 @@ start(Options) when is_list(Options) ->
 %% @doc Stop the application and all its dependencies.
 -spec stop() -> ok.
 stop() ->
-    stop_deps(?APP).
+    reltool_util:application_stop(?APP).
 
 %% @doc Stop this gen_server
 -spec stop(server_ref()) -> ok | error().
@@ -505,6 +506,7 @@ init([ClientName, Options0]) ->
     Connection = connection(ConnectionOptions),
     {ok, #state{client_name = ClientName, 
                 binary_response = DecodeResponse,
+                connection_options = ConnectionOptions,
                 connection = Connection}}.
 
 handle_call({stop}, _From, State) ->
@@ -677,9 +679,38 @@ set_env(Key, Value) ->
 
 %% @doc Process the request over thrift
 -spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
-process_request(Connection, Request, #state{binary_response = BinaryResponse}) ->
-    {Connection1, RestResponse} = thrift_client:call(Connection, 'execute', [Request]),
+process_request(undefined, Request, State = #state{connection_options = ConnectionOptions,
+                                                   binary_response = BinaryResponse}) ->
+    Connection = connection(ConnectionOptions),
+    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
+    {Connection1, process_response(BinaryResponse, RestResponse)};
+process_request(Connection, Request, State = #state{binary_response = BinaryResponse}) ->
+    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
     {Connection1, process_response(BinaryResponse, RestResponse)}.
+
+-spec do_request(connection(), request(), #state{}) -> {connection(), response()}.
+do_request(Connection, {Function, Args}, _State) ->
+    try thrift_client:call(Connection, Function, Args) of
+        {Connection1, Response = {ok, _}} ->
+            {Connection1, Response};
+        {Connection1, Response = {error, _}} ->
+            {Connection1, Response}
+    catch
+        Exception:Reason ->
+            case {Exception, Reason} of
+                {throw, {Connection1, Response = {exception, _}}} ->
+                    {Connection1, Response};
+                % Thrift client closes the connection
+                {error, {case_clause,{error, closed}}} ->
+                    {undefined, {error, badarg}};
+                {error, {case_clause,{error, econnrefused}}} ->
+                    {undefined, {error, econnrefused}};
+                {error, badarg} ->
+                    {Connection, {error, badarg}}
+
+            end
+    end.
+
 
 -spec process_response(boolean(), response()) -> response().
 process_response(_, {error, _} = Response) ->
@@ -897,38 +928,6 @@ join_list_sep([Head | Tail], Sep, Acc) ->
     join_list_sep(Tail, Sep, [Head, Sep | Acc]);
 join_list_sep([], _Sep, Acc) ->
     lists:reverse(Acc).
-
--spec start_deps(App :: atom()) -> ok.
-start_deps(App) ->
-    application:load(App),
-    {ok, Deps} = application:get_key(App, applications),
-    lists:foreach(fun start_deps/1, Deps),
-    start_app(App).
-
--spec start_app(App :: atom()) -> ok.
-start_app(App) ->
-    case application:start(App) of
-        {error, {already_started, _}} -> ok;
-        ok                            -> ok
-    end.
-
--spec stop_deps(App :: atom()) -> ok.
-stop_deps(App) ->
-    stop_app(App),
-    {ok, Deps} = application:get_key(App, applications),
-    lists:foreach(fun stop_deps/1, lists:reverse(Deps)).
-
--spec stop_app(App :: atom()) -> ok.
-stop_app(kernel) ->
-    ok;
-stop_app(stdlib) ->
-    ok;
-stop_app(App) ->
-    case application:stop(App) of
-        {error, {not_started, _}} -> ok;
-        ok                        -> ok
-    end.
-
 
 %% @doc Make a complete URI based on the tokens and props
 make_uri(BaseList, PropList) ->
