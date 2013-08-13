@@ -109,6 +109,7 @@ handle(Req0,
                      timeout_async = TimeoutAsync,
                      output_type = OutputType,
                      default_content_type = DefaultContentType,
+                     status_code_timeout = StatusCodeTimeout,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
                      use_method_suffix = UseMethodSuffix,
@@ -198,7 +199,7 @@ handle(Req0,
                               RequestStartMicroSec]),
             {ok, Req, State};
         {cowboy_error, timeout} ->
-            HttpCode = 504,
+            HttpCode = StatusCodeTimeout,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                                   ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
@@ -215,7 +216,7 @@ handle(Req0,
             {ok, Req, State}
     after
         TimeoutAsync ->
-            HttpCode = 504,
+            HttpCode = StatusCodeTimeout,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                                   ReqN),
             ?LOG_WARN_APPLY(fun request_time_end_error/5,

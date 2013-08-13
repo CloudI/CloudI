@@ -50,6 +50,7 @@
         timeout_websocket,
         output_type,
         default_content_type,
+        status_code_timeout,
         use_websockets,
         use_host_prefix,
         use_client_ip_prefix,

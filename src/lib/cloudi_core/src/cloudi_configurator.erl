@@ -233,8 +233,8 @@ handle_call({acl_remove, L, _}, _,
 handle_call({services_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
     case cloudi_configuration:services_add(L, Config, Timeout) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, IDs, NewConfig} ->
+            {reply, {ok, IDs}, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;

@@ -145,7 +145,7 @@
         max_r              :: non_neg_integer(),
         max_t              :: cloudi_service_api:seconds(),
         options            :: #config_service_options{},
-        uuid               :: <<_:128>>
+        uuid               :: cloudi_service_api:service_id()
     }).
 
 % external service parameters
@@ -168,7 +168,7 @@
         max_r              :: non_neg_integer(),
         max_t              :: cloudi_service_api:seconds(),
         options            :: #config_service_options{},
-        uuid               :: <<_:128>>
+        uuid               :: cloudi_service_api:service_id()
     }).
 
 -record(config,
