@@ -133,10 +133,12 @@
 -type loglevel() :: fatal | error | warn | info | debug | trace | off.
 -export_type([loglevel/0]).
 
+-type service_id() :: <<_:128>>. % version 1 UUID (service instance id)
 -type service_internal() :: #internal{}.
 -type service_external() :: #external{}.
 -type service() :: #internal{} | #external{}.
--export_type([service_internal/0,
+-export_type([service_id/0,
+              service_internal/0,
               service_external/0,
               service/0]).
 
@@ -193,7 +195,7 @@ acl_remove([_ | _] = L, Timeout)
 
 -spec services_add(L :: list(#internal{} | #external{}),
                    Timeout :: timeout_milliseconds()) ->
-    ok |
+    {ok, list(service_id())} |
     {error, any()}.
 
 services_add([_ | _] = L, Timeout)
@@ -211,7 +213,7 @@ services_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(L :: list(cloudi_service:trans_id()),
+-spec services_remove(L :: list(service_id()),
                       Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
@@ -233,7 +235,7 @@ services_remove([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: list(cloudi_service:trans_id()), 
+-spec services_restart(L :: list(service_id()), 
                        Timeout :: timeout_milliseconds()) ->
     ok |
     {error, any()}.
@@ -252,8 +254,8 @@ services_restart([_ | _] = L, Timeout)
 
 -spec services_search(ServiceName :: string(),
                       Timeout :: timeout_milliseconds()) ->
-    {ok, list({cloudi_service:trans_id(), #internal{}} |
-              {cloudi_service:trans_id(), #external{}})} |
+    {ok, list({service_id(), #internal{}} |
+              {service_id(), #external{}})} |
     {error, any()}.
 
 services_search([_ | _] = ServiceName, Timeout)
@@ -275,8 +277,8 @@ services_search([_ | _] = ServiceName, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services(Timeout :: timeout_milliseconds()) ->
-    {ok, list({cloudi_service:trans_id(), #internal{}} |
-              {cloudi_service:trans_id(), #external{}})} |
+    {ok, list({service_id(), #internal{}} |
+              {service_id(), #external{}})} |
     {error, any()}.
 
 services(Timeout)

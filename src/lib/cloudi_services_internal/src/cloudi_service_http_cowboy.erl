@@ -81,6 +81,7 @@
 -define(DEFAULT_MAX_REQUEST_LINE_LENGTH,  4096).
 -define(DEFAULT_OUTPUT,               external).
 -define(DEFAULT_CONTENT_TYPE,        undefined). % force a content type
+-define(DEFAULT_STATUS_CODE_TIMEOUT,       504). % "Gateway Timeout"
 -define(DEFAULT_USE_WEBSOCKETS,          false).
 -define(DEFAULT_USE_HOST_PREFIX,         false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,    false).
@@ -121,6 +122,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {max_request_line_length,  ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
         {output,                   ?DEFAULT_OUTPUT},
         {content_type,             ?DEFAULT_CONTENT_TYPE},
+        {status_code_timeout,      ?DEFAULT_STATUS_CODE_TIMEOUT},
         {use_websockets,           ?DEFAULT_USE_WEBSOCKETS},
         {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,     ?DEFAULT_USE_CLIENT_IP_PREFIX},
@@ -129,7 +131,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      SSL, Compress, MaxConnections,
      MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
-     OutputType, DefaultContentType0,
+     OutputType, DefaultContentType0, StatusCodeTimeout,
      UseWebSockets, UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
@@ -156,6 +158,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         is_binary(DefaultContentType0) ->
             DefaultContentType0
     end,
+    true = is_integer(StatusCodeTimeout),
     true = is_boolean(UseWebSockets),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
@@ -171,6 +174,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               timeout_websocket = WebsocketTimeout,
                               output_type = OutputType,
                               default_content_type = DefaultContentType1,
+                              status_code_timeout = StatusCodeTimeout,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
                               use_client_ip_prefix = UseClientIpPrefix,

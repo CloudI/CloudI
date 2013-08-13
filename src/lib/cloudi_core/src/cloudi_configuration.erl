@@ -250,7 +250,7 @@ acl_remove(Value, _) ->
 -spec services_add(Value :: list(#internal{} | #external{} | any()),
                    Config :: #config{},
                    Timeout :: cloudi_service_api:timeout_milliseconds()) ->
-    {ok, #config{}} |
+    {ok, list(cloudi_service_api:service_id()), #config{}} |
     {error, any()}.
 
 services_add([T | _] = Value,
@@ -259,13 +259,14 @@ services_add([T | _] = Value,
                      acl = ACL} = Config, Timeout)
     when is_record(T, internal); is_record(T, external) ->
     case services_validate(Value, UUID) of
-        {ok, ValidatedServices} ->
+        {ok, ValidatedServices, IDs} ->
             case services_acl_update(ValidatedServices, ACL) of
                 {ok, NextServices} ->
                     case services_add_service(NextServices, Timeout) of
                         {ok, NewServices} ->
-                            {ok, Config#config{services = Services ++
-                                                          NewServices}};
+                            {ok, IDs,
+                             Config#config{services = Services ++
+                                                      NewServices}};
                         {error, _} = Error ->
                             Error
                     end;
@@ -284,7 +285,7 @@ services_add(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(Value :: list(cloudi_service:trans_id()),
+-spec services_remove(Value :: list(cloudi_service_api:service_id()),
                       Config :: #config{},
                       Timeout :: cloudi_service_api:timeout_milliseconds()) ->
     {ok, #config{}} |
@@ -308,7 +309,7 @@ services_remove(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(Value :: list(cloudi_service:trans_id()),
+-spec services_restart(Value :: list(cloudi_service_api:service_id()),
                        Config :: #config{},
                        Timeout :: cloudi_service_api:timeout_milliseconds()) ->
     {ok, #config{}} |
@@ -332,10 +333,10 @@ services_restart(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_search(Value :: list(cloudi_service:trans_id()),
+-spec services_search(Value :: list(cloudi_service_api:service_id()),
                       Config :: #config{}) ->
-    list({cloudi_service:trans_id(), #internal{}} |
-         {cloudi_service:trans_id(), #external{}}).
+    list({cloudi_service_api:service_id(), #internal{}} |
+         {cloudi_service_api:service_id(), #external{}}).
 
 services_search([ID | _] = Value, Config)
     when is_binary(ID), byte_size(ID) == 16 ->
@@ -350,8 +351,8 @@ services_search([ID | _] = Value, Config)
 %%-------------------------------------------------------------------------
 
 -spec services(#config{}) ->
-    list({cloudi_service:trans_id(), #internal{}} |
-         {cloudi_service:trans_id(), #external{}}).
+    list({cloudi_service_api:service_id(), #internal{}} |
+         {cloudi_service_api:service_id(), #external{}}).
 
 services(#config{services = Services}) ->
     lists:map(fun(Service) ->
@@ -489,7 +490,7 @@ new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external) ->
     case services_validate(Value, UUID) of
-        {ok, NewServices} ->
+        {ok, NewServices, _IDs} ->
             new(Terms, Config#config{services = NewServices});
         {error, _} = Error ->
             Error
@@ -585,40 +586,40 @@ services_add_service([Service | Services], Added, Timeout) ->
 services_acl_update([], _) ->
     {ok, []};
 services_acl_update([_ | _] = Services, Lookup) ->
-    services_acl_update([], Services, Lookup).
+    services_acl_update(Services, [], Lookup).
 
-services_acl_update(Output, [], _) ->
+services_acl_update([], Output, _) ->
     {ok, lists:reverse(Output)};
-services_acl_update(Output,
-                    [#config_service_internal{
+services_acl_update([#config_service_internal{
                         dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L], Lookup) ->
-    case services_acl_update_list([], Deny, Lookup) of
+                        dest_list_allow = Allow} = Service | L],
+                    Output, Lookup) ->
+    case services_acl_update_list(Deny, [], Lookup) of
         {ok, NewDeny} ->
-            case services_acl_update_list([], Allow, Lookup) of
+            case services_acl_update_list(Allow, [], Lookup) of
                 {ok, NewAllow} ->
-                    services_acl_update(
+                    services_acl_update(L,
                         [Service#config_service_internal{
                             dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], L, Lookup);
+                            dest_list_allow = NewAllow} | Output], Lookup);
                 {error, _} = Error ->
                     Error
             end;
         {error, _} = Error ->
             Error
     end;
-services_acl_update(Output,
-                    [#config_service_external{
+services_acl_update([#config_service_external{
                         dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L], Lookup) ->
-    case services_acl_update_list([], Deny, Lookup) of
+                        dest_list_allow = Allow} = Service | L],
+                    Output, Lookup) ->
+    case services_acl_update_list(Deny, [], Lookup) of
         {ok, NewDeny} ->
-            case services_acl_update_list([], Allow, Lookup) of
+            case services_acl_update_list(Allow, [], Lookup) of
                 {ok, NewAllow} ->
-                    services_acl_update(
+                    services_acl_update(L,
                         [Service#config_service_external{
                             dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], L, Lookup);
+                            dest_list_allow = NewAllow} | Output], Lookup);
                 {error, _} = Error ->
                     Error
             end;
@@ -626,25 +627,25 @@ services_acl_update(Output,
             Error
     end.
 
-services_acl_update_list(_, undefined, _) ->
+services_acl_update_list(undefined, _, _) ->
     {ok, undefined};
-services_acl_update_list(Output, [], _) ->
+services_acl_update_list([], Output, _) ->
     {ok, lists:reverse(Output)};
-services_acl_update_list(Output, [E | L], Lookup)
+services_acl_update_list([E | L], Output, Lookup)
     when is_atom(E) ->
     case dict:find(E, Lookup) of
         {ok, Value} ->
-            services_acl_update_list(Value ++ Output, L, Lookup);
+            services_acl_update_list(L, Value ++ Output, Lookup);
         error ->
             {error, {acl_not_found, E}}
     end;
-services_acl_update_list(Output, [E | L], Lookup)
+services_acl_update_list([E | L], Output, Lookup)
     when is_list(E), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern(E) of
         true ->
-            services_acl_update_list([E | Output], L, Lookup);
+            services_acl_update_list(L, [E | Output], Lookup);
         false ->
-            services_acl_update_list([E ++ "*" | Output], L, Lookup)
+            services_acl_update_list(L, [E ++ "*" | Output], Lookup)
     catch
         exit:badarg ->
             {error, {acl_invalid, E}}
@@ -785,25 +786,27 @@ services_format_options_external(Options) ->
 
 -spec services_validate(Services :: list(#internal{} | #external{}),
                         UUID :: cloudi_x_uuid:state()) ->
-    {ok, list(#config_service_internal{} | #config_service_external{})} |
+    {ok,
+     list(#config_service_internal{} | #config_service_external{}),
+     list(cloudi_service_api:service_id())} |
     {error, any()}.
 
 services_validate([_ | _] = Services, UUID) ->
-    services_validate([], Services, UUID).
+    services_validate(Services, [], [], UUID).
 
-services_validate(Output, [], _) ->
-    {ok, lists:reverse(Output)};
-services_validate(_, [#internal{prefix = Prefix} | _], _)
+services_validate([], Output, IDs, _) ->
+    {ok, lists:reverse(Output), lists:reverse(IDs)};
+services_validate([#internal{prefix = Prefix} | _], _, _, _)
     when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
     {error, {service_internal_prefix_invalid, Prefix}};
-services_validate(_, [#internal{module = Module} | _], _)
+services_validate([#internal{module = Module} | _], _, _, _)
     when not (is_atom(Module) or
               (is_list(Module) andalso is_integer(hd(Module)))) ->
     {error, {service_internal_module_invalid, Module}};
-services_validate(_, [#internal{args = Args} | _], _)
+services_validate([#internal{args = Args} | _], _, _, _)
     when not is_list(Args) ->
     {error, {service_internal_args_invalid, Args}};
-services_validate(_, [#internal{dest_refresh = DestRefresh} | _], _)
+services_validate([#internal{dest_refresh = DestRefresh} | _], _, _, _)
     when not (is_atom(DestRefresh) andalso
               ((DestRefresh =:= immediate_closest) orelse
                (DestRefresh =:= lazy_closest) orelse
@@ -821,38 +824,37 @@ services_validate(_, [#internal{dest_refresh = DestRefresh} | _], _)
                (DestRefresh =:= lazy_oldest) orelse
                (DestRefresh =:= none))) ->
     {error, {service_internal_dest_refresh_invalid, DestRefresh}};
-services_validate(_, [#internal{timeout_init = TimeoutInit} | _], _)
+services_validate([#internal{timeout_init = TimeoutInit} | _], _, _, _)
     when not (is_integer(TimeoutInit) andalso
               (TimeoutInit > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_init_invalid, TimeoutInit}};
-services_validate(_, [#internal{timeout_async = TimeoutAsync} | _], _)
+services_validate([#internal{timeout_async = TimeoutAsync} | _], _, _, _)
     when not (is_integer(TimeoutAsync) andalso
               (TimeoutAsync > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_async_invalid, TimeoutAsync}};
-services_validate(_, [#internal{timeout_sync = TimeoutSync} | _], _)
+services_validate([#internal{timeout_sync = TimeoutSync} | _], _, _, _)
     when not (is_integer(TimeoutSync) andalso
               (TimeoutSync > ?TIMEOUT_DELTA)) ->
     {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
-services_validate(_, [#internal{dest_list_deny = DestListDeny} | _], _)
+services_validate([#internal{dest_list_deny = DestListDeny} | _], _, _, _)
     when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
     {error, {service_internal_dest_list_deny_invalid, DestListDeny}};
-services_validate(_, [#internal{dest_list_allow = DestListAllow} | _], _)
+services_validate([#internal{dest_list_allow = DestListAllow} | _], _, _, _)
     when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
     {error, {service_internal_dest_list_allow_invalid, DestListAllow}};
-services_validate(_, [#internal{count_process = CountProcess} | _], _)
+services_validate([#internal{count_process = CountProcess} | _], _, _, _)
     when not (is_number(CountProcess) andalso CountProcess > 0) ->
     {error, {service_internal_count_process_invalid, CountProcess}};
-services_validate(_, [#internal{max_r = MaxR} | _], _)
+services_validate([#internal{max_r = MaxR} | _], _, _, _)
     when not (is_integer(MaxR) andalso MaxR >= 0) ->
     {error, {service_internal_max_r_invalid, MaxR}};
-services_validate(_, [#internal{max_t = MaxT} | _], _)
+services_validate([#internal{max_t = MaxT} | _], _, _, _)
     when not (is_integer(MaxT) andalso MaxT >= 0) ->
     {error, {service_internal_max_t_invalid, MaxT}};
-services_validate(_, [#internal{options = Options} | _], _)
+services_validate([#internal{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_internal_options_invalid, Options}};
-services_validate(Output,
-                  [#internal{
+services_validate([#internal{
                       prefix = Prefix,
                       module = Module,
                       args = Args,
@@ -865,7 +867,8 @@ services_validate(Output,
                       count_process = CountProcess,
                       max_r = MaxR,
                       max_t = MaxT,
-                      options = Options} | L], UUID) ->
+                      options = Options} | L],
+                  Output, IDs, UUID) ->
     FilePath = if
         is_atom(Module) ->
             undefined;
@@ -877,7 +880,8 @@ services_validate(Output,
             case services_validate_options_internal(Options) of
                 {ok, NewOptions} ->
                     ID = cloudi_x_uuid:get_v1(UUID),
-                    services_validate([#config_service_internal{
+                    services_validate(L,
+                                      [#config_service_internal{
                                            prefix = Prefix,
                                            module = Module,
                                            file_path = FilePath,
@@ -892,27 +896,29 @@ services_validate(Output,
                                            max_r = MaxR,
                                            max_t = MaxT,
                                            options = NewOptions,
-                                           uuid = ID} | Output], L, UUID);
+                                           uuid = ID} | Output],
+                                      [ID | IDs],
+                                      UUID);
                 {error, _} = Error ->
                     Error
             end;
         {error, _} = Error ->
             Error
     end;
-services_validate(_, [#external{prefix = Prefix} | _], _)
+services_validate([#external{prefix = Prefix} | _], _, _, _)
     when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
     {error, {service_external_prefix_invalid, Prefix}};
-services_validate(_, [#external{file_path = FilePath} | _], _)
+services_validate([#external{file_path = FilePath} | _], _, _, _)
     when not (is_list(FilePath) andalso is_integer(hd(FilePath))) ->
     {error, {service_external_file_path_invalid, FilePath}};
-services_validate(_, [#external{args = Args} | _], _)
+services_validate([#external{args = Args} | _], _, _, _)
     when not (is_list(Args) andalso
               (Args == "" orelse is_integer(hd(Args)))) ->
     {error, {service_external_args_invalid, Args}};
-services_validate(_, [#external{env = Env} | _], _)
+services_validate([#external{env = Env} | _], _, _, _)
     when not is_list(Env) ->
     {error, {service_external_env_invalid, Env}};
-services_validate(_, [#external{dest_refresh = DestRefresh} | _], _)
+services_validate([#external{dest_refresh = DestRefresh} | _], _, _, _)
     when not (is_atom(DestRefresh) andalso
               ((DestRefresh =:= immediate_closest) orelse
                (DestRefresh =:= lazy_closest) orelse
@@ -930,51 +936,50 @@ services_validate(_, [#external{dest_refresh = DestRefresh} | _], _)
                (DestRefresh =:= lazy_oldest) orelse
                (DestRefresh =:= none))) ->
     {error, {service_external_dest_refresh_invalid, DestRefresh}};
-services_validate(_, [#external{protocol = Protocol} | _], _)
+services_validate([#external{protocol = Protocol} | _], _, _, _)
     when not ((Protocol =:= default) orelse
               (Protocol =:= tcp) orelse
               (Protocol =:= udp) orelse
               (Protocol =:= local)) ->
     {error, {service_external_protocol_invalid, Protocol}};
-services_validate(_, [#external{buffer_size = BufferSize} | _], _)
+services_validate([#external{buffer_size = BufferSize} | _], _, _, _)
     when not ((BufferSize =:= default) orelse
               (is_integer(BufferSize) andalso (BufferSize >= 1024))) ->
     {error, {service_external_buffer_size_invalid, BufferSize}};
-services_validate(_, [#external{timeout_init = TimeoutInit} | _], _)
+services_validate([#external{timeout_init = TimeoutInit} | _], _, _, _)
     when not (is_integer(TimeoutInit) andalso
               (TimeoutInit > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_init_invalid, TimeoutInit}};
-services_validate(_, [#external{timeout_async = TimeoutAsync} | _], _)
+services_validate([#external{timeout_async = TimeoutAsync} | _], _, _, _)
     when not (is_integer(TimeoutAsync) andalso
               (TimeoutAsync > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_async_invalid, TimeoutAsync}};
-services_validate(_, [#external{timeout_sync = TimeoutSync} | _], _)
+services_validate([#external{timeout_sync = TimeoutSync} | _], _, _, _)
     when not (is_integer(TimeoutSync) andalso
               (TimeoutSync > ?TIMEOUT_DELTA)) ->
     {error, {service_external_timeout_sync_invalid, TimeoutSync}};
-services_validate(_, [#external{dest_list_deny = DestListDeny} | _], _)
+services_validate([#external{dest_list_deny = DestListDeny} | _], _, _, _)
     when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
     {error, {service_external_dest_list_deny_invalid, DestListDeny}};
-services_validate(_, [#external{dest_list_allow = DestListAllow} | _], _)
+services_validate([#external{dest_list_allow = DestListAllow} | _], _, _, _)
     when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
     {error, {service_external_dest_list_allow_invalid, DestListAllow}};
-services_validate(_, [#external{count_process = CountProcess} | _], _)
+services_validate([#external{count_process = CountProcess} | _], _, _, _)
     when not (is_number(CountProcess) andalso CountProcess > 0) ->
     {error, {service_external_count_process_invalid, CountProcess}};
-services_validate(_, [#external{count_thread = CountThread} | _], _)
+services_validate([#external{count_thread = CountThread} | _], _, _, _)
     when not (is_number(CountThread) andalso CountThread > 0) ->
     {error, {service_external_count_thread_invalid, CountThread}};
-services_validate(_, [#external{max_r = MaxR} | _], _)
+services_validate([#external{max_r = MaxR} | _], _, _, _)
     when not (is_integer(MaxR) andalso MaxR >= 0) ->
     {error, {service_external_max_r_invalid, MaxR}};
-services_validate(_, [#external{max_t = MaxT} | _], _)
+services_validate([#external{max_t = MaxT} | _], _, _, _)
     when not (is_integer(MaxT) andalso MaxT >= 0) ->
     {error, {service_external_max_t_invalid, MaxT}};
-services_validate(_, [#external{options = Options} | _], _)
+services_validate([#external{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_external_options_invalid, Options}};
-services_validate(Output,
-                  [#external{
+services_validate([#external{
                       prefix = Prefix,
                       file_path = FilePath,
                       args = Args,
@@ -991,7 +996,8 @@ services_validate(Output,
                       count_thread = CountThread,
                       max_r = MaxR,
                       max_t = MaxT,
-                      options = Options} | L], UUID) ->
+                      options = Options} | L],
+                  Output, IDs, UUID) ->
     NewProtocol = if
         Protocol =:= default ->
             local;
@@ -1016,7 +1022,8 @@ services_validate(Output,
             case services_validate_options_external(Options) of
                 {ok, NewOptions} ->
                     ID = cloudi_x_uuid:get_v1(UUID),
-                    services_validate([#config_service_external{
+                    services_validate(L,
+                                      [#config_service_external{
                                            prefix = Prefix,
                                            file_path = FilePath,
                                            args = Args,
@@ -1034,14 +1041,16 @@ services_validate(Output,
                                            max_r = MaxR,
                                            max_t = MaxT,
                                            options = NewOptions,
-                                           uuid = ID} | Output], L, UUID);
+                                           uuid = ID} | Output],
+                                      [ID | IDs],
+                                      UUID);
                 {error, _} = Error ->
                     Error
             end;
         {error, _} = Error ->
             Error
     end;
-services_validate(_, [Service | _], _) ->
+services_validate([Service | _], _, _, _) ->
     {error, {services_invalid, Service}}.
 
 -spec services_validate_options_internal(OptionsList ::
@@ -1275,26 +1284,23 @@ services_validate_options_external(OptionsList) ->
     end.
 
 services_validate_option_pid_options(OptionsList) ->
-    services_validate_option_pid_options([link], OptionsList).
+    services_validate_option_pid_options(OptionsList, [link]).
 
-services_validate_option_pid_options(Output, []) ->
+services_validate_option_pid_options([], Output) ->
     {ok, lists:reverse(Output)};
-services_validate_option_pid_options(Output,
-                                     [{fullsweep_after, V} = PidOption |
-                                      OptionsList])
+services_validate_option_pid_options([{fullsweep_after, V} = PidOption |
+                                      OptionsList], Output)
     when is_integer(V), V >= 0 ->
-    services_validate_option_pid_options([PidOption | Output], OptionsList);
-services_validate_option_pid_options(Output,
-                                     [{min_heap_size, V} = PidOption |
-                                      OptionsList])
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([{min_heap_size, V} = PidOption |
+                                      OptionsList], Output)
     when is_integer(V), V >= 0 ->
-    services_validate_option_pid_options([PidOption | Output], OptionsList);
-services_validate_option_pid_options(Output,
-                                     [{min_bin_vheap_size, V} = PidOption |
-                                      OptionsList])
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([{min_bin_vheap_size, V} = PidOption |
+                                      OptionsList], Output)
     when is_integer(V), V >= 0 ->
-    services_validate_option_pid_options([PidOption | Output], OptionsList);
-services_validate_option_pid_options(_, [PidOption | _]) ->
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([PidOption | _], _) ->
     {error, {service_options_pid_invalid, PidOption}}.
 
 acl_lookup_new(L) ->
@@ -1319,7 +1325,7 @@ acl_store([H | _], _) ->
 acl_expand([], LookupFinal, _) ->
     {ok, LookupFinal};
 acl_expand([{Key, Value} | L], LookupFinal, LookupConfig) ->
-    case acl_expand_values([], Value, [], Key, LookupConfig) of
+    case acl_expand_values(Value, [], [], Key, LookupConfig) of
         {ok, NewValue} ->
             acl_expand(L, dict:store(Key, NewValue, LookupFinal),
                        LookupConfig);
@@ -1327,9 +1333,9 @@ acl_expand([{Key, Value} | L], LookupFinal, LookupConfig) ->
             Error
     end.
 
-acl_expand_values(Output, [], _Path, _Key, _Lookup) ->
+acl_expand_values([], Output, _Path, _Key, _Lookup) ->
     {ok, lists:reverse(Output)};
-acl_expand_values(Output, [E | L], Path, Key, Lookup)
+acl_expand_values([E | L], Output, Path, Key, Lookup)
     when is_atom(E) ->
     case lists:member(E, Path) of
         true ->
@@ -1339,27 +1345,27 @@ acl_expand_values(Output, [E | L], Path, Key, Lookup)
                 error ->
                     {error, {acl_not_found, E}};
                 {ok, OtherL} ->
-                    case acl_expand_values(Output, OtherL,
+                    case acl_expand_values(OtherL, Output,
                                            [E | Path], Key, Lookup) of
                         {ok, NewOutput} ->
-                            acl_expand_values(NewOutput, L, Path, Key, Lookup);
+                            acl_expand_values(L, NewOutput, Path, Key, Lookup);
                         {error, _} = Error ->
                             Error
                     end
             end
     end;
-acl_expand_values(Output, [E | L], Path, Key, Lookup)
+acl_expand_values([E | L], Output, Path, Key, Lookup)
     when is_list(E), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern(E) of
         true ->
-            acl_expand_values([E | Output], L, Path, Key, Lookup);
+            acl_expand_values(L, [E | Output], Path, Key, Lookup);
         false ->
-            acl_expand_values([E ++ "*" | Output], L, Path, Key, Lookup)
+            acl_expand_values(L, [E ++ "*" | Output], Path, Key, Lookup)
     catch
         exit:badarg ->
             {error, {acl_invalid, E}}
     end;
-acl_expand_values(_, [E | _], _, _, _) ->
+acl_expand_values([E | _], _, _, _, _) ->
     {error, {acl_invalid, E}}.
 
 services_remove_uuid(Value, Services, Timeout) ->
