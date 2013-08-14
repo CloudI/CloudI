@@ -622,7 +622,7 @@ websocket_time_end_error(NameIncoming,
 websocket_request_end(Name, NewTimeout, OldTimeout) ->
     ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
 
-return_response(NameIncoming, HeadersOutgoing, Response,
+return_response(NameIncoming, HeadersOutgoing0, Response,
                 ReqN, OutputType, ContentTypeForced,
                 ContentTypeLookup) ->
     ResponseBinary = if
@@ -633,9 +633,18 @@ return_response(NameIncoming, HeadersOutgoing, Response,
             Response
     end,
     FileName = cloudi_string:afterr($/, NameIncoming, input),
+    {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
+                                                      HeadersOutgoing0) of
+        false ->
+            {200, HeadersOutgoing0};
+        {value, {<<"status">>, Status}, HeadersOutgoing1}
+            when is_binary(Status) ->
+            {erlang:binary_to_integer(hd(binary:split(Status, <<" ">>))),
+             HeadersOutgoing1}
+    end,
     ResponseHeadersOutgoing = if
-        HeadersOutgoing =/= [] ->
-            HeadersOutgoing;
+        HeadersOutgoingN =/= [] ->
+            HeadersOutgoingN;
         ContentTypeForced =/= undefined ->
             [{<<"content-type">>, ContentTypeForced}];
         true ->
@@ -661,7 +670,6 @@ return_response(NameIncoming, HeadersOutgoing, Response,
                     end
             end
     end,
-    HttpCode = 200,
     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                           ResponseHeadersOutgoing,
                                           ResponseBinary,
