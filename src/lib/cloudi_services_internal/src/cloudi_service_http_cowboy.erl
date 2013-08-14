@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -64,28 +64,29 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
--define(DEFAULT_INTERFACE,         {127,0,0,1}). % ip address
--define(DEFAULT_PORT,                     8080).
--define(DEFAULT_BACKLOG,                   128).
--define(DEFAULT_NODELAY,                  true).
--define(DEFAULT_RECV_TIMEOUT,        30 * 1000). % milliseconds
--define(DEFAULT_WEBSOCKET_TIMEOUT,    infinity). % milliseconds
--define(DEFAULT_SSL,                     false).
--define(DEFAULT_COMPRESS,                false).
--define(DEFAULT_MAX_CONNECTIONS,          4096).
--define(DEFAULT_MAX_EMPTY_LINES,             5).
--define(DEFAULT_MAX_HEADER_NAME_LENGTH,     64).
--define(DEFAULT_MAX_HEADER_VALUE_LENGTH,  4096).
--define(DEFAULT_MAX_HEADERS,               100).
--define(DEFAULT_MAX_KEEPALIVE,             100). % requests in keepalive session
--define(DEFAULT_MAX_REQUEST_LINE_LENGTH,  4096).
--define(DEFAULT_OUTPUT,               external).
--define(DEFAULT_CONTENT_TYPE,        undefined). % force a content type
--define(DEFAULT_STATUS_CODE_TIMEOUT,       504). % "Gateway Timeout"
--define(DEFAULT_USE_WEBSOCKETS,          false).
--define(DEFAULT_USE_HOST_PREFIX,         false). % for virtual hosts
--define(DEFAULT_USE_CLIENT_IP_PREFIX,    false).
--define(DEFAULT_USE_METHOD_SUFFIX,        true). % get/post/etc. name suffix
+-define(DEFAULT_INTERFACE,            {127,0,0,1}). % ip address
+-define(DEFAULT_PORT,                        8080).
+-define(DEFAULT_BACKLOG,                      128).
+-define(DEFAULT_NODELAY,                     true).
+-define(DEFAULT_RECV_TIMEOUT,           30 * 1000). % milliseconds
+-define(DEFAULT_WEBSOCKET_TIMEOUT,       infinity). % milliseconds
+-define(DEFAULT_SSL,                        false).
+-define(DEFAULT_COMPRESS,                   false).
+-define(DEFAULT_MAX_CONNECTIONS,             4096).
+-define(DEFAULT_MAX_EMPTY_LINES,                5).
+-define(DEFAULT_MAX_HEADER_NAME_LENGTH,        64).
+-define(DEFAULT_MAX_HEADER_VALUE_LENGTH,     4096).
+-define(DEFAULT_MAX_HEADERS,                  100).
+-define(DEFAULT_MAX_KEEPALIVE,                100). % requests in session
+-define(DEFAULT_MAX_REQUEST_LINE_LENGTH,     4096).
+-define(DEFAULT_OUTPUT,                  external).
+-define(DEFAULT_CONTENT_TYPE,           undefined). % force a content type
+-define(DEFAULT_CONTENT_TYPES_ACCEPTED, undefined). % force a content type
+-define(DEFAULT_STATUS_CODE_TIMEOUT,          504). % "Gateway Timeout"
+-define(DEFAULT_USE_WEBSOCKETS,             false).
+-define(DEFAULT_USE_HOST_PREFIX,            false). % for virtual hosts
+-define(DEFAULT_USE_CLIENT_IP_PREFIX,       false).
+-define(DEFAULT_USE_METHOD_SUFFIX,           true). % get/post/etc. name suffix
 
 
 -record(state,
@@ -122,6 +123,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {max_request_line_length,  ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
         {output,                   ?DEFAULT_OUTPUT},
         {content_type,             ?DEFAULT_CONTENT_TYPE},
+        {content_types_accepted,   ?DEFAULT_CONTENT_TYPES_ACCEPTED},
         {status_code_timeout,      ?DEFAULT_STATUS_CODE_TIMEOUT},
         {use_websockets,           ?DEFAULT_USE_WEBSOCKETS},
         {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
@@ -131,7 +133,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      SSL, Compress, MaxConnections,
      MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
-     OutputType, DefaultContentType0, StatusCodeTimeout,
+     OutputType, ContentTypeForced0, ContentTypesAccepted0, StatusCodeTimeout,
      UseWebSockets, UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
@@ -150,13 +152,19 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(MaxRequestLineLength),
     true = OutputType =:= external orelse OutputType =:= internal orelse
            OutputType =:= list orelse OutputType =:= binary,
-    DefaultContentType1 = if
-        DefaultContentType0 =:= undefined ->
+    ContentTypeForced1 = if
+        ContentTypeForced0 =:= undefined ->
             undefined;
-        is_list(DefaultContentType0) ->
-            erlang:list_to_binary(DefaultContentType0);
-        is_binary(DefaultContentType0) ->
-            DefaultContentType0
+        is_list(ContentTypeForced0) ->
+            erlang:list_to_binary(ContentTypeForced0);
+        is_binary(ContentTypeForced0) ->
+            ContentTypeForced0
+    end,
+    ContentTypesAccepted1 = if
+        ContentTypesAccepted0 =:= undefined ->
+            undefined;
+        is_list(ContentTypesAccepted0) ->
+            content_types_accepted_pattern(ContentTypesAccepted0)
     end,
     true = is_integer(StatusCodeTimeout),
     true = is_boolean(UseWebSockets),
@@ -173,7 +181,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               prefix = Prefix,
                               timeout_websocket = WebsocketTimeout,
                               output_type = OutputType,
-                              default_content_type = DefaultContentType1,
+                              content_type_forced = ContentTypeForced1,
+                              content_types_accepted = ContentTypesAccepted1,
                               status_code_timeout = StatusCodeTimeout,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
@@ -279,6 +288,28 @@ cloudi_service_terminate(_, #state{service = Service,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+content_types_accepted_pattern(ContentTypesAccepted) ->
+    content_types_accepted_pattern(ContentTypesAccepted, [<<"*/*">>]).
+
+content_types_accepted_pattern([], L) ->
+    binary:compile_pattern(L);
+content_types_accepted_pattern([H | ContentTypesAccepted], L) ->
+    ContentType = if
+        is_list(H), is_integer(hd(H)) ->
+            erlang:list_to_binary(H);
+        is_binary(H) ->
+            H
+    end,
+    NewL = case binary:split(ContentType, <<"/">>) of
+        [<<"*">>, <<"*">>] ->
+            lists:umerge(L, [ContentType]);
+        [_, <<"*">>] ->
+            lists:umerge(L, [ContentType]);
+        [Type, _] ->
+            lists:umerge(L, [<<Type/binary,<<"/*">>/binary>>, ContentType])
+    end,
+    content_types_accepted_pattern(ContentTypesAccepted, NewL).
 
 % static content type detection
 content_type_lookup() ->
