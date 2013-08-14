@@ -81,7 +81,7 @@
 -define(DEFAULT_MAX_REQUEST_LINE_LENGTH,     4096).
 -define(DEFAULT_OUTPUT,                  external).
 -define(DEFAULT_CONTENT_TYPE,           undefined). % force a content type
--define(DEFAULT_CONTENT_TYPES_ACCEPTED, undefined). % force a content type
+-define(DEFAULT_CONTENT_TYPES_ACCEPTED, undefined).
 -define(DEFAULT_STATUS_CODE_TIMEOUT,          504). % "Gateway Timeout"
 -define(DEFAULT_USE_WEBSOCKETS,             false).
 -define(DEFAULT_USE_HOST_PREFIX,            false). % for virtual hosts
