@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -108,7 +108,9 @@ handle(Req0,
        #cowboy_state{service = Service,
                      timeout_async = TimeoutAsync,
                      output_type = OutputType,
-                     default_content_type = DefaultContentType,
+                     content_type_forced = ContentTypeForced,
+                     content_types_accepted = ContentTypesAccepted,
+                     status_code_timeout = StatusCodeTimeout,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
                      use_method_suffix = UseMethodSuffix,
@@ -122,106 +124,112 @@ handle(Req0,
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw, Req5),
-    NameOutgoing = if
-        UseMethodSuffix =:= false ->
-            NameIncoming;
-        Method =:= <<"GET">> ->
-            NameIncoming ++ "/get";
-        Method =:= <<"POST">> ->
-            NameIncoming ++ "/post";
-        Method =:= <<"PUT">> ->
-            NameIncoming ++ "/put";
-        Method =:= <<"DELETE">> ->
-            NameIncoming ++ "/delete";
-        Method =:= <<"HEAD">> ->
-            NameIncoming ++ "/head";
-        Method =:= <<"TRACE">> ->
-            NameIncoming ++ "/trace";
-        Method =:= <<"OPTIONS">> ->
-            NameIncoming ++ "/options";
-        Method =:= <<"CONNECT">> ->
-            NameIncoming ++ "/connect"
-    end,
-    RequestBinary = if
-        Method =:= <<"GET">> ->
-            if
-                QsVals =:= [] ->
-                    <<>>;
-                true ->
-                    erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
-                        if
-                            V =:= true ->
-                                [K, 0, <<"true">>, 0 | L];
-                            V =:= false ->
-                                [K, 0, <<"false">>, 0 | L];
-                            true ->
-                                [K, 0, V, 0 | L]
-                        end
-                    end, [], QsVals))
-            end;
-        Method =:= <<"POST">>; Method =:= <<"PUT">> ->
-            % do not pass type information along with the request!
-            % make sure to encourage good design that provides
-            % one type per name (path)
-            case header_content_type(HeadersIncoming) of
-                <<"application/zip">> ->
-                    zlib:unzip(Body);
-                _ ->
-                    Body
-            end;
+    RequestAccepted = if
+        ContentTypesAccepted =:= undefined ->
+            true;
         true ->
-            <<>>
+            header_accept_check(HeadersIncoming, ContentTypesAccepted)
     end,
-    Request = if
-        OutputType =:= list ->
-            erlang:binary_to_list(RequestBinary);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            RequestBinary
-    end,
-    RequestInfo = if
-        OutputType =:= internal; OutputType =:= list ->
-            HeadersIncoming;
-        OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(HeadersIncoming)
-    end,
-    Service ! {cowboy_request, self(), NameOutgoing, RequestInfo, Request},
-    receive
-        {cowboy_response, ResponseInfo, Response} ->
-            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-            {HttpCode,
-             Req} = return_response(NameIncoming, HeadersOutgoing, Response,
-                                    ReqN, OutputType, DefaultContentType,
-                                    ContentTypeLookup),
-            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                             [HttpCode, Method, NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
+    if
+        RequestAccepted =:= false ->
+            HttpCode = 406,
+            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
+                                                  ReqN),
+            ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                            [HttpCode, Method, NameIncoming,
+                             RequestStartMicroSec, not_acceptable]),
             {ok, Req, State};
-        {cowboy_error, timeout} ->
-            HttpCode = 504,
-            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                  ReqN),
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, timeout]),
-            {ok, Req, State};
-        {cowboy_error, Reason} ->
-            HttpCode = 500,
-            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                  ReqN),
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, Reason]),
-            {ok, Req, State}
-    after
-        TimeoutAsync ->
-            HttpCode = 504,
-            {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                  ReqN),
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, timeout]),
-            {ok, Req, State}
+        RequestAccepted =:= true ->
+            NameOutgoing = if
+                UseMethodSuffix =:= false ->
+                    NameIncoming;
+                Method =:= <<"GET">> ->
+                    NameIncoming ++ "/get";
+                Method =:= <<"POST">> ->
+                    NameIncoming ++ "/post";
+                Method =:= <<"PUT">> ->
+                    NameIncoming ++ "/put";
+                Method =:= <<"DELETE">> ->
+                    NameIncoming ++ "/delete";
+                Method =:= <<"HEAD">> ->
+                    NameIncoming ++ "/head";
+                Method =:= <<"TRACE">> ->
+                    NameIncoming ++ "/trace";
+                Method =:= <<"OPTIONS">> ->
+                    NameIncoming ++ "/options";
+                Method =:= <<"CONNECT">> ->
+                    NameIncoming ++ "/connect"
+            end,
+            RequestBinary = if
+                Method =:= <<"GET">> ->
+                    get_query_string_format(QsVals);
+                Method =:= <<"POST">>; Method =:= <<"PUT">> ->
+                    % do not pass type information along with the request!
+                    % make sure to encourage good design that provides
+                    % one type per name (path)
+                    case header_content_type(HeadersIncoming) of
+                        <<"application/zip">> ->
+                            zlib:unzip(Body);
+                        _ ->
+                            Body
+                    end;
+                true ->
+                    <<>>
+            end,
+            Request = if
+                OutputType =:= list ->
+                    erlang:binary_to_list(RequestBinary);
+                OutputType =:= internal; OutputType =:= external;
+                OutputType =:= binary ->
+                    RequestBinary
+            end,
+            RequestInfo = if
+                OutputType =:= internal; OutputType =:= list ->
+                    HeadersIncoming;
+                OutputType =:= external; OutputType =:= binary ->
+                    headers_external_incoming(HeadersIncoming)
+            end,
+            Service ! {cowboy_request, self(),
+                       NameOutgoing, RequestInfo, Request},
+            receive
+                {cowboy_response, ResponseInfo, Response} ->
+                    HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+                    {HttpCode,
+                     Req} = return_response(NameIncoming, HeadersOutgoing,
+                                            Response, ReqN, OutputType,
+                                            ContentTypeForced,
+                                            ContentTypeLookup),
+                    ?LOG_TRACE_APPLY(fun request_time_end_success/5,
+                                     [HttpCode, Method,
+                                      NameIncoming, NameOutgoing,
+                                      RequestStartMicroSec]),
+                    {ok, Req, State};
+                {cowboy_error, timeout} ->
+                    HttpCode = StatusCodeTimeout,
+                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
+                                                          ReqN),
+                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                                    [HttpCode, Method, NameIncoming,
+                                     RequestStartMicroSec, timeout]),
+                    {ok, Req, State};
+                {cowboy_error, Reason} ->
+                    HttpCode = 500,
+                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
+                                                          ReqN),
+                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                                    [HttpCode, Method, NameIncoming,
+                                     RequestStartMicroSec, Reason]),
+                    {ok, Req, State}
+            after
+                TimeoutAsync ->
+                    HttpCode = StatusCodeTimeout,
+                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
+                                                          ReqN),
+                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                                    [HttpCode, Method, NameIncoming,
+                                     RequestStartMicroSec, timeout]),
+                    {ok, Req, State}
+            end
     end.
 
 terminate(_Reason, _Req, _State) ->
@@ -511,12 +519,25 @@ upgrade_request(Req0) ->
             end
     end.
 
+header_accept_check(Headers, ContentTypesAccepted) ->
+    case lists:keyfind(<<"accept">>, 1, Headers) of
+        false ->
+            true;
+        {<<"accept">>, Value} ->
+            case binary:match(Value, ContentTypesAccepted) of
+                nomatch ->
+                    false;
+                _ ->
+                    true
+            end
+    end.
+
 header_content_type(Headers) ->
     case lists:keyfind(<<"content-type">>, 1, Headers) of
         false ->
             <<>>;
         {<<"content-type">>, Value} ->
-            hd(binary:split(Value, <<",">>))
+            hd(binary:split(Value, <<";">>))
     end.
 
 % format for external services, http headers passed as key-value pairs
@@ -549,6 +570,20 @@ headers_external_outgoing(Result, []) ->
     Result;
 headers_external_outgoing(Result, [K, V | L]) ->
     headers_external_outgoing([{K, V} | Result], L).
+
+get_query_string_format([]) ->
+    <<>>;
+get_query_string_format(QsVals) ->
+    erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
+        if
+            V =:= true ->
+                [K, 0, <<"true">>, 0 | L];
+            V =:= false ->
+                [K, 0, <<"false">>, 0 | L];
+            true ->
+                [K, 0, V, 0 | L]
+        end
+    end, [], QsVals)).
 
 request_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
@@ -588,7 +623,7 @@ websocket_request_end(Name, NewTimeout, OldTimeout) ->
     ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
 
 return_response(NameIncoming, HeadersOutgoing, Response,
-                ReqN, OutputType, DefaultContentType,
+                ReqN, OutputType, ContentTypeForced,
                 ContentTypeLookup) ->
     ResponseBinary = if
         OutputType =:= list, is_list(Response) ->
@@ -601,8 +636,8 @@ return_response(NameIncoming, HeadersOutgoing, Response,
     ResponseHeadersOutgoing = if
         HeadersOutgoing =/= [] ->
             HeadersOutgoing;
-        DefaultContentType =/= undefined ->
-            [{<<"content-type">>, DefaultContentType}];
+        ContentTypeForced =/= undefined ->
+            [{<<"content-type">>, ContentTypeForced}];
         true ->
             Extension = filename:extension(FileName),
             if
