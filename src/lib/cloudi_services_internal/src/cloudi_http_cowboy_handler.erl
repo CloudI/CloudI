@@ -656,7 +656,6 @@ return_response(NameIncoming, HeadersOutgoing0, Response,
         OutputType =:= binary; is_binary(Response) ->
             Response
     end,
-    FileName = cloudi_string:afterr($/, NameIncoming, input),
     {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
                                                       HeadersOutgoing0) of
         false ->
@@ -672,7 +671,7 @@ return_response(NameIncoming, HeadersOutgoing0, Response,
         ContentTypeForced =/= undefined ->
             [{<<"content-type">>, ContentTypeForced}];
         true ->
-            Extension = filename:extension(FileName),
+            Extension = filename:extension(NameIncoming),
             if
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
