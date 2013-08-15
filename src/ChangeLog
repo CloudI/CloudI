@@ -5,6 +5,8 @@
 
     * Add set_x_forwarded_for as a configuration parameter for
       cloudi_service_http_cowboy
+    * Switch the argument order on cloudi_service:service_name_parse/2 to
+      match the cloudi_service_handle_request/11 argument order
 
 2013-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
