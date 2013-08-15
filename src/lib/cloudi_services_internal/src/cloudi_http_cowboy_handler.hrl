@@ -51,6 +51,7 @@
         output_type,
         content_type_forced,
         content_types_accepted,
+        set_x_forwarded_for,
         status_code_timeout,
         use_websockets,
         use_host_prefix,

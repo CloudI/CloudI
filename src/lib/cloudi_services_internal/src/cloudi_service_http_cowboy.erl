@@ -83,6 +83,7 @@
 -define(DEFAULT_CONTENT_TYPE,           undefined). % force a content type
 -define(DEFAULT_CONTENT_TYPES_ACCEPTED, undefined).
 -define(DEFAULT_STATUS_CODE_TIMEOUT,          504). % "Gateway Timeout"
+-define(DEFAULT_SET_X_FORWARDED_FOR,        false). % if it is missing
 -define(DEFAULT_USE_WEBSOCKETS,             false).
 -define(DEFAULT_USE_HOST_PREFIX,            false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,       false).
@@ -124,6 +125,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {output,                   ?DEFAULT_OUTPUT},
         {content_type,             ?DEFAULT_CONTENT_TYPE},
         {content_types_accepted,   ?DEFAULT_CONTENT_TYPES_ACCEPTED},
+        {set_x_forwarded_for,      ?DEFAULT_SET_X_FORWARDED_FOR},
         {status_code_timeout,      ?DEFAULT_STATUS_CODE_TIMEOUT},
         {use_websockets,           ?DEFAULT_USE_WEBSOCKETS},
         {use_host_prefix,          ?DEFAULT_USE_HOST_PREFIX},
@@ -133,8 +135,9 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      SSL, Compress, MaxConnections,
      MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
-     OutputType, ContentTypeForced0, ContentTypesAccepted0, StatusCodeTimeout,
-     UseWebSockets, UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
+     OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
+     StatusCodeTimeout, UseWebSockets, UseHostPrefix, UseClientIpPrefix,
+     UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_integer(Backlog),
@@ -166,6 +169,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         is_list(ContentTypesAccepted0) ->
             content_types_accepted_pattern(ContentTypesAccepted0)
     end,
+    true = is_boolean(SetXForwardedFor),
     true = is_integer(StatusCodeTimeout),
     true = is_boolean(UseWebSockets),
     true = is_boolean(UseHostPrefix),
@@ -183,6 +187,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               output_type = OutputType,
                               content_type_forced = ContentTypeForced1,
                               content_types_accepted = ContentTypesAccepted1,
+                              set_x_forwarded_for = SetXForwardedFor,
                               status_code_timeout = StatusCodeTimeout,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
