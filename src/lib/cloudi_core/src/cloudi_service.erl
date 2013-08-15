@@ -1444,11 +1444,11 @@ timeout_sync(Dispatcher) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec service_name_parse(Pattern :: string(),
-                         Name :: string()) ->
+-spec service_name_parse(Name :: string(),
+                         Pattern :: string()) ->
     list(string()) | error.
 
-service_name_parse(Pattern, Name) ->
+service_name_parse(Name, Pattern) ->
     cloudi_x_trie:pattern_parse(Pattern, Name).
 
 %%-------------------------------------------------------------------------
