@@ -110,6 +110,7 @@ handle(Req0,
                      output_type = OutputType,
                      content_type_forced = ContentTypeForced,
                      content_types_accepted = ContentTypesAccepted,
+                     set_x_forwarded_for = SetXForwardedFor,
                      status_code_timeout = StatusCodeTimeout,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
@@ -117,18 +118,21 @@ handle(Req0,
                      content_type_lookup = ContentTypeLookup} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
-    {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
+    {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {QsVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
     {ok, Body, Req4} = cloudi_x_cowboy_req:body(Req3),
     {PathRaw, Req5} = cloudi_x_cowboy_req:path(Req4),
+    {Client, Req6} = cloudi_x_cowboy_req:peer(Req5),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
-                                                 PathRaw, Req5),
+                                                 PathRaw,
+                                                 Client,
+                                                 Req6),
     RequestAccepted = if
         ContentTypesAccepted =:= undefined ->
             true;
         true ->
-            header_accept_check(HeadersIncoming, ContentTypesAccepted)
+            header_accept_check(HeadersIncoming0, ContentTypesAccepted)
     end,
     if
         RequestAccepted =:= false ->
@@ -167,7 +171,7 @@ handle(Req0,
                     % do not pass type information along with the request!
                     % make sure to encourage good design that provides
                     % one type per name (path)
-                    case header_content_type(HeadersIncoming) of
+                    case header_content_type(HeadersIncoming0) of
                         <<"application/zip">> ->
                             zlib:unzip(Body);
                         _ ->
@@ -183,11 +187,28 @@ handle(Req0,
                 OutputType =:= binary ->
                     RequestBinary
             end,
+            HeadersIncomingN = if
+                SetXForwardedFor =:= true ->
+                    case lists:keyfind(<<"x-forwarded-for">>, 1,
+                                       HeadersIncoming0) of
+                        false ->
+                            {ClientIpAddr, _ClientPort} = Client,
+                            [{<<"x-forwarded-for">>,
+                              erlang:list_to_binary(
+                                  inet_parse:ntoa(ClientIpAddr))} |
+                             HeadersIncoming0];
+                        _ ->
+                            HeadersIncoming0
+                            
+                    end;
+                SetXForwardedFor =:= false ->
+                    HeadersIncoming0
+            end,
             RequestInfo = if
                 OutputType =:= internal; OutputType =:= list ->
-                    HeadersIncoming;
+                    HeadersIncomingN;
                 OutputType =:= external; OutputType =:= binary ->
-                    headers_external_incoming(HeadersIncoming)
+                    headers_external_incoming(HeadersIncomingN)
             end,
             Service ! {cowboy_request, self(),
                        NameOutgoing, RequestInfo, Request},
@@ -246,9 +267,12 @@ websocket_init(_Transport, Req0,
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
+    {Client, Req4} = cloudi_x_cowboy_req:peer(Req3),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
-                                                 PathRaw, Req3),
+                                                 PathRaw,
+                                                 Client,
+                                                 Req4),
     NameOutgoing = if
         UseMethodSuffix =:= false ->
             NameIncoming;
@@ -676,20 +700,18 @@ return_response(NameIncoming, HeadersOutgoing0, Response,
                                           ReqN),
     {HttpCode, Req}.
 
-service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Req0)
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Client, Req0)
     when UseClientIpPrefix =:= true, UseHostPrefix =:= true ->
     {HostRaw, Req1} = cloudi_x_cowboy_req:host(Req0),
-    {Client, Req2} = cloudi_x_cowboy_req:peer(Req1),
-    {service_name_incoming_merge(Client, HostRaw, PathRaw), Req2};
-service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Req0)
+    {service_name_incoming_merge(Client, HostRaw, PathRaw), Req1};
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Client, Req0)
     when UseClientIpPrefix =:= true, UseHostPrefix =:= false ->
-    {Client, Req1} = cloudi_x_cowboy_req:peer(Req0),
-    {service_name_incoming_merge(Client, undefined, PathRaw), Req1};
-service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Req0)
+    {service_name_incoming_merge(Client, undefined, PathRaw), Req0};
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, _Client, Req0)
     when UseClientIpPrefix =:= false, UseHostPrefix =:= true ->
     {HostRaw, Req1} = cloudi_x_cowboy_req:host(Req0),
     {service_name_incoming_merge(undefined, HostRaw, PathRaw), Req1};
-service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Req0)
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, _Client, Req0)
     when UseClientIpPrefix =:= false, UseHostPrefix =:= false ->
     {service_name_incoming_merge(undefined, undefined, PathRaw), Req0}.
 
@@ -697,11 +719,11 @@ service_name_incoming_merge(undefined, undefined, PathRaw) ->
     erlang:binary_to_list(PathRaw);
 service_name_incoming_merge(undefined, HostRaw, PathRaw) ->
     erlang:binary_to_list(<<HostRaw/binary, PathRaw/binary>>);
-service_name_incoming_merge({IpAddr, _Port}, undefined, PathRaw) ->
-    ip_address_string(IpAddr) ++
+service_name_incoming_merge({ClientIpAddr, _ClientPort}, undefined, PathRaw) ->
+    ip_address_string(ClientIpAddr) ++
     erlang:binary_to_list(PathRaw);
-service_name_incoming_merge({IpAddr, _Port}, HostRaw, PathRaw) ->
-    ip_address_string(IpAddr) ++
+service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
+    ip_address_string(ClientIpAddr) ++
     erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
     
 ip_address_string({B1, B2, B3, B4}) ->
