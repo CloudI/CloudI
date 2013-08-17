@@ -46,20 +46,13 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_service).
-
-%% external interface
-
--ifdef(ERLANG_OTP_VER_R14).
-%% behavior callbacks
--export([behaviour_info/1]).
--endif.
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -89,22 +82,6 @@
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_R14).
-
--spec behaviour_info(atom()) -> 'undefined' | [{atom(), byte()}].
-
-behaviour_info(callbacks) ->
-    [
-        {cloudi_service_map_reduce_new, 2},
-        {cloudi_service_map_reduce_send, 2},
-        {cloudi_service_map_reduce_resend, 2},
-        {cloudi_service_map_reduce_recv, 7}
-    ];
-behaviour_info(_) ->
-    undefined.
-
--else. % Erlang version must be >= R15
-
 -callback cloudi_service_map_reduce_new(ModuleReduceArgs :: list(),
                                         Dispatcher :: pid()) ->
     ModuleReduceState :: any().
@@ -130,8 +107,6 @@ behaviour_info(_) ->
     {'done', NewModuleReduceState :: any()} |
     {'error', Reason :: any()}.
 
--endif.
-
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
@@ -145,7 +120,14 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         cloudi_proplists:take_values(Defaults, Args),
     true = is_atom(MapReduceModule) and (MapReduceModule /= undefined),
     true = is_list(MapReduceArguments),
-    ok = cloudi_x_reltool_util:module_loaded(MapReduceModule),
+    case application:load(MapReduceModule) of
+        ok ->
+            ok = cloudi_x_reltool_util:application_start(MapReduceModule);
+        {error, {already_loaded, MapReduceModule}} ->
+            ok = cloudi_x_reltool_util:application_start(MapReduceModule);
+        {error, _} ->
+            ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
+    end,
     MapReduceState =
         MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
                                                       Dispatcher),
