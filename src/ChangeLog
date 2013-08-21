@@ -4,6 +4,7 @@
 2013-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix SSL bug in cloudi_service_http_cowboy
+    * Fix process kill handling, for delayed cleanup of dead services
 
 2013-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
