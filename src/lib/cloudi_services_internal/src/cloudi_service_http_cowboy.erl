@@ -197,7 +197,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     ]),
     {ok, ListenerPid} = if
         is_list(SSL) ->
-            {value, CertFile, SSLOpts} = lists:keytake(certfile, 1, SSL),
+            {value,
+             {certfile, CertFile}, SSLOpts} = lists:keytake(certfile, 1, SSL),
             [] = cloudi_proplists:delete_all([cacertfile,
                                               ciphers,
                                               keyfile,
