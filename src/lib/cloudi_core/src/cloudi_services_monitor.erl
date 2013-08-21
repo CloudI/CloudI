@@ -293,9 +293,11 @@ restart_stage1(#service{pids = Pids,
                         max_t = MaxT} = Service, Services,
                State, ServiceId, OldPid) ->
     Self = self(),
+    Shutdown = terminate_delay(MaxT, MaxR),
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, shutdown),
-        erlang:send_after(terminate_delay(MaxT, MaxR), Self, {kill, P}),
+        erlang:send_after(Shutdown, Self,
+                          {kill, Shutdown, P, Service}),
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
