@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix SSL bug in cloudi_service_http_cowboy
+
 2013-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Allow cloudi_service_map_reduce to use Erlang applications named the
