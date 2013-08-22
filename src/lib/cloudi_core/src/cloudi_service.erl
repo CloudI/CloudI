@@ -146,6 +146,7 @@
          timeout_sync/1,
          service_name_parse/2,
          request_http_qs_parse/1,
+         request_info_key_value_new/1,
          request_info_key_value_parse/1,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
@@ -1462,8 +1463,28 @@ service_name_parse(Name, Pattern) ->
 
 request_http_qs_parse(Request)
     when is_binary(Request) ->
-    binary_key_value_parse_list(dict:new(),
-                                binary:split(Request, <<0>>, [global])).
+    binary_key_value_parse_list(binary:split(Request, <<0>>, [global]),
+                                dict:new()).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===New RequestInfo key/value data.===
+%% RequestInfo is meant to contain key/value pairs that is request
+%% meta-data.  Create the binary RequestInfo data with a list of pairs or
+%% a dict data structure.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec request_info_key_value_new(RequestInfo ::
+                                     list({binary() | string() | atom(),
+                                           binary() | string() | any()}) |
+                                     dict()) ->
+    Result :: binary().
+
+request_info_key_value_new([{_, _} | _] = RequestInfo) ->
+    binary_key_value_new_list(RequestInfo, []);
+request_info_key_value_new(RequestInfo) ->
+    binary_key_value_new_list(dict:to_list(RequestInfo), []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1485,23 +1506,46 @@ request_info_key_value_parse(RequestInfo)
 request_info_key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
     % binary() -> binary()
-    binary_key_value_parse_list(dict:new(),
-                                binary:split(RequestInfo, <<0>>, [global])).
+    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
+                                dict:new()).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-binary_key_value_parse_list(Lookup, [<<>>]) ->
+binary_key_value_new_list([], Result) ->
+    erlang:iolist_to_binary(lists:reverse(Result));
+binary_key_value_new_list([{K, V} | L], Result) ->
+    NewK = if
+        is_binary(K) ->
+            K;
+        is_list(K), is_integer(hd(K)) ->
+            erlang:list_to_binary(K);
+        is_atom(K) ->
+            erlang:atom_to_binary(K, utf8)
+    end,
+    NewV = if
+        is_binary(V) ->
+            V;
+        is_list(V), is_integer(hd(V)) ->
+            erlang:list_to_binary(V);
+        is_atom(V) ->
+            erlang:atom_to_binary(V, utf8);
+        true ->
+            cloudi_string:term_to_binary(V)
+    end,
+    binary_key_value_new_list(L, [[NewK, 0, NewV, 0] | Result]).
+
+binary_key_value_parse_list([<<>>], Lookup) ->
     Lookup;
-binary_key_value_parse_list(Lookup, [K, V | L]) ->
+binary_key_value_parse_list([K, V | L], Lookup) ->
     case dict:find(K, Lookup) of
         {ok, [_ | _] = ListV} ->
-            binary_key_value_parse_list(dict:store(K, ListV ++ [V], Lookup), L);
+            binary_key_value_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
         {ok, V0} ->
-            binary_key_value_parse_list(dict:store(K, [V0, V], Lookup), L);
+            binary_key_value_parse_list(L, dict:store(K, [V0, V], Lookup));
         error ->
-            binary_key_value_parse_list(dict:store(K, V, Lookup), L)
+            binary_key_value_parse_list(L, dict:store(K, V, Lookup))
     end.
 
 %%-------------------------------------------------------------------------

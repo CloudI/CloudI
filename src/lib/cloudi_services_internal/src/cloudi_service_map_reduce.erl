@@ -140,7 +140,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                         map_count = MapCount,
                         map_requests = MapRequests}};
         {error, _} = Error ->
-            Error
+            {stop, Error}
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
