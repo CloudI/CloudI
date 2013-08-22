@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -216,6 +216,8 @@ init([Protocol, SocketPath,
 
 'CONNECT'({'pid', OsPid}, State) ->
     % forked process has connected before CloudI API initialization
+    % (only the thread_index == 0 Erlang process gets this message,
+    %  since the OS process only needs to be killed once, if at all)
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', State#state{os_pid = OsPid}};
 
@@ -740,7 +742,8 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
         error ->
             % send_async timeout already occurred
             {next_state, StateName, State};
-        {ok, {passive, Tref}} when Response == <<>> ->
+        {ok, {passive, Tref}}
+            when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);

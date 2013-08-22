@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -891,7 +891,8 @@ handle_info({'cloudi_service_return_async',
         error ->
             % send_async timeout already occurred
             {noreply, State};
-        {ok, {active, Tref}} when Response == <<>> ->
+        {ok, {active, Tref}}
+            when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);
@@ -915,7 +916,8 @@ handle_info({'cloudi_service_return_async',
             ReceiverPid ! {'return_async_active', Name, Pattern,
                            ResponseInfo, Response, Timeout, TransId},
             {noreply, send_timeout_end(TransId, State)};
-        {ok, {passive, Tref}} when Response == <<>> ->
+        {ok, {passive, Tref}}
+            when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);
@@ -960,7 +962,7 @@ handle_info({'cloudi_service_return_sync',
                     ok
             end,
             if
-                Response == <<>> ->
+                ResponseInfo == <<>>, Response == <<>> ->
                     gen_server:reply(Client, {error, timeout});
                 ResponseInfo == <<>> ->
                     gen_server:reply(Client, {ok, Response});

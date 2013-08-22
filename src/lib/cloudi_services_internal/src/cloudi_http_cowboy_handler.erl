@@ -157,12 +157,18 @@ handle(Req0,
                     NameIncoming ++ "/delete";
                 Method =:= <<"HEAD">> ->
                     NameIncoming ++ "/head";
-                Method =:= <<"TRACE">> ->
-                    NameIncoming ++ "/trace";
                 Method =:= <<"OPTIONS">> ->
                     NameIncoming ++ "/options";
+                Method =:= <<"PATCH">> ->
+                    NameIncoming ++ "/connect";
+                Method =:= <<"TRACE">> ->
+                    NameIncoming ++ "/trace";
                 Method =:= <<"CONNECT">> ->
-                    NameIncoming ++ "/connect"
+                    NameIncoming ++ "/connect";
+                true ->
+                    % handle custom methods, if they occur
+                    NameIncoming ++ [$/ |
+                        string:to_lower(erlang:binary_to_list(Method))]
             end,
             RequestBinary = if
                 Method =:= <<"GET">> ->
@@ -566,19 +572,20 @@ header_content_type(Headers) ->
 
 % format for external services, http headers passed as key-value pairs
 headers_external_incoming(L) ->
-    erlang:iolist_to_binary(lists:reverse(headers_external_incoming([], L))).
+    erlang:iolist_to_binary(lists:reverse(headers_external_incoming(L, []))).
 
-headers_external_incoming(Result, []) ->
+headers_external_incoming([], Result) ->
     Result;
-headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
-    headers_external_incoming([[K, 0, V, 0] | Result], L).
+headers_external_incoming([{K, V} | L], Result) when is_binary(K) ->
+    headers_external_incoming(L, [[K, 0, V, 0] | Result]).
 
 headers_external_outgoing(<<>>) ->
     [];
 headers_external_outgoing([] = ResponseInfo) ->
     ResponseInfo;
-headers_external_outgoing([{K, V} | _] = ResponseInfo)
-    when is_binary(K), is_binary(V) ->
+headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
+    % assumes key/value within tuple are iodata()
+    % (cowboy can error if this is not true)
     ResponseInfo;
 headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo) ->
@@ -588,26 +595,26 @@ headers_external_outgoing(ResponseInfo)
         _ ->
             [global]
     end,
-    headers_external_outgoing([], binary:split(ResponseInfo, <<0>>, Options)).
+    headers_external_outgoing(binary:split(ResponseInfo, <<0>>, Options), []).
 
-headers_external_outgoing(Result, []) ->
-    Result;
-headers_external_outgoing(Result, [K, V | L]) ->
-    headers_external_outgoing([{K, V} | Result], L).
+headers_external_outgoing([<<>>], Result) ->
+    lists:reverse(Result);
+headers_external_outgoing([K, V | L], Result) ->
+    headers_external_outgoing(L, [{K, V} | Result]).
 
 get_query_string_format([]) ->
     <<>>;
 get_query_string_format(QsVals) ->
-    erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
+    erlang:iolist_to_binary(lists:reverse(lists:foldr(fun({K, V}, L) ->
         if
             V =:= true ->
-                [K, 0, <<"true">>, 0 | L];
+                [[K, 0, <<"true">>, 0] | L];
             V =:= false ->
-                [K, 0, <<"false">>, 0 | L];
+                [[K, 0, <<"false">>, 0] | L];
             true ->
-                [K, 0, V, 0 | L]
+                [[K, 0, V, 0] | L]
         end
-    end, [], QsVals)).
+    end, [], QsVals))).
 
 request_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
