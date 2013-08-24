@@ -138,7 +138,6 @@ groups() ->
          ]},
         {test, [],
          [
-%         t_describe_cluster_name,
          t_add_drop_keyspace,
                 t_update_keyspace
          ]}
