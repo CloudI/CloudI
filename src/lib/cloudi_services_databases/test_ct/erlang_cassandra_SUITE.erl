@@ -15,6 +15,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include("cassandra_types.hrl").
 
+
 -compile(export_all).
 
 -define(CHECKSPEC(M,F,N), true = proper:check_spec({M,F,N})).
@@ -96,42 +97,42 @@ end_per_testcase(_TestCase, _Config) ->
 
 groups() ->
         [
-        {keyspace_crud, [{repeat, 3}],
+        {keyspace_crud, [{repeat, 1}],
          [
                 t_update_keyspace,
                 t_add_drop_keyspace,
                 t_set_keyspace,
                 t_describe_keyspace
          ]},
-        {column_family_crud, [{repeat, 3}],
+        {column_family_crud, [{repeat, 1}],
          [
                 t_add_drop_column_family,
                 t_update_column_family,
                 t_truncate_column_family
          ]},
-        {column_crud, [{repeat, 3}],
+        {column_crud, [{repeat, 1}],
          [
                 t_insert_column,
                 t_get_column,
                 t_remove_column
          ]},
-        {column_slice, [{repeat, 3}],
+        {column_slice, [{repeat, 1}],
          [
                 t_get_slice,
                 t_get_range_slices,
                 t_multiget_slice
          ]},
-        {count, [{repeat, 3}],
+        {count, [{repeat, 1}],
          [
                 t_get_count,
                 t_multiget_count
          ]},
-        {counter_crud, [{repeat, 3}],
+        {counter_crud, [{repeat, 1}],
          [
                 t_add_counter,
                 t_remove_counter
          ]},
-        {cql, [{repeat, 3}],
+        {cql, [{repeat, 1}],
          [
                 t_execute_cql_query,
                 t_prepare_and_execute_cql_query
