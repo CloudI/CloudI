@@ -733,12 +733,12 @@ service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
     erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
     
 ip_address_string({B1, B2, B3, B4}) ->
-    cloudi_string:format("~3..0b.~3..0b.~3..0b.~3..0b",
-                         [B1, B2, B3, B4]);
-ip_address_string({N1, N2, N3, N4, N5, N6, N7, N8}) ->
-    cloudi_string:format("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
-                         "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
-                         [N1, N2, N3, N4, N5, N6, N7, N8]).
+    cloudi_string:format_to_list("~3..0b.~3..0b.~3..0b.~3..0b",
+                                 [B1, B2, B3, B4]);
+ip_address_string({S1, S2, S3, S4, S5, S6, S7, S8}) ->
+    cloudi_string:format_to_list("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
+                                 "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
+                                 [S1, S2, S3, S4, S5, S6, S7, S8]).
 
 process_queue(Req,
               #cowboy_state{websocket_state =

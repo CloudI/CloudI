@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service_tcp and cloudi_service_udp
+
 2013-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:request_info_key_value_new/1
