@@ -31,6 +31,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/ememcached/src \
      -d $(top_srcdir)/external/emysql/src \
      -d $(top_srcdir)/external/epgsql/src \
+     -d $(top_srcdir)/external/erlang_cassandra/src \
      -d $(top_srcdir)/external/erlasticsearch/src \
      -d $(top_srcdir)/external/etokyotyrant/src \
      -d $(top_srcdir)/external/jsx/src \
@@ -74,6 +75,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/poolboy/ebin
 	$(MKDIR_P) external/thrift/ebin
 	$(MKDIR_P) external/erlasticsearch/ebin
+	$(MKDIR_P) external/erlang_cassandra/ebin
 	$(MKDIR_P) external/epgsql/ebin
 	$(MKDIR_P) external/emysql/ebin
 	$(MKDIR_P) external/ememcached/ebin
@@ -181,6 +183,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/erlasticsearch; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/erlasticsearch/ebin || exit 0)
+	(cd $(top_srcdir)/external/erlang_cassandra; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/erlang_cassandra/ebin || exit 0)
 	(cd $(top_srcdir)/external/epgsql; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/epgsql/ebin || exit 0)
@@ -264,6 +269,7 @@ rebar-directories-clean: rebar-clean
           $(top_builddir)/external/poolboy/ebin \
           $(top_builddir)/external/thrift/ebin \
           $(top_builddir)/external/erlasticsearch/ebin \
+          $(top_builddir)/external/erlang_cassandra/ebin \
           $(top_builddir)/external/epgsql/ebin \
           $(top_builddir)/external/emysql/ebin \
           $(top_builddir)/external/ememcached/ebin \
@@ -292,6 +298,7 @@ rebar-directories-clean: rebar-clean
           $(top_srcdir)/external/poolboy/ebin \
           $(top_srcdir)/external/thrift/ebin \
           $(top_srcdir)/external/erlasticsearch/ebin \
+          $(top_srcdir)/external/erlang_cassandra/ebin \
           $(top_srcdir)/external/epgsql/ebin \
           $(top_srcdir)/external/emysql/ebin \
           $(top_srcdir)/external/ememcached/ebin \
@@ -392,6 +399,7 @@ dialyze: all \
               external/dynamic_compile/ebin \
               external/etokyotyrant/ebin \
               external/erlasticsearch/ebin \
+              external/erlang_cassandra/ebin \
               external/epgsql/ebin \
               external/ememcached/ebin \
               external/ecouchdb/ebin \
