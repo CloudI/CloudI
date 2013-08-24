@@ -69,7 +69,7 @@
 -define(DEFAULT_NODELAY,                     true).
 -define(DEFAULT_KEEPALIVE,                   true).
 -define(DEFAULT_MAX_CONNECTIONS,             4096).
--define(DEFAULT_PACKET_TYPE,                 line). % gen_tcp:listen/2 option
+-define(DEFAULT_PACKET_TYPE,                 line). % gen_tcp:listen/2 packet
 
 -record(state,
     {
@@ -290,9 +290,11 @@ socket_loop(#state_socket{service = Service,
                     gen_tcp:send(Socket, Response)
             after
                 TimeoutAsync ->
-                    ok
+                    gen_tcp:send(Socket, <<>>)
             end,
             ok = inet:setopts(Socket, [{active, once}]),
+            socket_loop(StateSocket);
+        {tcp_response, _} ->
             socket_loop(StateSocket);
         {tcp_closed, Socket} ->
             catch gen_tcp:close(Socket),
