@@ -158,17 +158,15 @@ cloudi_service_handle_info({return_async_active, _Name, _Pattern,
                                   requests = Requests} = State, _) ->
     #request{source_address = SourceAddress,
              source_port = SourcePort} = dict:fetch(TransId, Requests),
-    NewState = State#state{requests = dict:erase(TransId, Requests)},
-    case gen_udp:send(Socket, SourceAddress, SourcePort, Response) of
-        ok ->
-            {noreply, NewState};
-        {error, Reason} ->
-            ?LOG_ERROR("dropped outgoing udp packet: ~p", [Reason]),
-            {noreply, NewState}
-    end;
+    send(Socket, SourceAddress, SourcePort, Response),
+    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
 cloudi_service_handle_info({timeout_async_active, TransId},
-                           #state{requests = Requests} = State, _) ->
+                           #state{socket = Socket,
+                                  requests = Requests} = State, _) ->
+    #request{source_address = SourceAddress,
+             source_port = SourcePort} = dict:fetch(TransId, Requests),
+    send(Socket, SourceAddress, SourcePort, <<>>),
     {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
 cloudi_service_handle_info(Request, State, _) ->
@@ -190,3 +188,13 @@ ip_address_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
     cloudi_string:format_to_binary("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
                                    "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
                                    [S1, S2, S3, S4, S5, S6, S7, S8]).
+
+send(Socket, SourceAddress, SourcePort, Response) ->
+    case gen_udp:send(Socket, SourceAddress, SourcePort, Response) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("dropped outgoing udp packet: ~p", [Reason]),
+            ok
+    end.
+
