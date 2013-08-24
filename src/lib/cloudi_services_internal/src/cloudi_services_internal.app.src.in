@@ -13,8 +13,10 @@
         cloudi_service_http_cowboy,
         cloudi_service_http_elli,
         cloudi_service_map_reduce,
+        cloudi_service_tcp,
         cloudi_service_timers,
         cloudi_service_work_manager,
+        cloudi_service_udp,
         cloudi_task_size
         ]},
    {included_applications, [

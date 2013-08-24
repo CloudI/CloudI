@@ -67,7 +67,9 @@
          list_to_term/1,
          term_to_binary/1,
          term_to_list/1,
-         format/2]).
+         format/2,
+         format_to_list/2,
+         format_to_binary/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -361,5 +363,28 @@ term_to_list(T) ->
 -spec format(L :: string(), A :: list()) -> string().
 
 format(L, A) when is_list(L), is_list(A) ->
+    format_to_list(L, A).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a string based on the arguments, stored as a list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec format_to_list(L :: string(), A :: list()) -> string().
+-compile({inline, [{format_to_list, 2}]}).
+
+format_to_list(L, A) when is_list(L), is_list(A) ->
     lists:flatten(io_lib:format(L, A)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a string based on the arguments, stored as a binary.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec format_to_binary(L :: string(), A :: list()) -> binary().
+
+format_to_binary(L, A) when is_list(L), is_list(A) ->
+    erlang:iolist_to_binary(io_lib:format(L, A)).
 
