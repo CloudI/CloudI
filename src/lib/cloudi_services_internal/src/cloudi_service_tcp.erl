@@ -133,7 +133,8 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {ok, Listener} ->
             case inet:sockname(Listener) of
                 {ok, {InterfaceUsed, PortUsed}} ->
-                    InterfaceFormatted = ip_address_binary(InterfaceUsed),
+                    InterfaceFormatted =
+                        cloudi_ip_address:to_binary(InterfaceUsed),
                     PortFormatted = erlang:integer_to_binary(PortUsed),
                     case prim_inet:async_accept(Listener, -1) of
                         {ok, Acceptor} ->
@@ -186,7 +187,7 @@ cloudi_service_handle_info({inet_async, _Listener, _Acceptor, {ok, Socket}},
     ok = inet:setopts(Socket, SocketOptions),
     case inet:peername(Socket) of
         {ok, {SourceAddress, SourcePort}} ->
-            SourceAddressFormatted = ip_address_binary(SourceAddress),
+            SourceAddressFormatted = cloudi_ip_address:to_binary(SourceAddress),
             SourcePortFormatted = erlang:integer_to_binary(SourcePort),
             RequestInfo = cloudi_service:request_info_key_value_new(
                 [{<<"source_address">>, SourceAddressFormatted},
@@ -256,14 +257,6 @@ cloudi_service_terminate(_, #state{listener = Listener}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-ip_address_binary({B1, B2, B3, B4}) ->
-    cloudi_string:format_to_binary("~3..0b.~3..0b.~3..0b.~3..0b",
-                                   [B1, B2, B3, B4]);
-ip_address_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    cloudi_string:format_to_binary("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
-                                   "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
-                                   [S1, S2, S3, S4, S5, S6, S7, S8]).
 
 socket_loop_init(#state_socket{service = Service,
                                socket = Socket} = StateSocket) ->

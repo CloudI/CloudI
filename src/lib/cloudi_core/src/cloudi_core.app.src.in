@@ -10,6 +10,7 @@
         cloudi_configurator,
         cloudi_core_app,
         cloudi_core_sup,
+        cloudi_ip_address,
         cloudi_lists,
         cloudi_logger,
         cloudi_logger_interface,

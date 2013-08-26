@@ -104,7 +104,8 @@ cloudi_service_init(Args, _Prefix, _Dispatcher) ->
         {ok, Socket} ->
             case inet:sockname(Socket) of
                 {ok, {InterfaceUsed, PortUsed}} ->
-                    InterfaceFormatted = ip_address_binary(InterfaceUsed),
+                    InterfaceFormatted =
+                        cloudi_ip_address:to_binary(InterfaceUsed),
                     PortFormatted = erlang:integer_to_binary(PortUsed),
                     {ok, #state{socket = Socket,
                                 interface = InterfaceUsed,
@@ -132,7 +133,7 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
                                       DestinationPortFormatted,
                                   destination = Name,
                                   requests = Requests} = State, Dispatcher) ->
-    SourceAddressFormatted = ip_address_binary(SourceAddress),
+    SourceAddressFormatted = cloudi_ip_address:to_binary(SourceAddress),
     SourcePortFormatted = erlang:integer_to_binary(SourcePort),
     RequestInfo = cloudi_service:request_info_key_value_new(
         [{<<"source_address">>, SourceAddressFormatted},
@@ -180,14 +181,6 @@ cloudi_service_terminate(_, #state{socket = Socket}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-ip_address_binary({B1, B2, B3, B4}) ->
-    cloudi_string:format_to_binary("~3..0b.~3..0b.~3..0b.~3..0b",
-                                   [B1, B2, B3, B4]);
-ip_address_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    cloudi_string:format_to_binary("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
-                                   "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
-                                   [S1, S2, S3, S4, S5, S6, S7, S8]).
 
 send(Socket, SourceAddress, SourcePort, Response) ->
     case gen_udp:send(Socket, SourceAddress, SourcePort, Response) of
