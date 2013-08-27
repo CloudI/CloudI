@@ -122,9 +122,9 @@
         queued = cloudi_x_pqueue4:new(),        % queued incoming messages
         % unique state elements
         queued_info = queue:new(),     % queue process messages for service
-        dispatcher,                    % main dispatcher pid
         module,                        % service module
         service_state,                 % service state
+        dispatcher,                    % main dispatcher pid
         request_pid = undefined,       % request pid
         options                        % #config_service_options{}
     }).
@@ -180,13 +180,12 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
           duo_mode = DuoMode,
           info_pid_options = InfoPidOptions} = ConfigOptions]) ->
     Dispatcher = self(),
-    Dispatcher ! {'cloudi_service_init', Args, Timeout},
     DuoModePid = if
         DuoMode =:= true ->
             proc_lib:spawn_opt(fun() ->
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
-                                              dispatcher = Dispatcher,
                                               module = Module,
+                                              dispatcher = Dispatcher,
                                               options = ConfigOptions})
             end, InfoPidOptions);
         true ->
@@ -199,20 +198,24 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
             Dispatcher
     end,
     cloudi_x_quickrand:seed(),
+    State = #state{dispatcher = Dispatcher,
+                   module = Module,
+                   process_index = ProcessIndex,
+                   prefix = Prefix,
+                   timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   receiver_pid = ReceiverPid,
+                   duo_mode_pid = DuoModePid,
+                   uuid_generator = cloudi_x_uuid:new(Dispatcher),
+                   dest_refresh = DestRefresh,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow,
+                   options = ConfigOptions},
+    ReceiverPid ! {'cloudi_service_init_execute', Args, Timeout,
+                   cloudi_services_internal_init:process_dictionary_get(),
+                   State}, % no process dictionary or state modifications below
     destination_refresh_first(DestRefresh, ConfigOptions),
-    {ok, #state{dispatcher = Dispatcher,
-                module = Module,
-                process_index = ProcessIndex,
-                prefix = Prefix,
-                timeout_async = TimeoutAsync,
-                timeout_sync = TimeoutSync,
-                receiver_pid = ReceiverPid,
-                duo_mode_pid = DuoModePid,
-                uuid_generator = cloudi_x_uuid:new(Dispatcher),
-                dest_refresh = DestRefresh,
-                dest_deny = DestDeny,
-                dest_allow = DestAllow,
-                options = ConfigOptions}}.
+    {ok, State}.
 
 handle_call(process_index, _,
             #state{process_index = ProcessIndex} = State) ->
@@ -501,31 +504,37 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     hibernate_check({noreply, State}).
 
-handle_info({'cloudi_service_init', Args, Timeout},
+handle_info({'cloudi_service_init_execute', Args, Timeout,
+             ProcessDictionary, State},
             #state{queue_requests = true,
                    module = Module,
                    prefix = Prefix,
-                   duo_mode_pid = DuoModePid} = State) ->
-    {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(Timeout,
-                                                                     State),
+                   duo_mode_pid = undefined} = State) ->
+    {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(
+        Timeout, ProcessDictionary, State),
     Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
-    NewState = cloudi_services_internal_init:stop_link(DispatcherProxy),
+    {NewProcessDictionary,
+     NewState} = cloudi_services_internal_init:stop_link(DispatcherProxy),
+    ok = cloudi_services_internal_init:process_dictionary_set(
+        NewProcessDictionary),
     hibernate_check(case Result of
         {ok, ServiceState} ->
             erlang:process_flag(trap_exit, true),
-            if
-                is_pid(DuoModePid) ->
-                    DuoModePid ! {'cloudi_service_init', Result},
-                    {noreply, NewState};
-                true ->
-                    {noreply, process_queues(ServiceState, NewState)}
-            end;
+            {noreply, process_queues(ServiceState, NewState)};
         {stop, Reason, ServiceState} ->
             {stop, Reason, NewState#state{service_state = ServiceState,
                                           duo_mode_pid = undefined}};
         {stop, Reason} ->
             {stop, Reason, NewState#state{duo_mode_pid = undefined}}
     end);
+
+handle_info({'cloudi_service_init_state', NewProcessDictionary, NewState},
+            #state{duo_mode_pid = DuoModePid}) ->
+    true = is_pid(DuoModePid),
+    ok = cloudi_services_internal_init:process_dictionary_set(
+        NewProcessDictionary),
+    erlang:process_flag(trap_exit, true),
+    hibernate_check({noreply, NewState});
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              NewServiceState},
@@ -1028,7 +1037,8 @@ handle_info({'cloudi_service_recv_async_timeout', TransId},
 
 handle_info(Request,
             #state{queue_requests = true,
-                   queued_info = QueueInfo} = State) ->
+                   queued_info = QueueInfo,
+                   duo_mode_pid = undefined} = State) ->
     hibernate_check({noreply,
                      State#state{
                          queued_info = queue:in(Request, QueueInfo)}});
@@ -1045,7 +1055,14 @@ handle_info(Request,
         info_pid = handle_module_info_loop_pid(InfoPid,
             {'cloudi_service_info_loop',
              Request, Module, Dispatcher, ServiceState},
-            ConfigOptions, Dispatcher)}}).
+            ConfigOptions, Dispatcher)}});
+
+handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
+    true = is_pid(DuoModePid),
+    % should never happen, but random code could
+    % send random messages to the dispatcher Erlang process
+    ?LOG_ERROR("Unknown info \"~p\"", [Request]),
+    hibernate_check({noreply, State}).
 
 terminate(Reason,
           #state{module = Module,
@@ -1619,6 +1636,7 @@ process_queues(NewServiceState, State) ->
             NewState
     end.
 
+-compile({inline, [{hibernate_check, 1}]}).
 hibernate_check({reply, _,
                  #state{options = #config_service_options{
                             hibernate = false}}} = Result) ->
@@ -1832,35 +1850,39 @@ handle_module_info_loop_hibernate(Uses,
 
 % duo_mode specific logic
 
-duo_mode_loop_init(#state_duo{dispatcher = Dispatcher,
+duo_mode_loop_init(#state_duo{module = Module,
+                              dispatcher = Dispatcher,
                               options = #config_service_options{
                                   hibernate = Hibernate}} = State) ->
     receive
-        {'cloudi_service_init', {ok, ServiceState}} ->
-            erlang:process_flag(trap_exit, true),
-            if
-                Hibernate =:= true ->
-                    proc_lib:hibernate(?MODULE, duo_mode_loop,
-                                       [duo_process_queues(ServiceState,
-                                                           State)]);
-                Hibernate =:= false ->
-                    duo_mode_loop(duo_process_queues(ServiceState, State))
-            end;
-        Request ->
-            % mimic a gen_server handle_info for code reuse
-            case duo_handle_info(Request, State) of
-                {stop, Reason, _} ->
-                    % do not call Module:cloudi_service_terminate/2
-                    % since init has not completed yet
-                    erlang:exit(Dispatcher, Reason);
-                {noreply, NewState} ->
+        {'cloudi_service_init_execute', Args, Timeout,
+         DispatcherProcessDictionary,
+         #state{prefix = Prefix} = DispatcherState} ->
+            {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(
+                Timeout, DispatcherProcessDictionary, DispatcherState),
+            Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
+            {NewDispatcherProcessDictionary, NewDispatcherState} =
+                cloudi_services_internal_init:stop_link(DispatcherProxy),
+            case Result of
+                {ok, ServiceState} ->
+                    erlang:process_flag(trap_exit, true),
+                    Dispatcher ! {'cloudi_service_init_state',
+                                  NewDispatcherProcessDictionary,
+                                  NewDispatcherState},
                     if
                         Hibernate =:= true ->
-                            proc_lib:hibernate(?MODULE, duo_mode_loop_init,
-                                               [NewState]);
+                            proc_lib:hibernate(?MODULE, duo_mode_loop,
+                                [duo_process_queues(ServiceState, State)]);
                         Hibernate =:= false ->
-                            duo_mode_loop_init(NewState)
-                    end
+                            duo_mode_loop(duo_process_queues(ServiceState,
+                                                             State))
+                    end;
+                {stop, Reason, ServiceState} ->
+                    Module:cloudi_service_terminate(Reason, ServiceState),
+                    erlang:exit(Dispatcher, Reason);
+                {stop, Reason} ->
+                    Module:cloudi_service_terminate(Reason, undefined),
+                    erlang:exit(Dispatcher, Reason)
             end
     end.
 
@@ -1967,9 +1989,9 @@ duo_handle_info({'cloudi_service_send_async',
                  Timeout, Priority, TransId, Pid},
                 #state_duo{duo_mode_pid = DuoModePid,
                            queue_requests = false,
-                           dispatcher = Dispatcher,
                            module = Module,
                            service_state = ServiceState,
+                           dispatcher = Dispatcher,
                            request_pid = RequestPid,
                            options = ConfigOptions} = State) ->
     {noreply, State#state_duo{
@@ -1987,9 +2009,9 @@ duo_handle_info({'cloudi_service_send_sync',
                  Timeout, Priority, TransId, Pid},
                 #state_duo{duo_mode_pid = DuoModePid,
                            queue_requests = false,
-                           dispatcher = Dispatcher,
                            module = Module,
                            service_state = ServiceState,
+                           dispatcher = Dispatcher,
                            request_pid = RequestPid,
                            options = ConfigOptions} = State) ->
     {noreply, State#state_duo{
@@ -2051,9 +2073,9 @@ duo_handle_info(Request,
     {noreply, State#state_duo{queued_info = queue:in(Request, QueueInfo)}};
 
 duo_handle_info(Request,
-                #state_duo{dispatcher = Dispatcher,
-                           module = Module,
-                           service_state = ServiceState} = State) ->
+                #state_duo{module = Module,
+                           service_state = ServiceState,
+                           dispatcher = Dispatcher} = State) ->
     case handle_module_info(Request, Module, Dispatcher, ServiceState) of
         {'cloudi_service_info_success', NewServiceState} ->
             {noreply, State#state_duo{service_state = NewServiceState}};
@@ -2065,8 +2087,8 @@ duo_handle_info(Request,
 duo_process_queue_info(NewServiceState,
                        #state_duo{queue_requests = true,
                                   queued_info = QueueInfo,
-                                  dispatcher = Dispatcher,
-                                  module = Module} = State) ->
+                                  module = Module,
+                                  dispatcher = Dispatcher} = State) ->
     case queue:out(QueueInfo) of
         {empty, NewQueueInfo} ->
             State#state_duo{service_state = NewServiceState,
@@ -2091,8 +2113,8 @@ duo_process_queue(NewServiceState,
                              recv_timeouts = RecvTimeouts,
                              queue_requests = true,
                              queued = Queue,
-                             dispatcher = Dispatcher,
                              module = Module,
+                             dispatcher = Dispatcher,
                              request_pid = RequestPid,
                              options = ConfigOptions} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
