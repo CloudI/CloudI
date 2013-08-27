@@ -68,6 +68,7 @@
 -define(DEFAULT_BACKLOG,                      128).
 -define(DEFAULT_NODELAY,                     true).
 -define(DEFAULT_KEEPALIVE,                   true).
+-define(DEFAULT_RECV_TIMEOUT,           30 * 1000). % milliseconds
 -define(DEFAULT_MAX_CONNECTIONS,             4096).
 -define(DEFAULT_PACKET_TYPE,                 line). % gen_tcp:listen/2 packet
 
@@ -76,7 +77,8 @@
         listener,
         acceptor,
         service,
-        timeout_async,
+        timeout_send,
+        timeout_recv,
         socket_options,
         interface_formatted,
         port_formatted,
@@ -90,7 +92,8 @@
     {
         service,
         socket,
-        timeout_async,
+        timeout_send,
+        timeout_recv,
         request_info
     }).
 
@@ -110,26 +113,28 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {backlog,                  ?DEFAULT_BACKLOG},
         {nodelay,                  ?DEFAULT_NODELAY},
         {keepalive,                ?DEFAULT_KEEPALIVE},
+        {recv_timeout,             ?DEFAULT_RECV_TIMEOUT},
         {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
         {packet_type,              ?DEFAULT_PACKET_TYPE}],
     [Interface, Port, Destination, Backlog, NoDelay, KeepAlive,
-     MaxConnections, PacketType] =
+     RecvTimeout, MaxConnections, PacketType] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_list(Destination),
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
     true = is_boolean(KeepAlive),
+    true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
     true = (is_integer(MaxConnections) andalso (MaxConnections > 0)),
     true = lists:member(PacketType,
                         [raw, 0, 1, 2, 4, asn1, cdr, sunrm, fcgi, tpkt, line]),
     Service = cloudi_service:self(Dispatcher),
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
-    SocketOptions = [{ip, Interface}, {active, false}, binary,
-                     {reuseaddr, true}, {backlog, Backlog},
-                     {nodelay, NoDelay}, {keepalive, KeepAlive},
-                     {packet, PacketType}],
-    case gen_tcp:listen(Port, SocketOptions) of
+    SocketOptions = [binary, {active, false},
+                     {nodelay, NoDelay}, {delay_send, false},
+                     {keepalive, KeepAlive}, {packet, PacketType}],
+    case gen_tcp:listen(Port, [{ip, Interface}, {backlog, Backlog},
+                               {reuseaddr, true} | SocketOptions]) of
         {ok, Listener} ->
             case inet:sockname(Listener) of
                 {ok, {InterfaceUsed, PortUsed}} ->
@@ -141,7 +146,8 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                             {ok, #state{listener = Listener,
                                         acceptor = Acceptor,
                                         service = Service,
-                                        timeout_async = TimeoutAsync,
+                                        timeout_send = TimeoutAsync,
+                                        timeout_recv = RecvTimeout,
                                         socket_options = SocketOptions,
                                         interface_formatted =
                                             InterfaceFormatted,
@@ -164,18 +170,29 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
-cloudi_service_handle_info({inet_async, _Listener, _Acceptor, {ok, Socket}},
-                           #state{connection_count = ConnectionCount,
+cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
+                           #state{listener = Listener,
+                                  acceptor = Acceptor,
+                                  connection_count = ConnectionCount,
                                   connection_max = ConnectionMax} = State,
                            _Dispatcher)
     when ConnectionCount >= ConnectionMax ->
+    true = inet_db:register_socket(Socket, inet_tcp),
     catch gen_tcp:close(Socket),
     ?LOG_WARN("max_connections (~p) reached!", [ConnectionMax]),
-    {noreply, State};
+    case prim_inet:async_accept(Listener, -1) of
+        {ok, NewAcceptor} ->
+            {noreply, State#state{acceptor = NewAcceptor}};
+        {error, _} = Error ->
+            {stop, Error, State}
+    end;
 
-cloudi_service_handle_info({inet_async, _Listener, _Acceptor, {ok, Socket}},
-                           #state{service = Service,
-                                  timeout_async = TimeoutAsync,
+cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
+                           #state{listener = Listener,
+                                  acceptor = Acceptor,
+                                  service = Service,
+                                  timeout_send = TimeoutSend,
+                                  timeout_recv = TimeoutRecv,
                                   socket_options = SocketOptions,
                                   interface_formatted =
                                       DestinationAddressFormatted,
@@ -185,7 +202,7 @@ cloudi_service_handle_info({inet_async, _Listener, _Acceptor, {ok, Socket}},
                            _Dispatcher) ->
     true = inet_db:register_socket(Socket, inet_tcp),
     ok = inet:setopts(Socket, SocketOptions),
-    case inet:peername(Socket) of
+    NewConnectionCount = case inet:peername(Socket) of
         {ok, {SourceAddress, SourcePort}} ->
             SourceAddressFormatted = cloudi_ip_address:to_binary(SourceAddress),
             SourcePortFormatted = erlang:integer_to_binary(SourcePort),
@@ -197,22 +214,28 @@ cloudi_service_handle_info({inet_async, _Listener, _Acceptor, {ok, Socket}},
             SocketPid = proc_lib:spawn_opt(fun() ->
                 socket_loop_init(#state_socket{service = Service,
                                                socket = Socket,
-                                               timeout_async = TimeoutAsync,
+                                               timeout_send = TimeoutSend,
+                                               timeout_recv = TimeoutRecv,
                                                request_info = RequestInfo})
             end, [link]),
             case gen_tcp:controlling_process(Socket, SocketPid) of
-                ok = Success ->
-                    SocketPid ! {init, Success},
-                    {noreply,
-                     State#state{connection_count = ConnectionCount + 1}};
-                {error, _} = Error ->
-                    SocketPid ! {init, Error},
-                    {noreply, State}
-            end;
+                ok = InitSuccess ->
+                    SocketPid ! {init, InitSuccess};
+                {error, _} = InitError ->
+                    SocketPid ! {init, InitError}
+            end,
+            ConnectionCount + 1;
         {error, Reason} ->
             ?LOG_ERROR("socket accept error: ~p", [Reason]),
             catch gen_tcp:close(Socket),
-            {noreply, State}
+            ConnectionCount
+    end,
+    case prim_inet:async_accept(Listener, -1) of
+        {ok, NewAcceptor} ->
+            {noreply, State#state{acceptor = NewAcceptor,
+                                  connection_count = NewConnectionCount}};
+        {error, _} = Error ->
+            {stop, Error, State#state{connection_count = NewConnectionCount}}
     end;
 
 cloudi_service_handle_info({inet_async, _Listener, _Acceptor, Error},
@@ -246,6 +269,11 @@ cloudi_service_handle_info({timeout_async_active, TransId},
     TcpPid ! {tcp_response, <<>>},
     {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
+cloudi_service_handle_info(socket_closed,
+                           #state{connection_count = ConnectionCount} = State,
+                           _) ->
+    {noreply, State#state{connection_count = ConnectionCount - 1}};
+
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -258,40 +286,63 @@ cloudi_service_terminate(_, #state{listener = Listener}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-socket_loop_init(#state_socket{service = Service,
-                               socket = Socket} = StateSocket) ->
+socket_loop_init(#state_socket{socket = Socket} = StateSocket) ->
     receive
         {init, ok} ->
             ok = inet:setopts(Socket, [{active, once}]),
             socket_loop(StateSocket);
-        {init, {error, Reason} = Error} ->
-            ?LOG_ERROR("socket creation error: ~p", [Reason]),
-            catch gen_tcp:close(Socket),
-            erlang:unlink(Service),
-            erlang:exit(Error)
+        {init, Error} ->
+            socket_loop_terminate(Error, StateSocket)
     end.
 
 socket_loop(#state_socket{service = Service,
                           socket = Socket,
-                          timeout_async = TimeoutAsync,
+                          timeout_send = TimeoutSend,
+                          timeout_recv = TimeoutRecv,
                           request_info = RequestInfo} = StateSocket) ->
     receive
         {tcp, Socket, Request} ->
             Service ! {tcp_request, self(), RequestInfo, Request},
             receive
                 {tcp_response, Response} ->
-                    gen_tcp:send(Socket, Response)
+                    socket_send(Response, StateSocket);
+                {tcp_closed, Socket} ->
+                    socket_loop_terminate(normal, StateSocket)
             after
-                TimeoutAsync ->
-                    gen_tcp:send(Socket, <<>>)
+                TimeoutSend ->
+                    socket_send(<<>>, StateSocket)
             end,
             ok = inet:setopts(Socket, [{active, once}]),
             socket_loop(StateSocket);
         {tcp_response, _} ->
+            % late response, timeout already occurred
             socket_loop(StateSocket);
         {tcp_closed, Socket} ->
-            catch gen_tcp:close(Socket),
-            erlang:unlink(Service),
-            erlang:exit(socket_closed)
+            socket_loop_terminate(normal, StateSocket)
+    after
+        TimeoutRecv ->
+            socket_loop_terminate(normal, StateSocket)
+    end.
+
+socket_loop_terminate(Reason, #state_socket{service = Service,
+                                            socket = Socket}) ->
+    if
+        Reason =:= normal ->
+            ?LOG_TRACE("socket ~p closed", [Socket]);
+        true ->
+            ?LOG_ERROR("socket ~p error: ~p", [Socket, Reason])
+    end,
+    catch gen_tcp:close(Socket),
+    Service ! socket_closed,
+    erlang:unlink(Service),
+    erlang:exit(Reason).
+
+socket_send(Data, #state_socket{socket = Socket} = StateSocket) ->
+    case gen_tcp:send(Socket, Data) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_WARN("socket ~p send error: ~p", [Socket, Reason]),
+            socket_loop_terminate(normal, StateSocket)
     end.
 

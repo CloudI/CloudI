@@ -641,6 +641,10 @@ handle_info({'EXIT', Dispatcher, Reason},
     ?LOG_ERROR("~p service exited: ~p", [Dispatcher, Reason]),
     {stop, Reason, State};
 
+handle_info({'EXIT', Pid, Reason}, State) ->
+    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
+    {stop, Reason, State};
+
 handle_info({cloudi_x_cpg_data, Groups},
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
@@ -1982,6 +1986,10 @@ duo_handle_info({'EXIT', Dispatcher, restart},
 duo_handle_info({'EXIT', Dispatcher, Reason},
                 #state_duo{dispatcher = Dispatcher} = State) ->
     ?LOG_ERROR("~p duo_mode dispatcher exited: ~p", [Dispatcher, Reason]),
+    {stop, Reason, State};
+
+duo_handle_info({'EXIT', Pid, Reason}, State) ->
+    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
     {stop, Reason, State};
 
 duo_handle_info({'cloudi_service_send_async',
