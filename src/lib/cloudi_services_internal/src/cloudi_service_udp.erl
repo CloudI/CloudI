@@ -144,9 +144,9 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
                                           RequestInfo, Request,
                                           undefined, undefined) of
         {ok, TransId} ->
-            Request = #request{source_address = SourceAddress,
-                               source_port = SourcePort},
-            {noreply, State#state{requests = dict:store(TransId, Request,
+            RequestData = #request{source_address = SourceAddress,
+                                   source_port = SourcePort},
+            {noreply, State#state{requests = dict:store(TransId, RequestData,
                                                         Requests)}};
         {error, Reason} ->
             ?LOG_ERROR("dropped incoming udp packet: ~p", [Reason]),

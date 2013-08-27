@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_init).
@@ -57,8 +57,10 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/2,
-         stop_link/1]).
+-export([start_link/3,
+         stop_link/1,
+         process_dictionary_get/0,
+         process_dictionary_set/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -78,17 +80,22 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Timeout, InternalState) ->
+start_link(Timeout, ProcessDictionary, InternalState) ->
     gen_server:start_link(?MODULE,
-                          [Timeout, erlang:get(), InternalState],
+                          [Timeout, ProcessDictionary, InternalState],
                           [{timeout, Timeout}]).
 stop_link(Pid) ->
-    {ProcessDictionary, InternalState} = gen_server:call(Pid, stop, infinity),
+    gen_server:call(Pid, stop, infinity).
+
+process_dictionary_get() ->
+    erlang:get().
+
+process_dictionary_set(ProcessDictionary) ->
     erlang:erase(),
     lists:foreach(fun({K, V}) ->
         erlang:put(K, V)
     end, ProcessDictionary),
-    InternalState.
+    ok.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

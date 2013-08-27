@@ -4,6 +4,10 @@
 2013-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_ip_address module for fixed width string representations
+    * Fix a bug when using self() within cloudi_service_init/3 when duo_mode
+      is true (erlang:self/0 now always equals cloudi_service:self/0 within
+      cloudi_service_init/3)
+    * Fix a bug in cloudi_service_udp
 
 2013-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
