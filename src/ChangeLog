@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bugs in cloudi_service_tcp
+
 2013-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_ip_address module for fixed width string representations
