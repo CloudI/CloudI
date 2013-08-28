@@ -5,6 +5,7 @@
   [{description, "CloudI Services Databases Integration"},
    {vsn, "@VERSION@"},
    {modules, [
+        cloudi_service_db_cassandra,
         cloudi_service_db_couchdb,
         cloudi_service_db_elasticsearch,
         cloudi_service_db_memcached,
@@ -20,6 +21,7 @@
         cloudi_x_epgsql,
         cloudi_x_poolboy,
         cloudi_x_thrift,
+        cloudi_x_erlang_cassandra,
         cloudi_x_erlasticsearch,
         cloudi_x_etokyotyrant,
         stdlib,

@@ -75,6 +75,15 @@ to its integration and dependencies).
 - `Mon Jun 10 08:01:52 EST 2013`
 - `BSD`
 
+`erlang_cassandra`
+----------------
+`Erlang Cassandra (thrift) Driver`
+
+- `https://github.com/dieswaytoofast/erlang_cassandra`
+- `tag v1.0`
+- `Mon Jun 10 08:01:52 EST 2013`
+- `BSD`
+
 `etokyotyrant (medici)`
 -----------------------
 `Erlang TokyoTyrant (native) Driver`

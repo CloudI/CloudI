@@ -1,0 +1,29 @@
+
+%%%-------------------------------------------------------------------
+%%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
+%%% @copyright (C) 2013 Mahesh Paolini-Subramanya
+%%% @doc Thrift interface to Cassandra
+%%% @end
+%%%
+%%% This source file is subject to the New BSD License. You should have received
+%%% a copy of the New BSD license with this software. If not, it can be
+%%% retrieved from: http://www.opensource.org/licenses/bsd-license.php
+%%%-------------------------------------------------------------------
+{application, erlang_cassandra,
+ [
+  {description, "thrift based cassandra"},
+  {vsn, "1.0.0"},
+  {registered, []},
+  {modules, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  compiler,
+                  syntax_tools,
+                  sasl,
+                  poolboy,
+                  reltool_util
+                 ]},
+  {mod, {erlang_cassandra_app, []}},
+  {env, []}
+ ]}.
