@@ -13,6 +13,7 @@
   "external/ememcached",
   "external/emysql",
   "external/epgsql",
+  "external/erlang_cassandra",
   "external/erlasticsearch",
   "external/etokyotyrant",
   "external/jsx",
