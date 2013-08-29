@@ -13,6 +13,7 @@
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("common_test/include/ct.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -compile(export_all).
 
@@ -28,7 +29,9 @@
 -define(DB_TARGET, "testdb").
 -define(TIMEOUT, 1000).
 
--define(ES(Prefix, Target), {internal, Prefix, cloudi_service_db_elasticsearch, [{database, Target}], immediate_closest, 5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
+-define(DEFAULT_THRIFT_HOST, "localhost").
+-define(DEFAULT_THRIFT_PORT, 9500).
+-define(ES(Prefix, Target), {internal, Prefix, cloudi_service_db_elasticsearch, [{database, Target}, {connection_options, [{thrift_host, ?DEFAULT_THRIFT_HOST}, {thrift_port, ?DEFAULT_THRIFT_PORT}]}], immediate_closest, 5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
 
 -record(internal,
     {
@@ -94,66 +97,82 @@ init_per_testcase(_TestCase, Config) ->
 end_per_testcase(_TestCase, _Config) ->
     ok.
 
+groups_condition(Groups) ->
+    case gen_tcp:connect(?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT, []) of
+        {ok, Socket} ->
+            catch gen_tcp:close(Socket),
+            Groups;
+        {error, econnrefused} ->
+            ?LOG_ERROR("unable to test ~p",
+                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}]),
+            [];
+        {error, Reason} ->
+            ?LOG_ERROR("unable to test ~p: ~p",
+                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}, Reason]),
+            []
+    end.
+
 groups() ->
-    [{crud_index, [],
-       [t_is_index_1,
-        t_is_index_all,
-        t_is_type_1,
-        t_is_type_all,
-        t_create_index, 
-        t_create_index_with_shards,
-        t_open_index
-      ]},
-     {index_helpers, [],
-        [t_flush_1,
-        t_flush_list,
-        t_flush_all,
-        t_refresh_1,
-        t_refresh_list,
-        t_refresh_all,
-        t_optimize_1,
-        t_optimize_list,
-        t_optimize_all,
-        t_segments_1,
-        t_segments_list,
-        t_segments_all,
-        t_status_1,
-        t_status_all,
-        t_clear_cache_1,
-        t_clear_cache_list,
-        t_clear_cache_all
-
-       ]},
-    % These three _MUST_ be in this sequence, and by themselves
-    {crud_doc, [],
-      [ t_insert_doc, 
-       t_get_doc, 
-       t_delete_doc
-      ]},
-    {doc_helpers, [],
-       [t_is_doc,
-        t_mget_index,
-        t_mget_type,
-        t_mget_id
-      ]},
-     {test, [],
-      [
-         t_health
-      ]},
-     {cluster_helpers, [],
-      [t_health,
-       t_state,
-       t_nodes_info,
-       t_nodes_stats
-      ]},
-
-     {search, [],
-      [t_search,
-       t_count,
-       t_delete_by_query_param,
-       t_delete_by_query_doc
-      ]}
-    ].
+    groups_condition([
+        {crud_index, [],
+          [t_is_index_1,
+           t_is_index_all,
+           t_is_type_1,
+           t_is_type_all,
+           t_create_index, 
+           t_create_index_with_shards,
+           t_open_index
+         ]},
+        {index_helpers, [],
+           [t_flush_1,
+           t_flush_list,
+           t_flush_all,
+           t_refresh_1,
+           t_refresh_list,
+           t_refresh_all,
+           t_optimize_1,
+           t_optimize_list,
+           t_optimize_all,
+           t_segments_1,
+           t_segments_list,
+           t_segments_all,
+           t_status_1,
+           t_status_all,
+           t_clear_cache_1,
+           t_clear_cache_list,
+           t_clear_cache_all
+   
+          ]},
+       % These three _MUST_ be in this sequence, and by themselves
+       {crud_doc, [],
+         [ t_insert_doc, 
+          t_get_doc, 
+          t_delete_doc
+         ]},
+       {doc_helpers, [],
+          [t_is_doc,
+           t_mget_index,
+           t_mget_type,
+           t_mget_id
+         ]},
+        {test, [],
+         [
+            t_health
+         ]},
+        {cluster_helpers, [],
+         [t_health,
+          t_state,
+          t_nodes_info,
+          t_nodes_stats
+         ]},
+   
+        {search, [],
+         [t_search,
+          t_count,
+          t_delete_by_query_param,
+          t_delete_by_query_doc
+         ]}
+    ]).
 
 all() ->
     [

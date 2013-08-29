@@ -7,14 +7,34 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(DEFAULT_PGSQL_HOST, "127.0.0.1").
+-define(DEFAULT_PGSQL_PORT, 5432).
+
 -define(DB, "/db/pgsql/cloudi_tests"). % service name
 
 all() ->
     [{group, create_table_1}].
 
+groups_condition(Groups) ->
+    case gen_tcp:connect(?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT, []) of
+        {ok, Socket} ->
+            catch gen_tcp:close(Socket),
+            Groups;
+        {error, econnrefused} ->
+            ?LOG_ERROR("unable to test ~p",
+                       [{?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT}]),
+            [];
+        {error, Reason} ->
+            ?LOG_ERROR("unable to test ~p: ~p",
+                       [{?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT}, Reason]),
+            []
+    end.
+
 groups() ->
-    [{create_table_1, [],
-      [t_create_table_1]}].
+    groups_condition([
+        {create_table_1, [],
+         [t_create_table_1]}
+    ]).
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -50,22 +70,15 @@ end_per_testcase(_TestCase, Config) ->
     Config.
 
 t_create_table_1(_Config) ->
-    ?LOG_INFO("~p", [?FUNCTION]),
     Context = cloudi:new(),
-    case cloudi:get_pid(Context, ?DB, 0) of
-        {ok, _} ->
-            {ok, _Response} = cloudi:send_sync(Context, ?DB,
-                % from hexpi test
-                <<"DROP TABLE IF EXISTS incoming_results; "
-                  "CREATE TABLE incoming_results ("
-                  "digit_index   NUMERIC(30) PRIMARY KEY,"
-                  "data          TEXT"
-                  ");">>),
-            ok;
-        {error, _} ->
-            error_logger:error_msg("Postgres isn't setup"),
-            ok
-    end.
+    {ok, _Response} = cloudi:send_sync(Context, ?DB,
+        % from hexpi test
+        <<"DROP TABLE IF EXISTS incoming_results; "
+          "CREATE TABLE incoming_results ("
+          "digit_index   NUMERIC(30) PRIMARY KEY,"
+          "data          TEXT"
+          ");">>),
+    ok.
     
 
 

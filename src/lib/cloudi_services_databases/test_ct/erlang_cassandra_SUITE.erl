@@ -13,8 +13,8 @@
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("common_test/include/ct.hrl").
--include("cassandra_types.hrl").
-
+-include_lib("erlang_cassandra/include/cloudi_x_cassandra_types.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -compile(export_all).
 
@@ -42,7 +42,9 @@
 -define(MAX_COLUMNS, 100).
 -define(MAX_ROWS, 10).
 
--define(EC(Prefix, Target, PoolOptions), {internal, Prefix, cloudi_service_db_cassandra, [{connection_name, Target}, {pool_options, PoolOptions}], immediate_closest, 5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
+-define(DEFAULT_THRIFT_HOST, "localhost").
+-define(DEFAULT_THRIFT_PORT, 9160).
+-define(EC(Prefix, Target, PoolOptions), {internal, Prefix, cloudi_service_db_cassandra, [{connection_name, Target}, {pool_options, PoolOptions}, {connection_options, [{thrift_host, ?DEFAULT_THRIFT_HOST}, {thrift_port, ?DEFAULT_THRIFT_PORT}]}], immediate_closest, 5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
 
 -record(internal,
     {
@@ -95,8 +97,23 @@ init_per_testcase(_TestCase, Config) ->
 end_per_testcase(_TestCase, _Config) ->
     ok.
 
+groups_condition(Groups) ->
+    case gen_tcp:connect(?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT, []) of
+        {ok, Socket} ->
+            catch gen_tcp:close(Socket),
+            Groups;
+        {error, econnrefused} ->
+            ?LOG_ERROR("unable to test ~p",
+                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}]),
+            [];
+        {error, Reason} ->
+            ?LOG_ERROR("unable to test ~p: ~p",
+                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}, Reason]),
+            []
+    end.
+
 groups() ->
-        [
+    groups_condition([
         {keyspace_crud, [{repeat, 1}],
          [
                 t_update_keyspace,
@@ -143,7 +160,7 @@ groups() ->
                 t_update_keyspace
          ]}
 
-    ].
+    ]).
 
 all() ->
     [

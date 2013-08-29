@@ -70,7 +70,7 @@
 -define(DEFAULT_KEEPALIVE,                   true).
 -define(DEFAULT_RECV_TIMEOUT,           30 * 1000). % milliseconds
 -define(DEFAULT_MAX_CONNECTIONS,             4096).
--define(DEFAULT_PACKET_TYPE,                 line). % gen_tcp:listen/2 packet
+-define(DEFAULT_PACKET_TYPE,                 line). % inet:setopts/2 packet
 
 -record(state,
     {
