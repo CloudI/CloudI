@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move makefile "clean-configure" target to utilize the distclean target
+
 2013-08-28 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
 
     * Merge cassandra database integration
