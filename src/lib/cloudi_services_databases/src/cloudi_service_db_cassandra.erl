@@ -160,7 +160,7 @@
 -type compression()     :: binary().
 
 -record(state, {
-        connection_name     :: connection_name()
+        connection_name     :: undefined | connection_name()
         }).
 
 -type response()        :: [tuple()] | error().

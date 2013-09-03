@@ -42,6 +42,42 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/thrift/src \
      -d $(top_srcdir)/external/thrift/test
 
+.PHONY: \
+    rebar-directories-compile \
+    erlang-applications-scope-add \
+    rebar-compile \
+    rebar-clean \
+    rebar-directories-clean \
+    clean-configure \
+    rebar-directories-distclean \
+    erlang-applications-scope-remove \
+    dialyze \
+    doc \
+    xref \
+    test \
+    cloudi-prefix-install \
+    tests-install \
+    tests-echo-install \
+    tests-environment-install \
+    tests-flood-install \
+    tests-hexpi-install \
+    tests-http-install \
+    tests-http_req-install \
+    tests-service_api-install \
+    tests-messaging-install \
+    tests-msg_size-install \
+    tests-websockets-install \
+    tests-zeromq-install \
+    api-install \
+    api-erlang-install \
+    api-c-install \
+    api-java-install \
+    api-python-install \
+    api-ruby-install \
+    service_api-install \
+    service_api-python-install \
+    run
+
 all-local: rel/files/app.config \
            erlang-applications-scope-add \
            rebar-directories-compile \
@@ -213,9 +249,6 @@ rebar-directories-compile:
 	(cd $(top_builddir)/external/epgsql && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/epgsql/include || exit 0)
-	(cd $(top_builddir)/external/epgsql && \
-        test ! -e include && \
-        $(LN_S) $(abs_top_srcdir)/external/epgsql/include || exit 0)
 	(cd $(top_builddir)/external/emysql && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/emysql/include || exit 0)
@@ -279,6 +312,29 @@ rebar-directories-clean: rebar-clean
           $(top_builddir)/external/elli/ebin \
           $(top_builddir)/external/dynamic_compile/ebin \
           || exit 0
+	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
+       test -d external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
+       rm -f $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq \
+             || exit 0; \
+     fi)
+	(test -L $(top_builddir)/external/epgsql/include && \
+	 rm $(top_builddir)/external/epgsql/include || \
+	 exit 0)
+	(test -L $(top_builddir)/external/emysql/include && \
+	 rm $(top_builddir)/external/emysql/include || \
+	 exit 0)
+	(test -L $(top_builddir)/external/elli/include && \
+	 rm $(top_builddir)/external/elli/include || \
+	 exit 0)
+	(test -L $(top_builddir)/lib/uuid/include && \
+	 rm $(top_builddir)/lib/uuid/include || \
+	 exit 0)
+	(test -L $(top_builddir)/lib/cpg/include && \
+	 rm $(top_builddir)/lib/cpg/include || \
+	 exit 0)
+	(test -L $(top_builddir)/lib/cloudi_core/include && \
+	 rm $(top_builddir)/lib/cloudi_core/include || \
+	 exit 0)
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
           $(top_srcdir)/lib/cloudi_services_internal/ebin \
           $(top_srcdir)/lib/cloudi_services_databases/ebin \
@@ -308,71 +364,42 @@ rebar-directories-clean: rebar-clean
           $(top_srcdir)/external/elli/ebin \
           $(top_srcdir)/external/dynamic_compile/ebin
 
-clean-configure: config.log \
-                 clean \
-                 rebar-directories-clean-configure \
+clean-configure: distclean
+
+distclean-local: rebar-directories-distclean \
                  erlang-applications-scope-remove
-	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
-     make clean || exit 0)
-	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
-     exit 0)
 	rm -f $(top_srcdir)/aclocal.m4 \
-        $(top_srcdir)/config.h.in \
-        $(top_srcdir)/config.h.in~ \
-        $(top_builddir)/config.h \
-        $(top_builddir)/config.log \
-        $(top_builddir)/config.status \
-        $(top_builddir)/stamp-h1 \
-        $(top_srcdir)/config/config.guess \
-        $(top_srcdir)/config/config.sub \
-        $(top_srcdir)/config/depcomp \
-        $(top_srcdir)/config/install-sh \
-        $(top_srcdir)/config/ltmain.sh \
-        $(top_srcdir)/config/missing \
-        $(top_builddir)/libtool \
-        $(top_srcdir)/Makefile.in \
-        $(top_builddir)/Makefile \
-        $(top_srcdir)/configure \
-        $(top_srcdir)/m4/libtool.m4 \
-        $(top_srcdir)/m4/ltoptions.m4 \
-        $(top_srcdir)/m4/ltsugar.m4 \
-        $(top_srcdir)/m4/ltversion.m4 \
-        $(top_srcdir)/m4/lt~obsolete.m4 \
-        $(top_builddir)/rel/files/app.config \
-        $(top_builddir)/rebar_src.config \
-        $(top_builddir)/rebar_src_test.config \
-        $(top_builddir)/reltool.config \
-        $(top_builddir)/cloudi.conf
-	rm -rf $(top_srcdir)/autom4te.cache \
-           $(top_srcdir)/tests/.eunit \
+          $(top_srcdir)/config.h.in \
+		  $(top_srcdir)/config.h.in~ \
+          $(top_srcdir)/config/compile \
+          $(top_srcdir)/config/config.guess \
+          $(top_srcdir)/config/config.sub \
+          $(top_srcdir)/config/install-sh \
+          $(top_srcdir)/config/ltmain.sh \
+          $(top_srcdir)/config/missing \
+          $(top_srcdir)/Makefile.in \
+          $(top_srcdir)/configure \
+          $(top_srcdir)/m4/libtool.m4 \
+          $(top_srcdir)/m4/ltoptions.m4 \
+          $(top_srcdir)/m4/ltsugar.m4 \
+          $(top_srcdir)/m4/ltversion.m4 \
+          $(top_srcdir)/m4/lt~obsolete.m4 \
+          $(top_builddir)/rel/files/app.config
+	rm -rf $(top_srcdir)/autom4te.cache
+	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
            $(top_srcdir)/lib/cloudi_services_databases/test_ct/logs
-	rm -rf $(top_builddir)/api/c/.deps/ \
-         $(top_builddir)/api/python/.deps/ \
-         $(top_builddir)/lib/cloudi_core/cxx_src/.deps/ \
-         $(top_builddir)/tests/hexpi/cxx_src/.deps/ \
-         $(top_builddir)/tests/http_req/c_src/.deps/ \
-         $(top_builddir)/tests/flood/service/.deps/ \
-         $(top_builddir)/tests/messaging/cxx_src/.deps/ \
-         $(top_builddir)/tests/msg_size/cxx_src/.deps/
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
-	find $(top_builddir)/api -name "Makefile" | xargs rm -f
-	find $(top_builddir)/lib -name "Makefile" | xargs rm -f
-	find $(top_builddir)/tests -name "Makefile" | xargs rm -f
 
-rebar-directories-clean-configure:
-	rm -f $(top_srcdir)/external/rebar/ebin/*.beam \
-        $(top_srcdir)/lib/cloudi_core/src/cloudi_core.app.src \
-        $(top_builddir)/lib/cloudi_core/src/cloudi_core.app.src \
-        $(top_srcdir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
-        $(top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src \
-        $(top_srcdir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
-        $(top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src \
-        $(top_srcdir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src \
-        $(top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src
+rebar-directories-distclean:
+	rm -f $(top_srcdir)/external/rebar/ebin/*.beam
+	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
+     make distclean || exit 0)
+	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
+     exit 0)
 	test -e $(top_builddir)/rebar && rm -f $(top_builddir)/rebar || exit 0
 
 erlang-applications-scope-remove:
