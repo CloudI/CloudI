@@ -132,7 +132,9 @@
 
 
 -type error()           :: {error, Reason :: term()}.
--type connection_name() :: binary().
+-type connection_name() :: {any(), any(), string() | binary()} |
+                           string() |
+                           binary().
 -type dispatcher()      :: cloudi_service:dispatcher().
 -type name()            :: cloudi_service:service_name().
 -type thrift_host()     :: undefined | string().
@@ -160,7 +162,7 @@
 -type compression()     :: binary().
 
 -record(state, {
-        connection_name     :: undefined | connection_name()
+        connection_name     :: connection_name()
         }).
 
 -type response()        :: [tuple()] | error().
@@ -355,9 +357,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     % Use the connection_name to create a CQL connection pool. Note that 
     % if thisin this case, pool_options should be '1', unless no
     % prepared statements are going to be used
-    case cloudi_x_erlang_cassandra:start_cql_pool(binary_name(ConnectionName), PoolOptions, ConnectionOptions) of
+    case cloudi_x_erlang_cassandra:start_cql_pool(binary_name(ConnectionName),
+                                                  PoolOptions,
+                                                  ConnectionOptions) of
         {ok, _} ->
-            cloudi_service:subscribe(Dispatcher, ConnectionName),
+            cloudi_service:subscribe(Dispatcher,
+                                     subscription_name(ConnectionName)),
             {ok, #state{connection_name = ConnectionName}};
         {error, Reason} -> 
              {stop, Reason}
@@ -475,7 +480,21 @@ process_query(_ConnectionName, {'describe_ring', Destination}) ->
 process_query(_ConnectionName, _) ->
     {error, invalid_call}.
 
-binary_name({Host, Port, Name}) when is_list(Name) -> {Host, Port, list_to_binary(Name)};
-binary_name({Host, Port, Name}) when is_binary(Name) -> {Host, Port, Name};
-binary_name(Name) when is_list(Name) -> list_to_binary(Name);
-binary_name(Name) when is_binary(Name) -> Name.
+binary_name({Host, Port, Name}) when is_list(Name) ->
+    {Host, Port, erlang:list_to_binary(Name)};
+binary_name({Host, Port, Name}) when is_binary(Name) ->
+    {Host, Port, Name};
+binary_name(Name) when is_list(Name) ->
+    erlang:list_to_binary(Name);
+binary_name(Name) when is_binary(Name) ->
+    Name.
+
+subscription_name({_, _, Name}) when is_list(Name) -> 
+    Name;
+subscription_name({_, _, Name}) when is_binary(Name) -> 
+    erlang:binary_to_list(Name);
+subscription_name(Name) when is_list(Name) -> 
+    Name;
+subscription_name(Name) when is_binary(Name) -> 
+    erlang:binary_to_list(Name).
+

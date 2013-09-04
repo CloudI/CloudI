@@ -33,7 +33,22 @@ AX_CLOCK_GETTIME
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
 
-AC_SUBST(cloudi_prefix, ["$libdir/cloudi-$VERSION"])
+AC_ARG_WITH([version],
+    [AS_HELP_STRING([--with-version@<:@=ARG@:>@],
+        [put the CloudI version within the installation path prefix (ARG=yes),
+         or use a constant CloudI installation path prefix (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        cloudi_prefix="$libdir/cloudi"
+    elif test "x$withval" = "xyes"; then
+        cloudi_prefix="$libdir/cloudi-$VERSION"
+    else
+        cloudi_prefix="$libdir/cloudi-$VERSION"
+    fi
+    ],
+    [cloudi_prefix="$libdir/cloudi-$VERSION"])
+AC_SUBST(cloudi_prefix)
 AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
 AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
