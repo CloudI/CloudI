@@ -52,6 +52,7 @@
 AC_DEFUN([AX_CHECK_PRIVATE_HEADER],
 [
     cflags_prefix=""
+    include_path=""
     AS_VAR_PUSHDEF([ac_Header], [ac_cv_header_$1])
     AC_CACHE_CHECK([for $1], ac_Header,
         [m4_ifval([$4],
@@ -62,6 +63,7 @@ AC_DEFUN([AX_CHECK_PRIVATE_HEADER],
                  ac_check_header_save_CFLAGS=$CFLAGS
                  for path in $5 ; do
                      cflags_prefix="-I$path"
+                     include_path=$path
                      CFLAGS="$ac_check_header_save_CFLAGS $cflags_prefix"
                      AC_COMPILE_IFELSE([AC_LANG_SOURCE([$4
                                                         @%:@include <$1>])],
@@ -76,6 +78,7 @@ AC_DEFUN([AX_CHECK_PRIVATE_HEADER],
                  ac_check_header_save_CFLAGS=$CFLAGS
                  for path in $5 ; do
                      cflags_prefix="-I$path"
+                     include_path=$path
                      CFLAGS="$ac_check_header_save_CFLAGS $cflags_prefix"
                      AC_COMPILE_IFELSE([AC_LANG_SOURCE([@%:@include <$1>])],
                          [AS_VAR_SET(ac_Header, yes)
@@ -87,6 +90,9 @@ AC_DEFUN([AX_CHECK_PRIVATE_HEADER],
     AS_IF([test AS_VAR_GET(ac_Header) = yes],
         [m4_toupper(AS_TR_SH($1_CFLAGS))=$cflags_prefix
          AC_SUBST(m4_toupper(AS_TR_SH($1_CFLAGS)))
+         dnl only set if searched for
+         m4_toupper(AS_TR_SH($1_PATH))=$include_path
+         AC_SUBST(m4_toupper(AS_TR_SH($1_PATH)))
          $2],
         [$3])
     AS_VAR_POPDEF([ac_Header])

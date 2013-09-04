@@ -8,6 +8,7 @@
       (--without-version) is provided
     * Simplify the hello_world3 example
     * Fix type problem in cloudi_service_db_cassandra
+    * Make the configure script ZeroMQ path detection expect default cases
 
 2013-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
