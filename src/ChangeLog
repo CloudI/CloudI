@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add support for update-deps of CloudI as a rebar dependency
+
 2013-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify the rebar integration by removing the version number from
