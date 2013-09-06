@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_zeromq).
@@ -63,18 +63,25 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(DEFAULT_PROCESS_METADATA,           false). % RequestInfo/ResponseInfo
+                                                    % tunneling service request
+                                                    % meta-data through ZeroMQ
+                                                    % w/4-byte big endian header
+
 -record(state,
     {
-        context,
-        publish,     % NameInternal -> [{NameExternal, Socket} | _]
-        request,     % Name -> Socket
-        push,        % Name -> Socket
-        receives,    % Socket -> {reply, Name}
-                     % Socket -> [{subscribe,
-                     %             {BinaryMax, BinaryPattern,
-                     %              NameExternal -> NameInternal}} | _]
-                     % Socket -> {request, F(Response)}
-        reply_replies = dict:new()     % TransId -> Socket
+        context :: erlzmq:erlzmq_context(),
+        process_metadata :: boolean(),
+        publish :: cloudi_x_trie:trie(), % NameInternal -> [{NameExternal,
+                                         %                   Socket} | _]
+        request :: cloudi_x_trie:trie(), % Name -> Socket
+        push :: cloudi_x_trie:trie(),    % Name -> Socket
+        receives :: dict(), % Socket -> {reply, Name}
+                            % Socket -> [{subscribe,
+                            %             {BinaryMax, BinaryPattern,
+                            %              NameExternal -> NameInternal}} | _]
+                            % Socket -> {request, F(Response)}
+        reply_replies = dict:new() :: dict()    % TransId -> Socket
     }).
 
 %%%------------------------------------------------------------------------
@@ -91,7 +98,16 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     {RequestL, L3} = cloudi_proplists:partition(outbound, L2),
     {ReplyL, L4} = cloudi_proplists:partition(inbound, L3),
     {PullL, L5} = cloudi_proplists:partition(pull, L4),
-    {PushL, []} = cloudi_proplists:partition(push, L5),
+    {PushL, L6} = cloudi_proplists:partition(push, L5),
+    Defaults = [
+        {process_metadata,         ?DEFAULT_PROCESS_METADATA}],
+    [ProcessMetaData] = case L6 of
+        [] ->
+            cloudi_proplists:take_values(Defaults, []);
+        [{options, Options}] ->
+            cloudi_proplists:take_values(Defaults, Options)
+    end,
+    true = is_boolean(ProcessMetaData),
 
     {ok, Context} = erlzmq:context(),
     Service = cloudi_service:self(Dispatcher),
@@ -174,39 +190,42 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         dict:store(S, {pull, Prefix ++ Name}, D)
     end, ReceivesZMQ3, PullL),
     {ok, #state{context = Context,
+                process_metadata = ProcessMetaData,
                 publish = Publish,
                 request = Request,
                 push = Push,
                 receives = ReceivesZMQ4}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, _RequestInfo, Request,
+cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, _Priority, TransId, Pid,
-                              #state{publish = PublishZMQ,
+                              #state{process_metadata = ProcessMetaData,
+                                     publish = PublishZMQ,
                                      request = RequestZMQ,
                                      push = PushZMQ,
                                      receives = ReceivesZMQ} = State,
                               Dispatcher) ->
     true = is_binary(Request),
+    Outgoing = outgoing(ProcessMetaData, RequestInfo, Request),
     case cloudi_x_trie:find(Pattern, PublishZMQ) of
         {ok, PublishL} ->
             lists:foreach(fun({NameZMQ, S}) ->
-                ok = erlzmq:send(S, erlang:iolist_to_binary([NameZMQ, Request]))
+                ok = erlzmq:send(S, <<NameZMQ/binary, Outgoing/binary>>)
             end, PublishL);
         error ->
             ok
     end,
     case cloudi_x_trie:find(Pattern, PushZMQ) of
         {ok, PushS} ->
-            ok = erlzmq:send(PushS, Request);
+            ok = erlzmq:send(PushS, Outgoing);
         error ->
             ok
     end,
     case cloudi_x_trie:find(Pattern, RequestZMQ) of
         {ok, RequestS} ->
-            ok = erlzmq:send(RequestS, Request),
-            F = fun(Response) ->
+            ok = erlzmq:send(RequestS, Outgoing),
+            F = fun(ResponseInfo, Response) ->
                 cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
-                                              <<>>, Response,
+                                              ResponseInfo, Response,
                                               Timeout, TransId, Pid)
             end,
             {noreply, State#state{receives = dict:store(RequestS,
@@ -219,16 +238,20 @@ cloudi_service_handle_request(Type, Name, Pattern, _RequestInfo, Request,
     end.
 
 cloudi_service_handle_info({zmq, S, Incoming, _},
-                           #state{receives = ReceivesZMQ,
+                           #state{process_metadata = ProcessMetaData,
+                                  receives = ReceivesZMQ,
                                   reply_replies = ReplyReplies} = State,
                            Dispatcher) ->
     case dict:find(S, ReceivesZMQ) of
         {ok, {request, F}} ->
-            F(Incoming),
+            {ResponseInfo, Response} = incoming(ProcessMetaData, Incoming),
+            F(ResponseInfo, Response),
             {noreply, State#state{receives = dict:erase(S, ReceivesZMQ)}};
         {ok, {reply, Name}} ->
-            case cloudi_service:send_async_active(Dispatcher,
-                                                  Name, Incoming) of
+            {RequestInfo, Request} = incoming(ProcessMetaData, Incoming),
+            case cloudi_service:send_async_active(Dispatcher, Name,
+                                                  RequestInfo, Request,
+                                                  undefined, undefined) of
                 {ok, TransId} ->
                     {noreply,
                      State#state{reply_replies = dict:store(TransId, S,
@@ -238,26 +261,34 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
                     {noreply, State}
             end;
         {ok, {pull, Name}} ->
-            cloudi_service:send_async(Dispatcher, Name, Incoming),
+            {RequestInfo, Request} = incoming(ProcessMetaData, Incoming),
+            cloudi_service:send_async(Dispatcher, Name,
+                                      RequestInfo, Request,
+                                      undefined, undefined),
             {noreply, State};
         {ok, {subscribe, {Max, Pattern, Lookup}}} ->
             {0, Length} = binary:match(Incoming, Pattern,
                                        [{scope, {0, Max}}]),
-            {NameZMQ, Request} = erlang:split_binary(Incoming, Length),
+            {NameZMQ, IncomingRest} = erlang:split_binary(Incoming, Length),
+            {RequestInfo, Request} = incoming(ProcessMetaData, IncomingRest),
             lists:foreach(fun(Name) ->
-                cloudi_service:send_async(Dispatcher, Name, Request)
+                cloudi_service:send_async(Dispatcher, Name,
+                                          RequestInfo, Request,
+                                          undefined, undefined)
             end, dict:fetch(NameZMQ, Lookup)),
             {noreply, State}
     end;
 
 cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
-                            _ResponseInfo, Response,
+                            ResponseInfo, Response,
                             _Timeout, TransId},
-                           #state{reply_replies = ReplyReplies} = State,
+                           #state{process_metadata = ProcessMetaData,
+                                  reply_replies = ReplyReplies} = State,
                            _Dispatcher) ->
     true = is_binary(Response),
+    Outgoing = outgoing(ProcessMetaData, ResponseInfo, Response),
     S = dict:fetch(TransId, ReplyReplies),
-    ok = erlzmq:send(S, Response),
+    ok = erlzmq:send(S, Outgoing),
     {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
 
 cloudi_service_handle_info({'timeout_async_active', TransId},
@@ -298,4 +329,25 @@ cloudi_service_terminate(_, #state{context = Context,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+outgoing(true, RequestInfo, Request) ->
+    MetaData = if
+        is_binary(RequestInfo) ->
+            RequestInfo;
+        true ->
+            cloudi_service:request_info_key_value_new(RequestInfo)
+    end,
+    MetaDataSize = erlang:byte_size(MetaData),
+    <<MetaDataSize:32/unsigned-integer-big,
+      MetaData/binary, Request/binary>>;
+outgoing(false, _RequestInfo, Request) ->
+    Request.
+
+incoming(true, <<MetaDataSize:32/unsigned-integer-big, Incoming/binary>>) ->
+    Size = erlang:byte_size(Incoming),
+    RequestInfo = erlang:binary_part(Incoming, {0, MetaDataSize}),
+    Request = erlang:binary_part(Incoming, {Size, MetaDataSize - Size + 4}),
+    {RequestInfo, Request};
+incoming(false, Incoming) ->
+    {<<>>, Incoming}.
 
