@@ -4,12 +4,14 @@
 2013-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add support for update-deps of CloudI as a rebar dependency
-    * Use big endian return values (responses) in cloudi_service_db_pgsql 
-      for binary requests (previously it was native)
     * Add an options list to cloudi_service_zeromq
     * Add the process_metadata option to cloudi_service_zeromq for
       tunneling RequestInfo and ResponseInfo within ZeroMQ requests
       automatically
+    * Add endian configuration to cloudi_service_db_pgsql 
+      for binary request responses
+    * Add endian configuration to cloudi_service_zeromq
+      for ZeroMQ service request metadata size integer encoding
 
 2013-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

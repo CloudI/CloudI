@@ -64,16 +64,20 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(DEFAULT_HOST_NAME, "127.0.0.1").
--define(DEFAULT_USER_NAME, "cloudi").
--define(DEFAULT_PASSWORD,  "").
--define(DEFAULT_PORT,      5432).
--define(DEFAULT_LISTEN,    false). % async epgsql option (LISTEN/NOTIFY)
--define(DEFAULT_TIMEOUT,   20000). % 20 seconds
+-define(DEFAULT_HOST_NAME,            "127.0.0.1").
+-define(DEFAULT_USER_NAME,               "cloudi").
+-define(DEFAULT_PASSWORD,                      "").
+-define(DEFAULT_PORT,                        5432).
+-define(DEFAULT_LISTEN,                     false). % async epgsql option
+                                                    % (LISTEN/NOTIFY)
+-define(DEFAULT_TIMEOUT,                    20000). % 20 seconds
+-define(DEFAULT_ENDIAN,                    native). % response binary
+                                                    % integer sizes
 
 -record(state,
     {
-        connection
+        connection,
+        endian :: big | little | native
     }).
 
 % from external/epgsql/include/cloudi_x_pgsql.hrl 
@@ -139,16 +143,20 @@ squery(Dispatcher, Name, String, Timeout)
 
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
-        {hostname, ?DEFAULT_HOST_NAME},
-        {username, ?DEFAULT_USER_NAME},
-        {password, ?DEFAULT_PASSWORD},
-        {port, ?DEFAULT_PORT},
-        {listen, ?DEFAULT_LISTEN},
-        {timeout, ?DEFAULT_TIMEOUT},
-        {database, undefined}],
+        {hostname,                 ?DEFAULT_HOST_NAME},
+        {username,                 ?DEFAULT_USER_NAME},
+        {password,                 ?DEFAULT_PASSWORD},
+        {port,                     ?DEFAULT_PORT},
+        {listen,                   ?DEFAULT_LISTEN},
+        {timeout,                  ?DEFAULT_TIMEOUT},
+        {endian,                   ?DEFAULT_ENDIAN},
+        {database,                 undefined}],
     [HostName, UserName, Password, Port,
-     Listen, Timeout, Database | NewArgs] =
+     Listen, Timeout, Endian, Database | NewArgs] =
         cloudi_proplists:take_values(Defaults, Args),
+    true = (Endian =:= big orelse
+            Endian =:= little orelse
+            Endian =:= native),
     true = is_list(Database),
     AsyncArg = if
         Listen =:= true ->
@@ -163,14 +171,16 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     case cloudi_x_pgsql:connect(HostName, UserName, Password, FinalArgs) of
         {ok, Connection} ->
             cloudi_service:subscribe(Dispatcher, Database),
-            {ok, #state{connection = Connection}};
+            {ok, #state{connection = Connection,
+                        endian = Endian}};
         {error, Reason} ->
             {stop, Reason, #state{}}
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                           _Timeout, _Priority, TransId, _Pid,
-                          #state{connection = Connection} = State,
+                          #state{connection = Connection,
+                                 endian = Endian} = State,
                           _Dispatcher) ->
     case Request of
         {String, Parameters} when is_list(String), is_list(Parameters) ->
@@ -196,17 +206,22 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         String when is_binary(String) ->
             case cloudi_x_pgsql:squery(Connection, String) of
                 {ok, _} = Response ->
-                    {reply, response_external(Response, Request), State};
+                    {reply, response_external(Response, Request, Endian),
+                     State};
                 {ok, _, _} = Response ->
-                    {reply, response_external(Response, Request), State};
+                    {reply, response_external(Response, Request, Endian),
+                     State};
                 {ok, _, _, _} = Response ->
-                    {reply, response_external(Response, Request), State};
+                    {reply, response_external(Response, Request, Endian),
+                     State};
                 {error, Reason} = Response ->
                     ?LOG_ERROR("request ~p error ~p",
                                [TransId, Reason#error.message]),
-                    {reply, response_external(Response, Request), State};
+                    {reply, response_external(Response, Request, Endian),
+                     State};
                 Response when is_list(Response) ->
-                    {reply, response_external(Response, Request), State}
+                    {reply, response_external(Response, Request, Endian),
+                     State}
             end;
         String when is_list(String) ->
             case cloudi_x_pgsql:squery(Connection, String) of
@@ -250,27 +265,51 @@ response_internal({error, Reason}, _) ->
 response_internal(Response, _) when is_list(Response) ->
     Response.
 
-response_external({ok, I}, Input) ->
+response_external({ok, I}, Input, Endian) ->
     % SQL UPDATE
-    cloudi_response:new(Input, <<I:32/unsigned-integer-big>>);
-response_external({ok, _Columns, Rows}, Input) ->
+    IBin = if
+        Endian =:= big ->
+            <<I:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<I:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<I:32/unsigned-integer-native>>
+    end,
+    cloudi_response:new(Input, IBin, Endian);
+response_external({ok, _Columns, Rows}, Input, Endian) ->
     % SQL SELECT
     I = erlang:length(Rows),
-    Output = erlang:iolist_to_binary([<<I:32/unsigned-integer-big>> |
+    IBin = if
+        Endian =:= big ->
+            <<I:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<I:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<I:32/unsigned-integer-native>>
+    end,
+    Output = erlang:iolist_to_binary([IBin |
     lists:map(fun(T) ->
         cloudi_response:new(
-            Input, cloudi_string:term_to_list(erlang:tuple_to_list(T))
+            Input, cloudi_string:term_to_list(erlang:tuple_to_list(T)), Endian
         )
     end, Rows)]),
     cloudi_response:new(Input, Output);
-response_external({ok, I, _Columns, _Rows}, Input) ->
+response_external({ok, I, _Columns, _Rows}, Input, Endian) ->
     % SQL INSERT
-    cloudi_response:new(Input, <<I:32/unsigned-integer-big>>);
-response_external({error, _} = Error, Input) ->
-    cloudi_response:new(Input, Error);
-response_external(Response, Input) when is_list(Response) ->
+    IBin = if
+        Endian =:= big ->
+            <<I:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<I:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<I:32/unsigned-integer-native>>
+    end,
+    cloudi_response:new(Input, IBin, Endian);
+response_external({error, _} = Error, Input, Endian) ->
+    cloudi_response:new(Input, Error, Endian);
+response_external(Response, Input, Endian) when is_list(Response) ->
     erlang:iolist_to_binary(lists:map(fun(T) ->
-        cloudi_response:new(Input, response_external(T, Input))
+        cloudi_response:new(Input, response_external(T, Input, Endian), Endian)
     end, Response)).
 
 %% do a single query and return a boolean to determine if the query succeeded
