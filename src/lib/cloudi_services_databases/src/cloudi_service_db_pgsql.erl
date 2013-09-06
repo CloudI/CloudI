@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -252,11 +252,11 @@ response_internal(Response, _) when is_list(Response) ->
 
 response_external({ok, I}, Input) ->
     % SQL UPDATE
-    cloudi_response:new(Input, <<I:32/unsigned-integer-native>>);
+    cloudi_response:new(Input, <<I:32/unsigned-integer-big>>);
 response_external({ok, _Columns, Rows}, Input) ->
     % SQL SELECT
     I = erlang:length(Rows),
-    Output = erlang:iolist_to_binary([<<I:32/unsigned-integer-native>> |
+    Output = erlang:iolist_to_binary([<<I:32/unsigned-integer-big>> |
     lists:map(fun(T) ->
         cloudi_response:new(
             Input, cloudi_string:term_to_list(erlang:tuple_to_list(T))
@@ -265,7 +265,7 @@ response_external({ok, _Columns, Rows}, Input) ->
     cloudi_response:new(Input, Output);
 response_external({ok, I, _Columns, _Rows}, Input) ->
     % SQL INSERT
-    cloudi_response:new(Input, <<I:32/unsigned-integer-native>>);
+    cloudi_response:new(Input, <<I:32/unsigned-integer-big>>);
 response_external({error, _} = Error, Input) ->
     cloudi_response:new(Input, Error);
 response_external(Response, Input) when is_list(Response) ->
