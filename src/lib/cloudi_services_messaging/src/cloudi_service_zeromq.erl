@@ -63,6 +63,8 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(DEFAULT_ENDIAN,                    native). % ZeroMQ binary
+                                                    % integer sizes for metadata
 -define(DEFAULT_PROCESS_METADATA,           false). % RequestInfo/ResponseInfo
                                                     % tunneling service request
                                                     % meta-data through ZeroMQ
@@ -71,6 +73,7 @@
 -record(state,
     {
         context :: erlzmq:erlzmq_context(),
+        endian :: big | little | native,
         process_metadata :: boolean(),
         publish :: cloudi_x_trie:trie(), % NameInternal -> [{NameExternal,
                                          %                   Socket} | _]
@@ -100,13 +103,17 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     {PullL, L5} = cloudi_proplists:partition(pull, L4),
     {PushL, L6} = cloudi_proplists:partition(push, L5),
     Defaults = [
+        {endian,                   ?DEFAULT_ENDIAN},
         {process_metadata,         ?DEFAULT_PROCESS_METADATA}],
-    [ProcessMetaData] = case L6 of
+    [Endian, ProcessMetaData] = case L6 of
         [] ->
             cloudi_proplists:take_values(Defaults, []);
         [{options, Options}] ->
             cloudi_proplists:take_values(Defaults, Options)
     end,
+    true = (Endian =:= big orelse
+            Endian =:= little orelse
+            Endian =:= native),
     true = is_boolean(ProcessMetaData),
 
     {ok, Context} = erlzmq:context(),
@@ -190,6 +197,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         dict:store(S, {pull, Prefix ++ Name}, D)
     end, ReceivesZMQ3, PullL),
     {ok, #state{context = Context,
+                endian = Endian,
                 process_metadata = ProcessMetaData,
                 publish = Publish,
                 request = Request,
@@ -199,13 +207,14 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, _Priority, TransId, Pid,
                               #state{process_metadata = ProcessMetaData,
+                                     endian = Endian,
                                      publish = PublishZMQ,
                                      request = RequestZMQ,
                                      push = PushZMQ,
                                      receives = ReceivesZMQ} = State,
                               Dispatcher) ->
     true = is_binary(Request),
-    Outgoing = outgoing(ProcessMetaData, RequestInfo, Request),
+    Outgoing = outgoing(ProcessMetaData, Endian, RequestInfo, Request),
     case cloudi_x_trie:find(Pattern, PublishZMQ) of
         {ok, PublishL} ->
             lists:foreach(fun({NameZMQ, S}) ->
@@ -239,16 +248,19 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
 
 cloudi_service_handle_info({zmq, S, Incoming, _},
                            #state{process_metadata = ProcessMetaData,
+                                  endian = Endian,
                                   receives = ReceivesZMQ,
                                   reply_replies = ReplyReplies} = State,
                            Dispatcher) ->
     case dict:find(S, ReceivesZMQ) of
         {ok, {request, F}} ->
-            {ResponseInfo, Response} = incoming(ProcessMetaData, Incoming),
+            {ResponseInfo, Response} = incoming(ProcessMetaData, Endian,
+                                                Incoming),
             F(ResponseInfo, Response),
             {noreply, State#state{receives = dict:erase(S, ReceivesZMQ)}};
         {ok, {reply, Name}} ->
-            {RequestInfo, Request} = incoming(ProcessMetaData, Incoming),
+            {RequestInfo, Request} = incoming(ProcessMetaData, Endian,
+                                              Incoming),
             case cloudi_service:send_async_active(Dispatcher, Name,
                                                   RequestInfo, Request,
                                                   undefined, undefined) of
@@ -261,7 +273,8 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
                     {noreply, State}
             end;
         {ok, {pull, Name}} ->
-            {RequestInfo, Request} = incoming(ProcessMetaData, Incoming),
+            {RequestInfo, Request} = incoming(ProcessMetaData, Endian,
+                                              Incoming),
             cloudi_service:send_async(Dispatcher, Name,
                                       RequestInfo, Request,
                                       undefined, undefined),
@@ -270,7 +283,8 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
             {0, Length} = binary:match(Incoming, Pattern,
                                        [{scope, {0, Max}}]),
             {NameZMQ, IncomingRest} = erlang:split_binary(Incoming, Length),
-            {RequestInfo, Request} = incoming(ProcessMetaData, IncomingRest),
+            {RequestInfo, Request} = incoming(ProcessMetaData, Endian,
+                                              IncomingRest),
             lists:foreach(fun(Name) ->
                 cloudi_service:send_async(Dispatcher, Name,
                                           RequestInfo, Request,
@@ -283,10 +297,11 @@ cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
                             ResponseInfo, Response,
                             _Timeout, TransId},
                            #state{process_metadata = ProcessMetaData,
+                                  endian = Endian,
                                   reply_replies = ReplyReplies} = State,
                            _Dispatcher) ->
     true = is_binary(Response),
-    Outgoing = outgoing(ProcessMetaData, ResponseInfo, Response),
+    Outgoing = outgoing(ProcessMetaData, Endian, ResponseInfo, Response),
     S = dict:fetch(TransId, ReplyReplies),
     ok = erlzmq:send(S, Outgoing),
     {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
@@ -330,7 +345,7 @@ cloudi_service_terminate(_, #state{context = Context,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-outgoing(true, RequestInfo, Request) ->
+outgoing(true, Endian, RequestInfo, Request) ->
     MetaData = if
         is_binary(RequestInfo) ->
             RequestInfo;
@@ -338,16 +353,39 @@ outgoing(true, RequestInfo, Request) ->
             cloudi_service:request_info_key_value_new(RequestInfo)
     end,
     MetaDataSize = erlang:byte_size(MetaData),
-    <<MetaDataSize:32/unsigned-integer-big,
-      MetaData/binary, Request/binary>>;
-outgoing(false, _RequestInfo, Request) ->
+    if
+        Endian =:= big ->
+            <<MetaDataSize:32/unsigned-integer-big,
+              MetaData/binary, Request/binary>>;
+        Endian =:= little ->
+            <<MetaDataSize:32/unsigned-integer-little,
+              MetaData/binary, Request/binary>>;
+        Endian =:= native ->
+            <<MetaDataSize:32/unsigned-integer-native,
+              MetaData/binary, Request/binary>>
+    end;
+outgoing(false, _Endian, _RequestInfo, Request) ->
     Request.
 
-incoming(true, <<MetaDataSize:32/unsigned-integer-big, Incoming/binary>>) ->
-    Size = erlang:byte_size(Incoming),
-    RequestInfo = erlang:binary_part(Incoming, {0, MetaDataSize}),
-    Request = erlang:binary_part(Incoming, {Size, MetaDataSize - Size + 4}),
-    {RequestInfo, Request};
-incoming(false, Incoming) ->
+incoming(true, big, Incoming) ->
+    <<MetaDataSize:32/unsigned-integer-big,
+      IncomingRest/binary>> = Incoming,
+    incoming_metadata_split(MetaDataSize, IncomingRest);
+incoming(true, little, Incoming) ->
+    <<MetaDataSize:32/unsigned-integer-little,
+      IncomingRest/binary>> = Incoming,
+    incoming_metadata_split(MetaDataSize, IncomingRest);
+incoming(true, native, Incoming) ->
+    <<MetaDataSize:32/unsigned-integer-native,
+      IncomingRest/binary>> = Incoming,
+    incoming_metadata_split(MetaDataSize, IncomingRest);
+incoming(false, _Endian, Incoming) ->
     {<<>>, Incoming}.
+
+-compile({inline, [{incoming_metadata_split, 2}]}).
+incoming_metadata_split(MetaDataSize, IncomingRest) ->
+    Size = erlang:byte_size(IncomingRest),
+    RequestInfo = erlang:binary_part(IncomingRest, {0, MetaDataSize}),
+    Request = erlang:binary_part(IncomingRest, {Size, MetaDataSize - Size + 4}),
+    {RequestInfo, Request}.
 
