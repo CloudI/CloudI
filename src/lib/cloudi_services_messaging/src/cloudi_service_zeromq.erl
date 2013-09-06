@@ -386,6 +386,6 @@ incoming(false, _Endian, Incoming) ->
 incoming_metadata_split(MetaDataSize, IncomingRest) ->
     Size = erlang:byte_size(IncomingRest),
     RequestInfo = erlang:binary_part(IncomingRest, {0, MetaDataSize}),
-    Request = erlang:binary_part(IncomingRest, {Size, MetaDataSize - Size + 4}),
+    Request = erlang:binary_part(IncomingRest, {Size, MetaDataSize - Size}),
     {RequestInfo, Request}.
 
