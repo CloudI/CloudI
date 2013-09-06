@@ -345,7 +345,9 @@
     %    %  because the ZeroMQ REQ has received 2 zmq_send calls)
     %    cloudi_service_zeromq,
     %    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
-    %    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstarta"]}},
+    %    [{options,
+    %      [{process_metadata, true}]},
+    %     {outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstarta"]}},
     %    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
     %     {inbound, {"zigzag_step1", ["ipc:///tmp/cloudizigzagstarta"]}},
     %     {outbound, {"zigzag_step1", ["inproc://zigzagstep1"]}},
@@ -378,7 +380,9 @@
     %    %  because the ZeroMQ REQ has received 2 zmq_send calls)
     %    cloudi_service_zeromq,
     %    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
-    %    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstartb"]}},
+    %    [{options,
+    %      [{process_metadata, true}]},
+    %     {outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstartb"]}},
     %    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
     %     {inbound, {"zigzag_step1", ["ipc:///tmp/cloudizigzagstartb"]}},
     %     {outbound, {"zigzag_step1", ["inproc://zigzagstep1"]}},
@@ -408,7 +412,9 @@
     %{internal,
     %    "/tests/zeromq/",
     %    cloudi_service_zeromq,
-    %    [{outbound, {"chain_inproc_start", ["inproc://chainstep1"]}},
+    %    [{options,
+    %      [{process_metadata, true}]},
+    %     {outbound, {"chain_inproc_start", ["inproc://chainstep1"]}},
     %     {inbound, {"chain_inproc_step1", ["inproc://chainstep1"]}},
     %     {outbound, {"chain_inproc_step1", ["inproc://chainstep2"]}},
     %     {inbound, {"chain_inproc_step2", ["inproc://chainstep2"]}},
@@ -514,7 +520,9 @@
     %{internal,
     %    "/tests/zeromq/",
     %    cloudi_service_zeromq,
-    %    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1a"]}},
+    %    [{options,
+    %      [{process_metadata, true}]},
+    %     {outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1a"]}},
     %     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1a"]}},
     %     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2a"]}},
     %     {inbound, {"chain_ipc_step2", ["ipc:///tmp/cloudichainstep2a"]}},
@@ -569,7 +577,9 @@
     %{internal,
     %    "/tests/zeromq/",
     %    cloudi_service_zeromq,
-    %    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1b"]}},
+    %    [{options,
+    %      [{process_metadata, true}]},
+    %     {outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1b"]}},
     %     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1b"]}},
     %     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2b"]}},
     %     {inbound, {"chain_ipc_step2", ["ipc:///tmp/cloudichainstep2b"]}},

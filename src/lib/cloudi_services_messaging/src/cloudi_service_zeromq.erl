@@ -367,6 +367,8 @@ outgoing(true, Endian, RequestInfo, Request) ->
 outgoing(false, _Endian, _RequestInfo, Request) ->
     Request.
 
+incoming(_, _, <<>>) ->
+    {<<>>, <<>>};
 incoming(true, big, Incoming) ->
     <<MetaDataSize:32/unsigned-integer-big,
       IncomingRest/binary>> = Incoming,
