@@ -42,7 +42,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog [at] gmail (dot) com').
--vsn("0.5.0").
+-vsn("0.6.0").
 
 -mode(compile).
 
@@ -656,11 +656,46 @@ rename_regex(FilesSource, FilesInclude, _IncludeDirectories,
                                     Name2 ++ FileExtension),
         ok = file:write_file(NewFilePath, NewFileContents)
     end end,
-    lists:foreach(Fconversion(".erl"), FilesSource),
-    lists:foreach(Fconversion(".hrl"), FilesInclude),
+    pforeach(Fconversion(".erl"), FilesSource),
+    pforeach(Fconversion(".hrl"), FilesInclude),
     ok = files_move_old(FilesSource, DirectorySuffixOld),
     ok = files_move_old(FilesInclude, DirectorySuffixOld),
     ok.
+
+pforeach(F, L) when length(L) =< 4 ->
+    lists:foreach(F, L);
+pforeach(F, L) ->
+    N = erlang:system_info(schedulers),
+    Pids = lists:map(fun(_) ->
+        erlang:spawn_link(fun pforeach_pid/0)
+    end, lists:seq(1, N)),
+    pforeach_run([], Pids, L, F).
+
+pforeach_pid() ->
+    receive
+        {execute, F, Arg1} ->
+            F(Arg1),
+            pforeach_pid();
+        {exit, Pid} ->
+            Pid ! exit,
+            ok
+    end.
+
+pforeach_run(OldPids, NewPids, [], _F) ->
+    Self = self(),
+    Pids = lists:reverse(OldPids) ++ NewPids,
+    lists:foreach(fun(Pid) ->
+        Pid ! {exit, Self}
+    end, Pids),
+    lists:foreach(fun(_) ->
+        receive exit -> ok end
+    end, Pids),
+    ok;
+pforeach_run(OldPids, [], L, F) ->
+    pforeach_run([], lists:reverse(OldPids), L, F);
+pforeach_run(OldPids, [Pid | NewPids], [Arg1 | L], F) ->
+    Pid ! {execute, F, Arg1},
+    pforeach_run([Pid | OldPids], NewPids, L, F).
 -endif.
 
 help() ->
