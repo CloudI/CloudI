@@ -54,6 +54,12 @@
 -behaviour(cloudi_service).
 
 %% external interface
+-export([kv_new/5,
+         kv_delete/4,
+         kv_delete/5,
+         kv_get/4,
+         kv_get/5,
+         kv_put/6]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -82,6 +88,143 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a new value in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_new(Dispatcher :: cloudi_service:dispatcher(),
+             Name :: cloudi_service:service_name(),
+             Table :: string() | binary(),
+             Value :: any(),
+             Timeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, Key :: binary(), NewValue :: any()} |
+    {error, any()}.
+
+kv_new(Dispatcher, Name, Table, Value, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {new, Table, Value}, Timeout) of
+        {ok, {ok, _, _} = Success} ->
+            Success;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete all table values in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_delete(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                Table :: string() | binary(),
+                Timeout :: cloudi_service:timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
+
+kv_delete(Dispatcher, Name, Table, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {delete, Table}, Timeout) of
+        {ok, ok} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Delete a value in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_delete(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                Table :: string() | binary(),
+                Key :: binary(),
+                Timeout :: cloudi_service:timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
+
+kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {delete, Table, Key}, Timeout) of
+        {ok, ok} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve all table values in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_get(Dispatcher :: cloudi_service:dispatcher(),
+             Name :: cloudi_service:service_name(),
+             Table :: string() | binary(),
+             Timeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, list({Key :: binary(), Value :: any()})} |
+    {error, any()}.
+
+kv_get(Dispatcher, Name, Table, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {get, Table}, Timeout) of
+        {ok, {ok, _} = Success} ->
+            Success;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a table value in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_get(Dispatcher :: cloudi_service:dispatcher(),
+             Name :: cloudi_service:service_name(),
+             Table :: string() | binary(),
+             Key :: binary(),
+             Timeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, Key :: binary(), Value :: any()} |
+    {error, any()}.
+
+kv_get(Dispatcher, Name, Table, Key, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {get, Table, Key}, Timeout) of
+        {ok, {ok, Value}} ->
+            {ok, Key, Value};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a table value in the key-value db.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec kv_put(Dispatcher :: cloudi_service:dispatcher(),
+             Name :: cloudi_service:service_name(),
+             Table :: string() | binary(),
+             Key :: binary(),
+             Value :: any(),
+             Timeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, Key :: binary(), Value :: any()} |
+    {error, any()}.
+
+kv_put(Dispatcher, Name, Table, Key, Value, Timeout) ->
+    case cloudi_service:send_sync(Dispatcher, Name,
+                                  {put, Table, Key, Value}, Timeout) of
+        {ok, {ok, NewValue}} ->
+            {ok, Key, NewValue};
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -133,51 +276,82 @@ do_query(Database, Request,
     key_value(cloudi_request:new(Request, internal),
               Database, Request, State).
     
-key_value({new, Table},
-          Database, Request, State) ->
-    key_value({new, Table, undefined},
+key_value({Command, Table},
+          Database, Request, State)
+    when is_binary(Table) ->
+    key_value({Command, erlang:binary_to_list(Table)},
               Database, Request, State);
-key_value({new, Table, Value},
+key_value({Command, Table, Arg1},
+          Database, Request, State)
+    when is_binary(Table) ->
+    key_value({Command, erlang:binary_to_list(Table), Arg1},
+              Database, Request, State);
+key_value({Command, Table, Arg1, Arg2},
+          Database, Request, State)
+    when is_binary(Table) ->
+    key_value({Command, erlang:binary_to_list(Table), Arg1, Arg2},
+              Database, Request, State);
+key_value({new, [I | _] = Table, Value},
           Database, Request,
           #state{tables = Tables,
                  uuid_generator = UUID,
                  table_module = TableModule} = State)
-    when is_list(Table) ->
+    when is_integer(I) ->
     Key = cloudi_x_uuid:get_v1(UUID),
-    TableName = Database ++ [$/ | Table],
+    TableName = Database ++ [$* | Table],
+    NewValue = case Value of
+        <<0:128, Rest/binary>> ->
+            <<Key:128/binary, Rest/binary>>;
+        [undefined | L] ->
+            [Key | L];
+        _ when is_tuple(Value), is_atom(element(1, Value)) ->
+            case element(1, Value) of
+                undefined ->
+                    erlang:setelement(1, Value, Key);
+                _ ->
+                    case element(2, Value) of
+                        undefined ->
+                            erlang:setelement(2, Value, Key);
+                        _ ->
+                            Value
+                    end
+            end;
+        _ ->
+            Value
+    end,
     NewTables = cloudi_x_trie:update(TableName, fun(Old) ->
-            TableModule:store(Key, Value, Old)
-        end, TableModule:store(Key, Value, TableModule:new()), Tables),
+            TableModule:store(Key, NewValue, Old)
+        end, TableModule:store(Key, NewValue, TableModule:new()), Tables),
     {reply,
-     response(Request, {ok, Key}, State),
+     response(Request, {ok, Key, NewValue}, State),
      State#state{tables = NewTables}};
-key_value({delete, Table},
+key_value({delete, [I | _] = Table},
           Database, Request,
           #state{tables = Tables} = State)
-    when is_list(Table) ->
-    TableName = Database ++ [$/ | Table],
+    when is_integer(I) ->
+    TableName = Database ++ [$* | Table],
     NewTables = cloudi_x_trie:erase(TableName, Tables),
     {reply,
      response(Request, ok, State),
      State#state{tables = NewTables}};
-key_value({delete, Table, Key},
+key_value({delete, [I | _] = Table, Key},
           Database, Request,
           #state{tables = Tables,
                  table_module = TableModule} = State)
-    when is_list(Table) ->
-    TableName = Database ++ [$/ | Table],
+    when is_integer(I) ->
+    TableName = Database ++ [$* | Table],
     NewTables = cloudi_x_trie:update(TableName, fun(Old) ->
             TableModule:erase(Key, Old)
         end, TableModule:new(), Tables),
     {reply,
      response(Request, ok, State),
      State#state{tables = NewTables}};
-key_value({get, Table},
+key_value({get, [I | _] = Table},
           Database, Request,
           #state{tables = Tables,
                  table_module = TableModule} = State)
-    when is_list(Table) ->
-    TableName = Database ++ [$/ | Table],
+    when is_integer(I) ->
+    TableName = Database ++ [$* | Table],
     case cloudi_x_trie:find(TableName, Tables) of
         {ok, TableValues} ->
             {reply,
@@ -188,12 +362,12 @@ key_value({get, Table},
              response(Request, {ok, []}, State),
              State}
     end;
-key_value({get, Table, Key},
+key_value({get, [I | _] = Table, Key},
           Database, Request,
           #state{tables = Tables,
                  table_module = TableModule} = State)
-    when is_list(Table) ->
-    TableName = Database ++ [$/ | Table],
+    when is_integer(I) ->
+    TableName = Database ++ [$* | Table],
     Response = case cloudi_x_trie:find(TableName, Tables) of
         {ok, TableValues} ->
             case TableModule:find(Key, TableValues) of
@@ -206,17 +380,17 @@ key_value({get, Table, Key},
             response(Request, {ok, undefined}, State)
     end,
     {reply, Response, State};
-key_value({put, Table, Key, Value},
+key_value({put, [I | _] = Table, Key, Value},
           Database, Request,
           #state{tables = Tables,
                  table_module = TableModule} = State)
-    when is_list(Table) ->
-    TableName = Database ++ [$/ | Table],
+    when is_integer(I) ->
+    TableName = Database ++ [$* | Table],
     NewTables = cloudi_x_trie:update(TableName, fun(Old) ->
             TableModule:store(Key, Value, Old)
         end, TableModule:store(Key, Value, TableModule:new()), Tables),
     {reply,
-     response(Request, ok, State),
+     response(Request, {ok, Value}, State),
      State#state{tables = NewTables}};
 key_value(Command,
           _Database, Request, State) ->
