@@ -56,7 +56,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -935,6 +935,9 @@ pattern_parse_element(_, [], _) ->
 pattern_parse_element(C, [C | T], Segment) ->
     {ok, T, lists:reverse(Segment)};
 
+pattern_parse_element(_, [$* | _], _) ->
+    erlang:exit(badarg);
+
 pattern_parse_element(C, [H | T], L) ->
     pattern_parse_element(C, T, [H | L]).
 
@@ -944,11 +947,16 @@ pattern_parse([], [], Parsed) ->
 pattern_parse([], [_ | _], _) ->
     error;
 
+pattern_parse([_ | _], [$* | _], _) ->
+    erlang:exit(badarg);
+
 pattern_parse([$*], [_ | _] = L, Parsed) ->
     lists:reverse([L | Parsed]);
 
+pattern_parse([$*, $* | _], [_ | _], _) ->
+    erlang:exit(badarg);
+
 pattern_parse([$*, C | Pattern], [H | T], Parsed) ->
-    true = C =/= $*,
     case pattern_parse_element(C, T, [H]) of
         {ok, NewL, Segment} ->
             pattern_parse(Pattern, NewL, [Segment | Parsed]);
@@ -1198,6 +1206,14 @@ test() ->
     false = trie:is_pattern("abcdef"),
     true = trie:is_pattern("abc*d*ef"),
     {'EXIT',badarg} = (catch trie:is_pattern("abc**ef")),
+    RootNode7 = trie:from_list([{"00", zeros}, {"11", ones}]),
+    RootNode8 = trie:from_list([{"0", zero}, {"1", one}]),
+    ["00"] = trie:fetch_keys_similar("02", RootNode7),
+    [] = trie:fetch_keys_similar("2", RootNode7),
+    ["11"] = trie:fetch_keys_similar("1", RootNode7),
+    ["1"] = trie:fetch_keys_similar("1", RootNode8),
+    ["0"] = trie:fetch_keys_similar("0", RootNode8),
+    ["00"] = trie:fetch_keys_similar("0", RootNode7),
     ok.
 
 %%%------------------------------------------------------------------------

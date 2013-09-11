@@ -53,7 +53,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2013 Michael Truog
-%%% @version 1.1.1 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -ifdef(MODE_LIST).
@@ -66,6 +66,7 @@
 -define(TYPE_BHBT, [BH | BT]).
 -define(TYPE_KEYH0, Key ++ [H]).
 -define(TYPE_KEYH0T0, Key ++ [H] ++ T).
+-define(TYPE_KEYH0CHILDNODE, Key ++ [H] ++ ChildNode).
 -define(TYPE_KEYCHAR, Key ++ [Character]).
 -define(TYPE_KEYCHARNODE, Key ++ [Character] ++ Node).
 -define(TYPE_NEWKEYNODE, NewKey ++ Node).
@@ -80,6 +81,7 @@
 -define(TYPE_BHBT, <<BH:8,BT/binary>>).
 -define(TYPE_KEYH0, <<Key/binary,H:8>>).
 -define(TYPE_KEYH0T0, <<Key/binary,H:8,T/binary>>).
+-define(TYPE_KEYH0CHILDNODE, <<Key/binary,H:8,ChildNode/binary>>).
 -define(TYPE_KEYCHAR, <<Key/binary,Character:8>>).
 -define(TYPE_KEYCHARNODE, <<Key/binary,Character:8,Node/binary>>).
 -define(TYPE_NEWKEYNODE, <<NewKey/binary,Node/binary>>).
@@ -547,8 +549,8 @@ fold_similar_node(H, ?TYPE_EMPTY, Fold, F, A, Key, _, {I0, _, Data} = Node)
                     F(NewKey, Value,
                       fold_similar_element(Fold, F, A, NewKey, ChildNode))
             end;
-        Value =/= error, ChildNode =:= ?TYPE_EMPTY ->
-            F(?TYPE_KEYH0, Value, A);
+        Value =/= error, ?TYPE_CHECK(ChildNode) ->
+            F(?TYPE_KEYH0CHILDNODE, Value, A);
         true ->
             fold_similar_element(Fold, F, A, Key, Node)
     end;
@@ -561,8 +563,8 @@ fold_similar_node(H, T, Fold, F, A, Key, _, {I0, _, Data} = Node)
             ?TYPE_H1T1 = T,
             fold_similar_node(H1, T1, Fold, F, A,
                 ?TYPE_KEYH0, Value, ChildNode);
-        Value =/= error, ChildNode == T ->
-            F(?TYPE_KEYH0T0, Value, A);
+        Value =/= error, ?TYPE_CHECK(ChildNode) ->
+            F(?TYPE_KEYH0CHILDNODE, Value, A);
         true ->
             fold_similar_element(Fold, F, A, Key, Node)
     end.
