@@ -5,6 +5,7 @@
   [{description, "CloudI Services Databases Integration"},
    {vsn, "@VERSION@"},
    {modules, [
+        cloudi_service_db,
         cloudi_service_db_cassandra,
         cloudi_service_db_couchdb,
         cloudi_service_db_elasticsearch,

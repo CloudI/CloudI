@@ -5,6 +5,8 @@
 
     * Make the scope script parallel to speedup the initial
       build process
+    * Add initial version of cloudi_service_db, a simple in-memory database
+    * Update trie
 
 2013-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
