@@ -96,8 +96,8 @@
 -type request() :: any().
 -type response_info() :: any().
 -type response() :: any().
--type timeout_milliseconds() :: 0..4294967295.
--type priority() :: ?PRIORITY_HIGH..?PRIORITY_LOW. % (high)..(low)
+-type timeout_milliseconds() :: 0..4294967295 | undefined.
+-type priority() :: ?PRIORITY_HIGH..?PRIORITY_LOW | undefined. % (high)..(low)
 -type trans_id() :: <<_:128>>. % version 1 UUID
 -type pattern_pid() :: {service_name_pattern(), pid()}.
 -export_type([service_name/0,

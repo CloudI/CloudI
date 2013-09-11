@@ -1,9 +1,19 @@
-%%% -*- coding: utf-8; Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-%%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab fileencoding=utf-8:
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Cassandra Data Module==
+%%%
+%%%     This ia a _very_ thin shim on top of erlang_cassandra from 
+%%%         https://github.com/dieswaytoofast/erlang_cassandra`
+%%%     Note that your results are "double ok"'d.  i.e., whatever
+%%%     erlang_cassandra sends back is sent back from send_sync.
+%%%     As a result, all successful responses will be of the form
+%%%         {ok, {ok, Response}}
+%%%     All failures from erlang_cassandra will be of the form
+%%%         {ok, {error, Reason}}
+%%%     send_sync errors will be standard 'cloudi' errors
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -46,21 +56,7 @@
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% @copyright 2013 Mahesh Paolini-Subramanya
 %%% @version 1.0 {@date} {@time}
-%%% @doc
-%%%     This ia a _very_ thin shim on top of erlang_cassandra from 
-%%%         https://github.com/dieswaytoofast/erlang_cassandra`
-%%%     Note that your results are "double ok"'d.  i.e., whatever
-%%%     erlang_cassandra sends back is sent back from send_sync.
-%%%     As a result, all successful responses will be of the form
-%%%         {ok, {ok, Response}}
-%%%     All failures from erlang_cassandra will be of the form
-%%%         {ok, {error, Reason}}
-%%%     send_sync errors will be standard 'cloudi' errors
-%%%     
-%%%
-%%% @end
 %%%------------------------------------------------------------------------
-
 -module(cloudi_service_db_cassandra).
 -author('Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>').
 

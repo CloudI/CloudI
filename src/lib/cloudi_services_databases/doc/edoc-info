@@ -1,6 +1,7 @@
 %% encoding: UTF-8
 {application,cloudi_services_databases}.
 {packages,[]}.
-{modules,[cloudi_service_db_couchdb,cloudi_service_db_elasticsearch,
+{modules,[cloudi_service_db,cloudi_service_db_cassandra,
+          cloudi_service_db_couchdb,cloudi_service_db_elasticsearch,
           cloudi_service_db_memcached,cloudi_service_db_mysql,
           cloudi_service_db_pgsql,cloudi_service_db_tokyotyrant]}.
