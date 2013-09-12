@@ -33,3 +33,9 @@ module name:
     Hello World!
     $ bin/cloudi_hello_world3 stop
 
+If you want to alter the CloudI configuration
+(e.g., to use the ZeroMQ/CloudI integration)
+just define the environmental variable `CLOUDI_CONFIGURE_ARGS` for the
+rebar get-deps command:
+
+    $ export CLOUDI_CONFIGURE_ARGS="--with-zeromq"
