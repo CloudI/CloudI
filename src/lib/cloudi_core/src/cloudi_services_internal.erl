@@ -1370,6 +1370,20 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NewServiceState}
     catch
+        throw:{cloudi_service_return, {<<>>}} ->
+            {'cloudi_service_request_success', undefined, ServiceState};
+        throw:{cloudi_service_return, {Response}} ->
+            {'cloudi_service_request_success',
+             {'cloudi_service_return_async', Name, Pattern,
+              <<>>, Response,
+              RequestTimeoutF(Timeout), TransId, Source},
+             ServiceState};
+        throw:{cloudi_service_return, {ResponseInfo, Response}} ->
+            {'cloudi_service_request_success',
+             {'cloudi_service_return_async', Name, Pattern,
+              ResponseInfo, Response,
+              RequestTimeoutF(Timeout), TransId, Source},
+             ServiceState};
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
@@ -1487,6 +1501,20 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NewServiceState}
     catch
+        throw:{cloudi_service_return, {<<>>}} ->
+            {'cloudi_service_request_success', undefined, ServiceState};
+        throw:{cloudi_service_return, {Response}} ->
+            {'cloudi_service_request_success',
+             {'cloudi_service_return_sync', Name, Pattern,
+              <<>>, Response,
+              RequestTimeoutF(Timeout), TransId, Source},
+             ServiceState};
+        throw:{cloudi_service_return, {ResponseInfo, Response}} ->
+            {'cloudi_service_request_success',
+             {'cloudi_service_return_sync', Name, Pattern,
+              ResponseInfo, Response,
+              RequestTimeoutF(Timeout), TransId, Source},
+             ServiceState};
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
