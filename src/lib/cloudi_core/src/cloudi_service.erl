@@ -92,7 +92,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -133,6 +133,8 @@
          forward/9,
          forward_async/8,
          forward_sync/8,
+         return/2,
+         return/3,
          return/9,
          return_async/8,
          return_sync/8,
@@ -1184,6 +1186,35 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
                   {'cloudi_service_forward_sync_retry', Name,
                    RequestInfo, Request,
                    Timeout, Priority, TransId, Pid}}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec return(Dispatcher :: dispatcher(),
+             Response :: response()) ->
+    none().
+
+return(Dispatcher, Response)
+    when is_pid(Dispatcher) ->
+    erlang:throw({cloudi_service_return, {Response}}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec return(Dispatcher :: dispatcher(),
+             ResponseInfo :: response_info(),
+             Response :: response()) ->
+    none().
+
+return(Dispatcher, ResponseInfo, Response)
+    when is_pid(Dispatcher) ->
+    erlang:throw({cloudi_service_return, {ResponseInfo, Response}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
