@@ -5,6 +5,8 @@
 
     * For cloudi_service_http_cowboy, a service request timeout using
       405 responses gets an empty "allow" HTTP header
+    * Add non-standard HTTP header request info entries for
+      tracking a multipart sequence of service requests
 
 2013-09-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
