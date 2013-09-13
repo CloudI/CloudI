@@ -57,6 +57,8 @@ class Task(threading.Thread):
 
     def run(self):
         try:
+            self.__api.subscribe('echo/put', self.__request)
+            self.__api.subscribe('echo/post', self.__request)
             self.__api.subscribe('echo/get', self.__request)
 
             result = self.__api.poll()
@@ -66,7 +68,10 @@ class Task(threading.Thread):
 
     def __request(self, command, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
-        return request
+        if request == '':
+            return 'echo'
+        else:
+            return request
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
