@@ -120,14 +120,13 @@ handle(Req0,
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {QsVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
-    {ok, Body, Req4} = cloudi_x_cowboy_req:body(Req3),
-    {PathRaw, Req5} = cloudi_x_cowboy_req:path(Req4),
-    {Client, Req6} = cloudi_x_cowboy_req:peer(Req5),
+    {PathRaw, Req4} = cloudi_x_cowboy_req:path(Req3),
+    {Client, Req5} = cloudi_x_cowboy_req:peer(Req4),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
                                                  Client,
-                                                 Req6),
+                                                 Req5),
     RequestAccepted = if
         ContentTypesAccepted =:= undefined ->
             true;
@@ -170,29 +169,6 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         string:to_lower(erlang:binary_to_list(Method))]
             end,
-            RequestBinary = if
-                Method =:= <<"GET">> ->
-                    get_query_string_format(QsVals);
-                Method =:= <<"POST">>; Method =:= <<"PUT">> ->
-                    % do not pass type information along with the request!
-                    % make sure to encourage good design that provides
-                    % one type per name (path)
-                    case header_content_type(HeadersIncoming0) of
-                        <<"application/zip">> ->
-                            zlib:unzip(Body);
-                        _ ->
-                            Body
-                    end;
-                true ->
-                    <<>>
-            end,
-            Request = if
-                OutputType =:= list ->
-                    erlang:binary_to_list(RequestBinary);
-                OutputType =:= internal; OutputType =:= external;
-                OutputType =:= binary ->
-                    RequestBinary
-            end,
             HeadersIncomingN = if
                 SetXForwardedFor =:= true ->
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
@@ -210,20 +186,34 @@ handle(Req0,
                 SetXForwardedFor =:= false ->
                     HeadersIncoming0
             end,
-            RequestInfo = if
-                OutputType =:= internal; OutputType =:= list ->
-                    HeadersIncomingN;
-                OutputType =:= external; OutputType =:= binary ->
-                    headers_external_incoming(HeadersIncomingN)
+            Body = if
+                Method =:= <<"GET">> ->
+                    get_query_string_format(QsVals);
+                (Method =:= <<"POST">>) orelse
+                (Method =:= <<"PUT">>) ->
+                    case header_content_type(HeadersIncoming0) of
+                        <<"application/zip">> ->
+                            'application_zip';
+                        <<"multipart/form-data">> ->
+                            'multipart_form-data';
+                        _ ->
+                            'normal'
+                    end;
+                (Method =:= <<"DELETE">>) orelse
+                (Method =:= <<"HEAD">>) orelse
+                (Method =:= <<"OPTIONS">>) orelse
+                (Method =:= <<"TRACE">>) orelse
+                (Method =:= <<"CONNECT">>) ->
+                    <<>>;
+                true ->
+                    'normal'
             end,
-            Service ! {cowboy_request, self(),
-                       NameOutgoing, RequestInfo, Request},
-            receive
-                {cowboy_response, ResponseInfo, Response} ->
-                    HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+            case handle_request(Service, NameOutgoing, HeadersIncomingN,
+                                OutputType, TimeoutAsync, Body, ReqN) of
+                {{cowboy_response, HeadersOutgoing, Response}, ReqN0} ->
                     {HttpCode,
-                     Req} = return_response(NameIncoming, HeadersOutgoing,
-                                            Response, ReqN, OutputType,
+                     Req} = handle_response(NameIncoming, HeadersOutgoing,
+                                            Response, ReqN0, OutputType,
                                             ContentTypeForced,
                                             ContentTypeLookup),
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
@@ -231,30 +221,21 @@ handle(Req0,
                                       NameIncoming, NameOutgoing,
                                       RequestStartMicroSec]),
                     {ok, Req, State};
-                {cowboy_error, timeout} ->
+                {{cowboy_error, timeout}, ReqN0} ->
                     HttpCode = StatusCodeTimeout,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                          ReqN),
+                                                          ReqN0),
                     ?LOG_WARN_APPLY(fun request_time_end_error/5,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, timeout]),
                     {ok, Req, State};
-                {cowboy_error, Reason} ->
+                {{cowboy_error, Reason}, ReqN0} ->
                     HttpCode = 500,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                          ReqN),
+                                                          ReqN0),
                     ?LOG_WARN_APPLY(fun request_time_end_error/5,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, Reason]),
-                    {ok, Req, State}
-            after
-                TimeoutAsync ->
-                    HttpCode = StatusCodeTimeout,
-                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                          ReqN),
-                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                                    [HttpCode, Method, NameIncoming,
-                                     RequestStartMicroSec, timeout]),
                     {ok, Req, State}
             end
     end.
@@ -653,7 +634,153 @@ websocket_time_end_error(NameIncoming,
 websocket_request_end(Name, NewTimeout, OldTimeout) ->
     ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
 
-return_response(NameIncoming, HeadersOutgoing0, Response,
+handle_request(Service, Name, Headers,
+               OutputType, Timeout, 'normal', Req) ->
+    {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req),
+    handle_request(Service, Name, Headers,
+                   OutputType, Timeout, Body, NextReq);
+handle_request(Service, Name, Headers,
+               OutputType, Timeout, 'application_zip', Req) ->
+    {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req),
+    handle_request(Service, Name, Headers,
+                   OutputType, Timeout, zlib:unzip(Body), NextReq);
+handle_request(Service, Name, Headers,
+               OutputType, Timeout, 'multipart_form-data', Req) ->
+    handle_request_multipart(Service, Name, lists:keysort(1, Headers),
+                             OutputType, Timeout, [], 0, Req);
+handle_request(Service, Name, Headers,
+               OutputType, Timeout, Body, Req)
+    when is_binary(Body) ->
+    RequestInfo = if
+        OutputType =:= internal; OutputType =:= list ->
+            Headers;
+        OutputType =:= external; OutputType =:= binary ->
+            headers_external_incoming(Headers)
+    end,
+    Request = if
+        OutputType =:= list ->
+            erlang:binary_to_list(Body);
+        OutputType =:= internal; OutputType =:= external;
+        OutputType =:= binary ->
+            Body
+    end,
+    Service ! {cowboy_request, self(),
+               Name, RequestInfo, Request},
+    receive
+        {cowboy_response, ResponseInfo, Response} ->
+            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+            {{cowboy_response, HeadersOutgoing, Response}, Req};
+        {cowboy_error, _Reason} = Result ->
+            {Result, Req}
+    after
+        Timeout ->
+            {{cowboy_error, timeout}, Req}
+    end.
+
+handle_request_multipart(Service, Name, Headers,
+                         OutputType, Timeout,
+                         HeadersPart0, I0, Req0) ->
+    case handle_request_multipart_send(HeadersPart0, I0, Req0) of
+        {HeadersPart1, BodyPart, I1, Req1} ->
+            RequestInfo = if
+                OutputType =:= internal; OutputType =:= list ->
+                    headers_merge(HeadersPart1, Headers);
+                OutputType =:= external; OutputType =:= binary ->
+                    headers_external_incoming(headers_merge(HeadersPart1,
+                                                            Headers))
+            end,
+            Request = if
+                OutputType =:= list ->
+                    erlang:binary_to_list(BodyPart);
+                OutputType =:= internal; OutputType =:= external;
+                OutputType =:= binary ->
+                    BodyPart
+            end,
+            Service ! {cowboy_request, self(),
+                       Name, RequestInfo, Request},
+            handle_request_multipart(Service, Name, Headers,
+                                     OutputType, Timeout,
+                                     HeadersPart1, I1, Req1);
+        {I1, Req1} ->
+            handle_request_multipart_receive(undefined, undefined,
+                                             Timeout, I1, Req1)
+    end.
+
+headers_merge(HeadersPart, Headers) ->
+    lists:keymerge(1, lists:keysort(1, HeadersPart), Headers).
+
+handle_request_multipart_send(I, Req0) ->
+    case cloudi_x_cowboy_req:multipart_data(Req0) of
+        {headers, HeadersPart0, Req1} ->
+            HeadersPart1 = lists:keysort(1, HeadersPart0),
+            handle_request_multipart_send(HeadersPart1, I, Req1);
+        {body, BodyPart, Req1} ->
+            {[], BodyPart, I + 1, Req1};
+        {end_of_part, Req1} ->
+            handle_request_multipart_send(I, Req1);
+        {eof, Req1} ->
+            {I, Req1}
+    end.
+
+handle_request_multipart_send(HeadersPart0, I, Req0) ->
+    case cloudi_x_cowboy_req:multipart_data(Req0) of
+        {headers, HeadersPart1, Req1} ->
+            HeadersPart2 = headers_merge(HeadersPart1, HeadersPart0),
+            handle_request_multipart_send(HeadersPart2, I, Req1);
+        {body, BodyPart, Req1} ->
+            {HeadersPart0, BodyPart, I + 1, Req1};
+        {end_of_part, Req1} ->
+            handle_request_multipart_send(I, Req1);
+        {eof, Req1} ->
+            {I, Req1}
+    end.
+
+handle_request_multipart_receive(undefined, undefined, _Timeout, 0, Req) ->
+    {{cowboy_error, multipart_empty}, Req};
+handle_request_multipart_receive(SuccessLast, undefined, _Timeout, 0, Req) ->
+    {SuccessLast, Req};
+handle_request_multipart_receive(_SuccessLast, ErrorLast, _Timeout, 0, Req) ->
+    {ErrorLast, Req};
+handle_request_multipart_receive(SuccessLast, ErrorLast, Timeout, I, Req) ->
+    receive
+        {cowboy_response, ResponseInfo, Response} ->
+            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+            Status = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
+                {<<"status">>, V} ->
+                    erlang:binary_to_integer(hd(binary:split(V, <<" ">>)));
+                false ->
+                    200
+            end,
+            if
+                Status >= 200, Status < 300 ->
+                    handle_request_multipart_receive({cowboy_response,
+                                                      HeadersOutgoing,
+                                                      Response},
+                                                     ErrorLast, Timeout,
+                                                     I - 1, Req);
+                true ->
+                    handle_request_multipart_receive(SuccessLast,
+                                                     {cowboy_response,
+                                                      HeadersOutgoing,
+                                                      Response},
+                                                     Timeout,
+                                                     I - 1, Req)
+            end;
+        {cowboy_error, _Reason} = Result ->
+            {Result, Req}
+    after
+        Timeout ->
+            if
+                ErrorLast =/= undefined ->
+                    {ErrorLast, Req};
+                SuccessLast =/= undefined ->
+                    {SuccessLast, Req};
+                true ->
+                    {{cowboy_error, timeout}, Req}
+            end
+    end.
+
+handle_response(NameIncoming, HeadersOutgoing0, Response,
                 ReqN, OutputType, ContentTypeForced,
                 ContentTypeLookup) ->
     ResponseBinary = if
