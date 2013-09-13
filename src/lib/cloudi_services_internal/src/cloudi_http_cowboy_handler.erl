@@ -223,8 +223,19 @@ handle(Req0,
                     {ok, Req, State};
                 {{cowboy_error, timeout}, ReqN0} ->
                     HttpCode = StatusCodeTimeout,
-                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                          ReqN0),
+                    {ok, Req} = if
+                        HttpCode =:= 405 ->
+                            % currently not providing a list of valid methods
+                            % (a different HTTP status code is a better
+                            %  choice, since this service name may not exist)
+                            HeadersOutgoing = [{<<"allow">>, <<"">>}],
+                            cloudi_x_cowboy_req:reply(HttpCode,
+                                                      HeadersOutgoing,
+                                                      ReqN0);
+                        true ->
+                            cloudi_x_cowboy_req:reply(HttpCode,
+                                                      ReqN0)
+                    end,
                     ?LOG_WARN_APPLY(fun request_time_end_error/5,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, timeout]),
