@@ -657,8 +657,11 @@ handle_request(Service, Name, Headers,
                    OutputType, Timeout, zlib:unzip(Body), NextReq);
 handle_request(Service, Name, Headers,
                OutputType, Timeout, 'multipart_form-data', Req) ->
+    MultipartId = erlang:list_to_binary(erlang:pid_to_list(self())),
+    MultipartData = cloudi_x_cowboy_req:multipart_data(Req),
+    PartFirst = handle_request_multipart_send(MultipartData, [], 0),
     handle_request_multipart(Service, Name, lists:keysort(1, Headers),
-                             OutputType, Timeout, [], 0, Req);
+                             OutputType, Timeout, MultipartId, PartFirst);
 handle_request(Service, Name, Headers,
                OutputType, Timeout, Body, Req)
     when is_binary(Body) ->
@@ -689,62 +692,67 @@ handle_request(Service, Name, Headers,
     end.
 
 handle_request_multipart(Service, Name, Headers,
-                         OutputType, Timeout,
-                         HeadersPart0, I0, Req0) ->
-    case handle_request_multipart_send(HeadersPart0, I0, Req0) of
-        {HeadersPart1, BodyPart, I1, Req1} ->
-            RequestInfo = if
-                OutputType =:= internal; OutputType =:= list ->
-                    headers_merge(HeadersPart1, Headers);
-                OutputType =:= external; OutputType =:= binary ->
-                    headers_external_incoming(headers_merge(HeadersPart1,
-                                                            Headers))
-            end,
-            Request = if
-                OutputType =:= list ->
-                    erlang:binary_to_list(BodyPart);
-                OutputType =:= internal; OutputType =:= external;
-                OutputType =:= binary ->
-                    BodyPart
-            end,
-            Service ! {cowboy_request, self(),
-                       Name, RequestInfo, Request},
-            handle_request_multipart(Service, Name, Headers,
-                                     OutputType, Timeout,
-                                     HeadersPart1, I1, Req1);
-        {I1, Req1} ->
-            handle_request_multipart_receive(undefined, undefined,
-                                             Timeout, I1, Req1)
-    end.
+                         OutputType, Timeout, MultipartId,
+                         {HeadersPart0, BodyPart, I, Req}) ->
+    MultipartData = cloudi_x_cowboy_req:multipart_data(Req),
+    PartNext = handle_request_multipart_send(MultipartData,
+                                             HeadersPart0, I),
+    % each multipart part becomes a separate service request
+    % however, the non-standard HTTP header request data provides information
+    % to handle the sequence concurrently
+    HeadersPart1 = case PartNext of
+        {_, _, _, _} ->
+            [{<<"x-multipart-id">>, MultipartId},
+             {<<"x-multipart-index">>, erlang:integer_to_binary(I - 1)} |
+             HeadersPart0];
+        {_, _} ->
+            [{<<"x-multipart-id">>, MultipartId},
+             {<<"x-multipart-index">>, erlang:integer_to_binary(I - 1)},
+             {<<"x-multipart-last">>, <<"true">>} |
+             HeadersPart0]
+    end,
+    RequestInfo = if
+        OutputType =:= internal; OutputType =:= list ->
+            headers_merge(HeadersPart1, Headers);
+        OutputType =:= external; OutputType =:= binary ->
+            headers_external_incoming(headers_merge(HeadersPart1,
+                                                    Headers))
+    end,
+    Request = if
+        OutputType =:= list ->
+            erlang:binary_to_list(BodyPart);
+        OutputType =:= internal; OutputType =:= external;
+        OutputType =:= binary ->
+            BodyPart
+    end,
+    Service ! {cowboy_request, self(),
+               Name, RequestInfo, Request},
+    handle_request_multipart(Service, Name, Headers,
+                             OutputType, Timeout, MultipartId,
+                             PartNext);
+handle_request_multipart(_Service, _Name, _Headers,
+                         _OutputType, Timeout, _MultipartId,
+                         {I, Req}) ->
+    handle_request_multipart_receive(undefined, undefined, Timeout, I, Req).
 
 headers_merge(HeadersPart, Headers) ->
     lists:keymerge(1, lists:keysort(1, HeadersPart), Headers).
 
-handle_request_multipart_send(I, Req0) ->
-    case cloudi_x_cowboy_req:multipart_data(Req0) of
-        {headers, HeadersPart0, Req1} ->
-            HeadersPart1 = lists:keysort(1, HeadersPart0),
-            handle_request_multipart_send(HeadersPart1, I, Req1);
-        {body, BodyPart, Req1} ->
-            {[], BodyPart, I + 1, Req1};
-        {end_of_part, Req1} ->
-            handle_request_multipart_send(I, Req1);
-        {eof, Req1} ->
-            {I, Req1}
-    end.
-
-handle_request_multipart_send(HeadersPart0, I, Req0) ->
-    case cloudi_x_cowboy_req:multipart_data(Req0) of
-        {headers, HeadersPart1, Req1} ->
-            HeadersPart2 = headers_merge(HeadersPart1, HeadersPart0),
-            handle_request_multipart_send(HeadersPart2, I, Req1);
-        {body, BodyPart, Req1} ->
-            {HeadersPart0, BodyPart, I + 1, Req1};
-        {end_of_part, Req1} ->
-            handle_request_multipart_send(I, Req1);
-        {eof, Req1} ->
-            {I, Req1}
-    end.
+handle_request_multipart_send({headers, HeadersPart1, Req},
+                              HeadersPart0, I) ->
+    HeadersPart2 = headers_merge(HeadersPart1, HeadersPart0),
+    handle_request_multipart_send(cloudi_x_cowboy_req:multipart_data(Req),
+                                  HeadersPart2, I);
+handle_request_multipart_send({body, BodyPart, Req},
+                              HeadersPart, I) ->
+    {HeadersPart, BodyPart, I + 1, Req};
+handle_request_multipart_send({end_of_part, Req},
+                              _HeadersPart, I) ->
+    handle_request_multipart_send(cloudi_x_cowboy_req:multipart_data(Req),
+                                  [], I);
+handle_request_multipart_send({eof, Req},
+                              _HeadersPart, I) ->
+    {I, Req}.
 
 handle_request_multipart_receive(undefined, undefined, _Timeout, 0, Req) ->
     {{cowboy_error, multipart_empty}, Req};
