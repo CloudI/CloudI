@@ -700,23 +700,23 @@ handle_request_multipart(Service, Name, Headers,
     % each multipart part becomes a separate service request
     % however, the non-standard HTTP header request data provides information
     % to handle the sequence concurrently
-    HeadersPart1 = case PartNext of
+    HeadersPart1 = headers_merge(HeadersPart0, Headers),
+    HeadersPart2 = case PartNext of
         {_, _, _, _} ->
             [{<<"x-multipart-id">>, MultipartId},
              {<<"x-multipart-index">>, erlang:integer_to_binary(I - 1)} |
-             HeadersPart0];
+             HeadersPart1];
         {_, _} ->
             [{<<"x-multipart-id">>, MultipartId},
              {<<"x-multipart-index">>, erlang:integer_to_binary(I - 1)},
              {<<"x-multipart-last">>, <<"true">>} |
-             HeadersPart0]
+             HeadersPart1]
     end,
     RequestInfo = if
         OutputType =:= internal; OutputType =:= list ->
-            headers_merge(HeadersPart1, Headers);
+            HeadersPart2;
         OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(headers_merge(HeadersPart1,
-                                                    Headers))
+            headers_external_incoming(HeadersPart2)
     end,
     Request = if
         OutputType =:= list ->
