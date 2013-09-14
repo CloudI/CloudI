@@ -4,6 +4,7 @@
 2013-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * cloudi_service_http_cowboy multipart fixes
+    * Add cloudi_service:service_name_parse_with_suffix/2
 
 2013-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 

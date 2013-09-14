@@ -830,16 +830,20 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                     case cloudi_x_trie:find(Extension, ContentTypeLookup) of
                         error ->
                             [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
+                              erlang:iolist_to_binary(["attachment; "
+                                                       "filename=\"",
+                                                       NameIncoming,
+                                                       "\""])},
                              {<<"content-type">>,
                               <<"application/octet-stream">>}];
                         {ok, {request, ContentType}} ->
                             [{<<"content-type">>, ContentType}];
                         {ok, {attachment, ContentType}} ->
                             [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
+                              erlang:iolist_to_binary(["attachment; "
+                                                       "filename=\"",
+                                                       NameIncoming,
+                                                       "\""])},
                              {<<"content-type">>, ContentType}]
                     end
             end
