@@ -96,6 +96,7 @@
          new/0,
          new/1,
          pattern_parse/2,
+         pattern_parse/3,
          prefix/3,
          size/1,
          store/2,
@@ -927,7 +928,31 @@ itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
                     L :: string()) -> list(string()) | 'error'.
 
 pattern_parse(Pattern, L) ->
-    pattern_parse(Pattern, L, []).
+    pattern_parse(Pattern, L, default).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a string based on the supplied wildcard pattern.===
+%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "**" is forbidden.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern_parse(Pattern :: string(),
+                    L :: string(),
+                    Option :: default | with_suffix) ->
+    list(string()) | {list(string()), string()} | 'error'.
+
+pattern_parse(Pattern, L, Option)
+    when (Option =:= default) orelse
+         (Option =:= with_suffix) ->
+    pattern_parse(Pattern, L, [], [], Option).
+
+pattern_parse_result(default, Parameters, _) ->
+    Parameters;
+
+pattern_parse_result(with_suffix, Parameters, Suffix) ->
+    {Parameters, lists:reverse(Suffix)}.
 
 pattern_parse_element(_, [], _) ->
     error;
@@ -941,33 +966,33 @@ pattern_parse_element(_, [$* | _], _) ->
 pattern_parse_element(C, [H | T], L) ->
     pattern_parse_element(C, T, [H | L]).
 
-pattern_parse([], [], Parsed) ->
-    lists:reverse(Parsed);
+pattern_parse([], [], Parsed, Suffix, Option) ->
+    pattern_parse_result(Option, lists:reverse(Parsed), Suffix);
 
-pattern_parse([], [_ | _], _) ->
+pattern_parse([], [_ | _], _, _, _) ->
     error;
 
-pattern_parse([_ | _], [$* | _], _) ->
+pattern_parse([_ | _], [$* | _], _, _, _) ->
     erlang:exit(badarg);
 
-pattern_parse([$*], [_ | _] = L, Parsed) ->
-    lists:reverse([L | Parsed]);
+pattern_parse([$*], [_ | _] = L, Parsed, _, Option) ->
+    pattern_parse_result(Option, lists:reverse([L | Parsed]), []);
 
-pattern_parse([$*, $* | _], [_ | _], _) ->
+pattern_parse([$*, $* | _], [_ | _], _, _, _) ->
     erlang:exit(badarg);
 
-pattern_parse([$*, C | Pattern], [H | T], Parsed) ->
+pattern_parse([$*, C | Pattern], [H | T], Parsed, _, Option) ->
     case pattern_parse_element(C, T, [H]) of
         {ok, NewL, Segment} ->
-            pattern_parse(Pattern, NewL, [Segment | Parsed]);
+            pattern_parse(Pattern, NewL, [Segment | Parsed], [C], Option);
         error ->
             error
     end;
 
-pattern_parse([C | Pattern], [C | L], Parsed) ->
-    pattern_parse(Pattern, L, Parsed);
+pattern_parse([C | Pattern], [C | L], Parsed, Suffix, Option) ->
+    pattern_parse(Pattern, L, Parsed, [C | Suffix], Option);
 
-pattern_parse(_, _, _) ->
+pattern_parse(_, _, _, _, _) ->
     error.
 
 %%-------------------------------------------------------------------------
@@ -1198,11 +1223,15 @@ test() ->
     ["aa"] = trie:pattern_parse("aa*", "aaaa"),
     ["b"] = trie:pattern_parse("aa*", "aab"),
     ["b"] = trie:pattern_parse("aa*b", "aabb"),
+    {["b"], "b"} = trie:pattern_parse("aa*b", "aabb", with_suffix),
     ["b", "b"] = trie:pattern_parse("aa*a*", "aabab"),
+    {["b", "b"], ""} = trie:pattern_parse("aa*a*", "aabab", with_suffix),
     ["b", "bb"] = trie:pattern_parse("aa*a*", "aababb"),
     ["bb", "b"] = trie:pattern_parse("aa*a*", "aabbab"),
     ["bb", "bb"] = trie:pattern_parse("aa*a*", "aabbabb"),
     error = trie:pattern_parse("aa*a*", "aaabb"),
+    [] = trie:pattern_parse("aaabb", "aaabb"),
+    {[], "aaabb"} = trie:pattern_parse("aaabb", "aaabb", with_suffix),
     false = trie:is_pattern("abcdef"),
     true = trie:is_pattern("abc*d*ef"),
     {'EXIT',badarg} = (catch trie:is_pattern("abc**ef")),

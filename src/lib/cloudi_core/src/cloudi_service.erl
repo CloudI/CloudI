@@ -147,6 +147,7 @@
          timeout_async/1,
          timeout_sync/1,
          service_name_parse/2,
+         service_name_parse_with_suffix/2,
          request_http_qs_parse/1,
          request_info_key_value_new/1,
          request_info_key_value_parse/1,
@@ -1482,6 +1483,19 @@ timeout_sync(Dispatcher) ->
 
 service_name_parse(Name, Pattern) ->
     cloudi_x_trie:pattern_parse(Pattern, Name).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a service name pattern and return the common suffix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_name_parse_with_suffix(Name :: string(),
+                                     Pattern :: string()) ->
+    {list(string()), string()} | error.
+
+service_name_parse_with_suffix(Name, Pattern) ->
+    cloudi_x_trie:pattern_parse(Pattern, Name, with_suffix).
 
 %%-------------------------------------------------------------------------
 %% @doc
