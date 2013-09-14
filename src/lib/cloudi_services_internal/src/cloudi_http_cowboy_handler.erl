@@ -765,13 +765,13 @@ handle_request_multipart_receive(SuccessLast, ErrorLast, Timeout, I, Req) ->
         {cowboy_response, ResponseInfo, Response} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             Status = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
-                {<<"status">>, V} ->
+                {_, V} ->
                     erlang:binary_to_integer(hd(binary:split(V, <<" ">>)));
                 false ->
                     200
             end,
             if
-                Status >= 200, Status < 300 ->
+                (Status >= 200) andalso (Status =< 299) ->
                     handle_request_multipart_receive({cowboy_response,
                                                       HeadersOutgoing,
                                                       Response},
@@ -792,8 +792,6 @@ handle_request_multipart_receive(SuccessLast, ErrorLast, Timeout, I, Req) ->
             if
                 ErrorLast =/= undefined ->
                     {ErrorLast, Req};
-                SuccessLast =/= undefined ->
-                    {SuccessLast, Req};
                 true ->
                     {{cowboy_error, timeout}, Req}
             end
@@ -813,7 +811,7 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                                                       HeadersOutgoing0) of
         false ->
             {200, HeadersOutgoing0};
-        {value, {<<"status">>, Status}, HeadersOutgoing1}
+        {value, {_, Status}, HeadersOutgoing1}
             when is_binary(Status) ->
             {erlang:binary_to_integer(hd(binary:split(Status, <<" ">>))),
              HeadersOutgoing1}
