@@ -100,44 +100,44 @@ configure() ->
 acl_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_add, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 acl_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_remove, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_add, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_remove, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_restart, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_search(ServiceName, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_search, ServiceName,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 nodes_add(L, Timeout) ->
     Nodes = [node() | nodes()],
     check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_add, L,
-                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+                               timeout_decr(Timeout)}, Timeout)
     end)).
 
 nodes_remove(L, Timeout) ->
@@ -145,7 +145,7 @@ nodes_remove(L, Timeout) ->
     check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_remove, L,
-                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+                               timeout_decr(Timeout)}, Timeout)
     end)).
 
 service_start(#config_service_internal{
@@ -163,27 +163,28 @@ service_start(#config_service_internal{
                     ok
             end,
             service_start_internal(concurrency(Count),
-                                   FoundService, Timeout);
+                                   FoundService,
+                                   timeout_decr(Timeout));
         {error, _} = Error ->
             Error
     end;
 
 service_start(#config_service_external{count_process = Count} = Service,
               Timeout) ->
-    service_start_external(concurrency(Count), Service, Timeout).
+    service_start_external(concurrency(Count), Service, timeout_decr(Timeout)).
 
 service_stop(#config_service_internal{} = Service, Remove, Timeout)
     when is_boolean(Remove) ->
-    service_stop_internal(Service, Remove, Timeout);
+    service_stop_internal(Service, Remove, timeout_decr(Timeout));
 
 service_stop(#config_service_external{} = Service, false, Timeout) ->
-    service_stop_external(Service, Timeout).
+    service_stop_external(Service, timeout_decr(Timeout)).
 
 service_restart(#config_service_internal{} = Service, Timeout) ->
-    service_restart_internal(Service, Timeout);
+    service_restart_internal(Service, timeout_decr(Timeout));
 
 service_restart(#config_service_external{} = Service, Timeout) ->
-    service_restart_external(Service, Timeout).
+    service_restart_external(Service, timeout_decr(Timeout)).
 
 concurrency(I)
     when is_integer(I) ->
@@ -644,4 +645,9 @@ check_multi_call_replies([{_, ok} | Replies]) ->
     check_multi_call_replies(Replies);
 check_multi_call_replies([{_, Result} | _]) ->
     Result.
+
+timeout_decr(infinity) ->
+    infinity;
+timeout_decr(Timeout) when is_integer(Timeout) ->
+    Timeout - ?TIMEOUT_DELTA.
 
