@@ -5,6 +5,7 @@
 
     * Allow configuration data to be present in the application env entry
       to bypass a filesystem file and be fed configuration directly
+    * Fix some nested timeout errors to prevent outer timeout termination
 
 2013-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 

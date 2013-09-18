@@ -236,7 +236,8 @@ acl_remove(Value, _) ->
 
 -spec services_add(Value :: list(#internal{} | #external{} | any()),
                    Config :: #config{},
-                   Timeout :: cloudi_service_api:timeout_milliseconds()) ->
+                   Timeout :: cloudi_service_api:timeout_milliseconds() |
+                              infinity) ->
     {ok, list(cloudi_service_api:service_id()), #config{}} |
     {error, any()}.
 
@@ -274,7 +275,8 @@ services_add(Value, _, _) ->
 
 -spec services_remove(Value :: list(cloudi_service_api:service_id()),
                       Config :: #config{},
-                      Timeout :: cloudi_service_api:timeout_milliseconds()) ->
+                      Timeout :: cloudi_service_api:timeout_milliseconds() |
+                                 infinity) ->
     {ok, #config{}} |
     {error, any()}.
 
@@ -298,7 +300,8 @@ services_remove(Value, _, _) ->
 
 -spec services_restart(Value :: list(cloudi_service_api:service_id()),
                        Config :: #config{},
-                       Timeout :: cloudi_service_api:timeout_milliseconds()) ->
+                       Timeout :: cloudi_service_api:timeout_milliseconds() |
+                                  infinity) ->
     {ok, #config{}} |
     {error, any()}.
 
