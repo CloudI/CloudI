@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_app).
@@ -100,8 +100,8 @@ test() ->
 
 start(_, _) ->
     cloudi_x_quickrand:seed(),
-    {ok, Path} = application:get_env(configuration),
-    case cloudi_configuration:open(Path) of
+    {ok, PathOrData} = application:get_env(configuration),
+    case cloudi_configuration:load(PathOrData) of
         {ok, Config} ->
             cloudi_core_sup:start_link(Config);
         {error, _} = Error ->

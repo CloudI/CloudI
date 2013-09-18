@@ -51,8 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([open/0,
-         open/1,
+-export([load/1,
          acl_add/2,
          acl_remove/2,
          services_add/3,
@@ -68,15 +67,13 @@
 -include("cloudi_service_api.hrl").
 -include("cloudi_constants.hrl").
 
--define(CONFIGURATION_FILE_NAME, "cloudi.conf").
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse the CloudI configuration file.===
+%% ===Process the CloudI configuration data.===
 %% ====logging:====
 %%   `{logging, [{file, "path/to/log/file"}, {level, Level}]}'
 %%
@@ -173,23 +170,11 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec open() ->
+-spec load(Path :: string() | list(tuple())) ->
     {ok, #config{}} |
     {error, any()}.
 
-open() ->
-    case file:consult(?CONFIGURATION_FILE_NAME) of
-        {ok, Terms} ->
-            new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
-        {error, _} = Error ->
-            Error
-    end.
-
--spec open(Path :: string()) ->
-    {ok, #config{}} |
-    {error, any()}.
-
-open(Path) when is_list(Path) ->
+load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
         {ok, Terms} ->
             new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
@@ -198,8 +183,10 @@ open(Path) when is_list(Path) ->
                                    [Path, Reason]),
             Error
     end;
-open(Path) ->
-    {error, {path_invalid, Path}}.
+load([T | _] = Terms) when is_tuple(T) ->
+    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
+load(Data) ->
+    {error, {configuration_invalid, Data}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
