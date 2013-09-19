@@ -194,8 +194,8 @@ handle(Req0,
                     case header_content_type(HeadersIncoming0) of
                         <<"application/zip">> ->
                             'application_zip';
-                        <<"multipart/form-data">> ->
-                            'multipart_form-data';
+                        <<$m,$u,$l,$t,$i,$p,$a,$r,$t,$/, _/binary>> ->
+                            'multipart';
                         _ ->
                             'normal'
                     end;
@@ -656,7 +656,7 @@ handle_request(Service, Name, Headers,
     handle_request(Service, Name, Headers,
                    OutputType, Timeout, zlib:unzip(Body), NextReq);
 handle_request(Service, Name, Headers,
-               OutputType, Timeout, 'multipart_form-data', Req) ->
+               OutputType, Timeout, 'multipart', Req) ->
     MultipartId = erlang:list_to_binary(erlang:pid_to_list(self())),
     MultipartData = cloudi_x_cowboy_req:multipart_data(Req),
     PartFirst = handle_request_multipart_send(MultipartData, [], 0),
