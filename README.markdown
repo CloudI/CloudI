@@ -100,9 +100,10 @@ See the [Quick Start Guide](https://github.com/okeuday/CloudI/tree/master/doc#re
 Integration points:
 
 * CloudI API (See [`src/api/README`](https://github.com/okeuday/CloudI/tree/master/src/api#readme))
-* HTTP with [`cloudi_service_http_cowboy`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl)
+* HTTP with [`cloudi_service_http_cowboy`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_http_elli.erl)
 * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_messaging/src/cloudi_service_zeromq.erl)
 * Supported databases
+  * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_elasticsearch.erl)
   * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_couchdb.erl)
   * memcached with [`cloudi_service_db_memcached`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_memcached.erl)
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_mysql.erl)
