@@ -134,7 +134,7 @@ services(Timeout) ->
 
 nodes_add(L, Timeout) ->
     Nodes = [node() | nodes()],
-    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_add, L,
                                timeout_decr(Timeout)}, Timeout)
@@ -142,7 +142,7 @@ nodes_add(L, Timeout) ->
 
 nodes_remove(L, Timeout) ->
     Nodes = [node() | nodes()],
-    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_remove, L,
                                timeout_decr(Timeout)}, Timeout)
@@ -639,6 +639,10 @@ service_restart_external(#config_service_external{
             Error
     end.
 
+check_multi_call({Replies, _BadNodes}) ->
+    % ignore bad nodes
+    check_multi_call_replies(Replies).
+    
 check_multi_call_replies([]) ->
     ok;
 check_multi_call_replies([{_, ok} | Replies]) ->

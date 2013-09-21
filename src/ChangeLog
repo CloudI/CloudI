@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-09-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix JSON RPC errors with CloudI Service API
+    * Fix the CloudI Service API run.py test
+    * Fix cloudi_service_api:nodes_add/2 and cloudi_service_api:nodes_remove/2
+
 2013-09-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_db to store with the Key equal to the TransId of

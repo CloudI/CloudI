@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -208,7 +208,9 @@ format_json_rpc(undefined, Input, Timeout, Functions) ->
                 cloudi_string:term_to_binary(Result), Id
             )
     catch
-        _:Error ->
+        Type:Error ->
+            ?LOG_ERROR("JSON RPC error ~p ~p~n~p",
+                       [Type, Error, erlang:get_stacktrace()]),
             cloudi_json_rpc:response_to_json(
                 null, 0, cloudi_string:term_to_binary(Error), Id
             )

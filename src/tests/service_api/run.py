@@ -55,9 +55,9 @@ if __name__ == '__main__':
     obj = CloudI()
     assert obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok'
     assert obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok'
-    # removing entries that do not exist, does not fail,
-    # since the request is valid (despite the fact it is pointless)
-    assert obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok'
+    assert obj.nodes_remove(
+        '[foobar1@hostX, foobar2@hostY]'
+    ) == '{error,{node_not_found,foobar1@hostX}}'
 
     assert obj.acl_remove('[all]') == 'ok'
     assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     )) == 'ok'
 
     # start the C flood test
-    assert obj.services_add("""\
+    services_added = obj.services_add("""\
 [{external,
     "/tests/flood/",
     "tests/flood/service/flood", "1 tcp 16384",
@@ -82,14 +82,15 @@ if __name__ == '__main__':
      cloudi_service_flood,
      [{flood, "/tests/flood/c", <<"DATA">>, 1000}],
      lazy_closest,
-     5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]""") == 'ok'
+     5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]""")
+    assert type(services_added) == list # returns the list of new ServiceIds
+    assert len(services_added) == 2
 
     print 'waiting 20 seconds...'
     time.sleep(20)
 
     # stop the C flood test
-    services = obj.services()
     assert obj.services_remove('[%s, %s]' % (
-        str(services[14][0]), str(services[15][0]),
+        str(services_added[0]), str(services_added[1]),
     )) == 'ok'
 
