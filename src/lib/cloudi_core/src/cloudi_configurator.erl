@@ -153,7 +153,7 @@ service_start(#config_service_internal{
                   options = #config_service_options{
                       reload = Reload}} = Service,
               Timeout) ->
-    case service_start_find_internal(Service) of
+    case service_start_find_internal(Service, Timeout) of
         {ok, #config_service_internal{
                  module = Module} = FoundService} ->
             if
@@ -260,7 +260,7 @@ handle_call({services_restart, L, Timeout}, _,
 
 handle_call({services_search, ServiceName, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_x_cpg:get_local_members(ServiceName) of
+    case cloudi_x_cpg:get_local_members(ServiceName, Timeout) of
         {ok, _, PidList} ->
             case cloudi_services_monitor:search(PidList, Timeout) of
                 {ok, []} ->
@@ -371,7 +371,7 @@ configure_service([Service | Services], Configured, Timeout) ->
     end.
 
 service_start_find_internal(#config_service_internal{
-                                module = FilePath} = Service)
+                                module = FilePath} = Service, Timeout)
     when is_list(FilePath) ->
     case filename:extension(FilePath) of
         ".erl" ->
@@ -406,7 +406,7 @@ service_start_find_internal(#config_service_internal{
             case service_start_find_internal_add_pathz(FilePath) of
                 {ok, _} ->
                     service_start_find_internal_application(Application,
-                                                            Service);
+                                                            Service, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -426,15 +426,16 @@ service_start_find_internal(#config_service_internal{
         Extension ->
             {error, {internal_service_module_extension_invalid, Extension}}
     end;
-service_start_find_internal(#config_service_internal{module = Module} = Service)
+service_start_find_internal(#config_service_internal{
+                                module = Module} = Service, Timeout)
     when is_atom(Module) ->
     % prefer application files to load internal services
     % (so that application dependencies can be clearly specified, etc.)
     case application:load(Module) of
         ok ->
-            service_start_find_internal_application(Module, Service);
+            service_start_find_internal_application(Module, Service, Timeout);
         {error, {already_loaded, Module}} ->
-            service_start_find_internal_application(Module, Service);
+            service_start_find_internal_application(Module, Service, Timeout);
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
             service_start_find_internal_module(Module, Service)
@@ -476,9 +477,9 @@ service_start_find_internal_module(Module, Service)
             {ok, Service#config_service_internal{module = Module}}
     end.
 
-service_start_find_internal_application(Application, Service)
+service_start_find_internal_application(Application, Service, Timeout)
     when is_atom(Application) ->
-    case cloudi_x_reltool_util:application_start(Application) of
+    case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
             {ok, Service#config_service_internal{module = Application}};
         {error, _} = Error ->

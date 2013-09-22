@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.6.0 {@date} {@time}
+%%% @version 0.7.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -219,10 +219,18 @@ application_remove(Application) ->
 %%-------------------------------------------------------------------------
 
 -spec application_remove(Application :: atom(),
-                         Timeout :: pos_integer()) ->
+                         Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
+application_remove(Application, infinity)
+    when is_atom(Application) ->
+    case application_stop_dependencies(Application) of
+        {ok, Applications} ->
+            applications_purged(Applications, infinity);
+        {error, _} = Error ->
+            Error
+    end;
 application_remove(Application, Timeout)
     when is_atom(Application), is_integer(Timeout), Timeout > 0 ->
     case application_stop_dependencies(Application) of
@@ -258,7 +266,7 @@ application_purged(Application) ->
 %%-------------------------------------------------------------------------
 
 -spec application_purged(Application :: atom(),
-                         Timeout :: pos_integer()) ->
+                         Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
@@ -492,7 +500,7 @@ module_purged(Module) ->
 %%-------------------------------------------------------------------------
 
 -spec module_purged(Module :: atom(),
-                    Timeout :: pos_integer()) ->
+                    Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
@@ -600,12 +608,14 @@ script_remove(FilePath) ->
 %%-------------------------------------------------------------------------
 
 -spec script_remove(FilePath :: string(),
-                    Timeout :: pos_integer()) ->
+                    Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
 script_remove(FilePath, Timeout)
-    when is_list(FilePath), is_integer(Timeout), Timeout > 0 ->
+    when is_list(FilePath),
+         ((is_integer(Timeout) andalso (Timeout > 0)) orelse
+          (Timeout =:= infinity))->
     true = lists:suffix(".script", FilePath),
     % system name and version are ignored
     {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
@@ -619,9 +629,14 @@ script_remove(FilePath, Timeout)
                 true ->
                     case script_remove_instructions(Instructions) of
                         {ok, Applications} ->
-                            TimeoutSlice = erlang:round(
-                                0.5 + Timeout / erlang:length(Applications)),
-                            applications_remove(Applications, TimeoutSlice);
+                            NewTimeout = if
+                                Timeout =:= infinity ->
+                                    Timeout;
+                                is_integer(Timeout) ->
+                                    erlang:round(0.5 + Timeout /
+                                        erlang:length(Applications))
+                            end,
+                            applications_remove(Applications, NewTimeout);
                         {error, _} = Error ->
                             Error
                     end;
@@ -1031,6 +1046,8 @@ is_module_loaded(Module) when is_atom(Module) ->
     end.
 
 -define(MODULES_PURGED_DELTA, 100).
+modules_purged(Modules, infinity) ->
+    modules_purged(Modules, [], 5000);
 modules_purged(Modules, Timeout)
     when is_list(Modules), is_integer(Timeout), Timeout > 0 ->
     modules_purged(Modules, [], Timeout).
