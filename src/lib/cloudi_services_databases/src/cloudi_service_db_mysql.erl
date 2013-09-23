@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -80,6 +80,8 @@
                        insert_id = 0, server_status = 0, warning_count = 0,
                        message = "", error = "" }).
 
+-type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -90,7 +92,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec equery(Dispatcher :: pid(),
+-spec equery(Dispatcher :: dispatcher(),
              Name :: string(),
              String :: string(),
              Parameters :: list()) ->
@@ -98,10 +100,10 @@
     {'error', any()}.
 
 equery(Dispatcher, Name, String, Parameters)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(String), is_list(Parameters) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {equery, String, Parameters}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {equery, String, Parameters}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -110,7 +112,7 @@ equery(Dispatcher, Name, String, Parameters)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec prepare_query(Dispatcher :: pid(),
+-spec prepare_query(Dispatcher :: dispatcher(),
                     Name :: string(),
                     Identifier :: atom(),
                     String :: string()) ->
@@ -118,10 +120,10 @@ equery(Dispatcher, Name, String, Parameters)
     {'error', any()}.
 
 prepare_query(Dispatcher, Name, Identifier, String)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_atom(Identifier), is_list(String) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {prepare, Identifier, String}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {prepare, Identifier, String}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -129,7 +131,7 @@ prepare_query(Dispatcher, Name, Identifier, String)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec execute_query(Dispatcher :: pid(),
+-spec execute_query(Dispatcher :: dispatcher(),
                     Name :: string(),
                     Identifier :: atom(),
                     Arguments :: list()) ->
@@ -137,10 +139,10 @@ prepare_query(Dispatcher, Name, Identifier, String)
     {'error', any()}.
 
 execute_query(Dispatcher, Name, Identifier, Arguments)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_atom(Identifier), is_list(Arguments) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {execute, Identifier, Arguments}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {execute, Identifier, Arguments}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -148,16 +150,16 @@ execute_query(Dispatcher, Name, Identifier, Arguments)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec squery(Dispatcher :: pid(),
+-spec squery(Dispatcher :: dispatcher(),
              Name :: string(),
              String :: string()) ->
     {'ok', #mysql_result{}} |
     {'error', any()}.
 
 squery(Dispatcher, Name, String)
-    when is_pid(Dispatcher), is_list(Name), is_list(String) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {squery, String}).
+    when is_list(Name), is_list(String) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {squery, String}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_couchdb).
@@ -101,6 +101,8 @@
         timeout = undefined
     }).
 
+-type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -111,25 +113,25 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_database(Dispatcher :: pid(),
+-spec create_database(Dispatcher :: dispatcher(),
                       Name :: string()) ->
     {'ok', any()} |
     {'error', any()}.
 
 create_database(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                          create_database).
 
--spec create_database(Dispatcher :: pid(),
+-spec create_database(Dispatcher :: dispatcher(),
                       Name :: string(),
                       Timeout :: pos_integer()) ->
     {'ok', any()} |
     {'error', any()}.
 
 create_database(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name), is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
                          create_database, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -138,25 +140,25 @@ create_database(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_database(Dispatcher :: pid(),
+-spec delete_database(Dispatcher :: dispatcher(),
                       Name :: string()) ->
     {'ok', any()} |
     {'error', any()}.
 
 delete_database(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                          delete_database).
 
--spec delete_database(Dispatcher :: pid(),
+-spec delete_database(Dispatcher :: dispatcher(),
                       Name :: string(),
                       Timeout :: pos_integer()) ->
     {'ok', any()} |
     {'error', any()}.
 
 delete_database(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name), is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
                          delete_database, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -165,25 +167,25 @@ delete_database(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec database_info(Dispatcher :: pid(),
+-spec database_info(Dispatcher :: dispatcher(),
                     Name :: string()) ->
     {'ok', any()} |
     {'error', any()}.
 
 database_info(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                          database_info).
 
--spec database_info(Dispatcher :: pid(),
+-spec database_info(Dispatcher :: dispatcher(),
                     Name :: string(),
                     Timeout :: pos_integer()) ->
     {'ok', any()} |
     {'error', any()}.
 
 database_info(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name), is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
                          database_info, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -192,25 +194,25 @@ database_info(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec server_info(Dispatcher :: pid(),
+-spec server_info(Dispatcher :: dispatcher(),
                   Name :: string()) ->
     {'ok', any()} |
     {'error', any()}.
 
 server_info(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                          server_info).
 
--spec server_info(Dispatcher :: pid(),
+-spec server_info(Dispatcher :: dispatcher(),
                   Name :: string(),
                   Timeout :: pos_integer()) ->
     {'ok', any()} |
     {'error', any()}.
 
 server_info(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name), is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
                          server_info, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -219,25 +221,25 @@ server_info(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec retrieve_all_dbs(Dispatcher :: pid(),
+-spec retrieve_all_dbs(Dispatcher :: dispatcher(),
                        Name :: string()) ->
     {'ok', any()} |
     {'error', any()}.
 
 retrieve_all_dbs(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                          retrieve_all_dbs).
 
--spec retrieve_all_dbs(Dispatcher :: pid(),
+-spec retrieve_all_dbs(Dispatcher :: dispatcher(),
                        Name :: string(),
                        Timeout :: pos_integer()) ->
     {'ok', any()} |
     {'error', any()}.
 
 retrieve_all_dbs(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name), is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
                          retrieve_all_dbs, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -247,7 +249,7 @@ retrieve_all_dbs(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_attachment(Dispatcher :: pid(),
+-spec create_attachment(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string(),
                         File :: string(),
@@ -256,13 +258,13 @@ retrieve_all_dbs(Dispatcher, Name, Timeout)
     {'error', any()}.
 
 create_attachment(Dispatcher, Name, DocumentID, File, ContentType)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(File), is_list(ContentType) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_attachment, DocumentID,
                           File, ContentType}).
 
--spec create_attachment(Dispatcher :: pid(),
+-spec create_attachment(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string(),
                         File :: string(),
@@ -272,10 +274,10 @@ create_attachment(Dispatcher, Name, DocumentID, File, ContentType)
     {'error', any()}.
 
 create_attachment(Dispatcher, Name, DocumentID, File, ContentType, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(File), is_list(ContentType),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_attachment, DocumentID,
                           File, ContentType}, Timeout).
 
@@ -285,19 +287,19 @@ create_attachment(Dispatcher, Name, DocumentID, File, ContentType, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_document(Dispatcher :: pid(),
+-spec create_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       Doc :: list()) ->
     {'ok', {'json', {'struct', list()}}} |
     {'error', any()}.
 
 create_document(Dispatcher, Name, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_document, Doc}).
 
--spec create_document(Dispatcher :: pid(),
+-spec create_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       Doc :: list(),
                       Timeout :: pos_integer()) ->
@@ -305,9 +307,9 @@ create_document(Dispatcher, Name, Doc)
     {'error', any()}.
 
 create_document(Dispatcher, Name, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Doc), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_document, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -316,7 +318,7 @@ create_document(Dispatcher, Name, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_document_id(Dispatcher :: pid(),
+-spec create_document_id(Dispatcher :: dispatcher(),
                          Name :: string(),
                          DocumentID :: string(),
                          Doc :: list()) ->
@@ -324,12 +326,12 @@ create_document(Dispatcher, Name, Doc, Timeout)
     {'error', any()}.
 
 create_document_id(Dispatcher, Name, DocumentID, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_document, DocumentID, Doc}).
 
--spec create_document_id(Dispatcher :: pid(),
+-spec create_document_id(Dispatcher :: dispatcher(),
                          Name :: string(),
                          DocumentID :: string(),
                          Doc :: list(),
@@ -338,9 +340,9 @@ create_document_id(Dispatcher, Name, DocumentID, Doc)
     {'error', any()}.
 
 create_document_id(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -349,19 +351,19 @@ create_document_id(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_documents(Dispatcher :: pid(),
+-spec create_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
                        Documents :: list()) ->
     {'ok', {'json', {'struct', list()}}} |
     {'error', any()}.
 
 create_documents(Dispatcher, Name, Documents)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Documents) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_documents, Documents}).
 
--spec create_documents(Dispatcher :: pid(),
+-spec create_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
                        Documents :: list(),
                        Timeout :: pos_integer()) ->
@@ -369,9 +371,9 @@ create_documents(Dispatcher, Name, Documents)
     {'error', any()}.
 
 create_documents(Dispatcher, Name, Documents, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Documents), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -380,19 +382,19 @@ create_documents(Dispatcher, Name, Documents, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec document_revision(Dispatcher :: pid(),
+-spec document_revision(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string()) ->
     {'ok', {any(), any()}} |
     {'error', any()}.
 
 document_revision(Dispatcher, Name, DocumentID)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {document_revision, DocumentID}).
 
--spec document_revision(Dispatcher :: pid(),
+-spec document_revision(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string(),
                         Timeout :: pos_integer()) ->
@@ -400,9 +402,9 @@ document_revision(Dispatcher, Name, DocumentID)
     {'error', any()}.
 
 document_revision(Dispatcher, Name, DocumentID, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {document_revision, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -411,19 +413,19 @@ document_revision(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec retrieve_document(Dispatcher :: pid(),
+-spec retrieve_document(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string()) ->
     {'ok', {'json', {'struct', list()}}} |
     {'error', any()}.
 
 retrieve_document(Dispatcher, Name, DocumentID)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {retrieve_document, DocumentID}).
 
--spec retrieve_document(Dispatcher :: pid(),
+-spec retrieve_document(Dispatcher :: dispatcher(),
                         Name :: string(),
                         DocumentID :: string(),
                         Timeout :: pos_integer()) ->
@@ -431,9 +433,9 @@ retrieve_document(Dispatcher, Name, DocumentID)
     {'error', any()}.
 
 retrieve_document(Dispatcher, Name, DocumentID, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {retrieve_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -442,7 +444,7 @@ retrieve_document(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_document(Dispatcher :: pid(),
+-spec update_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       DocumentID :: string(),
                       Doc :: list()) ->
@@ -450,12 +452,12 @@ retrieve_document(Dispatcher, Name, DocumentID, Timeout)
     {'error', any()}.
 
 update_document(Dispatcher, Name, DocumentID, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {update_document, DocumentID, Doc}).
 
--spec update_document(Dispatcher :: pid(),
+-spec update_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       DocumentID :: string(),
                       Doc :: list(),
@@ -464,9 +466,9 @@ update_document(Dispatcher, Name, DocumentID, Doc)
     {'error', any()}.
 
 update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {update_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -475,7 +477,7 @@ update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_document_rev(Dispatcher :: pid(),
+-spec update_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
                           DocumentID :: string(),
                           Rev :: string(),
@@ -484,12 +486,12 @@ update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
     {'error', any()}.
 
 update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {update_document, DocumentID, Rev, Doc}).
 
--spec update_document_rev(Dispatcher :: pid(),
+-spec update_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
                           DocumentID :: string(),
                           Rev :: string(),
@@ -499,10 +501,10 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
     {'error', any()}.
 
 update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {update_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -511,7 +513,7 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace_document(Dispatcher :: pid(),
+-spec replace_document(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocumentID :: string(),
                        Doc :: list()) ->
@@ -519,12 +521,12 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
     {'error', any()}.
 
 replace_document(Dispatcher, Name, DocumentID, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {replace_document, DocumentID, Doc}).
 
--spec replace_document(Dispatcher :: pid(),
+-spec replace_document(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocumentID :: string(),
                        Doc :: list(),
@@ -533,9 +535,9 @@ replace_document(Dispatcher, Name, DocumentID, Doc)
     {'error', any()}.
 
 replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {replace_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -544,7 +546,7 @@ replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace_document_rev(Dispatcher :: pid(),
+-spec replace_document_rev(Dispatcher :: dispatcher(),
                            Name :: string(),
                            DocumentID :: string(),
                            Rev :: string(),
@@ -553,12 +555,12 @@ replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
     {'error', any()}.
 
 replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {replace_document, DocumentID, Rev, Doc}).
 
--spec replace_document_rev(Dispatcher :: pid(),
+-spec replace_document_rev(Dispatcher :: dispatcher(),
                            Name :: string(),
                            DocumentID :: string(),
                            Rev :: string(),
@@ -568,9 +570,9 @@ replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
     {'error', any()}.
 
 replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {replace_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -579,19 +581,19 @@ replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_document(Dispatcher :: pid(),
+-spec delete_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       DocumentID :: string()) ->
     {'ok', {'json', {'struct', list()}}} |
     {'error', any()}.
 
 delete_document(Dispatcher, Name, DocumentID)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_document, DocumentID}).
 
--spec delete_document(Dispatcher :: pid(),
+-spec delete_document(Dispatcher :: dispatcher(),
                       Name :: string(),
                       DocumentID :: string(),
                       Timeout :: pos_integer()) ->
@@ -599,9 +601,9 @@ delete_document(Dispatcher, Name, DocumentID)
     {'error', any()}.
 
 delete_document(Dispatcher, Name, DocumentID, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -610,7 +612,7 @@ delete_document(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_document_rev(Dispatcher :: pid(),
+-spec delete_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
                           DocumentID :: string(),
                           Rev :: string()) ->
@@ -618,12 +620,12 @@ delete_document(Dispatcher, Name, DocumentID, Timeout)
     {'error', any()}.
 
 delete_document_rev(Dispatcher, Name, DocumentID, Rev)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_document, DocumentID, Rev}).
 
--spec delete_document_rev(Dispatcher :: pid(),
+-spec delete_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
                           DocumentID :: string(),
                           Rev :: string(),
@@ -632,9 +634,9 @@ delete_document_rev(Dispatcher, Name, DocumentID, Rev)
     {'error', any()}.
 
 delete_document_rev(Dispatcher, Name, DocumentID, Rev, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_document, DocumentID, Rev}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -643,19 +645,19 @@ delete_document_rev(Dispatcher, Name, DocumentID, Rev, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_documents(Dispatcher :: pid(),
+-spec delete_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
                        Documents :: list()) ->
     {'ok', {'json', {'struct', list()}}} |
     {'error', any()}.
 
 delete_documents(Dispatcher, Name, Documents)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Documents) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_documents, Documents}).
 
--spec delete_documents(Dispatcher :: pid(),
+-spec delete_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
                        Documents :: list(),
                        Timeout :: pos_integer()) ->
@@ -663,9 +665,9 @@ delete_documents(Dispatcher, Name, Documents)
     {'error', any()}.
 
 delete_documents(Dispatcher, Name, Documents, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Documents), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {delete_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -674,7 +676,7 @@ delete_documents(Dispatcher, Name, Documents, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_views(Dispatcher :: pid(),
+-spec create_views(Dispatcher :: dispatcher(),
                    Name :: string(),
                    DocName :: string(),
                    ViewList :: list()) ->
@@ -682,12 +684,12 @@ delete_documents(Dispatcher, Name, Documents, Timeout)
     {'error', any()}.
 
 create_views(Dispatcher, Name, DocName, ViewList)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewList) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName, ViewList}).
 
--spec create_views(Dispatcher :: pid(),
+-spec create_views(Dispatcher :: dispatcher(),
                    Name :: string(),
                    DocName :: string(),
                    ViewList :: list(),
@@ -696,9 +698,9 @@ create_views(Dispatcher, Name, DocName, ViewList)
     {'error', any()}.
 
 create_views(Dispatcher, Name, DocName, ViewList, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewList), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName, ViewList}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -707,7 +709,7 @@ create_views(Dispatcher, Name, DocName, ViewList, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_view(Dispatcher :: pid(),
+-spec create_view(Dispatcher :: dispatcher(),
                   Name :: string(),
                   DocName :: string(),
                   ViewName :: string(),
@@ -716,12 +718,12 @@ create_views(Dispatcher, Name, DocName, ViewList, Timeout)
     {'error', any()}.
 
 create_view(Dispatcher, Name, DocName, ViewName, Data)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Data) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName, ViewName, Data}).
 
--spec create_view(Dispatcher :: pid(),
+-spec create_view(Dispatcher :: dispatcher(),
                   Name :: string(),
                   DocName :: string(),
                   ViewName :: string(),
@@ -731,10 +733,10 @@ create_view(Dispatcher, Name, DocName, ViewName, Data)
     {'error', any()}.
 
 create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Data),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName, ViewName, Data}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -743,7 +745,7 @@ create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_view_type(Dispatcher :: pid(),
+-spec create_view_type(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocName :: string(),
                        Type :: string(),
@@ -753,14 +755,14 @@ create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
     {'error', any()}.
 
 create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(Type),
          is_list(ViewName), is_list(Data) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName,
                           Type, ViewName, Data}).
 
--spec create_view_type(Dispatcher :: pid(),
+-spec create_view_type(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocName :: string(),
                        Type :: string(),
@@ -771,10 +773,10 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data)
     {'error', any()}.
 
 create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(Type),
          is_list(ViewName), is_list(Data), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {create_view, DocName,
                           Type, ViewName, Data}, Timeout).
 
@@ -784,7 +786,7 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec invoke_view(Dispatcher :: pid(),
+-spec invoke_view(Dispatcher :: dispatcher(),
                   Name :: string(),
                   DocName :: string(),
                   ViewName :: string()) ->
@@ -792,12 +794,12 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
     {'error', any()}.
 
 invoke_view(Dispatcher, Name, DocName, ViewName)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {invoke_view, DocName, ViewName}).
 
--spec invoke_view(Dispatcher :: pid(),
+-spec invoke_view(Dispatcher :: dispatcher(),
                   Name :: string(),
                   DocName :: string(),
                   ViewName :: string(),
@@ -806,9 +808,9 @@ invoke_view(Dispatcher, Name, DocName, ViewName)
     {'error', any()}.
 
 invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {invoke_view, DocName, ViewName}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -817,7 +819,7 @@ invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec invoke_view_keys(Dispatcher :: pid(),
+-spec invoke_view_keys(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocName :: string(),
                        ViewName :: string(),
@@ -826,12 +828,12 @@ invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
     {'error', any()}.
 
 invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Keys) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {invoke_view, DocName, ViewName, Keys}).
 
--spec invoke_view_keys(Dispatcher :: pid(),
+-spec invoke_view_keys(Dispatcher :: dispatcher(),
                        Name :: string(),
                        DocName :: string(),
                        ViewName :: string(),
@@ -841,10 +843,10 @@ invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys)
     {'error', any()}.
 
 invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Keys),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                          {invoke_view, DocName, ViewName, Keys}, Timeout).
 
 %%%------------------------------------------------------------------------

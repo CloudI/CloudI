@@ -85,6 +85,8 @@
         use_key_value :: boolean()
     }).
 
+-type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -95,7 +97,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_new(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_new(Dispatcher :: dispatcher(),
              Name :: cloudi_service:service_name(),
              Table :: string() | binary(),
              Value :: any(),
@@ -104,8 +106,8 @@
     {error, any()}.
 
 kv_new(Dispatcher, Name, Table, Value, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {new, Table, Value}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {new, Table, Value}, Timeout) of
         {ok, {ok, _, _} = Success} ->
             Success;
         {error, _} = Error ->
@@ -118,7 +120,7 @@ kv_new(Dispatcher, Name, Table, Value, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_delete(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_delete(Dispatcher :: dispatcher(),
                 Name :: cloudi_service:service_name(),
                 Table :: string() | binary(),
                 Timeout :: cloudi_service:timeout_milliseconds()) ->
@@ -126,8 +128,8 @@ kv_new(Dispatcher, Name, Table, Value, Timeout) ->
     {error, any()}.
 
 kv_delete(Dispatcher, Name, Table, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {delete, Table}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {delete, Table}, Timeout) of
         {ok, ok} ->
             ok;
         {error, _} = Error ->
@@ -140,7 +142,7 @@ kv_delete(Dispatcher, Name, Table, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_delete(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_delete(Dispatcher :: dispatcher(),
                 Name :: cloudi_service:service_name(),
                 Table :: string() | binary(),
                 Key :: binary(),
@@ -149,8 +151,8 @@ kv_delete(Dispatcher, Name, Table, Timeout) ->
     {error, any()}.
 
 kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {delete, Table, Key}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {delete, Table, Key}, Timeout) of
         {ok, ok} ->
             ok;
         {error, _} = Error ->
@@ -163,7 +165,7 @@ kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_get(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_get(Dispatcher :: dispatcher(),
              Name :: cloudi_service:service_name(),
              Table :: string() | binary(),
              Timeout :: cloudi_service:timeout_milliseconds()) ->
@@ -171,8 +173,8 @@ kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
     {error, any()}.
 
 kv_get(Dispatcher, Name, Table, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {get, Table}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {get, Table}, Timeout) of
         {ok, {ok, _} = Success} ->
             Success;
         {error, _} = Error ->
@@ -185,7 +187,7 @@ kv_get(Dispatcher, Name, Table, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_get(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_get(Dispatcher :: dispatcher(),
              Name :: cloudi_service:service_name(),
              Table :: string() | binary(),
              Key :: binary(),
@@ -194,8 +196,8 @@ kv_get(Dispatcher, Name, Table, Timeout) ->
     {error, any()}.
 
 kv_get(Dispatcher, Name, Table, Key, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {get, Table, Key}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {get, Table, Key}, Timeout) of
         {ok, {ok, Value}} ->
             {ok, Key, Value};
         {error, _} = Error ->
@@ -208,7 +210,7 @@ kv_get(Dispatcher, Name, Table, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_put(Dispatcher :: cloudi_service:dispatcher(),
+-spec kv_put(Dispatcher :: dispatcher(),
              Name :: cloudi_service:service_name(),
              Table :: string() | binary(),
              Key :: binary(),
@@ -218,8 +220,8 @@ kv_get(Dispatcher, Name, Table, Key, Timeout) ->
     {error, any()}.
 
 kv_put(Dispatcher, Name, Table, Key, Value, Timeout) ->
-    case cloudi_service:send_sync(Dispatcher, Name,
-                                  {put, Table, Key, Value}, Timeout) of
+    case cloudi:send_sync(Dispatcher, Name,
+                          {put, Table, Key, Value}, Timeout) of
         {ok, {ok, NewValue}} ->
             {ok, Key, NewValue};
         {error, _} = Error ->
