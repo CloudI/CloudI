@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_memcached).
@@ -85,6 +85,8 @@
         process = undefined
     }).
 
+-type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -95,27 +97,27 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: pid(),
+-spec get(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any()) ->
     any().
 
 get(Dispatcher, Name, Key)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {get, Key}).
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {get, Key}).
 
--spec get(Dispatcher :: pid(),
+-spec get(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any(),
           Timeout :: pos_integer()) ->
     any().
 
 get(Dispatcher, Name, Key, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {get, Key}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {get, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -123,28 +125,28 @@ get(Dispatcher, Name, Key, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_many(Dispatcher :: pid(),
+-spec get_many(Dispatcher :: dispatcher(),
                Name :: string(),
                Keys :: list()) ->
     any().
 
 get_many(Dispatcher, Name, Keys)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Keys) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {get_many, Keys}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {get_many, Keys}).
 
--spec get_many(Dispatcher :: pid(),
+-spec get_many(Dispatcher :: dispatcher(),
                Name :: string(),
                Keys :: list(),
                Timeout :: pos_integer()) ->
     any().
 
 get_many(Dispatcher, Name, Keys, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(Keys), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {get_many, Keys}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {get_many, Keys}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -152,19 +154,19 @@ get_many(Dispatcher, Name, Keys, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec add(Dispatcher :: pid(),
+-spec add(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any(),
           Value :: binary()) ->
     any().
 
 add(Dispatcher, Name, Key, Value)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {add, Key, Value}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {add, Key, Value}).
 
--spec add(Dispatcher :: pid(),
+-spec add(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any(),
           Value :: binary(),
@@ -172,10 +174,10 @@ add(Dispatcher, Name, Key, Value)
     any().
 
 add(Dispatcher, Name, Key, Value, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {add, Key, Value}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {add, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -183,7 +185,7 @@ add(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec add_exp(Dispatcher :: pid(),
+-spec add_exp(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -191,12 +193,12 @@ add(Dispatcher, Name, Key, Value, Timeout)
     any().
 
 add_exp(Dispatcher, Name, Key, Value, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {add, Key, Value, Expiration}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {add, Key, Value, Expiration}).
 
--spec add_exp(Dispatcher :: pid(),
+-spec add_exp(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -205,10 +207,10 @@ add_exp(Dispatcher, Name, Key, Value, Expiration)
     any().
 
 add_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {add, Key, Value, Expiration}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {add, Key, Value, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -216,19 +218,19 @@ add_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec set(Dispatcher :: pid(),
+-spec set(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any(),
           Value :: binary()) ->
     any().
 
 set(Dispatcher, Name, Key, Value)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {set, Key, Value}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {set, Key, Value}).
 
--spec set(Dispatcher :: pid(),
+-spec set(Dispatcher :: dispatcher(),
           Name :: string(),
           Key :: any(),
           Value :: binary(),
@@ -236,10 +238,10 @@ set(Dispatcher, Name, Key, Value)
     any().
 
 set(Dispatcher, Name, Key, Value, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {set, Key, Value}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {set, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -247,7 +249,7 @@ set(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec set_exp(Dispatcher :: pid(),
+-spec set_exp(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -255,12 +257,12 @@ set(Dispatcher, Name, Key, Value, Timeout)
     any().
 
 set_exp(Dispatcher, Name, Key, Value, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {set, Key, Value, Expiration}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {set, Key, Value, Expiration}).
 
--spec set_exp(Dispatcher :: pid(),
+-spec set_exp(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -269,10 +271,10 @@ set_exp(Dispatcher, Name, Key, Value, Expiration)
     any().
 
 set_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {set, Key, Value, Expiration}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {set, Key, Value, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -280,19 +282,19 @@ set_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace(Dispatcher :: pid(),
+-spec replace(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary()) ->
     any().
 
 replace(Dispatcher, Name, Key, Value)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {replace, Key, Value}).
 
--spec replace(Dispatcher :: pid(),
+-spec replace(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -300,9 +302,9 @@ replace(Dispatcher, Name, Key, Value)
     any().
 
 replace(Dispatcher, Name, Key, Value, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {replace, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -311,7 +313,7 @@ replace(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace_exp(Dispatcher :: pid(),
+-spec replace_exp(Dispatcher :: dispatcher(),
                   Name :: string(),
                   Key :: any(),
                   Value :: binary(),
@@ -319,12 +321,12 @@ replace(Dispatcher, Name, Key, Value, Timeout)
     any().
 
 replace_exp(Dispatcher, Name, Key, Value, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {replace, Key, Value, Expiration}).
 
--spec replace_exp(Dispatcher :: pid(),
+-spec replace_exp(Dispatcher :: dispatcher(),
                   Name :: string(),
                   Key :: any(),
                   Value :: binary(),
@@ -333,9 +335,9 @@ replace_exp(Dispatcher, Name, Key, Value, Expiration)
     any().
 
 replace_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Expiration), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {replace, Key, Value, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -344,26 +346,26 @@ replace_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(Dispatcher :: pid(),
+-spec delete(Dispatcher :: dispatcher(),
              Name :: string(),
              Key :: any()) ->
     any().
 
 delete(Dispatcher, Name, Key)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              {delete, Key}).
 
--spec delete(Dispatcher :: pid(),
+-spec delete(Dispatcher :: dispatcher(),
              Name :: string(),
              Key :: any(),
              Timeout :: pos_integer()) ->
     any().
 
 delete(Dispatcher, Name, Key, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {delete, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -372,7 +374,7 @@ delete(Dispatcher, Name, Key, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec increment(Dispatcher :: pid(),
+-spec increment(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Key :: any(),
                 Value :: binary(),
@@ -381,13 +383,13 @@ delete(Dispatcher, Name, Key, Timeout)
     any().
 
 increment(Dispatcher, Name, Key, Value, Initial, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {increment, Key, Value,
                               Initial, Expiration}).
 
--spec increment(Dispatcher :: pid(),
+-spec increment(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Key :: any(),
                 Value :: binary(),
@@ -397,10 +399,10 @@ increment(Dispatcher, Name, Key, Value, Initial, Expiration)
     any().
 
 increment(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {increment, Key, Value,
                               Initial, Expiration}, Timeout).
 
@@ -410,7 +412,7 @@ increment(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec decrement(Dispatcher :: pid(),
+-spec decrement(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Key :: any(),
                 Value :: binary(),
@@ -419,13 +421,13 @@ increment(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
     any().
 
 decrement(Dispatcher, Name, Key, Value, Initial, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {decrement, Key, Value,
                               Initial, Expiration}).
 
--spec decrement(Dispatcher :: pid(),
+-spec decrement(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Key :: any(),
                 Value :: binary(),
@@ -435,10 +437,10 @@ decrement(Dispatcher, Name, Key, Value, Initial, Expiration)
     any().
 
 decrement(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {decrement, Key, Value,
                               Initial, Expiration}, Timeout).
 
@@ -448,19 +450,19 @@ decrement(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec append(Dispatcher :: pid(),
+-spec append(Dispatcher :: dispatcher(),
              Name :: string(),
              Key :: any(),
              Value :: binary()) ->
     any().
 
 append(Dispatcher, Name, Key, Value)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {append, Key, Value}).
 
--spec append(Dispatcher :: pid(),
+-spec append(Dispatcher :: dispatcher(),
              Name :: string(),
              Key :: any(),
              Value :: binary(),
@@ -468,9 +470,9 @@ append(Dispatcher, Name, Key, Value)
     any().
 
 append(Dispatcher, Name, Key, Value, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {append, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -479,19 +481,19 @@ append(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec prepend(Dispatcher :: pid(),
+-spec prepend(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary()) ->
     any().
 
 prepend(Dispatcher, Name, Key, Value)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {prepend, Key, Value}).
 
--spec prepend(Dispatcher :: pid(),
+-spec prepend(Dispatcher :: dispatcher(),
               Name :: string(),
               Key :: any(),
               Value :: binary(),
@@ -499,9 +501,9 @@ prepend(Dispatcher, Name, Key, Value)
     any().
 
 prepend(Dispatcher, Name, Key, Value, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {prepend, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -510,23 +512,23 @@ prepend(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec stats(Dispatcher :: pid(),
+-spec stats(Dispatcher :: dispatcher(),
             Name :: string()) ->
     any().
 
 stats(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              stats).
 
--spec stats(Dispatcher :: pid(),
+-spec stats(Dispatcher :: dispatcher(),
             Name :: string(),
             Timeout :: pos_integer()) ->
     any().
 
 stats(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              stats, Timeout).
     
 %%-------------------------------------------------------------------------
@@ -535,24 +537,24 @@ stats(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec flush(Dispatcher :: pid(),
+-spec flush(Dispatcher :: dispatcher(),
             Name :: string()) ->
     any().
 
 flush(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              flush).
 
--spec flush(Dispatcher :: pid(),
+-spec flush(Dispatcher :: dispatcher(),
             Name :: string(),
             Timeout :: pos_integer()) ->
     any().
 
 flush(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              flush, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -561,27 +563,27 @@ flush(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec flush_exp(Dispatcher :: pid(),
+-spec flush_exp(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Expiration :: non_neg_integer()) ->
     any().
 
 flush_exp(Dispatcher, Name, Expiration)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Expiration) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {flush, Expiration}).
 
--spec flush_exp(Dispatcher :: pid(),
+-spec flush_exp(Dispatcher :: dispatcher(),
                 Name :: string(),
                 Expiration :: non_neg_integer(),
                 Timeout :: pos_integer()) ->
     any().
 
 flush_exp(Dispatcher, Name, Expiration, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Expiration), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              {flush, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -590,24 +592,24 @@ flush_exp(Dispatcher, Name, Expiration, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec quit(Dispatcher :: pid(),
+-spec quit(Dispatcher :: dispatcher(),
            Name :: string()) ->
     any().
 
 quit(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              quit).
 
--spec quit(Dispatcher :: pid(),
+-spec quit(Dispatcher :: dispatcher(),
            Name :: string(),
            Timeout :: pos_integer()) ->
     any().
 
 quit(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              quit, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -616,24 +618,24 @@ quit(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec version(Dispatcher :: pid(),
+-spec version(Dispatcher :: dispatcher(),
            Name :: string()) ->
     any().
 
 version(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
                              version).
 
--spec version(Dispatcher :: pid(),
+-spec version(Dispatcher :: dispatcher(),
            Name :: string(),
            Timeout :: pos_integer()) ->
     any().
 
 version(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Dispatcher, Name,
                              version, Timeout).
 
 %%%------------------------------------------------------------------------

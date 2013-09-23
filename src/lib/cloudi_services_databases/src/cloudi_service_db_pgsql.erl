@@ -85,6 +85,8 @@
 %-record(statement, {name, columns, types}).
 -record(error,     {severity, code, message, extra}).
 
+%-type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -96,11 +98,10 @@
 %%-------------------------------------------------------------------------
 
 equery(Dispatcher, Name, String, Parameters)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(String), is_list(Parameters) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {equery_argument_parse(String),
-                              Parameters}).
+    cloudi:send_sync(Dispatcher, Name,
+                     {equery_argument_parse(String), Parameters}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -109,11 +110,10 @@ equery(Dispatcher, Name, String, Parameters)
 %%-------------------------------------------------------------------------
 
 equery(Dispatcher, Name, String, Parameters, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(String), is_list(Parameters), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name,
-                             {equery_argument_parse(String),
-                              Parameters}, Timeout).
+    cloudi:send_sync(Dispatcher, Name,
+                     {equery_argument_parse(String), Parameters}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -122,9 +122,9 @@ equery(Dispatcher, Name, String, Parameters, Timeout)
 %%-------------------------------------------------------------------------
 
 squery(Dispatcher, Name, String)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(String) ->
-    cloudi_service:send_sync(Dispatcher, Name, String).
+    cloudi:send_sync(Dispatcher, Name, String).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -133,9 +133,9 @@ squery(Dispatcher, Name, String)
 %%-------------------------------------------------------------------------
 
 squery(Dispatcher, Name, String, Timeout)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_list(Name),
          is_list(String), is_integer(Timeout) ->
-    cloudi_service:send_sync(Dispatcher, Name, String, Timeout).
+    cloudi:send_sync(Dispatcher, Name, String, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service

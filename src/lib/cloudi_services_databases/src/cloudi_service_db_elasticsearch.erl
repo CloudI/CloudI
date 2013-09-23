@@ -45,7 +45,7 @@
 %%%
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% @copyright 2013 Mahesh Paolini-Subramanya
-%%% @version 1.3 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_elasticsearch).
@@ -118,7 +118,7 @@
 -type doc()             :: binary().
 -type params()          :: [tuple()].
 -type pool_name()       :: binary().
--type dispatcher()      :: cloudi_service:dispatcher().
+-type dispatcher()      :: cloudi_service:dispatcher() | cloudi:context().
 -type name()            :: cloudi_service:service_name().
 -type database()        :: atom() | string() | binary().
 
@@ -138,298 +138,502 @@
 %%%------------------------------------------------------------------------
 
 %% @doc Get the health the  ElasticSearch cluster
--spec health(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-health(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
-    cloudi_service:send_sync(Dispatcher, Name, {health}).
+-spec health(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+health(Dispatcher, Name)
+    when is_list(Name) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {health}).
 
 %% _equiv state(Dispatcher, Name, []).
--spec state(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-state(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec state(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+state(Dispatcher, Name)
+    when is_list(Name) ->
     state(Dispatcher, Name, []).
 
 %% @doc Get the state of the  ElasticSearch cluster
--spec state(dispatcher(), name(), params()) -> {ok, response()} | {error, any()}.
-state(Dispatcher, Name, Params) when is_pid(Dispatcher), is_list(Name), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {state, Params}).
+-spec state(dispatcher(), name(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+state(Dispatcher, Name, Params)
+    when is_list(Name), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {state, Params}).
 
 %% _equiv nodes_info(Dispatcher, Name, [], []).
--spec nodes_info(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-nodes_info(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec nodes_info(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_info(Dispatcher, Name) when is_list(Name) ->
     nodes_info(Dispatcher, Name, [], []).
 
 %% _equiv nodes_info(Dispatcher, Name, [NodeName], []).
--spec nodes_info(dispatcher(), name(), node_name()) -> {ok, response()} | {error, any()}.
-nodes_info(Dispatcher, Name, NodeName) when is_pid(Dispatcher), is_list(Name), is_binary(NodeName) ->
+-spec nodes_info(dispatcher(), name(), node_name()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_info(Dispatcher, Name, NodeName)
+    when is_list(Name), is_binary(NodeName) ->
     nodes_info(Dispatcher, Name, [NodeName], []);
 %% _equiv nodes_info(Dispatcher, Name, NodeNames, []).
-nodes_info(Dispatcher, Name, NodeNames) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames) ->
+nodes_info(Dispatcher, Name, NodeNames)
+    when is_list(Name), is_list(NodeNames) ->
     nodes_info(Dispatcher, Name, NodeNames, []).
 
 %% @doc Get the nodes_info of the  ElasticSearch cluster
--spec nodes_info(dispatcher(), name(), [node_name()], params()) -> {ok, response()} | {error, any()}.
-nodes_info(Dispatcher, Name, NodeNames, Params) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {nodes_info, NodeNames, Params}).
+-spec nodes_info(dispatcher(), name(), [node_name()], params()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_info(Dispatcher, Name, NodeNames, Params)
+    when is_list(Name), is_list(NodeNames), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {nodes_info, NodeNames, Params}).
 
 %% _equiv nodes_stats(Dispatcher, Name, [], []).
--spec nodes_stats(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-nodes_stats(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec nodes_stats(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_stats(Dispatcher, Name) when is_list(Name) ->
     nodes_stats(Dispatcher, Name, [], []).
 
 %% _equiv nodes_stats(Dispatcher, Name, [NodeName], []).
--spec nodes_stats(dispatcher(), name(), node_name()) -> {ok, response()} | {error, any()}.
-nodes_stats(Dispatcher, Name, NodeName) when is_pid(Dispatcher), is_list(Name), is_binary(NodeName) ->
+-spec nodes_stats(dispatcher(), name(), node_name()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_stats(Dispatcher, Name, NodeName)
+    when is_list(Name), is_binary(NodeName) ->
     nodes_stats(Dispatcher, Name, [NodeName], []);
 %% _equiv nodes_stats(Dispatcher, Name, NodeNames, []).
-nodes_stats(Dispatcher, Name, NodeNames) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames) ->
+nodes_stats(Dispatcher, Name, NodeNames)
+    when is_list(Name), is_list(NodeNames) ->
     nodes_stats(Dispatcher, Name, NodeNames, []).
 
 %% @doc Get the nodes_stats of the  ElasticSearch cluster
--spec nodes_stats(dispatcher(), name(), [node_name()], params()) -> {ok, response()} | {error, any()}.
-nodes_stats(Dispatcher, Name, NodeNames, Params) when is_pid(Dispatcher), is_list(Name), is_list(NodeNames), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {nodes_stats, NodeNames, Params}).
+-spec nodes_stats(dispatcher(), name(), [node_name()], params()) ->
+    {ok, response()} |
+    {error, any()}.
+nodes_stats(Dispatcher, Name, NodeNames, Params)
+    when is_list(Name), is_list(NodeNames), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {nodes_stats, NodeNames, Params}).
 
 %% @doc Get the status of an index/indices in the  ElasticSearch cluster
--spec status(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-status(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec status(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+status(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     status(Dispatcher, Name, [Index]);
-status(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes)->
-    cloudi_service:send_sync(Dispatcher, Name, {status, Indexes}).
+status(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes)->
+    cloudi:send_sync(Dispatcher, Name,
+                     {status, Indexes}).
 
 %% _equiv create_index(Dispatcher, Name, Index, <<>>)
--spec create_index(dispatcher(), name(), index()) -> {ok, response()} | {error, any()}.
-create_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec create_index(dispatcher(), name(), index()) ->
+    {ok, response()} |
+    {error, any()}.
+create_index(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     create_index(Dispatcher, Name, Index, <<>>).
 
 %% @doc Create an index in the ElasticSearch cluster
--spec create_index(dispatcher(), name(), index(), doc()) -> {ok, response()} | {error, any()}.
-create_index(Dispatcher, Name, Index, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc) ->
-    cloudi_service:send_sync(Dispatcher, Name, {create_index, Index, Doc}).
+-spec create_index(dispatcher(), name(), index(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+create_index(Dispatcher, Name, Index, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Doc) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {create_index, Index, Doc}).
 
 %% @doc Delete all the indices in the ElasticSearch cluster
--spec delete_index(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-delete_index(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec delete_index(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+delete_index(Dispatcher, Name)
+    when is_list(Name) ->
     delete_index(Dispatcher, Name, ?ALL).
 
 %% @doc Delete an index(es) in the ElasticSearch cluster
--spec delete_index(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-delete_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec delete_index(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+delete_index(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     delete_index(Dispatcher, Name, [Index]);
-delete_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_list(Index) ->
-    cloudi_service:send_sync(Dispatcher, Name, {delete_index, Index}).
+delete_index(Dispatcher, Name, Index)
+    when is_list(Name), is_list(Index) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {delete_index, Index}).
 
 %% @doc Open an index in the ElasticSearch cluster
--spec open_index(dispatcher(), name(), index()) -> {ok, response()} | {error, any()}.
-open_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
-    cloudi_service:send_sync(Dispatcher, Name, {open_index, Index}).
+-spec open_index(dispatcher(), name(), index()) ->
+    {ok, response()} |
+    {error, any()}.
+open_index(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {open_index, Index}).
 
 %% @doc Close an index in the ElasticSearch cluster
--spec close_index(dispatcher(), name(), index()) -> {ok, response()} | {error, any()}.
-close_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
-    cloudi_service:send_sync(Dispatcher, Name, {close_index, Index}).
+-spec close_index(dispatcher(), name(), index()) ->
+    {ok, response()} |
+    {error, any()}.
+close_index(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {close_index, Index}).
 
 %% @doc Check if an index/indices exists in the ElasticSearch cluster
--spec is_index(dispatcher(), name(), index() | [index()]) -> {ok, boolean()} | {error, any()}.
-is_index(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec is_index(dispatcher(), name(), index() | [index()]) ->
+    {ok, boolean()} |
+    {error, any()}.
+is_index(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     is_index(Dispatcher, Name, [Index]);
-is_index(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
-    cloudi_service:send_sync(Dispatcher, Name, {is_index, Indexes}).
+is_index(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
+    cloudi:send_sync(Dispatcher, Name, {is_index, Indexes}).
 
 %% _equiv count(Dispatcher, Name, ?ALL, [], Doc []).
--spec count(dispatcher(), name(), doc()) -> {ok, boolean()} | {error, any()}.
-count(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
+-spec count(dispatcher(), name(), doc()) ->
+    {ok, boolean()} |
+    {error, any()}.
+count(Dispatcher, Name, Doc)
+    when is_list(Name), is_binary(Doc) ->
     count(Dispatcher, Name, ?ALL, [], Doc, []).
 
 %% _equiv count(Dispatcher, Name, ?ALL, [], Doc, Params).
--spec count(dispatcher(), name(), doc(), params()) -> {ok, boolean()} | {error, any()}.
-count(Dispatcher, Name, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Doc), is_list(Params) ->
+-spec count(dispatcher(), name(), doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+count(Dispatcher, Name, Doc, Params)
+    when is_list(Name), is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, ?ALL, [], Doc, Params).
 
 %% _equiv count(Dispatcher, Name, Index, [], Doc, Params).
--spec count(dispatcher(), name(), index() | [index()], doc(), params()) -> {ok, boolean()} | {error, any()}.
-count(Dispatcher, Name, Index, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
+-spec count(dispatcher(), name(), index() | [index()], doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+count(Dispatcher, Name, Index, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, [Index], [], Doc, Params);
-count(Dispatcher, Name, Indexes, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
+count(Dispatcher, Name, Indexes, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
--spec count(dispatcher(), name(), index() | [index()], type() | [type()], doc(), params()) -> {ok, boolean()} | {error, any()}.
-count(Dispatcher, Name, Index, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
+-spec count(dispatcher(), name(), index() | [index()],
+            type() | [type()], doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+count(Dispatcher, Name, Index, Type, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, [Index], [Type], Doc, Params);
-count(Dispatcher, Name, Indexes, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
+count(Dispatcher, Name, Indexes, Type, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, Indexes, [Type], Doc, Params);
-count(Dispatcher, Name, Index, Types, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_list(Types), is_binary(Doc), is_list(Params) ->
+count(Dispatcher, Name, Index, Types, Doc, Params)
+    when is_list(Name), is_binary(Index), is_list(Types),
+         is_binary(Doc), is_list(Params) ->
     count(Dispatcher, Name, [Index], Types, Doc, Params);
-count(Dispatcher, Name, Indexes, Types, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Types), is_binary(Doc), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {count, Indexes, Types, Doc, Params}).
+count(Dispatcher, Name, Indexes, Types, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_list(Types),
+         is_binary(Doc), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {count, Indexes, Types, Doc, Params}).
 
 %% _equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc []).
--spec delete_by_query(dispatcher(), name(), doc()) -> {ok, boolean()} | {error, any()}.
-delete_by_query(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
+-spec delete_by_query(dispatcher(), name(), doc()) ->
+    {ok, boolean()} |
+    {error, any()}.
+delete_by_query(Dispatcher, Name, Doc)
+    when is_list(Name), is_binary(Doc) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, []).
 
 %% _equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
--spec delete_by_query(dispatcher(), name(), doc(), params()) -> {ok, boolean()} | {error, any()}.
-delete_by_query(Dispatcher, Name, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Doc), is_list(Params) ->
+-spec delete_by_query(dispatcher(), name(), doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+delete_by_query(Dispatcher, Name, Doc, Params)
+    when is_list(Name), is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
 
 %% _equiv delete_by_query(Dispatcher, Name, Index, [], Doc, Params).
--spec delete_by_query(dispatcher(), name(), index() | [index()], doc(), params()) -> {ok, boolean()} | {error, any()}.
-delete_by_query(Dispatcher, Name, Index, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
+-spec delete_by_query(dispatcher(), name(), index() | [index()],
+                      doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+delete_by_query(Dispatcher, Name, Index, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [], Doc, Params);
-delete_by_query(Dispatcher, Name, Indexes, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
+delete_by_query(Dispatcher, Name, Indexes, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
--spec delete_by_query(dispatcher(), name(), index() | [index()], type() | [type()], doc(), params()) -> {ok, boolean()} | {error, any()}.
-delete_by_query(Dispatcher, Name, Index, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
+-spec delete_by_query(dispatcher(), name(), index() | [index()],
+                      type() | [type()], doc(), params()) ->
+    {ok, boolean()} |
+    {error, any()}.
+delete_by_query(Dispatcher, Name, Index, Type, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [Type], Doc, Params);
-delete_by_query(Dispatcher, Name, Indexes, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
+delete_by_query(Dispatcher, Name, Indexes, Type, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, Indexes, [Type], Doc, Params);
-delete_by_query(Dispatcher, Name, Index, Types, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_list(Types), is_binary(Doc), is_list(Params) ->
+delete_by_query(Dispatcher, Name, Index, Types, Doc, Params)
+    when is_list(Name), is_binary(Index), is_list(Types),
+         is_binary(Doc), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], Types, Doc, Params);
-delete_by_query(Dispatcher, Name, Indexes, Types, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Types), is_binary(Doc), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {delete_by_query, Indexes, Types, Doc, Params}).
+delete_by_query(Dispatcher, Name, Indexes, Types, Doc, Params)
+    when is_list(Name), is_list(Indexes), is_list(Types),
+         is_binary(Doc), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {delete_by_query, Indexes, Types, Doc, Params}).
 
 %% @doc Check if a type exists in an index/indices in the ElasticSearch cluster
--spec is_type(dispatcher(), name(), index() | [index()], type() | [type()]) -> {ok, boolean()} | {error, any()}.
-is_type(Dispatcher, Name, Index, Type) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
+-spec is_type(dispatcher(), name(), index() | [index()], type() | [type()]) ->
+    {ok, boolean()} |
+    {error, any()}.
+is_type(Dispatcher, Name, Index, Type)
+    when is_list(Name), is_binary(Index), is_binary(Type) ->
     is_type(Dispatcher, Name, [Index], [Type]);
-is_type(Dispatcher, Name, Indexes, Type) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_binary(Type) ->
+is_type(Dispatcher, Name, Indexes, Type)
+    when is_list(Name), is_list(Indexes), is_binary(Type) ->
     is_type(Dispatcher, Name, Indexes, [Type]);
-is_type(Dispatcher, Name, Index, Types) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_list(Types) ->
+is_type(Dispatcher, Name, Index, Types)
+    when is_list(Name), is_binary(Index), is_list(Types) ->
     is_type(Dispatcher, Name, [Index], Types);
-is_type(Dispatcher, Name, Indexes, Types) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Types) ->
-    cloudi_service:send_sync(Dispatcher, Name, {is_type, Indexes, Types}).
+is_type(Dispatcher, Name, Indexes, Types)
+    when is_list(Name), is_list(Indexes), is_list(Types) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {is_type, Indexes, Types}).
 
 %% _equiv insert_doc(Index, Type, Id, Doc, []).
--spec insert_doc(dispatcher(), name(), index(), type(), id(), doc()) -> {ok, response()} | {error, any()}.
-insert_doc(Dispatcher, Name, Index, Type, Id, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
+-spec insert_doc(dispatcher(), name(), index(), type(), id(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+insert_doc(Dispatcher, Name, Index, Type, Id, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
     insert_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
 
 %% @doc Insert a doc into the ElasticSearch cluster
--spec insert_doc(dispatcher(), name(), index(), type(), id(), doc(), params()) -> {ok, response()} | {error, any()}.
-insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {insert_doc, Index, Type, Id, Doc, Params}).
+-spec insert_doc(dispatcher(), name(), index(), type(),
+                 id(), doc(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {insert_doc, Index, Type, Id, Doc, Params}).
 
 %% @doc Checks to see if the doc exists
--spec is_doc(dispatcher(), name(), index(), type(), id()) -> {ok, response()} | {error, any()}.
-is_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
-    cloudi_service:send_sync(Dispatcher, Name, {is_doc, Index, Type, Id}).
+-spec is_doc(dispatcher(), name(), index(), type(), id()) ->
+    {ok, response()} |
+    {error, any()}.
+is_doc(Dispatcher, Name, Index, Type, Id)
+    when is_list(Name), is_binary(Index), is_binary(Type) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {is_doc, Index, Type, Id}).
 
 %% _equiv get_doc(Dispatcher, Name, Index, Type, Id, []).
--spec get_doc(dispatcher(), name(), index(), type(), id()) -> {ok, response()} | {error, any()}.
-get_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
+-spec get_doc(dispatcher(), name(), index(), type(), id()) ->
+    {ok, response()} |
+    {error, any()}.
+get_doc(Dispatcher, Name, Index, Type, Id)
+    when is_list(Name), is_binary(Index), is_binary(Type) ->
     get_doc(Dispatcher, Name, Index, Type, Id, []).
 
 %% @doc Get a doc from the ElasticSearch cluster
--spec get_doc(dispatcher(), name(), index(), type(), id(), params()) -> {ok, response()} | {error, any()}.
-get_doc(Dispatcher, Name, Index, Type, Id, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_list(Params)->
-    cloudi_service:send_sync(Dispatcher, Name, {get_doc, Index, Type, Id, Params}).
+-spec get_doc(dispatcher(), name(), index(), type(), id(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+get_doc(Dispatcher, Name, Index, Type, Id, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type), is_list(Params)->
+    cloudi:send_sync(Dispatcher, Name,
+                     {get_doc, Index, Type, Id, Params}).
 
 %% _equiv mget_doc(Dispatcher, Name, <<>>, <<>>, Doc)
--spec mget_doc(dispatcher(), name(), doc()) -> {ok, response()} | {error, any()}.
-mget_doc(Dispatcher, Name, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Doc) ->
+-spec mget_doc(dispatcher(), name(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+mget_doc(Dispatcher, Name, Doc)
+    when is_list(Name), is_binary(Doc) ->
     mget_doc(Dispatcher, Name, <<>>, <<>>, Doc).
 
 %% _equiv mget_doc(Dispatcher, Name, Index, <<>>, Doc)
--spec mget_doc(dispatcher(), name(), index(), doc()) -> {ok, response()} | {error, any()}.
-mget_doc(Dispatcher, Name, Index, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Doc)->
+-spec mget_doc(dispatcher(), name(), index(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+mget_doc(Dispatcher, Name, Index, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Doc) ->
     mget_doc(Dispatcher, Name, Index, <<>>, Doc).
 
 %% @doc Get a doc from the ElasticSearch cluster
--spec mget_doc(dispatcher(), name(), index(), type(), doc()) -> {ok, response()} | {error, any()}.
-mget_doc(Dispatcher, Name, Index, Type, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc)->
-    cloudi_service:send_sync(Dispatcher, Name, {mget_doc, Index, Type, Doc}).
+-spec mget_doc(dispatcher(), name(), index(), type(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+mget_doc(Dispatcher, Name, Index, Type, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {mget_doc, Index, Type, Doc}).
 
 %% _equiv delete_doc(Dispatcher, Name, Index, Type, Id, []).
--spec delete_doc(dispatcher(), name(), index(), type(), id()) -> {ok, response()} | {error, any()}.
-delete_doc(Dispatcher, Name, Index, Type, Id) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type) ->
+-spec delete_doc(dispatcher(), name(), index(), type(), id()) ->
+    {ok, response()} |
+    {error, any()}.
+delete_doc(Dispatcher, Name, Index, Type, Id)
+    when is_list(Name), is_binary(Index), is_binary(Type) ->
     delete_doc(Dispatcher, Name, Index, Type, Id, []).
+
 %% @doc Delete a doc from the ElasticSearch cluster
--spec delete_doc(dispatcher(), name(), index(), type(), id(), params()) -> {ok, response()} | {error, any()}.
-delete_doc(Dispatcher, Name, Index, Type, Id, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_list(Params)->
-    cloudi_service:send_sync(Dispatcher, Name, {delete_doc, Index, Type, Id, Params}).
+-spec delete_doc(dispatcher(), name(), index(), type(), id(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+delete_doc(Dispatcher, Name, Index, Type, Id, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {delete_doc, Index, Type, Id, Params}).
 
 %% _equiv search(Dispatcher, Name, Index, Type, Doc, []).
--spec search(dispatcher(), name(), index(), type(), doc()) -> {ok, response()} | {error, any()}.
-search(Dispatcher, Name, Index, Type, Doc) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc)->
+-spec search(dispatcher(), name(), index(), type(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+search(Dispatcher, Name, Index, Type, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
     search(Dispatcher, Name, Index, Type, Doc, []).
+
 %% @doc Search for docs in the ElasticSearch cluster
--spec search(dispatcher(), name(), index(), type(), doc(), params()) -> {ok, response()} | {error, any()}.
-search(Dispatcher, Name, Index, Type, Doc, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {search, Index, Type, Doc, Params}).
+-spec search(dispatcher(), name(), index(), type(), doc(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+search(Dispatcher, Name, Index, Type, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         is_binary(Doc), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {search, Index, Type, Doc, Params}).
 
 %% _equiv refresh(Dispatcher, Name, ?ALL).
 %% @doc Refresh all indices
--spec refresh(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-refresh(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec refresh(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+refresh(Dispatcher, Name) when is_list(Name) ->
     refresh(Dispatcher, Name, ?ALL).
 
 %% @doc Refresh one or more indices
--spec refresh(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-refresh(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec refresh(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+refresh(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     refresh(Dispatcher, Name, [Index]);
-refresh(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
-    cloudi_service:send_sync(Dispatcher, Name, {refresh, Indexes}).
+refresh(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {refresh, Indexes}).
 
 %% @doc Flush all indices
 %% _equiv flush(Dispatcher, Name, ?ALL).
--spec flush(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-flush(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec flush(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+flush(Dispatcher, Name) when is_list(Name) ->
     flush(Dispatcher, Name, ?ALL).
 
 %% @doc Flush one or more indices
--spec flush(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-flush(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec flush(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+flush(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     flush(Dispatcher, Name, [Index]);
-flush(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
-    cloudi_service:send_sync(Dispatcher, Name, {flush, Indexes}).
+flush(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {flush, Indexes}).
 
 %% _equiv optimize(Dispatcher, Name, ?ALL).
 %% @doc Optimize all indices
--spec optimize(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-optimize(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec optimize(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+optimize(Dispatcher, Name)
+    when is_list(Name) ->
     optimize(Dispatcher, Name, ?ALL).
 
 %% @doc Optimize one or more indices
--spec optimize(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-optimize(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec optimize(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+optimize(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     optimize(Dispatcher, Name, [Index]);
-optimize(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
-    cloudi_service:send_sync(Dispatcher, Name, {optimize, Indexes}).
+optimize(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {optimize, Indexes}).
 
 %% _equiv segments(Dispatcher, Name, ?ALL).
 %% @doc Optimize all indices
--spec segments(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-segments(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec segments(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+segments(Dispatcher, Name)
+    when is_list(Name) ->
     segments(Dispatcher, Name, ?ALL).
 
 %% @doc Optimize one or more indices
--spec segments(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-segments(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec segments(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+segments(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     segments(Dispatcher, Name, [Index]);
-segments(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
-    cloudi_service:send_sync(Dispatcher, Name, {segments, Indexes}).
+segments(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {segments, Indexes}).
 
 %% _equiv clear_cache(Dispatcher, Name, ?ALL, []).
 %% @doc Clear all the caches
--spec clear_cache(dispatcher(), name()) -> {ok, response()} | {error, any()}.
-clear_cache(Dispatcher, Name) when is_pid(Dispatcher), is_list(Name) ->
+-spec clear_cache(dispatcher(), name()) ->
+    {ok, response()} |
+    {error, any()}.
+clear_cache(Dispatcher, Name)
+    when is_list(Name) ->
     clear_cache(Dispatcher, Name, ?ALL, []).
 
 %% _equiv clear_cache(Dispatcher, Name, Indexes, []).
--spec clear_cache(dispatcher(), name(), index() | [index()]) -> {ok, response()} | {error, any()}.
-clear_cache(Dispatcher, Name, Index) when is_pid(Dispatcher), is_list(Name), is_binary(Index) ->
+-spec clear_cache(dispatcher(), name(), index() | [index()]) ->
+    {ok, response()} |
+    {error, any()}.
+clear_cache(Dispatcher, Name, Index)
+    when is_list(Name), is_binary(Index) ->
     clear_cache(Dispatcher, Name, [Index], []);
-clear_cache(Dispatcher, Name, Indexes) when is_pid(Dispatcher), is_list(Name), is_list(Indexes) ->
+clear_cache(Dispatcher, Name, Indexes)
+    when is_list(Name), is_list(Indexes) ->
     clear_cache(Dispatcher, Name, Indexes, []).
 
 %% _equiv clear_cache(Dispatcher, Name, Indexes, []).
--spec clear_cache(dispatcher(), name(), index() | [index()], params()) -> {ok, response()} | {error, any()}.
-clear_cache(Dispatcher, Name, Index, Params) when is_pid(Dispatcher), is_list(Name), is_binary(Index), is_list(Params) ->
+-spec clear_cache(dispatcher(), name(), index() | [index()], params()) ->
+    {ok, response()} |
+    {error, any()}.
+clear_cache(Dispatcher, Name, Index, Params)
+    when is_list(Name), is_binary(Index), is_list(Params) ->
     clear_cache(Dispatcher, Name, [Index], Params);
-clear_cache(Dispatcher, Name, Indexes, Params) when is_pid(Dispatcher), is_list(Name), is_list(Indexes), is_list(Params) ->
-    cloudi_service:send_sync(Dispatcher, Name, {clear_cache, Indexes, Params}).
+clear_cache(Dispatcher, Name, Indexes, Params)
+    when is_list(Name), is_list(Indexes), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {clear_cache, Indexes, Params}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service

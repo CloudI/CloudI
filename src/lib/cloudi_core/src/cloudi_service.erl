@@ -309,9 +309,13 @@ get_pid(Dispatcher, Name)
 
 -spec get_pid(Dispatcher :: dispatcher(),
               Name :: service_name(),
-              Timeout :: timeout_milliseconds()) ->
+              Timeout :: timeout_milliseconds() | 'undefined') ->
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: atom()}.
+
+get_pid(Dispatcher, Name, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pid', Name}, infinity);
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -343,9 +347,13 @@ get_pids(Dispatcher, Name)
 
 -spec get_pids(Dispatcher :: dispatcher(),
                Name :: service_name(),
-               Timeout :: timeout_milliseconds()) ->
+               Timeout :: timeout_milliseconds() | 'undefined') ->
     {'ok', PatternPids :: list(pattern_pid())} |
     {'error', Reason :: atom()}.
+
+get_pids(Dispatcher, Name, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pids', Name}, infinity);
 
 get_pids(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
