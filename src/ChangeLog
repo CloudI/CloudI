@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid
+
 2013-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make the cloudi module use the cloudi_service module interface if a

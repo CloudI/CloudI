@@ -291,10 +291,10 @@ is_v1(_) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v3(Data :: binary() | iolist()) ->
+-spec get_v3(Data :: binary()) ->
     <<_:128>>.
 
-get_v3(Data) ->
+get_v3(Data) when is_binary(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:48>> =
         crypto:hash(md5, Data),
     B4 = (B4a bxor B4b) bxor B4c,
@@ -312,7 +312,7 @@ get_v3(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3(Namespace :: dns | url | oid | x500 | binary(),
-             Data :: binary() | list()) ->
+             Data :: binary() | iolist()) ->
     <<_:128>>.
 
 get_v3(dns, Data) ->
@@ -328,7 +328,7 @@ get_v3(Namespace, Data) when is_binary(Namespace) ->
         is_binary(Data) ->
             Data;
         is_list(Data) ->
-            erlang:list_to_binary(Data)
+            erlang:iolist_to_binary(Data)
     end,
     get_v3(<<Namespace/binary, DataBin/binary>>).
 
@@ -340,10 +340,10 @@ get_v3(Namespace, Data) when is_binary(Namespace) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v3_compat(Data :: binary() | iolist()) ->
+-spec get_v3_compat(Data :: binary()) ->
     <<_:128>>.
 
-get_v3_compat(Data) ->
+get_v3_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48>> =
         crypto:hash(md5, Data),
     <<B1:48,
@@ -362,7 +362,7 @@ get_v3_compat(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3_compat(Namespace :: dns | url | oid | x500 | binary(),
-                    Data :: binary() | list()) ->
+                    Data :: binary() | iolist()) ->
     <<_:128>>.
 
 get_v3_compat(dns, Data) ->
@@ -378,7 +378,7 @@ get_v3_compat(Namespace, Data) when is_binary(Namespace) ->
         is_binary(Data) ->
             Data;
         is_list(Data) ->
-            erlang:list_to_binary(Data)
+            erlang:iolist_to_binary(Data)
     end,
     get_v3_compat(<<Namespace/binary, DataBin/binary>>).
 
@@ -563,10 +563,10 @@ is_v4(_) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v5(Data :: binary() | iolist()) ->
+-spec get_v5(Data :: binary()) ->
     <<_:128>>.
 
-get_v5(Data) ->
+get_v5(Data) when is_binary(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:32, B4d:48>> =
         crypto:hash(sha, Data),
     B4 = ((B4a bxor B4b) bxor B4c) bxor B4d,
@@ -584,7 +584,7 @@ get_v5(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5(Namespace :: dns | url | oid | x500 | binary(),
-             Data :: binary() | list()) ->
+             Data :: binary() | iolist()) ->
     <<_:128>>.
 
 get_v5(dns, Data) ->
@@ -600,7 +600,7 @@ get_v5(Namespace, Data) when is_binary(Namespace) ->
         is_binary(Data) ->
             Data;
         is_list(Data) ->
-            erlang:list_to_binary(Data)
+            erlang:iolist_to_binary(Data)
     end,
     get_v5(<<Namespace/binary, DataBin/binary>>).
 
@@ -612,12 +612,12 @@ get_v5(Namespace, Data) when is_binary(Namespace) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v5_compat(Data :: binary() | iolist()) ->
+-spec get_v5_compat(Data :: binary()) ->
     <<_:128>>.
 
-get_v5_compat(Data) ->
+get_v5_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48, _:32>> =
-        crypto:hash(sha, <<Data/binary>>),
+        crypto:hash(sha, Data),
     <<B1:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
       B2:12,
@@ -634,7 +634,7 @@ get_v5_compat(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5_compat(Namespace :: dns | url | oid | x500 | binary(),
-                    Data :: binary() | list()) ->
+                    Data :: binary() | iolist()) ->
     <<_:128>>.
 
 get_v5_compat(dns, Data) ->
@@ -650,7 +650,7 @@ get_v5_compat(Namespace, Data) when is_binary(Namespace) ->
         is_binary(Data) ->
             Data;
         is_list(Data) ->
-            erlang:list_to_binary(Data)
+            erlang:iolist_to_binary(Data)
     end,
     get_v5_compat(<<Namespace/binary, DataBin/binary>>).
 
@@ -702,16 +702,47 @@ uuid_to_list(Value)
 uuid_to_string(Value) ->
     uuid_to_string(Value, standard).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a UUID to a string representation based on an option.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uuid_to_string(Value :: <<_:128>>,
+                     Option :: standard | nodash |
+                               list_standard | list_nodash |
+                               binary_standard | binary_nodash) ->
+    string() | binary().
+
 uuid_to_string(Value, standard) ->
     [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-"
+                                "~4.16.0b-~12.16.0b",
                                 [B1, B2, B3, B4, B5]));
 
 uuid_to_string(Value, nodash) ->
     [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    lists:flatten(io_lib:format("~8.16.0b~4.16.0b~4.16.0b~4.16.0b~12.16.0b",
-                                [B1, B2, B3, B4, B5])).
+    lists:flatten(io_lib:format("~8.16.0b~4.16.0b~4.16.0b"
+                                "~4.16.0b~12.16.0b",
+                                [B1, B2, B3, B4, B5]));
 
+uuid_to_string(Value, list_standard) ->
+    uuid_to_string(Value, standard);
+
+uuid_to_string(Value, list_nodash) ->
+    uuid_to_string(Value, nodash);
+
+uuid_to_string(Value, binary_standard) ->
+    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
+    erlang:iolist_to_binary(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-"
+                                          "~4.16.0b-~12.16.0b",
+                                          [B1, B2, B3, B4, B5]));
+
+uuid_to_string(Value, binary_nodash) ->
+    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
+    erlang:iolist_to_binary(io_lib:format("~8.16.0b~4.16.0b~4.16.0b"
+                                          "~4.16.0b~12.16.0b",
+                                          [B1, B2, B3, B4, B5])).
 
 %%-------------------------------------------------------------------------
 %% @doc
