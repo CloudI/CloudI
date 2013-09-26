@@ -115,8 +115,8 @@ to its integration and dependencies).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit f0f43c4abab4d4e889bff79e5d5aab675f9e8d4d (master, v1.4.1)`
-- `Mon Jun  3 08:57:57 PDT 2013`
+- `commit e50af6e109cb03bd26acf715cbc77de746507d1d (master, v1.4.3)`
+- `Thu Sep 26 16:51:24 PDT 2013`
 - `MIT`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
