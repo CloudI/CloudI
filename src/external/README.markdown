@@ -72,7 +72,7 @@ to its integration and dependencies).
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
 - `tag v1.3`
-- `Mon Jun 10 08:01:52 EST 2013`
+- `Thu Sep 26 15:50:56 2013 -0400`
 - `BSD`
 
 `erlang_cassandra`
@@ -211,8 +211,8 @@ to its integration and dependencies).
 `Erlang Thrift software library`
 
 - `https://github.com/dieswaytoofast/thrift`
-- `commit f367c54ffcd522d9522c8ed0872c397be24da967`
-- `Sun May 19 17:13:30 EDT 2013`
+- `commit 0b8efd728f2ff2106d5e15e3c65c8ef895451c0a`
+- `Thu Sep 26 16:19:26 2013 -0400`
 - `Apache License`
 
 `zeromq/v?/erlzmq`
