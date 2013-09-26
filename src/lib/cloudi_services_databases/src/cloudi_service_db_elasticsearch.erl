@@ -244,7 +244,7 @@ create_index(Dispatcher, Name, Index)
     {ok, response()} |
     {error, any()}.
 create_index(Dispatcher, Name, Index, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Doc) ->
+    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name,
                      {create_index, Index, Doc}).
 
@@ -302,7 +302,7 @@ is_index(Dispatcher, Name, Indexes)
     {ok, boolean()} |
     {error, any()}.
 count(Dispatcher, Name, Doc)
-    when is_list(Name), is_binary(Doc) ->
+    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
     count(Dispatcher, Name, ?ALL, [], Doc, []).
 
 %% _equiv count(Dispatcher, Name, ?ALL, [], Doc, Params).
@@ -310,7 +310,7 @@ count(Dispatcher, Name, Doc)
     {ok, boolean()} |
     {error, any()}.
 count(Dispatcher, Name, Doc, Params)
-    when is_list(Name), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, ?ALL, [], Doc, Params).
 
 %% _equiv count(Dispatcher, Name, Index, [], Doc, Params).
@@ -318,10 +318,10 @@ count(Dispatcher, Name, Doc, Params)
     {ok, boolean()} |
     {error, any()}.
 count(Dispatcher, Name, Index, Doc, Params)
-    when is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, [Index], [], Doc, Params);
 count(Dispatcher, Name, Indexes, Doc, Params)
-    when is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), is_list(Indexes), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
@@ -331,19 +331,19 @@ count(Dispatcher, Name, Indexes, Doc, Params)
     {error, any()}.
 count(Dispatcher, Name, Index, Type, Doc, Params)
     when is_list(Name), is_binary(Index), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, [Index], [Type], Doc, Params);
 count(Dispatcher, Name, Indexes, Type, Doc, Params)
     when is_list(Name), is_list(Indexes), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, Indexes, [Type], Doc, Params);
 count(Dispatcher, Name, Index, Types, Doc, Params)
     when is_list(Name), is_binary(Index), is_list(Types),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, [Index], Types, Doc, Params);
 count(Dispatcher, Name, Indexes, Types, Doc, Params)
     when is_list(Name), is_list(Indexes), is_list(Types),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {count, Indexes, Types, Doc, Params}).
 
@@ -352,7 +352,7 @@ count(Dispatcher, Name, Indexes, Types, Doc, Params)
     {ok, boolean()} |
     {error, any()}.
 delete_by_query(Dispatcher, Name, Doc)
-    when is_list(Name), is_binary(Doc) ->
+    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, []).
 
 %% _equiv delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
@@ -360,7 +360,7 @@ delete_by_query(Dispatcher, Name, Doc)
     {ok, boolean()} |
     {error, any()}.
 delete_by_query(Dispatcher, Name, Doc, Params)
-    when is_list(Name), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
 
 %% _equiv delete_by_query(Dispatcher, Name, Index, [], Doc, Params).
@@ -369,10 +369,10 @@ delete_by_query(Dispatcher, Name, Doc, Params)
     {ok, boolean()} |
     {error, any()}.
 delete_by_query(Dispatcher, Name, Index, Doc, Params)
-    when is_list(Name), is_binary(Index), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [], Doc, Params);
 delete_by_query(Dispatcher, Name, Indexes, Doc, Params)
-    when is_list(Name), is_list(Indexes), is_binary(Doc), is_list(Params) ->
+    when is_list(Name), is_list(Indexes), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
@@ -382,19 +382,19 @@ delete_by_query(Dispatcher, Name, Indexes, Doc, Params)
     {error, any()}.
 delete_by_query(Dispatcher, Name, Index, Type, Doc, Params)
     when is_list(Name), is_binary(Index), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [Type], Doc, Params);
 delete_by_query(Dispatcher, Name, Indexes, Type, Doc, Params)
     when is_list(Name), is_list(Indexes), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, Indexes, [Type], Doc, Params);
 delete_by_query(Dispatcher, Name, Index, Types, Doc, Params)
     when is_list(Name), is_binary(Index), is_list(Types),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], Types, Doc, Params);
 delete_by_query(Dispatcher, Name, Indexes, Types, Doc, Params)
     when is_list(Name), is_list(Indexes), is_list(Types),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {delete_by_query, Indexes, Types, Doc, Params}).
 
@@ -421,7 +421,7 @@ is_type(Dispatcher, Name, Indexes, Types)
     {ok, response()} |
     {error, any()}.
 insert_doc(Dispatcher, Name, Index, Type, Id, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
+    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
     insert_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
 
 %% @doc Insert a doc into the ElasticSearch cluster
@@ -431,7 +431,7 @@ insert_doc(Dispatcher, Name, Index, Type, Id, Doc)
     {error, any()}.
 insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params)
     when is_list(Name), is_binary(Index), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {insert_doc, Index, Type, Id, Doc, Params}).
 
@@ -466,7 +466,7 @@ get_doc(Dispatcher, Name, Index, Type, Id, Params)
     {ok, response()} |
     {error, any()}.
 mget_doc(Dispatcher, Name, Doc)
-    when is_list(Name), is_binary(Doc) ->
+    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
     mget_doc(Dispatcher, Name, <<>>, <<>>, Doc).
 
 %% _equiv mget_doc(Dispatcher, Name, Index, <<>>, Doc)
@@ -474,7 +474,7 @@ mget_doc(Dispatcher, Name, Doc)
     {ok, response()} |
     {error, any()}.
 mget_doc(Dispatcher, Name, Index, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Doc) ->
+    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)) ->
     mget_doc(Dispatcher, Name, Index, <<>>, Doc).
 
 %% @doc Get a doc from the ElasticSearch cluster
@@ -482,7 +482,7 @@ mget_doc(Dispatcher, Name, Index, Doc)
     {ok, response()} |
     {error, any()}.
 mget_doc(Dispatcher, Name, Index, Type, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
+    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name,
                      {mget_doc, Index, Type, Doc}).
 
@@ -508,7 +508,7 @@ delete_doc(Dispatcher, Name, Index, Type, Id, Params)
     {ok, response()} |
     {error, any()}.
 search(Dispatcher, Name, Index, Type, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), is_binary(Doc) ->
+    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
     search(Dispatcher, Name, Index, Type, Doc, []).
 
 %% @doc Search for docs in the ElasticSearch cluster
@@ -517,7 +517,7 @@ search(Dispatcher, Name, Index, Type, Doc)
     {error, any()}.
 search(Dispatcher, Name, Index, Type, Doc, Params)
     when is_list(Name), is_binary(Index), is_binary(Type),
-         is_binary(Doc), is_list(Params) ->
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {search, Index, Type, Doc, Params}).
 
