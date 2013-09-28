@@ -86,6 +86,28 @@
         % different scope can help avoid contention when using an immediate
         % destination refresh method.
         scope = default :: atom(),
+        % add latency to all service requests and info messages received
+        % based on the parameters specified.  If "system" is set, the
+        % cloudi_core Erlang application env value is used after being
+        % checked during service startup (e.g., after service restarts).
+        % (all time parameters are specified in milliseconds)
+        monkey_latency = false ::
+            list({time_uniform_min, pos_integer()} |
+                 {time_uniform_max, pos_integer()} |
+                 {time_gaussian_mean, pos_integer()} |
+                 {time_gaussian_stddev, float()} |
+                 {time_absolute, pos_integer()}) |
+            system | false,
+        % cause service termination based on the probability parameter
+        % (checked for each service request and info message, if necessary).
+        % If "system" is set, the cloudi_core Erlang application env value
+        % is used after being checked during service startup
+        % (e.g., after service restarts).  The probability_day method
+        % replicates the Netflix chaos monkey usage.
+        monkey_chaos = false ::
+            list({probability_request, float()} |
+                 {probability_day, float()}) |
+            system | false,
 
         % Only Relevant For Internal Services:
 

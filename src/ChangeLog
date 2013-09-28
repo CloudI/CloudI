@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the monkey_latency and monkey_chaos service configuration
+      options for providing any service configuration a way to change
+      performance for evaluating system resilience during service failures
+      (http://techblog.netflix.com/2011/07/netflix-simian-army.html)
+
 2013-09-26 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
 
     * Update erlasticsearch to take json docs
