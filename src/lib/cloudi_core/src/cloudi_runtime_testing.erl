@@ -288,7 +288,9 @@ monkey_latency_validate([{time_gaussian_mean, Mean} | Options],
          is_integer(Mean), Mean > 0 ->
     NewStdDev = if
         StdDev =:= undefined ->
-            1.0;
+            % most values are within 3-sigma,
+            % so attempt to cover all values down to 0
+            Mean / 3.0;
         StdDev =/= undefined ->
             StdDev
     end,
