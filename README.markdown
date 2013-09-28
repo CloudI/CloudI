@@ -104,6 +104,7 @@ Integration points:
 * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_messaging/src/cloudi_service_zeromq.erl)
 * Supported databases
   * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_elasticsearch.erl)
+  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_cassandra.erl)
   * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_couchdb.erl)
   * memcached with [`cloudi_service_db_memcached`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_memcached.erl)
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_databases/src/cloudi_service_db_mysql.erl)

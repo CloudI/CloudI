@@ -21,6 +21,7 @@
         cloudi_proplists,
         cloudi_request,
         cloudi_response,
+        cloudi_runtime_testing,
         cloudi_service,
         cloudi_service_api,
         cloudi_services_external,

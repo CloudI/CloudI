@@ -341,3 +341,49 @@ recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
             recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
 
+check_init(#config_service_options{
+               monkey_latency = false,
+               monkey_chaos = false} = ConfigOptions) ->
+    ConfigOptions;
+check_init(#config_service_options{
+               monkey_latency = MonkeyLatency,
+               monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+    NewMonkeyLatency = if
+        MonkeyLatency =/= false ->
+            cloudi_runtime_testing:monkey_latency_init(MonkeyLatency);
+        true ->
+            MonkeyLatency
+    end,
+    NewMonkeyChaos = if
+        MonkeyChaos =/= false ->
+            cloudi_runtime_testing:monkey_chaos_init(MonkeyChaos);
+        true ->
+            MonkeyChaos
+    end,
+    ConfigOptions#config_service_options{
+        monkey_latency = NewMonkeyLatency,
+        monkey_chaos = NewMonkeyChaos}.
+
+check_incoming(#config_service_options{
+                   monkey_latency = false,
+                   monkey_chaos = false} = ConfigOptions) ->
+    ConfigOptions;
+check_incoming(#config_service_options{
+                   monkey_latency = MonkeyLatency,
+                   monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+    NewMonkeyLatency = if
+        MonkeyLatency =/= false ->
+            cloudi_runtime_testing:monkey_latency_check(MonkeyLatency);
+        true ->
+            MonkeyLatency
+    end,
+    NewMonkeyChaos = if
+        MonkeyChaos =/= false ->
+            cloudi_runtime_testing:monkey_chaos_check(MonkeyChaos);
+        true ->
+            MonkeyChaos
+    end,
+    ConfigOptions#config_service_options{
+        monkey_latency = NewMonkeyLatency,
+        monkey_chaos = NewMonkeyChaos}.
+
