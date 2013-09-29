@@ -106,6 +106,15 @@
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()} |
          {scope, atom()} |
+         {monkey_latency,
+          list({time_uniform_min, pos_integer()} |
+               {time_uniform_max, pos_integer()} |
+               {time_gaussian_mean, pos_integer()} |
+               {time_gaussian_stddev, float()} |
+               {time_absolute, pos_integer()}) | system | false} |
+         {monkey_chaos,
+          list({probability_request, float()} |
+               {probability_day, float()}) | system | false} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({fullsweep_after, non_neg_integer()} |
@@ -126,7 +135,16 @@
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_timeout_adjustment, boolean()} |
          {response_timeout_adjustment, boolean()} |
-         {scope, atom()}).
+         {scope, atom()} |
+         {monkey_latency,
+          list({time_uniform_min, pos_integer()} |
+               {time_uniform_max, pos_integer()} |
+               {time_gaussian_mean, pos_integer()} |
+               {time_gaussian_stddev, float()} |
+               {time_absolute, pos_integer()}) | system | false} |
+         {monkey_chaos,
+          list({probability_request, float()} |
+               {probability_day, float()}) | system | false}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 
