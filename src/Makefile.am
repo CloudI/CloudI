@@ -52,9 +52,12 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
     rebar-directories-distclean \
     erlang-applications-scope-remove \
     dialyze \
+    dialyzer \
     doc \
+    docs \
     xref \
     test \
+    tests \
     cloudi-prefix-install \
     tests-install \
     tests-echo-install \
@@ -433,6 +436,8 @@ dialyze: all \
               external/emysql/ebin \
               external/jsx/ebin
 
+dialyzer: dialyze
+
 dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
@@ -442,6 +447,8 @@ doc: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
         || exit 0)
+
+docs: doc
 
 xref: all
 	(cd $(top_srcdir) && \
@@ -453,6 +460,8 @@ test: all
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit \
         || exit 0)
+
+tests: test
 
 uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"

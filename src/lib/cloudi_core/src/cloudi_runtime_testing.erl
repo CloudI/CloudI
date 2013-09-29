@@ -303,7 +303,7 @@ monkey_latency_validate([{time_gaussian_stddev, StdDev} | Options],
                         #monkey_latency{method = Method,
                                         value1 = Mean} = MonkeyLatency)
     when ((Method =:= undefined) orelse (Method =:= time_gaussian)),
-         is_float(StdDev), StdDev > 0.0 ->
+         is_number(StdDev), StdDev > 0.0 ->
     NewMean = if
         Mean =:= undefined ->
             ?MONKEY_LATENCY_EXTREME;
