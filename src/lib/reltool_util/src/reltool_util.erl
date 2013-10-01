@@ -422,7 +422,15 @@ ensure_application_loaded(Application) ->
                     % loading the application data does not automatically
                     % load its modules
                     lists:foreach(fun(M) ->
-                        ok = module_loaded(M)
+                        % valid results, others cause a crash
+                        case module_loaded(M) of
+                            ok ->
+                                ok;
+                            {error, nofile} ->
+                                error_logger:warn_msg("broken application ~p "
+                                                      "missing ~p file~n",
+                                                      [Application, M])
+                        end
                     end, Modules);
                 undefined ->
                     ok
