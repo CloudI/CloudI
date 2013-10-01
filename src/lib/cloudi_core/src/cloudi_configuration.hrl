@@ -111,6 +111,9 @@
 
         % Only Relevant For Internal Services:
 
+        % specify an Erlang application name, so it can be different from
+        % the CloudI service module name
+        application_name = undefined :: atom(),
         % how many service requests should restart the Erlang process used for
         % handling the service requests
         % (an integer greater than 0 or the atom 'infinity' are valid values)

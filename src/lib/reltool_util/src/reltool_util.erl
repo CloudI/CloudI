@@ -427,9 +427,10 @@ ensure_application_loaded(Application) ->
                             ok ->
                                 ok;
                             {error, nofile} ->
-                                error_logger:warn_msg("broken application ~p "
-                                                      "missing ~p file~n",
-                                                      [Application, M])
+                                error_logger:warning_msg("broken "
+                                                         "application ~p "
+                                                         "missing ~p file~n",
+                                                         [Application, M])
                         end
                     end, Modules);
                 undefined ->

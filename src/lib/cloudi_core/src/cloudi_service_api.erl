@@ -115,6 +115,7 @@
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
+         {application_name, undefined | atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({fullsweep_after, non_neg_integer()} |

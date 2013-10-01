@@ -396,6 +396,7 @@ service_start_find_internal(#config_service_internal{
             case service_start_find_internal_add_pathz(FilePath) of
                 {ok, _} ->
                     service_start_find_internal_application(Application,
+                                                            Application,
                                                             Service, Timeout);
                 {error, _} = Error ->
                     Error
@@ -417,15 +418,29 @@ service_start_find_internal(#config_service_internal{
             {error, {internal_service_module_extension_invalid, Extension}}
     end;
 service_start_find_internal(#config_service_internal{
-                                module = Module} = Service, Timeout)
+                                module = Module,
+                                options = #config_service_options{
+                                    application_name = ApplicationNameForced
+                                }} = Service, Timeout)
     when is_atom(Module) ->
+    Application = if
+        ApplicationNameForced =/= undefined ->
+            ApplicationNameForced;
+        ApplicationNameForced =:= undefined ->
+            Module
+    end,
     % prefer application files to load internal services
     % (so that application dependencies can be clearly specified, etc.)
-    case application:load(Module) of
+    case application:load(Application) of
         ok ->
-            service_start_find_internal_application(Module, Service, Timeout);
-        {error, {already_loaded, Module}} ->
-            service_start_find_internal_application(Module, Service, Timeout);
+            service_start_find_internal_application(Application,
+                                                    Module, Service, Timeout);
+        {error, {already_loaded, Application}} ->
+            service_start_find_internal_application(Application,
+                                                    Module, Service, Timeout);
+        {error, _} when ApplicationNameForced =/= undefined ->
+            {error, {service_options_application_name_notfound,
+                     ApplicationNameForced}};
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
             service_start_find_internal_module(Module, Service)
@@ -467,11 +482,11 @@ service_start_find_internal_module(Module, Service)
             {ok, Service#config_service_internal{module = Module}}
     end.
 
-service_start_find_internal_application(Application, Service, Timeout)
-    when is_atom(Application) ->
+service_start_find_internal_application(Application, Module, Service, Timeout)
+    when is_atom(Application), is_atom(Module) ->
     case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
-            {ok, Service#config_service_internal{module = Application}};
+            {ok, Service#config_service_internal{module = Module}};
         {error, _} = Error ->
             Error
     end.
