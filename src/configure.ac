@@ -171,9 +171,24 @@ AC_CONFIG_FILES([
     rebar_src_test.config
     reltool.config
     lib/cloudi_core/src/cloudi_core.app.src
-    lib/cloudi_services_internal/src/cloudi_services_internal.app.src
-    lib/cloudi_services_databases/src/cloudi_services_databases.app.src
-    lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src
+    lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
+    lib/cloudi_service_db/src/cloudi_service_db.app.src
+    lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src
+    lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src
+    lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.app.src
+    lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.app.src
+    lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
+    lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
+    lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src
+    lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
+    lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src
+    lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
+    lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
+    lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
+    lib/cloudi_service_timers/src/cloudi_service_timers.app.src
+    lib/cloudi_service_udp/src/cloudi_service_udp.app.src
+    lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src
+    lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
     Makefile
     api/Makefile
     api/c/Makefile

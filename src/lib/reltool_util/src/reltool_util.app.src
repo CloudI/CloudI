@@ -1,6 +1,6 @@
 {application, reltool_util,
   [{description, "Reltool Utility Functions"},
-   {vsn, "0.7.0"},
+   {vsn, "0.8.0"},
    {modules, [reltool_util]},
    {registered, []},
    {applications, [stdlib, kernel]},

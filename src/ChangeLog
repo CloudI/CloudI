@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Separate the cloudi_services_internal, cloudi_services_databases, and
+      cloudi_services_messaging Erlang applications into a single
+      Erlang application for each CloudI service to help isolate
+      CloudI service Erlang application dependencies
+
 2013-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the monkey_latency and monkey_chaos service configuration
