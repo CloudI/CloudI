@@ -2,6 +2,6 @@
   [{description, "Priority Queue Data Structures"},
    {vsn, "1.2.2"},
    {modules, [pqueue, pqueue3, pqueue4]},
-   {applications, [stdlib]},
-   {start_phases, []}]}.
+   {registered, []},
+   {applications, [stdlib]}]}.
 

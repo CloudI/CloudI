@@ -393,8 +393,5 @@ monkey_chaos_pid_day(Percent)
 
 % return a floating point value between 0.0 and 1.0, inclusive
 random() ->
-    % 53 bits maximum for double precision floating point representation
-    Bytes = 7, % erlang:round(53.0 / 8), % bytes for random number
-    MaxRand = 72057594037927940, % math:pow(2, 7 * 8) - 1, % max random number
-    binary:decode_unsigned(crypto:strong_rand_bytes(Bytes)) / MaxRand.
+    quickrand:strong_float().
 

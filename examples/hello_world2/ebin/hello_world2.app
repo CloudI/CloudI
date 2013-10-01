@@ -6,6 +6,7 @@
    {vsn, "1.2.5"},
    {modules, [
         hello_world2]},
+   {registered, []},
    {applications, [
         cloudi_core,
         stdlib,

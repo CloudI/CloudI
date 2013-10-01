@@ -7,6 +7,7 @@
    {modules, [
         cloudi_service_db_mysql
         ]},
+   {registered, []},
    {applications, [
         %cloudi_core, % makes relx break
         cloudi_x_emysql,

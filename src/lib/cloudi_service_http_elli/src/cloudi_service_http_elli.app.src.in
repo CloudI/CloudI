@@ -8,6 +8,7 @@
         cloudi_http_elli_handler,
         cloudi_service_http_elli
         ]},
+   {registered, []},
    {included_applications, [
         cloudi_x_elli
         ]},

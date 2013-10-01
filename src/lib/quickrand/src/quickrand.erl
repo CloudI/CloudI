@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.1 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -53,7 +53,8 @@
 %% external interface
 -export([seed/0,
          uniform/1,
-         strong_uniform/1]).
+         strong_uniform/1,
+         strong_float/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -131,4 +132,19 @@ strong_uniform(1) ->
 strong_uniform(N) when is_integer(N), N > 1 ->
     Bytes = erlang:byte_size(binary:encode_unsigned(N)),
     (binary:decode_unsigned(crypto:strong_rand_bytes(Bytes), big) rem N) + 1.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return an Erlang floating point random number (double-precision).===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_float() ->
+    float().  % return a floating point value between 0.0 and 1.0, inclusive
+
+strong_float() ->
+    % 53 bits maximum for double precision floating point representation
+    Bytes = 7, % erlang:round(53.0 / 8), % bytes for random number
+    MaxRand = 72057594037927940, % math:pow(2, 7 * 8) - 1, % max random number
+    binary:decode_unsigned(crypto:strong_rand_bytes(Bytes)) / MaxRand.
 

@@ -7,6 +7,7 @@
    {modules, [
         cloudi_service_db_memcached
         ]},
+   {registered, []},
    {applications, [
         %cloudi_core, % makes relx break
         cloudi_x_ememcached,

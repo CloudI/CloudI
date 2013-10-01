@@ -8,6 +8,7 @@
         cloudi_service_map_reduce,
         cloudi_task_size
         ]},
+   {registered, []},
    {applications, [
         %cloudi_core, % makes relx break
         stdlib,
