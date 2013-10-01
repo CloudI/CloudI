@@ -319,22 +319,12 @@ handle_cast(Request, State) ->
 
 handle_info(configure,
             #state{configuration = Config} = State) ->
-    case cloudi_x_reltool_util:applications_start([cloudi_services_internal,
-                                                   cloudi_services_databases,
-                                                   cloudi_services_messaging],
-                                                  infinity) of
-        ok ->
-            case configure(Config, infinity) of
-                {ok, NewConfig} ->
-                    {noreply, State#state{configuration = NewConfig}};
-                {error, _} = Error ->
-                    % cloudi_core application startup failed due to a problem
-                    % with the cloudi.conf file
-                    {stop, Error, State}
-            end;
+    case configure(Config, infinity) of
+        {ok, NewConfig} ->
+            {noreply, State#state{configuration = NewConfig}};
         {error, _} = Error ->
-            % cloudi_core included_application startup failed for
-            % Erlang applications that contain included internal services
+            % cloudi_core application startup failed due to a problem
+            % with the cloudi.conf file
             {stop, Error, State}
     end;
 

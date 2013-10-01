@@ -1,8 +1,0 @@
-%% encoding: UTF-8
-{application,cloudi_services_internal}.
-{packages,[]}.
-{modules,[cloudi_http_cowboy_handler,cloudi_http_elli_handler,cloudi_json_rpc,
-          cloudi_service_api_requests,cloudi_service_filesystem,
-          cloudi_service_http_cowboy,cloudi_service_http_elli,
-          cloudi_service_map_reduce,cloudi_service_tcp,cloudi_service_timers,
-          cloudi_service_udp,cloudi_service_work_manager,cloudi_task_size]}.

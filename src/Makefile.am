@@ -7,9 +7,24 @@ SCOPE_EXTERNAL = cloudi_x_
 SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -c $(top_srcdir)/lib/ \
      -d $(top_srcdir)/lib/cloudi_core/src \
-     -d $(top_srcdir)/lib/cloudi_services_databases/src \
-     -d $(top_srcdir)/lib/cloudi_services_internal/src \
-     -d $(top_srcdir)/lib/cloudi_services_messaging/src \
+     -d $(top_srcdir)/lib/cloudi_service_api_requests/src \
+     -d $(top_srcdir)/lib/cloudi_service_db/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_cassandra/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_couchdb/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_elasticsearch/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_memcached/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src \
+     -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
+     -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
+     -d $(top_srcdir)/lib/cloudi_service_tcp/src \
+     -d $(top_srcdir)/lib/cloudi_service_timers/src \
+     -d $(top_srcdir)/lib/cloudi_service_udp/src \
+     -d $(top_srcdir)/lib/cloudi_service_work_manager/src \
+     -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
      -d $(top_srcdir)/lib/key2value/src \
@@ -96,9 +111,24 @@ rel/files/app.config: rel/files/app.config.in
 rebar-directories-compile:
 	$(MKDIR_P) external
 	$(MKDIR_P) lib/cloudi_core/ebin
-	$(MKDIR_P) lib/cloudi_services_internal/ebin
-	$(MKDIR_P) lib/cloudi_services_databases/ebin
-	$(MKDIR_P) lib/cloudi_services_messaging/ebin
+	$(MKDIR_P) lib/cloudi_service_api_requests/ebin
+	$(MKDIR_P) lib/cloudi_service_db/ebin
+	$(MKDIR_P) lib/cloudi_service_db_cassandra/ebin
+	$(MKDIR_P) lib/cloudi_service_db_couchdb/ebin
+	$(MKDIR_P) lib/cloudi_service_db_elasticsearch/ebin
+	$(MKDIR_P) lib/cloudi_service_db_memcached/ebin
+	$(MKDIR_P) lib/cloudi_service_db_mysql/ebin
+	$(MKDIR_P) lib/cloudi_service_db_pgsql/ebin
+	$(MKDIR_P) lib/cloudi_service_db_tokyotyrant/ebin
+	$(MKDIR_P) lib/cloudi_service_filesystem/ebin
+	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
+	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
+	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
+	$(MKDIR_P) lib/cloudi_service_tcp/ebin
+	$(MKDIR_P) lib/cloudi_service_timers/ebin
+	$(MKDIR_P) lib/cloudi_service_udp/ebin
+	$(MKDIR_P) lib/cloudi_service_work_manager/ebin
+	$(MKDIR_P) lib/cloudi_service_zeromq/ebin
 	$(MKDIR_P) lib/pqueue/ebin
 	$(MKDIR_P) lib/quickrand/ebin
 	$(MKDIR_P) lib/cpg/ebin
@@ -126,15 +156,60 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_internal/src && \
-        test ! -e cloudi_services_internal.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/src/cloudi_services_internal.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_databases/src && \
-        test ! -e cloudi_services_databases.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/src/cloudi_services_databases.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_messaging/src && \
-        test ! -e cloudi_services_messaging.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_api_requests/src && \
+        test ! -e cloudi_service_api_requests.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db/src && \
+        test ! -e cloudi_service_db.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db/src/cloudi_service_db.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra/src && \
+        test ! -e cloudi_service_db_cassandra.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_couchdb/src && \
+        test ! -e cloudi_service_db_couchdb.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_elasticsearch/src && \
+        test ! -e cloudi_service_db_elasticsearch.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_memcached/src && \
+        test ! -e cloudi_service_db_memcached.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_mysql/src && \
+        test ! -e cloudi_service_db_mysql.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_pgsql/src && \
+        test ! -e cloudi_service_db_pgsql.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src && \
+        test ! -e cloudi_service_db_tokyotyrant.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_filesystem/src && \
+        test ! -e cloudi_service_filesystem.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_cowboy/src && \
+        test ! -e cloudi_service_http_cowboy.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_elli/src && \
+        test ! -e cloudi_service_http_elli.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_map_reduce/src && \
+        test ! -e cloudi_service_map_reduce.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_tcp/src && \
+        test ! -e cloudi_service_tcp.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_timers/src && \
+        test ! -e cloudi_service_timers.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_timers/src/cloudi_service_timers.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_udp/src && \
+        test ! -e cloudi_service_udp.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_udp/src/cloudi_service_udp.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_work_manager/src && \
+        test ! -e cloudi_service_work_manager.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_zeromq/src && \
+        test ! -e cloudi_service_zeromq.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src || exit 0)
 	(cd $(top_srcdir)/lib/pqueue/src && \
         test ! -e $(SCOPE_EXTERNAL)pqueue.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/pqueue/src/$(SCOPE_EXTERNAL)pqueue.app.src || exit 0)
@@ -159,15 +234,60 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_core && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_internal && \
+	(cd $(top_srcdir)/lib/cloudi_service_api_requests && \
         test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_internal/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_databases && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_api_requests/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db && \
         test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_databases/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_services_messaging && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra && \
         test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_services_messaging/ebin || exit 0)
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_couchdb && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_couchdb/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_elasticsearch && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_elasticsearch/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_memcached && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_memcached/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_mysql && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_mysql/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_pgsql && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_pgsql/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_filesystem && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_cowboy && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_cowboy/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_elli && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_elli/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_map_reduce && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_tcp && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_tcp/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_timers && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_timers/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_udp && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_udp/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_work_manager && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_work_manager/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_zeromq && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_zeromq/ebin || exit 0)
 	(cd $(top_srcdir)/lib/pqueue && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/pqueue/ebin || exit 0)
@@ -287,9 +407,24 @@ rebar-clean:
 
 rebar-directories-clean: rebar-clean
 	rmdir $(top_builddir)/lib/cloudi_core/ebin \
-          $(top_builddir)/lib/cloudi_services_internal/ebin \
-          $(top_builddir)/lib/cloudi_services_databases/ebin \
-          $(top_builddir)/lib/cloudi_services_messaging/ebin \
+          $(top_builddir)/lib/cloudi_service_api_requests/ebin \
+          $(top_builddir)/lib/cloudi_service_db/ebin \
+          $(top_builddir)/lib/cloudi_service_db_cassandra/ebin \
+          $(top_builddir)/lib/cloudi_service_db_couchdb/ebin \
+          $(top_builddir)/lib/cloudi_service_db_elasticsearch/ebin \
+          $(top_builddir)/lib/cloudi_service_db_memcached/ebin \
+          $(top_builddir)/lib/cloudi_service_db_mysql/ebin \
+          $(top_builddir)/lib/cloudi_service_db_pgsql/ebin \
+          $(top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin \
+          $(top_builddir)/lib/cloudi_service_filesystem/ebin \
+          $(top_builddir)/lib/cloudi_service_http_cowboy/ebin \
+          $(top_builddir)/lib/cloudi_service_http_elli/ebin \
+          $(top_builddir)/lib/cloudi_service_map_reduce/ebin \
+          $(top_builddir)/lib/cloudi_service_tcp/ebin \
+          $(top_builddir)/lib/cloudi_service_timers/ebin \
+          $(top_builddir)/lib/cloudi_service_udp/ebin \
+          $(top_builddir)/lib/cloudi_service_work_manager/ebin \
+          $(top_builddir)/lib/cloudi_service_zeromq/ebin \
           $(top_builddir)/lib/pqueue/ebin \
           $(top_builddir)/lib/quickrand/ebin \
           $(top_builddir)/lib/cpg/ebin \
@@ -339,9 +474,24 @@ rebar-directories-clean: rebar-clean
 	 rm $(top_builddir)/lib/cloudi_core/include || \
 	 exit 0)
 	rm -f $(top_srcdir)/lib/cloudi_core/ebin \
-          $(top_srcdir)/lib/cloudi_services_internal/ebin \
-          $(top_srcdir)/lib/cloudi_services_databases/ebin \
-          $(top_srcdir)/lib/cloudi_services_messaging/ebin \
+          $(top_srcdir)/lib/cloudi_service_api_requests/ebin \
+          $(top_srcdir)/lib/cloudi_service_db/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_cassandra/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_couchdb/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_elasticsearch/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_memcached/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_mysql/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_pgsql/ebin \
+          $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/ebin \
+          $(top_srcdir)/lib/cloudi_service_filesystem/ebin \
+          $(top_srcdir)/lib/cloudi_service_http_cowboy/ebin \
+          $(top_srcdir)/lib/cloudi_service_http_elli/ebin \
+          $(top_srcdir)/lib/cloudi_service_map_reduce/ebin \
+          $(top_srcdir)/lib/cloudi_service_tcp/ebin \
+          $(top_srcdir)/lib/cloudi_service_timers/ebin \
+          $(top_srcdir)/lib/cloudi_service_udp/ebin \
+          $(top_srcdir)/lib/cloudi_service_work_manager/ebin \
+          $(top_srcdir)/lib/cloudi_service_zeromq/ebin \
           $(top_srcdir)/lib/pqueue/ebin \
           $(top_srcdir)/lib/quickrand/ebin \
           $(top_srcdir)/lib/cpg/ebin \
@@ -391,7 +541,9 @@ distclean-local: rebar-directories-distclean \
 	rm -rf $(top_srcdir)/autom4te.cache
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
-           $(top_srcdir)/lib/cloudi_services_databases/test_ct/logs
+           $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
@@ -414,9 +566,24 @@ dialyze: all \
               -Wno_return -Wno_unused \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
-              lib/cloudi_services_internal/ebin/ \
-              lib/cloudi_services_databases/ebin/ \
-              lib/cloudi_services_messaging/ebin/ \
+              lib/cloudi_service_api_requests/ebin/ \
+              lib/cloudi_service_db/ebin/ \
+              lib/cloudi_service_db_cassandra/ebin/ \
+              lib/cloudi_service_db_couchdb/ebin/ \
+              lib/cloudi_service_db_elasticsearch/ebin/ \
+              lib/cloudi_service_db_memcached/ebin/ \
+              lib/cloudi_service_db_mysql/ebin/ \
+              lib/cloudi_service_db_pgsql/ebin/ \
+              lib/cloudi_service_db_tokyotyrant/ebin/ \
+              lib/cloudi_service_filesystem/ebin/ \
+              lib/cloudi_service_http_cowboy/ebin/ \
+              lib/cloudi_service_http_elli/ebin/ \
+              lib/cloudi_service_map_reduce/ebin/ \
+              lib/cloudi_service_tcp/ebin/ \
+              lib/cloudi_service_timers/ebin/ \
+              lib/cloudi_service_udp/ebin/ \
+              lib/cloudi_service_work_manager/ebin/ \
+              lib/cloudi_service_zeromq/ebin/ \
               lib/pqueue/ebin/ \
               lib/quickrand/ebin/ \
               lib/cpg/ebin/ \
