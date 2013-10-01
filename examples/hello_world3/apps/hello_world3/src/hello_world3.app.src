@@ -5,6 +5,7 @@
   [{description, "Hello World Example Application"},
    {vsn, "1.2.5"},
    {modules, [hello_world3]},
+   {registered, []},
    {applications, [
         cloudi_core,
         stdlib,

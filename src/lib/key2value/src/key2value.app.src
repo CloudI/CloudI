@@ -2,6 +2,6 @@
   [{description, "2-way Set Associative Map Data Structure"},
    {vsn, "0.1.8"},
    {modules, [key2value]},
-   {applications, [stdlib]},
-   {start_phases, []}]}.
+   {registered, []},
+   {applications, [stdlib]}]}.
 

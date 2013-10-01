@@ -8,6 +8,7 @@
         cloudi_json_rpc,
         cloudi_service_api_requests
         ]},
+   {registered, []},
    {applications, [
         %cloudi_core, % makes relx break
         cloudi_x_jsx,

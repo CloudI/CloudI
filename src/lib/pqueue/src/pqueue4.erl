@@ -49,7 +49,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
@@ -170,7 +170,7 @@ in(X, Q) ->
 
 in(_, P, _)
     when P < -128; P > 128 ->
-    throw(badarg);
+    erlang:exit(badarg);
 in(X, P, {empty, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
     in_higher(P, Q, X);
 in(X, P, {Pc, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q)
@@ -289,7 +289,7 @@ out({Pc, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
 
 out(P, _)
     when P < -128; P > 128 ->
-    throw(badarg);
+    erlang:exit(badarg);
 out(_, {empty, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
     {empty, Q};
 out(P, Q) ->

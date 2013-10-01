@@ -6,6 +6,7 @@
    {vsn, "1.2.2"},
    {modules, [
         hello_world1]},
+   {registered, []},
    {applications, [
         stdlib,
         kernel]}]}.
