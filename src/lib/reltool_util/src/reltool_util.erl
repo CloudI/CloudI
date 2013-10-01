@@ -404,6 +404,10 @@ application_modules(Application, Options)
     ok |
     {error, any()}.
 
+ensure_application_loaded(kernel) ->
+    ok;
+ensure_application_loaded(stdlib) ->
+    ok;
 ensure_application_loaded(Application) ->
     Loaded = case application:load(Application) of
         ok ->
