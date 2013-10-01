@@ -10,6 +10,9 @@
     * Update all dependencies to have {registered, []}, to keep relx happy
     * Add the hello_world4 example to show how CloudI can be included with
       a relx release
+    * Add the application_name internal service configuration option to
+      specify an Erlang application name that doesn't need to be the
+      CloudI service module name
 
 2013-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
