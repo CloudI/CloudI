@@ -436,6 +436,31 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
             {reply, {error, timeout}, State}
     end);
 
+handle_call({'mcast_async_active', Name, RequestInfo, Request,
+             undefined, Priority}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'mcast_async_active', Name, RequestInfo, Request,
+                 TimeoutAsync, Priority}, Client, State);
+
+handle_call({'mcast_async_active', Name, RequestInfo, Request,
+             Timeout, undefined}, Client,
+            #state{options = #config_service_options{
+                       priority_default = PriorityDefault}} = State) ->
+    handle_call({'mcast_async_active', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault}, Client, State);
+
+handle_call({'mcast_async_active', Name, RequestInfo, Request,
+             Timeout, Priority}, Client,
+            #state{dest_deny = DestDeny,
+                   dest_allow = DestAllow} = State) ->
+    hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
+        true ->
+            handle_mcast_async_active(Name, RequestInfo, Request,
+                                      Timeout, Priority, Client, State);
+        false ->
+            {reply, {error, timeout}, State}
+    end);
+
 handle_call({'recv_async', TransId, Consume}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'recv_async', TimeoutSync, TransId, Consume}, Client, State);
@@ -684,6 +709,12 @@ handle_info({'cloudi_service_mcast_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
     hibernate_check(handle_mcast_async(Name, RequestInfo, Request,
                                        Timeout, Priority, Client, State));
+
+handle_info({'cloudi_service_mcast_async_active_retry',
+             Name, RequestInfo, Request, Timeout, Priority, Client}, State) ->
+    hibernate_check(handle_mcast_async_active(Name, RequestInfo, Request,
+                                              Timeout, Priority,
+                                              Client, State));
 
 handle_info({'cloudi_service_forward_async_retry',
              Name, RequestInfo, Request, Timeout, Priority, TransId, Source},
@@ -1304,6 +1335,44 @@ handle_mcast_async(Name, RequestInfo, Request,
             gen_server:reply(Client, {ok, TransIdList}),
             NewState = lists:foldl(fun(Id, S) ->
                 send_async_timeout_start(Timeout, Id, S)
+            end, State, TransIdList),
+            {noreply, NewState}
+    end.
+
+handle_mcast_async_active(Name, RequestInfo, Request,
+                          Timeout, Priority, Client,
+                          #state{receiver_pid = ReceiverPid,
+                                 uuid_generator = UUID,
+                                 dest_refresh = DestRefresh,
+                                 cpg_data = Groups,
+                                 options = #config_service_options{
+                                     scope = Scope}} = State) ->
+    case destination_all(DestRefresh, Scope, Name, ReceiverPid,
+                         Groups, Timeout) of
+        {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
+            erlang:send_after(?MCAST_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_mcast_async_active_retry',
+                               Name, RequestInfo, Request,
+                               Timeout - ?MCAST_ASYNC_INTERVAL,
+                               Priority, Client}),
+            {noreply, State};
+        {error, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {ok, Pattern, PidList} ->
+            TransIdList = lists:map(fun(Pid) ->
+                TransId = cloudi_x_uuid:get_v1(UUID),
+                Pid ! {'cloudi_service_send_async',
+                       Name, Pattern, RequestInfo, Request,
+                       Timeout, Priority, TransId, ReceiverPid},
+                TransId
+            end, PidList),
+            gen_server:reply(Client, {ok, TransIdList}),
+            NewState = lists:foldl(fun(Id, S) ->
+                send_async_active_timeout_start(Timeout, Id, S)
             end, State, TransIdList),
             {noreply, NewState}
     end.

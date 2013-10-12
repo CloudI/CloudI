@@ -75,6 +75,9 @@
          mcast_async/3,
          mcast_async/4,
          mcast_async/6,
+         mcast_async_passive/3,
+         mcast_async_passive/4,
+         mcast_async_passive/6,
          recv_async/1,
          recv_async/2,
          recv_async/3,
@@ -840,6 +843,63 @@ mcast_async(#cloudi_context{dest_refresh = DestRefresh,
             end, PidList),
             {ok, TransIdList}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+                          Name :: service_name(),
+                          Request :: request()) ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: any()}.
+
+mcast_async_passive(Context, Name, Request) ->
+    mcast_async(Context, Name, Request).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+                          Name :: service_name(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: any()}.
+
+mcast_async_passive(Context, Name, Request, Timeout) ->
+    mcast_async(Context, Name, Request, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+                          Name :: service_name(),
+                          RequestInfo :: request_info(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined',
+                          Priority :: priority() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: any()}.
+
+mcast_async_passive(Context, Name, RequestInfo, Request,
+                    Timeout, Priority) ->
+    mcast_async(Context, Name, RequestInfo, Request,
+                Timeout, Priority).
 
 %%-------------------------------------------------------------------------
 %% @doc
