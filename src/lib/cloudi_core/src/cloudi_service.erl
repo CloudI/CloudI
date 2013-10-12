@@ -130,6 +130,12 @@
          mcast_async/3,
          mcast_async/4,
          mcast_async/6,
+         mcast_async_active/3,
+         mcast_async_active/4,
+         mcast_async_active/6,
+         mcast_async_passive/3,
+         mcast_async_passive/4,
+         mcast_async_passive/6,
          forward/9,
          forward_async/8,
          forward_sync/8,
@@ -1116,6 +1122,172 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
                                     RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         Request :: request()) ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, Request)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
+                                 undefined, undefined}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         Request :: request(),
+                         Timeout :: timeout_milliseconds() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, Request, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
+                                 undefined, undefined}, infinity);
+
+mcast_async_active(Dispatcher, Name, Request, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name, <<>>, Request,
+                                    Timeout, undefined},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         RequestInfo :: request_info(),
+                         Request :: request(),
+                         Timeout :: timeout_milliseconds() | 'undefined',
+                         Priority :: priority() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined}, infinity);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 Priority}, infinity);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, undefined},
+                                   Timeout + ?TIMEOUT_DELTA));
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0, is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, Priority},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          Request :: request()) ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, Request) ->
+    mcast_async(Dispatcher, Name, Request).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, Request, Timeout) ->
+    mcast_async(Dispatcher, Name, Request, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          RequestInfo :: request_info(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined',
+                          Priority :: priority() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
+                    Timeout, Priority) ->
+    mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority).
 
 %%-------------------------------------------------------------------------
 %% @doc
