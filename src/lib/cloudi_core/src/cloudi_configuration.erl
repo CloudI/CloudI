@@ -177,14 +177,14 @@
 load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
         {ok, Terms} ->
-            new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
+            new(Terms, #config{uuid_generator = uuid_generator()});
         {error, Reason} = Error ->
             error_logger:error_msg("configuration file \"~s\" not found: ~p",
                                    [Path, Reason]),
             Error
     end;
 load([T | _] = Terms) when is_tuple(T) ->
-    new(Terms, #config{uuid_generator = cloudi_x_uuid:new(self())});
+    new(Terms, #config{uuid_generator = uuid_generator()});
 load(Data) ->
     {error, {configuration_invalid, Data}}.
 
@@ -559,6 +559,11 @@ new([{'logging', [T | _] = Value} | Terms], Config)
     end;
 new([Term | _], _) ->
     {error, {invalid, Term}}.
+
+uuid_generator() ->
+    {ok, MacAddress} = application:get_env(mac_address),
+    cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
+                               {mac_address, MacAddress}]).
 
 services_add_service(NextServices, Timeout) ->
     services_add_service(NextServices, [], Timeout).
@@ -1639,3 +1644,4 @@ service_name_valid(Name, ErrorReason) ->
         exit:badarg ->
             {error, {ErrorReason, Name}}
     end.
+

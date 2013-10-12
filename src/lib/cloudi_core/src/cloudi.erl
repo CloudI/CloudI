@@ -177,6 +177,9 @@ new(Settings)
     ConfiguredScope = ?SCOPE_ASSIGN(Scope),
     ok = cloudi_x_cpg:scope_exists(ConfiguredScope),
     Self = self(),
+    {ok, MacAddress} = application:get_env(mac_address),
+    UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
+                                    {mac_address, MacAddress}]),
     #cloudi_context{
         dest_refresh = DestRefresh,
         timeout_async = DefaultTimeoutAsync,
@@ -184,7 +187,7 @@ new(Settings)
         priority_default = PriorityDefault,
         scope = ConfiguredScope,
         receiver = Self,
-        uuid_generator = cloudi_x_uuid:new(Self)
+        uuid_generator = UUID
     }.
 
 %%-------------------------------------------------------------------------

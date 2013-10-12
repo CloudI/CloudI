@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-10-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Use the mac address set in the cloudi_core application env for
+      uuid (v1) generator creation
+    * Update uuid
+
+2013-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bug reported by Anton Ryabkov:
+      an unsubscribe of an exact match for a service name was not removing
+      the entry when no services were subscribed (an empty group), so a
+      pattern matching subscription that existed would be ignored, despite
+      the fact no services were within the exact service name match. The fix
+      removes entries when no services are subscribed to the service name, so
+      there is no problem with the service name pattern match.
+
 2013-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Separate the cloudi_services_internal, cloudi_services_databases, and

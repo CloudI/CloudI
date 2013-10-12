@@ -99,6 +99,7 @@ test() ->
     {error, Reason :: any()}.
 
 start(_, _) ->
+    application:set_env(cloudi_core, mac_address, cloudi_x_uuid:mac_address()),
     cloudi_x_quickrand:seed(),
     {ok, PathOrData} = application:get_env(configuration),
     case cloudi_configuration:load(PathOrData) of
