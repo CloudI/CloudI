@@ -165,6 +165,7 @@
 
 -include("cloudi_constants.hrl").
 
+-type request_type() :: 'send_async' | 'send_sync'.
 -type service_name() :: cloudi:service_name().
 -type service_name_pattern() :: cloudi:service_name_pattern().
 -type request_info() :: cloudi:request_info().
@@ -175,7 +176,8 @@
 -type priority() :: cloudi:priority().
 -type trans_id() :: cloudi:trans_id(). % version 1 UUID
 -type pattern_pid() :: cloudi:pattern_pid().
--export_type([service_name/0,
+-export_type([request_type/0,
+              service_name/0,
               service_name_pattern/0,
               request_info/0, request/0,
               response_info/0, response/0,
@@ -201,7 +203,7 @@
     {'stop', Reason :: any()} |
     {'stop', Reason :: any(), State :: any()}.
 
--callback cloudi_service_handle_request(Type :: 'send_async' | 'send_sync',
+-callback cloudi_service_handle_request(Type :: request_type(),
                                         Name :: service_name(),
                                         Pattern :: service_name_pattern(),
                                         RequestInfo :: request_info(),
@@ -1296,7 +1298,7 @@ mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
 %%-------------------------------------------------------------------------
 
 -spec forward(Dispatcher :: dispatcher(),
-              Type :: 'send_async' | 'send_sync',
+              Type :: request_type(),
               Name :: service_name(),
               RequestInfo :: request_info(),
               Request :: request(),
@@ -1404,7 +1406,7 @@ return(Dispatcher, ResponseInfo, Response)
 %%-------------------------------------------------------------------------
 
 -spec return(Dispatcher :: dispatcher(),
-             Type :: 'send_async' | 'send_sync',
+             Type :: request_type(),
              Name :: service_name(),
              Pattern :: service_name_pattern(),
              ResponseInfo :: response_info(),
@@ -1486,7 +1488,7 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
 %%-------------------------------------------------------------------------
 
 -spec return_nothrow(Dispatcher :: dispatcher(),
-                     Type :: 'send_async' | 'send_sync',
+                     Type :: request_type(),
                      Name :: service_name(),
                      Pattern :: service_name_pattern(),
                      ResponseInfo :: response_info(),
@@ -1799,7 +1801,7 @@ binary_key_value_parse_list([K, V | L], Lookup) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec 'Module:cloudi_service_handle_request'(Type :: 'send_async' | 'send_sync',
+-spec 'Module:cloudi_service_handle_request'(Type :: request_type(),
                                              Name :: service_name(),
                                              Pattern :: service_name_pattern(),
                                              RequestInfo :: request_info(),

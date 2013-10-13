@@ -6,6 +6,8 @@
     * Add the cloudi_service:mcast_async_active function variations along with
       cloudi_service:mcast_async_passive functions to mirror what is already
       available for cloudi_service:send_async
+    * Add cloudi_service_quorum for seeking quorum among running services
+      for a service request
 
 2013-10-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
