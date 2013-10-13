@@ -561,7 +561,7 @@ new([Term | _], _) ->
     {error, {invalid, Term}}.
 
 uuid_generator() ->
-    {ok, MacAddress} = application:get_env(mac_address),
+    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
                                {mac_address, MacAddress}]).
 
