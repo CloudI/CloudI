@@ -155,15 +155,9 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   pending = Pending} = State,
                            Dispatcher) ->
     OriginalTransId = dict:fetch(TransId, Pending),
-    Key = if
-        UseResponseInfo =:= true ->
-            {ResponseInfo, Response};
-        UseResponseInfo =:= false ->
-            Response
-    end,
-    {noreply, State#state{requests = request_check(Key, ResponseInfo, Response,
+    {noreply, State#state{requests = request_check(ResponseInfo, Response,
                                                    OriginalTransId, Requests,
-                                                   Dispatcher),
+                                                   UseResponseInfo, Dispatcher),
                           pending = dict:erase(TransId, Pending)}};
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
@@ -195,8 +189,8 @@ pending_store([TransId | L], Count, Pending, OriginalTransId) ->
     pending_store(L, Count + 1, dict:store(TransId, OriginalTransId, Pending),
                   OriginalTransId).
 
-request_check(Key, ResponseInfo, Response, OriginalTransId, Requests,
-              Dispatcher) ->
+request_check(ResponseInfo, Response, OriginalTransId, Requests,
+              UseResponseInfo, Dispatcher) ->
     case dict:find(OriginalTransId, Requests) of
         {ok, #request{% return data
                       type = ResponseType,
@@ -207,6 +201,12 @@ request_check(Key, ResponseInfo, Response, OriginalTransId, Requests,
                       % quorum data
                       required_count = RequiredCount,
                       responses = Responses} = Request} ->
+            Key = if
+                UseResponseInfo =:= true ->
+                    {ResponseInfo, Response};
+                UseResponseInfo =:= false ->
+                    Response
+            end,
             Count = case orddict:find(Key, Responses) of
                 {ok, I} ->
                     I + 1;
