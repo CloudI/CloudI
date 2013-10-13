@@ -199,7 +199,7 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
         true ->
             Dispatcher
     end,
-    {ok, MacAddress} = application:get_env(mac_address),
+    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, erlang},
                                           {mac_address, MacAddress}]),
     State = #state{dispatcher = Dispatcher,

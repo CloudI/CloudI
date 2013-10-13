@@ -180,7 +180,7 @@ new(Settings)
     ConfiguredScope = ?SCOPE_ASSIGN(Scope),
     ok = cloudi_x_cpg:scope_exists(ConfiguredScope),
     Self = self(),
-    {ok, MacAddress} = application:get_env(mac_address),
+    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
                                     {mac_address, MacAddress}]),
     #cloudi_context{

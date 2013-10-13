@@ -116,8 +116,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                      requests = Requests,
                                      pending = Pending} = State,
                               Dispatcher) ->
-    Parameters = [_ | _] = cloudi_service:service_name_parse(Name, Pattern),
-    QuorumName = lists:last(Parameters),
+    [QuorumName] = cloudi_service:service_name_parse(Name, Pattern),
     case cloudi_service:mcast_async_active(Dispatcher, QuorumName,
                                            RequestInfo, Request,
                                            Timeout, Priority) of
