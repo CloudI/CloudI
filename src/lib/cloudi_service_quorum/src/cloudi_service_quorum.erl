@@ -125,9 +125,10 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                                 Pending, TransId),
             RequiredCount = if
                 is_integer(Quorum) ->
-                    Quorum;
+                    erlang:min(Count, Quorum);
                 is_float(Quorum) ->
-                    erlang:round(Quorum * Count + 0.5) % ceil
+                    erlang:min(Count,
+                               erlang:round(Quorum * Count + 0.5)) % ceil
             end,
             Request = #request{type = Type,
                                name = Name,

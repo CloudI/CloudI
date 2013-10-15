@@ -1306,7 +1306,7 @@ mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
               Priority :: priority(),
               TransId :: trans_id(),
               Pid :: pid()) ->
-    none().
+    no_return().
 
 forward(Dispatcher, 'send_async', Name, RequestInfo, Request,
         Timeout, Priority, TransId, Pid) ->
@@ -1332,7 +1332,7 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Priority :: priority(),
                     TransId :: trans_id(),
                     Pid :: pid()) ->
-    none().
+    no_return().
 
 forward_async(Dispatcher, Name, RequestInfo, Request,
               Timeout, Priority, TransId, Pid)
@@ -1358,7 +1358,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Priority :: priority(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
-    none().
+    no_return().
 
 forward_sync(Dispatcher, Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid)
@@ -1378,7 +1378,7 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
 
 -spec return(Dispatcher :: dispatcher(),
              Response :: response()) ->
-    none().
+    no_return().
 
 return(Dispatcher, Response)
     when is_pid(Dispatcher) ->
@@ -1393,7 +1393,7 @@ return(Dispatcher, Response)
 -spec return(Dispatcher :: dispatcher(),
              ResponseInfo :: response_info(),
              Response :: response()) ->
-    none().
+    no_return().
 
 return(Dispatcher, ResponseInfo, Response)
     when is_pid(Dispatcher) ->
@@ -1414,7 +1414,7 @@ return(Dispatcher, ResponseInfo, Response)
              Timeout :: timeout_milliseconds(),
              TransId :: trans_id(),
              Pid :: pid()) ->
-    none().
+    no_return().
 
 return(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
        Timeout, TransId, Pid) ->
@@ -1440,7 +1440,7 @@ return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
                    Timeout :: timeout_milliseconds(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
-    none().
+    no_return().
 
 return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid)
@@ -1466,7 +1466,7 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   Timeout :: timeout_milliseconds(),
                   TransId :: trans_id(),
                   Pid :: pid()) ->
-    none().
+    no_return().
 
 return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
             Timeout, TransId, Pid)
