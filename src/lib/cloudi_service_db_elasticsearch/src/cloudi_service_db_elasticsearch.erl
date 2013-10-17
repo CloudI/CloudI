@@ -83,7 +83,17 @@
          flush/2, flush/3,
          optimize/2, optimize/3,
          clear_cache/2, clear_cache/3, clear_cache/4,
-         segments/2, segments/3]).
+         segments/2, segments/3,
+         % Mapping CRUD
+         put_mapping/5,
+         get_mapping/4,
+         delete_mapping/4,
+         % Aliases CRUD
+         aliases/3,
+         insert_alias/4, insert_alias/5,
+         delete_alias/4,
+         is_alias/4,
+         get_alias/4]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -625,8 +635,7 @@ clear_cache(Dispatcher, Name, Indexes)
 
 %% _equiv clear_cache(Dispatcher, Name, Indexes, []).
 -spec clear_cache(dispatcher(), name(), index() | [index()], params()) ->
-    {ok, response()} |
-    {error, any()}.
+    {ok, response()} | {error, any()}.
 clear_cache(Dispatcher, Name, Index, Params)
     when is_list(Name), is_binary(Index), is_list(Params) ->
     clear_cache(Dispatcher, Name, [Index], Params);
@@ -634,6 +643,56 @@ clear_cache(Dispatcher, Name, Indexes, Params)
     when is_list(Name), is_list(Indexes), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {clear_cache, Indexes, Params}).
+%% @doc Insert a mapping into an ElasticSearch index
+-spec put_mapping(dispatcher(), name(), index() | [index()], type(), doc()) -> {ok, response()} | {error, any()}.
+put_mapping(Dispatcher, Name, Index, Type, Doc) when is_list(Name), is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    put_mapping(Dispatcher, Name, [Index], Type, Doc);
+put_mapping(Dispatcher, Name, Indexes, Type, Doc) when is_list(Name), is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    cloudi:send_sync(Dispatcher, Name, {put_mapping, Indexes, Type, Doc}, infinity).
+
+%% @doc Get a mapping from an ElasticSearch index
+-spec get_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
+get_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
+    get_mapping(Dispatcher, Name, [Index], Type);
+get_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name),is_list(Indexes) andalso is_binary(Type) ->
+    cloudi:send_sync(Dispatcher, Name, {get_mapping, Indexes, Type}, infinity).
+
+%% @doc Delete a mapping from an ElasticSearch index
+-spec delete_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
+delete_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
+    delete_mapping(Dispatcher, Name, [Index], Type);
+delete_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name), is_list(Indexes) andalso is_binary(Type) ->
+    cloudi:send_sync(Dispatcher, Name, {delete_mapping, Indexes, Type}, infinity).
+
+%% @doc Operate on aliases (as compared to 'alias')
+-spec aliases(dispatcher(), name(), doc()) -> {ok, response()} | {error, any()}.
+aliases(Dispatcher, Name, Doc) when is_list(Name), is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
+    cloudi:send_sync(Dispatcher, Name, {aliases, Doc}, infinity).
+
+%% @doc Insert an alias (as compared to 'aliases')
+-spec insert_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
+insert_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias}, infinity).
+%% @doc Insert an alias with options(as compared to 'aliases')
+-spec insert_alias(dispatcher(), name(), index(), index(), doc()) -> {ok, response()} | {error, any()}.
+insert_alias(Dispatcher, Name, Index, Alias, Doc) when  is_list(Name),is_binary(Index) andalso is_binary(Alias) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias, Doc}, infinity).
+
+%% @doc Delete an alias (as compared to 'aliases')
+-spec delete_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
+delete_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+    cloudi:send_sync(Dispatcher, Name, {delete_alias, Index, Alias}, infinity).
+
+%% @doc Checks if an alias exists (Alias can be a string with a wildcard)
+-spec is_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
+is_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+    cloudi:send_sync(Dispatcher, Name, {is_alias, Index, Alias}, infinity).
+
+%% @doc Gets an alias(or more, based on the string)
+-spec get_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
+get_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+    cloudi:send_sync(Dispatcher, Name, {get_alias, Index, Alias}, infinity).
+
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -681,101 +740,119 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         Command when is_binary(Command) ->
             {reply, do_query(Command, BinaryPoolName, Timeout), State};
         {'health'} -> 
-            {reply, cloudi_x_erlasticsearch:health({pool, PoolName}), State};
+            {reply, cloudi_x_erlasticsearch:health(PoolName), State};
         {'state'} ->
-            {reply, cloudi_x_erlasticsearch:state({pool, PoolName}, []), State};
+            {reply, cloudi_x_erlasticsearch:state(PoolName, []), State};
         {'state', Params} -> 
-            {reply, cloudi_x_erlasticsearch:state({pool, PoolName}, Params), State};
+            {reply, cloudi_x_erlasticsearch:state(PoolName, Params), State};
         {'nodes_info'} ->
-            {reply, cloudi_x_erlasticsearch:nodes_info({pool, PoolName}, [], []), State};
+            {reply, cloudi_x_erlasticsearch:nodes_info(PoolName, [], []), State};
         {'nodes_info', NodeNames} ->
-            {reply, cloudi_x_erlasticsearch:nodes_info({pool, PoolName}, NodeNames, []), State};
+            {reply, cloudi_x_erlasticsearch:nodes_info(PoolName, NodeNames, []), State};
         {'nodes_info', NodeNames, Params} -> 
-            {reply, cloudi_x_erlasticsearch:nodes_info({pool, PoolName}, NodeNames, Params), State};
+            {reply, cloudi_x_erlasticsearch:nodes_info(PoolName, NodeNames, Params), State};
         {'nodes_stats'} ->
-            {reply, cloudi_x_erlasticsearch:nodes_stats({pool, PoolName}, [], []), State};
+            {reply, cloudi_x_erlasticsearch:nodes_stats(PoolName, [], []), State};
         {'nodes_stats', NodeNames} ->
-            {reply, cloudi_x_erlasticsearch:nodes_stats({pool, PoolName}, NodeNames, []), State};
+            {reply, cloudi_x_erlasticsearch:nodes_stats(PoolName, NodeNames, []), State};
         {'nodes_stats', NodeNames, Params} -> 
-            {reply, cloudi_x_erlasticsearch:nodes_stats({pool, PoolName}, NodeNames, Params), State};
+            {reply, cloudi_x_erlasticsearch:nodes_stats(PoolName, NodeNames, Params), State};
         {'status', Indexes} -> 
-            {reply, cloudi_x_erlasticsearch:status({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:status(PoolName, Indexes), State};
         {'create_index', Index} ->
-            {reply, cloudi_x_erlasticsearch:create_index({pool, PoolName}, Index, <<>>), State};
+            {reply, cloudi_x_erlasticsearch:create_index(PoolName, Index, <<>>), State};
         {'create_index', Index, Doc} -> 
-            {reply, cloudi_x_erlasticsearch:create_index({pool, PoolName}, Index, Doc), State};
+            {reply, cloudi_x_erlasticsearch:create_index(PoolName, Index, Doc), State};
         {'delete_index'} ->
-            {reply, cloudi_x_erlasticsearch:delete_index({pool, PoolName}, ?ALL), State};
+            {reply, cloudi_x_erlasticsearch:delete_index(PoolName, ?ALL), State};
         {'delete_index', Index} -> 
-            {reply, cloudi_x_erlasticsearch:delete_index({pool, PoolName}, Index), State};
+            {reply, cloudi_x_erlasticsearch:delete_index(PoolName, Index), State};
         {'open_index', Index} -> 
-            {reply, cloudi_x_erlasticsearch:open_index({pool, PoolName}, Index), State};
+            {reply, cloudi_x_erlasticsearch:open_index(PoolName, Index), State};
         {'close_index', Index} -> 
-            {reply, cloudi_x_erlasticsearch:close_index({pool, PoolName}, Index), State};
+            {reply, cloudi_x_erlasticsearch:close_index(PoolName, Index), State};
         {'is_index', Indexes} -> 
-            {reply, cloudi_x_erlasticsearch:is_index({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:is_index(PoolName, Indexes), State};
         {'count', Doc} ->
-            {reply, cloudi_x_erlasticsearch:count({pool, PoolName}, ?ALL, [], Doc, []), State};
+            {reply, cloudi_x_erlasticsearch:count(PoolName, ?ALL, [], Doc, []), State};
         {'count', Doc, Params} ->
-            {reply, cloudi_x_erlasticsearch:count({pool, PoolName}, ?ALL, [], Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:count(PoolName, ?ALL, [], Doc, Params), State};
         {'count', Indexes, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:count({pool, PoolName}, Indexes, [], Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:count(PoolName, Indexes, [], Doc, Params), State};
         {'count', Indexes, Types, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:count({pool, PoolName}, Indexes, Types, Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:count(PoolName, Indexes, Types, Doc, Params), State};
         {'delete_by_query', Doc} ->
-            {reply, cloudi_x_erlasticsearch:delete_by_query({pool, PoolName}, ?ALL, [], Doc, []), State};
+            {reply, cloudi_x_erlasticsearch:delete_by_query(PoolName, ?ALL, [], Doc, []), State};
         {'delete_by_query', Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:delete_by_query({pool, PoolName}, ?ALL, [], Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:delete_by_query(PoolName, ?ALL, [], Doc, Params), State};
         {'delete_by_query', Indexes, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:delete_by_query({pool, PoolName}, Indexes, [], Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:delete_by_query(PoolName, Indexes, [], Doc, Params), State};
         {'delete_by_query', Indexes, Types, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:delete_by_query({pool, PoolName}, Indexes, Types, Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:delete_by_query(PoolName, Indexes, Types, Doc, Params), State};
         {'is_type', Indexes, Types} -> 
-            {reply, cloudi_x_erlasticsearch:is_type({pool, PoolName}, Indexes, Types), State};
+            {reply, cloudi_x_erlasticsearch:is_type(PoolName, Indexes, Types), State};
         {'insert_doc', Index, Type, Id, Doc} ->
-            {reply, cloudi_x_erlasticsearch:insert_doc({pool, PoolName}, Index, Type, Id, Doc, []), State};
+            {reply, cloudi_x_erlasticsearch:insert_doc(PoolName, Index, Type, Id, Doc, []), State};
         {'insert_doc', Index, Type, Id, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:insert_doc({pool, PoolName}, Index, Type, Id, Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:insert_doc(PoolName, Index, Type, Id, Doc, Params), State};
         {'is_doc', Index, Type, Id} -> 
-            {reply, cloudi_x_erlasticsearch:is_doc({pool, PoolName}, Index, Type, Id), State};
+            {reply, cloudi_x_erlasticsearch:is_doc(PoolName, Index, Type, Id), State};
         {'get_doc', Index, Type, Id} ->
-            {reply, cloudi_x_erlasticsearch:get_doc({pool, PoolName}, Index, Type, Id, []), State};
+            {reply, cloudi_x_erlasticsearch:get_doc(PoolName, Index, Type, Id, []), State};
         {'get_doc', Index, Type, Id, Params} -> 
-            {reply, cloudi_x_erlasticsearch:get_doc({pool, PoolName}, Index, Type, Id, Params), State};
+            {reply, cloudi_x_erlasticsearch:get_doc(PoolName, Index, Type, Id, Params), State};
         {'mget_doc', Index, Doc} -> 
-            {reply, cloudi_x_erlasticsearch:mget_doc({pool, PoolName}, Index, <<>>, Doc), State};
+            {reply, cloudi_x_erlasticsearch:mget_doc(PoolName, Index, <<>>, Doc), State};
         {'mget_doc', Index, Type, Doc} -> 
-            {reply, cloudi_x_erlasticsearch:mget_doc({pool, PoolName}, Index, Type, Doc), State};
+            {reply, cloudi_x_erlasticsearch:mget_doc(PoolName, Index, Type, Doc), State};
         {'delete_doc', Index, Type, Id} ->
-            {reply, cloudi_x_erlasticsearch:delete_doc({pool, PoolName}, Index, Type, Id, []), State};
+            {reply, cloudi_x_erlasticsearch:delete_doc(PoolName, Index, Type, Id, []), State};
         {'delete_doc', Index, Type, Id, Params} -> 
-            {reply, cloudi_x_erlasticsearch:delete_doc({pool, PoolName}, Index, Type, Id, Params), State};
+            {reply, cloudi_x_erlasticsearch:delete_doc(PoolName, Index, Type, Id, Params), State};
         {'search', Index, Type, Doc} ->
-            {reply, cloudi_x_erlasticsearch:search({pool, PoolName}, Index, Type, Doc, []), State};
+            {reply, cloudi_x_erlasticsearch:search(PoolName, Index, Type, Doc, []), State};
         {'search', Index, Type, Doc, Params} -> 
-            {reply, cloudi_x_erlasticsearch:search({pool, PoolName}, Index, Type, Doc, Params), State};
+            {reply, cloudi_x_erlasticsearch:search(PoolName, Index, Type, Doc, Params), State};
         {'refresh'} ->
-            {reply, cloudi_x_erlasticsearch:refresh({pool, PoolName}, ?ALL), State};
+            {reply, cloudi_x_erlasticsearch:refresh(PoolName, ?ALL), State};
         {'refresh', Indexes} ->
-            {reply, cloudi_x_erlasticsearch:refresh({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:refresh(PoolName, Indexes), State};
         {'flush'} ->
-            {reply, cloudi_x_erlasticsearch:flush({pool, PoolName}, ?ALL), State};
+            {reply, cloudi_x_erlasticsearch:flush(PoolName, ?ALL), State};
         {'flush', Indexes} ->
-            {reply, cloudi_x_erlasticsearch:flush({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:flush(PoolName, Indexes), State};
         {'optimize'} ->
-            {reply, cloudi_x_erlasticsearch:optimize({pool, PoolName}, ?ALL), State};
+            {reply, cloudi_x_erlasticsearch:optimize(PoolName, ?ALL), State};
         {'optimize', Indexes} ->
-            {reply, cloudi_x_erlasticsearch:optimize({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:optimize(PoolName, Indexes), State};
         {'segments'} ->
-            {reply, cloudi_x_erlasticsearch:segments({pool, PoolName}, ?ALL), State};
+            {reply, cloudi_x_erlasticsearch:segments(PoolName, ?ALL), State};
         {'segments', Indexes} ->
-            {reply, cloudi_x_erlasticsearch:segments({pool, PoolName}, Indexes), State};
+            {reply, cloudi_x_erlasticsearch:segments(PoolName, Indexes), State};
         {'clear_cache'} ->
-            {reply, cloudi_x_erlasticsearch:clear_cache({pool, PoolName}, ?ALL, []), State};
+            {reply, cloudi_x_erlasticsearch:clear_cache(PoolName, ?ALL, []), State};
         {'clear_cache', Indexes} ->
-            {reply, cloudi_x_erlasticsearch:clear_cache({pool, PoolName}, Indexes, []), State};
+            {reply, cloudi_x_erlasticsearch:clear_cache(PoolName, Indexes, []), State};
         {'clear_cache', Indexes, Params} ->
-            {reply, cloudi_x_erlasticsearch:clear_cache({pool, PoolName}, Indexes, Params), State}
+            {reply, cloudi_x_erlasticsearch:clear_cache(PoolName, Indexes, Params), State};
+        {'put_mapping', Indexes, Type, Doc} ->
+            {reply, cloudi_x_erlasticsearch:put_mapping(PoolName, Indexes, Type, Doc), State};
+        {'get_mapping', Indexes, Type} ->
+            {reply, cloudi_x_erlasticsearch:get_mapping(PoolName, Indexes, Type), State};
+        {'delete_mapping', Indexes, Type} ->
+            {reply, cloudi_x_erlasticsearch:delete_mapping(PoolName, Indexes, Type), State};
+        {'aliases', Doc} ->
+            {reply, cloudi_x_erlasticsearch:aliases(PoolName, Doc), State};
+        {'insert_alias', Index, Alias} ->
+            {reply, cloudi_x_erlasticsearch:insert_alias(PoolName, Index, Alias), State};
+        {'insert_alias', Index, Alias, Doc} ->
+            {reply, cloudi_x_erlasticsearch:insert_alias(PoolName, Index, Alias, Doc), State};
+        {'delete_alias', Index, Alias} ->
+            {reply, cloudi_x_erlasticsearch:delete_alias(PoolName, Index, Alias), State};
+        {'is_alias', Index, Alias} ->
+            {reply, cloudi_x_erlasticsearch:is_alias(PoolName, Index, Alias), State};
+        {'get_alias', Index, Alias} ->
+            {reply, cloudi_x_erlasticsearch:get_alias(PoolName, Index, Alias), State}
     end.
 
 cloudi_service_handle_info(Request, State, _) ->
@@ -798,101 +875,119 @@ cloudi_service_terminate(_, #state{pool_name = PoolName,
 do_query(Query, BinaryPoolName, _Timeout) ->
     try (case cloudi_string:binary_to_term(Query) of
 		        {'health'} -> 
-		            cloudi_x_erlasticsearch:health({pool, BinaryPoolName});
+		            cloudi_x_erlasticsearch:health(BinaryPoolName);
                 {'state'} ->
-                    cloudi_x_erlasticsearch:state({pool, BinaryPoolName}, []);
+                    cloudi_x_erlasticsearch:state(BinaryPoolName, []);
 		        {'state', Params} -> 
-		            cloudi_x_erlasticsearch:state({pool, BinaryPoolName}, Params);
+		            cloudi_x_erlasticsearch:state(BinaryPoolName, Params);
 		        {'nodes_info'} ->
-		            cloudi_x_erlasticsearch:nodes_info({pool, BinaryPoolName}, [], []);
+		            cloudi_x_erlasticsearch:nodes_info(BinaryPoolName, [], []);
 		        {'nodes_info', NodeNames} ->
-		            cloudi_x_erlasticsearch:nodes_info({pool, BinaryPoolName}, NodeNames, []);
+		            cloudi_x_erlasticsearch:nodes_info(BinaryPoolName, NodeNames, []);
 		        {'nodes_info', NodeNames, Params} -> 
-		            cloudi_x_erlasticsearch:nodes_info({pool, BinaryPoolName}, NodeNames, Params);
+		            cloudi_x_erlasticsearch:nodes_info(BinaryPoolName, NodeNames, Params);
 		        {'nodes_stats'} ->
-		            cloudi_x_erlasticsearch:nodes_stats({pool, BinaryPoolName}, [], []);
+		            cloudi_x_erlasticsearch:nodes_stats(BinaryPoolName, [], []);
 		        {'nodes_stats', NodeNames} ->
-		            cloudi_x_erlasticsearch:nodes_stats({pool, BinaryPoolName}, NodeNames, []);
+		            cloudi_x_erlasticsearch:nodes_stats(BinaryPoolName, NodeNames, []);
 		        {'nodes_stats', NodeNames, Params} -> 
-		            cloudi_x_erlasticsearch:nodes_stats({pool, BinaryPoolName}, NodeNames, Params);
+		            cloudi_x_erlasticsearch:nodes_stats(BinaryPoolName, NodeNames, Params);
 		        {'status', Indexes} -> 
-		            cloudi_x_erlasticsearch:status({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:status(BinaryPoolName, Indexes);
 		        {'create_index', Index} ->
-		            cloudi_x_erlasticsearch:create_index({pool, BinaryPoolName}, Index, <<>>);
+		            cloudi_x_erlasticsearch:create_index(BinaryPoolName, Index, <<>>);
 		        {'create_index', Index, Doc} -> 
-		            cloudi_x_erlasticsearch:create_index({pool, BinaryPoolName}, Index, Doc);
+		            cloudi_x_erlasticsearch:create_index(BinaryPoolName, Index, Doc);
 		        {'delete_index'} ->
-		            cloudi_x_erlasticsearch:delete_index({pool, BinaryPoolName}, ?ALL);
+		            cloudi_x_erlasticsearch:delete_index(BinaryPoolName, ?ALL);
 		        {'delete_index', Index} -> 
-		            cloudi_x_erlasticsearch:delete_index({pool, BinaryPoolName}, Index);
+		            cloudi_x_erlasticsearch:delete_index(BinaryPoolName, Index);
 		        {'open_index', Index} -> 
-		            cloudi_x_erlasticsearch:open_index({pool, BinaryPoolName}, Index);
+		            cloudi_x_erlasticsearch:open_index(BinaryPoolName, Index);
 		        {'close_index', Index} -> 
-		            cloudi_x_erlasticsearch:close_index({pool, BinaryPoolName}, Index);
+		            cloudi_x_erlasticsearch:close_index(BinaryPoolName, Index);
 		        {'is_index', Indexes} -> 
-		            cloudi_x_erlasticsearch:is_index({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:is_index(BinaryPoolName, Indexes);
 		        {'count', Doc} ->
-		            cloudi_x_erlasticsearch:count({pool, BinaryPoolName}, ?ALL, [], Doc, []);
+		            cloudi_x_erlasticsearch:count(BinaryPoolName, ?ALL, [], Doc, []);
 		        {'count', Doc, Params} ->
-		            cloudi_x_erlasticsearch:count({pool, BinaryPoolName}, ?ALL, [], Doc, Params);
+		            cloudi_x_erlasticsearch:count(BinaryPoolName, ?ALL, [], Doc, Params);
 		        {'count', Indexes, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:count({pool, BinaryPoolName}, Indexes, [], Doc, Params);
+		            cloudi_x_erlasticsearch:count(BinaryPoolName, Indexes, [], Doc, Params);
 		        {'count', Indexes, Types, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:count({pool, BinaryPoolName}, Indexes, Types, Doc, Params);
+		            cloudi_x_erlasticsearch:count(BinaryPoolName, Indexes, Types, Doc, Params);
 		        {'delete_by_query', Doc} ->
-                    cloudi_x_erlasticsearch:delete_by_query({pool, BinaryPoolName}, ?ALL, [], Doc, []);
+                    cloudi_x_erlasticsearch:delete_by_query(BinaryPoolName, ?ALL, [], Doc, []);
 		        {'delete_by_query', Doc, Params} -> 
-		            cloudi_x_erlasticsearch:delete_by_query({pool, BinaryPoolName}, ?ALL, [], Doc, Params);
+		            cloudi_x_erlasticsearch:delete_by_query(BinaryPoolName, ?ALL, [], Doc, Params);
 		        {'delete_by_query', Indexes, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:delete_by_query({pool, BinaryPoolName}, Indexes, [], Doc, Params);
+		            cloudi_x_erlasticsearch:delete_by_query(BinaryPoolName, Indexes, [], Doc, Params);
 		        {'delete_by_query', Indexes, Types, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:delete_by_query({pool, BinaryPoolName}, Indexes, Types, Doc, Params);
+		            cloudi_x_erlasticsearch:delete_by_query(BinaryPoolName, Indexes, Types, Doc, Params);
 		        {'is_type', Indexes, Types} -> 
-		            cloudi_x_erlasticsearch:is_type({pool, BinaryPoolName}, Indexes, Types);
+		            cloudi_x_erlasticsearch:is_type(BinaryPoolName, Indexes, Types);
 		        {'insert_doc', Index, Type, Id, Doc} ->
-		            cloudi_x_erlasticsearch:insert_doc({pool, BinaryPoolName}, Index, Type, Id, Doc, []);
+		            cloudi_x_erlasticsearch:insert_doc(BinaryPoolName, Index, Type, Id, Doc, []);
 		        {'insert_doc', Index, Type, Id, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:insert_doc({pool, BinaryPoolName}, Index, Type, Id, Doc, Params);
+		            cloudi_x_erlasticsearch:insert_doc(BinaryPoolName, Index, Type, Id, Doc, Params);
 		        {'is_doc', Index, Type, Id} -> 
-		            cloudi_x_erlasticsearch:is_doc({pool, BinaryPoolName}, Index, Type, Id);
+		            cloudi_x_erlasticsearch:is_doc(BinaryPoolName, Index, Type, Id);
 		        {'get_doc', Index, Type, Id} ->
-		            cloudi_x_erlasticsearch:get_doc({pool, BinaryPoolName}, Index, Type, Id, []);
+		            cloudi_x_erlasticsearch:get_doc(BinaryPoolName, Index, Type, Id, []);
 		        {'get_doc', Index, Type, Id, Params} -> 
-		            cloudi_x_erlasticsearch:get_doc({pool, BinaryPoolName}, Index, Type, Id, Params);
+		            cloudi_x_erlasticsearch:get_doc(BinaryPoolName, Index, Type, Id, Params);
 		        {'mget_doc', Index, Doc} -> 
-		            cloudi_x_erlasticsearch:mget_doc({pool, BinaryPoolName}, Index, <<>>, Doc);
+		            cloudi_x_erlasticsearch:mget_doc(BinaryPoolName, Index, <<>>, Doc);
 		        {'mget_doc', Index, Type, Doc} -> 
-		            cloudi_x_erlasticsearch:mget_doc({pool, BinaryPoolName}, Index, Type, Doc);
+		            cloudi_x_erlasticsearch:mget_doc(BinaryPoolName, Index, Type, Doc);
 		        {'delete_doc', Index, Type, Id} ->
-		            cloudi_x_erlasticsearch:delete_doc({pool, BinaryPoolName}, Index, Type, Id, []);
+		            cloudi_x_erlasticsearch:delete_doc(BinaryPoolName, Index, Type, Id, []);
 		        {'delete_doc', Index, Type, Id, Params} -> 
-		            cloudi_x_erlasticsearch:delete_doc({pool, BinaryPoolName}, Index, Type, Id, Params);
+		            cloudi_x_erlasticsearch:delete_doc(BinaryPoolName, Index, Type, Id, Params);
 		        {'search', Index, Type, Doc} ->
-		            cloudi_x_erlasticsearch:search({pool, BinaryPoolName}, Index, Type, Doc, []);
+		            cloudi_x_erlasticsearch:search(BinaryPoolName, Index, Type, Doc, []);
 		        {'search', Index, Type, Doc, Params} -> 
-		            cloudi_x_erlasticsearch:search({pool, BinaryPoolName}, Index, Type, Doc, Params);
+		            cloudi_x_erlasticsearch:search(BinaryPoolName, Index, Type, Doc, Params);
 		        {'refresh'} ->
-		            cloudi_x_erlasticsearch:refresh({pool, BinaryPoolName}, ?ALL);
+		            cloudi_x_erlasticsearch:refresh(BinaryPoolName, ?ALL);
 		        {'refresh', Indexes} ->
-		            cloudi_x_erlasticsearch:refresh({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:refresh(BinaryPoolName, Indexes);
 		        {'flush'} ->
-		            cloudi_x_erlasticsearch:flush({pool, BinaryPoolName}, ?ALL);
+		            cloudi_x_erlasticsearch:flush(BinaryPoolName, ?ALL);
 		        {'flush', Indexes} ->
-		            cloudi_x_erlasticsearch:flush({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:flush(BinaryPoolName, Indexes);
 		        {'optimize'} ->
-		            cloudi_x_erlasticsearch:optimize({pool, BinaryPoolName}, ?ALL);
+		            cloudi_x_erlasticsearch:optimize(BinaryPoolName, ?ALL);
 		        {'optimize', Indexes} ->
-		            cloudi_x_erlasticsearch:optimize({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:optimize(BinaryPoolName, Indexes);
 		        {'segments'} ->
-		            cloudi_x_erlasticsearch:segments({pool, BinaryPoolName}, ?ALL);
+		            cloudi_x_erlasticsearch:segments(BinaryPoolName, ?ALL);
 		        {'segments', Indexes} ->
-		            cloudi_x_erlasticsearch:segments({pool, BinaryPoolName}, Indexes);
+		            cloudi_x_erlasticsearch:segments(BinaryPoolName, Indexes);
 		        {'clear_cache'} ->
-		            cloudi_x_erlasticsearch:clear_cache({pool, BinaryPoolName}, ?ALL, []);
+		            cloudi_x_erlasticsearch:clear_cache(BinaryPoolName, ?ALL, []);
 		        {'clear_cache', Indexes} ->
-		            cloudi_x_erlasticsearch:clear_cache({pool, BinaryPoolName}, Indexes, []);
+		            cloudi_x_erlasticsearch:clear_cache(BinaryPoolName, Indexes, []);
 		        {'clear_cache', Indexes, Params} ->
-                    cloudi_x_erlasticsearch:clear_cache({pool, BinaryPoolName}, Indexes, Params);
+                    cloudi_x_erlasticsearch:clear_cache(BinaryPoolName, Indexes, Params);
+		        {'put_mapping', Indexes, Type, Doc} ->
+                    cloudi_x_erlasticsearch:put_mapping(BinaryPoolName, Indexes, Type, Doc);
+		        {'get_mapping', Indexes, Type} ->
+                    cloudi_x_erlasticsearch:get_mapping(BinaryPoolName, Indexes, Type);
+		        {'delete_mapping', Indexes, Type} ->
+                    cloudi_x_erlasticsearch:delete_mapping(BinaryPoolName, Indexes, Type);
+		        {'aliases', Doc} ->
+                    cloudi_x_erlasticsearch:aliases(BinaryPoolName, Doc);
+		        {'insert_alias', Index, Alias} ->
+                    cloudi_x_erlasticsearch:insert_alias(BinaryPoolName, Index, Alias);
+		        {'insert_alias', Index, Alias, Doc} ->
+                    cloudi_x_erlasticsearch:insert_alias(BinaryPoolName, Index, Alias, Doc);
+		        {'delete_alias', Index, Alias} ->
+                    cloudi_x_erlasticsearch:delete_alias(BinaryPoolName, Index, Alias);
+		        {'is_alias', Index, Alias} ->
+                    cloudi_x_erlasticsearch:is_alias(BinaryPoolName, Index, Alias);
+		        {'get_alias', Index, Alias} ->
+                    cloudi_x_erlasticsearch:get_alias(BinaryPoolName, Index, Alias);
                 _ ->
                     {error, invalid_call}
             end) of
