@@ -23,6 +23,10 @@
 -define(NUMTESTS, 500).
 -define(DOCUMENT_DEPTH, 5).
 -define(THREE_SHARDS, <<"{\"settings\":{\"number_of_shards\":3}}">>).
+-define(MAPPING_KEY, <<"some_type">>).
+-define(MAPPING_VALUE, <<"boolean">>).
+-define(MAPPING_DOC(Type), [{Type, [{<<"properties">>, [{?MAPPING_KEY, [{<<"type">>, ?MAPPING_VALUE}]}]}]}]).
+-define(ALIASES_DOC(Index, Alias), [{<<"actions">>, [[{<<"add">>, [{<<"index">>, Index}, {<<"alias">>, Alias}]}]]}]).
 % Cloudi
 -define(CLOUDI_CONF, "cloudi.conf").
 -define(DB_PREFIX, "/dbpopulator/elasticsearch/").
@@ -123,6 +127,20 @@ groups() ->
            t_create_index_with_shards,
            t_open_index
          ]},
+        {crud_mapping, [{repeat, 5}],
+       [t_put_mapping,
+        t_get_mapping,
+        t_delete_mapping
+      ]},
+
+        {aliases, [{repeat, 5}],
+       [t_aliases,
+        t_insert_alias_1,
+        t_insert_alias_2,
+        t_delete_alias,
+        t_is_alias,
+        t_get_alias
+      ]},
         {index_helpers, [],
            [t_flush_1,
            t_flush_list,
@@ -182,7 +200,9 @@ all() ->
         {group, search},
         {group, index_helpers},
         {group, cluster_helpers},
-        {group, doc_helpers}
+        {group, doc_helpers},
+        {group, crud_mapping},
+        {group, aliases}
     ].
 t_health(Config) ->
     Context  = ?config(context, Config),
@@ -237,6 +257,135 @@ t_clear_cache_all(Config) ->
     create_indices(Config, Index),
     clear_cache_all(Config, Index),
     delete_all_indices(Config, Index).
+
+t_put_mapping(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Type = ?config(type, Config),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    {ok, Response} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
+    true = is_200(Response),
+    delete_this_index(Config, Index).
+
+t_get_mapping(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Type = ?config(type, Config),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    {ok, Response1} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
+    true = is_200(Response1),
+    {ok, Response2} = cloudi:send_sync(Context, Target, {get_mapping, Index, Type}),
+    validate_mapping(Type, Response2),
+    delete_this_index(Config, Index).
+
+validate_mapping(Type, Response) ->
+    {body, Data1} = lists:keyfind(body, 1, Response),
+    Data2 = case is_binary(Data1) of
+        true ->
+            jsx:decode(Data1);
+        false ->
+            Data1
+    end,
+    {Type, Data3} = lists:keyfind(Type, 1, Data2),
+    {<<"properties">>, Data4} = lists:keyfind(<<"properties">>, 1, Data3),
+    {?MAPPING_KEY, [{<<"type">>, ?MAPPING_VALUE}]} = lists:keyfind(?MAPPING_KEY, 1, Data4).
+
+t_delete_mapping(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Type = ?config(type, Config),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    {ok, Response1} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
+    true = is_200(Response1),
+    {ok, Response2} = cloudi:send_sync(Context, Target, {delete_mapping, Index, Type}),
+    true = is_200(Response2),
+    delete_this_index(Config, Index).
+
+t_aliases(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    AliasesDoc = ?ALIASES_DOC(Index, Alias),
+    {ok, Response} = cloudi:send_sync(Context, Target, {aliases, AliasesDoc}),
+    true = is_200(Response),
+    delete_this_index(Config, Index).
+
+t_insert_alias_1(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    {ok, Response} = cloudi:send_sync(Context, Target, {insert_alias, Index, Alias}),
+    true = is_200(Response),
+    delete_this_index(Config, Index).
+
+t_insert_alias_2(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    Params = [{<<"routing">>, <<"1">>}],
+    {ok, Response} = cloudi:send_sync(Context, Target, {insert_alias, Index, Alias, Params}),
+    true = is_200(Response),
+    delete_this_index(Config, Index).
+
+t_delete_alias(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    {ok, Response1} = cloudi:send_sync(Context, Target, {insert_alias, Index, Alias}),
+    true = is_200(Response1),
+    {ok, Response2} = cloudi:send_sync(Context, Target, {delete_alias, Index, Alias}),
+    true = is_200(Response2),
+    delete_this_index(Config, Index).
+
+t_is_alias(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    {ok, Response1} = cloudi:send_sync(Context, Target, {insert_alias, Index, Alias}),
+    true = is_200(Response1),
+    true = true_response(cloudi:send_sync(Context, Target, {is_alias, Index, Alias})),
+    delete_this_index(Config, Index).
+
+t_get_alias(Config) ->
+    Context  = ?config(context, Config),
+    Target  = ?config(target, Config),
+    Index = ?config(index, Config),
+    Alias = random_name(Index),
+    cloudi:send_sync(Context, Target, {create_index, Index}),
+    {ok, Response1} = cloudi:send_sync(Context, Target, {insert_alias, Index, Alias}),
+    true = is_200(Response1),
+    {ok, Response2} = cloudi:send_sync(Context, Target, {get_alias, Index, Alias}),
+    validate_alias(Index, Alias, Response2),
+    delete_this_index(Config, Index).
+
+validate_alias(Index, Alias, Response) ->
+    {body, Data1} = lists:keyfind(body, 1, Response),
+    Data2 = case is_binary(Data1) of
+        true ->
+            jsx:decode(Data1);
+        false ->
+            Data1
+    end,
+    {Index, Data3} = lists:keyfind(Index, 1, Data2),
+    {<<"aliases">>, Data4} = lists:keyfind(<<"aliases">>, 1, Data3),
+    {Alias, _} = lists:keyfind(Alias, 1, Data4).
+
 
 t_is_index_1(Config) ->
     Index = ?config(index, Config),
@@ -961,12 +1110,11 @@ unload_cloudi_service(Prefixes) ->
                                 _ -> ok
                             end end, cloudi_services()) end, Prefixes).
 
-setup_cloudi(Config) ->
-    DataDir = ?config(data_dir, Config),
-    ConfFile = DataDir ++ ?CLOUDI_CONF,
-    application:set_env(cloudi_core, configuration, ConfFile),
-    cloudi_x_reltool_util:application_start(cloudi_core, [{configuration, ConfFile}], 1000),
-    Config.
+setup_cloudi(_Config) ->
+    CloudIConfig = [{acl, []}, {services, []}, {nodes, []},
+                    {logging, [{file, "cloudi.log"}]}],
+    ok = cloudi_x_reltool_util:application_start(cloudi_core,
+                                        [{configuration, CloudIConfig}],1000).
 
 
 teardown_cloudi(_Config) ->
