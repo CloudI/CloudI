@@ -44,6 +44,5 @@ init([]) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
     % Start up user and department first, 'cos the cache depends on these being up
-    {ok, {SupFlags, [?SUPERVISOR(erlasticsearch_client_sup, erlasticsearch_client_sup, []),
-                     ?SUPERVISOR(erlasticsearch_poolboy_sup, erlasticsearch_poolboy_sup, [])
+    {ok, {SupFlags, [?SUPERVISOR(erlasticsearch_poolboy_sup, erlasticsearch_poolboy_sup, [])
                     ]}}.

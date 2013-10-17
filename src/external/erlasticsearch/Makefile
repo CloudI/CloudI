@@ -33,9 +33,8 @@ build-plt:
 	@dialyzer --build_plt --apps kernel stdlib sasl crypto ssl inets tools xmerl runtime_tools compiler syntax_tools mnesia public_key
 
 dialyze: compile
-	@dialyzer -r ebin -r deps/bstr -r deps/proper -r deps/thrift deps/d_util \
-		-r deps/ibrowse -r deps/poolboy -r deps/proper_stdlib  \
-		-Wno_undefined_callbacks
+	@dialyzer -r ebin -r deps/proper -r deps/thrift \
+		-r deps/poolboy -Wno_undefined_callbacks
 
 test: compile
 	@rebar skip_deps=true ct verbose=1
