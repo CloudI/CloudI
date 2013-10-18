@@ -1069,7 +1069,7 @@ is_200(Response) ->
     case lists:keyfind(status, 1, Response) of
         {status, 200} -> true;
         {status, <<"200">>} -> true;
-        _ -> false
+        _ -> Response
     end.
 
 is_200_or_201({error, _} = Response) -> Response;
@@ -1079,7 +1079,7 @@ is_200_or_201(Response) ->
         {status, <<"200">>} -> true;
         {status, 201} -> true;
         {status, <<"201">>} -> true;
-        _ -> false
+        _ -> Response
     end.
 
 
