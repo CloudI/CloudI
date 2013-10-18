@@ -146,7 +146,7 @@ start_pool(PoolName, PoolOptions, ConnectionOptions) when is_list(PoolOptions),
 %% @doc Stop a poolboy instance
 -spec stop_pool(pool_name()) -> ok | error().
 stop_pool(PoolName) ->
-    erlasticsearch_poolboy_sup:stop_pool(PoolName).
+    erlasticsearch_poolboy_sup:stop_pool(fq_server_ref(PoolName)).
 %%
 
 %% @doc Get the health the  ElasticSearch cluster
