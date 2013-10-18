@@ -264,7 +264,7 @@ t_put_mapping(Config) ->
     Index = ?config(index, Config),
     Type = ?config(type, Config),
     cloudi:send_sync(Context, Target, {create_index, Index}),
-    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    MappingDoc = cloudi_x_jsx:encode(?MAPPING_DOC(Type)),
     {ok, Response} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
     true = is_200(Response),
     delete_this_index(Config, Index).
@@ -275,7 +275,7 @@ t_get_mapping(Config) ->
     Index = ?config(index, Config),
     Type = ?config(type, Config),
     cloudi:send_sync(Context, Target, {create_index, Index}),
-    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    MappingDoc = cloudi_x_jsx:encode(?MAPPING_DOC(Type)),
     {ok, Response1} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
     true = is_200(Response1),
     {ok, Response2} = cloudi:send_sync(Context, Target, {get_mapping, Index, Type}),
@@ -286,7 +286,7 @@ validate_mapping(Type, Response) ->
     {body, Data1} = lists:keyfind(body, 1, Response),
     Data2 = case is_binary(Data1) of
         true ->
-            jsx:decode(Data1);
+            cloudi_x_jsx:decode(Data1);
         false ->
             Data1
     end,
@@ -300,7 +300,7 @@ t_delete_mapping(Config) ->
     Index = ?config(index, Config),
     Type = ?config(type, Config),
     cloudi:send_sync(Context, Target, {create_index, Index}),
-    MappingDoc = jsx:encode(?MAPPING_DOC(Type)),
+    MappingDoc = cloudi_x_jsx:encode(?MAPPING_DOC(Type)),
     {ok, Response1} = cloudi:send_sync(Context, Target, {put_mapping, Index, Type, MappingDoc}),
     true = is_200(Response1),
     {ok, Response2} = cloudi:send_sync(Context, Target, {delete_mapping, Index, Type}),
@@ -378,7 +378,7 @@ validate_alias(Index, Alias, Response) ->
     {body, Data1} = lists:keyfind(body, 1, Response),
     Data2 = case is_binary(Data1) of
         true ->
-            jsx:decode(Data1);
+            cloudi_x_jsx:decode(Data1);
         false ->
             Data1
     end,
