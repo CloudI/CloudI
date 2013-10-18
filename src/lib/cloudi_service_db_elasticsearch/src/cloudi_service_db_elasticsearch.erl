@@ -648,50 +648,50 @@ clear_cache(Dispatcher, Name, Indexes, Params)
 put_mapping(Dispatcher, Name, Index, Type, Doc) when is_list(Name), is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
     put_mapping(Dispatcher, Name, [Index], Type, Doc);
 put_mapping(Dispatcher, Name, Indexes, Type, Doc) when is_list(Name), is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
-    cloudi:send_sync(Dispatcher, Name, {put_mapping, Indexes, Type, Doc}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {put_mapping, Indexes, Type, Doc}).
 
 %% @doc Get a mapping from an ElasticSearch index
 -spec get_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
 get_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
     get_mapping(Dispatcher, Name, [Index], Type);
 get_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name),is_list(Indexes) andalso is_binary(Type) ->
-    cloudi:send_sync(Dispatcher, Name, {get_mapping, Indexes, Type}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {get_mapping, Indexes, Type}).
 
 %% @doc Delete a mapping from an ElasticSearch index
 -spec delete_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
 delete_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
     delete_mapping(Dispatcher, Name, [Index], Type);
 delete_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name), is_list(Indexes) andalso is_binary(Type) ->
-    cloudi:send_sync(Dispatcher, Name, {delete_mapping, Indexes, Type}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {delete_mapping, Indexes, Type}).
 
 %% @doc Operate on aliases (as compared to 'alias')
 -spec aliases(dispatcher(), name(), doc()) -> {ok, response()} | {error, any()}.
 aliases(Dispatcher, Name, Doc) when is_list(Name), is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
-    cloudi:send_sync(Dispatcher, Name, {aliases, Doc}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {aliases, Doc}).
 
 %% @doc Insert an alias (as compared to 'aliases')
 -spec insert_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
 insert_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
-    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias}).
 %% @doc Insert an alias with options(as compared to 'aliases')
 -spec insert_alias(dispatcher(), name(), index(), index(), doc()) -> {ok, response()} | {error, any()}.
 insert_alias(Dispatcher, Name, Index, Alias, Doc) when  is_list(Name),is_binary(Index) andalso is_binary(Alias) andalso (is_binary(Doc) orelse is_list(Doc)) ->
-    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias, Doc}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias, Doc}).
 
 %% @doc Delete an alias (as compared to 'aliases')
 -spec delete_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
 delete_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
-    cloudi:send_sync(Dispatcher, Name, {delete_alias, Index, Alias}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {delete_alias, Index, Alias}).
 
 %% @doc Checks if an alias exists (Alias can be a string with a wildcard)
 -spec is_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
 is_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
-    cloudi:send_sync(Dispatcher, Name, {is_alias, Index, Alias}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {is_alias, Index, Alias}).
 
 %% @doc Gets an alias(or more, based on the string)
 -spec get_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
 get_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
-    cloudi:send_sync(Dispatcher, Name, {get_alias, Index, Alias}, infinity).
+    cloudi:send_sync(Dispatcher, Name, {get_alias, Index, Alias}).
 
 
 %%%------------------------------------------------------------------------
