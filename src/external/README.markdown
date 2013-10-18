@@ -71,8 +71,8 @@ to its integration and dependencies).
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
-- `tag v1.4.0`
-- `Thu Oct 17 12:13:13 2013 -0500`
+- `tag v1.4.1`
+- `Fri Oct 18 11:33:46 2013 -0400`
 - `BSD`
 
 `erlang_cassandra`
