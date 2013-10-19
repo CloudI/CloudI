@@ -760,18 +760,35 @@ set_env(Key, Value) ->
     application:set_env(?APP, Key, Value).
 
 %% @doc Process the request over thrift
--spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
-process_request(undefined, Request, State = #state{connection_options = ConnectionOptions,
+%%      In case the network blipped and the thrift connection vanishes,
+%%      this will retry the request (w/ a new thrift connection)
+%%      before choking
+-spec process_request(connection(), rest_request(), #state{}) -> {connection(), response()}.
+process_request(Connection, Request, State) ->
+    try process_request_1(_Retry = true, Connection, Request, State)
+    catch
+        Exception:Reason ->
+            case {Exception, Reason} of
+                {throw, {retry_request, true}} ->
+                    process_request_1(false, undefined, Request, State);
+                _ ->
+                    {undefined, ?CONNECTION_REFUSED}
+            end
+    end.
+
+%% @doc Actually perform the request
+-spec process_request_1(boolean(), connection(), rest_request(), #state{}) -> {connection(), response()}.
+process_request_1(Retry, undefined, Request, State = #state{connection_options = ConnectionOptions,
                                                    binary_response = BinaryResponse}) ->
     Connection = connection(ConnectionOptions),
-    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
+    {Connection1, RestResponse} = do_request(Retry, Connection, {'execute', [Request]}, State),
     {Connection1, process_response(BinaryResponse, RestResponse)};
-process_request(Connection, Request, State = #state{binary_response = BinaryResponse}) ->
-    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
+process_request_1(Retry, Connection, Request, State = #state{binary_response = BinaryResponse}) ->
+    {Connection1, RestResponse} = do_request(Retry, Connection, {'execute', [Request]}, State),
     {Connection1, process_response(BinaryResponse, RestResponse)}.
 
--spec do_request(connection(), {'execute', [request()]}, #state{}) -> {connection(), response()}.
-do_request(Connection, {Function, Args}, _State) ->
+-spec do_request(boolean(), connection(), {'execute', [rest_request()]}, #state{}) -> {connection(),  {ok, rest_response()} | error() | exception()}.
+do_request(Retry, Connection, {Function, Args}, _State) ->
     Args2 =
         case Args of
             [#restRequest{body=Body}] when is_binary(Body) ->
@@ -790,10 +807,14 @@ do_request(Connection, {Function, Args}, _State) ->
                 {throw, {Connection1, Response = {exception, _}}} ->
                     {Connection1, Response};
                 % Thrift client closes the connection
-                {error, {case_clause,{error, closed}}} ->
-                    {undefined, {error, badarg}};
+                {error, {case_clause, {error, closed}}} ->
+                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
+                        true -> throw({retry_request, Retry})
+                    end;
                 {error, {case_clause,{error, econnrefused}}} ->
-                    {undefined, {error, econnrefused}};
+                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
+                        true -> throw({retry_request, Retry})
+                    end;
                 {error, badarg} ->
                     {Connection, {error, badarg}}
 

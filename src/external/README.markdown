@@ -72,7 +72,7 @@ to its integration and dependencies).
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
 - `tag v1.4.1`
-- `Fri Oct 18 11:33:46 2013 -0400`
+- `Sat Oct 19 09:12:06 2013 -0400`
 - `BSD`
 
 `erlang_cassandra`
@@ -80,8 +80,8 @@ to its integration and dependencies).
 `Erlang Cassandra (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlang_cassandra`
-- `tag v1.0`
-- `Mon Jun 10 08:01:52 EST 2013`
+- `tag v1.0.3`
+- `Sat Oct 19 09:39:28 2013 -0400`
 - `BSD`
 
 `etokyotyrant (medici)`
