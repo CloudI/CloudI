@@ -12,7 +12,7 @@
 {application, erlang_cassandra,
  [
   {description, "thrift based cassandra"},
-  {vsn, "1.0.0"},
+  {vsn, "1.0.3"},
   {registered, []},
   {modules, []},
   {applications, [
@@ -21,8 +21,10 @@
                   compiler,
                   syntax_tools,
                   sasl,
+%                  lager,
                   poolboy,
-                  reltool_util
+                  reltool_util,
+                  thrift
                  ]},
   {mod, {erlang_cassandra_app, []}},
   {env, []}
