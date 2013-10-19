@@ -621,17 +621,33 @@ request({F, A1, A2, A3}) ->
 request({F, A1, A2, A3, A4}) ->
     {F, [A1, A2, A3, A4]}.
 
-
 %% @doc Process the request over thrift
+%%      In case the network blipped and the thrift connection vanishes,
+%%      this will retry the request (w/ a new thrift connection)
+%%      before choking
 -spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
-process_request(undefined, {Function, Args}, State = #state{connection_options = ConnectionOptions}) ->
-    Connection = connection(ConnectionOptions),
-    do_request(Connection, {Function, Args}, State#state{connection = Connection});
 process_request(Connection, {Function, Args}, State) ->
-    do_request(Connection, {Function, Args}, State).
+    try process_request_1(_Retry = true, Connection, {Function, Args}, State)
+    catch
+        Exception:Reason ->
+            case {Exception, Reason} of
+                {throw, {retry_request, true}} ->
+                    process_request_1(false, undefined, {Function, Args}, State);
+                _ ->
+                    {undefined, ?CONNECTION_REFUSED}
+            end
+    end.
 
--spec do_request(connection(), request(), #state{}) -> {connection(), response()}.
-do_request(Connection, {Function, Args}, _State) ->
+%% @doc Actually perform the request
+-spec process_request_1(boolean(), connection(), request(), #state{}) -> {connection(), response()}.
+process_request_1(Retry, undefined, {Function, Args}, State = #state{connection_options = ConnectionOptions}) ->
+    Connection = connection(ConnectionOptions),
+    do_request(Retry, Connection, {Function, Args}, State);
+process_request_1(Retry, Connection, {Function, Args}, State) ->
+    do_request(Retry, Connection, {Function, Args}, State).
+
+-spec do_request(boolean(), connection(), request(), #state{}) -> {connection(),  response()}.
+do_request(Retry, Connection, {Function, Args}, _State) ->
     try thrift_client:call(Connection, Function, Args) of
         {Connection1, Response = {ok, _}} ->
             {Connection1, Response};
@@ -643,10 +659,14 @@ do_request(Connection, {Function, Args}, _State) ->
                 {throw, {Connection1, Response = {exception, _}}} ->
                     {Connection1, Response};
                 % Thrift client closes the connection
-                {error, {case_clause,{error, closed}}} ->
-                    {undefined, {error, badarg}};
+                {error, {case_clause, {error, closed}}} ->
+                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
+                        true -> throw({retry_request, Retry})
+                    end;
                 {error, {case_clause,{error, econnrefused}}} ->
-                    {undefined, {error, econnrefused}};
+                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
+                        true -> throw({retry_request, Retry})
+                    end;
                 {error, badarg} ->
                     {Connection, {error, badarg}}
 
