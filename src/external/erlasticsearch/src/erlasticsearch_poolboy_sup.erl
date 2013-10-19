@@ -36,8 +36,7 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 -spec start_pool(pool_name(), params(), params()) -> supervisor:startchild_ret().
-start_pool(PoolName, PoolOptions, ConnectionOptions) when is_binary(PoolName),
-                                                          is_list(PoolOptions),
+start_pool(PoolName, PoolOptions, ConnectionOptions) when is_list(PoolOptions),
                                                           is_list(ConnectionOptions) ->
     PoolSpec = pool_spec(PoolName, PoolOptions, ConnectionOptions),
     supervisor:start_child(?SERVER, PoolSpec).
@@ -59,7 +58,7 @@ init([]) ->
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
-    PoolName = erlasticsearch:get_env(pool_name, ?DEFAULT_POOL_NAME),
+    PoolName = application:get_env(erlasticsearch, pool_name, ?DEFAULT_POOL_NAME),
     % We need this to be a one_for_one supervisor, because of the way the 
     % connection_options trickle through to the workers (and hence, our
     % gen-server).  To simplify things, I start a default pool of size 0. This
@@ -68,17 +67,24 @@ init([]) ->
     % NOTE: You can have the pool actually connect and do something by passing
     % in pool_name / pool_options / connection_options in the environment (or by
     % setting it in your app.config)
-    PoolOptions = erlasticsearch:get_env(pool_options, [{size, 0},
-                                                        {max_overflow, 0}]),
-    ConnectionOptions = erlasticsearch:get_env(connection_options, []),
-    PoolSpecs = pool_spec(PoolName, PoolOptions, ConnectionOptions),
+    PoolOptions = application:get_env(erlasticsearch, pool_options, [{size, 0},
+                                                                     {max_overflow, 0}]),
+    ConnectionOptions = application:get_env(erlasticsearch, connection_options, []),
+    PoolSpecs = pool_spec({undefined, undefined, PoolName}, PoolOptions, ConnectionOptions),
     {ok, {SupFlags, [PoolSpecs]}}.
 
-
 -spec pool_spec(pool_name(), params(), params()) -> supervisor:child_spec().
-pool_spec(PoolName, PoolOptions, ConnectionOptions) ->
+pool_spec({Host, Port, _} = PoolName, PoolOptions, ConnectionOptions) ->
     PoolId = erlasticsearch:registered_pool_name(PoolName),
     PoolArgs = [{name, {local, PoolId}},
                 {worker_module, erlasticsearch_poolboy_worker}] ++ PoolOptions,
-    poolboy:child_spec(PoolId, PoolArgs, ConnectionOptions).
+    ConnectionArgs = thrift_host(Host) ++ 
+                     thrift_port(Port) ++ ConnectionOptions,
+    % Pass in pool_name to the connection_options since this is also the
+    %   keyspace, and is needed by init/1
+    poolboy:child_spec(PoolId, PoolArgs, ConnectionArgs).
 
+thrift_host(undefined) -> [];
+thrift_host(Host) when is_list(Host) -> [{thrift_host, Host}].
+thrift_port(undefined) -> [];
+thrift_port(Port) when is_integer(Port) -> [{thrift_port, Port}].

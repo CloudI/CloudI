@@ -19,13 +19,20 @@ Using this method of deployment (within the same OTP release) the
 listing the `cloudi_core` application as a dependency, unlike the
 approach within the `hello_world1` example.
 
+PLEASE NOTE (as of 10/18/2013, CloudI version 1.3.0): rebar was recently
+broken, when fetching the HEAD of https://github.com/rebar/rebar due to
+attempts at improving update-deps functionality.  To avoid problems with
+update-deps you should use the most recent rebar release tag, which is
+`2.1.0-pre`.  This version of rebar is provided within the CloudI repo to
+satisfy build-time dependencies (if the configure script is not
+given --without-rebar).
+
 ## USAGE
 
 To use an Erlang/OTP application file for an internal service with the same
 module name:
 
     $ rebar get-deps
-    $ export ERL_LIBS=deps/cloudi/install_local/lib/cloudi-1.2.5/lib/
     $ rebar compile
     $ rebar generate
     $ cd release
@@ -34,3 +41,9 @@ module name:
     Hello World!
     $ bin/cloudi_hello_world3 stop
 
+If you want to alter the CloudI configuration
+(e.g., to use the ZeroMQ/CloudI integration)
+just define the environmental variable `CLOUDI_CONFIGURE_ARGS` for the
+rebar get-deps command:
+
+    $ export CLOUDI_CONFIGURE_ARGS="--with-zeromq"

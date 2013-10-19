@@ -92,7 +92,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -130,9 +130,17 @@
          mcast_async/3,
          mcast_async/4,
          mcast_async/6,
+         mcast_async_active/3,
+         mcast_async_active/4,
+         mcast_async_active/6,
+         mcast_async_passive/3,
+         mcast_async_passive/4,
+         mcast_async_passive/6,
          forward/9,
          forward_async/8,
          forward_sync/8,
+         return/2,
+         return/3,
          return/9,
          return_async/8,
          return_sync/8,
@@ -145,7 +153,9 @@
          timeout_async/1,
          timeout_sync/1,
          service_name_parse/2,
+         service_name_parse_with_suffix/2,
          request_http_qs_parse/1,
+         request_info_key_value_new/1,
          request_info_key_value_parse/1,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
@@ -155,6 +165,7 @@
 
 -include("cloudi_constants.hrl").
 
+-type request_type() :: 'send_async' | 'send_sync'.
 -type service_name() :: cloudi:service_name().
 -type service_name_pattern() :: cloudi:service_name_pattern().
 -type request_info() :: cloudi:request_info().
@@ -165,7 +176,8 @@
 -type priority() :: cloudi:priority().
 -type trans_id() :: cloudi:trans_id(). % version 1 UUID
 -type pattern_pid() :: cloudi:pattern_pid().
--export_type([service_name/0,
+-export_type([request_type/0,
+              service_name/0,
               service_name_pattern/0,
               request_info/0, request/0,
               response_info/0, response/0,
@@ -191,7 +203,7 @@
     {'stop', Reason :: any()} |
     {'stop', Reason :: any(), State :: any()}.
 
--callback cloudi_service_handle_request(Type :: 'send_async' | 'send_sync',
+-callback cloudi_service_handle_request(Type :: request_type(),
                                         Name :: service_name(),
                                         Pattern :: service_name_pattern(),
                                         RequestInfo :: request_info(),
@@ -305,9 +317,13 @@ get_pid(Dispatcher, Name)
 
 -spec get_pid(Dispatcher :: dispatcher(),
               Name :: service_name(),
-              Timeout :: timeout_milliseconds()) ->
+              Timeout :: timeout_milliseconds() | 'undefined') ->
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: atom()}.
+
+get_pid(Dispatcher, Name, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pid', Name}, infinity);
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -339,9 +355,13 @@ get_pids(Dispatcher, Name)
 
 -spec get_pids(Dispatcher :: dispatcher(),
                Name :: service_name(),
-               Timeout :: timeout_milliseconds()) ->
+               Timeout :: timeout_milliseconds() | 'undefined') ->
     {'ok', PatternPids :: list(pattern_pid())} |
     {'error', Reason :: atom()}.
+
+get_pids(Dispatcher, Name, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'get_pids', Name}, infinity);
 
 get_pids(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1107,12 +1127,178 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         Request :: request()) ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, Request)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
+                                 undefined, undefined}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         Request :: request(),
+                         Timeout :: timeout_milliseconds() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, Request, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
+                                 undefined, undefined}, infinity);
+
+mcast_async_active(Dispatcher, Name, Request, Timeout)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name, <<>>, Request,
+                                    Timeout, undefined},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% Asynchronous service requests are sent to all services that have
+%% subscribed to the service name pattern that matches the destination.
+%% The responses are sent to the service as Erlang messages that are either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_active(Dispatcher :: dispatcher(),
+                         Name :: service_name(),
+                         RequestInfo :: request_info(),
+                         Request :: request(),
+                         Timeout :: timeout_milliseconds() | 'undefined',
+                         Priority :: priority() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_list(Name) ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 undefined}, infinity);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    gen_server:call(Dispatcher, {'mcast_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined,
+                                 Priority}, infinity);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, undefined},
+                                   Timeout + ?TIMEOUT_DELTA));
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0, is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'mcast_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, Priority},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          Request :: request()) ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, Request) ->
+    mcast_async(Dispatcher, Name, Request).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, Request, Timeout) ->
+    mcast_async(Dispatcher, Name, Request, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a multicast asynchronous service request.===
+%% An alias for mcast_async.  The asynchronous service requests are returned
+%% and handled the same way as within external services.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mcast_async_passive(Dispatcher :: dispatcher(),
+                          Name :: service_name(),
+                          RequestInfo :: request_info(),
+                          Request :: request(),
+                          Timeout :: timeout_milliseconds() | 'undefined',
+                          Priority :: priority() | 'undefined') ->
+    {'ok', TransIdList :: list(trans_id())} |
+    {'error', Reason :: atom()}.
+
+mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
+                    Timeout, Priority) ->
+    mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Forward a service request.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec forward(Dispatcher :: dispatcher(),
-              Type :: 'send_async' | 'send_sync',
+              Type :: request_type(),
               Name :: service_name(),
               RequestInfo :: request_info(),
               Request :: request(),
@@ -1120,7 +1306,7 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
               Priority :: priority(),
               TransId :: trans_id(),
               Pid :: pid()) ->
-    none().
+    no_return().
 
 forward(Dispatcher, 'send_async', Name, RequestInfo, Request,
         Timeout, Priority, TransId, Pid) ->
@@ -1146,7 +1332,7 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Priority :: priority(),
                     TransId :: trans_id(),
                     Pid :: pid()) ->
-    none().
+    no_return().
 
 forward_async(Dispatcher, Name, RequestInfo, Request,
               Timeout, Priority, TransId, Pid)
@@ -1172,7 +1358,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Priority :: priority(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
-    none().
+    no_return().
 
 forward_sync(Dispatcher, Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid)
@@ -1191,7 +1377,36 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
 %%-------------------------------------------------------------------------
 
 -spec return(Dispatcher :: dispatcher(),
-             Type :: 'send_async' | 'send_sync',
+             Response :: response()) ->
+    no_return().
+
+return(Dispatcher, Response)
+    when is_pid(Dispatcher) ->
+    erlang:throw({cloudi_service_return, {Response}}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec return(Dispatcher :: dispatcher(),
+             ResponseInfo :: response_info(),
+             Response :: response()) ->
+    no_return().
+
+return(Dispatcher, ResponseInfo, Response)
+    when is_pid(Dispatcher) ->
+    erlang:throw({cloudi_service_return, {ResponseInfo, Response}}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a service response.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec return(Dispatcher :: dispatcher(),
+             Type :: request_type(),
              Name :: service_name(),
              Pattern :: service_name_pattern(),
              ResponseInfo :: response_info(),
@@ -1199,7 +1414,7 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
              Timeout :: timeout_milliseconds(),
              TransId :: trans_id(),
              Pid :: pid()) ->
-    none().
+    no_return().
 
 return(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
        Timeout, TransId, Pid) ->
@@ -1225,7 +1440,7 @@ return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
                    Timeout :: timeout_milliseconds(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
-    none().
+    no_return().
 
 return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
              Timeout, TransId, Pid)
@@ -1251,7 +1466,7 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   Timeout :: timeout_milliseconds(),
                   TransId :: trans_id(),
                   Pid :: pid()) ->
-    none().
+    no_return().
 
 return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
             Timeout, TransId, Pid)
@@ -1273,7 +1488,7 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
 %%-------------------------------------------------------------------------
 
 -spec return_nothrow(Dispatcher :: dispatcher(),
-                     Type :: 'send_async' | 'send_sync',
+                     Type :: request_type(),
                      Name :: service_name(),
                      Pattern :: service_name_pattern(),
                      ResponseInfo :: response_info(),
@@ -1444,12 +1659,25 @@ timeout_sync(Dispatcher) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec service_name_parse(Pattern :: string(),
-                         Name :: string()) ->
+-spec service_name_parse(Name :: string(),
+                         Pattern :: string()) ->
     list(string()) | error.
 
-service_name_parse(Pattern, Name) ->
+service_name_parse(Name, Pattern) ->
     cloudi_x_trie:pattern_parse(Pattern, Name).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a service name pattern and return the common suffix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_name_parse_with_suffix(Name :: string(),
+                                     Pattern :: string()) ->
+    {list(string()), string()} | error.
+
+service_name_parse_with_suffix(Name, Pattern) ->
+    cloudi_x_trie:pattern_parse(Pattern, Name, with_suffix).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1462,8 +1690,28 @@ service_name_parse(Pattern, Name) ->
 
 request_http_qs_parse(Request)
     when is_binary(Request) ->
-    binary_key_value_parse_list(dict:new(),
-                                binary:split(Request, <<0>>, [global])).
+    binary_key_value_parse_list(binary:split(Request, <<0>>, [global]),
+                                dict:new()).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===New RequestInfo key/value data.===
+%% RequestInfo is meant to contain key/value pairs that is request
+%% meta-data.  Create the binary RequestInfo data with a list of pairs or
+%% a dict data structure.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec request_info_key_value_new(RequestInfo ::
+                                     list({binary() | string() | atom(),
+                                           binary() | string() | any()}) |
+                                     dict()) ->
+    Result :: binary().
+
+request_info_key_value_new([{_, _} | _] = RequestInfo) ->
+    binary_key_value_new_list(RequestInfo, []);
+request_info_key_value_new(RequestInfo) ->
+    binary_key_value_new_list(dict:to_list(RequestInfo), []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1485,23 +1733,46 @@ request_info_key_value_parse(RequestInfo)
 request_info_key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
     % binary() -> binary()
-    binary_key_value_parse_list(dict:new(),
-                                binary:split(RequestInfo, <<0>>, [global])).
+    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
+                                dict:new()).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-binary_key_value_parse_list(Lookup, [<<>>]) ->
+binary_key_value_new_list([], Result) ->
+    erlang:iolist_to_binary(lists:reverse(Result));
+binary_key_value_new_list([{K, V} | L], Result) ->
+    NewK = if
+        is_binary(K) ->
+            K;
+        is_list(K), is_integer(hd(K)) ->
+            erlang:list_to_binary(K);
+        is_atom(K) ->
+            erlang:atom_to_binary(K, utf8)
+    end,
+    NewV = if
+        is_binary(V) ->
+            V;
+        is_list(V), is_integer(hd(V)) ->
+            erlang:list_to_binary(V);
+        is_atom(V) ->
+            erlang:atom_to_binary(V, utf8);
+        true ->
+            cloudi_string:term_to_binary(V)
+    end,
+    binary_key_value_new_list(L, [[NewK, 0, NewV, 0] | Result]).
+
+binary_key_value_parse_list([<<>>], Lookup) ->
     Lookup;
-binary_key_value_parse_list(Lookup, [K, V | L]) ->
+binary_key_value_parse_list([K, V | L], Lookup) ->
     case dict:find(K, Lookup) of
         {ok, [_ | _] = ListV} ->
-            binary_key_value_parse_list(dict:store(K, ListV ++ [V], Lookup), L);
+            binary_key_value_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
         {ok, V0} ->
-            binary_key_value_parse_list(dict:store(K, [V0, V], Lookup), L);
+            binary_key_value_parse_list(L, dict:store(K, [V0, V], Lookup));
         error ->
-            binary_key_value_parse_list(dict:store(K, V, Lookup), L)
+            binary_key_value_parse_list(L, dict:store(K, V, Lookup))
     end.
 
 %%-------------------------------------------------------------------------
@@ -1530,7 +1801,7 @@ binary_key_value_parse_list(Lookup, [K, V | L]) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec 'Module:cloudi_service_handle_request'(Type :: 'send_async' | 'send_sync',
+-spec 'Module:cloudi_service_handle_request'(Type :: request_type(),
                                              Name :: service_name(),
                                              Pattern :: service_name_pattern(),
                                              RequestInfo :: request_info(),

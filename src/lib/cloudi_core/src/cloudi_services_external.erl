@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -192,22 +192,26 @@ init([Protocol, SocketPath,
     Dispatcher = self(),
     InitTimeout = erlang:send_after(Timeout, Dispatcher,
                                     'cloudi_service_init_timeout'),
-    process_flag(trap_exit, true),
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, State} ->
             cloudi_x_quickrand:seed(),
-            destination_refresh_first(DestRefresh, ConfigOptions),
+            NewConfigOptions = check_init(ConfigOptions),
+            destination_refresh_first(DestRefresh, NewConfigOptions),
+            {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
+            UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, erlang},
+                                                  {mac_address, MacAddress}]),
+            process_flag(trap_exit, true),
             {ok, 'CONNECT',
              State#state{dispatcher = Dispatcher,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
                          timeout_sync = TimeoutSync,
                          init_timeout = InitTimeout,
-                         uuid_generator = cloudi_x_uuid:new(Dispatcher),
+                         uuid_generator = UUID,
                          dest_refresh = DestRefresh,
                          dest_deny = DestDeny,
                          dest_allow = DestAllow,
-                         options = ConfigOptions}};
+                         options = NewConfigOptions}};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -216,6 +220,8 @@ init([Protocol, SocketPath,
 
 'CONNECT'({'pid', OsPid}, State) ->
     % forked process has connected before CloudI API initialization
+    % (only the thread_index == 0 Erlang process gets this message,
+    %  since the OS process only needs to be killed once, if at all)
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', State#state{os_pid = OsPid}};
 
@@ -668,10 +674,14 @@ handle_info({'cloudi_service_send_async', _, _,
 
 handle_info({'cloudi_service_send_async', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{queue_requests = false} = State) ->
+            #state{queue_requests = false,
+                   options = ConfigOptions} = State) ->
+    NewConfigOptions = check_incoming(ConfigOptions),
     send('send_async_out'(Name, Pattern, RequestInfo, Request,
                           Timeout, Priority, TransId, Pid), State),
-    {next_state, StateName, State#state{queue_requests = true}};
+    {next_state, StateName,
+     State#state{queue_requests = true,
+                 options = NewConfigOptions}};
 
 handle_info({'cloudi_service_send_sync', _, _,
              RequestInfo, Request, Timeout, _, _, _}, StateName, State)
@@ -681,10 +691,14 @@ handle_info({'cloudi_service_send_sync', _, _,
 
 handle_info({'cloudi_service_send_sync', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
-            #state{queue_requests = false} = State) ->
+            #state{queue_requests = false,
+                   options = ConfigOptions} = State) ->
+    NewConfigOptions = check_incoming(ConfigOptions),
     send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Pid), State),
-    {next_state, StateName, State#state{queue_requests = true}};
+    {next_state, StateName,
+     State#state{queue_requests = true,
+                 options = NewConfigOptions}};
 
 handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T, StateName,
             #state{queue_requests = true,
@@ -740,7 +754,8 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
         error ->
             % send_async timeout already occurred
             {next_state, StateName, State};
-        {ok, {passive, Tref}} when Response == <<>> ->
+        {ok, {passive, Tref}}
+            when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment ->
                     erlang:cancel_timer(Tref);
@@ -1148,7 +1163,8 @@ send(Data, #state{protocol = Protocol,
 
 process_queue(#state{recv_timeouts = RecvTimeouts,
                      queue_requests = true,
-                     queued = Queue} = State) ->
+                     queued = Queue,
+                     options = ConfigOptions} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
         {empty, NewQueue} ->
             State#state{queue_requests = false,
@@ -1163,11 +1179,13 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
                 V ->    
                     V       
             end,
+            NewConfigOptions = check_incoming(ConfigOptions),
             send('send_async_out'(Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Pid),
                  State),
             State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                        queued = NewQueue};
+                        queued = NewQueue,
+                        options = NewConfigOptions};
         {{value, {'cloudi_service_send_sync',
                   Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
@@ -1178,11 +1196,13 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
                 V ->    
                     V       
             end,
+            NewConfigOptions = check_incoming(ConfigOptions),
             send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Pid),
                  State),
             State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                        queued = NewQueue}
+                        queued = NewQueue,
+                        options = NewConfigOptions}
     end.
 
 socket_open(tcp, _, _, BufferSize) ->

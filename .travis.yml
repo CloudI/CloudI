@@ -7,7 +7,8 @@ rvm:
   - 1.9.3
 before_install:
   - sudo apt-get update
-  - sudo apt-get install g++ default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev make autoconf automake libtool git
+# travis takes care of: make autoconf automake libtool g++ git
+  - sudo apt-get install default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
 before_script:
   - mkdir build
@@ -16,9 +17,10 @@ before_script:
   - ../src/configure --with-zeromq --prefix=`pwd`/../install_local
 script: ../src/make_dev test install
 after_script:
-  - make clean
-  - make clean-configure
+  - make distclean
 branches:
   only:
     - master
     - develop
+notifications:
+  irc: "chat.freenode.net#cloudi"

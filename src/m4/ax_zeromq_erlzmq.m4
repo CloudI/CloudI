@@ -69,12 +69,15 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
         AX_ERLANG_REQUIRE_OTP_VER([R14B02], ,
             [AC_MSG_ERROR([Erlang >= R14B02 required for erlzmq usage in cloudi_service_zeromq])])
         abs_top_srcdir=`cd $srcdir; pwd`
+        if test -z "$REBAR"; then
+            AC_MSG_ERROR([rebar not found!])
+        fi
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/erlzmq/ && \
               ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS \
               ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS \
               ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH \
-              $BUILDDIR/rebar compile && \
+              $REBAR compile && \
               echo "erlzmq compiled" || exit 1)],
             [ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS
              ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS
@@ -82,7 +85,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
              ZEROMQ_VERSION_MAJOR=$ZEROMQ_VERSION_MAJOR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
              SRCDIR=$abs_top_srcdir
-             BUILDDIR=$abs_top_builddir])
+             REBAR=$REBAR])
         ZEROMQ_ERLZMQ_RELTOOL="{app, erlzmq, @<:@{incl_cond, include}, {mod_cond, all}, {app_file, keep}@:>@},"
         ZEROMQ_ERLZMQ_APPCONF="erlzmq,"
         ZEROMQ_ERLZMQ_PATH=',"external/zeromq/v'$ZEROMQ_VERSION_MAJOR'"'

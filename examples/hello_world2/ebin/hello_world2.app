@@ -3,9 +3,10 @@
 
 {application, hello_world2,
   [{description, "Hello World Example Application"},
-   {vsn, "1.2.5"},
+   {vsn, "1.3.0"},
    {modules, [
         hello_world2]},
+   {registered, []},
    {applications, [
         cloudi_core,
         stdlib,

@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2013 Michael Truog
+%%% @version 1.2.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue).
@@ -114,7 +114,7 @@ in(X, Q) ->
 
 in(_, P, _)
     when P < -20; P > 20 ->
-    throw(badarg);
+    erlang:exit(badarg);
 in(X, P, {empty, _, _, _, _, _, _, _} = Q) ->
     in_higher(P, Q, X);
 in(X, P, {Pc, _, _, _, _, _, _, _} = Q)
@@ -303,7 +303,7 @@ out({Pc, _, _, _, _, _, _, _} = Q) ->
 
 out(P, _)
     when P < -20; P > 20 ->
-    throw(badarg);
+    erlang:exit(badarg);
 out(_, {empty, _, _, _, _, _, _, _} = Q) ->
     {empty, Q};
 out(P, Q) ->

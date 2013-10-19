@@ -19,14 +19,10 @@
 %% API
 -export([start/0, start/1]).
 -export([stop/0, stop/1]).
--export([start_link/1, start_link/2]).
--export([stop_client/1]).
+-export([start_link/1]).
 -export([stop_pool/1]).
--export([start_client/1, start_client/2]).
 -export([start_pool/1, start_pool/2, start_pool/3]).
 -export([registered_pool_name/1]).
--export([registered_client_name/1]).
--export([get_target/1]).
 -export([get_env/2, set_env/2]).
 -export([join/2]).
 
@@ -67,6 +63,17 @@
 
 -export([is_200/1, is_200_or_201/1]).
 
+% Mapping CRUD
+-export([put_mapping/4]).
+-export([get_mapping/3]).
+-export([delete_mapping/3]).
+
+% ALIASES CRUD
+-export([aliases/2]).
+-export([insert_alias/3, insert_alias/4]).
+-export([delete_alias/3]).
+-export([is_alias/3]).
+-export([get_alias/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -74,8 +81,9 @@
 -define(APP, ?MODULE).
 
 -record(state, {
-        client_name                         :: client_name(),
+        pool_name                           :: pool_name(),
         binary_response = false             :: boolean(),
+        connection_options = []             :: params(),
         connection                          :: connection()}).
 
 %% ------------------------------------------------------------------
@@ -85,7 +93,7 @@
 %% @doc Start the application and all its dependencies.
 -spec start() -> ok.
 start() ->
-    start_deps(?APP).
+    reltool_util:application_start(?APP).
 
 %% @doc To start up a 'simple' client
 -spec start(params()) -> {ok, pid()}.
@@ -95,7 +103,7 @@ start(Options) when is_list(Options) ->
 %% @doc Stop the application and all its dependencies.
 -spec stop() -> ok.
 stop() ->
-    stop_deps(?APP).
+    reltool_util:application_stop(?APP).
 
 %% @doc Stop this gen_server
 -spec stop(server_ref()) -> ok | error().
@@ -105,357 +113,386 @@ stop(ServerRef) ->
 
 %% @doc Used by Poolboy, to start 'unregistered' gen_servers
 start_link(ConnectionOptions) ->
-    gen_server:start_link(?MODULE, [?DEFAULT_CLIENT_NAME, ConnectionOptions], []).
-
-start_link(ClientName, ConnectionOptions) ->
-    gen_server:start_link({local, registered_client_name(ClientName)}, ?MODULE, [ClientName, ConnectionOptions], []).
-
-%% @doc Name used to register the client process
--spec registered_client_name(client_name()) -> registered_client_name().
-registered_client_name(ClientName) ->
-    binary_to_atom(<<?REGISTERED_NAME_PREFIX, ClientName/binary, ".client">>, utf8).
+    gen_server:start_link(?MODULE, [?DEFAULT_POOL_NAME, ConnectionOptions], []).
 
 %% @doc Name used to register the pool server
 -spec registered_pool_name(pool_name()) -> registered_pool_name().
-registered_pool_name(PoolName) ->
-    binary_to_atom(<<?REGISTERED_NAME_PREFIX, PoolName/binary, ".pool">>, utf8).
-
-%% @equiv start_client(ClientName, []).
--spec start_client(client_name()) -> supervisor:startchild_ret().
-start_client(ClientName) when is_binary(ClientName) ->
-    start_client(ClientName, []).
-
-%% @doc Start a client process
--spec start_client(client_name(), params()) -> supervisor:startchild_ret().
-start_client(ClientName, Options) when is_binary(ClientName),
-                                       is_list(Options) ->
-    erlasticsearch_client_sup:start_client(ClientName, Options).
-
-%% @doc Stop a client process
--spec stop_client(client_name()) -> ok | error().
-stop_client(ClientName) ->
-    erlasticsearch_client_sup:stop_client(ClientName).
+registered_pool_name(PoolName) when is_binary(PoolName) ->
+    binary_to_atom(<<?REGISTERED_NAME_PREFIX, PoolName/binary, ".pool">>, utf8);
+registered_pool_name({Host, Port, PoolName}) ->
+    BHost = binary_host(Host),
+    BPort = binary_port(Port),
+    binary_to_atom(<<?REGISTERED_NAME_PREFIX, BHost/binary, "_", BPort/binary, "_", PoolName/binary, ".pool">>, utf8).
 
 %% @doc Start a poolboy instance
 -spec start_pool(pool_name()) -> supervisor:startchild_ret().
-start_pool(PoolName) when is_binary(PoolName) ->
-    PoolOptions = erlasticsearch:get_env(pool_options, ?DEFAULT_POOL_OPTIONS),
-    ConnectionOptions = erlasticsearch:get_env(connection_options, ?DEFAULT_CONNECTION_OPTIONS),
+start_pool(PoolName) ->
+    PoolOptions = application:get_env(erlasticsearch, pool_options, ?DEFAULT_POOL_OPTIONS),
+    ConnectionOptions = application:get_env(erlasticsearch, connection_options, ?DEFAULT_CONNECTION_OPTIONS),
     start_pool(PoolName, PoolOptions, ConnectionOptions).
 
 %% @doc Start a poolboy instance
 -spec start_pool(pool_name(), params()) -> supervisor:startchild_ret().
-start_pool(PoolName, PoolOptions) when is_binary(PoolName),
-                                       is_list(PoolOptions) ->
-    ConnectionOptions = erlasticsearch:get_env(connection_options, ?DEFAULT_CONNECTION_OPTIONS),
+start_pool(PoolName, PoolOptions) when is_list(PoolOptions) ->
+    ConnectionOptions = application:get_env(erlasticsearch, connection_options, ?DEFAULT_CONNECTION_OPTIONS),
     start_pool(PoolName, PoolOptions, ConnectionOptions).
 
 %% @doc Start a poolboy instance with appropriate Pool & Conn settings
 -spec start_pool(pool_name(), params(), params()) -> supervisor:startchild_ret().
-start_pool(PoolName, PoolOptions, ConnectionOptions) when is_binary(PoolName),
-                                                      is_list(PoolOptions),
-                                                      is_list(ConnectionOptions) ->
-    erlasticsearch_poolboy_sup:start_pool(PoolName, PoolOptions, ConnectionOptions).
+start_pool(PoolName, PoolOptions, ConnectionOptions) when is_list(PoolOptions),
+                                                          is_list(ConnectionOptions) ->
+    erlasticsearch_poolboy_sup:start_pool(fq_server_ref(PoolName), PoolOptions, ConnectionOptions).
 
 %% @doc Stop a poolboy instance
 -spec stop_pool(pool_name()) -> ok | error().
 stop_pool(PoolName) ->
-    erlasticsearch_poolboy_sup:stop_pool(PoolName).
+    erlasticsearch_poolboy_sup:stop_pool(fq_server_ref(PoolName)).
 %%
 
 %% @doc Get the health the  ElasticSearch cluster
--spec health(server_ref()) -> response().
-health(ServerRef) ->
-    route_call(ServerRef, {health}, infinity).
+-spec health(destination()) -> response().
+health(Destination) ->
+    route_call(Destination, {health}, infinity).
 
-%% @equiv state(ServerRef, []).
--spec state(server_ref()) -> response().
-state(ServerRef) ->
-    state(ServerRef, []).
+%% @equiv state(Destination, []).
+-spec state(destination()) -> response().
+state(Destination) ->
+    state(Destination, []).
 
 %% @doc Get the state of the  ElasticSearch cluster
--spec state(server_ref(), params()) -> response().
-state(ServerRef, Params) when is_list(Params) ->
-    route_call(ServerRef, {state, Params}, infinity).
+-spec state(destination(), params()) -> response().
+state(Destination, Params) when is_list(Params) ->
+    route_call(Destination, {state, Params}, infinity).
 
-%% @equiv nodes_info(ServerRef, [], []).
--spec nodes_info(server_ref()) -> response().
-nodes_info(ServerRef) ->
-    nodes_info(ServerRef, [], []).
+%% @equiv nodes_info(Destination, [], []).
+-spec nodes_info(destination()) -> response().
+nodes_info(Destination) ->
+    nodes_info(Destination, [], []).
 
-%% @equiv nodes_info(ServerRef, [NodeName], []).
--spec nodes_info(server_ref(), node_name()) -> response().
-nodes_info(ServerRef, NodeName) when is_binary(NodeName) ->
-    nodes_info(ServerRef, [NodeName], []);
-%% @equiv nodes_info(ServerRef, NodeNames, []).
-nodes_info(ServerRef, NodeNames) when is_list(NodeNames) ->
-    nodes_info(ServerRef, NodeNames, []).
+%% @equiv nodes_info(Destination, [NodeName], []).
+-spec nodes_info(destination(), node_name()) -> response().
+nodes_info(Destination, NodeName) when is_binary(NodeName) ->
+    nodes_info(Destination, [NodeName], []);
+%% @equiv nodes_info(Destination, NodeNames, []).
+nodes_info(Destination, NodeNames) when is_list(NodeNames) ->
+    nodes_info(Destination, NodeNames, []).
 
 %% @doc Get the nodes_info of the  ElasticSearch cluster
--spec nodes_info(server_ref(), [node_name()], params()) -> response().
-nodes_info(ServerRef, NodeNames, Params) when is_list(NodeNames), is_list(Params) ->
-    route_call(ServerRef, {nodes_info, NodeNames, Params}, infinity).
+-spec nodes_info(destination(), [node_name()], params()) -> response().
+nodes_info(Destination, NodeNames, Params) when is_list(NodeNames), is_list(Params) ->
+    route_call(Destination, {nodes_info, NodeNames, Params}, infinity).
 
-%% @equiv nodes_stats(ServerRef, [], []).
--spec nodes_stats(server_ref()) -> response().
-nodes_stats(ServerRef) ->
-    nodes_stats(ServerRef, [], []).
+%% @equiv nodes_stats(Destination, [], []).
+-spec nodes_stats(destination()) -> response().
+nodes_stats(Destination) ->
+    nodes_stats(Destination, [], []).
 
-%% @equiv nodes_stats(ServerRef, [NodeName], []).
--spec nodes_stats(server_ref(), node_name()) -> response().
-nodes_stats(ServerRef, NodeName) when is_binary(NodeName) ->
-    nodes_stats(ServerRef, [NodeName], []);
-%% @equiv nodes_stats(ServerRef, NodeNames, []).
-nodes_stats(ServerRef, NodeNames) when is_list(NodeNames) ->
-    nodes_stats(ServerRef, NodeNames, []).
+%% @equiv nodes_stats(Destination, [NodeName], []).
+-spec nodes_stats(destination(), node_name()) -> response().
+nodes_stats(Destination, NodeName) when is_binary(NodeName) ->
+    nodes_stats(Destination, [NodeName], []);
+%% @equiv nodes_stats(Destination, NodeNames, []).
+nodes_stats(Destination, NodeNames) when is_list(NodeNames) ->
+    nodes_stats(Destination, NodeNames, []).
 
 %% @doc Get the nodes_stats of the  ElasticSearch cluster
--spec nodes_stats(server_ref(), [node_name()], params()) -> response().
-nodes_stats(ServerRef, NodeNames, Params) when is_list(NodeNames), is_list(Params) ->
-    route_call(ServerRef, {nodes_stats, NodeNames, Params}, infinity).
+-spec nodes_stats(destination(), [node_name()], params()) -> response().
+nodes_stats(Destination, NodeNames, Params) when is_list(NodeNames), is_list(Params) ->
+    route_call(Destination, {nodes_stats, NodeNames, Params}, infinity).
 
 %% @doc Get the status of an index/indices in the  ElasticSearch cluster
--spec status(server_ref(), index() | [index()]) -> response().
-status(ServerRef, Index) when is_binary(Index) ->
-    status(ServerRef, [Index]);
-status(ServerRef, Indexes) when is_list(Indexes)->
-    route_call(ServerRef, {status, Indexes}, infinity).
+-spec status(destination(), index() | [index()]) -> response().
+status(Destination, Index) when is_binary(Index) ->
+    status(Destination, [Index]);
+status(Destination, Indexes) when is_list(Indexes)->
+    route_call(Destination, {status, Indexes}, infinity).
 
-%% @equiv create_index(ServerRef, Index, <<>>)
--spec create_index(server_ref(), index()) -> response().
-create_index(ServerRef, Index) when is_binary(Index) ->
-    create_index(ServerRef, Index, <<>>).
+%% @equiv create_index(Destination, Index, <<>>)
+-spec create_index(destination(), index()) -> response().
+create_index(Destination, Index) when is_binary(Index) ->
+    create_index(Destination, Index, <<>>).
 
 %% @doc Create an index in the ElasticSearch cluster
--spec create_index(server_ref(), index(), doc()) -> response().
-create_index(ServerRef, Index, Doc) when is_binary(Index), is_binary(Doc) ->
-    route_call(ServerRef, {create_index, Index, Doc}, infinity).
+-spec create_index(destination(), index(), doc()) -> response().
+create_index(Destination, Index, Doc) when is_binary(Index) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    route_call(Destination, {create_index, Index, Doc}, infinity).
 
 %% @doc Delete all the indices in the ElasticSearch cluster
--spec delete_index(server_ref()) -> response().
-delete_index(ServerRef) ->
-    delete_index(ServerRef, ?ALL).
+-spec delete_index(destination()) -> response().
+delete_index(Destination) ->
+    delete_index(Destination, ?ALL).
 
 %% @doc Delete an index(es) in the ElasticSearch cluster
--spec delete_index(server_ref(), index() | [index()]) -> response().
-delete_index(ServerRef, Index) when is_binary(Index) ->
-    delete_index(ServerRef, [Index]);
-delete_index(ServerRef, Index) when is_list(Index) ->
-    route_call(ServerRef, {delete_index, Index}, infinity).
+-spec delete_index(destination(), index() | [index()]) -> response().
+delete_index(Destination, Index) when is_binary(Index) ->
+    delete_index(Destination, [Index]);
+delete_index(Destination, Index) when is_list(Index) ->
+    route_call(Destination, {delete_index, Index}, infinity).
 
 %% @doc Open an index in the ElasticSearch cluster
--spec open_index(server_ref(), index()) -> response().
-open_index(ServerRef, Index) when is_binary(Index) ->
-    route_call(ServerRef, {open_index, Index}, infinity).
+-spec open_index(destination(), index()) -> response().
+open_index(Destination, Index) when is_binary(Index) ->
+    route_call(Destination, {open_index, Index}, infinity).
 
 %% @doc Close an index in the ElasticSearch cluster
--spec close_index(server_ref(), index()) -> response().
-close_index(ServerRef, Index) when is_binary(Index) ->
-    route_call(ServerRef, {close_index, Index}, infinity).
+-spec close_index(destination(), index()) -> response().
+close_index(Destination, Index) when is_binary(Index) ->
+    route_call(Destination, {close_index, Index}, infinity).
 
 %% @doc Check if an index/indices exists in the ElasticSearch cluster
--spec is_index(server_ref(), index() | [index()]) -> response().
-is_index(ServerRef, Index) when is_binary(Index) ->
-    is_index(ServerRef, [Index]);
-is_index(ServerRef, Indexes) when is_list(Indexes) ->
-    route_call(ServerRef, {is_index, Indexes}, infinity).
+-spec is_index(destination(), index() | [index()]) -> response().
+is_index(Destination, Index) when is_binary(Index) ->
+    is_index(Destination, [Index]);
+is_index(Destination, Indexes) when is_list(Indexes) ->
+    route_call(Destination, {is_index, Indexes}, infinity).
 
-%% @equiv count(ServerRef, ?ALL, [], Doc []).
--spec count(server_ref(), doc()) -> response().
-count(ServerRef, Doc) when is_binary(Doc) ->
-    count(ServerRef, ?ALL, [], Doc, []).
+%% @equiv count(Destination, ?ALL, [], Doc []).
+-spec count(destination(), doc()) -> response().
+count(Destination, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    count(Destination, ?ALL, [], Doc, []).
 
-%% @equiv count(ServerRef, ?ALL, [], Doc, Params).
--spec count(server_ref(), doc(), params()) -> response().
-count(ServerRef, Doc, Params) when is_binary(Doc), is_list(Params) ->
-    count(ServerRef, ?ALL, [], Doc, Params).
+%% @equiv count(Destination, ?ALL, [], Doc, Params).
+-spec count(destination(), doc(), params()) -> response().
+count(Destination, Doc, Params) when (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, ?ALL, [], Doc, Params).
 
-%% @equiv count(ServerRef, Index, [], Doc, Params).
--spec count(server_ref(), index() | [index()], doc(), params()) -> response().
-count(ServerRef, Index, Doc, Params) when is_binary(Index), is_binary(Doc), is_list(Params) ->
-    count(ServerRef, [Index], [], Doc, Params);
-count(ServerRef, Indexes, Doc, Params) when is_list(Indexes), is_binary(Doc), is_list(Params) ->
-    count(ServerRef, Indexes, [], Doc, Params).
-
-%% @doc Get the number of matches for a query
--spec count(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> response().
-count(ServerRef, Index, Type, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    count(ServerRef, [Index], [Type], Doc, Params);
-count(ServerRef, Indexes, Type, Doc, Params) when is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    count(ServerRef, Indexes, [Type], Doc, Params);
-count(ServerRef, Index, Types, Doc, Params) when is_binary(Index), is_list(Types), is_binary(Doc), is_list(Params) ->
-    count(ServerRef, [Index], Types, Doc, Params);
-count(ServerRef, Indexes, Types, Doc, Params) when is_list(Indexes), is_list(Types), is_binary(Doc), is_list(Params) ->
-    route_call(ServerRef, {count, Indexes, Types, Doc, Params}, infinity).
-
-%% @equiv delete_by_query(ServerRef, ?ALL, [], Doc []).
--spec delete_by_query(server_ref(), doc()) -> response().
-delete_by_query(ServerRef, Doc) when is_binary(Doc) ->
-    delete_by_query(ServerRef, ?ALL, [], Doc, []).
-
-%% @equiv delete_by_query(ServerRef, ?ALL, [], Doc, Params).
--spec delete_by_query(server_ref(), doc(), params()) -> response().
-delete_by_query(ServerRef, Doc, Params) when is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, ?ALL, [], Doc, Params).
-
-%% @equiv delete_by_query(ServerRef, Index, [], Doc, Params).
--spec delete_by_query(server_ref(), index() | [index()], doc(), params()) -> response().
-delete_by_query(ServerRef, Index, Doc, Params) when is_binary(Index), is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, [Index], [], Doc, Params);
-delete_by_query(ServerRef, Indexes, Doc, Params) when is_list(Indexes), is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, Indexes, [], Doc, Params).
+%% @equiv count(Destination, Index, [], Doc, Params).
+-spec count(destination(), index() | [index()], doc(), params()) -> response().
+count(Destination, Index, Doc, Params) when is_binary(Index) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, [Index], [], Doc, Params);
+count(Destination, Indexes, Doc, Params) when is_list(Indexes) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
--spec delete_by_query(server_ref(), index() | [index()], type() | [type()], doc(), params()) -> response().
-delete_by_query(ServerRef, Index, Type, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, [Index], [Type], Doc, Params);
-delete_by_query(ServerRef, Indexes, Type, Doc, Params) when is_list(Indexes), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, Indexes, [Type], Doc, Params);
-delete_by_query(ServerRef, Index, Types, Doc, Params) when is_binary(Index), is_list(Types), is_binary(Doc), is_list(Params) ->
-    delete_by_query(ServerRef, [Index], Types, Doc, Params);
-delete_by_query(ServerRef, Indexes, Types, Doc, Params) when is_list(Indexes), is_list(Types), is_binary(Doc), is_list(Params) ->
-    route_call(ServerRef, {delete_by_query, Indexes, Types, Doc, Params}, infinity).
+-spec count(destination(), index() | [index()], type() | [type()], doc(), params()) -> response().
+count(Destination, Index, Type, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, [Index], [Type], Doc, Params);
+count(Destination, Indexes, Type, Doc, Params) when is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, Indexes, [Type], Doc, Params);
+count(Destination, Index, Types, Doc, Params) when is_binary(Index) andalso is_list(Types) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    count(Destination, [Index], Types, Doc, Params);
+count(Destination, Indexes, Types, Doc, Params) when is_list(Indexes) andalso is_list(Types) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    route_call(Destination, {count, Indexes, Types, Doc, Params}, infinity).
+
+%% @equiv delete_by_query(Destination, ?ALL, [], Doc []).
+-spec delete_by_query(destination(), doc()) -> response().
+delete_by_query(Destination, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    delete_by_query(Destination, ?ALL, [], Doc, []).
+
+%% @equiv delete_by_query(Destination, ?ALL, [], Doc, Params).
+-spec delete_by_query(destination(), doc(), params()) -> response().
+delete_by_query(Destination, Doc, Params) when (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    delete_by_query(Destination, ?ALL, [], Doc, Params).
+
+%% @equiv delete_by_query(Destination, Index, [], Doc, Params).
+-spec delete_by_query(destination(), index() | [index()], doc(), params()) -> response().
+delete_by_query(Destination, Index, Doc, Params) when is_binary(Index) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    delete_by_query(Destination, [Index], [], Doc, Params);
+delete_by_query(Destination, Indexes, Doc, Params) when is_list(Indexes) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    delete_by_query(Destination, Indexes, [], Doc, Params).
+
+%% @doc Get the number of matches for a query
+-spec delete_by_query(destination(), index() | [index()], type() | [type()], doc(), params()) -> response().
+delete_by_query(Destination, Index, Type, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    delete_by_query(Destination, [Index], [Type], Doc, Params);
+delete_by_query(Destination, Indexes, Type, Doc, Params) when is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    delete_by_query(Destination, Indexes, [Type], Doc, Params);
+delete_by_query(Destination, Index, Types, Doc, Params) when is_binary(Index) andalso is_list(Types) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    delete_by_query(Destination, [Index], Types, Doc, Params);
+delete_by_query(Destination, Indexes, Types, Doc, Params) when is_list(Indexes) andalso is_list(Types) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    route_call(Destination, {delete_by_query, Indexes, Types, Doc, Params}, infinity).
 
 %% @doc Check if a type exists in an index/indices in the ElasticSearch cluster
--spec is_type(server_ref(), index() | [index()], type() | [type()]) -> response().
-is_type(ServerRef, Index, Type) when is_binary(Index), is_binary(Type) ->
-    is_type(ServerRef, [Index], [Type]);
-is_type(ServerRef, Indexes, Type) when is_list(Indexes), is_binary(Type) ->
-    is_type(ServerRef, Indexes, [Type]);
-is_type(ServerRef, Index, Types) when is_binary(Index), is_list(Types) ->
-    is_type(ServerRef, [Index], Types);
-is_type(ServerRef, Indexes, Types) when is_list(Indexes), is_list(Types) ->
-    route_call(ServerRef, {is_type, Indexes, Types}, infinity).
+-spec is_type(destination(), index() | [index()], type() | [type()]) -> response().
+is_type(Destination, Index, Type) when is_binary(Index), is_binary(Type) ->
+    is_type(Destination, [Index], [Type]);
+is_type(Destination, Indexes, Type) when is_list(Indexes), is_binary(Type) ->
+    is_type(Destination, Indexes, [Type]);
+is_type(Destination, Index, Types) when is_binary(Index), is_list(Types) ->
+    is_type(Destination, [Index], Types);
+is_type(Destination, Indexes, Types) when is_list(Indexes), is_list(Types) ->
+    route_call(Destination, {is_type, Indexes, Types}, infinity).
 
-%% @equiv insert_doc(Index, Type, Id, Doc, []).
--spec insert_doc(server_ref(), index(), type(), id(), doc()) -> response().
-insert_doc(ServerRef, Index, Type, Id, Doc) when is_binary(Index), is_binary(Type), is_binary(Doc) ->
-    insert_doc(ServerRef, Index, Type, Id, Doc, []).
+%% @equiv insert_doc(Destination, Index, Type, Id, Doc, []).
+-spec insert_doc(destination(), index(), type(), id(), doc()) -> response().
+insert_doc(Destination, Index, Type, Id, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    insert_doc(Destination, Index, Type, Id, Doc, []).
 
 %% @doc Insert a doc into the ElasticSearch cluster
--spec insert_doc(server_ref(), index(), type(), id(), doc(), params()) -> response().
-insert_doc(ServerRef, Index, Type, Id, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    route_call(ServerRef, {insert_doc, Index, Type, Id, Doc, Params}, infinity).
+-spec insert_doc(destination(), index(), type(), id(), doc(), params()) -> response().
+insert_doc(Destination, Index, Type, Id, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    route_call(Destination, {insert_doc, Index, Type, Id, Doc, Params}, infinity).
 
 %% @doc Checks to see if the doc exists
--spec is_doc(server_ref(), index(), type(), id()) -> response().
-is_doc(ServerRef, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
-    route_call(ServerRef, {is_doc, Index, Type, Id}, infinity).
+-spec is_doc(destination(), index(), type(), id()) -> response().
+is_doc(Destination, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
+    route_call(Destination, {is_doc, Index, Type, Id}, infinity).
 
-%% @equiv get_doc(ServerRef, Index, Type, Id, []).
--spec get_doc(server_ref(), index(), type(), id()) -> response().
-get_doc(ServerRef, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
-    get_doc(ServerRef, Index, Type, Id, []).
-
-%% @doc Get a doc from the ElasticSearch cluster
--spec get_doc(server_ref(), index(), type(), id(), params()) -> response().
-get_doc(ServerRef, Index, Type, Id, Params) when is_binary(Index), is_binary(Type), is_list(Params)->
-    route_call(ServerRef, {get_doc, Index, Type, Id, Params}, infinity).
-
-%% @equiv mget_doc(ServerRef, <<>>, <<>>, Doc)
--spec mget_doc(server_ref(), doc()) -> response().
-mget_doc(ServerRef, Doc) when is_binary(Doc) ->
-    mget_doc(ServerRef, <<>>, <<>>, Doc).
-
-%% @equiv mget_doc(ServerRef, Index, <<>>, Doc)
--spec mget_doc(server_ref(), index(), doc()) -> response().
-mget_doc(ServerRef, Index, Doc) when is_binary(Index), is_binary(Doc)->
-    mget_doc(ServerRef, Index, <<>>, Doc).
+%% @equiv get_doc(Destination, Index, Type, Id, []).
+-spec get_doc(destination(), index(), type(), id()) -> response().
+get_doc(Destination, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
+    get_doc(Destination, Index, Type, Id, []).
 
 %% @doc Get a doc from the ElasticSearch cluster
--spec mget_doc(server_ref(), index(), type(), doc()) -> response().
-mget_doc(ServerRef, Index, Type, Doc) when is_binary(Index), is_binary(Type), is_binary(Doc)->
-    route_call(ServerRef, {mget_doc, Index, Type, Doc}, infinity).
+-spec get_doc(destination(), index(), type(), id(), params()) -> response().
+get_doc(Destination, Index, Type, Id, Params) when is_binary(Index), is_binary(Type), is_list(Params)->
+    route_call(Destination, {get_doc, Index, Type, Id, Params}, infinity).
 
-%% @equiv delete_doc(ServerRef, Index, Type, Id, []).
--spec delete_doc(server_ref(), index(), type(), id()) -> response().
-delete_doc(ServerRef, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
-    delete_doc(ServerRef, Index, Type, Id, []).
+%% @equiv mget_doc(Destination, <<>>, <<>>, Doc)
+-spec mget_doc(destination(), doc()) -> response().
+mget_doc(Destination, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    mget_doc(Destination, <<>>, <<>>, Doc).
+
+%% @equiv mget_doc(Destination, Index, <<>>, Doc)
+-spec mget_doc(destination(), index(), doc()) -> response().
+mget_doc(Destination, Index, Doc) when is_binary(Index) andalso (is_binary(Doc) orelse is_list(Doc))->
+    mget_doc(Destination, Index, <<>>, Doc).
+
+%% @doc Get a doc from the ElasticSearch cluster
+-spec mget_doc(destination(), index(), type(), doc()) -> response().
+mget_doc(Destination, Index, Type, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc))->
+    route_call(Destination, {mget_doc, Index, Type, Doc}, infinity).
+
+%% @equiv delete_doc(Destination, Index, Type, Id, []).
+-spec delete_doc(destination(), index(), type(), id()) -> response().
+delete_doc(Destination, Index, Type, Id) when is_binary(Index), is_binary(Type) ->
+    delete_doc(Destination, Index, Type, Id, []).
 %% @doc Delete a doc from the ElasticSearch cluster
--spec delete_doc(server_ref(), index(), type(), id(), params()) -> response().
-delete_doc(ServerRef, Index, Type, Id, Params) when is_binary(Index), is_binary(Type), is_list(Params)->
-    route_call(ServerRef, {delete_doc, Index, Type, Id, Params}, infinity).
+-spec delete_doc(destination(), index(), type(), id(), params()) -> response().
+delete_doc(Destination, Index, Type, Id, Params) when is_binary(Index), is_binary(Type), is_list(Params)->
+    route_call(Destination, {delete_doc, Index, Type, Id, Params}, infinity).
 
-%% @equiv search(ServerRef, Index, Type, Doc, []).
--spec search(server_ref(), index(), type(), doc()) -> response().
-search(ServerRef, Index, Type, Doc) when is_binary(Index), is_binary(Type), is_binary(Doc)->
-    search(ServerRef, Index, Type, Doc, []).
+%% @equiv search(Destination, Index, Type, Doc, []).
+-spec search(destination(), index(), type(), doc()) -> response().
+search(Destination, Index, Type, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc))->
+    search(Destination, Index, Type, Doc, []).
 %% @doc Search for docs in the ElasticSearch cluster
--spec search(server_ref(), index(), type(), doc(), params()) -> response().
-search(ServerRef, Index, Type, Doc, Params) when is_binary(Index), is_binary(Type), is_binary(Doc), is_list(Params) ->
-    route_call(ServerRef, {search, Index, Type, Doc, Params}, infinity).
+-spec search(destination(), index(), type(), doc(), params()) -> response().
+search(Destination, Index, Type, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    route_call(Destination, {search, Index, Type, Doc, Params}, infinity).
 
-%% @equiv refresh(ServerRef, ?ALL).
+%% @equiv refresh(Destination, ?ALL).
 %% @doc Refresh all indices
-%-spec refresh(server_ref()) -> response().
-refresh(ServerRef) ->
-    refresh(ServerRef, ?ALL).
+%-spec refresh(destination()) -> response().
+refresh(Destination) ->
+    refresh(Destination, ?ALL).
 
 %% @doc Refresh one or more indices
-%-spec refresh(server_ref(), index() | [index()]) -> response().
-refresh(ServerRef, Index) when is_binary(Index) ->
-    refresh(ServerRef, [Index]);
-refresh(ServerRef, Indexes) when is_list(Indexes) ->
-    route_call(ServerRef, {refresh, Indexes}, infinity).
+%-spec refresh(destination(), index() | [index()]) -> response().
+refresh(Destination, Index) when is_binary(Index) ->
+    refresh(Destination, [Index]);
+refresh(Destination, Indexes) when is_list(Indexes) ->
+    route_call(Destination, {refresh, Indexes}, infinity).
 
 %% @doc Flush all indices
-%% @equiv flush(ServerRef, ?ALL).
--spec flush(server_ref()) -> response().
-flush(ServerRef) ->
-    flush(ServerRef, ?ALL).
+%% @equiv flush(Destination, ?ALL).
+-spec flush(destination()) -> response().
+flush(Destination) ->
+    flush(Destination, ?ALL).
 
 %% @doc Flush one or more indices
--spec flush(server_ref(), index() | [index()]) -> response().
-flush(ServerRef, Index) when is_binary(Index) ->
-    flush(ServerRef, [Index]);
-flush(ServerRef, Indexes) when is_list(Indexes) ->
-    route_call(ServerRef, {flush, Indexes}, infinity).
+-spec flush(destination(), index() | [index()]) -> response().
+flush(Destination, Index) when is_binary(Index) ->
+    flush(Destination, [Index]);
+flush(Destination, Indexes) when is_list(Indexes) ->
+    route_call(Destination, {flush, Indexes}, infinity).
 
-%% @equiv optimize(ServerRef, ?ALL).
+%% @equiv optimize(Destination, ?ALL).
 %% @doc Optimize all indices
--spec optimize(server_ref()) -> response().
-optimize(ServerRef) ->
-    optimize(ServerRef, ?ALL).
+-spec optimize(destination()) -> response().
+optimize(Destination) ->
+    optimize(Destination, ?ALL).
 
 %% @doc Optimize one or more indices
--spec optimize(server_ref(), index() | [index()]) -> response().
-optimize(ServerRef, Index) when is_binary(Index) ->
-    optimize(ServerRef, [Index]);
-optimize(ServerRef, Indexes) when is_list(Indexes) ->
-    route_call(ServerRef, {optimize, Indexes}, infinity).
+-spec optimize(destination(), index() | [index()]) -> response().
+optimize(Destination, Index) when is_binary(Index) ->
+    optimize(Destination, [Index]);
+optimize(Destination, Indexes) when is_list(Indexes) ->
+    route_call(Destination, {optimize, Indexes}, infinity).
 
-%% @equiv segments(ServerRef, ?ALL).
+%% @equiv segments(Destination, ?ALL).
 %% @doc Optimize all indices
--spec segments(server_ref()) -> response().
-segments(ServerRef) ->
-    segments(ServerRef, ?ALL).
+-spec segments(destination()) -> response().
+segments(Destination) ->
+    segments(Destination, ?ALL).
 
 %% @doc Optimize one or more indices
--spec segments(server_ref(), index() | [index()]) -> response().
-segments(ServerRef, Index) when is_binary(Index) ->
-    segments(ServerRef, [Index]);
-segments(ServerRef, Indexes) when is_list(Indexes) ->
-    route_call(ServerRef, {segments, Indexes}, infinity).
+-spec segments(destination(), index() | [index()]) -> response().
+segments(Destination, Index) when is_binary(Index) ->
+    segments(Destination, [Index]);
+segments(Destination, Indexes) when is_list(Indexes) ->
+    route_call(Destination, {segments, Indexes}, infinity).
 
-%% @equiv clear_cache(ServerRef, ?ALL, []).
+%% @equiv clear_cache(Destination, ?ALL, []).
 %% @doc Clear all the caches
--spec clear_cache(server_ref()) -> response().
-clear_cache(ServerRef) ->
-    clear_cache(ServerRef, ?ALL, []).
+-spec clear_cache(destination()) -> response().
+clear_cache(Destination) ->
+    clear_cache(Destination, ?ALL, []).
 
-%% @equiv clear_cache(ServerRef, Indexes, []).
--spec clear_cache(server_ref(), index() | [index()]) -> response().
-clear_cache(ServerRef, Index) when is_binary(Index) ->
-    clear_cache(ServerRef, [Index], []);
-clear_cache(ServerRef, Indexes) when is_list(Indexes) ->
-    clear_cache(ServerRef, Indexes, []).
+%% @equiv clear_cache(Destination, Indexes, []).
+-spec clear_cache(destination(), index() | [index()]) -> response().
+clear_cache(Destination, Index) when is_binary(Index) ->
+    clear_cache(Destination, [Index], []);
+clear_cache(Destination, Indexes) when is_list(Indexes) ->
+    clear_cache(Destination, Indexes, []).
 
-%% @equiv clear_cache(ServerRef, Indexes, []).
--spec clear_cache(server_ref(), index() | [index()], params()) -> response().
-clear_cache(ServerRef, Index, Params) when is_binary(Index), is_list(Params) ->
-    clear_cache(ServerRef, [Index], Params);
-clear_cache(ServerRef, Indexes, Params) when is_list(Indexes), is_list(Params) ->
-    route_call(ServerRef, {clear_cache, Indexes, Params}, infinity).
+%% @equiv clear_cache(Destination, Indexes, []).
+-spec clear_cache(destination(), index() | [index()], params()) -> response().
+clear_cache(Destination, Index, Params) when is_binary(Index), is_list(Params) ->
+    clear_cache(Destination, [Index], Params);
+clear_cache(Destination, Indexes, Params) when is_list(Indexes), is_list(Params) ->
+    route_call(Destination, {clear_cache, Indexes, Params}, infinity).
+
+
+%% @doc Insert a mapping into an ElasticSearch index
+-spec put_mapping(destination(), index() | [index()], type(), doc()) -> response().
+put_mapping(Destination, Index, Type, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    put_mapping(Destination, [Index], Type, Doc);
+put_mapping(Destination, Indexes, Type, Doc) when is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    route_call(Destination, {put_mapping, Indexes, Type, Doc}, infinity).
+
+%% @doc Get a mapping from an ElasticSearch index
+-spec get_mapping(destination(), index() | [index()], type()) -> response().
+get_mapping(Destination, Index, Type) when is_binary(Index) andalso is_binary(Type) ->
+    get_mapping(Destination, [Index], Type);
+get_mapping(Destination, Indexes, Type) when is_list(Indexes) andalso is_binary(Type) ->
+    route_call(Destination, {get_mapping, Indexes, Type}, infinity).
+
+%% @doc Delete a mapping from an ElasticSearch index
+-spec delete_mapping(destination(), index() | [index()], type()) -> response().
+delete_mapping(Destination, Index, Type) when is_binary(Index) andalso is_binary(Type) ->
+    delete_mapping(Destination, [Index], Type);
+delete_mapping(Destination, Indexes, Type) when is_list(Indexes) andalso is_binary(Type) ->
+    route_call(Destination, {delete_mapping, Indexes, Type}, infinity).
+
+%% @doc Operate on aliases (as compared to 'alias')
+-spec aliases(destination(), doc()) -> response().
+aliases(Destination, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    route_call(Destination, {aliases, Doc}, infinity).
+
+%% @doc Insert an alias (as compared to 'aliases')
+-spec insert_alias(destination(), index(), index()) -> response().
+insert_alias(Destination, Index, Alias) when is_binary(Index) andalso is_binary(Alias) ->
+    route_call(Destination, {insert_alias, Index, Alias}, infinity).
+%% @doc Insert an alias with options(as compared to 'aliases')
+-spec insert_alias(destination(), index(), index(), doc()) -> response().
+insert_alias(Destination, Index, Alias, Doc) when is_binary(Index) andalso is_binary(Alias) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    route_call(Destination, {insert_alias, Index, Alias, Doc}, infinity).
+
+%% @doc Delete an alias (as compared to 'aliases')
+-spec delete_alias(destination(), index(), index()) -> response().
+delete_alias(Destination, Index, Alias) when is_binary(Index) andalso is_binary(Alias) ->
+    route_call(Destination, {delete_alias, Index, Alias}, infinity).
+
+%% @doc Checks if an alias exists (Alias can be a string with a wildcard)
+-spec is_alias(destination(), index(), index()) -> response().
+is_alias(Destination, Index, Alias) when is_binary(Index) andalso is_binary(Alias) ->
+    route_call(Destination, {is_alias, Index, Alias}, infinity).
+
+%% @doc Gets an alias(or more, based on the string)
+-spec get_alias(destination(), index(), index()) -> response().
+get_alias(Destination, Index, Alias) when is_binary(Index) andalso is_binary(Alias) ->
+    route_call(Destination, {get_alias, Index, Alias}, infinity).
 
 %% @doc The official way to get a value from this application's env.
 %%      Will return Default if that key is unset.
@@ -497,14 +534,15 @@ join(List, Sep) when is_list(List) ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([ClientName, Options0]) ->
+init([PoolName, Options0]) ->
     {DecodeResponse, ConnectionOptions} = case lists:keytake(binary_response, 1, Options0) of
         {value, {binary_response, Decode}, Options1} -> {Decode, Options1};
         false -> {true, Options0}
     end,
     Connection = connection(ConnectionOptions),
-    {ok, #state{client_name = ClientName, 
+    {ok, #state{pool_name = PoolName, 
                 binary_response = DecodeResponse,
+                connection_options = ConnectionOptions,
                 connection = Connection}}.
 
 handle_call({stop}, _From, State) ->
@@ -635,6 +673,52 @@ handle_call({_Request = clear_cache, Index, Params}, _From, State = #state{conne
     {Connection1, Response} = process_request(Connection0, RestRequest, State),
     {reply, Response, State#state{connection = Connection1}};
 
+handle_call({_Request = put_mapping, Indexes, Type, Doc}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_put_mapping(Indexes, Type, Doc),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = get_mapping, Indexes, Type}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_get_mapping(Indexes, Type),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = delete_mapping, Indexes, Type}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_delete_mapping(Indexes, Type),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = aliases, Doc}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_aliases(Doc),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = insert_alias, Index, Alias}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_insert_alias(Index, Alias),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = insert_alias, Index, Alias, Doc}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_insert_alias(Index, Alias, Doc),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = delete_alias, Index, Alias}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_delete_alias(Index, Alias),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = is_alias, Index, Alias}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_is_alias(Index, Alias),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    Result = make_boolean_response(Response, State),
+    {reply, Result, State#state{connection = Connection1}};
+
+handle_call({_Request = get_alias, Index, Alias}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_get_alias(Index, Alias),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
 handle_call(_Request, _From, State) ->
     thrift_client:close(State#state.connection),
     {stop, unhandled_call, State}.
@@ -677,11 +761,47 @@ set_env(Key, Value) ->
 
 %% @doc Process the request over thrift
 -spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
-process_request(Connection, Request, #state{binary_response = BinaryResponse}) ->
-    {Connection1, RestResponse} = thrift_client:call(Connection, 'execute', [Request]),
+process_request(undefined, Request, State = #state{connection_options = ConnectionOptions,
+                                                   binary_response = BinaryResponse}) ->
+    Connection = connection(ConnectionOptions),
+    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
+    {Connection1, process_response(BinaryResponse, RestResponse)};
+process_request(Connection, Request, State = #state{binary_response = BinaryResponse}) ->
+    {Connection1, RestResponse} = do_request(Connection, {'execute', [Request]}, State),
     {Connection1, process_response(BinaryResponse, RestResponse)}.
 
--spec process_response(boolean(), response()) -> response().
+-spec do_request(connection(), {'execute', [request()]}, #state{}) -> {connection(), response()}.
+do_request(Connection, {Function, Args}, _State) ->
+    Args2 =
+        case Args of
+            [#restRequest{body=Body}] when is_binary(Body) ->
+                Args;
+            [A=#restRequest{body=Body}] when is_list(Body) ->
+                [A#restRequest{body=jsx:encode(Body)}]
+        end,
+    try thrift_client:call(Connection, Function, Args2) of
+        {Connection1, Response = {ok, _}} ->
+            {Connection1, Response};
+        {Connection1, Response = {error, _}} ->
+            {Connection1, Response}
+    catch
+        Exception:Reason ->
+            case {Exception, Reason} of
+                {throw, {Connection1, Response = {exception, _}}} ->
+                    {Connection1, Response};
+                % Thrift client closes the connection
+                {error, {case_clause,{error, closed}}} ->
+                    {undefined, {error, badarg}};
+                {error, {case_clause,{error, econnrefused}}} ->
+                    {undefined, {error, econnrefused}};
+                {error, badarg} ->
+                    {Connection, {error, badarg}}
+
+            end
+    end.
+
+
+-spec process_response(boolean(), {ok, rest_response()} | error() | exception()) -> response().
 process_response(_, {error, _} = Response) ->
     Response;
 process_response(true, {ok, #restResponse{status = Status, body = undefined}}) ->
@@ -724,8 +844,8 @@ rest_request_status(Index) when is_list(Index) ->
     #restRequest{method = ?elasticsearch_Method_GET,
                  uri = Uri}.
 
-rest_request_create_index(Index, Doc) when is_binary(Index),
-                                              is_binary(Doc) ->
+rest_request_create_index(Index, Doc) when is_binary(Index) andalso
+                                              (is_binary(Doc) orelse is_list(Doc)) ->
     #restRequest{method = ?elasticsearch_Method_PUT,
                  uri = Index,
                  body = Doc}.
@@ -745,9 +865,9 @@ rest_request_close_index(Index) when is_binary(Index) ->
     #restRequest{method = ?elasticsearch_Method_POST,
                  uri = Uri}.
 
-rest_request_count(Index, Type, Doc, Params) when is_list(Index),
-                                        is_list(Type),
-                                        is_binary(Doc),
+rest_request_count(Index, Type, Doc, Params) when is_list(Index) andalso
+                                        is_list(Type) andalso
+                                        (is_binary(Doc) orelse is_list(Doc)) andalso
                                         is_list(Params) ->
     IndexList = join(Index, <<",">>),
     TypeList = join(Type, <<",">>),
@@ -756,9 +876,9 @@ rest_request_count(Index, Type, Doc, Params) when is_list(Index),
                  uri = Uri,
                  body = Doc}.
 
-rest_request_delete_by_query(Index, Type, Doc, Params) when is_list(Index),
-                                        is_list(Type),
-                                        is_binary(Doc),
+rest_request_delete_by_query(Index, Type, Doc, Params) when is_list(Index) andalso
+                                        is_list(Type) andalso
+                                        (is_binary(Doc) orelse is_list(Doc)) andalso
                                         is_list(Params) ->
     IndexList = join(Index, <<",">>),
     TypeList = join(Type, <<",">>),
@@ -780,19 +900,19 @@ rest_request_is_type(Index, Type) when is_list(Index),
     #restRequest{method = ?elasticsearch_Method_HEAD,
                  uri = Uri}.
 
-rest_request_insert_doc(Index, Type, undefined, Doc, Params) when is_binary(Index),
-                                                      is_binary(Type),
-                                                      is_binary(Doc),
+rest_request_insert_doc(Index, Type, undefined, Doc, Params) when is_binary(Index) andalso
+                                                      is_binary(Type) andalso
+                                                      (is_binary(Doc) orelse is_list(Doc)) andalso
                                                       is_list(Params) ->
     Uri = make_uri([Index, Type], Params),
     #restRequest{method = ?elasticsearch_Method_POST,
                  uri = Uri,
                  body = Doc};
 
-rest_request_insert_doc(Index, Type, Id, Doc, Params) when is_binary(Index),
-                                                      is_binary(Type),
-                                                      is_binary(Id),
-                                                      is_binary(Doc),
+rest_request_insert_doc(Index, Type, Id, Doc, Params) when is_binary(Index) andalso
+                                                      is_binary(Type) andalso
+                                                      is_binary(Id) andalso
+                                                      (is_binary(Doc) orelse is_list(Doc)) andalso
                                                       is_list(Params) ->
     Uri = make_uri([Index, Type, Id], Params),
     #restRequest{method = ?elasticsearch_Method_PUT,
@@ -814,9 +934,9 @@ rest_request_get_doc(Index, Type, Id, Params) when is_binary(Index),
     #restRequest{method = ?elasticsearch_Method_GET,
                  uri = Uri}.
 
-rest_request_mget_doc(Index, Type, Doc) when is_binary(Index),
-                                                   is_binary(Type),
-                                                   is_binary(Doc) ->
+rest_request_mget_doc(Index, Type, Doc) when is_binary(Index) andalso
+                                                   is_binary(Type) andalso
+                                                   (is_binary(Doc) orelse is_list(Doc)) ->
     Uri = make_uri([Index, Type, ?MGET], []),
     #restRequest{method = ?elasticsearch_Method_GET,
                  uri = Uri,
@@ -830,9 +950,9 @@ rest_request_delete_doc(Index, Type, Id, Params) when is_binary(Index),
     #restRequest{method = ?elasticsearch_Method_DELETE,
                  uri = Uri}.
 
-rest_request_search(Index, Type, Doc, Params) when is_binary(Index),
-                                                   is_binary(Type),
-                                                   is_binary(Doc),
+rest_request_search(Index, Type, Doc, Params) when is_binary(Index) andalso
+                                                   is_binary(Type) andalso
+                                                   (is_binary(Doc) orelse is_list(Doc)) andalso
                                                    is_list(Params) ->
     Uri = make_uri([Index, Type, ?SEARCH], Params),
     #restRequest{method = ?elasticsearch_Method_GET,
@@ -869,24 +989,92 @@ rest_request_clear_cache(Index, Params) when is_list(Index) ->
     #restRequest{method = ?elasticsearch_Method_POST,
                  uri = Uri}.
 
-%% @doc Send the request to either poolboy, or the gen_server
--spec route_call(server_ref(), tuple(), timeout()) -> response().
-route_call({pool, PoolName}, Arguments, Timeout) ->
-    PoolId = registered_pool_name(PoolName),
-    poolboy:transaction(PoolId, fun(Worker) ->
-                gen_server:call(Worker, Arguments, Timeout)
-        end);
-route_call(ServerRef, Arguments, Timeout) ->
-    gen_server:call(get_target(ServerRef), Arguments, Timeout).
-    
-%% @doc Get the target for the server_ref
--spec get_target(server_ref()) -> target().
-get_target(ServerRef) when is_pid(ServerRef) ->
-    ServerRef;
-get_target(ServerRef) when is_atom(ServerRef) ->
-    ServerRef;
-get_target(ClientName) when is_binary(ClientName) ->
-    whereis(registered_client_name(ClientName)).
+rest_request_put_mapping(Index, Type, Doc) when is_list(Index),
+                                                is_binary(Type),
+                                                (is_binary(Doc) orelse is_list(Doc)) ->
+    IndexList = join(Index, <<",">>),
+    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_PUT,
+                 uri = Uri,
+                 body = Doc}.
+
+rest_request_get_mapping(Index, Type) when is_list(Index),
+                                           is_binary(Type) ->
+    IndexList = join(Index, <<",">>),
+    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_GET,
+                 uri = Uri}.
+
+rest_request_delete_mapping(Index, Type) when is_list(Index),
+                                              is_binary(Type) ->
+    IndexList = join(Index, <<",">>),
+    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_DELETE,
+                 uri = Uri}.
+
+rest_request_aliases(Doc) when is_binary(Doc) orelse is_list(Doc) ->
+    Uri = ?ALIASES,
+    #restRequest{method = ?elasticsearch_Method_POST,
+                 uri = Uri,
+                 body = Doc}.
+
+rest_request_insert_alias(Index, Alias) when is_binary(Index),
+                                             is_binary(Alias) ->
+    Uri = join([Index, ?ALIAS, Alias], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_PUT,
+                 uri = Uri}.
+
+rest_request_insert_alias(Index, Alias, Doc) when is_binary(Index),
+                                                  is_binary(Alias),
+                                                  (is_binary(Doc) orelse is_list(Doc)) ->
+    Uri = join([Index, ?ALIAS, Alias], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_PUT,
+                 uri = Uri,
+                 body = Doc}.
+
+rest_request_delete_alias(Index, Alias) when is_binary(Index),
+                                             is_binary(Alias) ->
+    Uri = join([Index, ?ALIAS, Alias], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_DELETE,
+                 uri = Uri}.
+
+rest_request_is_alias(Index, Alias) when is_binary(Index),
+                                         is_binary(Alias) ->
+    Uri = join([Index, ?ALIAS, Alias], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_HEAD,
+                 uri = Uri}.
+
+rest_request_get_alias(Index, Alias) when is_binary(Index),
+                                          is_binary(Alias) ->
+    Uri = join([Index, ?ALIAS, Alias], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_GET,
+                 uri = Uri}.
+
+%% @doc Send the request to the gen_server
+-spec route_call(destination(), tuple(), timeout()) -> response().
+% When this comes back from Poolboy, ServerRef is a pid
+%       optionally, atom for internal testing
+route_call(ServerRef, Command, Timeout) when is_atom(ServerRef); is_pid(ServerRef) ->
+    gen_server:call(ServerRef, Command, Timeout);
+%% @doc Send the request to poolboy
+route_call(Destination, Command, Timeout) ->
+    pool_call(fq_server_ref(Destination), Command, Timeout).
+
+-spec pool_call(fq_server_ref(), tuple(), timeout()) ->response().
+pool_call(FqServerRef, Command, Timeout) ->
+    PoolId = registered_pool_name(FqServerRef),
+    TransactionFun = fun() ->
+            poolboy:transaction(PoolId, fun(Worker) ->
+                        gen_server:call(Worker, Command, Timeout)
+                end) end,
+    try
+        TransactionFun()
+    % If the pool doesnt' exist, the keyspace has not been set before
+    catch
+        exit:{noproc, _} ->
+            start_pool(FqServerRef),
+            TransactionFun()
+    end.
 
 -spec join_list_sep([binary()], binary()) -> [any()].
 join_list_sep([Head | Tail], Sep) ->
@@ -897,38 +1085,6 @@ join_list_sep([Head | Tail], Sep, Acc) ->
     join_list_sep(Tail, Sep, [Head, Sep | Acc]);
 join_list_sep([], _Sep, Acc) ->
     lists:reverse(Acc).
-
--spec start_deps(App :: atom()) -> ok.
-start_deps(App) ->
-    application:load(App),
-    {ok, Deps} = application:get_key(App, applications),
-    lists:foreach(fun start_deps/1, Deps),
-    start_app(App).
-
--spec start_app(App :: atom()) -> ok.
-start_app(App) ->
-    case application:start(App) of
-        {error, {already_started, _}} -> ok;
-        ok                            -> ok
-    end.
-
--spec stop_deps(App :: atom()) -> ok.
-stop_deps(App) ->
-    stop_app(App),
-    {ok, Deps} = application:get_key(App, applications),
-    lists:foreach(fun stop_deps/1, lists:reverse(Deps)).
-
--spec stop_app(App :: atom()) -> ok.
-stop_app(kernel) ->
-    ok;
-stop_app(stdlib) ->
-    ok;
-stop_app(App) ->
-    case application:stop(App) of
-        {error, {not_started, _}} -> ok;
-        ok                        -> ok
-    end.
-
 
 %% @doc Make a complete URI based on the tokens and props
 make_uri(BaseList, PropList) ->
@@ -997,3 +1153,18 @@ make_boolean_response(Response, #state{binary_response = true}) when is_list(Res
         true -> [{result, <<"true">>} | Response];
         false -> [{result, <<"false">>} | Response]
     end.
+
+%% @doc Fully qualify a server ref w/ a thrift host/port
+-spec fq_server_ref(destination()) -> fq_server_ref().
+fq_server_ref({Host, Port, Name}) when is_list(Name) -> {Host, Port, list_to_binary(Name)};
+fq_server_ref({Host, Port, Name}) when is_binary(Name) -> {Host, Port, Name};
+fq_server_ref(Destination) when is_list(Destination) -> {undefined, undefined, list_to_binary(Destination)};
+fq_server_ref(Destination) when is_binary(Destination) -> {undefined, undefined, Destination}.
+
+%% If thrift host is passed in, use it
+binary_host(Host) when is_list(Host) -> list_to_binary(Host);
+binary_host(undefined) -> <<"">>.
+
+%% If thrift port is passed in, use it
+binary_port(Port) when is_integer(Port) -> list_to_binary(integer_to_list(Port));
+binary_port(undefined) -> <<"">>.

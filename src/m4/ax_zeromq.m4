@@ -103,14 +103,14 @@ AC_DEFUN([AX_ZEROMQ],
             if test "x$ac_zeromq_path" != "x"; then
                 ac_zeromq_path_include="$ac_zeromq_path/include"
                 ac_zeromq_path_lib="$ac_zeromq_path/lib"
-                ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
-                ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
+                ZEROMQ_CFLAGS="-I$ac_zeromq_path_include"
+                ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
             elif test -f "$local_zeromq_path/include/zmq.h"; then
                 ac_zeromq_path="$local_zeromq_path"
                 ac_zeromq_path_include="$ac_zeromq_path/include"
                 ac_zeromq_path_lib="$ac_zeromq_path/lib"
-                ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
-                ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
+                ZEROMQ_CFLAGS="-I$ac_zeromq_path_include"
+                ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
             else
                 AC_PATH_PROG([zeromq_path_bin_queue], [zmq_queue])
                 if test "x$zeromq_path_bin_queue" != "x"; then
@@ -119,17 +119,20 @@ AC_DEFUN([AX_ZEROMQ],
                     ac_zeromq_path=`AS_DIRNAME([$zeromq_path_bin])`
                     ac_zeromq_path_include="$ac_zeromq_path/include"
                     ac_zeromq_path_lib="$ac_zeromq_path/lib"
-                    ZEROMQ_CFLAGS="-I$ac_zeromq_path/include"
-                    ZEROMQ_LDFLAGS="-L$ac_zeromq_path/lib"
+                    ZEROMQ_CFLAGS="-I$ac_zeromq_path_include"
+                    ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
                 else
-                    ac_zeromq_path=""
-                    ac_zeromq_path_include=""
-                    ac_zeromq_path_lib=""
                     AX_CHECK_PRIVATE_HEADER(zmq.h,
-                        [ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
-                         ZEROMQ_LDFLAGS=""
+                        [ac_zeromq_path=`AS_DIRNAME([$ZMQ_H_PATH])`
+                         ac_zeromq_path_include=$ZMQ_H_PATH
+                         ac_zeromq_path_lib="$ac_zeromq_path/lib"
+                         ZEROMQ_CFLAGS=$ZMQ_H_CFLAGS
+                         ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
                         ],
-                        [ZEROMQ_CFLAGS=""
+                        [ac_zeromq_path=""
+                         ac_zeromq_path_include=""
+                         ac_zeromq_path_lib=""
+                         ZEROMQ_CFLAGS=""
                          ZEROMQ_LDFLAGS=""], , $1)
                 fi
             fi
@@ -162,8 +165,8 @@ void * ctx = zmq_init(1);
 void * socket = zmq_socket(ctx, ZMQ_REQ);
 zmq_close(socket);
 zmq_term(ctx);
-                                      ]])], , [build_zeromq="yes"], ,
-                                     $ac_zeromq_path_lib $2)
+                                      ]])], ,
+                                     [build_zeromq="yes"], , $2)
                 LDFLAGS="$LDFLAGS_SAVED"
                 export LDFLAGS
             fi
@@ -187,16 +190,27 @@ zmq_term(ctx);
                 [PREFIX=$local_zeromq_path
                  SRCDIR=$abs_top_srcdir
                  ZEROMQ_VERSION_MAJOR=$want_zeromq_version])
-
-            ZEROMQ_CFLAGS="-I$local_zeromq_path/include"
-            ZEROMQ_LDFLAGS="-L$local_zeromq_path/lib"
-            ZEROMQ_LIB_PATH="$local_zeromq_path/lib"
+            ac_zeromq_path="$local_zeromq_path"
+            ac_zeromq_path_include="$ac_zeromq_path/include"
+            ac_zeromq_path_lib="$ac_zeromq_path/lib"
+            ZEROMQ_CFLAGS="-I$ac_zeromq_path_include"
+            ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
+            ZEROMQ_LIB_PATH="$ac_zeromq_path_lib"
         else
             AC_MSG_CHECKING(for ZeroMQ v$want_zeromq_version)
             AC_MSG_RESULT(found)
-            ZEROMQ_LDFLAGS=$ZMQ_LDFLAGS
-            dnl empty if not in one of $2
-            ZEROMQ_LIB_PATH=$ZMQ_PATH
+            dnl ZMQ_LDFLAGS and ZMQ_PATH empty if not found in $2
+            if test "x$ZMQ_PATH" = "x"; then
+                ZEROMQ_LIB_PATH="$ac_zeromq_path_lib"
+            else
+                ac_zeromq_path_lib=$ZMQ_PATH
+                ZEROMQ_LIB_PATH=$ZMQ_PATH
+            fi
+            if test "x$ZMQ_LDFLAGS" = "x"; then
+                ZEROMQ_LDFLAGS="-L$ac_zeromq_path_lib"
+            else
+                ZEROMQ_LDFLAGS=$ZMQ_LDFLAGS
+            fi
         fi
         AC_SUBST(ZEROMQ_LDFLAGS)
         AC_SUBST(ZEROMQ_CFLAGS)

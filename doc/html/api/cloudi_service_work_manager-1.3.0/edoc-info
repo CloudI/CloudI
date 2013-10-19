@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,cloudi_service_work_manager}.
+{packages,[]}.
+{modules,[cloudi_service_work_manager]}.

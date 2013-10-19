@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,cloudi_service_http_elli}.
+{packages,[]}.
+{modules,[cloudi_http_elli_handler,cloudi_service_http_elli]}.

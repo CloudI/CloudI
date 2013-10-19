@@ -2,9 +2,7 @@ ErlasticSearch
 =========
 A thrift based erlang client for [ElasticSearch](http://www.elasticsearch.org/).
 
-It incorporates a connection-pool based on [poolboy](https://github.com/devinus/poolboy), which is by far the easiest and least-painful way to get going. It - basically - just works.
-
-Alternately, you can start and stop individual (named/registered) _gen_servers_ and access ElasticSearch through them.
+It incorporates a connection-pool based on [poolboy](https://github.com/devinus/poolboy) - if/when you get down to productizing, you might want to take a look at the pool's `size` and `max_overflow` options
 
 
 
@@ -29,21 +27,11 @@ Add this as a rebar dependency to your project.
    * ```thrift_host``` (default : *"localhost"*)
    * ```thrift_port``` (default : *9500*)
    * ```binary_response``` (default *true*. When *false*, this will run ```jsx:decode``` on the ES response, and send the tuples back to you, instead of one long binary)
-   * Poolboy specific information
-      * ```pools```
-         * Note that if you are using the _connection pooled_ version (*which I recommend! Its easy! It works!*), you can either use the default pools, or start a pooled connection as necessary.
-            * If you are using the default pools, be sure to use the (uncommented) pool settings from ```app.config```
-            * ***If you use the default pools, then you will have to start up elasticsearch before the application, otherwise Bad Things™ will happen***, 
-1. Start a pool, or a client process
-	* ```erlasticsearch:start_client(<<"some_unique_name_here">>).```  
-	       **or**
+   * ```pools```
+      * If you are using the default pools, be sure to use the (uncommented) pool settings from ```app.config``` ( ***If you use the default pools, then you will have to start up elasticsearch before the application, otherwise Bad Things™ will happen*** )
+1. Start a pool
 	* ```erlasticsearch:start_pool(<<"some_unique_name_here">>).```
 1. Profit
-
-
-***Note***   If you use a _client process_, then _all_ requests are serialized through this process. You might want it this way. Or you might not. Whatever.
-
-
 
 
 WARNING
@@ -64,40 +52,19 @@ TL;DR
 ============
 
 1. Make sure you have ElasticSearch running.
-2. Start up a connection
-	* _Pool_ : ```erlasticsearch:start_pool(<<"some_unique_name_here">>).```  
-	       **or**
-	* _Client_ : ```erlasticsearch:start_client(<<"some_unique_name_here">>).``` 
-       * In this case _All_ requests are serialized through this process. You might want it this way. Or you might not. Whatever.
-1. Any JSON expected by ElasticSearch will need to go in as JSON  
-   * For example --> ```<<"{\"settings\":{\"number_of_shards\":3}}">>```
-1. Output returned by everything is in the form of ```[tuple()] | {error, Reason}```, i.e., either it is a list of tuples, or an error.  The tuple list will contain the following
-   * **{status, Status}** <-- This is the REST code (200, 201, 404, etc.) 
-   * **{body, Body}** <-- The body of the response from ElasticSearch. More on this next
-   * **{result, Result}** <-- A boolean representing the result for the various boolean methods (```is_index```, ```is_doc```, etc.)
-   * The Body of the response _from_ ElasticSearch - when it exists - will be JSON.  That said, ```binary_response``` in your ```connection_options``` is going to determine the form of the response.  
-      * The default is ```binary_response = true```. In this case, you ```{body, Body}``` is just going to contain the entire payload from Elasticsearch as a single binary.
-         * e.g. --> ```{body , <<"{\"ok\":true,\"acknowledged\":true}">>}```
-      * If you set ```binary_response = false```, ```{body, Body}``` will contain the JSON as a decoded tuple-list (basically, what you get by running ```jsx:decode(Body)```)
-         * ```{body , [ {<<"ok">> , true} , {<<"acknowledged">> , true} ] }```
-
-
-
-Details
-============
-
-1. The thrift client is in the form of a _simple_one_for_one_ supervised client process (a _gen_server_).
-1. You can explicitly start a (new) connection pool, and access ElasticSearch that way, as follows (e.g. if you need distinct pools for distinct DBs)
+1. You can explicitly start a (new) connection pool, and access ElasticSearch that way, as follows (e.g. if you need distinct pools for distinct Indexes)
    * Start up a pool ---> ```erlasticsearch:start_pool(<<"some_unique_name_here">>).```
-   * From that point, use ```{pool, <<"some_unique_name_here">>}``` as ```ServerRef``` 
-1. You can explicitly start a (supervised!) client process, and access ElasticSearch that way, as follows (This is useful if you need to synchronize your requests, or some such)
-   * Start up a client ---> ```erlasticsearch:start_client(<<"some_unique_name_here">>).```
-   * Start a client process via ```start_client```.  From that point, any of the following three can serve as ```ServerRef``` in the accessors below
-      * The client_name _ClientName_ that you passed in to ```start_client```
-      * The pid _Pid_ that was returned from ```start_client```
-      * The atom that the client process is registered under (accessible via ```erlasticsearch:registered_client_name/1```) 
-1. Any JSON expected by ElasticSearch will need to go in as JSON  
-   * For example --> ```<<"{\"settings\":{\"number_of_shards\":3}}">>```
+   * From that point, use ```<<"some_unique_name_here">>``` as ```ServerRef```, e.g. 
+```erlang
+(erlasticsearch@paglierino)1 > erlasticsearch:is_index(<<"some_unique_name_here">>, <<"an_index">>).  
+```
+1. You can just pick ```<<"another_unique_name">>>``` and use it as ```ServerRef```, *without* starting up a connection pool. In this case, a connection pool will be automagically started. e.g.
+```erlang
+(erlasticsearch@paglierino)1 > erlasticsearch:is_index(<<"some_unique_name_here">>, <<"an_index">>).  
+```
+1. Any JSON expected by ElasticSearch will need to go in as JSON or [jsx](https://github.com/talentdeficit/jsx) encodable proplists. e.g.
+   * ```<<"{\"settings\":{\"number_of_shards\":3}}">>```, or
+   * ```[{<<"settings">>, [{<<"number_of_shards">>, 3}]}]```
 1. Output returned by everything is in the form of ```[tuple()] | {error, Reason}```, i.e., either it is a list of tuples, or an error.  The tuple list will contain the following
    * **{status, Status}** <-- This is the REST code (200, 201, 404, etc.) 
    * **{body, Body}** <-- The body of the response from ElasticSearch. More on this next
@@ -108,8 +75,6 @@ Details
       * If you set ```binary_response = false```, ```{body, Body}``` will contain the JSON as a decoded tuple-list (basically, what you get by running ```jsx:decode(Body)```)
          * ```{body , [ {<<"ok">> , true} , {<<"acknowledged">> , true} ] }```
 
-
-***NOTE*** : Just remember, pools are always referenced as ```{pool, <<"some_name">>}``` and clients as ```<<"some_name">>```
 
 
 
@@ -120,30 +85,34 @@ Details
 [sup_diagram]: https://github.com/dieswaytoofast/erlasticsearch/blob/master/supervision_tree.jpg
 
 
-Pool/Client Management
+Pool Management
 -----
-These methods are available to start and stop the thrift pools/clients 
-Note that once the application has been started, you can either
+These methods are available to start and stop the thrift pools 
+Once the erlasticsearch application has been started, you can use ```start_pool``` and ```stop_pool``` to start/stop a connection-pool.  After this, you can use your _PoolName_ as ```ServerRef``` in the accessors below.   
+Alternatively, you can just use _PoolName_, and a pool will be started up for you. The difference here is that the defaults will get used for the pool's ```size``` and ```max_overflow``` options
 
-1. Start a client process via ```start_client```.  From that point, any of the following three can serve as ```ServerRef``` in the accessors below
+_PoolName_ can also be used to refer to multiple ElasticSearch instances. This is because in all cases, _PoolName_ is one of
 
-   * The client_name _ClientName_ that you passed in to ```start_client```
-   * The pid _Pid_ that was returned from ```start_client```
-   * The atom that the client process is registered under (accessible via ```erlasticsearch:registered_client_name/1```)
-1. Use the poolby version of the client, in which case you
-   * Use ```start_pool``` and ```stop_pool```
-   * Use ```{pool, <<"unique_pool_name">>}``` as ```ServerRef``` in teh accessors below   
+   * ```PoolIdentifier``` e.g.
+     * ```<<"some unique name">>```)
+   * ```{ThriftHost, ThriftPort, PoolIdentifier}``` e.g.
+       * ```{"localhost", 9500, <<"some unqiue name">>}```
+       * ```{unidentified, 9500, <<"some unique name">>}```
+
+The type spec
+
+```erlang
+-type pool_identifier() :: binary().
+-type thrift_host()     :: undefined | string().
+-type thrift_port()     :: undefined | integer().
+```
 
 
 Function | Parameters | Description
 ----- | ----------- | --------
-start_client/1 | ClientName  | Start a client process reference-able as _ClientName_
-start_client/2 | ClientName, Parameters | Start a client process reference-able as _ClientName_, with additional thrift parameters (also settable as _connection_options_ in ```app.config```)
-stop_client/1 | ClientName  | Stop the client process references as _ClientName_
-registered_client_name/1 | ClientName  | The atom that the thrift client process is registered under
-start_pool/1 | PoolName  | Start a connection pool referenceable as _{pool, PoolName}_, with default ```pool_options``` and ```connection_options```
-start_pool/2 | PoolName, PoolParameters | Start a connection pool referenceable as _{pool, PoolName}_, with custom ```pool_options``` and default ```connection_options```
-start_pool/3 | PoolName, PoolParameters, ConnectionParameters | Start a connection pool referenceable as _{pool, PoolName}_, with custom ```pool_options``` and ```connection_options```
+start_pool/1 | PoolName  | Start a connection pool referenceable as _PoolName_, with default ```pool_options``` and ```connection_options```
+start_pool/2 | PoolName, PoolParameters | Start a connection pool referenceable as _PoolName_, with custom ```pool_options``` and default ```connection_options```
+start_pool/3 | PoolName, PoolParameters, ConnectionParameters | Start a connection pool referenceable as _PoolName_, with custom ```pool_options``` and ```connection_options```
 stop_pool/1 | PoolName  | Stop the connection pool referenced as _PoolName_
 
 **EXAMPLES**
@@ -152,56 +121,29 @@ Using the _client_ based accessors  (note that ```bar2``` has ```{binary_respons
 
 
 ```erlang
-erlasticsearch@pecorino)1> erlasticsearch:start_client(<<"bar1">>).
+erlasticsearch@pecorino)1> erlasticsearch:start_pool(<<"bar1">>).
 {ok,<0.178.0>}
-erlasticsearch@pecorino)2> ok, Pid} = erlasticsearch:start_client(<<"bar2">>, [{thrift_options, [{framed, false}]}, {binary_response, false}]).
+erlasticsearch@pecorino)2> {ok, Pid} = erlasticsearch:start_pool(<<"bar2">>, [{thrift_options, [{framed, false}]}, {binary_response, false}]).
 {ok,<0.182.0>}
-erlasticsearch@pecorino)3> erlasticsearch:registered_client_name(<<"bar2">>).
-'erlasticsearch_bar2.client'
 erlasticsearch@pecorino)4> erlasticsearch:flush(<<"bar1">>).
 [{status,<<"200">>},
  {body,<<"{\"ok\":true,\"_shards\":{\"total\":0,\"successful\":0,\"failed\":0}}">>}]
-erlasticsearch@pecorino)5> erlasticsearch:flush('erlasticsearch_bar2.client').
+erlasticsearch@pecorino)5> erlasticsearch:flush(<<"barbar">>).
 {ok,{restResponse,200,undefined,<<"{\"ok\":true,\"_shards\":{\"total\":552,\"successful\":276,\"failed\":0}}">>}}
-erlasticsearch@pecorino)6> erlasticsearch:flush(Pid).
-[{status,200},
- {body,[{<<"ok">>,true},
-        {<<"_shards">>,
-         [{<<"total">>,0},{<<"successful">>,0},{<<"failed">>,0}]}]}]
-erlasticsearch@pecorino)7> erlasticsearch:flush(list_to_pid("<0.182.0>")).
-[{status,200},
- {body,[{<<"ok">>,true},
-        {<<"_shards">>,
-         [{<<"total">>,0},{<<"successful">>,0},{<<"failed">>,0}]}]}]
-erlasticsearch@pecorino)8> erlasticsearch:stop_client(<<"bar1">>).
+erlasticsearch@pecorino)8> erlasticsearch:stop_pool(<<"bar1">>).
 ok
-erlasticsearch@pecorino)9> erlasticsearch:stop_client(<<"bar2">>).
+erlasticsearch@pecorino)9> erlasticsearch:stop_pool(<<"bar2">>).
+ok
+erlasticsearch@pecorino)9> erlasticsearch:stop_pool(<<"barbar">>).
 ok
 ```
 
-Using _poolboy_ based accessors  (note that ```bar2``` has ```{binary_response, false}```)
-
-```erlang
-erlasticsearch@pecorino)1> erlasticsearch:start_pool(<<"bar0">>).
-{ok,<0.83.0>}
-erlasticsearch@pecorino)2> erlasticsearch:start_pool(<<"bar1">>, [{size, 10}, {max_overflow, 20}]).
-{ok,<0.111.0>}
-erlasticsearch@pecorino)3> erlasticsearch:start_pool(<<"bar2">>, [{size, 10}, {max_overflow, 20}], [{thrift_host, "localhost"}, {binary_response, false}]).  
-{ok,<0.135.0>}
-erlasticsearch@pecorino)4> erlasticsearch:flush({pool, <<"bar1">>}).
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"_shards\":{\"total\":0,\"successful\":0,\"failed\":0}}">>}]
-erlasticsearch@pecorino)5> erlasticsearch:flush({pool, <<"bar3">>}).
-[{status,200},
- {body,[{<<"ok">>,true},
-        {<<"_shards">>,
-         [{<<"total">>,0},{<<"successful">>,0},{<<"failed">>,0}]}]}]
-```
+**Note that the pool associated with ```<<"barbar">>``` was automatically started up by erlasticsearch above!**
 
 
 Index CRUD
 -----
-These methods are available to perform CRUD activities on Indexes (kinda, sorta, vaguely the equivalent of Databases)
+These methods are available to perform CRUD activities on Indexes (kinda, sorta, vaguely the equivalent of Databases in ElasticSearch. But you already knew that, right?)
 
 Function | Parameters | Description
 ----- | ----------- | --------
@@ -220,50 +162,14 @@ close_index/2 | ServerRef, IndexName  | Closes the Index called _IndexName_
 (note that ```bar2``` has ```{binary_response, false}```)
 
 ```erlang
-erlasticsearch@pecorino)1> erlasticsearch:start_client(<<"bar">>).
-{ok,<0.178.0>}
-erlasticsearch@pecorino)2> erlasticsearch:start_client(<<"bar2">>, [{binary_response, false}]).
-{ok,<0.182.0>}
 erlasticsearch@pecorino)3> erlasticsearch:create_index(<<"bar">>, <<"foo2">>).
 [{status,<<"200">>},
  {body,<<"{\"ok\":true,\"acknowledged\":true}">>}]
-erlasticsearch@pecorino)4> erlasticsearch:create_index(<<"bar2">>, <<"foo3">>, <<"{\"settings\":{\"number_of_shards\":3}}">>).
-[{status,200},
- {body,[{<<"ok">>,true},{<<"acknowledged">>,true}]}]
-erlasticsearch@pecorino)5> erlasticsearch:create_index(<<"bar">>, <<"foo4">>, <<"{\"settings\":{\"number_of_shards\":3}}">>).
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"acknowledged\":true}">>}]
-```
-```erlang
 erlasticsearch@pecorino)6> erlasticsearch:delete_index(<<"bar">>, <<"foo2">>).                                               
 [{status,<<"200">>},
  {body,<<"{\"ok\":true,\"acknowledged\":true}">>}]
-erlasticsearch@pecorino)7> erlasticsearch:stop_client(<<"bar">>).
-ok
-```
-```erlang
-erlasticsearch@pecorino)8> erlasticsearch:is_index({pool, <<"an_erlasticsearch_pool">>}, <<"foo3">>).    
+erlasticsearch@pecorino)8> erlasticsearch:is_index(<<"an_erlasticsearch_pool">>, <<"foo3">>).    
 [{result,<<"false">>},{status,<<"404">>}]
-erlasticsearch@pecorino)9> erlasticsearch:is_index({pool, <<"an_erlasticsearch_pool">>}, <<"foo4">>).
-[{result,<<"true">>},{status,<<"200">>}]
-erlasticsearch@pecorino)10> erlasticsearch:is_index({pool, <<"an_erlasticsearch_pool">>}, [<<"foo3">>, <<"foo4">>]).
-[{result,<<"true">>},{status,<<"200">>}]
-erlasticsearch@pecorino)11> erlasticsearch:is_index({pool, <<"an_erlasticsearch_pool">>}, <<"no_such_index">>).
-[{result,<<"false">>},{status,<<"404">>}]
-erlasticsearch@pecorino)12> erlasticsearch:is_type({pool, <<"an_erlasticsearch_pool">>}, <<"foo3">>, <<"existing_type_1">>).
-[{result,<<"true">>},{status,<<"200">>}]
-erlasticsearch@pecorino)13> erlasticsearch:is_type({pool, <<"an_erlasticsearch_pool">>}, [<<"foo3">>, <<"foo4">>], <<"existing_type_1">>).
-[{result,<<"true">>},{status,<<"200">>}]
-erlasticsearch@pecorino)14> erlasticsearch:is_type({pool, <<"an_erlasticsearch_pool">>}, [<<"foo3">>, <<"foo4">>], [<<"existing_type_1">>, <<"existing_type_2">>]).
-[{result,<<"true">>},{status,<<"200">>}]
-```
-```erlang
-erlasticsearch@pecorino)15> erlasticsearch:open_index({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>).
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"acknowledged\":true}">>}]
-erlasticsearch@pecorino)16> erlasticsearch:close_index({pool, <<"an_erlasticsearch_pool">>}, <<"foo4">>).                  
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"acknowledged\":true}">>}]
 ```
 
 
@@ -306,9 +212,9 @@ _Note_:
 **EXAMPLES**
 
 ```erlang
-erlasticsearch@pecorino)4> erlasticsearch:start_client(<<"bar">>).
+erlasticsearch@pecorino)4> erlasticsearch:start_pool(<<"bar">>).
 {ok,<0.178.0>}
-erlasticsearch@pecorino)5> erlasticsearch:start_client(<<"bar2">>, [{binary_response, false}]).
+erlasticsearch@pecorino)5> erlasticsearch:start_pool(<<"bar2">>, [{binary_response, false}]).
 {ok,<0.182.0>}
 erlasticsearch@pecorino)6> erlasticsearch:insert_doc(<<"bar">>, <<"index1">>, <<"type1">>, <<"id1">>, <<"{\"some_key\":\"some_val\"}">>).
 [{status,<<"201">>},
@@ -323,16 +229,8 @@ erlasticsearch@pecorino)8> erlasticsearch:insert_doc(<<"bar2">>, <<"index3">>, <
         {<<"_type">>,<<"type3">>},
         {<<"_id">>,<<"z9M78se6SuKsZ0lYlybAwg">>},
         {<<"_version">>,1}]}]
-```
-```erlang
-erlasticsearch@pecorino)9> erlasticsearch:is_doc(<<"bar">>, <<"index1">>, <<"type1">>, <<"id1">>).
-[{result,<<"true">>},{status,<<"200">>}]
-```
-```erlang
-erlasticsearch@pecorino)9> erlasticsearch:get_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"id1">>).
-[{status,<<"200">>},
- {body,<<"{\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1,\"exists\":true, \"_source\" : {\"some_key\":\""...>>}]
-erlasticsearch@pecorino)10> erlasticsearch:get_doc(<<"bar2">>, <<"index1">>, <<"type1">>, <<"id1">>, [{fields, foobar}]).                             [{status,200},
+erlasticsearch@pecorino)10> erlasticsearch:get_doc(<<"bar2">>, <<"index1">>, <<"type1">>, <<"id1">>, [{fields, foobar}]).
+[{status,200},
  {body,[{<<"_index">>,<<"index1">>},
         {<<"_type">>,<<"type1">>},
         {<<"_id">>,<<"id1">>},
@@ -347,125 +245,26 @@ erlasticsearch@pecorino)11> erlasticsearch:get_doc(<<"bar2">>, <<"index1">>, <<"
         {<<"exists">>,true},
         {<<"fields">>,[{<<"some_key">>,<<"some_val">>}]}]}]
 ```
-```erlang
-erlasticsearch@pecorino)12> erlasticsearch:delete_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"id1">>).                   
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"found\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":2}">>}]
-```
-```erlang
-erlasticsearch@pecorino)13> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body,<<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)14> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index2">>, <<"type2">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body,<<"{\"ok\":true,\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)15> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, <<>>).
-[{status,<<"200">>},
- {body,<<"{\"count\":5,\"_shards\":{\"total\":15,\"successful\":15,\"failed\":0}}">>}]
-erlasticsearch@pecorino)16> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, <<>>, [{q, <<"key_1:value_1">>}]).
-[{status,<<"200">>},
- {body,<<"{\"count\":2,\"_shards\":{\"total\":15,\"successful\":15,\"failed\":0}}">>}]
-erlasticsearch@pecorino)17> erlasticsearch:count(<<"bar2">>, <<"{\"term\":{\"key_1\":\"value_1\"}}">>, []).                               
-[{status,200},
- {body,[{<<"count">>,2},
-        {<<"_shards">>,
-         [{<<"total">>,15},
-          {<<"successful">>,15},
-          {<<"failed">>,0}]}]}]
-erlasticsearch@pecorino)18> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>],<<>>, [{q, <<"key_1:value_1">>}]).
-[{status,<<"200">>},
- {body,<<"{\"count\":1,\"_shards\":{\"total\":5,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)19> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>,<<"index2">>],[<<"type1">>, <<"type2">>],<<>>, [{q, <<"key_1:value_1">>}]).
-erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>,<<"index2">>],[<<"type1">>, <<"type2">>],<<>>, [{q, <<"key_1:value_1">>}]).
-[{status,<<"200">>},
- {body,<<"{\"count\":2,\"_shards\":{\"total\":10,\"successful\":10,\"failed\":0}}">>}]
-```              
-```erlang
-erlasticsearch@pecorino)20> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"1\",\"_version\":2}">>}]
-erlasticsearch@pecorino)21> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index2">>, <<"type2">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"200">>},
- {body,<<"{\"ok\":true,\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"1\",\"_version\":2}">>}]
-erlasticsearch@pecorino)22> erlasticsearch:delete_by_query({pool, <<"an_erlasticsearch_pool">>}, <<"{\"term\":{\"key_1\":\"value_1\"}}">>).                  [{status,<<"201">>},
- {body,<<"{\"ok\":true,\"_indices\":{\"index_137402104\":{\"_shards\":{\"total\":5,\"successful\":5,\"failed\":0}},\""...>>}]
-erlasticsearch@pecorino)23> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, <<"{\"term\":{\"key_1\":\"value_1\"}}">>).
-[{status,<<"201">>},
- {body, <<"{\"count\":0,\"_shards\":{\"total\":245,\"successful\":245,\"failed\":0}}">>}]
-```
-```erlang
-erlasticsearch@pecorino)24> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body, <<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)25> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index2">>, <<"type2">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)26> erlasticsearch:delete_by_query({pool, <<"an_erlasticsearch_pool">>}, <<>>, [{q, <<"key1:value1">>}]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_indices\":{\"index_137402104\":{\"_shards\":{\"total\":5,\"successful\":5,\"failed\":0}},\""...>>}]
-erlasticsearch@pecorino)27> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, <<"{\"term\":{\"key_1\":\"value_1\"}}">>).
-[{status,<<"200">>},
- {body, <<"{\"count\":0,\"_shards\":{\"total\":245,\"successful\":245,\"failed\":0}}">>}]
-```
-```erlang
-erlasticsearch@pecorino)28> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body, <<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)29> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index2">>, <<"type2">>, <<"1">>, <<"{\"key_1\":\"value_1\"},{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body, <<"{\"ok\":true,\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)30> erlasticsearch:delete_by_query({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>], [<<"type1">>, <<"type2">>], <<>>, [{q, <<"key1:value1">>}]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_indices\":{\"index1\":{\"_shards\":{\"total\":5,\"successful\":5,\"failed\":0}},\"index2\":{"...>>}]
-erlasticsearch@pecorino)31> erlasticsearch:count({pool, <<"an_erlasticsearch_pool">>}, <<"{\"term\":{\"key_1\":\"value_1\"}}">>).
-[{status,<<"200">>},
- {body, <<"{\"count\":0,\"_shards\":{\"total\":245,\"successful\":245,\"failed\":0}}">>}]
-```
-```erlang
-erlasticsearch@pecorino)32> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"id1">>, <<"{\"key_1\":\"value_1\"}">>).
-[{status,<<"201">>},
- {body, <<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)33>  erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index2">>, <<"type2">>, <<"id2">>, <<"{\"key_2\":\"value_2\"}">>).
-[{status,<<"201">>},
- {body, <<"{\"ok\":true,\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"id2\",\"_version\":1}">>}]
-erlasticsearch@pecorino)34> FullDoc = jsx:encode([{docs, [[{<<"_index">>, <<"index1">>},{<<"_type">>, <<"type1">>},{<<"_id">>, <<"id1">>}], [{<<"_index">>, <<"index2">>},{<<"_type">>, <<"type2">>},{<<"_id">>, <<"id2">>}]]}]).
-<<"{\"docs\":[{\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\"},{\"_index\":\"index2\",\"_type\":\"type2\",\"_id\":\"id2\"}]}">>
-erlasticsearch@pecorino)35> erlasticsearch:mget_doc({pool, <<"an_erlasticsearch_pool">>}, FullDoc).                                                         [{status,<<"200">>},
- {body, <<"{\"docs\":[{\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1,\"exists\":true, \"_source"...>>}]
-erlasticsearch@pecorino)36> TypeDoc = jsx:encode([{docs, [[{<<"_type">>, <<"type1">>},{<<"_id">>, <<"id1">>}], [{<<"_type">>, <<"type2">>},{<<"_id">>, <<"id2">>}]]}]).
-<<"{\"docs\":[{\"_type\":\"type1\",\"_id\":\"id1\"},{\"_type\":\"type2\",\"_id\":\"id2\"}]}">>
-erlasticsearch@pecorino)37> erlasticsearch:mget_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, TypeDoc).
-[{status,<<"200">>},
- {body, <<"{\"docs\":[{\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1,\"exists\":true, \"_source"...>>}]
-erlasticsearch@pecorino)38> IdDoc = jsx:encode([{docs, [[{<<"_id">>, <<"id1">>}], [{<<"_id">>, <<"id2">>}]]}]).
-<<"{\"docs\":[{\"_id\":\"id1\"},{\"_id\":\"id2\"}]}">>
-erlasticsearch@pecorino)39> erlasticsearch:mget_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, IdDoc).
-[{status,<<"201">>},
- {body, <<"{\"docs\":[{\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1,\"exists\":true, \"_source"...>>}]           
-```
-
 
 
 Search
 -----
 API to perform searches against ElasticSearch (this _is_ why you are using ElasticSearch, right?)
 
-(**Note**: _ServerRef_ is either a _Client Name/Reference_, or _{pool, PoolName}_)
-
 Function | Parameters | Description
 ----- | ----------- | --------
-search/4 | ServerRef, IndexName, Type, Doc  | Searches the index _IndexName_, with type _Type_ for the JSON query embedded in _Doc_
-search/5 | ServerRef, IndexName, Type, Doc, Params  | Searches the index _IndexName_, with type _Type_ for the JSON query embedded in _Doc_, and passes the tuple-list _Params_ to ElasticSearch
+search/4 | PoolName, IndexName, Type, Doc  | Searches the index _IndexName_, with type _Type_ for the JSON query embedded in _Doc_
+search/5 | PoolName, IndexName, Type, Doc, Params  | Searches the index _IndexName_, with type _Type_ for the JSON query embedded in _Doc_, and passes the tuple-list _Params_ to ElasticSearch
 
 
 
 **EXAMPLES**
 
 ```erlang
-erlasticsearch@pecorino)2> erlasticsearch:insert_doc({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"id1">>, <<"{\"some_key\":\"some_val\"}">>).
+erlasticsearch@pecorino)2> erlasticsearch:insert_doc({"localhost", 9500, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<"id1">>, <<"{\"some_key\":\"some_val\"}">>).
 [{status,<<"201">>},
  {body, <<"{\"ok\":true,\"_index\":\"index1\",\"_type\":\"type1\",\"_id\":\"id1\",\"_version\":1}">>}]
-erlasticsearch@pecorino)3> erlasticsearch:search({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<>>, [{q, "some_key:some_val"}]).     
+erlasticsearch@pecorino)3> erlasticsearch:search({"localhost", 9500, <<"an_erlasticsearch_pool">>}, <<"index1">>, <<"type1">>, <<>>, [{q, "some_key:some_val"}]).     
 [{status,<<"200">>},
  {body, <<"{\"took\":1,\"timed_out\":false,\"_shards\":{\"total\":5,\"successful\":5,\"failed\":0},\"hits\":{\"total\":"...>>}]
 ```
@@ -474,7 +273,7 @@ Index Helpers
 -----
 A bunch of functions that do "things" to indices (flush, refresh, etc.)
 
-(**Note**: _ServerRef_ is either a _Client Name/Reference_, or _{pool, PoolName}_)
+(**Note**: _ServerRef_ refers to either _PoolName_ or _{ThriftHost, ThriftPort, PoolIdentifier}_)
 
 Function | Parameters | Description
 ----- | ----------- | --------
@@ -495,64 +294,20 @@ clear_cache/3 | ServerRef, Index, params | Clears all the caches associated with
 **EXAMPLES**
 
 ```erlang
-erlasticsearch@pecorino)2> erlasticsearch:refresh({pool, <<"an_erlasticsearch_pool">>}).                                                                                   [{status,<<"200">>},
+erlasticsearch@pecorino)2> erlasticsearch:refresh(<<"bar">>).                                                                                   [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":552,\"successful\":276,\"failed\":0}}">>}] 
-erlasticsearch@pecorino)3> erlasticsearch:refresh({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>).                                                                        [{status,<<"200">>},
+erlasticsearch@pecorino)3> erlasticsearch:refresh(<<"bar">>, <<"index1">>).                                                                        [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)4> erlasticsearch:refresh({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>]).
+erlasticsearch@pecorino)4> erlasticsearch:refresh(<<"bar">>, [<<"index1">>, <<"index2">>]).
 [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":16,\"successful\":8,\"failed\":0}}">>}]
-```
-```erlang
-erlasticsearch@pecorino)5> erlasticsearch:flush({pool, <<"an_erlasticsearch_pool">>}).                                                                                   [{status,<<"200">>},
+erlasticsearch@pecorino)5> erlasticsearch:flush(<<"bar">>).                                                                                   [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":552,\"successful\":276,\"failed\":0}}">>}] 
-erlasticsearch@pecorino)6> erlasticsearch:refresh({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>).                                                                        [{status,<<"200">>},
+erlasticsearch@pecorino)6> erlasticsearch:refresh(<<"bar">>, <<"index1">>).                                                                        [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)7> erlasticsearch:refresh({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>]).
+erlasticsearch@pecorino)7> erlasticsearch:refresh(<<"bar">>, [<<"index1">>, <<"index2">>]).
 [{status,<<"200">>},
  {body, <<"{\"ok\":true,\"_shards\":{\"total\":16,\"successful\":8,\"failed\":0}}">>}] 
-```
-```erlang
-erlasticsearch@pecorino)8> erlasticsearch:status({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":6,\"successful\":3,\"failed\":0},\"indices\":{\"index1\":{\"index\":{\"prim"...>>}]
-erlasticsearch@pecorino)9> erlasticsearch:status({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":16,\"successful\":8,\"failed\":0},\"indices\":{\"index2\":{\"index\":{\"pri"...>>}]
-erlasticsearch@pecorino)10> erlasticsearch:optimize({pool, <<"an_erlasticsearch_pool">>}, <<"index1">>).     
-[{status,<<"200">>},
- {body, <"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)11> erlasticsearch:optimize({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":16,\"successful\":8,\"failed\":0}}">>}]
-erlasticsearch@pecorino)12> erlasticsearch:optimize({pool, <<"an_erlasticsearch_pool">>}).                         
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":692,\"successful\":346,\"failed\":0}}">>}]                 
-```
-```erlang
-erlasticsearch@pecorino)13> erlasticsearch:segments({pool, <<"an_erlasticsearch_pool">>}).                                     
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":170,\"successful\":85,\"failed\":0},\"indices\":{\"test_1\":{\"shards\":"...>>}]
-erlasticsearch@pecorino)14> erlasticsearch:segments({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0},\"indices\":{\"index1\":{\"shards\":{\""...>>}]
-erlasticsearch@pecorino)15> erlasticsearch:segments({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>, <<"index2">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":20,\"successful\":10,\"failed\":0},\"indices\":{\"index1\":{\"shards\":{"...>>}]
-```
-```erlang
-erlasticsearch@pecorino)16> erlasticsearch:clear_cache({pool, <<"an_erlasticsearch_pool">>}).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":130,\"successful\":65,\"failed\":0}}">>}]
-erlasticsearch@pecorino)17> erlasticsearch:clear_cache({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)18> erlasticsearch:clear_cache({pool, <<"an_erlasticsearch_pool">>}, [<<"index1">>], [{filter, true}]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":10,\"successful\":5,\"failed\":0}}">>}]
-erlasticsearch@pecorino)19> erlasticsearch:clear_cache({pool, <<"an_erlasticsearch_pool">>}, [], [{filter, true}]).            
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"_shards\":{\"total\":140,\"successful\":70,\"failed\":0}}">>}]        
 ```
 
 
@@ -560,7 +315,7 @@ Cluster Helpers
 -----
 A bunch of functions that do "things" to clusters (health, etc.)
 
-(**Note**: _ServerRef_ is either a _Client Name/Reference_, or _{pool, PoolName}_)
+(**Note**: _ServerRef_ refers to either _PoolName_ or _{ThriftHost, ThriftPort, PoolIdentifier}_)
 
 Function | Parameters | Description
 ----- | ----------- | --------
@@ -577,52 +332,19 @@ nodes_stats/3 | ServerRef, NodeName, Params  | Reports the stats of the node _No
 
 **EXAMPLES**
 ```erlang
-erlasticsearch@pecorino)1> erlasticsearch:start_client(<<"bar">>).
-{ok,<0.178.0>}
 erlasticsearch@pecorino)2> erlasticsearch:refresh(<<"bar">>).                                                                                   {ok,{restResponse,200,undefined,                                                                                                                                               <<"{\"ok\":true,\"_shards\":{\"total\":552,\"successful\":276,\"failed\":0}}">>}]
 erlasticsearch@pecorino)3> erlasticsearch:health(<<"bar">>).                          
 [{status,<<"200">>},
  {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"status\":\"yellow\",\"timed_out\":false,\"number_of_nodes\""...>>}]
 erlasticsearch@pecorino)1> erlasticsearch:stop_client(<<"bar">>).
 ok
-```
-```erlang
-erlasticsearch@pecorino)4> erlasticsearch:state({pool, <<"an_erlasticsearch_pool">>}).
+erlasticsearch@pecorino)4> erlasticsearch:state(<<"bar">>).
 [{status,<<"200">>},
  {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"master_node\":\"7k3ViuT5SQ67ayWsF1y8hQ\",\"blocks\":{\"ind"...>>}]
-erlasticsearch@pecorino)5> erlasticsearch:state({pool, <<"an_erlasticsearch_pool">>}, [{filter_nodes, true}]).
+erlasticsearch@pecorino)5> erlasticsearch:state(<<"bar">>, [{filter_nodes, true}]).
 [{status,<<"200">>},
  {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"blocks\":{\"indices\":{\"index1\":{\"4\":{\"description\":\"inde"...>>}]
 ```
-```erlang
-erlasticsearch@pecorino)6> erlasticsearch:nodes_info({pool, <<"an_erlasticsearch_pool">>}).                   
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"name\":\""...>>}]
-erlasticsearch@pecorino)7> erlasticsearch:nodes_info({pool, <<"an_erlasticsearch_pool">>}, <<"node1">>).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"name\":\""...>>}]
-erlasticsearch@pecorino)8> erlasticsearch:nodes_info({pool, <<"an_erlasticsearch_pool">>}, [<<"node1">>]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"name\":\""...>>}]
-erlasticsearch@pecorino)9> erlasticsearch:nodes_info({pool, <<"an_erlasticsearch_pool">>}, [<<"node1">>], [{os, true}, {process, true}]).
-[{status,<<"200">>},
- {body, <<"{\"ok\":true,\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"name\":\""...>>}]
-```
-```erlang
-erlasticsearch@pecorino)10> erlasticsearch:nodes_stats({pool, <<"an_erlasticsearch_pool">>}).                              
-[{status,<<"200">>},
- {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"timestamp\":136865"...>>}]
-erlasticsearch@pecorino)11> erlasticsearch:nodes_stats({pool, <<"an_erlasticsearch_pool">>}, <<"node1">>).
-[{status,<<"200">>},
- {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"timestamp\":136865"...>>}]
-erlasticsearch@pecorino)12> erlasticsearch:nodes_stats({pool, <<"an_erlasticsearch_pool">>}, [<<"node1">>]).
-[{status,<<"200">>},
- {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"timestamp\":136865"...>>}]
-erlasticsearch@pecorino)13> erlasticsearch:nodes_stats({pool, <<"an_erlasticsearch_pool">>}, [<<"node1">>], [{process, true}, {transport, true}]).
-[{status,<<"200">>},
- {body, <<"{\"cluster_name\":\"elasticsearch_mahesh\",\"nodes\":{\"node1\":{\"timestamp\":136865"...>>}]
-```
-
 
 
 Credits

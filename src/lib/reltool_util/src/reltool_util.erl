@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 0.6.0 {@date} {@time}
+%%% @version 0.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -71,12 +71,17 @@
          ensure_application_started/1,
          ensure_application_stopped/1,
          module_loaded/1,
+         is_module_loaded/1,
+         is_module_loaded/2,
          module_purged/1,
          module_purged/2,
          module_exports/1,
          script_start/1,
          script_remove/1,
          script_remove/2]).
+
+-define(IS_MODULE_LOADED_DELTA, 100).
+-define(MODULES_PURGED_DELTA, 100).
 
 -compile({no_auto_import, [{module_loaded, 1}]}).
 
@@ -219,10 +224,18 @@ application_remove(Application) ->
 %%-------------------------------------------------------------------------
 
 -spec application_remove(Application :: atom(),
-                         Timeout :: pos_integer()) ->
+                         Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
+application_remove(Application, infinity)
+    when is_atom(Application) ->
+    case application_stop_dependencies(Application) of
+        {ok, Applications} ->
+            applications_purged(Applications, infinity);
+        {error, _} = Error ->
+            Error
+    end;
 application_remove(Application, Timeout)
     when is_atom(Application), is_integer(Timeout), Timeout > 0 ->
     case application_stop_dependencies(Application) of
@@ -258,7 +271,7 @@ application_purged(Application) ->
 %%-------------------------------------------------------------------------
 
 -spec application_purged(Application :: atom(),
-                         Timeout :: pos_integer()) ->
+                         Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
@@ -361,6 +374,9 @@ application_modules(Application) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Retrieve a list of application modules with filter options.===
+%% Options can contain {behavior, ModuleName} to list all the modules
+%% that use a specific behaviour (the information will not be present if
+%% the beam file was stripped).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -388,22 +404,50 @@ application_modules(Application, Options)
     ok |
     {error, any()}.
 
+ensure_application_loaded(kernel) ->
+    ok;
+ensure_application_loaded(stdlib) ->
+    ok;
 ensure_application_loaded(Application) ->
-    case application:load(Application) of
+    Loaded = case application:load(Application) of
         ok ->
-            case application:get_key(Application, modules) of
-                {ok, Modules} ->
-                    lists:foreach(fun(M) ->
-                        ok = module_loaded(M)
-                    end, Modules);
-                undefined ->
-                    ok
-            end;
+            ok;
         {error, {already_loaded, Application}} ->
             ok;
         {error, _} = Error ->
             Error
-     end.
+     end,
+     if
+        Loaded =:= ok ->
+            case application:get_key(Application, modules) of
+                {ok, Modules} ->
+                    % make sure all modules are loaded, even if the
+                    % application information is already loaded, since
+                    % loading the application data does not automatically
+                    % load its modules
+                    lists:foreach(fun(M) ->
+                        % valid results, others cause a crash
+                        case module_loaded(M) of
+                            ok ->
+                                ok;
+                            {error, nofile} ->
+                                error_logger:warning_msg("broken "
+                                                         "application ~p "
+                                                         "missing ~p file~n",
+                                                         [Application, M]);
+                            {error, Reason} ->
+                                error_logger:error_msg("application ~p load "
+                                                       "error ~p on ~p file~n",
+                                                       [Application,
+                                                        Reason, M])
+                        end
+                    end, Modules);
+                undefined ->
+                    ok
+            end;
+        true ->
+            Loaded
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -458,7 +502,7 @@ ensure_application_stopped(Application) ->
 
 module_loaded(Module)
     when is_atom(Module) ->
-    case is_module_loaded(Module) of
+    case is_module_loaded_check(Module) of
         false ->
             case code:load_file(Module) of
                 {module, Module} ->
@@ -468,6 +512,52 @@ module_loaded(Module)
             end;
         true ->
             ok
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Wait to check if a module is loaded.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_module_loaded(Module :: atom()) ->
+    ok |
+    {error, any()}.
+
+is_module_loaded(Module)
+    when is_atom(Module) ->
+    case is_module_loaded(Module, 5000) of
+        {ok, _} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Wait to check if a module is loaded.===
+%% Return a new timeout value with the elapsed time subtracted.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_module_loaded(Module :: atom(),
+                       Timeout :: non_neg_integer()) ->
+    {ok, non_neg_integer()} |
+    {error, any()}.
+
+is_module_loaded(Module, Timeout)
+    when is_atom(Module), is_integer(Timeout), Timeout >= 0 ->
+    case is_module_loaded_check(Module) of
+        true ->
+            {ok, Timeout};
+        false ->
+            case erlang:max(Timeout - ?IS_MODULE_LOADED_DELTA, 0) of
+                0 ->
+                    {error, timeout};
+                NextTimeout ->
+                    receive after ?IS_MODULE_LOADED_DELTA -> ok end,
+                    is_module_loaded(Module, NextTimeout)
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -492,7 +582,7 @@ module_purged(Module) ->
 %%-------------------------------------------------------------------------
 
 -spec module_purged(Module :: atom(),
-                    Timeout :: pos_integer()) ->
+                    Timeout :: non_neg_integer() | infinity) ->
     ok |
     {error, any()}.
 
@@ -600,12 +690,14 @@ script_remove(FilePath) ->
 %%-------------------------------------------------------------------------
 
 -spec script_remove(FilePath :: string(),
-                    Timeout :: pos_integer()) ->
+                    Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
 
 script_remove(FilePath, Timeout)
-    when is_list(FilePath), is_integer(Timeout), Timeout > 0 ->
+    when is_list(FilePath),
+         ((is_integer(Timeout) andalso (Timeout > 0)) orelse
+          (Timeout =:= infinity))->
     true = lists:suffix(".script", FilePath),
     % system name and version are ignored
     {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
@@ -619,9 +711,14 @@ script_remove(FilePath, Timeout)
                 true ->
                     case script_remove_instructions(Instructions) of
                         {ok, Applications} ->
-                            TimeoutSlice = erlang:round(
-                                0.5 + Timeout / erlang:length(Applications)),
-                            applications_remove(Applications, TimeoutSlice);
+                            NewTimeout = if
+                                Timeout =:= infinity ->
+                                    Timeout;
+                                is_integer(Timeout) ->
+                                    erlang:round(0.5 + Timeout /
+                                        erlang:length(Applications))
+                            end,
+                            applications_remove(Applications, NewTimeout);
                         {error, _} = Error ->
                             Error
                     end;
@@ -773,11 +870,49 @@ applications_purged([Application | Applications], Timeout) ->
     end.
 
 applications_dependencies(A) ->
-    case application:get_key(A, applications) of
+    Included = case application:get_key(A, included_applications) of
         undefined ->
-            {error, {undefined_dependencies, A}};
-        {ok, As} ->
-            applications_dependencies(As, As)
+            ok;
+        {ok, LoadAs} ->
+            applications_dependencies_load(LoadAs)
+    end,
+    if
+        Included =:= ok ->
+            case application:get_key(A, applications) of
+                undefined ->
+                    {error, {undefined_dependencies, A}};
+                {ok, As} ->
+                    applications_dependencies(As, As)
+            end;
+        true ->
+            Included
+    end.
+
+applications_dependencies_load([]) ->
+    ok;
+applications_dependencies_load([A | Rest]) ->
+    case ensure_application_loaded(A) of
+        ok ->
+            As1 = case application:get_key(A, included_applications) of
+                undefined ->
+                    [];
+                {ok, As0} ->
+                    As0
+            end,
+            LoadAs = case application:get_key(A, applications) of
+                undefined ->
+                    As1;
+                {ok, As2} ->
+                    As1 ++ As2
+            end,
+            case applications_dependencies_load(LoadAs) of
+                ok ->
+                    applications_dependencies_load(Rest);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
     end.
 
 applications_dependencies([], As) ->
@@ -785,21 +920,33 @@ applications_dependencies([], As) ->
 applications_dependencies([A | Rest], As) ->
     case ensure_application_loaded(A) of
         ok ->
-            case application:get_key(A, applications) of
+            Included = case application:get_key(A, included_applications) of
                 undefined ->
-                    {error, {undefined_dependencies, A}};
-                {ok, []} ->
-                    applications_dependencies(Rest, As);
-                {ok, NextAs} ->
-                    OtherAs = lists:foldl(fun(NextA, L) ->
-                        lists:delete(NextA, L)
-                    end, As, NextAs),
-                    case applications_dependencies(NextAs, NextAs ++ OtherAs) of
-                        {ok, NewAs} ->
-                            applications_dependencies(Rest, NewAs);
-                        {error, _} = Error ->
-                            Error
-                    end
+                    ok;
+                {ok, LoadAs} ->
+                    applications_dependencies_load(LoadAs)
+            end,
+            if
+                Included =:= ok ->
+                    case application:get_key(A, applications) of
+                        undefined ->
+                            {error, {undefined_dependencies, A}};
+                        {ok, []} ->
+                            applications_dependencies(Rest, As);
+                        {ok, NextAs} ->
+                            OtherAs = lists:foldl(fun(NextA, L) ->
+                                lists:delete(NextA, L)
+                            end, As, NextAs),
+                            case applications_dependencies(NextAs,
+                                                           NextAs ++ OtherAs) of
+                                {ok, NewAs} ->
+                                    applications_dependencies(Rest, NewAs);
+                                {error, _} = Error ->
+                                    Error
+                            end
+                    end;
+                true ->
+                    Included
             end;
         {error, _} = Error ->
             Error
@@ -857,7 +1004,7 @@ script_start_instructions([{path, Paths} | L],
 script_start_instructions([{primLoad, Modules} | L],
                           preloaded, Applications, Root, Apps) ->
     Loaded = lists:all(fun(M) ->
-        is_module_loaded(M) =:= true
+        is_module_loaded_check(M) =:= true
     end, Modules),
     if
         Loaded ->
@@ -984,10 +1131,10 @@ script_remove_instructions([{apply, {c, erlangrc, _}} | L],
 ensure_all_loaded([]) ->
     ok;
 ensure_all_loaded([Module | Modules]) ->
-    case is_module_loaded(Module) of
+    case is_module_loaded_check(Module) of
         true ->
             Loaded = lists:all(fun(M) ->
-                is_module_loaded(M) =:= true
+                is_module_loaded_check(M) =:= true
             end, Modules),
             if
                 Loaded ->
@@ -997,7 +1144,7 @@ ensure_all_loaded([Module | Modules]) ->
             end;
         false ->
             NotLoaded = lists:all(fun(M) ->
-                is_module_loaded(M) =:= false
+                is_module_loaded_check(M) =:= false
             end, Modules),
             if
                 NotLoaded ->
@@ -1022,7 +1169,7 @@ ensure_code_paths([P | Paths], Apps) ->
             {error, {not_loaded, Application, VSN}}
     end.
 
-is_module_loaded(Module) when is_atom(Module) ->
+is_module_loaded_check(Module) when is_atom(Module) ->
     case code:is_loaded(Module) of
         {file, _} ->
             true;
@@ -1030,9 +1177,10 @@ is_module_loaded(Module) when is_atom(Module) ->
             false
     end.
 
--define(MODULES_PURGED_DELTA, 100).
+modules_purged(Modules, infinity) ->
+    modules_purged(Modules, [], 5000);
 modules_purged(Modules, Timeout)
-    when is_list(Modules), is_integer(Timeout), Timeout > 0 ->
+    when is_list(Modules), is_integer(Timeout), Timeout >= 0 ->
     modules_purged(Modules, [], Timeout).
 
 modules_purged([], [], _) ->
