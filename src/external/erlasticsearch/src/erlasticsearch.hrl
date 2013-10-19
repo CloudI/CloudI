@@ -18,7 +18,7 @@
 -type method()          :: atom().
 -type rest_response()   :: #restResponse{}.
 -type response()        :: [tuple()] | error().
--type request()         :: #restRequest{}.
+-type rest_request()    :: #restRequest{}.
 -type thrift_host()     :: undefined | string().
 -type thrift_port()     :: undefined | integer().
 -type connection()      :: any().
@@ -53,6 +53,7 @@
 
 %% Errors
 -define(NO_SUCH_SEQUENCE, no_such_sequence).
+-define(CONNECTION_REFUSED, {error, econnrefused}).
 
 %% Methods
 -define(STATE, <<"_cluster/state">>).

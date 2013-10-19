@@ -107,8 +107,8 @@
 -define(DEFAULT_THRIFT_HOST, "localhost").
 -define(DEFAULT_THRIFT_PORT, 9500).
 -define(DEFAULT_POOL_NAME, <<"default_cloudi_elasticsearch_pool">>).
--define(DEFAULT_POOL_OPTIONS, [{size, 5},
-                               {max_overflow, 10}
+-define(DEFAULT_POOL_OPTIONS, [{size, 1},
+                               {max_overflow, 0}
                               ]).
 
 -define(DEFAULT_CONNECTION_OPTIONS, [{thrift_host, ?DEFAULT_THRIFT_HOST},
