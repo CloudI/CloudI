@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.2.5b<br />last updated on August 9<sup>th</sup> 2013</h3></center>
+  <center><h3>version 1.3.0b<br />last updated on October 18<sup>th</sup> 2013</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -42,13 +42,15 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_subscribe"         >1.2 - subscribe</a></li>
     <li><a href="#1_unsubscribe"       >1.3 - unsubscribe</a></li>
     <li><a href="#1_get_pid"           >1.4 - get_pid (Erlang-only)</a></li>
-    <li><a href="#1_send_sync"         >1.5 - send_sync</a></li>
-    <li><a href="#1_send_async"        >1.6 - send_async</a></li>
-    <li><a href="#1_send_async_active" >1.7 - send_async_active (Erlang-only)</a></li>
-    <li><a href="#1_mcast_async"       >1.8 - mcast_async</a></li>
-    <li><a href="#1_recv_async"        >1.9 - recv_async</a></li>
-    <li><a href="#1_return"            >1.10 - return</a></li>
-    <li><a href="#1_forward"           >1.11 - forward</a></li>
+    <li><a href="#1_get_pids"          >1.5 - get_pids (Erlang-only)</a></li>
+    <li><a href="#1_send_sync"         >1.6 - send_sync</a></li>
+    <li><a href="#1_send_async"        >1.7 - send_async</a></li>
+    <li><a href="#1_send_async_active" >1.8 - send_async_active (Erlang-only)</a></li>
+    <li><a href="#1_mcast_async"       >1.9 - mcast_async</a></li>
+    <li><a href="#1_mcast_async_active">1.10 - mcast_async_active (Erlang-only)</a></li>
+    <li><a href="#1_recv_async"        >1.11 - recv_async</a></li>
+    <li><a href="#1_return"            >1.12 - return</a></li>
+    <li><a href="#1_forward"           >1.13 - forward</a></li>
   </ul>
   <a name="CloudI"></a>
   <h2>CloudI Service API - Controlling CloudI</h2>
@@ -274,13 +276,13 @@ CloudI::API.thread_count()
     parameters in cloudi_service but functions with less parameters do
     exist and they utilize default values for timeouts and request
     priority.  Please see the
-    <a href="api/cloudi_core-1.2.5/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.3.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.2.5/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.3.0/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -485,7 +487,7 @@ cloudi_service:get_pid(Dispatcher :: pid(),
     function should rarely be necessary, but it can allow other logic
     to be used for determining which service should receive a request
     (e.g., based on apparent processing power, like within the hexpi test).
-    The Erlang process (tuple) returned could become invalid if the service
+    The Erlang PatternPid tuple returned could become invalid if the service
     destination terminated, so the Erlang process monitoring becomes
     the burden of the get_pid function user.  Due to the intimate nature
     of this function, it only exists within the Erlang CloudI API
@@ -493,8 +495,43 @@ cloudi_service:get_pid(Dispatcher :: pid(),
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
+  <a name="1_get_pids"></a>
+  <h3>1.5 - get_pids (Erlang-only)</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:get_pids(Dispatcher :: pid(),
+                        Name :: string(),
+                        Timeout :: non_neg_integer()) -&gt;
+    {'ok', PatternPids :: list({string(), pid()})} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    Internal (Erlang-only) services can request a list of Erlang processes
+    based on the service name provided, before calling either the
+    send_sync function or the send_async function.  If all Erlang processes
+    returned need to be used with send_async, it is easier to use the
+    <a href="#1_mcast_async">mcast_async</a> function.  The get_pids
+    function should rarely be necessary, but it can allow other logic
+    to be used for determining which service should receive a request
+    (e.g., based on apparent processing power, like within the hexpi test).
+    The Erlang PatternPids tuple list returned could contain invalid
+    Erlang processes if the service destination terminated, so the
+    Erlang process monitoring becomes
+    the burden of the get_pids function user.  Due to the intimate nature
+    of this function, it only exists within the Erlang CloudI API
+    (to implement it in other languages would do more harm than good).
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
   <a name="1_send_sync"></a>
-  <h3>1.5 - send_sync</h3>
+  <h3>1.6 - send_sync</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -666,7 +703,7 @@ org.cloudi.API.Response
   <div class="top"><a href="#Service">Top</a></div>
 
   <a name="1_send_async"></a>
-  <h3>1.6 - send_async</h3>
+  <h3>1.7 - send_async</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -845,7 +882,7 @@ trans_id
   <div class="top"><a href="#Service">Top</a></div>
 
   <a name="1_send_async_active"></a>
-  <h3>1.7 - send_async_active (Erlang-only)</h3>
+  <h3>1.8 - send_async_active (Erlang-only)</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -906,12 +943,16 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.2.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.3.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    The message formats are also provided as records that are accessible with:
   </p>
+<pre>
+-include_lib("cloudi_core/include/cloudi_service.hrl").
+</pre>
   <div class="top"><a href="#Service">Top</a></div>
 
   <a name="1_mcast_async"></a>
-  <h3>1.8 - mcast_async</h3>
+  <h3>1.9 - mcast_async</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -926,15 +967,6 @@ cloudi_service:mcast_async(Dispatcher :: pid(),
                            Request :: any(),
                            Timeout :: non_neg_integer() | 'undefined',
                            Priority :: integer() | 'undefined') -&gt;
-    {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
-    {'error', Reason :: atom()}.
-cloudi_service:mcast_async(Dispatcher :: pid(),
-                           Name :: string(),
-                           RequestInfo :: any(),
-                           Request :: any(),
-                           Timeout :: non_neg_integer() | 'undefined',
-                           Priority :: integer() | 'undefined',
-                           PatternPid :: {string(), pid()}) -&gt;
     {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
     {'error', Reason :: atom()}.
 </pre>
@@ -1072,8 +1104,69 @@ List&lt;org.cloudi.API.TransId&gt;
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
+  <a name="1_mcast_async_active"></a>
+  <h3>1.10 - mcast_async_active (Erlang-only)</h3>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Function Call
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+<pre>
+cloudi_service:mcast_async_active(Dispatcher :: pid(),
+                                  Name :: string(),
+                                  RequestInfo :: any(),
+                                  Request :: any(),
+                                  Timeout :: non_neg_integer() | 'undefined',
+                                  Priority :: integer() | 'undefined') -&gt;
+    {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
+    {'error', Reason :: atom()}.
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The mcast_async_active function provides the same functionality as
+    the mcast_async function within an Erlang process, but the response is
+    automatically sent to the Erlang process, after completion.  Using
+    mcast_async_active is the preferred way to publish an asynchronous
+    service request in Erlang because it utilizes Erlang's concurrency
+    without requiring a blocking operation (a passive send, using Erlang
+    vernacular, since it would otherwise require a call of the function
+    recv_async to receive the request).
+  </p>
+  <p>
+    Incoming Process Message (the same as the send_async_active messages):
+  </p>
+  <table><tr><th>
+    Programming Language
+  </th><th>
+    Messages
+  </th></tr><tr><td>
+    Erlang
+  </td><td>
+  <p>
+  </p>
+<pre>
+{'return_async_active', Name :: string(), Pattern :: string(),
+ ResponseInfo :: any(), Response :: any(),
+ Timeout :: non_neg_integer(), TransId :: &lt;&lt;_:128&gt;&gt;}
+{'timeout_async_active', TransId :: &lt;&lt;_:128&gt;&gt;}
+</pre>
+  </td></tr></table>
+  <p class="paragraph">
+    The mcast_async_active message is sent to the Erlang process as an
+    Erlang message, so it arrives in the cloudi_service_handle_info function
+    of the Erlang service module (i.e., the module that implements the
+    <a href="api/cloudi_core-1.3.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    The message formats are also provided as records that are accessible with:
+  </p>
+<pre>
+-include_lib("cloudi_core/include/cloudi_service.hrl").
+</pre>
+  <div class="top"><a href="#Service">Top</a></div>
+
   <a name="1_recv_async"></a>
-  <h3>1.9 - recv_async</h3>
+  <h3>1.11 - recv_async</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -1214,7 +1307,7 @@ org.cloudi.API.Response
   <div class="top"><a href="#Service">Top</a></div>
 
   <a name="1_return"></a>
-  <h3>1.10 - return</h3>
+  <h3>1.12 - return</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -1300,7 +1393,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.3.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1317,7 +1410,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
   <div class="top"><a href="#Service">Top</a></div>
 
   <a name="1_forward"></a>
-  <h3>1.11 - forward</h3>
+  <h3>1.13 - forward</h3>
   <table><tr><th>
     Programming Language
   </th><th>
@@ -1403,7 +1496,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.2.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.3.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1488,7 +1581,8 @@ curl -X POST -d '[sensitive]' http://localhost:6467/cloudi/api/erlang/acl_remove
 curl -X POST -d '[{external, "/tests/flood/", "tests/flood/service/flood", "", [{"LD_LIBRARY_PATH", "api/c/lib/"}, {"DYLD_LIBRARY_PATH", "api/c/lib/"}], none, default, default, 5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}, {internal, "/tests/flood/", cloudi_service_flood, [{flood, "/tests/flood/c", &lt;&lt;"DATA"&gt;&gt;, 1000}], lazy_closest, 5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]' http://localhost:6467/cloudi/api/erlang/services_add
 </p>
   <p class="paragraph">
-    Start services.  Provide service configuration using the same syntax
+    Start services and return their Service UUIDs.  Provide service
+    configuration using the same syntax
     found in the configuration file (i.e., <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>).
     Internal services will need to be located in a code path that the
     running Erlang VM is aware of (see
@@ -1840,15 +1934,6 @@ curl http://localhost:6467/cloudi/api/erlang/code_path
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
-</div>
-
-<br />
-<br />
-<br />
-<br />
-<br />
-<div id="footer">
-Copyright &#169; 2013 Michael Truog
 </div>
 
 </body>

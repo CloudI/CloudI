@@ -1,3 +1,41 @@
+October 18, 2013
+  Version 1.3.0 (beta) released.
+  * backwards compatibility difference:
+    * CloudI Service API function services_add now returns a list of
+      service UUIDs which can then be used in the other CloudI Service API
+      functions (see the API HTML documentation or the
+      cloudi_service_api module for details)
+  * cassandra support was added by Mahesh Paolini-Subramanya
+  * elasticsearch support for mapping and aliases was added
+    by Mahesh Paolini-Subramanya
+  * A service name pattern matching bug was fixed after being reported
+    by Anton Ryabkov (an unsubscribe now removes a cpg group entry, if
+    the group is empty, to avoid shadowing a pattern match)
+  * CloudI API function cloudi_service:mcast_async_active was added
+  * All the included internal CloudI services are now separate Erlang/OTP
+    applications, to provide better management of their dependencies
+  * The hello_world4 example was added to show how an Erlang/OTP release with
+    CloudI can be created with relx
+  * The hello_world3 example (rebar usage) was simplified,
+    (rebar's HEAD is currently broken, refer to example README for details)
+  * The service configuration options monkey_latency and monkey_chaos were
+    added to provide a way of changing service performance and/or stability 
+    for evaluating system resilience during service problems
+    (http://techblog.netflix.com/2011/07/netflix-simian-army.html)
+  * cloudi_service_http_cowboy had a few additions:
+    * multipart support was added
+    * content_types_accepted, set_x_forwarded_for, and status_code_timeout
+      are configuration options
+    * "status" key usage in ResponseInfo provides the HTTP status, as with
+      normal HTTP protocol responses
+  * A few new internal services were added:
+    * cloudi_service_db_cassandra
+    * cloudi_service_db
+    * cloudi_service_tcp
+    * cloudi_service_udp
+    * cloudi_service_quorum
+  * Various bugfixes, small additions, and documentation improvements
+
 August 9, 2013
   Version 1.2.5 (beta) released.
   * elasticsearch integration was added in cloudi_service_db_elasticsearch.

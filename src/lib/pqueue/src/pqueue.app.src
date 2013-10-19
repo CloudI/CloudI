@@ -1,6 +1,6 @@
 {application, pqueue,
   [{description, "Priority Queue Data Structures"},
-   {vsn, "1.2.2"},
+   {vsn, "1.3.0"},
    {modules, [pqueue, pqueue3, pqueue4]},
    {registered, []},
    {applications, [stdlib]}]}.
