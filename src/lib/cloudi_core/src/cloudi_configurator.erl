@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -100,52 +100,52 @@ configure() ->
 acl_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_add, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 acl_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_remove, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_add, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_remove, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_restart, L,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services_search(ServiceName, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_search, ServiceName,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 services(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+                                 timeout_decr(Timeout)}, Timeout)).
 
 nodes_add(L, Timeout) ->
     Nodes = [node() | nodes()],
-    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_add, L,
-                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+                               timeout_decr(Timeout)}, Timeout)
     end)).
 
 nodes_remove(L, Timeout) ->
     Nodes = [node() | nodes()],
-    check_multi_call_replies(global:trans({{?MODULE, L}, self()}, fun() ->
+    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_remove, L,
-                               Timeout - ?TIMEOUT_DELTA}, Timeout)
+                               timeout_decr(Timeout)}, Timeout)
     end)).
 
 service_start(#config_service_internal{
@@ -153,7 +153,7 @@ service_start(#config_service_internal{
                   options = #config_service_options{
                       reload = Reload}} = Service,
               Timeout) ->
-    case service_start_find_internal(Service) of
+    case service_start_find_internal(Service, Timeout) of
         {ok, #config_service_internal{
                  module = Module} = FoundService} ->
             if
@@ -163,27 +163,28 @@ service_start(#config_service_internal{
                     ok
             end,
             service_start_internal(concurrency(Count),
-                                   FoundService, Timeout);
+                                   FoundService,
+                                   timeout_decr(Timeout));
         {error, _} = Error ->
             Error
     end;
 
 service_start(#config_service_external{count_process = Count} = Service,
               Timeout) ->
-    service_start_external(concurrency(Count), Service, Timeout).
+    service_start_external(concurrency(Count), Service, timeout_decr(Timeout)).
 
 service_stop(#config_service_internal{} = Service, Remove, Timeout)
     when is_boolean(Remove) ->
-    service_stop_internal(Service, Remove, Timeout);
+    service_stop_internal(Service, Remove, timeout_decr(Timeout));
 
 service_stop(#config_service_external{} = Service, false, Timeout) ->
-    service_stop_external(Service, Timeout).
+    service_stop_external(Service, timeout_decr(Timeout)).
 
 service_restart(#config_service_internal{} = Service, Timeout) ->
-    service_restart_internal(Service, Timeout);
+    service_restart_internal(Service, timeout_decr(Timeout));
 
 service_restart(#config_service_external{} = Service, Timeout) ->
-    service_restart_external(Service, Timeout).
+    service_restart_external(Service, timeout_decr(Timeout)).
 
 concurrency(I)
     when is_integer(I) ->
@@ -233,8 +234,8 @@ handle_call({acl_remove, L, _}, _,
 handle_call({services_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
     case cloudi_configuration:services_add(L, Config, Timeout) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, IDs, NewConfig} ->
+            {reply, {ok, IDs}, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -259,7 +260,7 @@ handle_call({services_restart, L, Timeout}, _,
 
 handle_call({services_search, ServiceName, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_x_cpg:get_local_members(ServiceName) of
+    case cloudi_x_cpg:get_local_members(ServiceName, Timeout) of
         {ok, _, PidList} ->
             case cloudi_services_monitor:search(PidList, Timeout) of
                 {ok, []} ->
@@ -318,22 +319,12 @@ handle_cast(Request, State) ->
 
 handle_info(configure,
             #state{configuration = Config} = State) ->
-    case cloudi_x_reltool_util:applications_start([cloudi_services_internal,
-                                                   cloudi_services_databases,
-                                                   cloudi_services_messaging],
-                                                  infinity) of
-        ok ->
-            case configure(Config, infinity) of
-                {ok, NewConfig} ->
-                    {noreply, State#state{configuration = NewConfig}};
-                {error, _} = Error ->
-                    % cloudi_core application startup failed due to a problem
-                    % with the cloudi.conf file
-                    {stop, Error, State}
-            end;
+    case configure(Config, infinity) of
+        {ok, NewConfig} ->
+            {noreply, State#state{configuration = NewConfig}};
         {error, _} = Error ->
-            % cloudi_core included_application startup failed for
-            % Erlang applications that contain included internal services
+            % cloudi_core application startup failed due to a problem
+            % with the cloudi.conf file
             {stop, Error, State}
     end;
 
@@ -370,7 +361,7 @@ configure_service([Service | Services], Configured, Timeout) ->
     end.
 
 service_start_find_internal(#config_service_internal{
-                                module = FilePath} = Service)
+                                module = FilePath} = Service, Timeout)
     when is_list(FilePath) ->
     case filename:extension(FilePath) of
         ".erl" ->
@@ -405,7 +396,8 @@ service_start_find_internal(#config_service_internal{
             case service_start_find_internal_add_pathz(FilePath) of
                 {ok, _} ->
                     service_start_find_internal_application(Application,
-                                                            Service);
+                                                            Application,
+                                                            Service, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -425,15 +417,30 @@ service_start_find_internal(#config_service_internal{
         Extension ->
             {error, {internal_service_module_extension_invalid, Extension}}
     end;
-service_start_find_internal(#config_service_internal{module = Module} = Service)
+service_start_find_internal(#config_service_internal{
+                                module = Module,
+                                options = #config_service_options{
+                                    application_name = ApplicationNameForced
+                                }} = Service, Timeout)
     when is_atom(Module) ->
+    Application = if
+        ApplicationNameForced =/= undefined ->
+            ApplicationNameForced;
+        ApplicationNameForced =:= undefined ->
+            Module
+    end,
     % prefer application files to load internal services
     % (so that application dependencies can be clearly specified, etc.)
-    case application:load(Module) of
+    case application:load(Application) of
         ok ->
-            service_start_find_internal_application(Module, Service);
-        {error, {already_loaded, Module}} ->
-            service_start_find_internal_application(Module, Service);
+            service_start_find_internal_application(Application,
+                                                    Module, Service, Timeout);
+        {error, {already_loaded, Application}} ->
+            service_start_find_internal_application(Application,
+                                                    Module, Service, Timeout);
+        {error, _} when ApplicationNameForced =/= undefined ->
+            {error, {service_options_application_name_notfound,
+                     ApplicationNameForced}};
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
             service_start_find_internal_module(Module, Service)
@@ -475,11 +482,11 @@ service_start_find_internal_module(Module, Service)
             {ok, Service#config_service_internal{module = Module}}
     end.
 
-service_start_find_internal_application(Application, Service)
-    when is_atom(Application) ->
-    case cloudi_x_reltool_util:application_start(Application) of
+service_start_find_internal_application(Application, Module, Service, Timeout)
+    when is_atom(Application), is_atom(Module) ->
+    case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
-            {ok, Service#config_service_internal{module = Application}};
+            {ok, Service#config_service_internal{module = Module}};
         {error, _} = Error ->
             Error
     end.
@@ -638,10 +645,19 @@ service_restart_external(#config_service_external{
             Error
     end.
 
+check_multi_call({Replies, _BadNodes}) ->
+    % ignore bad nodes
+    check_multi_call_replies(Replies).
+    
 check_multi_call_replies([]) ->
     ok;
 check_multi_call_replies([{_, ok} | Replies]) ->
     check_multi_call_replies(Replies);
 check_multi_call_replies([{_, Result} | _]) ->
     Result.
+
+timeout_decr(infinity) ->
+    infinity;
+timeout_decr(Timeout) when is_integer(Timeout) ->
+    Timeout - ?TIMEOUT_DELTA.
 

@@ -45,38 +45,57 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_response).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/2]).
+-export([new/2,
+         new/3,
+         new_external/3,
+         new_internal/2]).
+
+-include("cloudi_logger.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-new(Input, Output)
+new(Input, Output) ->
+    % TODO: remove old code path
+    new_external(Input, Output, native).
+
+new(Input, Output, Endian) ->
+    % TODO: remove old code path
+    new_external(Input, Output, Endian).
+
+new_external(Input, Output, Endian)
     when is_binary(Input) ->
     % a straight-forward response format for external processes
-    if
-        is_binary(Output) ->
-            Output;
-        is_list(Output) ->
-            convert_list_to_binary(Output);
-        is_tuple(Output) ->
-            case Output of
-                {error, _} ->
-                    <<>>
-            end;
-        Output =:= ok ->
-            <<16#ffffffff:32>>
+    case Output of
+        ok ->
+            <<16#ffffffff:32>>;
+        {ok, undefined} ->
+            <<16#00000000:32>>;
+        {ok, V} when is_binary(V) ->
+            convert_binary_to_binary(V, Endian);
+        {ok, V} when is_list(V) ->
+            convert_list_to_binary(V, Endian);
+        {ok, V} when is_atom(V) ->
+            convert_string_to_binary(erlang:atom_to_list(V), Endian);
+        {error, Reason} ->
+            ?LOG_ERROR("response external: ~p", [Reason]),
+            <<>>;
+        _ when is_list(Output) ->
+            convert_list_to_binary(Output, Endian);
+        _ when is_binary(Output) ->
+            Output
     end;
-
-new(Input, Output)
+new_external(Input, Output, _Endian)
     when is_list(Input), is_integer(hd(Input)) ->
+    % TODO: remove old code path
     if
         is_list(Output), is_integer(hd(Output)) ->
             Output;
@@ -85,39 +104,95 @@ new(Input, Output)
         true ->
             cloudi_string:term_to_list(Output)
     end;
+new_external(_, Output, _Endian) ->
+    % TODO: remove old code path
+    Output.
 
-new(_, Output) ->
+new_internal(Input, Output)
+    when is_binary(Input) ->
+    cloudi_string:term_to_binary(Output);
+new_internal(Input, Output)
+    when is_list(Input) ->
+    cloudi_string:term_to_list(Output);
+new_internal(_Input, Output) ->
     Output.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-convert_list_to_binary([]) ->
-    <<>>;
-convert_list_to_binary([A | _] = L)
-    when is_atom(A) ->
-    % list of atoms
-    Length = erlang:length(L),
-    Result = [<<Length:32/unsigned-integer-native>> | lists:map(fun(E) ->
-        convert_string_to_binary(erlang:atom_to_list(E))
-    end, L)],
-    erlang:iolist_to_binary(Result);
-convert_list_to_binary([[I | _] | _] = L)
+convert_list_to_binary([], _Endian) ->
+    <<16#00000000:32>>;
+convert_list_to_binary([[I | _] | _] = L, Endian)
     when is_integer(I) ->
     % list of strings
     Length = erlang:length(L),
-    Result = [<<Length:32/unsigned-integer-native>> | lists:map(fun(E) ->
-        convert_string_to_binary(E)
-    end, L)],
-    erlang:iolist_to_binary(Result);
-convert_list_to_binary([I | _] = L)
+    LengthBin = if
+        Endian =:= big ->
+            <<Length:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<Length:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<Length:32/unsigned-integer-native>>
+    end,
+    erlang:iolist_to_binary([LengthBin |
+        [convert_string_to_binary(E, Endian) || E <- L]]);
+convert_list_to_binary([I | _] = L, Endian)
     when is_integer(I) ->
     % string
-    convert_string_to_binary(L).
+    convert_string_to_binary(L, Endian);
+convert_list_to_binary([{V1, V2} | _] = L, Endian)
+    when is_binary(V1), is_binary(V2) ->
+    % list of binary pairs
+    Length = erlang:length(L),
+    LengthBin = if
+        Endian =:= big ->
+            <<Length:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<Length:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<Length:32/unsigned-integer-native>>
+    end,
+    erlang:iolist_to_binary([LengthBin |
+        [[convert_binary_to_binary(Value1, Endian),
+          convert_binary_to_binary(Value2, Endian)] ||
+         {Value1, Value2} <- L]]);
+convert_list_to_binary([A | _] = L, Endian)
+    when is_atom(A) ->
+    % list of atoms
+    Length = erlang:length(L),
+    LengthBin = if
+        Endian =:= big ->
+            <<Length:32/unsigned-integer-big>>;
+        Endian =:= little ->
+            <<Length:32/unsigned-integer-little>>;
+        Endian =:= native ->
+            <<Length:32/unsigned-integer-native>>
+    end,
+    erlang:iolist_to_binary([LengthBin |
+        [convert_string_to_binary(erlang:atom_to_list(E), Endian) ||
+         E <- L]]).
     
-convert_string_to_binary(S) ->
+convert_string_to_binary(S, big) ->
     Length = erlang:length(S),
     Data = erlang:list_to_binary(S),
+    <<Length:32/unsigned-integer-big, Data/binary>>;
+convert_string_to_binary(S, little) ->
+    Length = erlang:length(S),
+    Data = erlang:list_to_binary(S),
+    <<Length:32/unsigned-integer-little, Data/binary>>;
+convert_string_to_binary(S, native) ->
+    Length = erlang:length(S),
+    Data = erlang:list_to_binary(S),
+    <<Length:32/unsigned-integer-native, Data/binary>>.
+
+convert_binary_to_binary(Data, big) ->
+    Length = erlang:byte_size(Data),
+    <<Length:32/unsigned-integer-big, Data/binary>>;
+convert_binary_to_binary(Data, little) ->
+    Length = erlang:byte_size(Data),
+    <<Length:32/unsigned-integer-little, Data/binary>>;
+convert_binary_to_binary(Data, native) ->
+    Length = erlang:byte_size(Data),
     <<Length:32/unsigned-integer-native, Data/binary>>.
 

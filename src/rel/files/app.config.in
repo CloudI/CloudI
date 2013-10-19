@@ -25,6 +25,8 @@
     {multicast_ttl, 1}
 ]},
 {cloudi_core, [
+    {monkey_latency, false},
+    {monkey_chaos, false},
     {configuration, "@cloudi_confdir@/cloudi.conf"}
 ]}].
 

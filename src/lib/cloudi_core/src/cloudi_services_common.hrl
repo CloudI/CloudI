@@ -169,6 +169,17 @@ destination_get(lazy_oldest, _, Name, Pid, Groups, _)
     when is_list(Name) ->
     cloudi_x_cpg_data:get_oldest_pid(Name, Pid, Groups);
 
+destination_get(DestRefresh, _, _, _, _, Timeout)
+    when (Timeout < ?TIMEOUT_DELTA),
+         (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
+    {error, timeout};
+
 destination_get(immediate_closest, Scope, Name, Pid, _, Timeout)
     when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Scope, Name, Pid, Timeout));
@@ -220,6 +231,17 @@ destination_all(DestRefresh, _, Name, Pid, Groups, _)
     when is_list(Name),
          DestRefresh =:= lazy_remote ->
     cloudi_x_cpg_data:get_remote_members(Name, Pid, Groups);
+
+destination_all(DestRefresh, _, _, _, _, Timeout)
+    when (Timeout < ?TIMEOUT_DELTA),
+         (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
+    {error, timeout};
 
 destination_all(DestRefresh, Scope, Name, Pid, _, Timeout)
     when is_list(Name),
@@ -318,4 +340,50 @@ recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
         true ->
             recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
+
+check_init(#config_service_options{
+               monkey_latency = false,
+               monkey_chaos = false} = ConfigOptions) ->
+    ConfigOptions;
+check_init(#config_service_options{
+               monkey_latency = MonkeyLatency,
+               monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+    NewMonkeyLatency = if
+        MonkeyLatency =/= false ->
+            cloudi_runtime_testing:monkey_latency_init(MonkeyLatency);
+        true ->
+            MonkeyLatency
+    end,
+    NewMonkeyChaos = if
+        MonkeyChaos =/= false ->
+            cloudi_runtime_testing:monkey_chaos_init(MonkeyChaos);
+        true ->
+            MonkeyChaos
+    end,
+    ConfigOptions#config_service_options{
+        monkey_latency = NewMonkeyLatency,
+        monkey_chaos = NewMonkeyChaos}.
+
+check_incoming(#config_service_options{
+                   monkey_latency = false,
+                   monkey_chaos = false} = ConfigOptions) ->
+    ConfigOptions;
+check_incoming(#config_service_options{
+                   monkey_latency = MonkeyLatency,
+                   monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+    NewMonkeyLatency = if
+        MonkeyLatency =/= false ->
+            cloudi_runtime_testing:monkey_latency_check(MonkeyLatency);
+        true ->
+            MonkeyLatency
+    end,
+    NewMonkeyChaos = if
+        MonkeyChaos =/= false ->
+            cloudi_runtime_testing:monkey_chaos_check(MonkeyChaos);
+        true ->
+            MonkeyChaos
+    end,
+    ConfigOptions#config_service_options{
+        monkey_latency = NewMonkeyLatency,
+        monkey_chaos = NewMonkeyChaos}.
 

@@ -56,20 +56,19 @@ main(_) ->
             ok;
         {error, eexist} ->
             io:format("release already exists? (~p)~n", [TargetDir]),
-            erlang:halt(1)
+            exit_code(1)
     end,
     ok = reltool:eval_target_spec(Spec, code:root_dir(), TargetDir),
     ok = process_overlay(RelToolConfig, TargetDir, OverlayConfig),
-    erlang:halt(0).
+    exit_code(0).
 
 shell(Command, Arguments) ->
-    CommandSuffix = " && echo 0 || echo 1",
-    [Result | _] = os:cmd(lists:flatten(
-        io_lib:format(Command ++ CommandSuffix, Arguments))),
-    if
-        Result =:= $0 ->
+    CommandSuffix = " && printf 0 || printf 1",
+    case lists:reverse(os:cmd(lists:flatten(
+        io_lib:format(Command ++ CommandSuffix, Arguments)))) of
+        [$0 | _] ->
             ok;
-        Result =:= $1 ->
+        [$1 | _] ->
             io:format("\"~s\" failed!~n", [io_lib:format(Command, Arguments)]),
             error
     end.
@@ -117,4 +116,7 @@ execute_overlay([{copy, In, Out} | Rest], Vars, BaseDir, TargetDir) ->
     true = filelib:is_file(InFile),
     ok = shell("cp -R ~s ~s", [InFile, OutFile]),
     execute_overlay(Rest, Vars, BaseDir, TargetDir).
+
+exit_code(ExitCode) ->
+    erlang:halt(ExitCode, [{flush, true}]).
 

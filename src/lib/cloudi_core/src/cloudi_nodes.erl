@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_nodes).
@@ -90,9 +90,7 @@ start_link(Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 reconfigure(Config, Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {reconfigure, Config,
-                                 Timeout - ?TIMEOUT_DELTA}, Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE, {reconfigure, Config}, Timeout)).
 
 alive(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, alive, Timeout)).
@@ -139,7 +137,7 @@ init([Config]) ->
                                                     reconnect),
                 nodes = Config#config.nodes}}.
 
-handle_call({reconfigure, Config, _}, _,
+handle_call({reconfigure, Config}, _,
             #state{nodes_alive = NodesAlive,
                    timer_reconnect = TimerReconnect} = State) ->
     Nodes = lists:usort(Config#config.nodes ++ nodes()),

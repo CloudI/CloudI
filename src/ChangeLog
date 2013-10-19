@@ -1,6 +1,222 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.3.0 (beta) released
+    * Update cpg, key2value, pqueue, reltool_util, uuid after version bump
+
+2013-10-17 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+
+    * Migrate elasticsearch version from 1.3 to 1.4
+    * Added support for mapping and aliases
+
+2013-10-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Dialyzer fixes, turn all dialyzer warnings on
+    * Update reltool_util
+
+2013-10-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the cloudi_service:mcast_async_active function variations along with
+      cloudi_service:mcast_async_passive functions to mirror what is already
+      available for cloudi_service:send_async
+    * Add cloudi_service_quorum for seeking quorum among running services
+      for a service request
+
+2013-10-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Use the mac address set in the cloudi_core application env for
+      uuid (v1) generator creation
+    * Update uuid
+
+2013-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bug reported by Anton Ryabkov:
+      an unsubscribe of an exact match for a service name was not removing
+      the entry when no services were subscribed (an empty group), so a
+      pattern matching subscription that existed would be ignored, despite
+      the fact no services were within the exact service name match. The fix
+      removes entries when no services are subscribed to the service name, so
+      there is no problem with the service name pattern match.
+
+2013-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Separate the cloudi_services_internal, cloudi_services_databases, and
+      cloudi_services_messaging Erlang applications into a single
+      Erlang application for each CloudI service to help isolate
+      CloudI service Erlang application dependencies
+    * Update all dependencies to have {registered, []}, to keep relx happy
+    * Add the hello_world4 example to show how CloudI can be included with
+      a relx release
+    * Add the application_name internal service configuration option to
+      specify an Erlang application name that doesn't need to be the
+      CloudI service module name
+
+2013-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the monkey_latency and monkey_chaos service configuration
+      options for providing any service configuration a way to change
+      performance for evaluating system resilience during service failures
+      (http://techblog.netflix.com/2011/07/netflix-simian-army.html)
+
+2013-09-26 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+
+    * Update erlasticsearch to take json docs
+    * Update jsx to 1.4.3
+
+2013-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update uuid
+
+2013-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the cloudi module use the cloudi_service module interface if a
+      Dispatcher pid is provided instead of a Context record
+      (to provide a way of making a flexible interface for both services
+       and non-service Erlang pids)
+    * Convert all the internal services to use the cloudi module for
+      external interface functions
+
+2013-09-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix JSON RPC errors with CloudI Service API
+    * Fix the CloudI Service API run.py test
+    * Fix cloudi_service_api:nodes_add/2 and cloudi_service_api:nodes_remove/2
+
+2013-09-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_db to store with the Key equal to the TransId of
+      the service request
+
+2013-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the cloudi_service_http_cowboy multipart support generic
+
+2013-09-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow configuration data to be present in the application env entry
+      to bypass a filesystem file and be fed configuration directly
+    * Fix some nested timeout errors to prevent outer timeout termination
+
+2013-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * cloudi_service_http_cowboy multipart fixes
+    * Add cloudi_service:service_name_parse_with_suffix/2
+
+2013-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * For cloudi_service_http_cowboy, a service request timeout using
+      405 responses gets an empty "allow" HTTP header
+    * Add non-standard HTTP header request info entries for
+      tracking a multipart sequence of service requests
+
+2013-09-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CLOUDI_CONFIGURE_ARGS env variable for rebar usage
+    * Add cloudi_service:return/2 and cloudi_service:return/3 to make
+      internal service return calls easier
+    * Add multipart support to cloudi_service_http_cowboy
+
+2013-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi:timeout_milliseconds() and cloudi:priority()
+    * Fixes for cloudi_service_db
+    * Edoc documentation updated
+
+2013-09-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the scope script parallel to speedup the initial
+      build process
+    * Add initial version of cloudi_service_db, a simple in-memory database
+    * Update trie
+
+2013-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add support for update-deps of CloudI as a rebar dependency
+    * Add an options list to cloudi_service_zeromq
+    * Add the process_metadata option to cloudi_service_zeromq for
+      tunneling RequestInfo and ResponseInfo within ZeroMQ requests
+      automatically
+    * Add endian configuration to cloudi_service_db_pgsql 
+      for binary request responses
+    * Add endian configuration to cloudi_service_zeromq
+      for ZeroMQ service request metadata size integer encoding
+
+2013-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Simplify the rebar integration by removing the version number from
+      the installation path prefix when a configuration command line argument
+      (--without-version) is provided
+    * Simplify the hello_world3 example
+    * Fix type problem in cloudi_service_db_cassandra
+    * Make the configure script ZeroMQ path detection expect default cases
+
+2013-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move makefile "clean-configure" target to utilize the distclean target
+    * Tweak example hello_world3 so that ERL_LIBS is not used
+
+2013-08-28 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+
+    * Merge cassandra database integration
+
+2013-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bugs in cloudi_service_tcp
+
+2013-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the cloudi_ip_address module for fixed width string representations
+    * Fix a bug when using self() within cloudi_service_init/3 when duo_mode
+      is true (erlang:self/0 now always equals cloudi_service:self/0 within
+      cloudi_service_init/3)
+    * Fix a bug in cloudi_service_udp
+
+2013-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service_tcp and cloudi_service_udp
+
+2013-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service:request_info_key_value_new/1
+    * Fix service requests that only provide ResponseInfo
+    * Add support for any methods to cloudi_service_http_cowboy
+    * Add proper iodata handling in ResponseInfo HTTP header values to
+      cloudi_service_http_cowboy
+    * Fix cloudi_service_map_reduce failure result
+
+2013-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix SSL bug in cloudi_service_http_cowboy
+    * Fix process kill handling, for delayed cleanup of dead services
+
+2013-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow cloudi_service_map_reduce to use Erlang applications named the
+      same as the map reduce module
+
+2013-08-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add set_x_forwarded_for as a configuration parameter for
+      cloudi_service_http_cowboy
+    * Switch the argument order on cloudi_service:service_name_parse/2 to
+      match the cloudi_service_handle_request/11 argument order
+
+2013-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add content_types_accepted as a configuration parameter for
+      cloudi_service_http_cowboy
+    * Add "status" key usage from ResponseInfo within
+      cloudi_service_http_cowboy
+
+2013-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change the CloudI Service API services_add function to return the
+      newly created service_ids
+    * Add status_code_timeout as a configuration parameter for
+      cloudi_service_http_cowboy
+
 2013-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.2.5 (beta) released

@@ -1,6 +1,6 @@
 {application, quickrand,
   [{description, "Quick Random Number Generation"},
-   {vsn, "1.2.1"},
+   {vsn, "1.3.0"},
    {modules, [quickrand, random_wh06_int]},
    {registered, []},
    {applications, [crypto, stdlib]},

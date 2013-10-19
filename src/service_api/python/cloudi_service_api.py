@@ -41,6 +41,8 @@ class CloudI(object):
     def __getattr__(self, name):
         if name == 'services':
             return self.__services
+        elif name == 'services_add':
+            return self.__services_add
         return self.__server.__getattr__(name)
 
     def __services(self):
@@ -49,5 +51,12 @@ class CloudI(object):
             (_ServiceUUID(*uuid_tuple),
              _ServiceDescription(*service_configuration))
             for uuid_tuple, service_configuration in erlang.consult(raw)
+        ]
+
+    def __services_add(self, L):
+        raw = self.__server.services_add(L)
+        return [
+            _ServiceUUID(*uuid_tuple)
+            for uuid_tuple in erlang.consult(raw)
         ]
 

@@ -71,7 +71,16 @@ to its integration and dependencies).
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
-- `tag v1.3`
+- `tag v1.4.1`
+- `Fri Oct 18 11:33:46 2013 -0400`
+- `BSD`
+
+`erlang_cassandra`
+----------------
+`Erlang Cassandra (thrift) Driver`
+
+- `https://github.com/dieswaytoofast/erlang_cassandra`
+- `tag v1.0`
 - `Mon Jun 10 08:01:52 EST 2013`
 - `BSD`
 
@@ -106,8 +115,8 @@ to its integration and dependencies).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit f0f43c4abab4d4e889bff79e5d5aab675f9e8d4d (master, v1.4.1)`
-- `Mon Jun  3 08:57:57 PDT 2013`
+- `commit e50af6e109cb03bd26acf715cbc77de746507d1d (master, v1.4.3)`
+- `Thu Sep 26 16:51:24 PDT 2013`
 - `MIT`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
@@ -202,8 +211,8 @@ to its integration and dependencies).
 `Erlang Thrift software library`
 
 - `https://github.com/dieswaytoofast/thrift`
-- `commit f367c54ffcd522d9522c8ed0872c397be24da967`
-- `Sun May 19 17:13:30 EDT 2013`
+- `commit 0b8efd728f2ff2106d5e15e3c65c8ef895451c0a`
+- `Thu Sep 26 16:19:26 2013 -0400`
 - `Apache License`
 
 `zeromq/v?/erlzmq`

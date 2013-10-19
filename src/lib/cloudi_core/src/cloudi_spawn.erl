@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -55,6 +55,7 @@
          start_external/15]).
 
 -include("cloudi_configuration.hrl").
+-include("cloudi_logger.hrl").
 
 -define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
 -define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
@@ -103,14 +104,17 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
         is_list(DestAllowList) ->
             cloudi_x_trie:new(DestAllowList)
     end,
-    case code:is_loaded(Module) of
-        false ->
-            {error, {service_internal_module_not_loaded, Module}};
-        {file, _} ->
-            ?CREATE_INTERNAL(ProcessIndex, Module, Args, Timeout,
+    case cloudi_x_reltool_util:is_module_loaded(Module, Timeout) of
+        {ok, NewTimeout} ->
+            % Erlang application startup is asynchronous, so wait for the
+            % module to be loaded or timeout
+            ?CREATE_INTERNAL(ProcessIndex, Module, Args, NewTimeout,
                              Prefix, TimeoutAsync, TimeoutSync,
                              DestRefresh, DestDeny, DestAllow,
-                             ConfigOptions)
+                             ConfigOptions);
+        {error, Reason} ->
+            ?LOG_ERROR("loading ~p failed: ~p", [Module, Reason]),
+            {error, {service_internal_module_not_loaded, Module}}
     end.
 
 start_external(ThreadsPerProcess,

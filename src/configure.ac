@@ -1,7 +1,7 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
 
-AC_INIT([CloudI], [1.2.5], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.3.0], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
@@ -33,7 +33,22 @@ AX_CLOCK_GETTIME
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
 
-AC_SUBST(cloudi_prefix, ["$libdir/cloudi-$VERSION"])
+AC_ARG_WITH([version],
+    [AS_HELP_STRING([--with-version@<:@=ARG@:>@],
+        [put the CloudI version within the installation path prefix (ARG=yes),
+         or use a constant CloudI installation path prefix (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        cloudi_prefix="$libdir/cloudi"
+    elif test "x$withval" = "xyes"; then
+        cloudi_prefix="$libdir/cloudi-$VERSION"
+    else
+        cloudi_prefix="$libdir/cloudi-$VERSION"
+    fi
+    ],
+    [cloudi_prefix="$libdir/cloudi-$VERSION"])
+AC_SUBST(cloudi_prefix)
 AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
 AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
@@ -156,9 +171,24 @@ AC_CONFIG_FILES([
     rebar_src_test.config
     reltool.config
     lib/cloudi_core/src/cloudi_core.app.src
-    lib/cloudi_services_internal/src/cloudi_services_internal.app.src
-    lib/cloudi_services_databases/src/cloudi_services_databases.app.src
-    lib/cloudi_services_messaging/src/cloudi_services_messaging.app.src
+    lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
+    lib/cloudi_service_db/src/cloudi_service_db.app.src
+    lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src
+    lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src
+    lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.app.src
+    lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.app.src
+    lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
+    lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
+    lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src
+    lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
+    lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src
+    lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
+    lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
+    lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
+    lib/cloudi_service_timers/src/cloudi_service_timers.app.src
+    lib/cloudi_service_udp/src/cloudi_service_udp.app.src
+    lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src
+    lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
     Makefile
     api/Makefile
     api/c/Makefile

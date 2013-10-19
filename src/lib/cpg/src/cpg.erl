@@ -2719,7 +2719,7 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                 false
         end
     end,
-    NewGroups = if
+    NextGroups = if
         node() =:= node(Pid) ->
             ?GROUP_STORAGE:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
@@ -2750,6 +2750,17 @@ leave_group(GroupName, Pid, #state{groups = Groups,
                               lists:delete(GroupName, OldValue)
                           end,
                           Pids),
+    NewGroups = case ?GROUP_STORAGE:find(GroupName, NextGroups) of
+        error ->
+            NextGroups;
+        {ok, #cpg_data{local_count = 0,
+                       remote_count = 0}} ->
+            % necessary so that pattern matching entries are not shadowed
+            % by empty entries that provide exact matches
+            ?GROUP_STORAGE:erase(GroupName, NextGroups);
+        {ok, #cpg_data{}} ->
+            NextGroups
+    end,
     State#state{groups = NewGroups,
                 pids = NewPids}.
 
