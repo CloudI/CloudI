@@ -72,7 +72,7 @@ to its integration and dependencies).
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
 - `tag v1.4.1`
-- `Fri Oct 18 11:33:46 2013 -0400`
+- `Sat Oct 19 09:12:06 2013 -0400`
 - `BSD`
 
 `erlang_cassandra`
