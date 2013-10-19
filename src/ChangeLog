@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.3.0 (beta) released
+    * Update cpg, key2value, pqueue, reltool_util, uuid after version bump
+
 2013-10-17 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
 
     * Migrate elasticsearch version from 1.3 to 1.4

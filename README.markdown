@@ -1,4 +1,4 @@
-#[CloudI 1.2.5 (beta)](http://cloudi.org)
+#[CloudI 1.3.0 (beta)](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
 
@@ -64,7 +64,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
 * `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
-* `Ruby >= 1.9.0 (ruby1.9/Ubuntu, ruby19/macports)`
+* `Ruby >= 1.9.0 (ruby1.9.1/Ubuntu, ruby19/macports)`
 * `GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)`
 * `boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
 
