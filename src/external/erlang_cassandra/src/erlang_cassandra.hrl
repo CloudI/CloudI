@@ -25,7 +25,7 @@
 -type type()            :: binary().
 -type id()              :: binary() | undefined.
 -type doc()             :: binary().
--type params()          :: [tuple()].
+-type params()          ::[tuple()].
 -type client_name()     :: binary().
 -type registered_client_name() :: atom().
 -type registered_pool_name()   :: atom().
@@ -86,6 +86,8 @@
 
 %% Errors
 -define(NO_SUCH_SEQUENCE, no_such_sequence).
+-define(CONNECTION_REFUSED, {error, econnrefused}).
+
 
 %% Methods
 -define(STATE, <<"_cluster/state">>).
