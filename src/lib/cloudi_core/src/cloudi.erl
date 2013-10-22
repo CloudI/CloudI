@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -53,6 +53,7 @@
 %% external interface
 -export([new/0,
          new/1,
+         destinations_refresh/2,
          get_pid/2,
          get_pid/3,
          get_pids/2,
@@ -87,10 +88,12 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
 
--define(DEFAULT_PRIORITY,                           0).
 -define(DEFAULT_DEST_REFRESH,       immediate_closest).
+-define(DEFAULT_DEST_REFRESH_START,               500). % milliseconds
+-define(DEFAULT_DEST_REFRESH_DELAY,            300000). % milliseconds
 -define(DEFAULT_TIMEOUT_ASYNC,                   5000). % milliseconds
 -define(DEFAULT_TIMEOUT_SYNC,                    5000). % milliseconds
+-define(DEFAULT_PRIORITY,                           0).
 -define(DEFAULT_SCOPE,                        default).
 
 -type service_name() :: string().
@@ -115,12 +118,15 @@
 -record(cloudi_context,
         {
             dest_refresh :: cloudi_service_api:dest_refresh(),
+            dest_refresh_delay
+                :: cloudi_service_api:dest_refresh_delay_milliseconds(),
             timeout_async :: cloudi_service_api:timeout_milliseconds(),
             timeout_sync :: cloudi_service_api:timeout_milliseconds(),
             priority_default :: priority(),
             scope :: atom(),
             receiver :: pid(),
-            uuid_generator :: cloudi_x_uuid:state()
+            uuid_generator :: cloudi_x_uuid:state(),
+            cpg_data = cloudi_x_cpg_data:get_empty_groups() :: any()
         }).
 
 -type context() :: #cloudi_context{}.
@@ -144,6 +150,9 @@ new() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a CloudI context.===
+%% If a lazy destination refresh method is used, make sure to receive the
+%% {cloudi_x_cpg_data, Groups} message and pass it to the
+%% destinations_refresh/2 function.
 %% @end
 %%-------------------------------------------------------------------------
 -spec new(Settings :: list({atom(), any()})) ->
@@ -152,24 +161,36 @@ new() ->
 new(Settings)
     when is_list(Settings) ->
     Defaults = [
-        {dest_refresh,          ?DEFAULT_DEST_REFRESH},
-        {timeout_async,        ?DEFAULT_TIMEOUT_ASYNC},
-        {timeout_sync,          ?DEFAULT_TIMEOUT_SYNC},
-        {priority_default,          ?DEFAULT_PRIORITY},
-        {scope,                        ?DEFAULT_SCOPE}
+        {dest_refresh,                     ?DEFAULT_DEST_REFRESH},
+        {dest_refresh_start,         ?DEFAULT_DEST_REFRESH_START},
+        {dest_refresh_delay,         ?DEFAULT_DEST_REFRESH_DELAY},
+        {timeout_async,                   ?DEFAULT_TIMEOUT_ASYNC},
+        {timeout_sync,                     ?DEFAULT_TIMEOUT_SYNC},
+        {priority_default,                     ?DEFAULT_PRIORITY},
+        {scope,                                   ?DEFAULT_SCOPE}
         ],
-    [DestRefresh, DefaultTimeoutAsync, DefaultTimeoutSync,
+    [DestRefresh, DestRefreshStart, DestRefreshDelay,
+     DefaultTimeoutAsync, DefaultTimeoutSync,
      PriorityDefault, Scope] =
         cloudi_proplists:take_values(Defaults, Settings),
-    % all usage of the cloudi module is immediate
     true = (DestRefresh =:= immediate_closest) orelse
+           (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
+           (DestRefresh =:= lazy_furthest) orelse
            (DestRefresh =:= immediate_random) orelse
+           (DestRefresh =:= lazy_random) orelse
            (DestRefresh =:= immediate_local) orelse
+           (DestRefresh =:= lazy_local) orelse
            (DestRefresh =:= immediate_remote) orelse
+           (DestRefresh =:= lazy_remote) orelse
            (DestRefresh =:= immediate_newest) orelse
+           (DestRefresh =:= lazy_newest) orelse
            (DestRefresh =:= immediate_oldest) orelse
-           (DestRefresh =:= none),
+           (DestRefresh =:= lazy_oldest),
+    true = is_integer(DestRefreshStart) and
+           (DestRefreshStart > ?TIMEOUT_DELTA),
+    true = is_integer(DestRefreshDelay) and
+           (DestRefreshDelay > ?TIMEOUT_DELTA),
     true = is_integer(DefaultTimeoutAsync) and
            (DefaultTimeoutAsync > ?TIMEOUT_DELTA),
     true = is_integer(DefaultTimeoutSync) and
@@ -183,8 +204,10 @@ new(Settings)
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
                                     {mac_address, MacAddress}]),
+    ok = destination_refresh_first(DestRefresh, DestRefreshStart, Scope),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        dest_refresh_delay = DestRefreshDelay,
         timeout_async = DefaultTimeoutAsync,
         timeout_sync = DefaultTimeoutSync,
         priority_default = PriorityDefault,
@@ -192,6 +215,27 @@ new(Settings)
         receiver = Self,
         uuid_generator = UUID
     }.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Refresh destination lookup data.===
+%% Must be called if using a lazy destination refresh method.
+%% The {cloudi_x_cpg_data, Groups} message must be received and processed
+%% by this function.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destinations_refresh(Context :: context(),
+                           Message :: {cloudi_x_cpg_data, any()}) ->
+    context().
+
+destinations_refresh(#cloudi_context{
+                         dest_refresh = DestRefresh,
+                         dest_refresh_delay = DestRefreshDelay,
+                         scope = Scope} = Context,
+                     {cloudi_x_cpg_data, Groups}) ->
+    ok = destination_refresh_start(DestRefresh, DestRefreshDelay, Scope),
+    Context#cloudi_context{cpg_data = Groups}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -228,10 +272,11 @@ get_pid(Dispatcher, Name, Timeout)
     cloudi_service:get_pid(Dispatcher, Name, Timeout);
 
 get_pid(#cloudi_context{dest_refresh = DestRefresh,
-                        scope = Scope} = Context, Name, Timeout)
+                        scope = Scope,
+                        cpg_data = Groups} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
-    case destination_get(DestRefresh, Scope, Name,
+    case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
@@ -280,10 +325,11 @@ get_pids(Dispatcher, Name, Timeout)
     cloudi_service:get_pids(Dispatcher, Name, Timeout);
 
 get_pids(#cloudi_context{dest_refresh = DestRefresh,
-                         scope = Scope} = Context, Name, Timeout)
+                         scope = Scope,
+                         cpg_data = Groups} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
-    case destination_all(DestRefresh, Scope, Name,
+    case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -420,12 +466,13 @@ send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
                Timeout, PriorityDefault, PatternPid);
 
 send_async(#cloudi_context{dest_refresh = DestRefresh,
-                           scope = Scope} = Context,
+                           scope = Scope,
+                           cpg_data = Groups} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
-    case destination_get(DestRefresh, Scope, Name,
+    case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
@@ -682,12 +729,13 @@ send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
               Timeout, PriorityDefault, PatternPid);
 
 send_sync(#cloudi_context{dest_refresh = DestRefresh,
-                          scope = Scope} = Context,
+                          scope = Scope,
+                          cpg_data = Groups} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
-    case destination_get(DestRefresh, Scope, Name,
+    case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
@@ -818,12 +866,13 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
 mcast_async(#cloudi_context{dest_refresh = DestRefresh,
                             scope = Scope,
                             receiver = Receiver,
-                            uuid_generator = UUID} = Context,
+                            uuid_generator = UUID,
+                            cpg_data = Groups} = Context,
             Name, RequestInfo, Request, Timeout, Priority)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    case destination_all(DestRefresh, Scope, Name,
+    case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?MCAST_ASYNC_INTERVAL ->
@@ -1044,50 +1093,128 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+destination_refresh_first(DestRefresh, Delay, Scope)
+    when (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_groups(Scope, Delay);
+
+destination_refresh_first(DestRefresh, _, _)
+    when (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
+    ok.
+
+destination_refresh_start(DestRefresh, Delay, Scope)
+    when (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_groups(Scope, Delay);
+
+destination_refresh_start(DestRefresh, _, _)
+    when (DestRefresh =:= immediate_closest orelse
+          DestRefresh =:= immediate_furthest orelse
+          DestRefresh =:= immediate_random orelse
+          DestRefresh =:= immediate_local orelse
+          DestRefresh =:= immediate_remote orelse
+          DestRefresh =:= immediate_newest orelse
+          DestRefresh =:= immediate_oldest) ->
+    ok.
+
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_closest,
-         is_list(Name) ->
+destination_get(lazy_closest, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_closest_pid(Name, Groups);
+
+destination_get(lazy_furthest, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_furthest_pid(Name, Groups);
+
+destination_get(lazy_random, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_random_pid(Name, Groups);
+
+destination_get(lazy_local, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_local_pid(Name, Groups);
+
+destination_get(lazy_remote, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_remote_pid(Name, Groups);
+
+destination_get(lazy_newest, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_newest_pid(Name, Groups);
+
+destination_get(lazy_oldest, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_oldest_pid(Name, Groups);
+
+destination_get(immediate_closest, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_furthest,
-         is_list(Name) ->
+destination_get(immediate_furthest, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_furthest_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_random,
-         is_list(Name) ->
+destination_get(immediate_random, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_random_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_local,
-         is_list(Name) ->
+destination_get(immediate_local, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_local_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_remote,
-         is_list(Name) ->
+destination_get(immediate_remote, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_remote_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_newest,
-         is_list(Name) ->
+destination_get(immediate_newest, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_newest_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_oldest,
-         is_list(Name) ->
+destination_get(immediate_oldest, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Scope, Name, Timeout));
 
-destination_get(DestRefresh, _, _, _) ->
+destination_get(DestRefresh, _, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).
 
-destination_all(DestRefresh, Scope, Name, Timeout)
+destination_all(DestRefresh, _, Name, Groups, _)
+    when is_list(Name),
+         (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    cloudi_x_cpg_data:get_members(Name, Groups);
+
+destination_all(lazy_local, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_local_members(Name, Groups);
+
+destination_all(lazy_remote, _, Name, Groups, _)
+    when is_list(Name) ->
+    cloudi_x_cpg_data:get_remote_members(Name, Groups);
+
+destination_all(DestRefresh, Scope, Name, _, Timeout)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
@@ -1096,17 +1223,15 @@ destination_all(DestRefresh, Scope, Name, Timeout)
          is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_members(Scope, Name, Timeout));
 
-destination_all(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_local,
-         is_list(Name) ->
+destination_all(immediate_local, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_local_members(Scope, Name, Timeout));
 
-destination_all(DestRefresh, Scope, Name, Timeout)
-    when DestRefresh =:= immediate_remote,
-         is_list(Name) ->
+destination_all(immediate_remote, Scope, Name, _, Timeout)
+    when is_list(Name) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Scope, Name, Timeout));
 
-destination_all(DestRefresh, _, _, _) ->
+destination_all(DestRefresh, _, _, _, _) ->
     ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
                [DestRefresh]),
     erlang:exit(badarg).

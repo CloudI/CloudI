@@ -8,6 +8,8 @@
     * Update jinterface
     * Update older database driver repository links
     * Update READMEs with the new repository location
+    * Provide a function for updating the destination refresh lookup data
+      in the cloudi module, so lazy destination refresh methods can be used
 
 2013-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
