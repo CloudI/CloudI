@@ -12,12 +12,12 @@ Supported request formats:
 
 * JSON-RPC
 * Erlang term format
-* native Erlang function calls ([`cloudi_service_api`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module) within the same Erlang VM
+* native Erlang function calls ([`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module) within the same Erlang VM
 
 CloudI allows you to call dynamic configuration functions from any CloudI
-process (assuming it is not blocked by an ACL).  The [default configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
-initializes the [CloudI service responsible for dynamic configuration](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl)
-which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
+process (assuming it is not blocked by an ACL).  The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
+initializes the [CloudI service responsible for dynamic configuration](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl)
+which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
 * `"/cloudi/api/json_rpc/"`
 * `"/cloudi/api/erlang/*"` (see below)
@@ -39,7 +39,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/erlang/code_path_remove"`
   * `"/cloudi/api/erlang/code_path"`
 
-The [default configuration](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)
+The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
 expects HTTP requests to port 6464 with the proper service path and format
 (listed above) to call the CloudI service interface.
 
@@ -47,14 +47,14 @@ expects HTTP requests to port 6464 with the proper service path and format
 
 CloudI Service API integration example:
 
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/service_api/python/cloudi_service_api.py) (JSON-RPC over HTTP)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/service_api/python/cloudi_service_api.py) (JSON-RPC over HTTP)
 
 CloudI Service API usage examples:
 
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_off.py) (Turn logging off)
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_on.py) (Turn logging on)
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/path.py) (Add to the Erlang code search path)
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/run.py) (Add/Remove nodes, Add/Remove ACL entries, Start/Stop services)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/logging_off.py) (Turn logging off)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/logging_on.py) (Turn logging on)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/path.py) (Add to the Erlang code search path)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/run.py) (Add/Remove nodes, Add/Remove ACL entries, Start/Stop services)
 
 Please see the [CloudI Service API documentation](http://cloudi.org/api.html#CloudI)
 for more details (a graphical interface will be added soon,

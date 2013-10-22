@@ -96,46 +96,46 @@ during a loadtest, since it skews the results by causing abnormal latency.
 
 ##RESULTS
 
-[`loadtest/results_v1_2_2/201306_20k_10kreqs_local/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local):
+[`loadtest/results_v1_2_2/201306_20k_10kreqs_local/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local):
 * shows the default performance when using the `local` protocol (unix domain sockets) for external services without request or response timeout adjustment service options
 
-[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_request/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_request):
+[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_request/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_request):
 * shows the performance when using the `local` protocol (unix domain sockets) for external services with the request timeout adjustment service option
 
-[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_response/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_response):
+[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_response/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_with_response):
 * shows the performance when using the `local` protocol (unix domain sockets) for external services with the response timeout adjustment service option
 
-[`loadtest/results_v1_2_2/201306_20k_10kreqs_tcp_1_2_1/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_tcp_1_2_1):
+[`loadtest/results_v1_2_2/201306_20k_10kreqs_tcp_1_2_1/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_tcp_1_2_1):
 * shows the default performance when using the `tcp` protocol (inet sockets) for external services without request or response timeout adjustment service options in CloudI 1.2.1 running on Ubuntu 12.04.2
 
-[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_ets/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_ets) and [`loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_no_ets/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_no_ets):
+[`loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_ets/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_ets) and [`loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_no_ets/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local_cpg_no_ets):
 * Test an `immediate` destination refresh method with CPG using ETS to determine if ETS lowers CloudI request latency (it doesn't)
 
-[`loadtest/results_v1_2_2/201306_4k_10kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_4k_10kreqs) and [`loadtest/results_v1_2_2/201306_4k_20kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_4k_20kreqs):
+[`loadtest/results_v1_2_2/201306_4k_10kreqs/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_4k_10kreqs) and [`loadtest/results_v1_2_2/201306_4k_20kreqs/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_4k_20kreqs):
 * Test to determine any throughput limit within CloudI (currently 10kreqs is difficult to exceed within a single CloudI node, probably because of the `erlang:now/0` function call for each request v1 UUID)
 
-[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request):
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_request):
 * shows the latency due to adjusting the request timeout based on the service's request handling latency, in CloudI version 1.2.1
 
-[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response):
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_with_response):
 * shows the latency due to adjusting the response timeout which incurs a smaller latency penalty, in CloudI version 1.2.1
 
-[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment):
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_duo_without_adjustment):
 * shows the default cowboy configuration for CloudI version 1.2.1 and how it provides better performance than CloudI version 1.1.0 for CloudI API implementations in C/C++, Java, and Erlang
 
-[`loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment):
+[`loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_1/201303_20k_10kreqs_single_without_adjustment):
 * used the default cowboy configuration from CloudI version 1.2.0 to show performance problems when relying on a `non-duo_mode` service, which was previously the default before CloudI version 1.2.0
 
-[`loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
-* same test as [`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
+[`loadtest/results_v1_1_0/201210_20k_10kreqs_misultin/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_misultin):
+* same test as [`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs), but with Erlang R15B02 and CloudI version 1.1.0
 
-[`loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy):
-* used to compare [cowboy with misultin](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
+[`loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_20k_10kreqs_cowboy):
+* used to compare [cowboy with misultin](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
 
-[`loadtest/results_v1_1_0/201210_40k_10kreqs_misultin/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_misultin) and [`loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy):
-* shows more latency with 40,000 concurrent connections open ( [summary](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf) ) for external programming languages (i.e., any programming languages not running on the Erlang VM)
+[`loadtest/results_v1_1_0/201210_40k_10kreqs_misultin/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_misultin) and [`loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_40k_10kreqs_cowboy):
+* shows more latency with 40,000 concurrent connections open ( [summary](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf) ) for external programming languages (i.e., any programming languages not running on the Erlang VM)
 
-[`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs):
+[`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_0_0/201206_20k_10kreqs):
 * 20,000 concurrent connections open
 * 10,000 requests/second maintained for 10 minutes
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
