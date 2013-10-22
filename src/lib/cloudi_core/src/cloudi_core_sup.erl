@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_sup).
@@ -59,6 +59,7 @@
 -export([init/1]).
 
 -include("cloudi_configuration.hrl").
+-include("cloudi_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -92,19 +93,30 @@ start_link(Config) when is_record(Config, config) ->
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
 
+-ifdef(CLOUDI_CORE_STANDALONE).
+-define(CHILDSPECS,
+        [child_specification(cloudi_logger, Config),
+         child_specification(cloudi_nodes, Config),
+         child_specification(cloudi_services_monitor),
+         child_specification(cloudi_services_internal_sup),
+         child_specification(cloudi_configurator, Config),
+         child_specification(cloudi_services_internal_reload)]).
+-else.
+-define(CHILDSPECS,
+        [child_specification(cloudi_logger, Config),
+         child_specification(cloudi_nodes, Config),
+         child_specification(cloudi_services_monitor),
+         child_specification(cloudi_services_external_sup),
+         child_specification(cloudi_services_internal_sup),
+         child_specification(cloudi_os_spawn_pool),
+         child_specification(cloudi_configurator, Config),
+         child_specification(cloudi_services_internal_reload)]).
+-endif.
+
 init([Config]) when is_record(Config, config) ->
     MaxRestarts = 5,
     MaxTime = 60, % seconds (1 minute)
-    {ok,
-     {{rest_for_one, MaxRestarts, MaxTime},
-      [child_specification(cloudi_logger, Config),
-       child_specification(cloudi_nodes, Config),
-       child_specification(cloudi_services_monitor),
-       child_specification(cloudi_services_external_sup),
-       child_specification(cloudi_services_internal_sup),
-       child_specification(cloudi_os_spawn_pool),
-       child_specification(cloudi_configurator, Config),
-       child_specification(cloudi_services_internal_reload)]}}.
+    {ok, {{rest_for_one, MaxRestarts, MaxTime}, ?CHILDSPECS}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

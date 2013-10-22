@@ -66,6 +66,12 @@
 % Constants that should never be changed                                     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% for using cloudi_core as an isolated Erlang application
+% outside of the CloudI repository
+% (only internal services are supported,
+%  due to the extra compilation required for external services support)
+%-define(CLOUDI_CORE_STANDALONE, true).
+
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).

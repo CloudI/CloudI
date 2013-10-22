@@ -56,12 +56,18 @@
          set/2,
          setsockopts/3]).
 
+-include("cloudi_constants.hrl").
+
 -on_load(init/0).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-ifdef(CLOUDI_CORE_STANDALONE).
+init() ->
+    ok.
+-else.
 init() ->
     case cloudi_core_app:test() of
         true ->
@@ -71,6 +77,7 @@ init() ->
             erlang:load_nif(filename:join([Path,
                                            "libcloudi_socket_drv"]), [])
     end.
+-endif.
 
 -spec local(_SocketPath :: string()) ->
     ok | {error, atom()}.

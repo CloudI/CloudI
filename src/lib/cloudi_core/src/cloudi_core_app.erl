@@ -101,12 +101,16 @@ test() ->
 start(_, _) ->
     application:set_env(cloudi_core, mac_address, cloudi_x_uuid:mac_address()),
     cloudi_x_quickrand:seed(),
-    {ok, PathOrData} = application:get_env(configuration),
-    case cloudi_configuration:load(PathOrData) of
-        {ok, Config} ->
-            cloudi_core_sup:start_link(Config);
-        {error, _} = Error ->
-            Error
+    case application:get_env(configuration) of
+        {ok, PathOrData} ->
+            case cloudi_configuration:load(PathOrData) of
+                {ok, Config} ->
+                    cloudi_core_sup:start_link(Config);
+                {error, _} = Error ->
+                    Error
+            end;
+        undefined ->
+            init:stop("cloudi_core configuration undefined")
     end.
 
 %%-------------------------------------------------------------------------

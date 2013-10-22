@@ -178,8 +178,16 @@ load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
         {ok, Terms} ->
             new(Terms, #config{uuid_generator = uuid_generator()});
+        {error, enoent} = Error ->
+            error_logger:error_msg("configuration file \"~s\" not found",
+                                   [Path]),
+            Error;
+        {error, eacces} = Error ->
+            error_logger:error_msg("configuration file \"~s\" not accessible",
+                                   [Path]),
+            Error;
         {error, Reason} = Error ->
-            error_logger:error_msg("configuration file \"~s\" not found: ~p",
+            error_logger:error_msg("configuration file \"~s\" invalid: ~p",
                                    [Path, Reason]),
             Error
     end;
@@ -818,8 +826,7 @@ services_format_options_external(Options) ->
 services_validate([_ | _] = Services, UUID) ->
     services_validate(Services, [], [], UUID).
 
-services_validate([], Output, IDs, _) ->
-    {ok, lists:reverse(Output), lists:reverse(IDs)};
+-define(CLOUDI_CORE_SUPPORT_INTERNAL,
 services_validate([#internal{prefix = Prefix} | _], _, _, _)
     when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
     {error, {service_internal_prefix_invalid, Prefix}};
@@ -928,7 +935,8 @@ services_validate([#internal{
             end;
         {error, _} = Error ->
             Error
-    end;
+    end).
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL,
 services_validate([#external{prefix = Prefix} | _], _, _, _)
     when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
     {error, {service_external_prefix_invalid, Prefix}};
@@ -1073,7 +1081,12 @@ services_validate([#external{
             end;
         {error, _} = Error ->
             Error
-    end;
+    end).
+
+services_validate([], Output, IDs, _) ->
+    {ok, lists:reverse(Output), lists:reverse(IDs)};
+?CLOUDI_CORE_SUPPORT_INTERNAL;
+?CLOUDI_CORE_SUPPORT_EXTERNAL;
 services_validate([Service | _], _, _, _) ->
     {error, {services_invalid, Service}}.
 
