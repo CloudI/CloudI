@@ -5,6 +5,8 @@
 
     * Split cloudi_core and the internal services into separate respositories
       (at https://github.com/CloudI/)
+    * Update jinterface
+    * Update older database driver repository links
 
 2013-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 

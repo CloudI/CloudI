@@ -26,9 +26,9 @@ to its integration and dependencies).
 ---------------------------
 `Erlang CouchDB (native) Driver`
 
-- `http://github.com/ngerakines/erlang_couchdb`
-- `commit e8b1a107d05f5e886de9`
-- `October 14, 2009`
+- `https://github.com/okeuday/ecouchdb`
+- `commit dd8bf6d694327feea202c6552cdb09c650831ba5`
+- `Tue Oct 22 11:58:41 PDT 2013`
 - `BSD`
 
 `elli`
@@ -43,19 +43,19 @@ to its integration and dependencies).
 ----------------------------------
 `Erlang memcached Driver`
 
-- `modified from http://github.com/JacobVorreuter/mcerlang`
-- `commit (repository was removed)`
-- `October 14, 2009`
+- `https://github.com/okeuday/ememcached`
+- `commit a44340caa9b14cefb590ba47c3baa2ac83270dcc`
+- `Tue Oct 22 11:58:41 PDT 2013`
 - `BSD`
 
 `emysql (erlang_mysql)`
 -----------------------
  `Erlang MySQL (native) Driver`
  
-- `http://github.com/ngerakines/erlang_mysql`
+- `https://github.com/okeuday/emysql`
 - `alternative: https://github.com/Eonblast/Emysql`
-- `commit 712f8ead7585e6d3736a`
-- `October 14, 2009`
+- `commit 13b3957b82f3647cb0255ac7eaeaba49e3ef9579`
+- `Tue Oct 22 11:58:41 PDT 2013`
 
 `epgsql`
 --------
@@ -88,17 +88,18 @@ to its integration and dependencies).
 -----------------------
 `Erlang TokyoTyrant (native) Driver`
 
-- `https://github.com/mccoy/medici`
-- `commit d4eafd6dd402d0c3bc42`
-- `October 14, 2009`
+- `https://github.com/okeuday/etokyotyrant`
+- `commit 469ed7086157e06f74174d32bfb83fd9152384fb`
+- `Tue Oct 22 11:58:41 PDT 2013`
 - `Erlang Public License`
 
 `jinterface`
 ------------
 `Binary Erlang Term Encoding Java Source Code`
 
-- `http://www.erlang.org/download/otp_src_R16A_RELEASE_CANDIDATE.tar.gz`
-- `Mon Feb  4 13:03:02 PST 2013`
+- `http://www.erlang.org/download/otp_src_R16B02.tar.gz`
+- `(in otp_src_R16B02/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `Tue Oct 22 11:58:41 PDT 2013`
 - `Erlang Public License`
 
 `jsonrpclib`
