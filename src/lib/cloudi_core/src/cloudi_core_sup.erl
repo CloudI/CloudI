@@ -101,6 +101,9 @@ start_link(Config) when is_record(Config, config) ->
          child_specification(cloudi_services_internal_sup),
          child_specification(cloudi_configurator, Config),
          child_specification(cloudi_services_internal_reload)]).
+-define(CHECK,
+        (is_tuple(child_specification(cloudi_services_external_sup)) andalso
+         is_tuple(child_specification(cloudi_os_spawn_pool)))).
 -else.
 -define(CHILDSPECS,
         [child_specification(cloudi_logger, Config),
@@ -111,9 +114,12 @@ start_link(Config) when is_record(Config, config) ->
          child_specification(cloudi_os_spawn_pool),
          child_specification(cloudi_configurator, Config),
          child_specification(cloudi_services_internal_reload)]).
+-define(CHECK,
+        true).
 -endif.
 
 init([Config]) when is_record(Config, config) ->
+    true = ?CHECK,
     MaxRestarts = 5,
     MaxTime = 60, % seconds (1 minute)
     {ok, {{rest_for_one, MaxRestarts, MaxTime}, ?CHILDSPECS}}.
