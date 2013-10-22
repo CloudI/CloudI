@@ -1,10 +1,10 @@
 #[CloudI 1.3.0 (beta)](http://cloudi.org)
 
-[![Build Status](https://secure.travis-ci.org/okeuday/CloudI.png?branch=develop)](http://travis-ci.org/okeuday/CloudI)
+[![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI)
 
 ## LICENSE
 
-[BSD License](https://github.com/okeuday/CloudI/blob/master/src/LICENSE)
+[BSD License](https://github.com/CloudI/CloudI/blob/master/src/LICENSE)
 
 ## ABOUT
 
@@ -95,27 +95,27 @@ To stop CloudI:
 
 ## INTEGRATION
 
-See the [Quick Start Guide](https://github.com/okeuday/CloudI/tree/master/doc#readme) or the [API documentation](http://cloudi.org/api.html#1_Intro)
+See the [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#readme) or the [API documentation](http://cloudi.org/api.html#1_Intro)
 
 Integration points:
 
-* CloudI API (See [`src/api/README`](https://github.com/okeuday/CloudI/tree/master/src/api#readme))
-* HTTP with [`cloudi_service_http_cowboy`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
-* ZeroMQ with [`cloudi_service_zeromq`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.erl)
+* CloudI API (See [`src/api/README`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
+* HTTP with [`cloudi_service_http_cowboy`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
+* ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.erl)
 * Supported databases
-  * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.erl)
-  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.erl)
-  * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.erl)
-  * memcached with [`cloudi_service_db_memcached`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.erl)
-  * MySQL with [`cloudi_service_db_mysql`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
-  * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
-  * Tokyo Tyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.erl)
+  * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.erl)
+  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.erl)
+  * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.erl)
+  * memcached with [`cloudi_service_db_memcached`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.erl)
+  * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
+  * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
+  * Tokyo Tyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.erl)
 
-Dynamic configuration uses the CloudI Service API (See [`src/service_api/README`](https://github.com/okeuday/CloudI/tree/master/src/service_api#readme))
+Dynamic configuration uses the CloudI Service API (See [`src/service_api/README`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
 
 The default CloudI configuration runs many tests that can be used as
 examples of CloudI integration
-(see [`src/cloudi.conf.in`](https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in)).
+(see [`src/cloudi.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)).
 
 ## CONTACT
 
