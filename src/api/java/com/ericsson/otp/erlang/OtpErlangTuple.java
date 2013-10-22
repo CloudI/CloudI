@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2000-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2000-2013. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -84,13 +84,13 @@ public class OtpErlangTuple extends OtpErlangObject implements Serializable,
      *                    if the array is empty (null) or contains null
      *                    elements.
      */
-    public OtpErlangTuple(OtpErlangObject[] elems, final int start,
+    public OtpErlangTuple(final OtpErlangObject[] elems, final int start,
 	    final int count) {
 	if (elems == null) {
 	    throw new java.lang.IllegalArgumentException(
 		    "Tuple content can't be null");
 	} else if (count < 1) {
-	    elems = NO_ELEMENTS;
+	    this.elems = NO_ELEMENTS;
 	} else {
 	    this.elems = new OtpErlangObject[count];
 	    for (int i = 0; i < count; i++) {
