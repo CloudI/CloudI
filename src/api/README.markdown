@@ -32,13 +32,13 @@ initialize the CloudI API and call its event-loop (in the "poll" function).
 
 ### Examples exist within the tests:
 
-* [Erlang](https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl) (`hexpi` test controller)
-* [C++](https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp) (`hexpi` test worker threads)
-* [C](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/c_src/main.c) (`http_req` test HTTP handler)
-* [Java](https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/org/cloudi/tests/http_req) (`http_req` test HTTP handler)
-* [Python](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/http_req.py) (`http_req` test HTTP handler)
-* [Python (using C integration)](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/http_req_c.py) (`http_req` test HTTP handler)
-* [Ruby](https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/http_req.rb) (`http_req` test HTTP handler)
+* [Erlang](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl) (`hexpi` test controller)
+* [C++](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp) (`hexpi` test worker threads)
+* [C](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c) (`http_req` test HTTP handler)
+* [Java](https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/org/cloudi/tests/http_req) (`http_req` test HTTP handler)
+* [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py) (`http_req` test HTTP handler)
+* [Python (using C integration)](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req_c.py) (`http_req` test HTTP handler)
+* [Ruby](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb) (`http_req` test HTTP handler)
 
 Please see the [CloudI API documentation](http://cloudi.org/api.html#Service)
 for more details.
