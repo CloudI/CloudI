@@ -578,7 +578,7 @@ handle_info({inet_async, Listener, Acceptor, Error}, StateName,
     when Protocol =:= tcp; Protocol =:= local ->
     {stop, {StateName, inet_async, Error}, State};
 
-handle_info({cloudi_x_cpg_data, Groups}, StateName,
+handle_info({cloudi_cpg_data, Groups}, StateName,
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),

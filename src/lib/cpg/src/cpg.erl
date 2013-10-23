@@ -2612,7 +2612,7 @@ handle_info({new, Node},
 
 handle_info({cpg_data, From},
             #state{groups = Groups} = State) ->
-    From ! {cpg_data, Groups},
+    From ! {cloudi_cpg_data, Groups},
     {noreply, State};
 
 handle_info(_, State) ->

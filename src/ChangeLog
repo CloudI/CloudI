@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-10-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix a potential inconsistency between the CloudI repo and the
+      cloudi_core repo (with CLOUDI_CORE_STANDALONE defined) by changing the
+      {cpg_data, Groups} message in cpg to {cloudi_cpg_data, Groups}
+
 2013-10-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Split cloudi_core and the internal services into separate respositories
