@@ -674,7 +674,7 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
     {stop, Reason, State};
 
-handle_info({cloudi_x_cpg_data, Groups},
+handle_info({cloudi_cpg_data, Groups},
             #state{dest_refresh = DestRefresh,
                    options = ConfigOptions} = State) ->
     destination_refresh_start(DestRefresh, ConfigOptions),

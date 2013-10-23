@@ -151,7 +151,7 @@ new() ->
 %% @doc
 %% ===Create a CloudI context.===
 %% If a lazy destination refresh method is used, make sure to receive the
-%% {cloudi_x_cpg_data, Groups} message and pass it to the
+%% {cloudi_cpg_data, Groups} message and pass it to the
 %% destinations_refresh/2 function.
 %% @end
 %%-------------------------------------------------------------------------
@@ -220,20 +220,20 @@ new(Settings)
 %% @doc
 %% ===Refresh destination lookup data.===
 %% Must be called if using a lazy destination refresh method.
-%% The {cloudi_x_cpg_data, Groups} message must be received and processed
+%% The {cloudi_cpg_data, Groups} message must be received and processed
 %% by this function.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec destinations_refresh(Context :: context(),
-                           Message :: {cloudi_x_cpg_data, any()}) ->
+                           Message :: {cloudi_cpg_data, any()}) ->
     context().
 
 destinations_refresh(#cloudi_context{
                          dest_refresh = DestRefresh,
                          dest_refresh_delay = DestRefreshDelay,
                          scope = Scope} = Context,
-                     {cloudi_x_cpg_data, Groups}) ->
+                     {cloudi_cpg_data, Groups}) ->
     ok = destination_refresh_start(DestRefresh, DestRefreshDelay, Scope),
     Context#cloudi_context{cpg_data = Groups}.
 
