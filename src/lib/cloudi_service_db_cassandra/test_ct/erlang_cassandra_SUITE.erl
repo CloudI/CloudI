@@ -25,7 +25,6 @@
 -define(NUMTESTS, 10).
 
 % Cloudi
--define(CLOUDI_CONF, "cloudi.conf").
 -define(DB_PREFIX, "/dbpopulator/cloudi_x_erlang_cassandra/").
 -define(DB_TARGET, "testdb").
 -define(POOL_OPTIONS, [{size, 1}, {max_overflow, 0}]).
@@ -825,12 +824,11 @@ unload_cloudi_service(Prefixes) ->
                                 _ -> ok
                             end end, cloudi_services()) end, Prefixes).
 
-setup_cloudi(Config) ->
-    DataDir = ?config(data_dir, Config),
-    ConfFile = DataDir ++ ?CLOUDI_CONF,
-    application:set_env(cloudi_core, configuration, ConfFile),
-    cloudi_x_reltool_util:application_start(cloudi_core, [{configuration, ConfFile}], 1000),
-    Config.
+setup_cloudi(_Config) ->
+    CloudIConfig = [{acl, []}, {services, []}, {nodes, []},
+                    {logging, [{file, "cloudi.log"}]}],
+    ok = cloudi_x_reltool_util:application_start(cloudi_core,
+                                        [{configuration, CloudIConfig}],1000).
 
 
 teardown_cloudi(_Config) ->
