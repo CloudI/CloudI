@@ -171,32 +171,36 @@ start_external(ThreadsPerProcess,
                                 DestRefresh, DestDeny, DestAllow,
                                 ConfigOptions) of
         {ok, Pids, Ports} ->
-            SpawnProcess = cloudi_pool:get(cloudi_os_spawn),
-            SpawnProtocol = if
-                Protocol =:= tcp ->
-                    $t; % inet
-                Protocol =:= udp ->
-                    $u; % inet
-                Protocol =:= local ->
-                    $l  % tcp local (unix domain socket)
-            end,
-            SpawnSocketPath = string_terminate(SocketPath),
-            EnvironmentLookup = environment_lookup(),
-            SpawnFilename = filename_parse(Filename, EnvironmentLookup),
-            case arguments_parse(Arguments, EnvironmentLookup) of
-                {ok, SpawnArguments} ->
-                    SpawnEnvironment = environment_parse(
-                        Environment, ThreadsPerProcess,
-                        Protocol, BufferSize, EnvironmentLookup),
-                    case cloudi_os_spawn:spawn(SpawnProcess,
-                                               SpawnProtocol,
-                                               SpawnSocketPath,
-                                               Ports,
-                                               SpawnFilename,
-                                               SpawnArguments,
-                                               SpawnEnvironment) of
-                        {ok, _OsPid} ->
-                            {ok, Pids};
+            case cloudi_pool:get(cloudi_os_spawn) of
+                SpawnProcess when is_pid(SpawnProcess) ->
+                    SpawnProtocol = if
+                        Protocol =:= tcp ->
+                            $t; % inet
+                        Protocol =:= udp ->
+                            $u; % inet
+                        Protocol =:= local ->
+                            $l  % tcp local (unix domain socket)
+                    end,
+                    SpawnSocketPath = string_terminate(SocketPath),
+                    EnvironmentLookup = environment_lookup(),
+                    SpawnFilename = filename_parse(Filename, EnvironmentLookup),
+                    case arguments_parse(Arguments, EnvironmentLookup) of
+                        {ok, SpawnArguments} ->
+                            SpawnEnvironment = environment_parse(
+                                Environment, ThreadsPerProcess,
+                                Protocol, BufferSize, EnvironmentLookup),
+                            case cloudi_os_spawn:spawn(SpawnProcess,
+                                                       SpawnProtocol,
+                                                       SpawnSocketPath,
+                                                       Ports,
+                                                       SpawnFilename,
+                                                       SpawnArguments,
+                                                       SpawnEnvironment) of
+                                {ok, _OsPid} ->
+                                    {ok, Pids};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, _} = Error ->
                             Error
                     end;
