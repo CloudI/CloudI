@@ -522,7 +522,7 @@ handle_info(keepalive_udp, StateName,
 handle_info({udp_closed, Socket}, _,
             #state{protocol = udp,
                    socket = Socket} = State) ->
-    {stop, normal, State};
+    {stop, socket_closed, State};
 
 handle_info({tcp, Socket, Data}, StateName,
             #state{protocol = Protocol,
@@ -540,7 +540,7 @@ handle_info({tcp_closed, Socket}, _,
             #state{protocol = Protocol,
                    socket = Socket} = State)
     when Protocol =:= tcp; Protocol =:= local ->
-    {stop, normal, State};
+    {stop, socket_closed, State};
 
 handle_info({tcp_error, Socket, Reason}, _,
             #state{protocol = Protocol,
