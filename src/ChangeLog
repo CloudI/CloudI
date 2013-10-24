@@ -6,12 +6,13 @@
     * Fix a potential inconsistency between the CloudI repo and the
       cloudi_core repo (with CLOUDI_CORE_STANDALONE defined) by changing the
       {cpg_data, Groups} message in cpg to {cloudi_cpg_data, Groups}
+    * Add proplist service configuration format
 
 2013-10-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Split cloudi_core and the internal services into separate respositories
       (at https://github.com/CloudI/)
-    * Update jinterface
+    * Update jinterface from R16B02
     * Update older database driver repository links
     * Update READMEs with the new repository location
     * Provide a function for updating the destination refresh lookup data

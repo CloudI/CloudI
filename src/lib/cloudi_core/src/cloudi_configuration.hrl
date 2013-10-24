@@ -41,11 +41,16 @@
 %%%
 %%%------------------------------------------------------------------------
 
+-include("cloudi_configuration_defaults.hrl").
+
 -record(config_logging,
     {
-        level = trace :: cloudi_service_api:loglevel(),
-        file = "logs/cloudi.log" :: file:filename(),
-        redirect = undefined :: undefined | node()
+        level = trace
+            :: cloudi_service_api:loglevel(),
+        file = "logs/cloudi.log"
+            :: file:filename(),
+        redirect = undefined
+            :: undefined | node()
     }).
 
 -record(config_service_options,
@@ -53,13 +58,15 @@
         % DEFAULT VALUES ASSIGNED BELOW
 
         % -128 (high) <= priority_default <= 127 (low)
-        priority_default = 0 :: cloudi_service:priority(),
+        priority_default = ?DEFAULT_PRIORITY
+            :: cloudi_service:priority(),
         % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
-        queue_limit = undefined :: undefined | pos_integer(),
+        queue_limit = undefined
+            :: undefined | pos_integer(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
-        dest_refresh_start = 500 % 0.5 seconds
+        dest_refresh_start = ?DEFAULT_DEST_REFRESH_START
             :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
@@ -68,72 +75,78 @@
         % service is mainly communicating with long-lived services
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
-        dest_refresh_delay = 300000 % 5 minutes
+        dest_refresh_delay = ?DEFAULT_DEST_REFRESH_DELAY
             :: cloudi_service_api:dest_refresh_delay_milliseconds(),
         % should the service request handler execution time decrement the
         % request timeout to reduce the timeout of a forwarded request or
         % the timeout of a returned response
         % (if the request timeout is equal to the forward or return timeout,
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
-        request_timeout_adjustment = false :: boolean(),
+        request_timeout_adjustment = false
+            :: boolean(),
         % should the service use internal timeout information to provide a
         % more accurate timeout value within the response provided
         % (n.b., this only affects the response timeout of a successful
         %  send_async request)
-        response_timeout_adjustment = false :: boolean(),
+        response_timeout_adjustment = false
+            :: boolean(),
         % provide a scope for all subscribe/unsubscribe and messaging
         % (i.e., all service name usage is within the scope).  Using a
         % different scope can help avoid contention when using an immediate
         % destination refresh method.
-        scope = default :: atom(),
+        scope = ?DEFAULT_SCOPE
+            :: atom(),
         % add latency to all service requests and info messages received
         % based on the parameters specified.  If "system" is set, the
         % cloudi_core Erlang application env value is used after being
         % checked during service startup (e.g., after service restarts).
         % (all time parameters are specified in milliseconds)
-        monkey_latency = false ::
-            list({time_uniform_min, pos_integer()} |
-                 {time_uniform_max, pos_integer()} |
-                 {time_gaussian_mean, pos_integer()} |
-                 {time_gaussian_stddev, float()} |
-                 {time_absolute, pos_integer()}) |
-            system | false,
+        monkey_latency = false
+            :: list({time_uniform_min, pos_integer()} |
+                    {time_uniform_max, pos_integer()} |
+                    {time_gaussian_mean, pos_integer()} |
+                    {time_gaussian_stddev, float()} |
+                    {time_absolute, pos_integer()}) |
+               system | false,
         % cause service termination based on the probability parameter
         % (checked for each service request and info message, if necessary).
         % If "system" is set, the cloudi_core Erlang application env value
         % is used after being checked during service startup
         % (e.g., after service restarts).  The probability_day method
         % replicates the Netflix chaos monkey usage.
-        monkey_chaos = false ::
-            list({probability_request, float()} |
-                 {probability_day, float()}) |
-            system | false,
+        monkey_chaos = false
+            :: list({probability_request, float()} |
+                    {probability_day, float()}) |
+               system | false,
 
         % Only Relevant For Internal Services:
 
         % specify an Erlang application name, so it can be different from
         % the CloudI service module name
-        application_name = undefined :: atom(),
+        application_name = undefined
+            :: atom(),
         % how many service requests should restart the Erlang process used for
         % handling the service requests
         % (an integer greater than 0 or the atom 'infinity' are valid values)
-        request_pid_uses = 1 :: infinity | pos_integer(),
+        request_pid_uses = 1
+            :: infinity | pos_integer(),
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % service request handling Erlang process
-        request_pid_options = [] ::
-            list({fullsweep_after, non_neg_integer()} |
-                 {min_heap_size, non_neg_integer()} |
-                 {min_bin_vheap_size, non_neg_integer()}),
+        request_pid_options = []
+            :: list({fullsweep_after, non_neg_integer()} |
+                    {min_heap_size, non_neg_integer()} |
+                    {min_bin_vheap_size, non_neg_integer()}),
         % how many info messages should restart the Erlang process used for
         % handling the info message
         % (an integer greater than 0 or the atom 'infinity' are valid values)
-        info_pid_uses = infinity :: infinity | pos_integer(),
+        info_pid_uses = infinity
+            :: infinity | pos_integer(),
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % info message handling Erlang process
-        info_pid_options = [] ::
-            list({fullsweep_after, non_neg_integer()} |
-                 {min_heap_size, non_neg_integer()} |
-                 {min_bin_vheap_size, non_neg_integer()}),
+        info_pid_options = []
+            :: list({fullsweep_after, non_neg_integer()} |
+                    {min_heap_size, non_neg_integer()} |
+                    {min_bin_vheap_size, non_neg_integer()}),
         % use two Erlang processes instead of one for an internal service to
         % keep send operations separate from receive operations.  better
         % throughput can be achieved with duo_mode, especially when sending to
@@ -143,14 +156,17 @@
         % is used in place of the info_pid and the process' message queue
         % is used directly (so info_pid_uses must be set to infinity when
         % duo_mode is true).
-        duo_mode = false :: boolean(),
+        duo_mode = false
+            :: boolean(),
         % should a mostly idle service hibernate automatically to conserve
         % memory at the expense of extra garbage collections and an empty
         % stack trace.
-        hibernate = false :: boolean(),
+        hibernate = false
+            :: boolean(),
         % should the service be reloaded automatically when an Erlang module
         % file changes?  should only be used during service development.
-        reload = false :: boolean()
+        reload = false
+            :: boolean()
     }).
 
 % internal service parameters

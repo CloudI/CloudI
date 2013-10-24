@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -41,43 +41,16 @@
 %%%
 %%%------------------------------------------------------------------------
 
-% internal service parameters
--record(internal,
-    {
-        prefix             :: cloudi:service_name_pattern(),
-        module             :: atom() | file:filename(),
-        args               :: list(),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_internal()
-    }).
-    
-% external service parameters
--record(external,
-    {
-        prefix             :: cloudi:service_name_pattern(),
-        file_path          :: file:filename(),
-        args               :: string(),
-        env                :: list({string(), string()}),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        protocol           :: 'default' | 'local' | 'tcp' | 'udp',
-        buffer_size        :: 'default' | pos_integer(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        count_thread       :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_external()
-    }).
+% defaults common to cloudi module usage and cloudi_service module usage
+-define(DEFAULT_SERVICE_PREFIX,                   "/").
+-define(DEFAULT_DEST_REFRESH,       immediate_closest).
+-define(DEFAULT_TIMEOUT_INIT,                    5000). % milliseconds
+-define(DEFAULT_TIMEOUT_ASYNC,                   5000). % milliseconds
+-define(DEFAULT_TIMEOUT_SYNC,                    5000). % milliseconds
+-define(DEFAULT_MAX_R,                              5). % max restart count
+-define(DEFAULT_MAX_T,                            300). % max time in seconds
+-define(DEFAULT_DEST_REFRESH_START,               500). % milliseconds
+-define(DEFAULT_DEST_REFRESH_DELAY,            300000). % milliseconds
+-define(DEFAULT_PRIORITY,                           0).
+-define(DEFAULT_SCOPE,                        default).
 
