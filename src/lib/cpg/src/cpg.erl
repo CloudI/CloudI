@@ -1141,6 +1141,12 @@ get_members(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_members, GroupName, Exclude},
+                    Timeout);
+
+get_members(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_members, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1222,6 +1228,12 @@ get_local_members(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_local_members, GroupName, Exclude},
+                    Timeout);
+
+get_local_members(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_local_members, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1303,6 +1315,12 @@ get_remote_members(GroupName, Exclude, Timeout)
     when is_pid(Exclude) ->
     gen_server:call(?DEFAULT_SCOPE,
                     {get_remote_members, GroupName, Exclude},
+                    Timeout);
+
+get_remote_members(Scope, GroupName, Timeout)
+    when is_atom(Scope) ->
+    gen_server:call(Scope,
+                    {get_remote_members, GroupName},
                     Timeout).
 
 %%-------------------------------------------------------------------------
