@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -242,7 +242,8 @@ acl_remove(Value, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_add(Value :: list(#internal{} | #external{} | any()),
+-spec services_add(Value :: list(#internal{} | #external{} |
+                                 cloudi_service_api:service_proplist()),
                    Config :: #config{},
                    Timeout :: cloudi_service_api:timeout_milliseconds() |
                               infinity) ->
@@ -253,7 +254,7 @@ services_add([T | _] = Value,
              #config{uuid_generator = UUID,
                      services = Services,
                      acl = ACL} = Config, Timeout)
-    when is_record(T, internal); is_record(T, external) ->
+    when is_record(T, internal); is_record(T, external); is_list(T) ->
     case services_validate(Value, UUID) of
         {ok, ValidatedServices, IDs} ->
             case services_acl_update(ValidatedServices, ACL) of
@@ -486,7 +487,7 @@ new([{'services', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
-    when is_record(T, internal); is_record(T, external) ->
+    when is_record(T, internal); is_record(T, external); is_list(T) ->
     case services_validate(Value, UUID) of
         {ok, NewServices, _IDs} ->
             new(Terms, Config#config{services = NewServices});
@@ -816,7 +817,8 @@ services_format_options_external(Options) ->
     end,
     lists:reverse(OptionsList9).
 
--spec services_validate(Services :: list(#internal{} | #external{}),
+-spec services_validate(Services :: list(#internal{} | #external{} |
+                                         cloudi_service_api:service_proplist()),
                         UUID :: cloudi_x_uuid:state()) ->
     {ok,
      list(#config_service_internal{} | #config_service_external{}),
@@ -886,19 +888,19 @@ services_validate([#internal{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_internal_options_invalid, Options}};
 services_validate([#internal{
-                      prefix = Prefix,
-                      module = Module,
-                      args = Args,
-                      dest_refresh = DestRefresh,
-                      timeout_init = TimeoutInit,
-                      timeout_async = TimeoutAsync,
-                      timeout_sync = TimeoutSync,
-                      dest_list_deny = DestListDeny,
-                      dest_list_allow = DestListAllow,
-                      count_process = CountProcess,
-                      max_r = MaxR,
-                      max_t = MaxT,
-                      options = Options} | L],
+                       prefix = Prefix,
+                       module = Module,
+                       args = Args,
+                       dest_refresh = DestRefresh,
+                       timeout_init = TimeoutInit,
+                       timeout_async = TimeoutAsync,
+                       timeout_sync = TimeoutSync,
+                       dest_list_deny = DestListDeny,
+                       dest_list_allow = DestListAllow,
+                       count_process = CountProcess,
+                       max_r = MaxR,
+                       max_t = MaxT,
+                       options = Options} | L],
                   Output, IDs, UUID) ->
     FilePath = if
         is_atom(Module) ->
@@ -1012,23 +1014,23 @@ services_validate([#external{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_external_options_invalid, Options}};
 services_validate([#external{
-                      prefix = Prefix,
-                      file_path = FilePath,
-                      args = Args,
-                      env = Env,
-                      dest_refresh = DestRefresh,
-                      protocol = Protocol,
-                      buffer_size = BufferSize,
-                      timeout_init = TimeoutInit,
-                      timeout_async = TimeoutAsync,
-                      timeout_sync = TimeoutSync,
-                      dest_list_deny = DestListDeny,
-                      dest_list_allow = DestListAllow,
-                      count_process = CountProcess,
-                      count_thread = CountThread,
-                      max_r = MaxR,
-                      max_t = MaxT,
-                      options = Options} | L],
+                       prefix = Prefix,
+                       file_path = FilePath,
+                       args = Args,
+                       env = Env,
+                       dest_refresh = DestRefresh,
+                       protocol = Protocol,
+                       buffer_size = BufferSize,
+                       timeout_init = TimeoutInit,
+                       timeout_async = TimeoutAsync,
+                       timeout_sync = TimeoutSync,
+                       dest_list_deny = DestListDeny,
+                       dest_list_allow = DestListAllow,
+                       count_process = CountProcess,
+                       count_thread = CountThread,
+                       max_r = MaxR,
+                       max_t = MaxT,
+                       options = Options} | L],
                   Output, IDs, UUID) ->
     NewProtocol = if
         Protocol =:= default ->
@@ -1085,10 +1087,99 @@ services_validate([#external{
 
 services_validate([], Output, IDs, _) ->
     {ok, lists:reverse(Output), lists:reverse(IDs)};
+services_validate([[_| _] = ServicePropList | L], Output, IDs, UUID) ->
+    Defaults = [
+        {type,                 undefined},
+        {prefix,               ?DEFAULT_SERVICE_PREFIX},
+        {module,               undefined},
+        {file_path,            undefined},
+        {args,                 []},
+        {env,                  []},
+        {dest_refresh,         ?DEFAULT_DEST_REFRESH},
+        {protocol,             default},
+        {buffer_size,          default},
+        {timeout_init,         ?DEFAULT_TIMEOUT_INIT},
+        {timeout_async,        ?DEFAULT_TIMEOUT_ASYNC},
+        {timeout_sync,         ?DEFAULT_TIMEOUT_SYNC},
+        {dest_list_deny,       undefined},
+        {dest_list_allow,      undefined},
+        {count_process,        1},
+        {count_thread,         1},
+        {max_r,                ?DEFAULT_MAX_R},
+        {max_t,                ?DEFAULT_MAX_T},
+        {options,              []}],
+    [Type, Prefix, Module,
+     FilePath, Args, Env, DestRefresh, Protocol, BufferSize,
+     TimeoutInit, TimeoutAsync, TimeoutSync, DestListDeny,
+     DestListAllow, CountProcess, CountThread,
+     MaxR, MaxT, ConfigurationOptions | Extra] =
+        cloudi_proplists:take_values(Defaults, ServicePropList),
+    ServiceType = if
+        Type =:= undefined ->
+            if
+                Module /= undefined, FilePath =:= undefined ->
+                    internal;
+                FilePath /= undefined, Module =:= undefined ->
+                    external;
+                true ->
+                    undefined
+            end;
+        Type =:= internal, Module /= undefined ->
+            internal;
+        Type =:= external, FilePath /= undefined ->
+            external;
+        true ->
+            undefined
+    end,
+    if
+        ServiceType =:= undefined ->
+            {error, {service_invalid, ServicePropList}};
+        Extra /= [] ->
+            if
+                ServiceType =:= internal ->
+                    {error, {service_internal_invalid, Extra}};
+                ServiceType =:= external ->
+                    {error, {service_external_invalid, Extra}}
+            end;
+        ServiceType =:= internal ->
+            Service = #internal{prefix = Prefix,
+                                module = Module,
+                                args = Args,
+                                dest_refresh = DestRefresh,
+                                timeout_init = TimeoutInit,
+                                timeout_async = TimeoutAsync,
+                                timeout_sync = TimeoutSync,
+                                dest_list_deny = DestListDeny,
+                                dest_list_allow = DestListAllow,
+                                count_process = CountProcess,
+                                max_r = MaxR,
+                                max_t = MaxT,
+                                options = ConfigurationOptions},
+            services_validate([Service | L], Output, IDs, UUID);
+        ServiceType =:= external ->
+            Service = #external{prefix = Prefix,
+                                file_path = FilePath,
+                                args = Args,
+                                env = Env,
+                                dest_refresh = DestRefresh,
+                                protocol = Protocol,
+                                buffer_size = BufferSize,
+                                timeout_init = TimeoutInit,
+                                timeout_async = TimeoutAsync,
+                                timeout_sync = TimeoutSync,
+                                dest_list_deny = DestListDeny,
+                                dest_list_allow = DestListAllow,
+                                count_process = CountProcess,
+                                count_thread = CountThread,
+                                max_r = MaxR,
+                                max_t = MaxT,
+                                options = ConfigurationOptions},
+            services_validate([Service | L], Output, IDs, UUID)
+    end;
 ?CLOUDI_CORE_SUPPORT_INTERNAL;
 ?CLOUDI_CORE_SUPPORT_EXTERNAL;
 services_validate([Service | _], _, _, _) ->
-    {error, {services_invalid, Service}}.
+    {error, {service_invalid, Service}}.
 
 -spec services_validate_options_internal(OptionsList ::
     cloudi_service_api:service_options_internal()) ->

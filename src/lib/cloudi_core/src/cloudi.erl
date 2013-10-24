@@ -87,14 +87,7 @@
 
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
-
--define(DEFAULT_DEST_REFRESH,       immediate_closest).
--define(DEFAULT_DEST_REFRESH_START,               500). % milliseconds
--define(DEFAULT_DEST_REFRESH_DELAY,            300000). % milliseconds
--define(DEFAULT_TIMEOUT_ASYNC,                   5000). % milliseconds
--define(DEFAULT_TIMEOUT_SYNC,                    5000). % milliseconds
--define(DEFAULT_PRIORITY,                           0).
--define(DEFAULT_SCOPE,                        default).
+-include("cloudi_configuration_defaults.hrl").
 
 -type service_name() :: string().
 -type service_name_pattern() :: string().

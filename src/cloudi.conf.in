@@ -186,6 +186,18 @@
         % (see config_service_options in
         %  lib/cloudi_core/src/cloudi_configuration.hrl)
         [{request_timeout_adjustment, true}]},
+    % the service below manages the Hexidecimal PI test
+    % (using the proplist method of specifying the configuration data...
+    %  it provides defaults automatically)
+    [%{type, internal}, % gets inferred
+     {prefix, "/tests/"},
+     {module, cloudi_service_map_reduce},
+     {args, [{map_reduce, cloudi_service_hexpi}, % map-reduce module
+             {map_reduce_args, [1, 65536]},  % index start, index end
+             {concurrency, 1.5}]},
+     {timeout_init, 10000},
+     {dest_list_deny, [api]},
+     {options, [{request_timeout_adjustment, true}]}],
     % the service below provides a connection to the cloudi_tests PostgreSQL DB
     %{internal,
     %    "/db/pgsql/",
@@ -212,16 +224,6 @@
          {name, "cloudi_tests_proxy"}],
         lazy_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
-    % the service below manages the Hexidecimal PI test
-    {internal,
-        "/tests/",
-        cloudi_service_map_reduce,
-        [{map_reduce, cloudi_service_hexpi}, % map-reduce module
-         {map_reduce_args, [1, 65536]},  % index start, index end
-         {concurrency, 1.5}],
-        immediate_closest, % recover from failures (process deaths) immediately
-        10000, 5000, 5000, [api], undefined, 1, 5, 300,
-        [{request_timeout_adjustment, true}]},
     % tests/http/ services
     {internal,
         "/tests/websockets/",
