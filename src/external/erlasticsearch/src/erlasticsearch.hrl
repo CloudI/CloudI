@@ -75,6 +75,7 @@
 -define(MAPPING, <<"_mapping">>).
 -define(ALIASES, <<"_aliases">>).
 -define(ALIAS, <<"_alias">>).
+-define(UPDATE, <<"_update">>).
 
 % Shortcuts
 -define(ALL, <<"_all">>).

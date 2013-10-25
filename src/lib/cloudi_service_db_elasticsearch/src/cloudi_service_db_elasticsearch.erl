@@ -71,6 +71,7 @@
          close_index/3, 
          % Doc CRUD
          insert_doc/6, insert_doc/7,
+         update_doc/6, update_doc/7,
          get_doc/5, get_doc/6,
          mget_doc/3, mget_doc/4, mget_doc/5,
          delete_doc/5, delete_doc/6,
@@ -444,6 +445,25 @@ insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params)
          (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     cloudi:send_sync(Dispatcher, Name,
                      {insert_doc, Index, Type, Id, Doc, Params}).
+
+%% _equiv update_doc(Index, Type, Id, Doc, []).
+-spec update_doc(dispatcher(), name(), index(), type(), id(), doc()) ->
+    {ok, response()} |
+    {error, any()}.
+update_doc(Dispatcher, Name, Index, Type, Id, Doc)
+    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
+    update_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
+
+%% @doc Insert a doc into the ElasticSearch cluster
+-spec update_doc(dispatcher(), name(), index(), type(),
+                 id(), doc(), params()) ->
+    {ok, response()} |
+    {error, any()}.
+update_doc(Dispatcher, Name, Index, Type, Id, Doc, Params)
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {update_doc, Index, Type, Id, Doc, Params}).
 
 %% @doc Checks to see if the doc exists
 -spec is_doc(dispatcher(), name(), index(), type(), id()) ->
@@ -836,6 +856,10 @@ process_query(PoolName, {'insert_doc', Index, Type, Id, Doc}) ->
     cloudi_x_erlasticsearch:insert_doc(PoolName, Index, Type, Id, Doc, []);
 process_query(PoolName, {'insert_doc', Index, Type, Id, Doc, Params}) -> 
     cloudi_x_erlasticsearch:insert_doc(PoolName, Index, Type, Id, Doc, Params);
+process_query(PoolName, {'update_doc', Index, Type, Id, Doc}) ->
+    cloudi_x_erlasticsearch:update_doc(PoolName, Index, Type, Id, Doc, []);
+process_query(PoolName, {'update_doc', Index, Type, Id, Doc, Params}) -> 
+    cloudi_x_erlasticsearch:update_doc(PoolName, Index, Type, Id, Doc, Params);
 process_query(PoolName, {'is_doc', Index, Type, Id}) -> 
     cloudi_x_erlasticsearch:is_doc(PoolName, Index, Type, Id);
 process_query(PoolName, {'get_doc', Index, Type, Id}) ->
