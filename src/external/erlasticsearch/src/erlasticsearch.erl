@@ -46,6 +46,7 @@
 
 % Doc CRUD
 -export([insert_doc/5, insert_doc/6]).
+-export([update_doc/5, update_doc/6]).
 -export([get_doc/4, get_doc/5]).
 -export([mget_doc/2, mget_doc/3, mget_doc/4]).
 -export([delete_doc/4, delete_doc/5]).
@@ -322,6 +323,16 @@ insert_doc(Destination, Index, Type, Id, Doc) when is_binary(Index) andalso is_b
 -spec insert_doc(destination(), index(), type(), id(), doc(), params()) -> response().
 insert_doc(Destination, Index, Type, Id, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
     route_call(Destination, {insert_doc, Index, Type, Id, Doc, Params}, infinity).
+
+%% @equiv update_doc(Destination, Index, Type, Id, Doc, []).
+-spec update_doc(destination(), index(), type(), id(), doc()) -> response().
+update_doc(Destination, Index, Type, Id, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    update_doc(Destination, Index, Type, Id, Doc, []).
+
+%% @doc Insert a doc into the ElasticSearch cluster
+-spec update_doc(destination(), index(), type(), id(), doc(), params()) -> response().
+update_doc(Destination, Index, Type, Id, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
+    route_call(Destination, {update_doc, Index, Type, Id, Doc, Params}, infinity).
 
 %% @doc Checks to see if the doc exists
 -spec is_doc(destination(), index(), type(), id()) -> response().
@@ -619,6 +630,11 @@ handle_call({_Request = is_type, Index, Type}, _From, State = #state{connection 
 
 handle_call({_Request = insert_doc, Index, Type, Id, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_insert_doc(Index, Type, Id, Doc, Params),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = update_doc, Index, Type, Id, Doc, Params}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_update_doc(Index, Type, Id, Doc, Params),
     {Connection1, Response} = process_request(Connection0, RestRequest, State),
     {reply, Response, State#state{connection = Connection1}};
 
@@ -937,6 +953,16 @@ rest_request_insert_doc(Index, Type, Id, Doc, Params) when is_binary(Index) anda
                                                       is_list(Params) ->
     Uri = make_uri([Index, Type, Id], Params),
     #restRequest{method = ?elasticsearch_Method_PUT,
+                 uri = Uri,
+                 body = Doc}.
+
+rest_request_update_doc(Index, Type, Id, Doc, Params) when is_binary(Index) andalso
+                                                      is_binary(Type) andalso
+                                                      is_binary(Id) andalso
+                                                      (is_binary(Doc) orelse is_list(Doc)) andalso
+                                                      is_list(Params) ->
+    Uri = make_uri([Index, Type, Id, ?UPDATE], Params),
+    #restRequest{method = ?elasticsearch_Method_POST,
                  uri = Uri,
                  body = Doc}.
 

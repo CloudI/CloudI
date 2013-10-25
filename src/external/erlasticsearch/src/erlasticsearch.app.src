@@ -11,7 +11,7 @@
 {application, erlasticsearch,
  [
   {description, "thrift based elasticsearch"},
-  {vsn, "1.4.1"},
+  {vsn, "1.4.3"},
   {registered, []},
   {modules, []},
   {applications, [
