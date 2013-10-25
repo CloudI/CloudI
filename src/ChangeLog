@@ -3,7 +3,11 @@
 
 2013-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix cloudi:mcast_async function call
+    * Update cpg
     * Fix shutdown issue with service restarts and cloudi_pool errors
+    * Add the automatic_loading service configuration option so the
+      automatic loading used for internal services can be turned off
 
 2013-10-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

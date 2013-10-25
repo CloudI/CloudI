@@ -128,7 +128,8 @@
                {min_bin_vheap_size, non_neg_integer()})} |
          {duo_mode, boolean()} |
          {hibernate, boolean()} |
-         {reload, boolean()}).
+         {reload, boolean()} |
+         {automatic_loading, boolean()}).
 -type service_options_external() ::
     list({priority_default, cloudi_service:priority()} |
          {queue_limit, undefined | pos_integer()} |

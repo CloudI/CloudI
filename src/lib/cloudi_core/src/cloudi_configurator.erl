@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -361,6 +361,22 @@ configure_service([Service | Services], Configured, Timeout) ->
     end.
 
 service_start_find_internal(#config_service_internal{
+                                module = Module,
+                                options = #config_service_options{
+                                    automatic_loading = false}} = Service,
+                            _Timeout) ->
+    if
+        is_atom(Module) ->
+            case code:is_loaded(Module) of
+                false ->
+                    {error, {not_loaded, Module}};
+                _ ->
+                    {ok, Service}
+            end;
+        true ->
+            {error, {invalid_loaded_module, Module}}
+    end;
+service_start_find_internal(#config_service_internal{
                                 module = FilePath} = Service, Timeout)
     when is_list(FilePath) ->
     case filename:extension(FilePath) of
@@ -500,8 +516,14 @@ service_start_find_internal_script(ScriptPath, Service)
             Error
     end.
 
-service_stop_remove_internal(#config_service_internal{module = Module,
-                                                      file_path = FilePath},
+service_stop_remove_internal(#config_service_internal{
+                                options = #config_service_options{
+                                    automatic_loading = false}},
+                             _Timeout) ->
+    ok;
+service_stop_remove_internal(#config_service_internal{
+                                 module = Module,
+                                 file_path = FilePath},
                              Timeout)
     when is_atom(Module), is_list(FilePath) ->
     case filename:extension(FilePath) of
@@ -514,7 +536,8 @@ service_stop_remove_internal(#config_service_internal{module = Module,
         ".script" ->
             cloudi_x_reltool_util:script_remove(FilePath, Timeout)
     end;
-service_stop_remove_internal(#config_service_internal{module = Module},
+service_stop_remove_internal(#config_service_internal{
+                                 module = Module},
                              Timeout)
     when is_atom(Module) ->
     case cloudi_x_reltool_util:application_running(Module, Timeout) of

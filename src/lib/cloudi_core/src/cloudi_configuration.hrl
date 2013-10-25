@@ -166,6 +166,10 @@
         % should the service be reloaded automatically when an Erlang module
         % file changes?  should only be used during service development.
         reload = false
+            :: boolean(),
+        % should the service be automatically loaded and unloaded at
+        % service start and stop, respectively?
+        automatic_loading = true
             :: boolean()
     }).
 
