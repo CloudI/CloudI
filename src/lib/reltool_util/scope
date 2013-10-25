@@ -42,7 +42,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog [at] gmail (dot) com').
--vsn("0.6.0").
+-vsn("0.8.0").
 
 -mode(compile).
 
@@ -67,6 +67,8 @@
             include_directories = [],
             name_conversions = []
         }).
+
+-include_lib("kernel/include/file.hrl").
 
 %-define(USE_IGOR, undefined).
 
@@ -192,7 +194,19 @@ undo_mv_old_dir([], _, _) ->
 undo_mv_old_dir([FilePath | FilePaths], OldDirectory, Directory) ->
     OldFilePath = filename:join(OldDirectory, FilePath),
     NewFilePath = filename:join(Directory, FilePath),
-    ok = file:rename(OldFilePath, NewFilePath),
+    case file:read_file_info(NewFilePath, [mtime]) of
+        {ok, #file_info{mtime = NewFileMtime}} ->
+            {ok, #file_info{mtime = OldFileMtime}} =
+                file:read_file_info(OldFilePath, [mtime]),
+            if
+                NewFileMtime > OldFileMtime ->
+                    ok = file:delete(OldFilePath);
+                true ->
+                    ok = file:rename(OldFilePath, NewFilePath)
+            end;
+        {error, _} ->
+            ok = file:rename(OldFilePath, NewFilePath)
+    end,
     undo_mv_old_dir(FilePaths, OldDirectory, Directory).
 
 undo_rm_scope([], _) ->
