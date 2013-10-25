@@ -55,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -738,17 +738,21 @@ uuid_to_string(Value) ->
                                binary_standard | binary_nodash) ->
     string() | binary().
 
-uuid_to_string(Value, standard) ->
-    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-"
-                                "~4.16.0b-~12.16.0b",
-                                [B1, B2, B3, B4, B5]));
+uuid_to_string(<<Value:128/unsigned-integer>>, standard) ->
+    [N01, N02, N03, N04, N05, N06, N07, N08,
+     N09, N10, N11, N12,
+     N13, N14, N15, N16,
+     N17, N18, N19, N20,
+     N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32] =
+        int_to_hex_list(Value, 32),
+    [N01, N02, N03, N04, N05, N06, N07, N08, $-,
+     N09, N10, N11, N12, $-,
+     N13, N14, N15, N16, $-,
+     N17, N18, N19, N20, $-,
+     N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32];
 
-uuid_to_string(Value, nodash) ->
-    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    lists:flatten(io_lib:format("~8.16.0b~4.16.0b~4.16.0b"
-                                "~4.16.0b~12.16.0b",
-                                [B1, B2, B3, B4, B5]));
+uuid_to_string(<<Value:128/unsigned-integer>>, nodash) ->
+    int_to_hex_list(Value, 32);
 
 uuid_to_string(Value, list_standard) ->
     uuid_to_string(Value, standard);
@@ -756,17 +760,31 @@ uuid_to_string(Value, list_standard) ->
 uuid_to_string(Value, list_nodash) ->
     uuid_to_string(Value, nodash);
 
-uuid_to_string(Value, binary_standard) ->
-    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    erlang:iolist_to_binary(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-"
-                                          "~4.16.0b-~12.16.0b",
-                                          [B1, B2, B3, B4, B5]));
+uuid_to_string(<<Value:128/unsigned-integer>>, binary_standard) ->
+    [N01, N02, N03, N04, N05, N06, N07, N08,
+     N09, N10, N11, N12,
+     N13, N14, N15, N16,
+     N17, N18, N19, N20,
+     N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32] =
+        int_to_hex_list(Value, 32),
+    <<N01, N02, N03, N04, N05, N06, N07, N08, $-,
+      N09, N10, N11, N12, $-,
+      N13, N14, N15, N16, $-,
+      N17, N18, N19, N20, $-,
+      N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32>>;
 
-uuid_to_string(Value, binary_nodash) ->
-    [B1, B2, B3, B4, B5] = uuid_to_list(Value),
-    erlang:iolist_to_binary(io_lib:format("~8.16.0b~4.16.0b~4.16.0b"
-                                          "~4.16.0b~12.16.0b",
-                                          [B1, B2, B3, B4, B5])).
+uuid_to_string(<<Value:128/unsigned-integer>>, binary_nodash) ->
+    [N01, N02, N03, N04, N05, N06, N07, N08,
+     N09, N10, N11, N12,
+     N13, N14, N15, N16,
+     N17, N18, N19, N20,
+     N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32] =
+        int_to_hex_list(Value, 32),
+    <<N01, N02, N03, N04, N05, N06, N07, N08,
+      N09, N10, N11, N12,
+      N13, N14, N15, N16,
+      N17, N18, N19, N20,
+      N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32>>.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -932,6 +950,8 @@ test() ->
     % "Fri Dec  7 19:13:58 PST 2012"
     % (Sat Dec  8 03:13:58 UTC 2012)
     V1uuid1 = uuid:string_to_uuid("4ea4b020-40e5-11e2-ac70-001fd0a5484e"),
+    "4ea4b020-40e5-11e2-ac70-001fd0a5484e" =
+        uuid:uuid_to_string(V1uuid1, standard),
     <<V1TimeLow1:32, V1TimeMid1:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
       V1TimeHigh1:12,
@@ -955,6 +975,8 @@ test() ->
     % '50d15f5c40e911e2a0eb001fd0a5484e'
     % 1354938160.1998589
     V1uuid2 = uuid:string_to_uuid("50d15f5c40e911e2a0eb001fd0a5484e"),
+    "50d15f5c40e911e2a0eb001fd0a5484e" =
+        uuid:uuid_to_string(V1uuid2, nodash),
     <<V1TimeLow2:32, V1TimeMid2:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
       V1TimeHigh2:12,
@@ -1004,6 +1026,8 @@ test() ->
     % >>> uuid.uuid3(uuid.NAMESPACE_DNS, 'test').hex
     % '45a113acc7f230b090a5a399ab912716'
     V3uuid1 = uuid:string_to_uuid("45a113acc7f230b090a5a399ab912716"),
+    "45a113acc7f230b090a5a399ab912716" =
+        uuid:uuid_to_string(V3uuid1, nodash),
     <<V3uuid1A:48,
       0:1, 0:1, 1:1, 1:1,  % version 3 bits
       V3uuid1B:12,
@@ -1043,6 +1067,8 @@ test() ->
     % version 4 tests
     % uuidgen -r
     V4uuid1 = uuid:string_to_uuid("ffe8b758-a5dc-4bf4-9eb0-878e010e8df7"),
+    "ffe8b758-a5dc-4bf4-9eb0-878e010e8df7" =
+        uuid:uuid_to_string(V4uuid1, standard),
     <<V4Rand1A:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
       V4Rand1B:12,
@@ -1055,6 +1081,8 @@ test() ->
     % >>> uuid.uuid4().hex
     % 'cc9769818fe747398e2422e99fee2753'
     V4uuid2 = uuid:string_to_uuid("cc9769818fe747398e2422e99fee2753"),
+    "cc9769818fe747398e2422e99fee2753" =
+        uuid:uuid_to_string(V4uuid2, nodash),
     <<V4Rand2A:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
       V4Rand2B:12,
@@ -1081,6 +1109,8 @@ test() ->
     % >>> uuid.uuid5(uuid.NAMESPACE_DNS, 'test').hex
     % '4be0643f1d98573b97cdca98a65347dd'
     V5uuid1 = uuid:string_to_uuid("4be0643f1d98573b97cdca98a65347dd"),
+    "4be0643f1d98573b97cdca98a65347dd" =
+        uuid:uuid_to_string(V5uuid1, nodash),
     <<V5uuid1A:48,
       0:1, 1:1, 0:1, 1:1,  % version 5 bits
       V5uuid1B:12,
@@ -1122,7 +1152,26 @@ test() ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
--compile({inline, [{hex_to_int,1}]}).
+int_to_hex_list(I, N) when is_integer(I), I >= 0 ->
+    int_to_hex_list([], I, 1, N).
+
+int_to_hex_list_pad(L, 0) ->
+    L;
+int_to_hex_list_pad(L, Count) ->
+    int_to_hex_list_pad([$0 | L], Count - 1).
+
+int_to_hex_list(L, I, Count, N)
+    when I < 16 ->
+    int_to_hex_list_pad([int_to_hex(I) | L], N - Count);
+int_to_hex_list(L, I, Count, N) ->
+    int_to_hex_list([int_to_hex(I rem 16) | L], I div 16, Count + 1, N).
+
+-compile({inline, [{int_to_hex,1}, {hex_to_int,1}]}).
+
+int_to_hex(I) when 0 =< I, I =< 9 ->
+    I + $0;
+int_to_hex(I) when 10 =< I, I =< 15 ->
+    (I - 10) + $a.
 
 hex_to_int(C1, C2) ->
     hex_to_int(C1) * 16 + hex_to_int(C2).
