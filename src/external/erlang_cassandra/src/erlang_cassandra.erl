@@ -382,7 +382,7 @@ describe_snitch() ->
     describe_snitch(?DEFAULT_KEYSPACE).
 
 %% @doc Get the Thrift API snitch
--spec describe_snitch(keyspace()) -> response().
+-spec describe_snitch(destination()) -> response().
 describe_snitch(Destination) ->
     route_call(Destination, {describe_snitch}, ?POOL_TIMEOUT).
 
@@ -392,7 +392,7 @@ describe_partitioner() ->
     describe_partitioner(?DEFAULT_KEYSPACE).
 
 %% @doc Get the Thrift API partitioner
--spec describe_partitioner(keyspace()) -> response().
+-spec describe_partitioner(destination()) -> response().
 describe_partitioner(Destination) ->
     route_call(Destination, {describe_partitioner}, ?POOL_TIMEOUT).
 
@@ -402,7 +402,7 @@ describe_schema_versions() ->
     describe_schema_versions(?DEFAULT_KEYSPACE).
 
 %% @doc Get the Thrift API schema_versions
--spec describe_schema_versions(keyspace()) -> response().
+-spec describe_schema_versions(destination()) -> response().
 describe_schema_versions(Destination) ->
     route_call(Destination, {describe_schema_versions}, ?POOL_TIMEOUT).
 
@@ -412,7 +412,7 @@ describe_cluster_name() ->
     describe_cluster_name(?DEFAULT_KEYSPACE).
 
 %% @doc Get the Thrift API cluster_name
--spec describe_cluster_name(keyspace()) -> response().
+-spec describe_cluster_name(destination()) -> response().
 describe_cluster_name(Destination) ->
     route_call(Destination, {describe_cluster_name}, ?POOL_TIMEOUT).
 
@@ -423,7 +423,7 @@ describe_keyspaces() ->
     describe_keyspaces(?DEFAULT_KEYSPACE).
 
 %% @doc Get the Thrift API keyspaces
--spec describe_keyspaces(keyspace()) -> response().
+-spec describe_keyspaces(destination()) -> response().
 describe_keyspaces(Destination) ->
     route_call(Destination, {describe_keyspaces}, ?POOL_TIMEOUT).
 
@@ -475,12 +475,19 @@ counter_column(Name, Value) when is_binary(Name),
     #counterColumn{name = Name,
                    value = Value}.
 
--spec column_family_definition(keyspace(), column_family()) -> column_family_definition().
+-spec column_family_definition(destination(), column_family()) -> column_family_definition().
+column_family_definition({_, _, Keyspace} = Destination, ColumnFamily) when is_binary(Keyspace),
+                                                                            is_binary(ColumnFamily) ->
+    column_family_definition(Destination, ColumnFamily, false);
 column_family_definition(Keyspace, ColumnFamily) when is_binary(Keyspace),
                                                       is_binary(ColumnFamily) ->
     column_family_definition(Keyspace, ColumnFamily, false).
 
--spec column_family_definition(keyspace(), column_family(), is_counter_column()) -> column_family_definition().
+-spec column_family_definition(destination(), column_family(), is_counter_column()) -> column_family_definition().
+column_family_definition({_, _, Keyspace}, ColumnFamily, Bool) when is_binary(Keyspace),
+                                                                    is_binary(ColumnFamily),
+                                                                    is_boolean(Bool) ->
+    column_family_definition(Keyspace, ColumnFamily, Bool);
 column_family_definition(Keyspace, ColumnFamily, false) when is_binary(Keyspace),
                                                       is_binary(ColumnFamily) ->
     #cfDef{keyspace = Keyspace,
@@ -494,11 +501,16 @@ column_family_definition(Keyspace, ColumnFamily, true) when is_binary(Keyspace),
            default_validation_class = <<"CounterColumnType">>
           }.
 
--spec keyspace_definition(keyspace()) -> keyspace_definition().
+-spec keyspace_definition(destination()) -> keyspace_definition().
+keyspace_definition({_, _, Keyspace} = Destination) when is_binary(Keyspace) ->
+    keyspace_definition(Destination, 1);
 keyspace_definition(Keyspace) when is_binary(Keyspace) ->
     keyspace_definition(Keyspace, 1).
 
--spec keyspace_definition(keyspace(), replication_factor()) -> keyspace_definition().
+-spec keyspace_definition(destination(), replication_factor()) -> keyspace_definition().
+keyspace_definition({_, _, Keyspace}, ReplicationFactor) when is_binary(Keyspace),
+                                                              is_integer(ReplicationFactor) ->
+    keyspace_definition(Keyspace, ReplicationFactor);
 keyspace_definition(Keyspace, ReplicationFactor) when is_binary(Keyspace),
                                                       is_integer(ReplicationFactor) ->
     #ksDef{name=Keyspace, 
