@@ -80,9 +80,10 @@ pool_spec({Host, Port, Keyspace} = PoolName, PoolOptions, ConnectionOptions) ->
     PoolId = erlang_cassandra:registered_pool_name(PoolName),
     PoolArgs = [{name, {local, PoolId}},
                 {worker_module, erlang_cassandra_poolboy_worker}] ++ PoolOptions,
-    ConnectionArgs = thrift_host(Host) ++ 
-                     thrift_port(Port) ++ 
-                     keyspace(Keyspace) ++ ConnectionOptions,
+    ConnectionArgs = keyspace(Keyspace) ++ sanitize_connection_options(thrift_host(Host),
+                                                 thrift_port(Port),
+                                                 ConnectionOptions),
+ 
     % Pass in pool_name to the connection_options since this is also the
     %   keyspace, and is needed by init/1
     poolboy:child_spec(PoolId, PoolArgs, ConnectionArgs).
@@ -93,3 +94,13 @@ thrift_host(Host) when is_list(Host) -> [{thrift_host, Host}].
 thrift_port(undefined) -> [];
 thrift_port(Port) when is_integer(Port) -> [{thrift_port, Port}].
 
+sanitize_connection_options([], [], Options) ->
+    Options;
+sanitize_connection_options(HostArgs, [], Options) ->
+    HostArgs ++ lists:keydelete(thrift_host, 1, Options);
+sanitize_connection_options([], PortArgs, Options) ->
+    PortArgs ++ lists:keydelete(thrift_port, 1, Options);
+sanitize_connection_options(HostArgs, PortArgs, Options) ->
+    HostArgs ++ 
+    PortArgs ++ 
+    lists:keydelete(thrift_host, 1, lists:keydelete(thrift_port, 1, Options)).

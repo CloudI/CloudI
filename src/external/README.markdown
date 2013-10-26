@@ -80,8 +80,8 @@ to its integration and dependencies).
 `Erlang Cassandra (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlang_cassandra`
-- `tag v1.0.3`
-- `Sat Oct 19 09:39:28 2013 -0400`
+- `tag v1.0.4`
+- `Sat Oct 26 11:06:28 2013 -0400`
 - `BSD`
 
 `etokyotyrant (medici)`
