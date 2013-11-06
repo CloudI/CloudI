@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add automatic handling of the lazy destination refresh method
+      cpg messages within the cloudi module (using
+      the cloudi:destinations_refresh/2 function is still the best way
+      of having recent service name destination data)
+
 2013-10-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix the cloudi_x_ scope script operation for source code repo updates
