@@ -1084,8 +1084,6 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 
 destinations_refresh_check(#cloudi_context{
                                dest_refresh = DestRefresh,
-                               dest_refresh_delay = DestRefreshDelay,
-                               scope = Scope,
                                receiver = Receiver} = Context)
     when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
@@ -1103,8 +1101,6 @@ destinations_refresh_check(#cloudi_context{
     end,
     receive
         {cloudi_cpg_data, Groups} ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
             % clear queue of all destination_refreshes that are pending
             destinations_refresh_check(Context#cloudi_context{
                                            cpg_data = Groups,
@@ -1125,14 +1121,9 @@ destinations_refresh_check(#cloudi_context{
     end,
     Context.
 
-sleep(#cloudi_context{
-          dest_refresh = DestRefresh,
-          dest_refresh_delay = DestRefreshDelay,
-          scope = Scope} = Context, Delay) ->
+sleep(#cloudi_context{} = Context, Delay) ->
     receive
         {cloudi_cpg_data, Groups} ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
             sleep(Context#cloudi_context{
                       cpg_data = Groups,
                       cpg_data_stale = true}, Delay)
@@ -1142,9 +1133,6 @@ sleep(#cloudi_context{
     end.
 
 send_sync_receive(#cloudi_context{
-                      dest_refresh = DestRefresh,
-                      dest_refresh_delay = DestRefreshDelay,
-                      scope = Scope,
                       receiver = Receiver} = Context,
                   Timeout, TransId) ->
     receive
@@ -1158,8 +1146,6 @@ send_sync_receive(#cloudi_context{
          _, _, ResponseInfo, Response, _, TransId, Receiver} ->
             result(Context, {ok, ResponseInfo, Response});
         {cloudi_cpg_data, Groups} ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
             send_sync_receive(Context#cloudi_context{
                                   cpg_data = Groups,
                                   cpg_data_stale = true},
@@ -1170,9 +1156,6 @@ send_sync_receive(#cloudi_context{
     end.
 
 recv_async_receive_any(#cloudi_context{
-                           dest_refresh = DestRefresh,
-                           dest_refresh_delay = DestRefreshDelay,
-                           scope = Scope,
                            receiver = Receiver} = Context,
                        Timeout) ->
     receive
@@ -1183,8 +1166,6 @@ recv_async_receive_any(#cloudi_context{
          _, _, ResponseInfo, Response, _, TransId, Receiver} ->
             result(Context, {ok, ResponseInfo, Response, TransId});
         {cloudi_cpg_data, Groups} ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
             recv_async_receive_any(Context#cloudi_context{
                                        cpg_data = Groups,
                                        cpg_data_stale = true},
@@ -1195,9 +1176,6 @@ recv_async_receive_any(#cloudi_context{
     end.
 
 recv_async_receive_id(#cloudi_context{
-                          dest_refresh = DestRefresh,
-                          dest_refresh_delay = DestRefreshDelay,
-                          scope = Scope,
                           receiver = Receiver} = Context,
                       Timeout, TransId) ->
     receive
@@ -1208,8 +1186,6 @@ recv_async_receive_id(#cloudi_context{
          _, _, ResponseInfo, Response, _, TransId, Receiver} ->
             result(Context, {ok, ResponseInfo, Response, TransId});
         {cloudi_cpg_data, Groups} ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
             recv_async_receive_id(Context#cloudi_context{
                                       cpg_data = Groups,
                                       cpg_data_stale = true},
@@ -1220,6 +1196,9 @@ recv_async_receive_id(#cloudi_context{
     end.
 
 result(#cloudi_context{
+           dest_refresh = DestRefresh,
+           dest_refresh_delay = DestRefreshDelay,
+           scope = Scope,
            receiver = Receiver,
            cpg_data = Groups,
            cpg_data_stale = SendGroups}, Result) ->
@@ -1228,6 +1207,8 @@ result(#cloudi_context{
             % Context is not returned,
             % so sent the updated Groups that were used
             Receiver ! {cloudi_cpg_data, Groups},
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
             Result;
         SendGroups =:= false ->
             Result
