@@ -119,7 +119,8 @@
             scope :: atom(),
             receiver :: pid(),
             uuid_generator :: cloudi_x_uuid:state(),
-            cpg_data = cloudi_x_cpg_data:get_empty_groups() :: any()
+            cpg_data :: any(),
+            cpg_data_stale = false :: boolean()
         }).
 
 -type context() :: #cloudi_context{}.
@@ -181,7 +182,7 @@ new(Settings)
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest),
     true = is_integer(DestRefreshStart) and
-           (DestRefreshStart > ?TIMEOUT_DELTA),
+           (DestRefreshStart >= 0),
     true = is_integer(DestRefreshDelay) and
            (DestRefreshDelay > ?TIMEOUT_DELTA),
     true = is_integer(DefaultTimeoutAsync) and
@@ -198,6 +199,27 @@ new(Settings)
     UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
                                     {mac_address, MacAddress}]),
     ok = destination_refresh_first(DestRefresh, DestRefreshStart, Scope),
+    Groups = if
+        ((DestRefresh =:= lazy_closest) orelse
+         (DestRefresh =:= lazy_furthest) orelse
+         (DestRefresh =:= lazy_random) orelse
+         (DestRefresh =:= lazy_local) orelse
+         (DestRefresh =:= lazy_remote) orelse
+         (DestRefresh =:= lazy_newest) orelse
+         (DestRefresh =:= lazy_oldest)),
+        DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
+            receive
+                {cloudi_cpg_data, G} ->
+                    ok = destination_refresh_start(DestRefresh,
+                                                   DestRefreshDelay, Scope),
+                    G
+            after
+                ?DEFAULT_DEST_REFRESH_START ->
+                    cloudi_x_cpg_data:get_empty_groups()
+            end;
+        true ->
+            cloudi_x_cpg_data:get_empty_groups()
+    end,
     #cloudi_context{
         dest_refresh = DestRefresh,
         dest_refresh_delay = DestRefreshDelay,
@@ -206,7 +228,8 @@ new(Settings)
         priority_default = PriorityDefault,
         scope = ConfiguredScope,
         receiver = Self,
-        uuid_generator = UUID
+        uuid_generator = UUID,
+        cpg_data = Groups
     }.
 
 %%-------------------------------------------------------------------------
@@ -214,7 +237,9 @@ new(Settings)
 %% ===Refresh destination lookup data.===
 %% Must be called if using a lazy destination refresh method.
 %% The {cloudi_cpg_data, Groups} message must be received and processed
-%% by this function.
+%% by this function.  However, if it isn't processed, the other function
+%% calls will attempt to update the Context based on any pending
+%% destination refresh messages that haven't yet been received.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -264,23 +289,25 @@ get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher) ->
     cloudi_service:get_pid(Dispatcher, Name, Timeout);
 
-get_pid(#cloudi_context{dest_refresh = DestRefresh,
-                        scope = Scope,
-                        cpg_data = Groups} = Context, Name, Timeout)
+get_pid(#cloudi_context{} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
+    NewContext = destinations_refresh_check(Context),
+    #cloudi_context{
+        dest_refresh = DestRefresh,
+        scope = Scope,
+        cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
-            receive after ?SEND_SYNC_INTERVAL -> ok end,
-            get_pid(Context, Name,
+            get_pid(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
                     Timeout - ?SEND_SYNC_INTERVAL);
         {error, _} = Error ->
-            Error;
+            result(NewContext, Error);
         {ok, Pattern, Pid} ->
-            {ok, {Pattern, Pid}}
+            result(NewContext, {ok, {Pattern, Pid}})
     end.
 
 %%-------------------------------------------------------------------------
@@ -317,22 +344,24 @@ get_pids(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher) ->
     cloudi_service:get_pids(Dispatcher, Name, Timeout);
 
-get_pids(#cloudi_context{dest_refresh = DestRefresh,
-                         scope = Scope,
-                         cpg_data = Groups} = Context, Name, Timeout)
+get_pids(#cloudi_context{} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
+    NewContext = destinations_refresh_check(Context),
+    #cloudi_context{
+        dest_refresh = DestRefresh,
+        scope = Scope,
+        cpg_data = Groups} = NewContext,
     case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?SEND_SYNC_INTERVAL ->
-            receive after ?SEND_SYNC_INTERVAL -> ok end,
-            get_pids(Context, Name,
+            get_pids(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
                      Timeout - ?SEND_SYNC_INTERVAL);
         {error, _} = Error ->
-            Error;
+            result(NewContext, Error);
         {ok, Pattern, Pids} ->
-            {ok, [{Pattern, Pid} || Pid <- Pids]}
+            result(NewContext, {ok, [{Pattern, Pid} || Pid <- Pids]})
     end.
 
 %%-------------------------------------------------------------------------
@@ -458,31 +487,34 @@ send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
     send_async(Context, Name, RequestInfo, Request,
                Timeout, PriorityDefault, PatternPid);
 
-send_async(#cloudi_context{dest_refresh = DestRefresh,
-                           scope = Scope,
-                           cpg_data = Groups} = Context,
+send_async(#cloudi_context{} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
+    NewContext = destinations_refresh_check(Context),
+    #cloudi_context{
+        dest_refresh = DestRefresh,
+        scope = Scope,
+        cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_ASYNC_INTERVAL ->
-            receive after ?SEND_ASYNC_INTERVAL -> ok end,
-            send_async(Context, Name, RequestInfo, Request,
+            send_async(sleep(NewContext, ?SEND_ASYNC_INTERVAL), Name,
+                       RequestInfo, Request,
                        Timeout - ?SEND_ASYNC_INTERVAL,
                        Priority, undefined);
         {error, _} = Error ->
-            Error;
+            result(NewContext, Error);
         {ok, Pattern, Pid} ->
-            send_async(Context, Name, RequestInfo, Request,
+            send_async(NewContext, Name, RequestInfo, Request,
                        Timeout, Priority, {Pattern, Pid})
     end;
 
 send_async(#cloudi_context{receiver = Receiver,
-                           uuid_generator = UUID},
+                           uuid_generator = UUID} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, {Pattern, Pid})
     when is_list(Name), is_integer(Timeout),
@@ -492,7 +524,7 @@ send_async(#cloudi_context{receiver = Receiver,
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
-    {ok, TransId}.
+    result(Context, {ok, TransId}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -721,62 +753,44 @@ send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
     send_sync(Context, Name, RequestInfo, Request,
               Timeout, PriorityDefault, PatternPid);
 
-send_sync(#cloudi_context{dest_refresh = DestRefresh,
-                          scope = Scope,
-                          cpg_data = Groups} = Context,
+send_sync(#cloudi_context{} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0 ->
+    NewContext = destinations_refresh_check(Context),
+    #cloudi_context{
+        dest_refresh = DestRefresh,
+        scope = Scope,
+        cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
-            receive after ?SEND_SYNC_INTERVAL -> ok end,
-            send_sync(Context, Name, RequestInfo, Request,
+            send_sync(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
+                      RequestInfo, Request,
                       Timeout - ?SEND_SYNC_INTERVAL,
                       Priority, undefined);
         {error, _} = Error ->
-            Error;
+            result(NewContext, Error);
         {ok, Pattern, Pid} ->
-            send_sync(Context, Name, RequestInfo, Request,
+            send_sync(NewContext, Name, RequestInfo, Request,
                       Timeout, Priority, {Pattern, Pid})
     end;
 
 send_sync(#cloudi_context{receiver = Receiver,
-                          uuid_generator = UUID},
+                          uuid_generator = UUID} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, {Pattern, Pid})
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    if
-        self() /= Receiver ->
-            ?LOG_ERROR("send_sync called outside of context", []),
-            erlang:exit(badarg);
-        true ->
-            ok
-    end,
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
-    receive
-        {'cloudi_service_return_sync',
-         _, _, <<>>, <<>>, _, TransId, Receiver} ->
-            {error, timeout};
-        {'cloudi_service_return_sync',
-         _, _, <<>>, Response, _, TransId, Receiver} ->
-            {ok, Response};
-        {'cloudi_service_return_sync',
-         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
-            {ok, ResponseInfo, Response}
-    after
-        Timeout ->
-            {error, timeout}
-    end.
-    
+    send_sync_receive(Context, Timeout, TransId).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -856,25 +870,27 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
     mcast_async(Context, Name, RequestInfo, Request,
                 Timeout, PriorityDefault);
 
-mcast_async(#cloudi_context{dest_refresh = DestRefresh,
-                            scope = Scope,
-                            receiver = Receiver,
-                            uuid_generator = UUID,
-                            cpg_data = Groups} = Context,
+mcast_async(#cloudi_context{} = Context,
             Name, RequestInfo, Request, Timeout, Priority)
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    NewContext = destinations_refresh_check(Context),
+    #cloudi_context{
+        dest_refresh = DestRefresh,
+        scope = Scope,
+        receiver = Receiver,
+        uuid_generator = UUID,
+        cpg_data = Groups} = NewContext,
     case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?MCAST_ASYNC_INTERVAL ->
-            receive after ?MCAST_ASYNC_INTERVAL -> ok end,
-            mcast_async(Context, Name, RequestInfo, Request,
-                        Timeout - ?MCAST_ASYNC_INTERVAL,
-                        Priority);
+            mcast_async(sleep(NewContext, ?MCAST_ASYNC_INTERVAL), Name,
+                        RequestInfo, Request,
+                        Timeout - ?MCAST_ASYNC_INTERVAL, Priority);
         {error, _} = Error ->
-            Error;
+            result(NewContext, Error);
         {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = cloudi_x_uuid:get_v1(UUID),
@@ -883,7 +899,7 @@ mcast_async(#cloudi_context{dest_refresh = DestRefresh,
                        Timeout, Priority, TransId, Receiver},
                 TransId
             end, PidList),
-            {ok, TransIdList}
+            result(NewContext, {ok, TransIdList})
     end.
 
 %%-------------------------------------------------------------------------
@@ -1014,7 +1030,7 @@ recv_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
            undefined, TransId) ->
     recv_async(Context, DefaultTimeoutAsync, TransId);
 
-recv_async(#cloudi_context{receiver = Receiver},
+recv_async(#cloudi_context{receiver = Receiver} = Context,
            Timeout, <<0:128>>)
     when is_integer(Timeout), Timeout >= 0 ->
     if
@@ -1024,19 +1040,9 @@ recv_async(#cloudi_context{receiver = Receiver},
         true ->
             ok
     end,
-    receive
-        {'cloudi_service_return_async',
-         _, _, _, <<>>, _, _, Receiver} ->
-            {error, timeout};
-        {'cloudi_service_return_async',
-         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
-            {ok, ResponseInfo, Response, TransId}
-    after
-        Timeout ->
-            {error, timeout}
-    end;
+    recv_async_receive_any(Context, Timeout);
 
-recv_async(#cloudi_context{receiver = Receiver},
+recv_async(#cloudi_context{receiver = Receiver} = Context,
            Timeout, TransId)
     when is_integer(Timeout), is_binary(TransId), Timeout >= 0 ->
     if
@@ -1046,17 +1052,7 @@ recv_async(#cloudi_context{receiver = Receiver},
         true ->
             ok
     end,
-    receive
-        {'cloudi_service_return_async',
-         _, _, _, <<>>, _, TransId, Receiver} ->
-            {error, timeout};
-        {'cloudi_service_return_async',
-         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
-            {ok, ResponseInfo, Response, TransId}
-    after
-        Timeout ->
-            {error, timeout}
-    end.
+    recv_async_receive_id(Context, Timeout, TransId).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1085,6 +1081,157 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+destinations_refresh_check(#cloudi_context{
+                               dest_refresh = DestRefresh,
+                               dest_refresh_delay = DestRefreshDelay,
+                               scope = Scope,
+                               receiver = Receiver} = Context)
+    when (DestRefresh =:= lazy_closest orelse
+          DestRefresh =:= lazy_furthest orelse
+          DestRefresh =:= lazy_random orelse
+          DestRefresh =:= lazy_local orelse
+          DestRefresh =:= lazy_remote orelse
+          DestRefresh =:= lazy_newest orelse
+          DestRefresh =:= lazy_oldest) ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
+    receive
+        {cloudi_cpg_data, Groups} ->
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
+            % clear queue of all destination_refreshes that are pending
+            destinations_refresh_check(Context#cloudi_context{
+                                           cpg_data = Groups,
+                                           cpg_data_stale = true})
+    after
+        0 ->
+            Context
+    end;
+
+destinations_refresh_check(#cloudi_context{
+                               receiver = Receiver} = Context) ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
+    Context.
+
+sleep(#cloudi_context{
+          dest_refresh = DestRefresh,
+          dest_refresh_delay = DestRefreshDelay,
+          scope = Scope} = Context, Delay) ->
+    receive
+        {cloudi_cpg_data, Groups} ->
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
+            sleep(Context#cloudi_context{
+                      cpg_data = Groups,
+                      cpg_data_stale = true}, Delay)
+    after
+        Delay ->
+            Context
+    end.
+
+send_sync_receive(#cloudi_context{
+                      dest_refresh = DestRefresh,
+                      dest_refresh_delay = DestRefreshDelay,
+                      scope = Scope,
+                      receiver = Receiver} = Context,
+                  Timeout, TransId) ->
+    receive
+        {'cloudi_service_return_sync',
+         _, _, <<>>, <<>>, _, TransId, Receiver} ->
+            result(Context, {error, timeout});
+        {'cloudi_service_return_sync',
+         _, _, <<>>, Response, _, TransId, Receiver} ->
+            result(Context, {ok, Response});
+        {'cloudi_service_return_sync',
+         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
+            result(Context, {ok, ResponseInfo, Response});
+        {cloudi_cpg_data, Groups} ->
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
+            send_sync_receive(Context#cloudi_context{
+                                  cpg_data = Groups,
+                                  cpg_data_stale = true},
+                              Timeout, TransId)
+    after
+        Timeout ->
+            result(Context, {error, timeout})
+    end.
+
+recv_async_receive_any(#cloudi_context{
+                           dest_refresh = DestRefresh,
+                           dest_refresh_delay = DestRefreshDelay,
+                           scope = Scope,
+                           receiver = Receiver} = Context,
+                       Timeout) ->
+    receive
+        {'cloudi_service_return_async',
+         _, _, _, <<>>, _, _, Receiver} ->
+            result(Context, {error, timeout});
+        {'cloudi_service_return_async',
+         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
+            result(Context, {ok, ResponseInfo, Response, TransId});
+        {cloudi_cpg_data, Groups} ->
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
+            recv_async_receive_any(Context#cloudi_context{
+                                       cpg_data = Groups,
+                                       cpg_data_stale = true},
+                                   Timeout)
+    after
+        Timeout ->
+            result(Context, {error, timeout})
+    end.
+
+recv_async_receive_id(#cloudi_context{
+                          dest_refresh = DestRefresh,
+                          dest_refresh_delay = DestRefreshDelay,
+                          scope = Scope,
+                          receiver = Receiver} = Context,
+                      Timeout, TransId) ->
+    receive
+        {'cloudi_service_return_async',
+         _, _, _, <<>>, _, TransId, Receiver} ->
+            result(Context, {error, timeout});
+        {'cloudi_service_return_async',
+         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
+            result(Context, {ok, ResponseInfo, Response, TransId});
+        {cloudi_cpg_data, Groups} ->
+            ok = destination_refresh_start(DestRefresh,
+                                           DestRefreshDelay, Scope),
+            recv_async_receive_id(Context#cloudi_context{
+                                      cpg_data = Groups,
+                                      cpg_data_stale = true},
+                                  Timeout, TransId)
+    after
+        Timeout ->
+            result(Context, {error, timeout})
+    end.
+
+result(#cloudi_context{
+           receiver = Receiver,
+           cpg_data = Groups,
+           cpg_data_stale = SendGroups}, Result) ->
+    if
+        SendGroups =:= true ->
+            % Context is not returned,
+            % so sent the updated Groups that were used
+            Receiver ! {cloudi_cpg_data, Groups},
+            Result;
+        SendGroups =:= false ->
+            Result
+    end.
 
 destination_refresh_first(DestRefresh, Delay, Scope)
     when (DestRefresh =:= lazy_closest orelse
@@ -1129,33 +1276,51 @@ destination_refresh_start(DestRefresh, _, _)
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
+lazy_check_get(Name, {ok, _, Pid} = Result) ->
+    if
+        node() =:= node(Pid) ->
+            case erlang:is_process_alive(Pid) of
+                true ->
+                    Result;
+                false ->
+                    % stale lookup: give the function call a chance to
+                    %               do a destination refresh
+                    {error, {no_process, Name}}
+            end;
+        true ->
+            Result
+    end;
+
+lazy_check_get(_, {error, _} = Result) ->
+    Result.
+
 destination_get(lazy_closest, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_closest_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_closest_pid(Name, Groups));
 
 destination_get(lazy_furthest, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_furthest_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_furthest_pid(Name, Groups));
 
 destination_get(lazy_random, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_random_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_random_pid(Name, Groups));
 
 destination_get(lazy_local, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_local_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_local_pid(Name, Groups));
 
 destination_get(lazy_remote, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_remote_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_remote_pid(Name, Groups));
 
 destination_get(lazy_newest, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_newest_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_newest_pid(Name, Groups));
 
 destination_get(lazy_oldest, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_oldest_pid(Name, Groups);
+    lazy_check_get(Name, cloudi_x_cpg_data:get_oldest_pid(Name, Groups));
 
 destination_get(immediate_closest, Scope, Name, _, Timeout)
     when is_list(Name) ->
@@ -1190,6 +1355,27 @@ destination_get(DestRefresh, _, _, _, _) ->
                [DestRefresh]),
     erlang:exit(badarg).
 
+lazy_check_all(Name, {ok, _, PidList} = Result) ->
+    Check = fun(Pid) ->
+        if
+            node() =:= node(Pid) ->
+                erlang:is_process_alive(Pid);
+            true ->
+                true
+        end
+    end,
+    case lists:all(Check, PidList) of
+        true ->
+            Result;
+        false ->
+            % stale lookup: give the function call a chance to
+            %               do a destination refresh
+            {error, {no_such_group, Name}}
+    end;
+
+lazy_check_all(_, {error, _} = Result) ->
+    Result.
+
 destination_all(DestRefresh, _, Name, Groups, _)
     when is_list(Name),
          (DestRefresh =:= lazy_closest orelse
@@ -1197,15 +1383,15 @@ destination_all(DestRefresh, _, Name, Groups, _)
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_members(Name, Groups);
+    lazy_check_all(Name, cloudi_x_cpg_data:get_members(Name, Groups));
 
 destination_all(lazy_local, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_local_members(Name, Groups);
+    lazy_check_all(Name, cloudi_x_cpg_data:get_local_members(Name, Groups));
 
 destination_all(lazy_remote, _, Name, Groups, _)
     when is_list(Name) ->
-    cloudi_x_cpg_data:get_remote_members(Name, Groups);
+    lazy_check_all(Name, cloudi_x_cpg_data:get_remote_members(Name, Groups));
 
 destination_all(DestRefresh, Scope, Name, _, Timeout)
     when (DestRefresh =:= immediate_closest orelse
