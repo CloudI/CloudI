@@ -58,6 +58,7 @@
          configure/0,
          acl_add/2,
          acl_remove/2,
+         service_subscriptions/2,
          services_add/2,
          services_remove/2,
          services_restart/2,
@@ -105,6 +106,11 @@ acl_add(L, Timeout) ->
 acl_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_remove, L,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+service_subscriptions(ServiceId, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {service_subscriptions, ServiceId,
                                  timeout_decr(Timeout)}, Timeout)).
 
 services_add(L, Timeout) ->
@@ -227,6 +233,16 @@ handle_call({acl_remove, L, _}, _,
     case cloudi_configuration:acl_remove(L, Config) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
+    case cloudi_services_monitor:pids(ServiceId, Timeout) of
+        {ok, PidList} ->
+            L = [sets:from_list(cloudi_x_cpg:which_groups(Pid, Timeout))
+                 || Pid <- PidList],
+            {reply, {ok, lists:sort(sets:to_list(sets:union(L)))}, State};
         {error, _} = Error ->
             {reply, Error, State}
     end;

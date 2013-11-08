@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_monitor).
@@ -59,7 +59,8 @@
          monitor/7,
          shutdown/2,
          restart/2,
-         search/2]).
+         search/2,
+         pids/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -123,6 +124,12 @@ restart(ServiceId, Timeout)
 search([_ | _] = PidList, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {search, PidList},
+                                Timeout)).
+
+pids(ServiceId, Timeout)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {pids, ServiceId},
                                 Timeout)).
 
 %%%------------------------------------------------------------------------
@@ -210,6 +217,15 @@ handle_call({search, PidList}, _,
         end
     end, [], PidList),
     {reply, {ok, lists:reverse(ServiceIdList)}, State};
+
+handle_call({pids, ServiceId}, _,
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {PidList, _}} ->
+            {reply, {ok, PidList}, State};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
