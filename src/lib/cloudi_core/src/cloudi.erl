@@ -126,6 +126,12 @@
 -type context() :: #cloudi_context{}.
 -export_type([context/0]).
 
+% only relevant to service modules, but some people just want the shorter names
+-type request_type() :: cloudi_service:request_type().
+-type dispatcher() :: cloudi_service:dispatcher().
+-export_type([request_type/0,
+              dispatcher/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
