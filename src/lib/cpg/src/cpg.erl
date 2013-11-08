@@ -35,7 +35,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -57,6 +57,7 @@
          join/2,
          join/3,
          join/4,
+         leave/0,
          leave/1,
          leave/2,
          leave/3,
@@ -80,6 +81,7 @@
          which_groups/0,
          which_groups/1,
          which_groups/2,
+         which_groups/3,
          get_closest_pid/1,
          get_closest_pid/2,
          get_closest_pid/3,
@@ -327,7 +329,7 @@ join(GroupName) ->
     ok.
 
 join(GroupName, Pid)
-    when is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid) ->
     join_impl(?DEFAULT_SCOPE, GroupName, Pid, ?DEFAULT_TIMEOUT);
 
 join(Scope, GroupName)
@@ -350,12 +352,11 @@ join(Scope, GroupName)
     ok.
 
 join(Scope, GroupName, Pid)
-    when is_atom(Scope), is_pid(Pid),
-         node(Pid) =:= node() ->
+    when is_atom(Scope), is_pid(Pid) ->
     join_impl(Scope, GroupName, Pid, ?DEFAULT_TIMEOUT);
 
 join(GroupName, Pid, Timeout)
-    when is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid) ->
     join_impl(?DEFAULT_SCOPE, GroupName, Pid, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -375,11 +376,11 @@ join(GroupName, Pid, Timeout)
     ok.
 
 join(Scope, GroupName, Pid, Timeout)
-    when is_atom(Scope), is_pid(Pid),
-         node(Pid) =:= node() ->
+    when is_atom(Scope), is_pid(Pid) ->
     join_impl(Scope, GroupName, Pid, Timeout).
 
-join_impl(Scope, GroupName, Pid, Timeout) ->
+join_impl(Scope, GroupName, Pid, Timeout)
+    when node(Pid) =:= node() ->
     group_name_validate(GroupName),
     Request = {join, GroupName, Pid},
     ok = gen_server:call(Scope, Request, Timeout),
@@ -388,20 +389,36 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group with a local pid.===
+%% ===Leave all groups.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave() ->
+    ok | error.
+
+leave() ->
+    leave(?DEFAULT_SCOPE, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave a specific group or all groups with a local pid.===
 %% The group is automatically removed if it becomes empty.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name()) ->
+-spec leave(pid() | name()) ->
     ok | error.
+
+leave(Pid)
+    when is_pid(Pid) ->
+    leave(?DEFAULT_SCOPE, Pid, ?DEFAULT_TIMEOUT);
 
 leave(GroupName) ->
     leave(?DEFAULT_SCOPE, GroupName, self(), ?DEFAULT_TIMEOUT).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.===
+%% ===Leave a specific group or all groups with the specified local pid or a specific group within a specific scope with self() as a local pid.===
 %% The pid must be a local pid to justify not using a distributed transaction
 %% since the cpg gen_server process acts like mutex lock, enforcing consistent
 %% local state for all local pid process groups.  The group will automatically
@@ -409,12 +426,20 @@ leave(GroupName) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name() | scope(),
-            pid() | name()) ->
+-spec leave(name() | scope() | pid(),
+            pid() | name() | pos_integer() | infinity) ->
     ok | error.
 
+leave(Scope, Pid)
+    when is_atom(Scope), is_pid(Pid) ->
+    leave_impl(Scope, Pid, ?DEFAULT_TIMEOUT);
+
+leave(Pid, Timeout)
+    when is_pid(Pid) ->
+    leave_impl(?DEFAULT_SCOPE, Pid, Timeout);
+
 leave(GroupName, Pid)
-    when is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid) ->
     leave_impl(?DEFAULT_SCOPE, GroupName, Pid, ?DEFAULT_TIMEOUT);
 
 leave(Scope, GroupName)
@@ -423,7 +448,7 @@ leave(Scope, GroupName)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group within a specific scope with a local pid.===
+%% ===Leave a specific group or all groups within a specific scope with a local pid.===
 %% The pid must be a local pid to justify not using a distributed transaction
 %% since the cpg gen_server process acts like mutex lock, enforcing consistent
 %% local state for all local pid process groups.  The group will automatically
@@ -436,18 +461,21 @@ leave(Scope, GroupName)
             pid() | pos_integer() | infinity) ->
     ok | error.
 
+leave(Scope, Pid, Timeout)
+    when is_atom(Scope), is_pid(Pid) ->
+    leave_impl(Scope, Pid, Timeout);
+
 leave(Scope, GroupName, Pid)
-    when is_atom(Scope), is_pid(Pid),
-         node(Pid) =:= node() ->
+    when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, ?DEFAULT_TIMEOUT);
 
 leave(GroupName, Pid, Timeout)
-    when is_pid(Pid), node(Pid) =:= node() ->
+    when is_pid(Pid) ->
     leave_impl(?DEFAULT_SCOPE, GroupName, Pid, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group within a specific scope with a local pid.===
+%% ===Leave a specific group or all groups within a specific scope with a local pid.===
 %% The pid must be a local pid to justify not using a distributed transaction
 %% since the cpg gen_server process acts like mutex lock, enforcing consistent
 %% local state for all local pid process groups.  The group will automatically
@@ -462,11 +490,22 @@ leave(GroupName, Pid, Timeout)
     ok | error.
 
 leave(Scope, GroupName, Pid, Timeout)
-    when is_atom(Scope), is_pid(Pid),
-         node(Pid) =:= node() ->
+    when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
 
-leave_impl(Scope, GroupName, Pid, Timeout) ->
+leave_impl(Scope, Pid, Timeout)
+    when node(Pid) =:= node() ->
+    Request = {leave, Pid},
+    case gen_server:call(Scope, Request, Timeout) of
+        ok ->
+            gen_server:abcast(nodes(), Scope, Request),
+            ok;
+        error ->
+            error
+    end.
+
+leave_impl(Scope, GroupName, Pid, Timeout)
+    when node(Pid) =:= node() ->
     group_name_validate(GroupName),
     Request = {leave, GroupName, Pid},
     case gen_server:call(Scope, Request, Timeout) of
@@ -680,27 +719,35 @@ join_impl(Scope, GroupName, Pid, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group.===
+%% ===Leave a specific group or all groups.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name()) ->
+-spec leave(pid() | name()) ->
     ok | error.
+
+leave(Pid)
+    when is_pid(Pid) ->
+    leave_impl(?DEFAULT_SCOPE, self(), infinity);
 
 leave(GroupName) ->
     leave_impl(?DEFAULT_SCOPE, GroupName, self(), infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group.===
+%% ===Leave a specific group or all groups.===
 %% The pid does not need to be a local pid because the function uses a
 %% distributed transaction to enforce global consistency.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec leave(name(),
-            pid()) ->
+-spec leave(name() | pid(),
+            pid() | pos_integer() | infinity) ->
     ok | error.
+
+leave(Pid, Timeout)
+    when is_pid(Pid) ->
+    leave_impl(?DEFAULT_SCOPE, Pid, Timeout);
 
 leave(GroupName, Pid)
     when is_pid(Pid) ->
@@ -708,7 +755,7 @@ leave(GroupName, Pid)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Leave a specific group in a specific scope.===
+%% ===Leave a specific group in a specific scope or all groups in a specific scope.===
 %% The pid does not need to be a local pid because the function uses a
 %% distributed transaction to enforce global consistency.
 %% @end
@@ -718,6 +765,10 @@ leave(GroupName, Pid)
             name() | pid(),
             pid() | pos_integer() | infinity) ->
     ok | error.
+
+leave(Scope, Pid, Timeout)
+    when is_atom(Scope), is_pid(Pid) ->
+    leave_impl(Scope, Pid, Timeout);
 
 leave(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
@@ -744,6 +795,19 @@ leave(GroupName, Pid, Timeout)
 leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
+
+leave_impl(Scope, Pid, Timeout) ->
+    case global:trans({Scope, self()},
+                      fun() ->
+                          gen_server:multi_call(Scope,
+                                                {leave, Pid},
+                                                Timeout)
+                      end) of
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
+        _ ->
+            error
+    end.
 
 leave_impl(Scope, GroupName, Pid, Timeout) ->
     group_name_validate(GroupName),
@@ -1361,13 +1425,18 @@ which_groups() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec which_groups(scope() | pos_integer() | infinity) ->
+-spec which_groups(scope() | pid() | pos_integer() | infinity) ->
     [name()].
 
 which_groups(Scope)
     when is_atom(Scope) ->
     gen_server:call(Scope,
                     which_groups);
+
+which_groups(Pid)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups, Pid});
 
 which_groups(Timeout) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1380,14 +1449,42 @@ which_groups(Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec which_groups(scope(),
-                   pos_integer() | infinity) ->
+-spec which_groups(scope() | pid(),
+                   pid() | pos_integer() | infinity) ->
     [name()].
+
+which_groups(Scope, Pid)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups, Pid});
 
 which_groups(Scope, Timeout)
     when is_atom(Scope) ->
     gen_server:call(Scope,
                     which_groups,
+                    Timeout);
+
+which_groups(Pid, Timeout)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups, Pid},
+                    Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get all the groups currently defined within a specific scope.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups(scope(),
+                   pid(),
+                   pos_integer() | infinity) ->
+    [name()].
+
+which_groups(Scope, Pid, Timeout)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups, Pid},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2436,6 +2533,18 @@ handle_call({delete, GroupName}, _, State) ->
 handle_call({join, GroupName, Pid}, _, State) ->
     {reply, ok, join_group(GroupName, Pid, State)};
 
+handle_call({leave, Pid}, _,
+            #state{pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, GroupNameList} ->
+            NewState = lists:foldl(fun(GroupName, S) ->
+                leave_group(GroupName, Pid, S)
+            end, State, GroupNameList),
+            {reply, ok, NewState};
+        error ->
+            {reply, error, State}
+    end;
+
 handle_call({leave, GroupName, Pid}, _,
             #state{pids = Pids} = State) ->
     Found = case dict:find(Pid, Pids) of
@@ -2482,6 +2591,15 @@ handle_call({get_remote_members, GroupName, Exclude}, _,
 handle_call(which_groups, _,
             #state{groups = Groups} = State) ->
     {reply, cpg_data:which_groups(Groups), State};
+
+handle_call({which_groups, Pid}, _,
+            #state{pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, L} ->
+            {reply, L, State};
+        error ->
+            {reply, [], State}
+    end;
 
 handle_call({get_closest_pid, GroupName}, _,
             #state{groups = Groups} = State) ->

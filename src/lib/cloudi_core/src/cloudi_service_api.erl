@@ -54,6 +54,7 @@
 %% external interface
 -export([acl_add/2,
          acl_remove/2,
+         service_subscriptions/2,
          services_add/2,
          services_remove/2,
          services_restart/2,
@@ -229,6 +230,25 @@ acl_remove([_ | _] = L, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Get a list of all service subscriptions.===
+%% When a subscription on the same service name pattern occurred
+%% multiple times, only a single entry is returned within the list.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_subscriptions(ServiceId :: service_id(),
+                            Timeout :: timeout_milliseconds() | infinity) ->
+    {ok, list(cloudi_service:service_name_pattern())} |
+    {error, any()}.
+
+service_subscriptions(ServiceId, Timeout)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16,
+         ((is_integer(Timeout) andalso Timeout > ?TIMEOUT_DELTA) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_configurator:service_subscriptions(ServiceId, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Add service instances.===
 %% Provide service configuration using the same syntax found in the
 %% configuration file (i.e., /usr/local/etc/cloudi/cloudi.conf).
@@ -297,7 +317,7 @@ services_restart([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_search(ServiceName :: string(),
+-spec services_search(ServiceName :: cloudi:service_name(),
                       Timeout :: timeout_milliseconds() | infinity) ->
     {ok, list({service_id(), #internal{}} |
               {service_id(), #external{}})} |

@@ -4,6 +4,8 @@
 2013-11-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make sure the cloudi module has all the types
+    * Update cpg
+    * Add the CloudI Service API function service_subscriptions/2
 
 2013-11-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
