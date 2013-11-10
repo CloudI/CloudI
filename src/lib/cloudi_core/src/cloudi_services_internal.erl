@@ -600,8 +600,16 @@ handle_info({'cloudi_service_request_failure',
     {stop, Reason, State#state{service_state = NewServiceState}};
 
 handle_info({'cloudi_service_info_failure',
-             Reason, NewServiceState}, State) ->
-    ?LOG_ERROR("info stop ~p", [Reason]),
+             Type, Error, Stack, NewServiceState}, State) ->
+    Reason = if
+        Type =:= stop ->
+            true = Stack =:= undefined,
+            ?LOG_ERROR("info stop ~p", [Error]),
+            Error;
+        true ->
+            ?LOG_ERROR("info ~p ~p~n~p", [Type, Error, Stack]),
+            {Type, {Error, Stack}}
+    end,
     {stop, Reason, State#state{service_state = NewServiceState}};
 
 handle_info({'EXIT', _, shutdown},
@@ -656,7 +664,7 @@ handle_info({'EXIT', InfoPid,
 
 handle_info({'EXIT', InfoPid,
              {'cloudi_service_info_failure',
-              _Reason, _NewServiceState} = Result},
+              _Type, _Error, _Stack, _NewServiceState} = Result},
             #state{info_pid = InfoPid} = State) ->
     handle_info(Result, State#state{info_pid = undefined});
 
@@ -1640,15 +1648,19 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
     end.
 
 handle_module_info(Request, Module, Dispatcher, ServiceState) ->
-    case Module:cloudi_service_handle_info(Request,
-                                           ServiceState,
-                                           Dispatcher) of
+    try Module:cloudi_service_handle_info(Request,
+                                          ServiceState,
+                                          Dispatcher) of
         {noreply, NewServiceState} ->
             {'cloudi_service_info_success',
              NewServiceState};
         {stop, Reason, NewServiceState} ->
             {'cloudi_service_info_failure',
-             Reason, NewServiceState}
+             stop, Reason, undefined, NewServiceState}
+    catch
+        Type:Error ->
+            {'cloudi_service_info_failure',
+             Type, Error, erlang:get_stacktrace(), ServiceState}
     end.
 
 send_async_active_timeout_start(Timeout, TransId,
@@ -2205,12 +2217,21 @@ duo_handle_info(Request,
     NewConfigOptions = check_incoming(ConfigOptions),
     case handle_module_info(Request, Module, Dispatcher, ServiceState) of
         {'cloudi_service_info_success', NewServiceState} ->
-            {noreply, State#state_duo{service_state = NewServiceState,
-                                      options = NewConfigOptions}};
-        {'cloudi_service_info_failure', Reason, NewServiceState} ->
+            {noreply,
+             State#state_duo{service_state = NewServiceState,
+                             options = NewConfigOptions}};
+        {'cloudi_service_info_failure',
+         stop, Reason, undefined, NewServiceState} ->
             ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
-            {stop, Reason, State#state_duo{service_state = NewServiceState,
-                                           options = NewConfigOptions}}
+            {stop, Reason,
+             State#state_duo{service_state = NewServiceState,
+                             options = NewConfigOptions}};
+        {'cloudi_service_info_failure',
+         Type, Error, Stack, NewServiceState} ->
+            ?LOG_ERROR("duo_mode info ~p ~p~n~p", [Type, Error, Stack]),
+            {stop, {Type, {Error, Stack}},
+             State#state_duo{service_state = NewServiceState,
+                             options = NewConfigOptions}}
     end.
 
 duo_process_queue_info(NewServiceState,
@@ -2232,9 +2253,17 @@ duo_process_queue_info(NewServiceState,
                     duo_process_queue_info(NextServiceState,
                         State#state_duo{queued_info = NewQueueInfo,
                                         options = NewConfigOptions});
-                {'cloudi_service_info_failure', Reason, NextServiceState} ->
+                {'cloudi_service_info_failure',
+                 stop, Reason, undefined, NextServiceState} ->
                     ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
                     {stop, Reason,
+                     State#state_duo{service_state = NextServiceState,
+                                     queued_info = NewQueueInfo,
+                                     options = NewConfigOptions}};
+                {'cloudi_service_info_failure',
+                 Type, Error, Stack, NextServiceState} ->
+                    ?LOG_ERROR("duo_mode info ~p ~p~n~p", [Type, Error, Stack]),
+                    {stop, {Type, {Error, Stack}},
                      State#state_duo{service_state = NextServiceState,
                                      queued_info = NewQueueInfo,
                                      options = NewConfigOptions}}
