@@ -4,6 +4,7 @@
 2013-11-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_handle_info/3 exception stacktrace logging
+    * Fix cloudi_service_map_reduce resend on first few messages
 
 2013-11-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

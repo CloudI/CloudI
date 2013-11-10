@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -152,10 +152,11 @@ cloudi_service_handle_info({timeout_async_active, TransId},
                            #state{map_reduce_module = MapReduceModule,
                                   map_reduce_state = MapReduceState,
                                   map_requests = MapRequests} = State,
-                           _Dispatcher) ->
-    SendArgs = orddict:fetch(TransId, MapRequests),
+                           Dispatcher) ->
+    [_ | SendArgs] = orddict:fetch(TransId, MapRequests),
     NextMapRequests = orddict:erase(TransId, MapRequests),
-    case MapReduceModule:cloudi_service_map_reduce_resend(SendArgs,
+    case MapReduceModule:cloudi_service_map_reduce_resend([Dispatcher |
+                                                           SendArgs],
                                                           MapReduceState) of
         {ok, NewSendArgs, NewMapReduceState} ->
             case erlang:apply(cloudi_service, send_async_active, NewSendArgs) of
@@ -180,8 +181,9 @@ cloudi_service_handle_info({return_async_active, _Name, _Pattern,
                                   map_reduce_state = MapReduceState,
                                   map_requests = MapRequests} = State,
                            Dispatcher) ->
-    SendArgs = orddict:fetch(TransId, MapRequests),
-    case MapReduceModule:cloudi_service_map_reduce_recv(SendArgs,
+    [_ | SendArgs] = orddict:fetch(TransId, MapRequests),
+    case MapReduceModule:cloudi_service_map_reduce_recv([Dispatcher |
+                                                         SendArgs],
                                                         ResponseInfo, Response,
                                                         Timeout, TransId,
                                                         MapReduceState,
