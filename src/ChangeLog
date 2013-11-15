@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update cowboy to 0.9.0
+    * Fix some type errors
+    * Fix cloudi_runtime_testing random usage
+
 2013-11-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_handle_info/3 exception stacktrace logging

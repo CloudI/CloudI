@@ -181,7 +181,8 @@
 -export_type([service_id/0,
               service_internal/0,
               service_external/0,
-              service/0]).
+              service/0,
+              service_proplist/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

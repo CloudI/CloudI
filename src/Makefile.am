@@ -40,6 +40,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/nodefinder/nodefinder/src \
      -d $(top_srcdir)/external/cowboy/src \
      -d $(top_srcdir)/external/cowboy/test \
+     -d $(top_srcdir)/external/cowlib/src \
+     -d $(top_srcdir)/external/cowlib/test \
      -d $(top_srcdir)/external/elli/src \
      -d $(top_srcdir)/external/elli/test \
      -d $(top_srcdir)/external/dynamic_compile/src \
@@ -152,6 +154,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/ememcached/ebin
 	$(MKDIR_P) external/ecouchdb/ebin
 	$(MKDIR_P) external/cowboy/ebin
+	$(MKDIR_P) external/cowlib/ebin
 	$(MKDIR_P) external/ranch/ebin
 	$(MKDIR_P) external/elli/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
@@ -368,6 +371,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cowboy && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cowboy/ebin || exit 0)
+	(cd $(top_srcdir)/external/cowlib && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cowlib/ebin || exit 0)
 	(cd $(top_srcdir)/external/ranch && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/ranch/ebin || exit 0)
@@ -500,6 +506,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/ecouchdb/ebin
 	rmdir $(top_builddir)/external/cowboy/ebin || exit 0
 	rm -f $(top_srcdir)/external/cowboy/ebin
+	rmdir $(top_builddir)/external/cowlib/ebin || exit 0
+	rm -f $(top_srcdir)/external/cowlib/ebin
 	rmdir $(top_builddir)/external/ranch/ebin || exit 0
 	rm -f $(top_srcdir)/external/ranch/ebin
 	rmdir $(top_builddir)/external/elli/ebin || exit 0

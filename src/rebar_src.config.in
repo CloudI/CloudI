@@ -23,6 +23,7 @@
   "lib/cloudi_service_work_manager",
   "lib/cloudi_service_zeromq",
   "external/cowboy",
+  "external/cowlib",
   "external/dynamic_compile",
   "external/ecouchdb",
   "external/elli",

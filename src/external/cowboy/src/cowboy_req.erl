@@ -101,6 +101,7 @@
 -export([chunked_reply/3]).
 -export([chunk/2]).
 -export([upgrade_reply/3]).
+-export([maybe_reply/2]).
 -export([ensure_response/2]).
 
 %% Private setter/getter API.
@@ -114,10 +115,7 @@
 -export([lock/1]).
 -export([to_list/1]).
 
--type cookie_option() :: {max_age, non_neg_integer()}
-	| {domain, binary()} | {path, binary()}
-	| {secure, boolean()} | {http_only, boolean()}.
--type cookie_opts() :: [cookie_option()].
+-type cookie_opts() :: cow_cookie:cookie_opts().
 -export_type([cookie_opts/0]).
 
 -type content_decode_fun() :: fun((binary())
@@ -166,7 +164,8 @@
 
 	%% Response.
 	resp_compress = false :: boolean(),
-	resp_state = waiting :: locked | waiting | chunks | done,
+	resp_state = waiting :: locked | waiting | waiting_stream
+		| chunks | stream | done,
 	resp_headers = [] :: cowboy:http_headers(),
 	resp_body = <<>> :: iodata() | resp_body_fun()
 		| {non_neg_integer(), resp_body_fun()}
@@ -281,7 +280,7 @@ qs_val(Name, Req) when is_binary(Name) ->
 	-> {binary() | true | Default, Req} when Req::req(), Default::any().
 qs_val(Name, Req=#http_req{qs=RawQs, qs_vals=undefined}, Default)
 		when is_binary(Name) ->
-	QsVals = cowboy_http:x_www_form_urlencoded(RawQs),
+	QsVals = cow_qs:parse_qs(RawQs),
 	qs_val(Name, Req#http_req{qs_vals=QsVals}, Default);
 qs_val(Name, Req, Default) ->
 	case lists:keyfind(Name, 1, Req#http_req.qs_vals) of
@@ -292,7 +291,7 @@ qs_val(Name, Req, Default) ->
 %% @doc Return the full list of query string values.
 -spec qs_vals(Req) -> {list({binary(), binary() | true}), Req} when Req::req().
 qs_vals(Req=#http_req{qs=RawQs, qs_vals=undefined}) ->
-	QsVals = cowboy_http:x_www_form_urlencoded(RawQs),
+	QsVals = cow_qs:parse_qs(RawQs),
 	qs_vals(Req#http_req{qs_vals=QsVals});
 qs_vals(Req=#http_req{qs_vals=QsVals}) ->
 	{QsVals, Req}.
@@ -429,7 +428,7 @@ parse_header(Name = <<"content-length">>, Req, Default) ->
 parse_header(Name = <<"content-type">>, Req, Default) ->
 	parse_header(Name, Req, Default, fun cowboy_http:content_type/1);
 parse_header(Name = <<"cookie">>, Req, Default) ->
-	parse_header(Name, Req, Default, fun cowboy_http:cookie_list/1);
+	parse_header(Name, Req, Default, fun cow_cookie:parse_cookie/1);
 parse_header(Name = <<"expect">>, Req, Default) ->
 	parse_header(Name, Req, Default,
 		fun (Value) ->
@@ -494,10 +493,7 @@ cookie(Name, Req=#http_req{cookies=undefined}, Default) when is_binary(Name) ->
 		{ok, undefined, Req2} ->
 			{Default, Req2#http_req{cookies=[]}};
 		{ok, Cookies, Req2} ->
-			cookie(Name, Req2#http_req{cookies=Cookies}, Default);
-		%% Flash player incorrectly sends an empty Cookie header.
-		{error, badarg} ->
-			{Default, Req#http_req{cookies=[]}}
+			cookie(Name, Req2#http_req{cookies=Cookies}, Default)
 	end;
 cookie(Name, Req, Default) ->
 	case lists:keyfind(Name, 1, Req#http_req.cookies) of
@@ -725,13 +721,6 @@ body(Req) ->
 %% @doc Return the body sent with the request.
 -spec body(non_neg_integer() | infinity, Req)
 	-> {ok, binary(), Req} | {error, atom()} when Req::req().
-body(infinity, Req) ->
-	case parse_header(<<"transfer-encoding">>, Req) of
-		{ok, [<<"identity">>], Req2} ->
-			read_body(Req2, <<>>);
-		{ok, _, _} ->
-			{error, chunked}
-	end;
 body(MaxBodyLength, Req) ->
 	case parse_header(<<"transfer-encoding">>, Req) of
 		{ok, [<<"identity">>], Req2} ->
@@ -781,7 +770,7 @@ body_qs(Req) ->
 body_qs(MaxBodyLength, Req) ->
 	case body(MaxBodyLength, Req) of
 		{ok, Body, Req2} ->
-			{ok, cowboy_http:x_www_form_urlencoded(Body), Req2};
+			{ok, cow_qs:parse_qs(Body), Req2};
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -791,9 +780,9 @@ body_qs(MaxBodyLength, Req) ->
 %% @doc Return data from the multipart parser.
 %%
 %% Use this function for multipart streaming. For each part in the request,
-%% this function returns <em>{headers, Headers}</em> followed by a sequence of
-%% <em>{body, Data}</em> tuples and finally <em>end_of_part</em>. When there
-%% is no part to parse anymore, <em>eof</em> is returned.
+%% this function returns <em>{headers, Headers, Req}</em> followed by a sequence of
+%% <em>{body, Data, Req}</em> tuples and finally <em>{end_of_part, Req}</em>. When there
+%% is no part to parse anymore, <em>{eof, Req}</em> is returned.
 -spec multipart_data(Req)
 	-> {headers, cowboy:http_headers(), Req} | {body, binary(), Req}
 		| {end_of_part | eof, Req} when Req::req().
@@ -832,7 +821,7 @@ multipart_data(Req, Length, {more, Parser}) when Length > 0 ->
 %% @doc Skip a part returned by the multipart parser.
 %%
 %% This function repeatedly calls <em>multipart_data/1</em> until
-%% <em>end_of_part</em> or <em>eof</em> is parsed.
+%% <em>{end_of_part, Req}</em> or <em>{eof, Req}</em> is parsed.
 -spec multipart_skip(Req) -> {ok, Req} when Req::req().
 multipart_skip(Req) ->
 	case multipart_data(Req) of
@@ -853,7 +842,7 @@ multipart_skip(Req) ->
 -spec set_resp_cookie(iodata(), iodata(), cookie_opts(), Req)
 	-> Req when Req::req().
 set_resp_cookie(Name, Value, Opts, Req) ->
-	Cookie = cowboy_http:cookie_to_iodata(Name, Value, Opts),
+	Cookie = cow_cookie:setcookie(Name, Value, Opts),
 	set_resp_header(<<"set-cookie">>, Cookie, Req).
 
 %% @doc Add a header to the response.
@@ -951,7 +940,8 @@ reply(Status, Headers, Body, Req=#http_req{
 		socket=Socket, transport=Transport,
 		version=Version, connection=Connection,
 		method=Method, resp_compress=Compress,
-		resp_state=waiting, resp_headers=RespHeaders}) ->
+		resp_state=RespState, resp_headers=RespHeaders})
+		when RespState =:= waiting; RespState =:= waiting_stream ->
 	HTTP11Headers = if
 		Transport =/= cowboy_spdy, Version =:= 'HTTP/1.1' ->
 			[{<<"connection">>, atom_to_connection(Connection)}];
@@ -987,10 +977,12 @@ reply(Status, Headers, Body, Req=#http_req{
 			if	RespType =/= hook, Method =/= <<"HEAD">> ->
 					ChunkFun = fun(IoData) -> chunk(IoData, Req2) end,
 					BodyFun(ChunkFun),
-					%% Terminate the chunked body for HTTP/1.1 only.
-					case Version of
-						'HTTP/1.0' -> Req2;
-						_ -> last_chunk(Req2)
+					%% Send the last chunk if chunked encoding was used.
+					if
+						Version =:= 'HTTP/1.0'; RespState =:= waiting_stream ->
+							Req2;
+						true ->
+							last_chunk(Req2)
 					end;
 				true -> Req2
 			end;
@@ -1091,7 +1083,7 @@ chunk(Data, #http_req{socket=Socket, transport=cowboy_spdy,
 		resp_state=chunks}) ->
 	cowboy_spdy:stream_data(Socket, Data);
 chunk(Data, #http_req{socket=Socket, transport=Transport,
-		resp_state=chunks, version='HTTP/1.0'}) ->
+		resp_state=stream}) ->
 	Transport:send(Socket, Data);
 chunk(Data, #http_req{socket=Socket, transport=Transport,
 		resp_state=chunks}) ->
@@ -1120,6 +1112,19 @@ upgrade_reply(Status, Headers, Req=#http_req{transport=Transport,
 	], <<>>, Req),
 	{ok, Req2#http_req{resp_state=done, resp_headers=[], resp_body= <<>>}}.
 
+%% @doc Send a reply if one hasn't been sent already.
+%%
+%% Meant to be used internally for sending errors after crashes.
+%% @private
+-spec maybe_reply(cowboy:http_status(), req()) -> ok.
+maybe_reply(Status, Req) ->
+	receive
+		{cowboy_req, resp_sent} -> ok
+	after 0 ->
+		_ = cowboy_req:reply(Status, Req),
+		ok
+	end.
+
 %% @doc Ensure the response has been sent fully.
 %% @private
 -spec ensure_response(req(), cowboy:http_status()) -> ok.
@@ -1128,16 +1133,17 @@ ensure_response(#http_req{resp_state=done}, _) ->
 	ok;
 %% No response has been sent but everything apparently went fine.
 %% Reply with the status code found in the second argument.
-ensure_response(Req=#http_req{resp_state=waiting}, Status) ->
+ensure_response(Req=#http_req{resp_state=RespState}, Status)
+		when RespState =:= waiting; RespState =:= waiting_stream ->
 	_ = reply(Status, [], [], Req),
 	ok;
 %% Terminate the chunked body for HTTP/1.1 only.
-ensure_response(#http_req{method= <<"HEAD">>, resp_state=chunks}, _) ->
-	ok;
-ensure_response(#http_req{version='HTTP/1.0', resp_state=chunks}, _) ->
+ensure_response(#http_req{method= <<"HEAD">>}, _) ->
 	ok;
 ensure_response(Req=#http_req{resp_state=chunks}, _) ->
 	_ = last_chunk(Req),
+	ok;
+ensure_response(#http_req{}, _) ->
 	ok.
 
 %% Private setter/getter API.
@@ -1261,19 +1267,27 @@ chunked_response(Status, Headers, Req=#http_req{
 		resp_headers=[], resp_body= <<>>}};
 chunked_response(Status, Headers, Req=#http_req{
 		version=Version, connection=Connection,
-		resp_state=waiting, resp_headers=RespHeaders}) ->
+		resp_state=RespState, resp_headers=RespHeaders})
+		when RespState =:= waiting; RespState =:= waiting_stream ->
 	RespConn = response_connection(Headers, Connection),
-	HTTP11Headers = case Version of
-		'HTTP/1.1' -> [
-			{<<"connection">>, atom_to_connection(Connection)},
-			{<<"transfer-encoding">>, <<"chunked">>}];
-		_ -> []
+	HTTP11Headers = if
+		Version =:= 'HTTP/1.0' -> [];
+		true ->
+			MaybeTE = if
+				RespState =:= waiting_stream -> [];
+				true -> [{<<"transfer-encoding">>, <<"chunked">>}]
+			end,
+			[{<<"connection">>, atom_to_connection(Connection)}|MaybeTE]
+	end,
+	RespState2 = if
+		Version =:= 'HTTP/1.1', RespState =:= 'waiting' -> chunks;
+		true -> stream
 	end,
 	{RespType, Req2} = response(Status, Headers, RespHeaders, [
 		{<<"date">>, cowboy_clock:rfc1123()},
 		{<<"server">>, <<"Cowboy">>}
 	|HTTP11Headers], <<>>, Req),
-	{RespType, Req2#http_req{connection=RespConn, resp_state=chunks,
+	{RespType, Req2#http_req{connection=RespConn, resp_state=RespState2,
 			resp_headers=[], resp_body= <<>>}}.
 
 -spec response(cowboy:http_status(), cowboy:http_headers(),
@@ -1305,7 +1319,7 @@ response(Status, Headers, RespHeaders, DefaultHeaders, Body, Req=#http_req{
 			cowboy_spdy:reply(Socket, status(Status), FullHeaders, Body),
 			ReqPid ! {?MODULE, resp_sent},
 			normal;
-		waiting ->
+		RespState when RespState =:= waiting; RespState =:= waiting_stream ->
 			HTTPVer = atom_to_binary(Version, latin1),
 			StatusLine = << HTTPVer/binary, " ",
 				(status(Status))/binary, "\r\n" >>,
@@ -1353,7 +1367,7 @@ response_merge_headers(Headers, RespHeaders, DefaultHeaders) ->
 merge_headers(Headers, []) ->
 	Headers;
 merge_headers(Headers, [{<<"set-cookie">>, Value}|Tail]) ->
-  merge_headers([{<<"set-cookie">>, Value}|Headers], Tail);
+	merge_headers([{<<"set-cookie">>, Value}|Headers], Tail);
 merge_headers(Headers, [{Name, Value}|Tail]) ->
 	Headers2 = case lists:keymember(Name, 1, Headers) of
 		true -> Headers;
