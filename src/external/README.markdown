@@ -10,8 +10,16 @@ to its integration and dependencies).
 --------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit 9eaee45c090b9cb170554bc7e09d679bc0598716 (version 0.8.6)`
-- `Thu Jun 20 10:33:01 PDT 2013`
+- `commit df818625545d565b8b76fbc445063a4822114b93 (version 0.9.0)`
+- `Fri Nov 15 13:24:03 PST 2013`
+- `MIT`
+
+`cowlib`
+--------
+`cowboy Protocols`
+- `https://github.com/extend/cowlib`
+- `commit 63298e8e160031a70efff86a1acde7e7db1fcda6 (version 0.4.0)`
+- `Fri Nov 15 13:24:03 PST 2013`
 - `MIT`
 
 `dynamic_compile`
@@ -194,8 +202,8 @@ to its integration and dependencies).
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/extend/ranch`
-- `commit 4f70a16bbe08e446e8fec248ca345d5f8e7df038 (version 0.8.4)`
-- `Thu Jun 20 10:33:01 PDT 2013`
+- `commit 33e1b4fcb0954f61588cb1baff905d107f74b467 (version 0.9.0)`
+- `Fri Nov 15 13:24:03 PST 2013`
 - `MIT`
 
 `rebar`

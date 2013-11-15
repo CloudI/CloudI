@@ -124,6 +124,7 @@ loop(State=#state{parent=Parent, ref=Ref, conn_type=ConnType,
 					end;
 				_ ->
 					To ! self(),
+					Transport:close(Socket),
 					loop(State, CurConns, NbChildren, Sleepers)
 			end;
 		{?MODULE, active_connections, To, Tag} ->
@@ -147,11 +148,13 @@ loop(State=#state{parent=Parent, ref=Ref, conn_type=ConnType,
 				CurConns, NbChildren, Sleepers);
 		{'EXIT', Parent, Reason} ->
 			exit(Reason);
-		{'EXIT', Pid, _} when Sleepers =:= [] ->
+		{'EXIT', Pid, Reason} when Sleepers =:= [] ->
+			report_error(Ref, Protocol, Pid, Reason),
 			erase(Pid),
 			loop(State, CurConns - 1, NbChildren - 1, Sleepers);
 		%% Resume a sleeping acceptor if needed.
-		{'EXIT', Pid, _} ->
+		{'EXIT', Pid, Reason} ->
+			report_error(Ref, Protocol, Pid, Reason),
 			erase(Pid),
 			[To|Sleepers2] = Sleepers,
 			To ! self(),
@@ -176,7 +179,11 @@ loop(State=#state{parent=Parent, ref=Ref, conn_type=ConnType,
 			loop(State, CurConns, NbChildren, Sleepers);
 		{'$gen_call', {To, Tag}, _} ->
 			To ! {Tag, {error, ?MODULE}},
-			loop(State, CurConns, NbChildren, Sleepers)
+			loop(State, CurConns, NbChildren, Sleepers);
+		Msg ->
+			error_logger:error_msg(
+				"Ranch listener ~p received unexpected message ~p~n",
+				[Ref, Msg])
 	end.
 
 system_continue(_, _, {State, CurConns, NbChildren, Sleepers}) ->
@@ -188,3 +195,17 @@ system_terminate(Reason, _, _, _) ->
 
 system_code_change(Misc, _, _, _) ->
 	{ok, Misc}.
+
+%% We use ~999999p here instead of ~w because the latter doesn't
+%% support printable strings.
+report_error(_, _, _, normal) ->
+	ok;
+report_error(_, _, _, shutdown) ->
+	ok;
+report_error(_, _, _, {shutdown, _}) ->
+	ok;
+report_error(Ref, Protocol, Pid, Reason) ->
+	error_logger:error_msg(
+		"Ranch listener ~p had connection process started with "
+		"~p:start_link/4 at ~p exit with reason: ~999999p~n",
+		[Ref, Protocol, Pid, Reason]).

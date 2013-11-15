@@ -76,7 +76,7 @@
 
 -record(state,
     {
-        tables = cloudi_x_trie:new() :: cloudi_x_trie:trie(),
+        tables = cloudi_x_trie:new() :: cloudi_x_trie:cloudi_x_trie(),
         prefix_length :: integer(),
         uuid_generator :: cloudi_x_uuid:state(),
         table_module :: atom(),

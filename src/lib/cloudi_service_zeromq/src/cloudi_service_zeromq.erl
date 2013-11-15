@@ -75,10 +75,12 @@
         context :: erlzmq:erlzmq_context(),
         endian :: big | little | native,
         process_metadata :: boolean(),
-        publish :: cloudi_x_trie:trie(), % NameInternal -> [{NameExternal,
-                                         %                   Socket} | _]
-        request :: cloudi_x_trie:trie(), % Name -> Socket
-        push :: cloudi_x_trie:trie(),    % Name -> Socket
+        publish :: cloudi_x_trie:cloudi_x_trie(),
+                % NameInternal -> [{NameExternal, Socket} | _]
+        request :: cloudi_x_trie:cloudi_x_trie(),
+                % Name -> Socket
+        push :: cloudi_x_trie:cloudi_x_trie(),
+             % Name -> Socket
         receives :: dict(), % Socket -> {reply, Name}
                             % Socket -> [{subscribe,
                             %             {BinaryMax, BinaryPattern,

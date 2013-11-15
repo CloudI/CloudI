@@ -393,5 +393,5 @@ monkey_chaos_pid_day(Percent)
 
 % return a floating point value between 0.0 and 1.0, inclusive
 random() ->
-    quickrand:strong_float().
+    cloudi_x_quickrand:strong_float().
 

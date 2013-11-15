@@ -13,15 +13,15 @@
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 {application, cowboy, [
-	{id, "Cowboy"},
 	{description, "Small, fast, modular HTTP server."},
-	{vsn, "0.8.6"},
+	{vsn, "0.9.0"},
 	{modules, []},
 	{registered, [cowboy_clock, cowboy_sup]},
 	{applications, [
 		kernel,
 		stdlib,
 		ranch,
+		cowlib,
 		crypto
 	]},
 	{mod, {cowboy_app, []}},
