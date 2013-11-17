@@ -10,7 +10,7 @@
         ]},
    {registered, []},
    {applications, [
-        %cloudi_core, % makes relx break
+        cloudi_core,
         cloudi_x_cowboy,
         cloudi_x_trie,
         cloudi_x_uuid,

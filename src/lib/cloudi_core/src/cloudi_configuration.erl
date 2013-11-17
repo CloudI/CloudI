@@ -788,43 +788,52 @@ services_format_options_external(Options) ->
             OptionsList4
     end,
     OptionsList6 = if
-        Options#config_service_options.response_timeout_adjustment /=
-        Defaults#config_service_options.response_timeout_adjustment ->
-            [{response_timeout_adjustment,
-              Options#config_service_options.response_timeout_adjustment} |
+        Options#config_service_options.request_timeout_immediate_max /=
+        Defaults#config_service_options.request_timeout_immediate_max ->
+            [{request_timeout_immediate_max,
+              Options#config_service_options.request_timeout_immediate_max} |
              OptionsList5];
         true ->
             OptionsList5
     end,
     OptionsList7 = if
-        Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
-            [{scope,
-              Options#config_service_options.scope} |
+        Options#config_service_options.response_timeout_adjustment /=
+        Defaults#config_service_options.response_timeout_adjustment ->
+            [{response_timeout_adjustment,
+              Options#config_service_options.response_timeout_adjustment} |
              OptionsList6];
         true ->
             OptionsList6
     end,
     OptionsList8 = if
-        Options#config_service_options.monkey_latency /=
-        Defaults#config_service_options.monkey_latency ->
-            [{monkey_latency,
-              cloudi_runtime_testing:monkey_latency_format(
-                  Options#config_service_options.monkey_latency)} |
+        Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
+            [{scope,
+              Options#config_service_options.scope} |
              OptionsList7];
         true ->
             OptionsList7
     end,
     OptionsList9 = if
+        Options#config_service_options.monkey_latency /=
+        Defaults#config_service_options.monkey_latency ->
+            [{monkey_latency,
+              cloudi_runtime_testing:monkey_latency_format(
+                  Options#config_service_options.monkey_latency)} |
+             OptionsList8];
+        true ->
+            OptionsList8
+    end,
+    OptionsList10 = if
         Options#config_service_options.monkey_chaos /=
         Defaults#config_service_options.monkey_chaos ->
             [{monkey_chaos,
               cloudi_runtime_testing:monkey_chaos_format(
                   Options#config_service_options.monkey_chaos)} |
-             OptionsList8];
+             OptionsList9];
         true ->
-            OptionsList8
+            OptionsList9
     end,
-    lists:reverse(OptionsList9).
+    lists:reverse(OptionsList10).
 
 -spec services_validate(Services :: list(#internal{} | #external{} |
                                          cloudi_service_api:service_proplist()),
@@ -1208,6 +1217,8 @@ services_validate_options_internal(OptionsList) ->
          Options#config_service_options.dest_refresh_delay},
         {request_timeout_adjustment,
          Options#config_service_options.request_timeout_adjustment},
+        {request_timeout_immediate_max,
+         Options#config_service_options.request_timeout_immediate_max},
         {response_timeout_adjustment,
          Options#config_service_options.response_timeout_adjustment},
         {scope,
@@ -1235,111 +1246,118 @@ services_validate_options_internal(OptionsList) ->
         {automatic_loading,
          Options#config_service_options.automatic_loading}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
-        [PriorityDefault, _, _, _,
+        [PriorityDefault, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
-        [_, QueueLimit, _, _, _, _, _,
+        [_, QueueLimit, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
                    (QueueLimit >= 1))) ->
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
-        [_, _, DestRefreshStart, _, _, _, _,
+        [_, _, DestRefreshStart, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
                   (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
-        [_, _, _, DestRefreshDelay, _, _, _,
+        [_, _, _, DestRefreshDelay, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not (is_integer(DestRefreshDelay) andalso
                   (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
-        [_, _, _, _, RequestTimeoutAdjustment, _, _,
+        [_, _, _, _, RequestTimeoutAdjustment, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
-        [_, _, _, _, _, ResponseTimeoutAdjustment, _,
+        [_, _, _, _, _, RequestTimeoutImmediateMax, _, _,
+         _, _, _, _, _, _, _, _, _, _, _]
+        when not (is_integer(RequestTimeoutImmediateMax) andalso
+                  (RequestTimeoutImmediateMax >= 0)) ->
+            {error, {service_options_request_timeout_immediate_max_invalid,
+                     RequestTimeoutImmediateMax}};
+        [_, _, _, _, _, _, ResponseTimeoutAdjustment, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
-        [_, _, _, _, _, _, Scope,
+        [_, _, _, _, _, _, _, Scope,
          _, _, _, _, _, _, _, _, _, _, _]
         when not is_atom(Scope) ->
             {error, {service_options_scope_invalid,
                      Scope}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          MonkeyLatency, _, _, _, _, _, _, _, _, _, _]
         when not ((MonkeyLatency =:= false) orelse
                   (MonkeyLatency =:= system) orelse
                   is_list(MonkeyLatency)) ->
             {error, {service_options_monkey_latency_invalid,
                      MonkeyLatency}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, MonkeyChaos, _, _, _, _, _, _, _, _, _]
         when not ((MonkeyChaos =:= false) orelse
                   (MonkeyChaos =:= system) orelse
                   is_list(MonkeyChaos)) ->
             {error, {service_options_monkey_chaos_invalid,
                      MonkeyChaos}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, ApplicationName, _, _, _, _, _, _, _, _]
         when not is_atom(ApplicationName) ->
             {error, {service_options_application_name_invalid,
                      ApplicationName}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, RequestPidUses, _, _, _, _, _, _, _]
         when not ((RequestPidUses =:= infinity) orelse
                   (is_integer(RequestPidUses) andalso
                    (RequestPidUses >= 1))) ->
             {error, {service_options_request_pid_uses_invalid,
                      RequestPidUses}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, RequestPidOptions, _, _, _, _, _, _]
         when not is_list(RequestPidOptions) ->
             {error, {service_options_request_pid_options_invalid,
                      RequestPidOptions}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, InfoPidUses, _, _, _, _, _]
         when not ((InfoPidUses =:= infinity) orelse
                   (is_integer(InfoPidUses) andalso
                    (InfoPidUses >= 1))) ->
             {error, {service_options_info_pid_uses_invalid,
                      InfoPidUses}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, InfoPidOptions, _, _, _, _]
         when not is_list(InfoPidOptions) ->
             {error, {service_options_info_pid_options_invalid,
                      InfoPidOptions}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, DuoMode, _, _, _]
         when not is_boolean(DuoMode) ->
             {error, {service_options_duo_mode_invalid,
                      DuoMode}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, Hibernate, _, _]
         when not is_boolean(Hibernate) ->
             {error, {service_options_hibernate_invalid,
                      Hibernate}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, Reload, _]
         when not is_boolean(Reload) ->
             {error, {service_options_reload_invalid,
                      Reload}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, AutomaticLoading]
         when not is_boolean(AutomaticLoading) ->
             {error, {service_options_automatic_loading_invalid,
                      AutomaticLoading}};
         [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-         RequestTimeoutAdjustment, ResponseTimeoutAdjustment, Scope,
+         RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
+         ResponseTimeoutAdjustment, Scope,
          MonkeyLatency, MonkeyChaos, ApplicationName,
          RequestPidUses, RequestPidOptions, InfoPidUses, InfoPidOptions,
          DuoMode, Hibernate, Reload, AutomaticLoading]
@@ -1354,50 +1372,53 @@ services_validate_options_internal(OptionsList) ->
                  NewMonkeyChaos,
                  NewRequestPidOptions,
                  NewInfoPidOptions} ->
-                    {ok, Options#config_service_options{
-                        priority_default =
-                            PriorityDefault,
-                        queue_limit =
-                            QueueLimit,
-                        dest_refresh_start =
-                            DestRefreshStart,
-                        dest_refresh_delay =
-                            DestRefreshDelay,
-                        request_timeout_adjustment =
-                            RequestTimeoutAdjustment,
-                        response_timeout_adjustment =
-                            ResponseTimeoutAdjustment,
-                        scope =
-                            ?SCOPE_ASSIGN(Scope),
-                        monkey_latency =
-                            NewMonkeyLatency,
-                        monkey_chaos =
-                            NewMonkeyChaos,
-                        application_name =
-                            ApplicationName,
-                        request_pid_uses =
-                            RequestPidUses,
-                        request_pid_options =
-                            NewRequestPidOptions,
-                        info_pid_uses =
-                            InfoPidUses,
-                        info_pid_options =
-                            NewInfoPidOptions,
-                        duo_mode =
-                            DuoMode,
-                        hibernate =
-                            Hibernate,
-                        reload =
-                            Reload,
-                        automatic_loading =
-                            AutomaticLoading}};
+                    {ok,
+                     Options#config_service_options{
+                         priority_default =
+                             PriorityDefault,
+                         queue_limit =
+                             QueueLimit,
+                         dest_refresh_start =
+                             DestRefreshStart,
+                         dest_refresh_delay =
+                             DestRefreshDelay,
+                         request_timeout_adjustment =
+                             RequestTimeoutAdjustment,
+                         request_timeout_immediate_max =
+                             RequestTimeoutImmediateMax,
+                         response_timeout_adjustment =
+                             ResponseTimeoutAdjustment,
+                         scope =
+                             ?SCOPE_ASSIGN(Scope),
+                         monkey_latency =
+                             NewMonkeyLatency,
+                         monkey_chaos =
+                             NewMonkeyChaos,
+                         application_name =
+                             ApplicationName,
+                         request_pid_uses =
+                             RequestPidUses,
+                         request_pid_options =
+                             NewRequestPidOptions,
+                         info_pid_uses =
+                             InfoPidUses,
+                         info_pid_options =
+                             NewInfoPidOptions,
+                         duo_mode =
+                             DuoMode,
+                         hibernate =
+                             Hibernate,
+                         reload =
+                             Reload,
+                         automatic_loading =
+                             AutomaticLoading}};
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _] ->
             {error, {service_options_invalid, OptionsList}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
@@ -1448,6 +1469,8 @@ services_validate_options_external(OptionsList) ->
          Options#config_service_options.dest_refresh_delay},
         {request_timeout_adjustment,
          Options#config_service_options.request_timeout_adjustment},
+        {request_timeout_immediate_max,
+         Options#config_service_options.request_timeout_immediate_max},
         {response_timeout_adjustment,
          Options#config_service_options.response_timeout_adjustment},
         {scope,
@@ -1457,54 +1480,60 @@ services_validate_options_external(OptionsList) ->
         {monkey_chaos,
          Options#config_service_options.monkey_chaos}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
-        [PriorityDefault, _, _, _, _, _, _,
+        [PriorityDefault, _, _, _, _, _, _, _,
          _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
-        [_, QueueLimit, _, _, _, _, _,
+        [_, QueueLimit, _, _, _, _, _, _,
          _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
                    (QueueLimit >= 1))) ->
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
-        [_, _, DestRefreshStart, _, _, _, _,
+        [_, _, DestRefreshStart, _, _, _, _, _,
          _, _]
         when not (is_integer(DestRefreshStart) andalso
                   (DestRefreshStart > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
-        [_, _, _, DestRefreshDelay, _, _, _,
+        [_, _, _, DestRefreshDelay, _, _, _, _,
          _, _]
         when not (is_integer(DestRefreshDelay) andalso
                   (DestRefreshDelay > ?TIMEOUT_DELTA)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
-        [_, _, _, _, RequestTimeoutAdjustment, _, _,
+        [_, _, _, _, RequestTimeoutAdjustment, _, _, _,
          _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
-        [_, _, _, _, _, ResponseTimeoutAdjustment, _,
+        [_, _, _, _, _, RequestTimeoutImmediateMax, _, _,
+         _, _]
+        when not (is_integer(RequestTimeoutImmediateMax) andalso
+                  RequestTimeoutImmediateMax >= 0) ->
+            {error, {service_options_request_timeout_immediate_max_invalid,
+                     RequestTimeoutImmediateMax}};
+        [_, _, _, _, _, _, ResponseTimeoutAdjustment, _,
          _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
-        [_, _, _, _, _, _, Scope,
+        [_, _, _, _, _, _, _, Scope,
          _, _]
         when not is_atom(Scope) ->
             {error, {service_options_scope_invalid,
                      Scope}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          MonkeyLatency, _]
         when not ((MonkeyLatency =:= false) orelse
                   (MonkeyLatency =:= system) orelse
                   is_list(MonkeyLatency)) ->
             {error, {service_options_monkey_latency_invalid,
                      MonkeyLatency}};
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, MonkeyChaos]
         when not ((MonkeyChaos =:= false) orelse
                   (MonkeyChaos =:= system) orelse
@@ -1512,36 +1541,40 @@ services_validate_options_external(OptionsList) ->
             {error, {service_options_monkey_chaos_invalid,
                      MonkeyChaos}};
         [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
-         RequestTimeoutAdjustment, ResponseTimeoutAdjustment, Scope,
+         RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
+         ResponseTimeoutAdjustment, Scope,
          MonkeyLatency, MonkeyChaos] ->
             case services_validate_options_external_checks(MonkeyLatency,
                                                            MonkeyChaos) of
                 {ok,
                  NewMonkeyLatency,
                  NewMonkeyChaos} ->
-                    {ok, Options#config_service_options{
-                        priority_default =
-                            PriorityDefault,
-                        queue_limit =
-                            QueueLimit,
-                        dest_refresh_start =
-                            DestRefreshStart,
-                        dest_refresh_delay =
-                            DestRefreshDelay,
-                        request_timeout_adjustment =
-                            RequestTimeoutAdjustment,
-                        response_timeout_adjustment =
-                            ResponseTimeoutAdjustment,
-                        scope =
-                            ?SCOPE_ASSIGN(Scope),
-                        monkey_latency =
-                            NewMonkeyLatency,
-                        monkey_chaos =
-                            NewMonkeyChaos}};
+                    {ok,
+                     Options#config_service_options{
+                         priority_default =
+                             PriorityDefault,
+                         queue_limit =
+                             QueueLimit,
+                         dest_refresh_start =
+                             DestRefreshStart,
+                         dest_refresh_delay =
+                             DestRefreshDelay,
+                         request_timeout_adjustment =
+                             RequestTimeoutAdjustment,
+                         request_timeout_immediate_max =
+                             RequestTimeoutImmediateMax,
+                         response_timeout_adjustment =
+                             ResponseTimeoutAdjustment,
+                         scope =
+                             ?SCOPE_ASSIGN(Scope),
+                         monkey_latency =
+                             NewMonkeyLatency,
+                         monkey_chaos =
+                             NewMonkeyChaos}};
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _,
+        [_, _, _, _, _, _, _, _,
          _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
