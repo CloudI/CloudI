@@ -611,13 +611,17 @@ log_mode_check(#state{level = Level,
     {message_queue_len,
      MessageQueueLength} = erlang:process_info(self(), message_queue_len),
     NewMode = if
+        Mode =:= async,
         MessageQueueLength >= ?LOGGER_MSG_QUEUE_SYNC ->
             sync;
+        Mode =:= sync,
+        MessageQueueLength =< ?LOGGER_MSG_QUEUE_ASYNC ->
+            async;
         true ->
-            async
+            Mode
     end,
     if
-        Mode /= NewMode ->
+        NewMode /= Mode ->
             case load_interface_module(Level, NewMode, Destination) of
                 {ok, Binary} ->
                     {ok, State#state{interface_module = Binary,

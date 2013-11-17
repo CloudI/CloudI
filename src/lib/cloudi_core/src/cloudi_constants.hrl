@@ -61,6 +61,10 @@
 %  process, but is simply overloaded by all processes)
 -define(LOGGER_MSG_QUEUE_SYNC, 1000).
 
+% message queue size that causes the logger to switch back to
+% asynchronous messaging after using synchronous messaging
+-define(LOGGER_MSG_QUEUE_ASYNC, (?LOGGER_MSG_QUEUE_SYNC - 250)).
+
 % periodic connection checks to determine if the udp connection is still active
 % must be a short time since this impacts MaxR and MaxT.  However, this time
 % becomes a hard maximum (minus a delta for overhead) for a task time target
