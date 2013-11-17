@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger).
@@ -57,7 +57,7 @@
          current_function/0,
          change_loglevel/1,
          redirect/1,
-         fatal/5, error/5, warn/5, info/5, debug/5, trace/5]).
+         fatal/6, error/6, warn/6, info/6, debug/6, trace/6]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -76,12 +76,13 @@
 
 -record(state,
     {
-        file_path,
-        interface_module,
-        fd = undefined,
-        inode = undefined,
-        level,
-        destination
+        file_path :: string(),
+        interface_module :: binary(),
+        fd = undefined :: undefined | file:fd(),
+        inode = undefined :: undefined | non_neg_integer(),
+        level :: fatal | error | warn | info | debug | trace | off,
+        mode = async :: async | sync,
+        destination :: ?MODULE | {?MODULE, node()}
     }).
 
 %%%------------------------------------------------------------------------
@@ -147,15 +148,16 @@ redirect(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fatal(Process :: atom(),
+-spec fatal(Mode :: async | sync,
+            Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list()) ->
     'ok'.
 
-fatal(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, fatal, Module, Line, Format, Args).
+fatal(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, fatal, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -165,15 +167,16 @@ fatal(Process, Module, Line, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec error(Process :: atom(),
+-spec error(Mode :: async | sync,
+            Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list()) ->
     'ok'.
 
-error(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, error, Module, Line, Format, Args).
+error(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, error, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -183,15 +186,16 @@ error(Process, Module, Line, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec warn(Process :: atom(),
+-spec warn(Mode :: async | sync,
+           Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: integer(),
            Format :: string(),
            Args :: list()) ->
     'ok'.
 
-warn(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, warn, Module, Line, Format, Args).
+warn(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, warn, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -201,15 +205,16 @@ warn(Process, Module, Line, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec info(Process :: atom(),
+-spec info(Mode :: async | sync,
+           Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: integer(),
            Format :: string(),
            Args :: list()) ->
     'ok'.
 
-info(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, info, Module, Line, Format, Args).
+info(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, info, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -219,15 +224,16 @@ info(Process, Module, Line, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec debug(Process :: atom(),
+-spec debug(Mode :: async | sync,
+            Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list()) ->
     'ok'.
 
-debug(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, debug, Module, Line, Format, Args).
+debug(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, debug, Module, Line, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -237,15 +243,16 @@ debug(Process, Module, Line, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trace(Process :: atom(),
+-spec trace(Mode :: async | sync,
+            Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
             Args :: list()) ->
     'ok'.
 
-trace(Process, Module, Line, Format, Args) ->
-    log_message_external(Process, trace, Module, Line, Format, Args).
+trace(Mode, Process, Module, Line, Format, Args) ->
+    log_message_external(Mode, Process, trace, Module, Line, Format, Args).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -254,17 +261,19 @@ trace(Process, Module, Line, Format, Args) ->
 init([#config_logging{level = Level,
                       file = FilePath,
                       redirect = NodeLogger}]) ->
+    #state{mode = Mode} = State = #state{},
     Destination = if
         NodeLogger == node(); NodeLogger =:= undefined ->
             ?MODULE;
         true ->
-            {cloudi_logger, NodeLogger}
+            {?MODULE, NodeLogger}
     end,
-    case load_interface_module(Level, Destination) of
+    case load_interface_module(Level, Mode, Destination) of
         {ok, Binary} when Destination == ?MODULE ->
-            case log_open(FilePath, #state{interface_module = Binary,
-                                           level = Level,
-                                           destination = Destination}) of
+            case log_open(FilePath,
+                          State#state{interface_module = Binary,
+                                      level = Level,
+                                      destination = Destination}) of
                 {ok, _} = Success ->
                     Success;
                 {error, Reason} ->
@@ -273,18 +282,33 @@ init([#config_logging{level = Level,
         {ok, Binary} ->
             case ?LOG_INFO_T0("redirecting log output to ~p",
                               [NodeLogger],
-                              #state{file_path = FilePath,
-                                     interface_module = Binary,
-                                     level = Level,
-                                     destination = ?MODULE}) of
-                {ok, State} ->
-                    {ok, State#state{destination = Destination}};
+                              State#state{file_path = FilePath,
+                                          interface_module = Binary,
+                                          level = Level,
+                                          destination = ?MODULE}) of
+                {ok, NewState} ->
+                    {ok, NewState#state{destination = Destination}};
                 {error, Reason, _} ->
                     {stop, Reason}
             end;
         {error, Reason} ->
             {stop, Reason}
     end.
+
+handle_call({Level, Now, Node, Pid,
+             Module, Line, LogMessage}, _, State) ->
+    case log_message_internal(Level, Now, Node, Pid,
+                              Module, Line, LogMessage, State) of
+        {ok, NextState} ->
+            case log_mode_check(NextState) of
+                {ok, NewState} ->
+                    {reply, ok, NewState};
+                {error, Reason} ->
+                    {stop, Reason, NextState}
+            end;
+        {error, Reason, NextState} ->
+            {stop, Reason, NextState}
+    end;
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]),
@@ -296,11 +320,12 @@ handle_cast({change_loglevel, Level},
 
 handle_cast({change_loglevel, Level},
             #state{level = LevelOld,
+                   mode = Mode,
                    destination = Destination} = State) ->
     case ?LOG_INFO_T0("changing loglevel from ~p to ~p",
                       [LevelOld, Level], State) of
         {ok, NextState} ->
-            case load_interface_module(Level, Destination) of
+            case load_interface_module(Level, Mode, Destination) of
                 {ok, Binary} ->
                     NewState = NextState#state{interface_module = Binary,
                                                level = Level},
@@ -319,7 +344,7 @@ handle_cast({redirect, Node}, State) ->
         Node == node(); Node =:= undefined ->
             ?MODULE;
         true ->
-            {cloudi_logger, Node}
+            {?MODULE, Node}
     end,
     case log_redirect(Node, Destination, State) of
         {ok, NewState} ->
@@ -332,10 +357,15 @@ handle_cast({Level, Now, Node, Pid,
              Module, Line, LogMessage}, State) ->
     case log_message_internal(Level, Now, Node, Pid,
                               Module, Line, LogMessage, State) of
-        {ok, NewState} ->
-            {noreply, NewState};
-        {error, Reason, NewState} ->
-            {stop, Reason, NewState}
+        {ok, NextState} ->
+            case log_mode_check(NextState) of
+                {ok, NewState} ->
+                    {noreply, NewState};
+                {error, Reason} ->
+                    {stop, Reason, NextState}
+            end;
+        {error, Reason, NextState} ->
+            {stop, Reason, NextState}
     end;
 
 handle_cast(Request, State) ->
@@ -355,7 +385,7 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-log_message_external(Process, Level, Module, Line, Format, Args)
+log_message_external(Mode, Process, Level, Module, Line, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line) ->
     Now = erlang:now(),
     case flooding_logger(Now) of
@@ -368,8 +398,16 @@ log_message_external(Process, Level, Module, Line, Format, Args)
                     cloudi_string:format("INVALID LOG INPUT: ~p ~p",
                                          [Format, Args])
             end,
-            gen_server:cast(Process, {Level, Now, node(), self(),
-                                      Module, Line, LogMessage})
+            if
+                Mode =:= async ->
+                    gen_server:cast(Process,
+                                    {Level, Now, node(), self(),
+                                     Module, Line, LogMessage});
+                Mode =:= sync ->
+                    gen_server:call(Process,
+                                    {Level, Now, node(), self(),
+                                     Module, Line, LogMessage}, infinity)
+            end
     end.
 
 %% every 10 seconds, determine if the process has sent too many logging messages
@@ -401,9 +439,8 @@ log_message_internal(Level, {_, _, MicroSeconds} = Now, Node, Pid,
                             inode = OldInode} = State)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
-    Description = lists:map(fun(S) ->
-      io_lib:format(" ~s~n", [S])
-    end, string:tokens(LogMessage, "\n")),
+    Description = [io_lib:format(" ~s~n", [S]) ||
+                   S <- string:tokens(LogMessage, "\n")],
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
@@ -544,7 +581,8 @@ log_redirect(_, Destination,
     {ok, State};
 
 log_redirect(Node, NewDestination,
-             #state{level = Level} = State) ->
+             #state{level = Level,
+                    mode = Mode} = State) ->
     NodeLogger = if
         NewDestination =:= ?MODULE ->
             node();
@@ -554,7 +592,7 @@ log_redirect(Node, NewDestination,
     case ?LOG_INFO_T0("redirecting log output to ~p",
                       [NodeLogger], State) of
         {ok, NextState} ->
-            case load_interface_module(Level, NewDestination) of
+            case load_interface_module(Level, Mode, NewDestination) of
                 {ok, Binary} ->
                     ?LOG_INFO_T1("redirected log output from ~p to ~p",
                                  [node(), NodeLogger], NextState),
@@ -565,6 +603,30 @@ log_redirect(Node, NewDestination,
             end;
         {error, _, _} = Error ->
             Error
+    end.
+
+log_mode_check(#state{level = Level,
+                      mode = Mode,
+                      destination = Destination} = State) ->
+    {message_queue_len,
+     MessageQueueLength} = erlang:process_info(self(), message_queue_len),
+    NewMode = if
+        MessageQueueLength >= ?LOGGER_MSG_QUEUE_SYNC ->
+            sync;
+        true ->
+            async
+    end,
+    if
+        Mode /= NewMode ->
+            case load_interface_module(Level, NewMode, Destination) of
+                {ok, Binary} ->
+                    {ok, State#state{interface_module = Binary,
+                                     mode = NewMode}};
+                {error, _} = Error ->
+                    Error
+            end;
+        true ->
+            {ok, State}
     end.
 
 level_to_string(fatal) ->
@@ -589,7 +651,7 @@ level_to_string(trace) ->
              info_apply/2, debug_apply/2, trace_apply/2,
              fatal_apply/3, error_apply/3, warn_apply/3,
              info_apply/3, debug_apply/3, trace_apply/3]).").
-interface(off, _) ->
+interface(off, _, _) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(_, _, _, _) -> ok.
@@ -611,12 +673,12 @@ interface(off, _) ->
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
     ";
-interface(fatal, Process) ->
+interface(fatal, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(_, _, _, _) -> ok.
     warn(_, _, _, _) -> ok.
     info(_, _, _, _) -> ok.
@@ -636,15 +698,15 @@ interface(fatal, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Process]);
-interface(error, Process) ->
+    ", [Mode, Process]);
+interface(error, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(_, _, _, _) -> ok.
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
@@ -665,17 +727,17 @@ interface(error, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Process, Process]);
-interface(warn, Process) ->
+    ", [Mode, Process, Mode, Process]);
+interface(warn, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
@@ -697,19 +759,19 @@ interface(warn, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Process, Process, Process]);
-interface(info, Process) ->
+    ", [Mode, Process, Mode, Process, Mode, Process]);
+interface(info, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
@@ -732,21 +794,22 @@ interface(info, Process) ->
         erlang:apply(M, F, A).
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Process, Process, Process, Process]);
-interface(debug, Process) ->
+    ", [Mode, Process, Mode, Process, Mode, Process,
+        Mode, Process]);
+interface(debug, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(Module, Line, Format, Arguments) ->
-        cloudi_logger:debug(~p, Module, Line, Format, Arguments).
+        cloudi_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
@@ -770,23 +833,24 @@ interface(debug, Process) ->
     debug_apply(M, F, A) ->
         erlang:apply(M, F, A).
     trace_apply(_, _, _) -> undefined.
-    ", [Process, Process, Process, Process, Process]);
-interface(trace, Process) ->
+    ", [Mode, Process, Mode, Process, Mode, Process,
+        Mode, Process, Mode, Process]);
+interface(trace, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, Module, Line, Format, Arguments).
+        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, Module, Line, Format, Arguments).
+        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, Module, Line, Format, Arguments).
+        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, Module, Line, Format, Arguments).
+        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(Module, Line, Format, Arguments) ->
-        cloudi_logger:debug(~p, Module, Line, Format, Arguments).
+        cloudi_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(Module, Line, Format, Arguments) ->
-        cloudi_logger:trace(~p, Module, Line, Format, Arguments).
+        cloudi_logger:trace(~p, ~p, Module, Line, Format, Arguments).
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -811,11 +875,13 @@ interface(trace, Process) ->
         erlang:apply(M, F, A).
     trace_apply(M, F, A) ->
         erlang:apply(M, F, A).
-    ", [Process, Process, Process, Process, Process, Process]).
+    ", [Mode, Process, Mode, Process, Mode, Process,
+        Mode, Process, Mode, Process, Mode, Process]).
 
-load_interface_module(Level, Destination) when is_atom(Level) ->
-    {Module, Binary} =
-        cloudi_x_dynamic_compile:from_string(interface(Level, Destination)),
+load_interface_module(Level, Mode, Process) when is_atom(Level) ->
+    {Module, Binary} = cloudi_x_dynamic_compile:from_string(interface(Level,
+                                                                      Mode,
+                                                                      Process)),
     % make sure no old code exists
     code:purge(cloudi_logger_interface),
     % load the new current code
