@@ -84,6 +84,20 @@
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
         request_timeout_adjustment = false
             :: boolean(),
+        % max timeout value of sent service requests whose destination
+        % Erlang pid will not be monitored because the rate at which
+        % sent service requests are being sent to unresponsive
+        % destination Erlang pids will not cause excessive timer
+        % (erlang:send_after/3) memory consumption during the time period
+        % specified by this value.  sent service requests with timeouts
+        % that are greater than this value will have their destination
+        % Erlang pid monitored so that timer memory consumption is cleaned up
+        % quicker than the timeout value specified within the service request.
+        % as the rate of sent service requests increases to unresponsive
+        % services, this value will need to decrease, to affect service
+        % requests of shorter duration.
+        request_timeout_immediate_max = 20000 % milliseconds
+            :: 0..4294967295,
         % should the service use internal timeout information to provide a
         % more accurate timeout value within the response provided
         % (n.b., this only affects the response timeout of a successful
@@ -172,6 +186,8 @@
         automatic_loading = true
             :: boolean()
     }).
+-define(CONFIG_SERVICE_OPTIONS_EXTERNAL_SIZE,
+        (#config_service_options.application_name - 1)).
 
 % internal service parameters
 -record(config_service_internal,

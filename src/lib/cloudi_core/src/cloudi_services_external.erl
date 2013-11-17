@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -84,10 +84,11 @@
         % common elements for cloudi_services_common.hrl
         dispatcher,                    % self()
         send_timeouts = dict:new(),    % tracking for send timeouts
+        send_timeout_monitors = dict:new(),  % send timeouts destinations
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         async_responses = dict:new(),  % tracking for async requests
         queue_requests = true,         % is the external process busy?
-        queued = cloudi_x_pqueue4:new(),        % queued incoming requests
+        queued = cloudi_x_pqueue4:new(),     % queued incoming requests
         % unique state elements
         protocol,                      % tcp, udp, or local
         port,                          % port number used
@@ -123,9 +124,7 @@
     {
         % common elements for cloudi_services_common.hrl
         duo_mode_pid,                  % unused
-        unused_element1,               % unused
         recv_timeouts,                 % unused
-        unused_element2,               % unused
         queue_requests,                % unused
         queued                         % unused
         % unique state elements
@@ -743,30 +742,34 @@ handle_info({'cloudi_service_return_async', _, _,
     {next_state, StateName, State};
 
 handle_info({'cloudi_service_return_async', _Name, _Pattern,
-             ResponseInfo, Response, OldTimeout, TransId, Pid}, StateName,
+             ResponseInfo, Response, OldTimeout, TransId, Source}, StateName,
             #state{dispatcher = Dispatcher,
                    send_timeouts = SendTimeouts,
                    options = #config_service_options{
+                       request_timeout_immediate_max =
+                           RequestTimeoutImmediateMax,
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
-    true = Pid =:= Dispatcher,
+    true = Source =:= Dispatcher,
     case dict:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {next_state, StateName, State};
-        {ok, {passive, Tref}}
+        {ok, {passive, Pid, Tref}}
             when ResponseInfo == <<>>, Response == <<>> ->
             if
-                ResponseTimeoutAdjustment ->
+                ResponseTimeoutAdjustment;
+                OldTimeout > RequestTimeoutImmediateMax ->
                     erlang:cancel_timer(Tref);
                 true ->
                     ok
             end,
             {next_state, StateName,
-             send_timeout_end(TransId, State)};
-        {ok, {passive, Tref}} ->
+             send_timeout_end(TransId, Pid, State)};
+        {ok, {passive, Pid, Tref}} ->
             Timeout = if
-                ResponseTimeoutAdjustment ->
+                ResponseTimeoutAdjustment;
+                OldTimeout > RequestTimeoutImmediateMax ->
                     case erlang:cancel_timer(Tref) of
                         false ->
                             0;
@@ -777,9 +780,9 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
                     OldTimeout
             end,
             {next_state, StateName,
-             send_timeout_end(TransId,
-                async_response_timeout_start(ResponseInfo, Response, Timeout,
-                                             TransId, State))}
+             send_timeout_end(TransId, Pid,
+                 async_response_timeout_start(ResponseInfo, Response, Timeout,
+                                              TransId, State))}
     end;
 
 handle_info({'cloudi_service_return_sync', _, _,
@@ -788,26 +791,30 @@ handle_info({'cloudi_service_return_sync', _, _,
     {next_state, StateName, State};
 
 handle_info({'cloudi_service_return_sync', _Name, _Pattern,
-             ResponseInfo, Response, _Timeout, TransId, Pid}, StateName,
+             ResponseInfo, Response, OldTimeout, TransId, Source}, StateName,
             #state{dispatcher = Dispatcher,
                    send_timeouts = SendTimeouts,
                    options = #config_service_options{
+                       request_timeout_immediate_max =
+                           RequestTimeoutImmediateMax,
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
-    true = Pid =:= Dispatcher,
+    true = Source =:= Dispatcher,
     case dict:find(TransId, SendTimeouts) of
         error ->
             % send_sync timeout already occurred
             {next_state, StateName, State};
-        {ok, {_, Tref}} ->
+        {ok, {_, Pid, Tref}} ->
             if
-                ResponseTimeoutAdjustment ->
+                ResponseTimeoutAdjustment;
+                OldTimeout > RequestTimeoutImmediateMax ->
                     erlang:cancel_timer(Tref);
                 true ->
                     ok
             end,
             send('return_sync_out'(ResponseInfo, Response, TransId), State),
-            {next_state, StateName, send_timeout_end(TransId, State)}
+            {next_state, StateName,
+             send_timeout_end(TransId, Pid, State)}
     end;
 
 handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
@@ -827,8 +834,9 @@ handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
                     ok % cancel_timer avoided due to latency
             end,
             {next_state, StateName, State};
-        {ok, _} ->
-            {next_state, StateName, send_timeout_end(TransId, State)}
+        {ok, {_, Pid, _}} ->
+            {next_state, StateName,
+             send_timeout_end(TransId, Pid, State)}
     end;
 
 handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
@@ -848,9 +856,10 @@ handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
                     ok % cancel_timer avoided due to latency
             end,
             {next_state, StateName, State};
-        {ok, _} ->
+        {ok, {_, Pid, _}} ->
             send('return_sync_out'(timeout, TransId), State),
-            {next_state, StateName, send_timeout_end(TransId, State)}
+            {next_state, StateName,
+             send_timeout_end(TransId, Pid, State)}
     end;
 
 handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
@@ -860,6 +869,10 @@ handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
 
 handle_info({'EXIT', _, Reason}, _, State) ->
     {stop, Reason, State};
+
+handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName,
+            State) ->
+    {next_state, StateName, send_timeout_dead(Pid, State)};
 
 handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -914,7 +927,7 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups,
                          options = #config_service_options{
-                            scope = Scope}} = State) ->
+                             scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
@@ -936,7 +949,7 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                    Timeout, Priority, TransId, Dispatcher},
             send('return_async_out'(TransId), State),
             {next_state, StateName,
-             send_async_timeout_start(Timeout, TransId, State)}
+             send_async_timeout_start(Timeout, TransId, Pid, State)}
     end.
 
 handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
@@ -966,12 +979,34 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
             {next_state, StateName,
-             send_sync_timeout_start(Timeout, TransId, undefined, State)}
+             send_sync_timeout_start(Timeout, TransId, Pid, undefined, State)}
     end.
+
+handle_mcast_async_pids(_Name, _Pattern, _RequestInfo, _Request,
+                        _Timeout, _Priority,
+                        TransIdList, [],
+                        State) ->
+    send('returns_async_out'(lists:reverse(TransIdList)), State),
+    State;
+handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
+                        Timeout, Priority,
+                        TransIdList, [Pid | PidList],
+                        #state{dispatcher = Dispatcher,
+                               uuid_generator = UUID} = State) ->
+    TransId = cloudi_x_uuid:get_v1(UUID),
+    Pid ! {'cloudi_service_send_async',
+           Name, Pattern, RequestInfo, Request,
+           Timeout, Priority, TransId, Dispatcher},
+    handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
+                            Timeout, Priority,
+                            [TransId | TransIdList], PidList,
+                            send_async_timeout_start(Timeout,
+                                                     TransId,
+                                                     Pid,
+                                                     State)).
 
 handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                    #state{dispatcher = Dispatcher,
-                          uuid_generator = UUID,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups,
                           options = #config_service_options{
@@ -991,18 +1026,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
             send('returns_async_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, PidList} ->
-            TransIdList = lists:map(fun(Pid) ->
-                TransId = cloudi_x_uuid:get_v1(UUID),
-                Pid ! {'cloudi_service_send_async',
-                       Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Dispatcher},
-                TransId
-            end, PidList),
-            send('returns_async_out'(TransIdList), State),
-            NewState = lists:foldl(fun(Id, S) ->
-                send_async_timeout_start(Timeout, Id, S)
-            end, State, TransIdList),
-            {next_state, StateName, NewState}
+            {next_state, StateName,
+             handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
+                                     Timeout, Priority,
+                                     [], PidList, State)}
     end.
 
 'init_out'(Prefix, TimeoutAsync, TimeoutSync,

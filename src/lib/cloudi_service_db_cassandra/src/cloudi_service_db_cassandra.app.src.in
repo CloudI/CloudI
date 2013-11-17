@@ -9,7 +9,7 @@
         ]},
    {registered, []},
    {applications, [
-        %cloudi_core, % makes relx break
+        cloudi_core,
         cloudi_x_poolboy,
         cloudi_x_thrift,
         cloudi_x_erlang_cassandra,

@@ -130,11 +130,11 @@ handle(Req, #elli_state{service = Service,
                                 [K, 0, <<"true">>, 0 | L];
                             V =:= false ->
                                 [K, 0, <<"false">>, 0 | L];
-                            true ->
+                            is_binary(V) ->
                                 [K, 0, V, 0 | L]
                         end
                     end, [],
-                    cloudi_x_cowboy_http:x_www_form_urlencoded(QsVals)))
+                    cloudi_x_cow_qs:parse_qs(QsVals)))
             end;
         Method =:= 'POST'; Method =:= 'PUT' ->
             % do not pass type information along with the request!

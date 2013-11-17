@@ -10,7 +10,7 @@
    {registered, []},
    {applications, [
         @ZEROMQ_ERLZMQ_APPCONF@
-        %cloudi_core, % makes relx break
+        cloudi_core,
         cloudi_x_trie,
         stdlib,
         kernel

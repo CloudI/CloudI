@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix service request and info message queuing when
+      cloudi_service_init/3 is executed and duo_mode is true
+    * Add the request_timeout_immediate_max service configuration option
+      to provide destination monitoring for long timeout values
+
 2013-11-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update cowboy to 0.9.0
