@@ -212,7 +212,7 @@ describe_keyspace(Destination, Keyspace) ->
 %% @doc Add a keyspace
 -spec system_add_keyspace(keyspace_definition()) -> response().
 system_add_keyspace(KeyspaceDefinition) ->
-    system_add_keyspace(?DEFAULT_KEYSPACE, KeyspaceDefinition).
+    system_add_keyspace(?DEFAULT_KEYSPACE_OPS_POOL, KeyspaceDefinition).
 
 -spec system_add_keyspace(destination(), keyspace_definition()) -> response().
 system_add_keyspace(Destination, KeyspaceDefinition) ->
@@ -231,9 +231,9 @@ system_update_keyspace(Destination, KeyspaceDefinition) ->
 %% @doc Remove a keyspace
 -spec system_drop_keyspace(destination()) -> response().
 system_drop_keyspace(Keyspace) when is_binary(Keyspace) ->
-    system_drop_keyspace(?DEFAULT_KEYSPACE, Keyspace);
+    system_drop_keyspace(?DEFAULT_KEYSPACE_OPS_POOL, Keyspace);
 system_drop_keyspace({Host, Port, Keyspace} = _Destination) ->
-    system_drop_keyspace({Host, Port, ?DEFAULT_KEYSPACE}, Keyspace).
+    system_drop_keyspace({Host, Port, ?DEFAULT_KEYSPACE_OPS_POOL}, Keyspace).
 
 -spec system_drop_keyspace(destination(), keyspace()) -> response().
 system_drop_keyspace(Destination, Keyspace) ->
@@ -369,7 +369,7 @@ execute_prepared_cql_query(CqlPool, CqlQuery, Values) when is_integer(CqlQuery),
 %% @doc Get the Thrift API version
 -spec describe_version() -> response().
 describe_version() ->
-    describe_version(?DEFAULT_KEYSPACE).
+    describe_version(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API version
 -spec describe_version(destination()) -> response().
@@ -379,7 +379,7 @@ describe_version(Destination) ->
 %% @doc Get the snitch used for the cluster
 -spec describe_snitch() -> response().
 describe_snitch() ->
-    describe_snitch(?DEFAULT_KEYSPACE).
+    describe_snitch(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API snitch
 -spec describe_snitch(destination()) -> response().
@@ -389,7 +389,7 @@ describe_snitch(Destination) ->
 %% @doc Get the partitioner used for the cluster
 -spec describe_partitioner() -> response().
 describe_partitioner() ->
-    describe_partitioner(?DEFAULT_KEYSPACE).
+    describe_partitioner(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API partitioner
 -spec describe_partitioner(destination()) -> response().
@@ -399,7 +399,7 @@ describe_partitioner(Destination) ->
 %% @doc Get the schema_versions used for the cluster
 -spec describe_schema_versions() -> response().
 describe_schema_versions() ->
-    describe_schema_versions(?DEFAULT_KEYSPACE).
+    describe_schema_versions(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API schema_versions
 -spec describe_schema_versions(destination()) -> response().
@@ -409,7 +409,7 @@ describe_schema_versions(Destination) ->
 %% @doc Get the cluster_name 
 -spec describe_cluster_name() -> response().
 describe_cluster_name() ->
-    describe_cluster_name(?DEFAULT_KEYSPACE).
+    describe_cluster_name(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API cluster_name
 -spec describe_cluster_name(destination()) -> response().
@@ -420,7 +420,7 @@ describe_cluster_name(Destination) ->
 %% @doc Get the list of all the keyspaces
 -spec describe_keyspaces() -> response().
 describe_keyspaces() ->
-    describe_keyspaces(?DEFAULT_KEYSPACE).
+    describe_keyspaces(?DEFAULT_KEYSPACE_OPS_POOL).
 
 %% @doc Get the Thrift API keyspaces
 -spec describe_keyspaces(destination()) -> response().
@@ -543,7 +543,7 @@ init([ConnectionOptions0]) ->
         {value, {keyspace, Keyspace0}, ConnectionOptions1} -> 
             {Keyspace0, ConnectionOptions1};
         false ->
-            {?DEFAULT_KEYSPACE, ConnectionOptions0}
+            {?DEFAULT_KEYSPACE_OPS_POOL, ConnectionOptions0}
     end,
     {SetKeyspace, ConnectionOptions4} = 
     case lists:keytake(set_keyspace, 1, ConnectionOptions2) of
@@ -725,12 +725,38 @@ pool_call(FqServerRef, Command, Timeout) ->
                 end) end,
     try
         TransactionFun()
-    % If the pool doesnt' exist, the keyspace has not been set before
+        % If the pool doesnt' exist, the keyspace has not been set before
+        % Check to make sure that the keyspace exists before starting the 
+        % pool
     catch
-        exit:{noproc, _} ->
-            start_pool(FqServerRef),
-            TransactionFun()
+        exit:{noproc, _Other} ->
+            case keyspace_exists(FqServerRef) of
+                true ->
+                    start_pool(FqServerRef),
+                    TransactionFun();
+                false -> 
+                    {_, _, Keyspace} = FqServerRef,
+                    {error, {?INVALID_KEYSPACE, Keyspace}}
+            end
     end.
+
+keyspace_exists(Destination) ->
+    Keyspace = keyspace_from_destination(Destination),
+    FqDefaultServerRef = fq_default_server_ref(Destination),
+    % Make sure that the default pool exists. Should usually do so, 
+    % but if alternate thrift hosts/ports are specified, need
+    % to make sure that the correct pool is used
+    start_pool(FqDefaultServerRef),
+    case safe_describe_keyspace(FqDefaultServerRef, Keyspace) of
+        {ok, _} -> true;
+        _Other -> 
+            false
+    end.
+
+% Don't want to describe the default keyspace - it doesn't exist
+safe_describe_keyspace(_, ?DEFAULT_KEYSPACE_OPS_POOL) -> {ok, ok};
+safe_describe_keyspace(FqDefaultServerRef, Keyspace) ->
+    describe_keyspace(FqDefaultServerRef, Keyspace).
 
 %% @doc Fully qualify a server ref w/ a thrift host/port
 -spec fq_server_ref(destination()) -> fq_server_ref().
@@ -738,6 +764,14 @@ fq_server_ref({Host, Port, Name}) when is_list(Name) -> {Host, Port, list_to_bin
 fq_server_ref({Host, Port, Name}) when is_binary(Name) -> {Host, Port, Name};
 fq_server_ref(Destination) when is_list(Destination) -> {undefined, undefined, list_to_binary(Destination)};
 fq_server_ref(Destination) when is_binary(Destination) -> {undefined, undefined, Destination}.
+
+%% @doc Fully qualify the default server ref w/ a thrift host/port
+-spec fq_default_server_ref(destination()) -> fq_server_ref().
+fq_default_server_ref({Host, Port, _}) -> {Host, Port, ?DEFAULT_KEYSPACE_OPS_POOL}.
+
+%% @doc Get the keyspace from a Destination
+-spec keyspace_from_destination(destination()) -> keyspace().
+keyspace_from_destination({_, _, Keyspace}) -> Keyspace.
 
 %% If thrift host is passed in, use it
 binary_host(Host) when is_list(Host) -> list_to_binary(Host);
