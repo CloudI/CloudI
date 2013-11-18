@@ -56,7 +56,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -66,6 +66,7 @@
 -export([append/3,
          append_list/3,
          erase/2,
+         erase_similar/2,
          fetch/2,
          fetch_keys/1,
          fetch_keys_similar/2,
@@ -102,6 +103,7 @@
          store/2,
          store/3,
          to_list/1,
+         to_list_similar/2,
          update/3,
          update/4,
          update_counter/3,
@@ -237,107 +239,6 @@ find_match_element_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
             end
     end.
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Find a value in a trie by prefix.===
-%% The atom 'prefix' is returned if the string supplied is a prefix
-%% for a key that has previously been stored within the trie, but no
-%% value was found, since there was no exact match for the string supplied.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec find_prefix(string(), trie()) -> {ok, any()} | 'prefix' | 'error'.
-
-find_prefix([H | _], {I0, I1, _})
-    when H < I0; H > I1 ->
-    error;
-
-find_prefix([H], {I0, _, Data})
-    when is_integer(H) ->
-    case erlang:element(H - I0 + 1, Data) of
-        {{_, _, _}, error} ->
-            prefix;
-        {{_, _, _}, Value} ->
-            {ok, Value};
-        {_, error} ->
-            error;
-        {[], Value} ->
-            {ok, Value};
-        {_, _} ->
-            prefix
-    end;
-
-find_prefix([H | T], {I0, _, Data})
-    when is_integer(H) ->
-    case erlang:element(H - I0 + 1, Data) of
-        {{_, _, _} = Node, _} ->
-            find_prefix(T, Node);
-        {_, error} ->
-            error;
-        {T, Value} ->
-            {ok, Value};
-        {L, _} ->
-            case lists:prefix(T, L) of
-                true ->
-                    prefix;
-                false ->
-                    error
-            end
-    end;
-
-find_prefix(_, []) ->
-    error.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Find the longest key in a trie that is a prefix to the passed string.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec find_prefix_longest(Match :: string(),
-                          Node :: trie()) -> {ok, string(), any()} | 'error'.
-
-find_prefix_longest(Match, Node) when is_tuple(Node) ->
-    find_prefix_longest(Match, [], error, Node);
-find_prefix_longest(_Match, _Node) ->
-    error.
-
-find_prefix_longest([H | T], Key, LastMatch, {I0, I1, Data})
-    when is_integer(H), H >= I0, H =< I1 ->
-    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
-    if
-        is_tuple(ChildNode) ->
-            %% If the prefix matched and there are other child leaf nodes
-            %% for this prefix, then update the last match to the current
-            %% prefix and continue recursing over the trie.
-            NewKey = [H | Key],
-            NewMatch = case Value of
-                           error -> LastMatch;
-                           _     -> {NewKey, Value}
-                       end,
-            find_prefix_longest(T, NewKey, NewMatch, ChildNode);
-        true ->
-            %% If this is a leaf node and the key for the current node is a
-            %% prefix for the passed value, then return a match on the current
-            %% node. Otherwise, return the last match we had found previously.
-            case lists:prefix(ChildNode, T) of
-                true when Value =/= error ->
-                    {ok, lists:reverse([H | Key], ChildNode), Value};
-                _ ->
-                    case LastMatch of
-                        {LastKey, LastValue} ->
-                            {ok, lists:reverse(LastKey), LastValue};
-                        error ->
-                            error
-                    end
-            end
-    end;
-
-find_prefix_longest(_Match, _Key, {LastKey, LastValue}, _Node) ->
-    {ok, lists:reverse(LastKey), LastValue};
-
-find_prefix_longest(_Match, _Key, error, _Node) ->
-    error.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1243,6 +1144,8 @@ test() ->
     ["1"] = trie:fetch_keys_similar("1", RootNode8),
     ["0"] = trie:fetch_keys_similar("0", RootNode8),
     ["00"] = trie:fetch_keys_similar("0", RootNode7),
+    RootNode9 = trie:new([{"abc", 123}]),
+    {97,97,{{"bc",456}}} = trie:store("abc", 456, RootNode9),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -1310,7 +1213,6 @@ wildcard_match_lists([C | Match], [C | L]) ->
 
 wildcard_match_lists(_, L) ->
     wildcard_match_lists_valid(L, false).
-
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

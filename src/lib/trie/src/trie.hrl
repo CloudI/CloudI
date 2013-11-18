@@ -2,18 +2,10 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
-%%% @doc
-%%% ==A trie data structure implementation.==
-%%% The trie (i.e., from "retrieval") data structure was invented by
-%%% Edward Fredkin (it is a form of radix sort).  The implementation stores
-%%% string suffixes as a list because it is a PATRICIA trie
-%%% (PATRICIA - Practical Algorithm to Retrieve Information
-%%%  Coded in Alphanumeric, D.R.Morrison (1968)).
 %%%
 %%% This file contains trie functions utilized by both the string
 %%% (list of integers) trie implementation and the binary trie
 %%% implementation.
-%%% @end
 %%%
 %%% BSD LICENSE
 %%% 
@@ -51,9 +43,6 @@
 %%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 %%% DAMAGE.
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2010-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -ifdef(MODE_LIST).
@@ -62,6 +51,7 @@
 -define(TYPE_CHECK(V), is_list(V)).
 -define(TYPE_H0T0, [H | T]).
 -define(TYPE_H0_, [H | _]).
+-define(TYPE_H0, [H]).
 -define(TYPE_H1T1, [H1 | T1]).
 -define(TYPE_BHBT, [BH | BT]).
 -define(TYPE_KEYH0, Key ++ [H]).
@@ -70,21 +60,30 @@
 -define(TYPE_KEYCHAR, Key ++ [Character]).
 -define(TYPE_KEYCHARNODE, Key ++ [Character] ++ Node).
 -define(TYPE_NEWKEYNODE, NewKey ++ Node).
+-define(TYPE_NEWKEY, [H | Key]).
+-define(TYPE_NEWKEY_REVERSE(X), lists:reverse(X)).
+-define(TYPE_NEWKEY_REVERSE(X, Y), lists:reverse(X, Y)).
+-define(TYPE_PREFIX(X, Y), lists:prefix(X, Y)).
 -else.
 -ifdef(MODE_BINARY).
 -define(TYPE_NAME, binary).
 -define(TYPE_EMPTY, <<>>).
 -define(TYPE_CHECK(V), is_binary(V)).
--define(TYPE_H0T0, <<H:8,T/binary>>).
--define(TYPE_H0_, <<H:8,_/binary>>).
--define(TYPE_H1T1, <<H1:8,T1/binary>>).
--define(TYPE_BHBT, <<BH:8,BT/binary>>).
--define(TYPE_KEYH0, <<Key/binary,H:8>>).
--define(TYPE_KEYH0T0, <<Key/binary,H:8,T/binary>>).
--define(TYPE_KEYH0CHILDNODE, <<Key/binary,H:8,ChildNode/binary>>).
--define(TYPE_KEYCHAR, <<Key/binary,Character:8>>).
--define(TYPE_KEYCHARNODE, <<Key/binary,Character:8,Node/binary>>).
--define(TYPE_NEWKEYNODE, <<NewKey/binary,Node/binary>>).
+-define(TYPE_H0T0, <<H:8, T/binary>>).
+-define(TYPE_H0_, <<H:8, _/binary>>).
+-define(TYPE_H0, <<H:8>>).
+-define(TYPE_H1T1, <<H1:8, T1/binary>>).
+-define(TYPE_BHBT, <<BH:8, BT/binary>>).
+-define(TYPE_KEYH0, <<Key/binary, H:8>>).
+-define(TYPE_KEYH0T0, <<Key/binary, H:8, T/binary>>).
+-define(TYPE_KEYH0CHILDNODE, <<Key/binary, H:8, ChildNode/binary>>).
+-define(TYPE_KEYCHAR, <<Key/binary, Character:8>>).
+-define(TYPE_KEYCHARNODE, <<Key/binary, Character:8, Node/binary>>).
+-define(TYPE_NEWKEYNODE, <<NewKey/binary, Node/binary>>).
+-define(TYPE_NEWKEY, <<Key/binary, H:8>>).
+-define(TYPE_NEWKEY_REVERSE(X), X).
+-define(TYPE_NEWKEY_REVERSE(X, Y), <<X/binary, Y/binary>>).
+-define(TYPE_PREFIX(X, Y), binary_prefix(X, Y)).
 -endif.
 -endif.
 
@@ -169,6 +168,18 @@ erase_node(H, T, {I0, I1, Data} = OldNode)
             {I0, I1, erlang:setelement(I, Data,
                 {erase_node(H1, T1, Node), Value})}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Erase all entries within a trie that share a common prefix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec erase_similar(Similar :: ?TYPE_NAME(),
+                    Node :: trie()) -> list(?TYPE_NAME()).
+
+erase_similar(Similar, Node) ->
+    fold_similar(Similar, fun(Key, _, N) -> erase(Key, N) end, Node, Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -347,6 +358,112 @@ find_node(H, T, {I0, _, Data})
         _ ->
             error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find a value in a trie by prefix.===
+%% The atom 'prefix' is returned if the string supplied is a prefix
+%% for a key that has previously been stored within the trie, but no
+%% value was found, since there was no exact match for the string supplied.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_prefix(?TYPE_NAME(), trie()) -> {ok, any()} | 'prefix' | 'error'.
+
+find_prefix(?TYPE_H0_, {I0, I1, _})
+  when H < I0; H > I1 ->
+    error;
+
+find_prefix(?TYPE_H0, {I0, _, Data})
+  when is_integer(H) ->
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _}, error} ->
+            prefix;
+        {{_, _, _}, Value} ->
+            {ok, Value};
+        {_, error} ->
+            error;
+        {?TYPE_EMPTY, Value} ->
+            {ok, Value};
+        {_, _} ->
+            prefix
+    end;
+
+find_prefix(?TYPE_H0T0, {I0, _, Data})
+  when is_integer(H) ->
+    case erlang:element(H - I0 + 1, Data) of
+        {{_, _, _} = Node, _} ->
+            find_prefix(T, Node);
+        {_, error} ->
+            error;
+        {T, Value} ->
+            {ok, Value};
+        {L, _} ->
+            case ?TYPE_PREFIX(T, L) of
+                true ->
+                    prefix;
+                false ->
+                    error
+            end
+    end;
+
+find_prefix(_, ?TYPE_EMPTY) ->
+    error.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the longest key in a trie that is a prefix to the passed string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_prefix_longest(Match :: ?TYPE_NAME(),
+                          Node :: trie()) ->
+    {ok, ?TYPE_NAME(), any()} | 'error'.
+
+find_prefix_longest(Match, Node) when is_tuple(Node) ->
+    find_prefix_longest(Match, ?TYPE_EMPTY, error, Node);
+
+find_prefix_longest(_Match, ?TYPE_EMPTY) ->
+    error.
+
+find_prefix_longest(?TYPE_H0T0, Key, LastMatch, {I0, I1, Data})
+  when is_integer(H), H >= I0, H =< I1 ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            %% If the prefix matched and there are other child leaf nodes
+            %% for this prefix, then update the last match to the current
+            %% prefix and continue recursing over the trie.
+            NewKey = ?TYPE_NEWKEY,
+            NewMatch = case Value of
+                error ->
+                    LastMatch;
+                _ ->
+                    {NewKey, Value}
+            end,
+            find_prefix_longest(T, NewKey, NewMatch, ChildNode);
+        true ->
+            %% If this is a leaf node and the key for the current node is a
+            %% prefix for the passed value, then return a match on the current
+            %% node. Otherwise, return the last match we had found previously.
+            case ?TYPE_PREFIX(ChildNode, T) of
+                true when Value =/= error ->
+                    {ok, ?TYPE_NEWKEY_REVERSE(?TYPE_NEWKEY, ChildNode), Value};
+                _ ->
+                    case LastMatch of
+                        {LastKey, LastValue} ->
+                            {ok, ?TYPE_NEWKEY_REVERSE(LastKey), LastValue};
+                        error ->
+                            error
+                    end
+            end
+    end;
+
+find_prefix_longest(_Match, _Key, {LastKey, LastValue}, _Node) ->
+    {ok, ?TYPE_NEWKEY_REVERSE(LastKey), LastValue};
+
+find_prefix_longest(_Match, _Key, error, _Node) ->
+    error.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -889,7 +1006,7 @@ store_node(H, ?TYPE_H1T1 = T, NewValue, {I0, I1, Data})
             {I0, I1, erlang:setelement(I, Data,
                 {store_node(H1, T1, NewValue, Node), Value})};
         T ->
-            {I0, I1, erlang:setelement(I, Data, {Node, Value})};
+            {I0, I1, erlang:setelement(I, Data, {Node, NewValue})};
         ?TYPE_EMPTY ->
             if
                 Value =:= error ->
@@ -916,6 +1033,19 @@ store_node(H, ?TYPE_H1T1 = T, NewValue, {I0, I1, Data})
 to_list(Node) ->
     foldr(fun (Key, Value, L) -> [{Key, Value} | L] end, [], Node).
         
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a list of all entries within a trie that share a common prefix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_list_similar(Similar :: ?TYPE_NAME(),
+                      Node :: trie()) -> list(?TYPE_NAME()).
+
+to_list_similar(Similar, Node) ->
+    foldr_similar(Similar,
+                  fun(Key, Value, L) -> [{Key, Value} | L] end, [], Node).
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Update a value in a trie.===
