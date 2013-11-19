@@ -58,7 +58,7 @@ init([]) ->
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
-    Keyspace = application:get_env(erlang_cassandra, keyspace, ?DEFAULT_KEYSPACE),
+    Keyspace = application:get_env(erlang_cassandra, keyspace, ?DUMMY_STARTUP_POOL),
     % We need this to be a one_for_one supervisor, because of the way the 
     % connection_options trickle through to the workers (and hence, our
     % gen-server).  To simplify things, I start a default pool of size 0. This
