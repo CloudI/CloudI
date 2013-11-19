@@ -110,12 +110,14 @@ groups_condition(Groups) ->
             catch gen_tcp:close(Socket),
             Groups;
         {error, econnrefused} ->
-            ?LOG_ERROR("unable to test ~p",
-                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}]),
+            error_logger:error_msg("unable to test ~p",
+                                   [{?DEFAULT_THRIFT_HOST,
+                                     ?DEFAULT_THRIFT_PORT}]),
             [];
         {error, Reason} ->
-            ?LOG_ERROR("unable to test ~p: ~p",
-                       [{?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT}, Reason]),
+            error_logger:error_msg("unable to test ~p: ~p",
+                                   [{?DEFAULT_THRIFT_HOST,
+                                     ?DEFAULT_THRIFT_PORT}, Reason]),
             []
     end.
 

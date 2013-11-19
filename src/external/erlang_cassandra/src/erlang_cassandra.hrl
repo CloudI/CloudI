@@ -65,7 +65,8 @@
 -type compression()     :: binary().
 
 %% Defaults
--define(DEFAULT_KEYSPACE, <<"default_erlang_cassandra_keyspace">>).
+-define(DUMMY_STARTUP_POOL, <<"_dummy_startup_pool">>).
+-define(DEFAULT_KEYSPACE_OPS_POOL, <<"default_keyspace_ops_pool">>).
 -define(DEFAULT_THRIFT_HOST, "localhost").
 -define(DEFAULT_THRIFT_PORT, 9160).
 -define(DEFAULT_THRIFT_OPTIONS, [{framed, true}]).
@@ -85,6 +86,7 @@
 -define(DEFAULT_SLICE_COUNT, 1000).
 
 %% Errors
+-define(INVALID_KEYSPACE, invalid_keyspace).
 -define(NO_SUCH_SEQUENCE, no_such_sequence).
 -define(CONNECTION_REFUSED, {error, econnrefused}).
 
