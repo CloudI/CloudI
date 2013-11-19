@@ -21,12 +21,14 @@ groups_condition(Groups) ->
             catch gen_tcp:close(Socket),
             Groups;
         {error, econnrefused} ->
-            ?LOG_ERROR("unable to test ~p",
-                       [{?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT}]),
+            error_logger:error_msg("unable to test ~p",
+                                   [{?DEFAULT_PGSQL_HOST,
+                                     ?DEFAULT_PGSQL_PORT}]),
             [];
         {error, Reason} ->
-            ?LOG_ERROR("unable to test ~p: ~p",
-                       [{?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT}, Reason]),
+            error_logger:error_msg("unable to test ~p: ~p",
+                                   [{?DEFAULT_PGSQL_HOST,
+                                     ?DEFAULT_PGSQL_PORT}, Reason]),
             []
     end.
 

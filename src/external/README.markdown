@@ -10,7 +10,7 @@ to its integration and dependencies).
 --------
 `Erlang HTTP Server`
 - `https://github.com/extend/cowboy`
-- `commit df818625545d565b8b76fbc445063a4822114b93 (version 0.9.0)`
+- `commit df818625545d565b8b76fbc445063a4822114b93 (0.9.0)`
 - `Fri Nov 15 13:24:03 PST 2013`
 - `MIT`
 
@@ -18,7 +18,7 @@ to its integration and dependencies).
 --------
 `cowboy Protocols`
 - `https://github.com/extend/cowlib`
-- `commit 63298e8e160031a70efff86a1acde7e7db1fcda6 (version 0.4.0)`
+- `commit 63298e8e160031a70efff86a1acde7e7db1fcda6 (0.4.0)`
 - `Fri Nov 15 13:24:03 PST 2013`
 - `MIT`
 
@@ -43,7 +43,7 @@ to its integration and dependencies).
 --------
 `Erlang HTTP Server`
 - `https://github.com/knutin/elli/`
-- `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (version 0.4.1)`
+- `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (0.4.1)`
 - `Thu Jun 27 09:13:14 PDT 2013`
 - `MIT`
 
@@ -101,6 +101,15 @@ to its integration and dependencies).
 - `Tue Oct 22 11:58:41 PDT 2013`
 - `Erlang Public License`
 
+`goldrush`
+----------
+`Small, Fast Event Processing for Erlang`
+
+- `https://github.com/DeadZen/goldrush`
+- `commit 1d883423ac360b3536ca52dc733a0164bacf3109 (0.1.5)`
+- `Tue Nov 19 09:19:54 PST 2013`
+- `MIT`
+
 `jinterface`
 ------------
 `Binary Erlang Term Encoding Java Source Code`
@@ -127,6 +136,15 @@ to its integration and dependencies).
 - `commit e50af6e109cb03bd26acf715cbc77de746507d1d (master, v1.4.3)`
 - `Thu Sep 26 16:51:24 PDT 2013`
 - `MIT`
+
+`lager`
+-------
+`Erlang Logging`
+
+- `https://github.com/basho/lager`
+- `commit ad400896af5b1ad8b4f7a4d34e609b5a990640bb (2.0.1)`
+- `Tue Nov 19 09:19:54 PST 2013`
+- `Apache License 2.0`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 -------------------------------------------------------------------
@@ -193,7 +211,7 @@ to its integration and dependencies).
 `PropEr (PROPerty-based testing tool for ERlang)`
 
 - `https://github.com/manopapad/proper`
-- `commit aa6b088607a08b82ef765dfdfcb6f20f0735915f (version 1.1)`
+- `commit aa6b088607a08b82ef765dfdfcb6f20f0735915f (1.1)`
 - `Tue Jul 16 11:26:20 PDT 2013`
 - `GPLv3`
 
@@ -202,7 +220,7 @@ to its integration and dependencies).
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/extend/ranch`
-- `commit 33e1b4fcb0954f61588cb1baff905d107f74b467 (version 0.9.0)`
+- `commit 33e1b4fcb0954f61588cb1baff905d107f74b467 (0.9.0)`
 - `Fri Nov 15 13:24:03 PST 2013`
 - `MIT`
 

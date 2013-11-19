@@ -52,7 +52,10 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/erlang_cassandra/src \
      -d $(top_srcdir)/external/erlasticsearch/src \
      -d $(top_srcdir)/external/etokyotyrant/src \
+     -d $(top_srcdir)/external/goldrush/src \
      -d $(top_srcdir)/external/jsx/src \
+     -d $(top_srcdir)/external/lager/src \
+     -d $(top_srcdir)/external/lager/test \
      -d $(top_srcdir)/external/poolboy/src \
      -d $(top_srcdir)/external/poolboy/test \
      -d $(top_srcdir)/external/ranch/src \
@@ -143,7 +146,9 @@ rebar-directories-compile:
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
+	$(MKDIR_P) external/lager/ebin
 	$(MKDIR_P) external/jsx/ebin
+	$(MKDIR_P) external/goldrush/ebin
 	$(MKDIR_P) external/etokyotyrant/ebin
 	$(MKDIR_P) external/poolboy/ebin
 	$(MKDIR_P) external/thrift/ebin
@@ -338,9 +343,15 @@ rebar-directories-compile:
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/combonodefinder/ebin || \
         exit 0)
+	(cd $(top_srcdir)/external/lager && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/lager/ebin || exit 0)
 	(cd $(top_srcdir)/external/jsx && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/jsx/ebin || exit 0)
+	(cd $(top_srcdir)/external/goldrush && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/goldrush/ebin || exit 0)
 	(cd $(top_srcdir)/external/etokyotyrant && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/etokyotyrant/ebin || exit 0)
@@ -484,8 +495,12 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/nodefinder/ec2nodefinder/ebin
 	rmdir $(top_builddir)/external/nodefinder/combonodefinder/ebin || exit 0
 	rm -f $(top_srcdir)/external/nodefinder/combonodefinder/ebin
+	rmdir $(top_builddir)/external/lager/ebin || exit 0
+	rm -f $(top_srcdir)/external/lager/ebin
 	rmdir $(top_builddir)/external/jsx/ebin || exit 0
 	rm -f $(top_srcdir)/external/jsx/ebin
+	rmdir $(top_builddir)/external/goldrush/ebin || exit 0
+	rm -f $(top_srcdir)/external/goldrush/ebin
 	rmdir $(top_builddir)/external/etokyotyrant/ebin || exit 0
 	rm -f $(top_srcdir)/external/etokyotyrant/ebin
 	rmdir $(top_builddir)/external/poolboy/ebin || exit 0
