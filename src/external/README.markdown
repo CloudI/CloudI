@@ -169,7 +169,7 @@ to its integration and dependencies).
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html`
 - `Fri Mar  4 00:01:29 PST 2011`
-- `GPL`
+- `GPL` (build-time dependency only)
 
 `m4/ax_prog_python_version.m4`
 ------------------------------
@@ -213,7 +213,7 @@ to its integration and dependencies).
 - `https://github.com/manopapad/proper`
 - `commit aa6b088607a08b82ef765dfdfcb6f20f0735915f (1.1)`
 - `Tue Jul 16 11:26:20 PDT 2013`
-- `GPLv3`
+- `GPLv3` (build/test-time dependency only)
 
 `ranch`
 -------
@@ -259,5 +259,5 @@ to its integration and dependencies).
 - `http://download.zeromq.org/zeromq-2.2.0.tar.gz`
 - `http://download.zeromq.org/zeromq-3.2.2.tar.gz`
 - `Thu Feb  7 14:18:10 PST 2013`
-- `LGPL`
+- `LGPL` (requires explicit enable from configure)
 

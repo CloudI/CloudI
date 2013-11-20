@@ -421,7 +421,7 @@ send_async(Context, Name, Request, Timeout) ->
                  Name :: service_name(),
                  Request :: request(),
                  Timeout :: timeout_milliseconds() | 'undefined',
-                 PatternPid :: pattern_pid()) ->
+                 PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: any()}.
 
@@ -579,7 +579,7 @@ send_async_passive(Context, Name, Request, Timeout) ->
                          Name :: service_name(),
                          Request :: request(),
                          Timeout :: timeout_milliseconds() | 'undefined',
-                         PatternPid :: pattern_pid()) ->
+                         PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: any()}.
 
@@ -622,7 +622,7 @@ send_async_passive(Context, Name, RequestInfo, Request,
                          Request :: request(),
                          Timeout :: timeout_milliseconds() | 'undefined',
                          Priority :: priority() | 'undefined',
-                         PatternPid :: pattern_pid()) ->
+                         PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: any()}.
 
@@ -684,7 +684,7 @@ send_sync(Context, Name, Request, Timeout) ->
                 Name :: service_name(),
                 Request :: request(),
                 Timeout :: timeout_milliseconds() | 'undefined',
-                PatternPid :: pattern_pid()) ->
+                PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', ResponseInfo :: response_info(), Response :: response()} |
     {'ok', Response :: response()} |
     {'error', Reason :: any()}.

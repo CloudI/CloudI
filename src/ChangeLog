@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix a small difference between the cloudi module and
+      the cloudi_service module with how PatternPid can be undefined
+
 2013-11-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add lager and goldrush as dependencies of erlang_cassandra
