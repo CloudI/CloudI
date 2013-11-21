@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_messaging_sequence3).
@@ -90,6 +90,8 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
             ?LOG_INFO(" messaging sequence3 start erlang", []),
             sequence3(Dispatcher, Prefix),
             ?LOG_INFO(" messaging sequence3 end erlang", []),
+            cloudi_service:send_async(Dispatcher,
+                                      Prefix ++ "sequence4", "start"),
             {reply, "end", State};
         "f1" ->
             RequestI = erlang:list_to_integer(Request),
@@ -129,6 +131,4 @@ sequence3(Dispatcher, Prefix) ->
     {ok, Test2Check} = cloudi_service:send_sync(Dispatcher, Prefix ++ "g1",
                                             "prefix_"),
     true = Test2Check == "prefix_suffix",
-    % loop to find any infrequent problems, restart sequence1
-    cloudi_service:send_async(Dispatcher, Prefix ++ "sequence1", "start"),
     ok.

@@ -883,6 +883,9 @@ tests-messaging-install: \
 	$(INSTALL_DATA) \
         "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence4.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/cloudi.jar" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/messaging.jar" \

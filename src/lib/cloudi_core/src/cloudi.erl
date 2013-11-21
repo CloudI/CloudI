@@ -82,6 +82,8 @@
          recv_async/1,
          recv_async/2,
          recv_async/3,
+         recv_asyncs/2,
+         recv_asyncs/3,
          timeout_async/1,
          timeout_sync/1,
          destination_refresh_immediate/1,
@@ -1064,6 +1066,59 @@ recv_async(#cloudi_context{receiver = Receiver} = Context,
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Receive asynchronous service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_asyncs(Context :: context() | cloudi_service:dispatcher(),
+                  TransIdList :: list(trans_id())) ->
+    {'ok', list({ResponseInfo :: response_info(), Response :: response(),
+                 TransId :: trans_id()})} |
+    {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, TransIdList)
+    when is_pid(Dispatcher) ->
+    cloudi_service:recv_asyncs(Dispatcher, TransIdList);
+
+recv_asyncs(Context, TransIdList) ->
+    recv_asyncs(Context, undefined, TransIdList).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive asynchronous service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_asyncs(Context :: context() | cloudi_service:dispatcher(),
+                  Timeout :: timeout_milliseconds() | 'undefined',
+                  TransIdList :: list(trans_id())) ->
+    {'ok', list({ResponseInfo :: response_info(), Response :: response(),
+                 TransId :: trans_id()})} |
+    {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, Timeout, TransIdList)
+    when is_pid(Dispatcher) ->
+    cloudi_service:recv_asyncs(Dispatcher, Timeout, TransIdList);
+
+recv_asyncs(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
+            undefined, TransIdList) ->
+    recv_asyncs(Context, DefaultTimeoutAsync, TransIdList);
+
+recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
+            Timeout, TransIdList)
+    when is_integer(Timeout), is_list(TransIdList), Timeout >= 0 ->
+    if
+        self() /= Receiver ->
+            ?LOG_ERROR("recv_asyncs called outside of context", []),
+            erlang:exit(badarg);
+        true ->
+            ok
+    end,
+    recv_asyncs_receive_ids([{<<>>, <<>>, TransId} || TransId <- TransIdList],
+                            Timeout, Context).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Configured service default asynchronous timeout (in milliseconds).===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1224,7 +1279,7 @@ recv_async_receive_any(#cloudi_context{
                        Timeout) ->
     receive
         {'cloudi_service_return_async',
-         _, _, _, <<>>, _, _, Receiver} ->
+         _, _, <<>>, <<>>, _, _, Receiver} ->
             result(Context, {error, timeout});
         {'cloudi_service_return_async',
          _, _, ResponseInfo, Response, _, TransId, Receiver} ->
@@ -1244,7 +1299,7 @@ recv_async_receive_id(#cloudi_context{
                       Timeout, TransId) ->
     receive
         {'cloudi_service_return_async',
-         _, _, _, <<>>, _, TransId, Receiver} ->
+         _, _, <<>>, <<>>, _, TransId, Receiver} ->
             result(Context, {error, timeout});
         {'cloudi_service_return_async',
          _, _, ResponseInfo, Response, _, TransId, Receiver} ->
@@ -1258,6 +1313,57 @@ recv_async_receive_id(#cloudi_context{
         Timeout ->
             result(Context, {error, timeout})
     end.
+
+recv_asyncs_receive_ids(Results, Timeout, Context) ->
+    case recv_asyncs_receive_ids(Results, [], true, false, Context) of
+        {true, _, NewResults, NewContext} ->
+            result(NewContext, {ok, NewResults});
+        {false, _, NewResults, NewContext}
+            when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            recv_asyncs_receive_ids(NewResults,
+                                    Timeout - ?RECV_ASYNC_INTERVAL,
+                                    sleep(NewContext, ?RECV_ASYNC_INTERVAL));
+        {false, false, NewResults, NewContext} ->
+            result(NewContext, {ok, NewResults});
+        {false, true, _, NewContext} ->
+            result(NewContext, {error, timeout})
+    end.
+
+recv_asyncs_receive_ids([], L, Done, FoundOne, Context) ->
+    {Done, not FoundOne, lists:reverse(L), Context};
+
+recv_asyncs_receive_ids([{<<>>, <<>>, TransId} = Entry | Results] = OldResults,
+                        L, Done, FoundOne,
+                        #cloudi_context{
+                            receiver = Receiver} = Context) ->
+    receive
+        {'cloudi_service_return_async',
+         _, _, <<>>, <<>>, _, TransId, Receiver} ->
+            recv_asyncs_receive_ids(Results,
+                                    [Entry | L],
+                                    Done, FoundOne, Context);
+        {'cloudi_service_return_async',
+         _, _, ResponseInfo, Response, _, TransId, Receiver} ->
+            recv_asyncs_receive_ids(Results,
+                                    [{ResponseInfo, Response, TransId} | L],
+                                    Done, true, Context);
+        {cloudi_cpg_data, Groups} ->
+            recv_asyncs_receive_ids(OldResults, L, Done, FoundOne,
+                                    Context#cloudi_context{
+                                        cpg_data = Groups,
+                                        cpg_data_stale = true})
+    after
+        0 ->
+            recv_asyncs_receive_ids(Results,
+                                    [Entry | L],
+                                    false, FoundOne, Context)
+    end;
+
+recv_asyncs_receive_ids([{_, _, _} = Entry | Results],
+                        L, Done, _FoundOne, Context) ->
+    recv_asyncs_receive_ids(Results,
+                            [Entry | L],
+                            Done, true, Context).
 
 result(#cloudi_context{
            dest_refresh = DestRefresh,

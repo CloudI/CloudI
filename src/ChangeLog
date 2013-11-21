@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add recv_asyncs to the cloudi_service module and the cloudi module
+      for internal services, but not to external services due to the
+      memory allocation burden it would create for external services
+
 2013-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix a small difference between the cloudi module and

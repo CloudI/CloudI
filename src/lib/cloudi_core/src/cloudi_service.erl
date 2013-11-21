@@ -149,6 +149,9 @@
          recv_async/2,
          recv_async/3,
          recv_async/4,
+         recv_asyncs/2,
+         recv_asyncs/3,
+         recv_asyncs/4,
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
@@ -1778,6 +1781,70 @@ recv_async(Dispatcher, Timeout, TransId, Consume)
          is_boolean(Consume), Timeout >= 0 ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'recv_async', Timeout, TransId, Consume},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive asynchronous service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_asyncs(Dispatcher :: dispatcher(),
+                  TransIdList :: list(trans_id())) ->
+    {'ok', list({ResponseInfo :: response_info(),
+                 Response :: response(), TransId :: trans_id()})} |
+    {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, [_ | _] = TransIdList)
+    when is_pid(Dispatcher), is_list(TransIdList) ->
+    gen_server:call(Dispatcher,
+                    {'recv_asyncs',
+                     [{<<>>, <<>>, TransId} ||
+                      TransId <- TransIdList], true}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive asynchronous service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_asyncs(Dispatcher :: dispatcher(),
+                  Timeout :: timeout_milliseconds(),
+                  TransIdList :: list(trans_id())) ->
+    {'ok', list({ResponseInfo :: response_info(), Response :: response(),
+                 TransId :: trans_id()})} |
+    {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
+    when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
+         Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_asyncs', Timeout,
+                                    [{<<>>, <<>>, TransId} ||
+                                     TransId <- TransIdList], true},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive asynchronous service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_asyncs(Dispatcher :: dispatcher(),
+                  Timeout :: timeout_milliseconds(),
+                  TransIdList :: list(trans_id()),
+                  Consume :: boolean()) ->
+    {'ok', list({ResponseInfo :: response_info(), Response :: response(),
+                 TransId :: trans_id()})} |
+    {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList, Consume)
+    when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
+         is_boolean(Consume), Timeout >= 0 ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'recv_asyncs', Timeout,
+                                    [{<<>>, <<>>, TransId} ||
+                                     TransId <- TransIdList], Consume},
                                    Timeout + ?TIMEOUT_DELTA)).
 
 %%-------------------------------------------------------------------------

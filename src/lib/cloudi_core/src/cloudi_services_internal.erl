@@ -511,6 +511,31 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
             end
     end);
 
+handle_call({'recv_asyncs', Results, Consume}, Client,
+            #state{timeout_sync = TimeoutSync} = State) ->
+    handle_call({'recv_asyncs', TimeoutSync, Results, Consume},
+                Client, State);
+
+handle_call({'recv_asyncs', Timeout, Results, Consume}, Client,
+            #state{async_responses = AsyncResponses} = State) ->
+    hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
+        {true, _, NewResults, NewAsyncResponses} ->
+            {reply, {ok, NewResults},
+             State#state{async_responses = NewAsyncResponses}};
+        {false, _, NewResults, NewAsyncResponses}
+            when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_recv_asyncs_retry',
+                               Timeout - ?RECV_ASYNC_INTERVAL,
+                               NewResults, Consume, Client}),
+            {noreply, State#state{async_responses = NewAsyncResponses}};
+        {false, false, NewResults, NewAsyncResponses} ->
+            {reply, {ok, NewResults},
+             State#state{async_responses = NewAsyncResponses}};
+        {false, true, _, _} ->
+            {reply, {error, timeout}, State}
+    end);
+
 handle_call(prefix, _,
             #state{prefix = Prefix} = State) ->
     hibernate_check({reply, Prefix, State});
@@ -871,6 +896,28 @@ handle_info({'cloudi_service_recv_async_retry',
                                      {ok, ResponseInfo, Response, TransId}),
                     {noreply, State}
             end
+    end);
+
+handle_info({'cloudi_service_recv_asyncs_retry',
+             Timeout, Results, Consume, Client},
+            #state{async_responses = AsyncResponses} = State) ->
+    hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
+        {true, _, NewResults, NewAsyncResponses} ->
+            gen_server:reply(Client, {ok, NewResults}),
+            {noreply, State#state{async_responses = NewAsyncResponses}};
+        {false, _, NewResults, NewAsyncResponses}
+            when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_recv_asyncs_retry',
+                               Timeout - ?RECV_ASYNC_INTERVAL,
+                               NewResults, Consume, Client}),
+            {noreply, State#state{async_responses = NewAsyncResponses}};
+        {false, false, NewResults, NewAsyncResponses} ->
+            gen_server:reply(Client, {ok, NewResults}),
+            {noreply, State#state{async_responses = NewAsyncResponses}};
+        {false, true, _, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State}
     end);
 
 handle_info({'cloudi_service_send_async',
@@ -1355,6 +1402,7 @@ handle_mcast_async_pids(_Name, _Pattern, _RequestInfo, _Request,
                         State) ->
     gen_server:reply(Client, {ok, lists:reverse(TransIdList)}),
     State;
+
 handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                         Timeout, Priority,
                         TransIdList, [Pid | PidList], Client,
@@ -1407,6 +1455,7 @@ handle_mcast_async_pids_active(_Name, _Pattern, _RequestInfo, _Request,
                                State) ->
     gen_server:reply(Client, {ok, lists:reverse(TransIdList)}),
     State;
+
 handle_mcast_async_pids_active(Name, Pattern, RequestInfo, Request,
                                Timeout, Priority,
                                TransIdList, [Pid | PidList], Client,
@@ -1758,6 +1807,7 @@ send_async_active_timeout_start(Timeout, TransId, Pid,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts),
         send_timeout_monitors = NewSendTimeoutMonitors};
+
 send_async_active_timeout_start(Timeout, TransId, _Pid,
                                 #state{send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
@@ -1767,6 +1817,36 @@ send_async_active_timeout_start(Timeout, TransId, _Pid,
              erlang:send_after(Timeout, self(),
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
+
+recv_asyncs_pick(Results, Consume, AsyncResponses) ->
+    recv_asyncs_pick(Results, [], true, false, Consume, AsyncResponses).
+
+recv_asyncs_pick([], L, Done, FoundOne, _Consume, NewAsyncResponses) ->
+    {Done, not FoundOne, lists:reverse(L), NewAsyncResponses};
+
+recv_asyncs_pick([{<<>>, <<>>, TransId} = Entry | Results], L,
+                 Done, FoundOne, Consume, AsyncResponses) ->
+    case dict:find(TransId, AsyncResponses) of
+        error ->
+            recv_asyncs_pick(Results,
+                             [Entry | L],
+                             false, FoundOne, Consume, AsyncResponses);
+        {ok, {ResponseInfo, Response}} ->
+            NewAsyncResponses = if
+                Consume =:= true ->
+                    dict:erase(TransId, AsyncResponses);
+                Consume =:= false ->
+                    AsyncResponses
+            end,
+            recv_asyncs_pick(Results,
+                             [{ResponseInfo, Response, TransId} | L],
+                             Done, true, Consume, NewAsyncResponses)
+    end;
+
+recv_asyncs_pick([{_, _, _} = Entry | Results], L,
+                 Done, _FoundOne, Consume, AsyncResponses) ->
+    recv_asyncs_pick(Results, [Entry | L],
+                     Done, true, Consume, AsyncResponses).
 
 process_queue(NewServiceState,
               #state{dispatcher = Dispatcher,
@@ -1862,20 +1942,25 @@ process_queues(NewServiceState, State) ->
     end.
 
 -compile({inline, [{hibernate_check, 1}]}).
+
 hibernate_check({reply, _,
                  #state{options = #config_service_options{
                             hibernate = false}}} = Result) ->
     Result;
+
 hibernate_check({noreply,
                  #state{options = #config_service_options{
                             hibernate = false}}} = Result) ->
     Result;
+
 hibernate_check({stop, _, _} = Result) ->
     Result;
+
 hibernate_check({reply, Reply,
                  #state{options = #config_service_options{
                             hibernate = true}} = State}) ->
     {reply, Reply, State, hibernate};
+
 hibernate_check({noreply,
                  #state{options = #config_service_options{
                             hibernate = true}} = State}) ->
