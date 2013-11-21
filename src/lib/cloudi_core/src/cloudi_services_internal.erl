@@ -523,6 +523,28 @@ handle_call(timeout_sync, _,
             #state{timeout_sync = TimeoutSync} = State) ->
     hibernate_check({reply, TimeoutSync, State});
 
+handle_call(destination_refresh_immediate, _,
+            #state{dest_refresh = DestRefresh} = State) ->
+    Immediate = (DestRefresh =:= immediate_closest orelse
+                 DestRefresh =:= immediate_furthest orelse
+                 DestRefresh =:= immediate_random orelse
+                 DestRefresh =:= immediate_local orelse
+                 DestRefresh =:= immediate_remote orelse
+                 DestRefresh =:= immediate_newest orelse
+                 DestRefresh =:= immediate_oldest),
+    hibernate_check({reply, Immediate, State});
+
+handle_call(destination_refresh_lazy, _,
+            #state{dest_refresh = DestRefresh} = State) ->
+    Lazy = (DestRefresh =:= lazy_closest orelse
+            DestRefresh =:= lazy_furthest orelse
+            DestRefresh =:= lazy_random orelse
+            DestRefresh =:= lazy_local orelse
+            DestRefresh =:= lazy_remote orelse
+            DestRefresh =:= lazy_newest orelse
+            DestRefresh =:= lazy_oldest),
+    hibernate_check({reply, Lazy, State});
+
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),

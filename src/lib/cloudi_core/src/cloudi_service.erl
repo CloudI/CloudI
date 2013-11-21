@@ -152,6 +152,8 @@
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
+         destination_refresh_immediate/1,
+         destination_refresh_lazy/1,
          service_name_parse/2,
          service_name_parse_with_suffix/2,
          request_http_qs_parse/1,
@@ -1815,6 +1817,30 @@ timeout_async(Dispatcher) ->
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service destination refresh is immediate.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destination_refresh_immediate(Dispatcher :: dispatcher()) ->
+    boolean().
+
+destination_refresh_immediate(Dispatcher) ->
+    gen_server:call(Dispatcher, destination_refresh_immediate, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service destination refresh is lazy.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destination_refresh_lazy(Dispatcher :: dispatcher()) ->
+    boolean().
+
+destination_refresh_lazy(Dispatcher) ->
+    gen_server:call(Dispatcher, destination_refresh_lazy, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

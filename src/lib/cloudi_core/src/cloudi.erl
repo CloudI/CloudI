@@ -83,7 +83,9 @@
          recv_async/2,
          recv_async/3,
          timeout_async/1,
-         timeout_sync/1]).
+         timeout_sync/1,
+         destination_refresh_immediate/1,
+         destination_refresh_lazy/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
@@ -1066,8 +1068,12 @@ recv_async(#cloudi_context{receiver = Receiver} = Context,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec timeout_async(Context :: #cloudi_context{}) ->
+-spec timeout_async(Context :: context() | cloudi_service:dispatcher()) ->
     TimeoutAsync :: cloudi_service_api:timeout_milliseconds().
+
+timeout_async(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:timeout_async(Dispatcher);
 
 timeout_async(#cloudi_context{timeout_async = DefaultTimeoutAsync}) ->
     DefaultTimeoutAsync.
@@ -1078,11 +1084,63 @@ timeout_async(#cloudi_context{timeout_async = DefaultTimeoutAsync}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec timeout_sync(Context :: #cloudi_context{}) ->
+-spec timeout_sync(Context :: context() | cloudi_service:dispatcher()) ->
     TimeoutSync :: cloudi_service_api:timeout_milliseconds().
+
+timeout_sync(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:timeout_sync(Dispatcher);
 
 timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
     DefaultTimeoutSync.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service destination refresh is immediate.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destination_refresh_immediate(Context :: context() |
+                                               cloudi_service:dispatcher()) ->
+    boolean().
+
+destination_refresh_immediate(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:destination_refresh_immediate(Dispatcher);
+
+destination_refresh_immediate(#cloudi_context{
+                                  dest_refresh = DestRefresh}) ->
+    (DestRefresh =:= immediate_closest orelse
+     DestRefresh =:= immediate_furthest orelse
+     DestRefresh =:= immediate_random orelse
+     DestRefresh =:= immediate_local orelse
+     DestRefresh =:= immediate_remote orelse
+     DestRefresh =:= immediate_newest orelse
+     DestRefresh =:= immediate_oldest).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Configured service destination refresh is lazy.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destination_refresh_lazy(Context :: context() |
+                                          cloudi_service:dispatcher()) ->
+    boolean().
+
+destination_refresh_lazy(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:destination_refresh_lazy(Dispatcher);
+
+destination_refresh_lazy(#cloudi_context{
+                             dest_refresh = DestRefresh}) ->
+    (DestRefresh =:= lazy_closest orelse
+     DestRefresh =:= lazy_furthest orelse
+     DestRefresh =:= lazy_random orelse
+     DestRefresh =:= lazy_local orelse
+     DestRefresh =:= lazy_remote orelse
+     DestRefresh =:= lazy_newest orelse
+     DestRefresh =:= lazy_oldest).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

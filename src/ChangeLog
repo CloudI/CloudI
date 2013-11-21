@@ -5,6 +5,9 @@
 
     * Fix a small difference between the cloudi module and
       the cloudi_service module with how PatternPid can be undefined
+    * Add the functions destination_refresh_immediate/1 and
+      destination_refresh_lazy/1 to the modules cloudi and cloudi_service
+      so interfaces can check before sending, if necessary
 
 2013-11-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
