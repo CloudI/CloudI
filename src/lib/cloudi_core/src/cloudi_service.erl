@@ -1737,11 +1737,16 @@ recv_async(Dispatcher, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec recv_async(Dispatcher :: dispatcher(),
-                 timeout_milliseconds() | trans_id(),
+                 timeout_milliseconds() | 'undefined' | trans_id(),
                  trans_id() | boolean()) ->
     {'ok', ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
     {'error', Reason :: atom()}.
+
+recv_async(Dispatcher, undefined, TransId)
+    when is_pid(Dispatcher), is_binary(TransId) ->
+    gen_server:call(Dispatcher,
+                    {'recv_async', TransId, true}, infinity);
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -1809,11 +1814,18 @@ recv_asyncs(Dispatcher, [_ | _] = TransIdList)
 %%-------------------------------------------------------------------------
 
 -spec recv_asyncs(Dispatcher :: dispatcher(),
-                  Timeout :: timeout_milliseconds(),
+                  Timeout :: timeout_milliseconds() | 'undefined',
                   TransIdList :: list(trans_id())) ->
     {'ok', list({ResponseInfo :: response_info(), Response :: response(),
                  TransId :: trans_id()})} |
     {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, undefined, [_ | _] = TransIdList)
+    when is_pid(Dispatcher), is_list(TransIdList) ->
+    gen_server:call(Dispatcher,
+                    {'recv_asyncs',
+                     [{<<>>, <<>>, TransId} ||
+                      TransId <- TransIdList], true}, infinity);
 
 recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),

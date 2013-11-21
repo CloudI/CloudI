@@ -6,6 +6,8 @@
     * Add recv_asyncs to the cloudi_service module and the cloudi module
       for internal services, but not to external services due to the
       memory allocation burden it would create for external services
+    * Fix a few small differences between the cloudi module and the
+      cloudi_service module with recv_async timeout handling of undefined
 
 2013-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
