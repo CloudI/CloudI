@@ -6,6 +6,14 @@ prefix to avoid any conflicts when CloudI shares the Erlang VM with other
 applications that may share common dependencies (erlzmq2 is an exception due
 to its integration and dependencies).
 
+`booster (only booster/backtrace.h)`
+------------------------------------
+`booster/backtrace.h, from booster, from CppCMS`
+- `https://svn.code.sf.net/p/cppcms/code/framework/trunk/booster/`
+- `revision r2237 2013-01-06 12:34:05 -0800 (CppCMS 1.0.4)`
+- `Wed Nov 27 12:15:07 PST 2013`
+- `Boost Software License v1`
+
 `cowboy`
 --------
 `Erlang HTTP Server`

@@ -51,6 +51,7 @@
 #include <ei.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
+#include <booster/backtrace.h>
 #include <string>
 #include <list>
 #include <cstdlib>
@@ -1180,10 +1181,13 @@ static void callback(cloudi_instance_t * p,
         catch (std::exception const & e)
         {
             std::cerr << "exception: " << e.what() << std::endl;
+            std::cerr << booster::trace(e);
         }
         catch (...)
         {
             std::cerr << "exception: (unknown)" << std::endl;
+            booster::backtrace unknown;
+            unknown.trace(std::cerr);
         }
         try
         {
@@ -1229,10 +1233,13 @@ static void callback(cloudi_instance_t * p,
         catch (std::exception const & e)
         {
             std::cerr << "exception: " << e.what() << std::endl;
+            std::cerr << booster::trace(e);
         }
         catch (...)
         {
             std::cerr << "exception: (unknown)" << std::endl;
+            booster::backtrace unknown;
+            unknown.trace(std::cerr);
         }
         try
         {

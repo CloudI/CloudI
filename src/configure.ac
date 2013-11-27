@@ -67,6 +67,8 @@ AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
 AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
     [AC_MSG_ERROR([boost::unordered_map not found])], ,
     $PATHS_NONSYSTEM_INC)
+# c++ booster check
+AX_BOOSTER_BACKTRACE()
 
 # java checks
 AC_SUBST(javadir, ["$datarootdir/java"])
