@@ -1281,6 +1281,18 @@ class API
             };
         };
 
+        // Get the backtrace at the current point of execution
+        // (e.g., when throwing an exception):
+        // #include <boost/exception/all.hpp>
+        // ...
+        // typedef boost::error_info<struct stack, std::string> errinfo_stack;
+        // ...
+        // throw (boost::enable_error_info(e)
+        //            << errinfo_stack(CloudI::API::backtrace()));
+        //
+        // (n.b., requires the --with-cxx-backtrace configuration option)
+        static std::string backtrace();
+
         class invalid_input_exception : public std::exception
         {
             public:

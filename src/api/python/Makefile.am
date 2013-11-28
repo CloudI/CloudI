@@ -16,5 +16,5 @@ libcloudi_py_la_LDFLAGS = $(PYTHON_LDFLAGS) -shared \
 libcloudi_py_la_LIBADD = ../c/libcloudi_la-cloudi.lo \
                          ../c/libcloudi_la-assert.lo \
                          ../c/libcloudi_la-timer.lo \
-                         -lei $(RT_LIB) -lstdc++
+                         -lei $(RT_LIB) $(BACKTRACE_LIB) -lstdc++
 

@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add backward-cpp integration alongside booster/backtrace.h for
+      providing the execution backtrace from the C++ CloudI API
+    * Make CloudI::API::backtrace() functionality require enabling
+      with configure (--with-cxx-backtrace)
+    * No longer catch non-std::exception types within the C/C++ CloudI API
+      (now the service will terminate with abort() after outputting a
+       backtrace, if possible)
+
 2013-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add booster/backtrace.h usage to the C/C++ CloudI API

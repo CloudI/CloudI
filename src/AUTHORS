@@ -7,6 +7,7 @@ Juan Jose Comellas
 Lukas Larsson               <garazdawi [at] gmail (dot) com>
 
 CloudI Integration Dependencies:
+backward-cpp     François-Xavier Bourlet <bombela@gmail.com>
 booster          Artyom Beilis (Tonkikh)
 cowboy           Loïc Hoguin <essen@ninenines.eu>
 ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>

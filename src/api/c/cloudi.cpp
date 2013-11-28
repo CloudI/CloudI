@@ -51,13 +51,102 @@
 #include <ei.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/exception/all.hpp>
+#define BACKTRACE_FRAMES 32
+#define BACKTRACE_FRAME_OFFSET 2
+#if defined(BACKTRACE_USE_BACKWARD)
+#include <backward.hpp>
+#elif defined(BACKTRACE_USE_BOOSTER)
 #include <booster/backtrace.h>
+#endif
 #include <string>
 #include <list>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include "assert.hpp"
+
+extern "C" {
+
+static std::string backtrace_string()
+{
+#if defined(BACKTRACE_USE_BACKWARD)
+    backward::StackTrace st;
+    st.load_here(BACKTRACE_FRAMES);
+    std::ostringstream result;
+    backward::TraceResolver  resolver;
+    result << "trace (most recent call last)";
+    unsigned int const thread_id = st.thread_id();
+    if (thread_id)
+    {
+        result << " in thread " << thread_id << ":" << std::endl;
+    }
+    else
+    {
+        result << ":" << std::endl;
+    }
+    resolver.load_stacktrace(st);
+    for (size_t i = BACKTRACE_FRAME_OFFSET; i < st.size(); ++i)
+    {
+        backward::ResolvedTrace const & trace = resolver.resolve(st[i]);
+        bool indented = true;
+
+        result << "#" <<
+            std::setfill(' ') << std::setw(2) << std::left <<
+            std::dec << (trace.idx - BACKTRACE_FRAME_OFFSET) << " ";
+        if (trace.source.filename.empty())
+        {
+            result <<
+                std::setfill(' ') << std::setw(18) << std::right <<
+                std::hex << trace.addr << " in " <<
+                trace.object_function << std::endl << 
+                "   at " << trace.object_filename << std::endl;
+            indented = false;
+        }
+        for (size_t j = 0; j < trace.inliners.size(); ++j)
+        {
+            if (not indented)
+                result << "    ";
+            backward::ResolvedTrace::SourceLoc const & location =
+                trace.inliners[j];
+            result << 
+                "     (inlined)     "
+                "in " << location.function << std::endl << 
+                "   at " << location.filename << ":" <<
+                std::dec << location.line << std::endl;
+            indented = false;
+        }
+        if (not trace.source.filename.empty())
+        {
+            if (not indented)
+                result << "    ";
+            result <<
+                std::setfill(' ') << std::setw(18) << std::right <<
+                std::hex << trace.addr << " in " <<
+                trace.source.function << std::endl <<
+                "   at " << trace.source.filename << ":" <<
+                std::dec << trace.source.line << std::endl;
+        }
+    }
+    return result.str();
+#elif defined(BACKTRACE_USE_BOOSTER)
+    booster::backtrace b(BACKTRACE_FRAMES);
+    std::ostringstream result;
+    result << "trace (most recent call last):" << std::endl;
+    for (unsigned int i = BACKTRACE_FRAME_OFFSET; i < b.stack_size(); ++i)
+    {
+        result << "#" <<
+            std::setfill(' ') << std::setw(2) << std::left <<
+            std::dec << (i - BACKTRACE_FRAME_OFFSET) << " ";
+        b.trace_line(i, result);
+    }
+    return result.str();
+#else
+    return std::string("");
+#endif
+}
+
+}
 
 namespace
 {
@@ -425,6 +514,12 @@ static void exit_handler()
     std::clog.flush();
 }
 
+static void exception_unknown()
+{
+    std::cerr << backtrace_string();
+    ::abort();
+}
+
 static int poll_request(cloudi_instance_t * p,
                         int timeout,
                         int external);
@@ -472,6 +567,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     p->prefix = 0;
 
     ::atexit(&exit_handler);
+    std::set_terminate(exception_unknown);
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
@@ -1178,16 +1274,13 @@ static void callback(cloudi_instance_t * p,
             assert(false);
             return;
         }
+        catch (boost::exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+        }
         catch (std::exception const & e)
         {
-            std::cerr << "exception: " << e.what() << std::endl;
-            std::cerr << booster::trace(e);
-        }
-        catch (...)
-        {
-            std::cerr << "exception: (unknown)" << std::endl;
-            booster::backtrace unknown;
-            unknown.trace(std::cerr);
+            std::cerr << boost::diagnostic_information(e);
         }
         try
         {
@@ -1230,16 +1323,13 @@ static void callback(cloudi_instance_t * p,
         {
             return;
         }
+        catch (boost::exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+        }
         catch (std::exception const & e)
         {
-            std::cerr << "exception: " << e.what() << std::endl;
-            std::cerr << booster::trace(e);
-        }
-        catch (...)
-        {
-            std::cerr << "exception: (unknown)" << std::endl;
-            booster::backtrace unknown;
-            unknown.trace(std::cerr);
+            std::cerr << boost::diagnostic_information(e);
         }
         try
         {
@@ -1962,6 +2052,11 @@ char const ** API::info_key_value_parse(void const * const message_info,
 void API::info_key_value_destroy(char const ** p) const
 {
     cloudi_info_key_value_destroy(p);
+}
+
+std::string API::backtrace()
+{
+    return backtrace_string();
 }
 
 } // namespace CloudI

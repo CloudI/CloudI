@@ -48,6 +48,7 @@
 #include <string>
 #include <cstring>
 #include "assert.hpp"
+#include <boost/exception/all.hpp>
 
 class ThreadData
 {
@@ -68,6 +69,7 @@ class OutputData
         int m_error;
 };
 
+typedef boost::error_info<struct stack, std::string> errinfo_stack;
 
 class Input
 {
@@ -103,6 +105,7 @@ class Input
             char const * digit_index =
                 reinterpret_cast<char const * const>(&parameters[2]);
 
+throw (boost::enable_error_info(std::runtime_error("fuck")) << errinfo_stack(CloudI::API::backtrace()));
             // perform the work
             timer t;
             std::ostringstream result;

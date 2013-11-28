@@ -30,6 +30,7 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AX_CLOCK_GETTIME
 
+# now in autoconf 2.69
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
 
@@ -57,18 +58,31 @@ AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
          m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
 
 # c++ boost checks
-AX_BOOST_BASE([1.36], ,
-    [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
+AX_BOOST_BASE([1.40], ,
+    [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
 AX_BOOST_THREAD
 AX_BOOST_SYSTEM
+AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
+    [AC_MSG_ERROR([boost::exception not found])], ,
+    $PATHS_NONSYSTEM_INC)
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
     $PATHS_NONSYSTEM_INC)
 AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
     [AC_MSG_ERROR([boost::unordered_map not found])], ,
     $PATHS_NONSYSTEM_INC)
-# c++ booster check
-AX_BOOSTER_BACKTRACE()
+# c++ backtrace check for adding exception information
+AC_ARG_WITH([cxx-backtrace],
+    [AS_HELP_STRING([--with-cxx-backtrace@<:@=ARG@:>@],
+        [the C++ CloudI API will provide the backtrace from
+         CloudI::API::backtrace() (ARG=yes),
+         or will not include backtrace support (ARG=no)
+         @<:@ARG=no@:>@ ])],
+    [
+    if test "x$withval" = "xyes"; then
+        AX_BACKTRACE()
+    fi
+    ])
 
 # java checks
 AC_SUBST(javadir, ["$datarootdir/java"])
