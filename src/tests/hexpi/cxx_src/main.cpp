@@ -48,7 +48,6 @@
 #include <string>
 #include <cstring>
 #include "assert.hpp"
-#include <boost/exception/all.hpp>
 
 class ThreadData
 {
@@ -68,8 +67,6 @@ class OutputData
     private:
         int m_error;
 };
-
-typedef boost::error_info<struct stack, std::string> errinfo_stack;
 
 class Input
 {
