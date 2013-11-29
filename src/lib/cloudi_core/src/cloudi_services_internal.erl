@@ -1781,7 +1781,8 @@ handle_module_info(Request, Module, Dispatcher, ServiceState) ->
     end.
 
 send_async_active_timeout_start(Timeout, TransId, Pid,
-                                #state{send_timeouts = SendTimeouts,
+                                #state{dispatcher = Dispatcher,
+                                       send_timeouts = SendTimeouts,
                                        send_timeout_monitors =
                                            SendTimeoutMonitors,
                                        options = #config_service_options{
@@ -1803,18 +1804,19 @@ send_async_active_timeout_start(Timeout, TransId, Pid,
     State#state{
         send_timeouts = dict:store(TransId,
             {active, Pid,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts),
         send_timeout_monitors = NewSendTimeoutMonitors};
 
 send_async_active_timeout_start(Timeout, TransId, _Pid,
-                                #state{send_timeouts = SendTimeouts} = State)
+                                #state{dispatcher = Dispatcher,
+                                       send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
         send_timeouts = dict:store(TransId,
             {active, undefined,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
 

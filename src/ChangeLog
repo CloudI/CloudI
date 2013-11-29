@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix timer usage within internal services, during the
+      cloudi_service_init/3 function execution
+
 2013-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add backward-cpp integration alongside booster/backtrace.h for
@@ -10,6 +15,8 @@
     * No longer catch non-std::exception types within the C/C++ CloudI API
       (now the service will terminate with abort() after outputting a
        backtrace, if possible)
+    * Add boost::exception integration to provide more information after the
+      abnormal termination of a C++ CloudI API service request
 
 2013-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

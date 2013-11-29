@@ -264,7 +264,8 @@ destination_all(DestRefresh, _, _, _, _, _) ->
     erlang:exit(badarg).
 
 send_async_timeout_start(Timeout, TransId, Pid,
-                         #state{send_timeouts = SendTimeouts,
+                         #state{dispatcher = Dispatcher,
+                                send_timeouts = SendTimeouts,
                                 send_timeout_monitors =
                                     SendTimeoutMonitors,
                                 options = #config_service_options{
@@ -285,23 +286,25 @@ send_async_timeout_start(Timeout, TransId, Pid,
     State#state{
         send_timeouts = dict:store(TransId,
             {passive, Pid,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts),
         send_timeout_monitors = NewSendTimeoutMonitors};
 
 send_async_timeout_start(Timeout, TransId, _Pid,
-                         #state{send_timeouts = SendTimeouts} = State)
+                         #state{dispatcher = Dispatcher,
+                                send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
         send_timeouts = dict:store(TransId,
             {passive, undefined,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
 
 send_sync_timeout_start(Timeout, TransId, Pid, Client,
-                        #state{send_timeouts = SendTimeouts,
+                        #state{dispatcher = Dispatcher,
+                               send_timeouts = SendTimeouts,
                                send_timeout_monitors =
                                    SendTimeoutMonitors,
                                options = #config_service_options{
@@ -322,18 +325,19 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
     State#state{
         send_timeouts = dict:store(TransId,
             {Client, Pid,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
             SendTimeouts),
         send_timeout_monitors = NewSendTimeoutMonitors};
 
 send_sync_timeout_start(Timeout, TransId, _Pid, Client,
-                        #state{send_timeouts = SendTimeouts} = State)
+                        #state{dispatcher = Dispatcher,
+                               send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
         send_timeouts = dict:store(TransId,
             {Client, undefined,
-             erlang:send_after(Timeout, self(),
+             erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
             SendTimeouts)}.
 
@@ -362,7 +366,8 @@ send_timeout_end(TransId, Pid,
                 send_timeout_monitors = NewSendTimeoutMonitors}.
 
 send_timeout_dead(Pid,
-                  #state{send_timeouts = SendTimeouts,
+                  #state{dispatcher = Dispatcher,
+                         send_timeouts = SendTimeouts,
                          send_timeout_monitors =
                              SendTimeoutMonitors} = State)
     when is_pid(Pid) ->
@@ -376,8 +381,9 @@ send_timeout_dead(Pid,
                             false ->
                                 ok;
                             _ ->
-                                self() ! {'cloudi_service_send_async_timeout',
-                                          TransId}
+                                Dispatcher !
+                                    {'cloudi_service_send_async_timeout',
+                                     TransId}
                         end,
                         dict:store(TransId, {Type, undefined, Tref}, D);
                     {ok, {Client, _, Tref}} ->
@@ -385,8 +391,9 @@ send_timeout_dead(Pid,
                             false ->
                                 ok;
                             _ ->
-                                self() ! {'cloudi_service_send_sync_timeout',
-                                          TransId}
+                                Dispatcher !
+                                    {'cloudi_service_send_sync_timeout',
+                                     TransId}
                         end,
                         dict:store(TransId, {Client, undefined, Tref}, D);
                     error ->
@@ -400,11 +407,13 @@ send_timeout_dead(Pid,
                 send_timeout_monitors = dict:erase(Pid, SendTimeoutMonitors)}.
 
 recv_timeout_start(Timeout, Priority, TransId, T,
-                   #state{recv_timeouts = RecvTimeouts,
+                   #state{dispatcher = Dispatcher,
+                          recv_timeouts = RecvTimeouts,
                           queued = Queue} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state{
-        recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, self(),
+        recv_timeouts = dict:store(TransId,
+            erlang:send_after(Timeout, Dispatcher,
                 {'cloudi_service_recv_timeout', Priority, TransId}),
             RecvTimeouts),
         queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
@@ -424,9 +433,10 @@ async_response_timeout_start(_, _, 0, _, State) ->
     State;
 
 async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
-                             #state{async_responses = AsyncResponses} = State)
+                             #state{dispatcher = Dispatcher,
+                                    async_responses = AsyncResponses} = State)
     when is_integer(Timeout), is_binary(TransId) ->
-    erlang:send_after(Timeout, self(),
+    erlang:send_after(Timeout, Dispatcher,
                       {'cloudi_service_recv_async_timeout', TransId}),
     State#state{async_responses = dict:store(TransId,
                                              {ResponseInfo, Response},
