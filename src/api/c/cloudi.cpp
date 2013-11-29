@@ -1291,7 +1291,6 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::return_async_exception const & e)
         {
-            assert(result == cloudi_success);
             return;
         }
         assert(false);
@@ -1340,7 +1339,6 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::return_sync_exception const & e)
         {
-            assert(result == cloudi_success);
             return;
         }
         assert(false);

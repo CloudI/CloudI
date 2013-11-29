@@ -419,12 +419,13 @@ recv_timeout_start(Timeout, Priority, TransId, T,
         queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 duo_recv_timeout_start(Timeout, Priority, TransId, T,
-                       #state_duo{duo_mode_pid = Self,
+                       #state_duo{duo_mode_pid = DuoModePid,
                                   recv_timeouts = RecvTimeouts,
                                   queued = Queue} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state_duo{
-        recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, Self,
+        recv_timeouts = dict:store(TransId,
+            erlang:send_after(Timeout, DuoModePid,
                 {'cloudi_service_recv_timeout', Priority, TransId}),
             RecvTimeouts),
         queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
