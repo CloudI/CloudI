@@ -8,6 +8,8 @@
     * Add done return value for cloudi_service_map_reduce
       cloudi_service_map_reduce_send/2 so that having more workers than
       work does not cause extra processing
+    * Terminate the cloudi_service_map_reduce service after all
+      requests have successfully returned
 
 2013-11-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 

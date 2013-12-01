@@ -637,7 +637,12 @@ handle_info({'cloudi_service_request_failure',
     Reason = if
         Type =:= stop ->
             true = Stack =:= undefined,
-            ?LOG_ERROR("request stop ~p", [Error]),
+            if
+                Error =:= shutdown ->
+                    ?LOG_WARN("request stop shutdown", []);
+                true ->
+                    ?LOG_ERROR("request stop ~p", [Error])
+            end,
             Error;
         true ->
             ?LOG_ERROR("request ~p ~p~n~p", [Type, Error, Stack]),
@@ -650,7 +655,12 @@ handle_info({'cloudi_service_info_failure',
     Reason = if
         Type =:= stop ->
             true = Stack =:= undefined,
-            ?LOG_ERROR("info stop ~p", [Error]),
+            if
+                Error =:= shutdown ->
+                    ?LOG_WARN("info stop shutdown", []);
+                true ->
+                    ?LOG_ERROR("info stop ~p", [Error])
+            end,
             Error;
         true ->
             ?LOG_ERROR("info ~p ~p~n~p", [Type, Error, Stack]),

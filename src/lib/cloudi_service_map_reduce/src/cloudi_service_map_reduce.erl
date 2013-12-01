@@ -201,9 +201,14 @@ cloudi_service_handle_info({return_async_active, _Name, _Pattern,
             end;
         {done, NewMapReduceState} ->
             NewMapRequests = orddict:erase(TransId, MapRequests),
-            {noreply,
-             State#state{map_reduce_state = NewMapReduceState,
-                         map_requests = NewMapRequests}};
+            NewState = State#state{map_reduce_state = NewMapReduceState,
+                                   map_requests = NewMapRequests},
+            case orddict:size(NewMapRequests) of
+                0 ->
+                    {stop, shutdown, NewState};
+                _ ->
+                    {noreply, NewState}
+            end;
         {error, _} = Error ->
             {stop, Error, State}
     end;
