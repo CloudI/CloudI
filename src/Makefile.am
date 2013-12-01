@@ -416,7 +416,7 @@ rebar-directories-compile:
 erlang-applications-scope-add: scoped
 
 scoped: $(top_srcdir)/external/README.markdown
-	rm -f scoped ; echo > scoped
+	rm -f $@ ; echo > $@
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS)
 

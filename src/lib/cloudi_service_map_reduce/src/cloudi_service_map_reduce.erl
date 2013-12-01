@@ -89,6 +89,7 @@
 -callback cloudi_service_map_reduce_send(ModuleReduceState :: any(),
                                          Dispatcher :: pid()) ->
     {'ok', SendArgs :: list(), NewModuleReduceState :: any()} |
+    {'done', NewModuleReduceState :: any()} |
     {'error', Reason :: any()}.
 
 -callback cloudi_service_map_reduce_resend(SendArgs :: list(),
@@ -236,6 +237,8 @@ map_send(Count, MapRequests, Dispatcher, MapReduceModule, MapReduceState) ->
                 {error, _} = Error ->
                     Error
             end;
+        {done, NewMapReduceState} ->
+            {ok, MapRequests, NewMapReduceState};
         {error, _} = Error ->
             Error
     end.

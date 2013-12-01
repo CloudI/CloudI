@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix ProcessCount and ThreadCount when greater than 1.0 so that it
+      uses ceil (previously it was sometimes ceil+1)
+    * Add done return value for cloudi_service_map_reduce
+      cloudi_service_map_reduce_send/2 so that having more workers than
+      work does not cause extra processing
+
 2013-11-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix timer usage within internal services, during the

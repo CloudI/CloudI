@@ -199,7 +199,7 @@ concurrency(I)
     when is_float(I) ->
     if
         I > 1.0 ->
-            erlang:round((I * erlang:system_info(schedulers)) + 0.5);
+            ceil(I * erlang:system_info(schedulers));
         I > 0.0, I < 1.0 ->
             erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
         I == 1.0 ->
@@ -699,4 +699,22 @@ timeout_decr(infinity) ->
     infinity;
 timeout_decr(Timeout) when is_integer(Timeout) ->
     Timeout - ?TIMEOUT_DELTA.
+
+ceil(X) ->
+    T = erlang:trunc(X),
+    if
+        X > T ->
+            T + 1;
+        true ->
+            T
+    end.
+
+%floor(X) ->
+%    T = erlang:trunc(X),
+%    if
+%        X < T ->
+%            T - 1;
+%        true ->
+%            T
+%    end.
 
