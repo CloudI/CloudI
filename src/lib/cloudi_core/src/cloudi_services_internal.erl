@@ -114,12 +114,10 @@
 % used when duo_mode is true
 -record(state_duo,
     {
-        % common elements for cloudi_services_common.hrl
         duo_mode_pid,                  % self()
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         queue_requests = true,         % is the request pid busy?
-        queued = cloudi_x_pqueue4:new(),        % queued incoming messages
-        % unique state elements
+        queued = cloudi_x_pqueue4:new(),     % queued incoming messages
         queued_info = queue:new(),     % queue process messages for service
         module,                        % service module
         service_state,                 % service state
@@ -1517,7 +1515,9 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
                       Module, Dispatcher,
                       #config_service_options{
                           request_timeout_adjustment =
-                              RequestTimeoutAdjustment}, ServiceState) ->
+                              RequestTimeoutAdjustment,
+                          response_timeout_immediate_max =
+                              ResponseTimeoutImmediateMax}, ServiceState) ->
     RequestTimeoutF = if
         RequestTimeoutAdjustment ->
             RequestTimeStart = os:timestamp(),
@@ -1538,13 +1538,33 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
                                              ServiceState,
                                              Dispatcher) of
         {reply, <<>>, NewServiceState} ->
-            {'cloudi_service_request_success', undefined, NewServiceState};
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, NewServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_async', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     NewServiceState}
+            end;
         {reply, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
               <<>>, Response,
               RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
+        {reply, <<>>, <<>>, NewServiceState} ->
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, NewServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_async', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     NewServiceState}
+            end;
         {reply, ResponseInfo, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
@@ -1585,13 +1605,33 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
              stop, Reason, undefined, NewServiceState}
     catch
         throw:{cloudi_service_return, {<<>>}} ->
-            {'cloudi_service_request_success', undefined, ServiceState};
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, ServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_async', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return, {Response}} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
               <<>>, Response,
               RequestTimeoutF(Timeout), TransId, Source},
              ServiceState};
+        throw:{cloudi_service_return, {<<>>, <<>>}} ->
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, ServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_async', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return, {ResponseInfo, Response}} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_async', Name, Pattern,
@@ -1603,21 +1643,49 @@ handle_module_request('send_async', Name, Pattern, RequestInfo, Request,
                 ResponseInfo, Response,
                 Timeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_async' ->
-            {'cloudi_service_request_success',
-             {ReturnType, Name, Pattern,
-              ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Source},
-             ServiceState};
+            if
+                ResponseInfo == <<>>, Response == <<>> ->
+                    if
+                        Timeout =< ResponseTimeoutImmediateMax ->
+                            {'cloudi_service_request_success',
+                             undefined, ServiceState};
+                        true ->
+                            {'cloudi_service_request_success',
+                             {ReturnType, Name, Pattern,
+                              <<>>, <<>>, Timeout, TransId, Source},
+                             ServiceState}
+                    end;
+                true ->
+                    {'cloudi_service_request_success',
+                     {ReturnType, Name, Pattern,
+                      ResponseInfo, Response,
+                      RequestTimeoutF(Timeout), TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
                 NextTimeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_async' ->
-            {'cloudi_service_request_success',
-             {ReturnType, Name, Pattern,
-              ResponseInfo, Response,
-              NextTimeout, TransId, Source},
-             ServiceState};
+            if
+                ResponseInfo == <<>>, Response == <<>> ->
+                    if
+                        NextTimeout =< ResponseTimeoutImmediateMax ->
+                            {'cloudi_service_request_success',
+                             undefined, ServiceState};
+                        true ->
+                            {'cloudi_service_request_success',
+                             {ReturnType, Name, Pattern,
+                              <<>>, <<>>, NextTimeout, TransId, Source},
+                             ServiceState}
+                    end;
+                true ->
+                    {'cloudi_service_request_success',
+                     {ReturnType, Name, Pattern,
+                      ResponseInfo, Response,
+                      NextTimeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
@@ -1648,7 +1716,9 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
                       Module, Dispatcher,
                       #config_service_options{
                           request_timeout_adjustment =
-                              RequestTimeoutAdjustment}, ServiceState) ->
+                              RequestTimeoutAdjustment,
+                          response_timeout_immediate_max =
+                              ResponseTimeoutImmediateMax}, ServiceState) ->
     RequestTimeoutF = if
         RequestTimeoutAdjustment ->
             RequestTimeStart = os:timestamp(),
@@ -1669,13 +1739,33 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
                                              ServiceState,
                                              Dispatcher) of
         {reply, <<>>, NewServiceState} ->
-            {'cloudi_service_request_success', undefined, NewServiceState};
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, NewServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_sync', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     NewServiceState}
+            end;
         {reply, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
               <<>>, Response,
               RequestTimeoutF(Timeout), TransId, Source},
              NewServiceState};
+        {reply, <<>>, <<>>, NewServiceState} ->
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, NewServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_sync', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     NewServiceState}
+            end;
         {reply, ResponseInfo, Response, NewServiceState} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
@@ -1716,13 +1806,33 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
              stop, Reason, undefined, NewServiceState}
     catch
         throw:{cloudi_service_return, {<<>>}} ->
-            {'cloudi_service_request_success', undefined, ServiceState};
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, ServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_sync', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return, {Response}} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
               <<>>, Response,
               RequestTimeoutF(Timeout), TransId, Source},
              ServiceState};
+        throw:{cloudi_service_return, {<<>>, <<>>}} ->
+            if
+                Timeout =< ResponseTimeoutImmediateMax ->
+                    {'cloudi_service_request_success',
+                     undefined, ServiceState};
+                true ->
+                    {'cloudi_service_request_success',
+                     {'cloudi_service_return_sync', Name, Pattern,
+                      <<>>, <<>>, Timeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return, {ResponseInfo, Response}} ->
             {'cloudi_service_request_success',
              {'cloudi_service_return_sync', Name, Pattern,
@@ -1734,21 +1844,49 @@ handle_module_request('send_sync', Name, Pattern, RequestInfo, Request,
                 ResponseInfo, Response,
                 Timeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_sync' ->
-            {'cloudi_service_request_success',
-             {ReturnType, Name, Pattern,
-              ResponseInfo, Response,
-              RequestTimeoutF(Timeout), TransId, Source},
-             ServiceState};
+            if
+                ResponseInfo == <<>>, Response == <<>> ->
+                    if
+                        Timeout =< ResponseTimeoutImmediateMax ->
+                            {'cloudi_service_request_success',
+                             undefined, ServiceState};
+                        true ->
+                            {'cloudi_service_request_success',
+                             {ReturnType, Name, Pattern,
+                              <<>>, <<>>, Timeout, TransId, Source},
+                             ServiceState}
+                    end;
+                true ->
+                    {'cloudi_service_request_success',
+                     {ReturnType, Name, Pattern,
+                      ResponseInfo, Response,
+                      RequestTimeoutF(Timeout), TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_return,
                {ReturnType, Name, Pattern,
                 ResponseInfo, Response,
                 NextTimeout, TransId, Source}}
             when ReturnType =:= 'cloudi_service_return_sync' ->
-            {'cloudi_service_request_success',
-             {ReturnType, Name, Pattern,
-              ResponseInfo, Response,
-              NextTimeout, TransId, Source},
-             ServiceState};
+            if
+                ResponseInfo == <<>>, Response == <<>> ->
+                    if
+                        NextTimeout =< ResponseTimeoutImmediateMax ->
+                            {'cloudi_service_request_success',
+                             undefined, ServiceState};
+                        true ->
+                            {'cloudi_service_request_success',
+                             {ReturnType, Name, Pattern,
+                              <<>>, <<>>, NextTimeout, TransId, Source},
+                             ServiceState}
+                    end;
+                true ->
+                    {'cloudi_service_request_success',
+                     {ReturnType, Name, Pattern,
+                      ResponseInfo, Response,
+                      NextTimeout, TransId, Source},
+                     ServiceState}
+            end;
         throw:{cloudi_service_forward,
                {ForwardType, NextName,
                 NextRequestInfo, NextRequest,
@@ -1829,6 +1967,30 @@ send_async_active_timeout_start(Timeout, TransId, _Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
+
+recv_timeout_start(Timeout, Priority, TransId, T,
+                   #state{recv_timeouts = RecvTimeouts,
+                          queued = Queue,
+                          receiver_pid = ReceiverPid} = State)
+    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
+    State#state{
+        recv_timeouts = dict:store(TransId,
+            erlang:send_after(Timeout, ReceiverPid,
+                {'cloudi_service_recv_timeout', Priority, TransId}),
+            RecvTimeouts),
+        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
+
+duo_recv_timeout_start(Timeout, Priority, TransId, T,
+                       #state_duo{duo_mode_pid = DuoModePid,
+                                  recv_timeouts = RecvTimeouts,
+                                  queued = Queue} = State)
+    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
+    State#state_duo{
+        recv_timeouts = dict:store(TransId,
+            erlang:send_after(Timeout, DuoModePid,
+                {'cloudi_service_recv_timeout', Priority, TransId}),
+            RecvTimeouts),
+        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 recv_asyncs_pick(Results, Consume, AsyncResponses) ->
     recv_asyncs_pick(Results, [], true, false, Consume, AsyncResponses).

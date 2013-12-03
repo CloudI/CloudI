@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the TIMEOUT_MAX constant and the TIMEOUT_MAX_ERLANG constant
+      with configuration validation usage
+    * Add the response_timeout_immediate_max service configuration option
+
 2013-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix ProcessCount and ThreadCount when greater than 1.0 so that it

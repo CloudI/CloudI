@@ -99,7 +99,7 @@
 -type request() :: any().
 -type response_info() :: any().
 -type response() :: any().
--type timeout_milliseconds() :: 0..4294967295 | undefined.
+-type timeout_milliseconds() :: 0..?TIMEOUT_MAX | undefined.
 -type priority() :: ?PRIORITY_HIGH..?PRIORITY_LOW | undefined. % (high)..(low)
 -type trans_id() :: <<_:128>>. % version 1 UUID
 -type pattern_pid() :: {service_name_pattern(), pid()}.
@@ -191,15 +191,19 @@ new(Settings)
            (DestRefresh =:= lazy_newest) orelse
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest),
-    true = is_integer(DestRefreshStart) and
-           (DestRefreshStart >= 0),
-    true = is_integer(DestRefreshDelay) and
-           (DestRefreshDelay > ?TIMEOUT_DELTA),
-    true = is_integer(DefaultTimeoutAsync) and
-           (DefaultTimeoutAsync > ?TIMEOUT_DELTA),
-    true = is_integer(DefaultTimeoutSync) and
-           (DefaultTimeoutSync > ?TIMEOUT_DELTA),
-    true = (PriorityDefault >= ?PRIORITY_HIGH) and
+    true = is_integer(DestRefreshStart) andalso
+           (DestRefreshStart >= 0) andalso % immediate cache is possible here
+           (DestRefreshStart =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(DestRefreshDelay) andalso
+           (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
+           (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(DefaultTimeoutAsync) andalso
+           (DefaultTimeoutAsync > ?TIMEOUT_DELTA) andalso
+           (DefaultTimeoutAsync =< ?TIMEOUT_MAX),
+    true = is_integer(DefaultTimeoutSync) andalso
+           (DefaultTimeoutSync > ?TIMEOUT_DELTA) andalso
+           (DefaultTimeoutSync =< ?TIMEOUT_MAX),
+    true = (PriorityDefault >= ?PRIORITY_HIGH) andalso
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
     ConfiguredScope = ?SCOPE_ASSIGN(Scope),
@@ -301,7 +305,7 @@ get_pid(Dispatcher, Name, Timeout)
 
 get_pid(#cloudi_context{} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0 ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
@@ -356,7 +360,7 @@ get_pids(Dispatcher, Name, Timeout)
 
 get_pids(#cloudi_context{} = Context, Name, Timeout)
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0 ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
@@ -501,7 +505,7 @@ send_async(#cloudi_context{} = Context,
            Name, RequestInfo, Request,
            Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0 ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
@@ -528,7 +532,7 @@ send_async(#cloudi_context{receiver = Receiver,
            Name, RequestInfo, Request,
            Timeout, Priority, {Pattern, Pid})
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
@@ -767,7 +771,7 @@ send_sync(#cloudi_context{} = Context,
           Name, RequestInfo, Request,
           Timeout, Priority, undefined)
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0 ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
@@ -794,7 +798,7 @@ send_sync(#cloudi_context{receiver = Receiver,
           Name, RequestInfo, Request,
           Timeout, Priority, {Pattern, Pid})
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     TransId = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
@@ -883,7 +887,7 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
 mcast_async(#cloudi_context{} = Context,
             Name, RequestInfo, Request, Timeout, Priority)
     when is_list(Name), is_integer(Timeout),
-         Timeout >= 0, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -1106,7 +1110,8 @@ recv_asyncs(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
 
 recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
             Timeout, TransIdList)
-    when is_integer(Timeout), is_list(TransIdList), Timeout >= 0 ->
+    when is_integer(Timeout), is_list(TransIdList),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     if
         self() /= Receiver ->
             ?LOG_ERROR("recv_asyncs called outside of context", []),

@@ -119,17 +119,6 @@
         options                        % #config_service_options{}
     }).
 
-% unused, but necessary for cloudi_services_common.hrl
--record(state_duo,
-    {
-        % common elements for cloudi_services_common.hrl
-        duo_mode_pid,                  % unused
-        recv_timeouts,                 % unused
-        queue_requests,                % unused
-        queued                         % unused
-        % unique state elements
-    }).
-
 -include("cloudi_services_common.hrl").
 
 %%%------------------------------------------------------------------------
@@ -449,18 +438,34 @@ init([Protocol, SocketPath,
 
 'HANDLE'({'return_async', Name, Pattern, ResponseInfo, Response,
           Timeout, TransId, Source},
-         State) ->
-    Source ! {'cloudi_service_return_async', Name, Pattern,
-              ResponseInfo, Response,
-              Timeout, TransId, Source},
+         #state{options = #config_service_options{
+                    response_timeout_immediate_max =
+                        ResponseTimeoutImmediateMax}} = State) ->
+    if
+        ResponseInfo == <<>>, Response == <<>>,
+        Timeout =< ResponseTimeoutImmediateMax ->
+            ok;
+        true ->
+            Source ! {'cloudi_service_return_async', Name, Pattern,
+                      ResponseInfo, Response,
+                      Timeout, TransId, Source}
+    end,
     {next_state, 'HANDLE', process_queue(State)};
 
 'HANDLE'({'return_sync', Name, Pattern, ResponseInfo, Response,
           Timeout, TransId, Source},
-         State) ->
-    Source ! {'cloudi_service_return_sync', Name, Pattern,
-              ResponseInfo, Response,
-              Timeout, TransId, Source},
+         #state{options = #config_service_options{
+                    response_timeout_immediate_max =
+                        ResponseTimeoutImmediateMax}} = State) ->
+    if
+        ResponseInfo == <<>>, Response == <<>>,
+        Timeout =< ResponseTimeoutImmediateMax ->
+            ok;
+        true ->
+            Source ! {'cloudi_service_return_sync', Name, Pattern,
+                      ResponseInfo, Response,
+                      Timeout, TransId, Source}
+    end,
     {next_state, 'HANDLE', process_queue(State)};
 
 'HANDLE'('keepalive', State) ->
@@ -1187,6 +1192,18 @@ send(Data, #state{protocol = Protocol,
         Protocol =:= udp ->
             ok = gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
+
+recv_timeout_start(Timeout, Priority, TransId, T,
+                   #state{dispatcher = Dispatcher,
+                          recv_timeouts = RecvTimeouts,
+                          queued = Queue} = State)
+    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
+    State#state{
+        recv_timeouts = dict:store(TransId,
+            erlang:send_after(Timeout, Dispatcher,
+                {'cloudi_service_recv_timeout', Priority, TransId}),
+            RecvTimeouts),
+        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 process_queue(#state{recv_timeouts = RecvTimeouts,
                      queue_requests = true,

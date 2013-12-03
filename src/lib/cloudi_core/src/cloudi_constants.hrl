@@ -97,3 +97,10 @@
                                     erlang:atom_to_list(Scope))
         end).
 
+% maximum timeout value for erlang:send_after/3 and gen_server:call
+-define(TIMEOUT_MAX_ERLANG, 4294967295).
+% maximum timeout value for a service request
+% (limitation for internal service requests, external service requests
+%  should have a maximum of TIMEOUT_MAX_ERLANG)
+-define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
+

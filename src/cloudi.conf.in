@@ -303,7 +303,15 @@
         cloudi_service_http_req,
         [],
         none,
-        5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
+        4294967195, 4294967195, 4294967195, % test limits
+        [api], undefined, 1, 5, 300, []},
+    {internal,
+        "/tests/http_req/",
+        cloudi_service_http_req,
+        [],
+        none,
+        101, 101, 101, % test limits
+        [api], undefined, 1, 5, 300, []},
     {internal,
         "/tests/http_req/",
         cloudi_service_filesystem,

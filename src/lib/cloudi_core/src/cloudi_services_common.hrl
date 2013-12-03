@@ -47,8 +47,7 @@
 % cloudi_services_external.erl may be used (to avoid GC delays)
 
 -compile({nowarn_unused_function,
-          [{duo_recv_timeout_start, 5},
-           {recv_async_select_random, 1},
+          [{recv_async_select_random, 1},
            {recv_async_select_oldest, 1}]}).
 
 -define(CATCH_EXIT(F),
@@ -405,30 +404,6 @@ send_timeout_dead(Pid,
     end,
     State#state{send_timeouts = NewSendTimeouts,
                 send_timeout_monitors = dict:erase(Pid, SendTimeoutMonitors)}.
-
-recv_timeout_start(Timeout, Priority, TransId, T,
-                   #state{dispatcher = Dispatcher,
-                          recv_timeouts = RecvTimeouts,
-                          queued = Queue} = State)
-    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
-    State#state{
-        recv_timeouts = dict:store(TransId,
-            erlang:send_after(Timeout, Dispatcher,
-                {'cloudi_service_recv_timeout', Priority, TransId}),
-            RecvTimeouts),
-        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
-
-duo_recv_timeout_start(Timeout, Priority, TransId, T,
-                       #state_duo{duo_mode_pid = DuoModePid,
-                                  recv_timeouts = RecvTimeouts,
-                                  queued = Queue} = State)
-    when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
-    State#state_duo{
-        recv_timeouts = dict:store(TransId,
-            erlang:send_after(Timeout, DuoModePid,
-                {'cloudi_service_recv_timeout', Priority, TransId}),
-            RecvTimeouts),
-        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;
