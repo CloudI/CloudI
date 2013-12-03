@@ -277,6 +277,9 @@ websocket_init(_Transport, Req0,
         Method =:= <<"GET">> ->
             NameIncoming ++ "/get"
     end,
+    % can not turn-off the /websocket suffix, since it would otherwise
+    % cause a conflict with service requests coming from HTTP into CloudI
+    % when UseMethodSuffix == false
     NameWebsocket = erlang:binary_to_list(PathRaw) ++ "/websocket",
     case lists:prefix(Prefix, NameWebsocket) of
         true ->

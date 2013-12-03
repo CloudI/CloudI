@@ -86,6 +86,7 @@
          recv_asyncs/3,
          timeout_async/1,
          timeout_sync/1,
+         timeout_max/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1]).
 
@@ -1153,6 +1154,22 @@ timeout_sync(Dispatcher)
 
 timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
     DefaultTimeoutSync.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% === Maximum possible service request timeout (in milliseconds).===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec timeout_max(Context :: context() | cloudi_service:dispatcher()) ->
+    TimeoutMax :: cloudi_service_api:timeout_milliseconds().
+
+timeout_max(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:timeout_max(Dispatcher);
+
+timeout_max(#cloudi_context{}) ->
+    ?TIMEOUT_MAX.
 
 %%-------------------------------------------------------------------------
 %% @doc

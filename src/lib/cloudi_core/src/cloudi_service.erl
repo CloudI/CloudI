@@ -155,6 +155,7 @@
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
+         timeout_max/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
          service_name_parse/2,
@@ -1900,6 +1901,19 @@ timeout_async(Dispatcher) ->
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Maximum possible service request timeout (in milliseconds).===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec timeout_max(Dispatcher :: dispatcher()) ->
+    TimeoutMax :: cloudi_service_api:timeout_milliseconds().
+
+timeout_max(Dispatcher)
+    when is_pid(Dispatcher) ->
+    ?TIMEOUT_MAX.
 
 %%-------------------------------------------------------------------------
 %% @doc
