@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * cloudi_service_http_cowboy support added for outgoing (CloudI->websocket)
+      service requests iolist usage
+    * cloudi_service_http_cowboy log statement for when outgoing
+      service requests don't match the output configuration
+
 2013-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:timeout_max/1 and cloudi:timeout_max/1 functions

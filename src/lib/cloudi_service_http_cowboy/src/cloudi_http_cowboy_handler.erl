@@ -453,10 +453,12 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
                                  response_pending = false} = WebSocketState
                              } = State)
     when (OutputType =:= internal orelse OutputType =:= external orelse
-          OutputType =:= binary), is_binary(RequestBinary),
+          OutputType =:= binary),
+         (is_binary(RequestBinary) orelse is_list(RequestBinary)),
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync') ->
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    % RequestBinary may be an iolist
     {reply, {binary, RequestBinary}, Req,
      State#cowboy_state{websocket_state = WebSocketState#websocket_state{
                             response_pending = true,
@@ -476,7 +478,8 @@ websocket_info({Type, _, _, _, Request,
     when (((OutputType =:= list) andalso
            (is_list(Request) orelse is_binary(Request))) or
           ((OutputType =:= internal orelse OutputType =:= external orelse
-            OutputType =:= binary) andalso is_binary(Request))),
+            OutputType =:= binary) andalso
+           (is_binary(Request) orelse is_list(Request)))),
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync'),
          (Timeout > 0) ->
@@ -488,10 +491,13 @@ websocket_info({Type, _, _, _, Request,
          queued = cloudi_x_pqueue4:in(T, Priority, Queue)}
      }};
 
-websocket_info({Type, _, _, _, _, _, _, _, _}, Req,
-               #cowboy_state{use_websockets = true} = State)
+websocket_info({Type, Name, _, _, _, _, _, TransId, _}, Req,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
+    ?LOG_ERROR("output ~p config ignoring service request to ~s (~s)",
+               [OutputType, Name, cloudi_x_uuid:uuid_to_string(TransId)]),
     {ok, Req, State};
 
 websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
