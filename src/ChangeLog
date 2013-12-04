@@ -7,6 +7,8 @@
       service requests iolist usage
     * cloudi_service_http_cowboy log statement for when outgoing
       service requests don't match the output configuration
+    * Add "immediate" timeout value usage to the cloudi module and the
+      cloudi_service module to avoid blocking on a service name lookup
 
 2013-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 

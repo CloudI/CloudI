@@ -178,6 +178,7 @@
 -type request() :: cloudi:request().
 -type response_info() :: cloudi:response_info().
 -type response() :: cloudi:response().
+-type timeout_value_milliseconds() :: cloudi:timeout_value_milliseconds().
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 -type priority() :: cloudi:priority().
 -type trans_id() :: cloudi:trans_id(). % version 1 UUID
@@ -187,6 +188,7 @@
               service_name_pattern/0,
               request_info/0, request/0,
               response_info/0, response/0,
+              timeout_value_milliseconds/0,
               timeout_milliseconds/0,
               priority/0,
               trans_id/0,
@@ -214,7 +216,7 @@
                                         Pattern :: service_name_pattern(),
                                         RequestInfo :: request_info(),
                                         Request :: request(),
-                                        Timeout :: timeout_milliseconds(),
+                                        Timeout :: timeout_value_milliseconds(),
                                         Priority :: priority(),
                                         TransId :: trans_id(),
                                         Pid :: pid(),
@@ -228,7 +230,7 @@
      NewState :: any()} |
     {'forward', NextName :: service_name(),
      NextRequestInfo :: request_info(), NextRequest :: request(),
-     NextTimeout :: timeout_milliseconds(), NextPriority :: priority(),
+     NextTimeout :: timeout_value_milliseconds(), NextPriority :: priority(),
      NewState :: any()} |
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
@@ -323,13 +325,16 @@ get_pid(Dispatcher, Name)
 
 -spec get_pid(Dispatcher :: dispatcher(),
               Name :: service_name(),
-              Timeout :: timeout_milliseconds() | 'undefined') ->
+              Timeout :: timeout_milliseconds()) ->
     {'ok', PatternPid :: pattern_pid()} |
     {'error', Reason :: atom()}.
 
 get_pid(Dispatcher, Name, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'get_pid', Name}, infinity);
+
+get_pid(Dispatcher, Name, immediate) ->
+    get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -361,13 +366,16 @@ get_pids(Dispatcher, Name)
 
 -spec get_pids(Dispatcher :: dispatcher(),
                Name :: service_name(),
-               Timeout :: timeout_milliseconds() | 'undefined') ->
+               Timeout :: timeout_milliseconds()) ->
     {'ok', PatternPids :: list(pattern_pid())} |
     {'error', Reason :: atom()}.
 
 get_pids(Dispatcher, Name, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'get_pids', Name}, infinity);
+
+get_pids(Dispatcher, Name, immediate) ->
+    get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
 
 get_pids(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -402,7 +410,7 @@ send_async(Dispatcher, Name, Request)
 -spec send_async(Dispatcher :: dispatcher(),
                  Name :: service_name(),
                  Request :: request(),
-                 Timeout :: timeout_milliseconds() | 'undefined') ->
+                 Timeout :: timeout_milliseconds()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -410,6 +418,9 @@ send_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
+
+send_async(Dispatcher, Name, Request, immediate) ->
+    send_async(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
 
 send_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -428,7 +439,7 @@ send_async(Dispatcher, Name, Request, Timeout)
 -spec send_async(Dispatcher :: dispatcher(),
                  Name :: service_name(),
                  Request :: request(),
-                 Timeout :: timeout_milliseconds() | 'undefined',
+                 Timeout :: timeout_milliseconds(),
                  PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -442,6 +453,10 @@ send_async(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
+
+send_async(Dispatcher, Name, Request, immediate, PatternPid) ->
+    send_async(Dispatcher, Name, Request,
+               ?SEND_ASYNC_INTERVAL - 1, PatternPid);
 
 send_async(Dispatcher, Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -469,8 +484,8 @@ send_async(Dispatcher, Name, Request, Timeout, PatternPid)
                  Name :: service_name(),
                  RequestInfo :: request_info(),
                  Request :: request(),
-                 Timeout :: timeout_milliseconds() | 'undefined',
-                 Priority :: priority() | 'undefined') ->
+                 Timeout :: timeout_milliseconds(),
+                 Priority :: priority()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -488,6 +503,11 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  undefined, Priority}, infinity);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           immediate, Priority) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
+               ?SEND_ASYNC_INTERVAL - 1, Priority);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, undefined)
@@ -520,8 +540,8 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                  Name :: service_name(),
                  RequestInfo :: request_info(),
                  Request :: request(),
-                 Timeout :: timeout_milliseconds() | 'undefined',
-                 Priority :: priority() | 'undefined',
+                 Timeout :: timeout_milliseconds(),
+                 Priority :: priority(),
                  PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -548,6 +568,11 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  undefined, Priority}, infinity);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           immediate, Priority, PatternPid) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
+               ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            undefined, Priority, PatternPid)
@@ -640,7 +665,7 @@ send_async_active(Dispatcher, Name, Request)
 -spec send_async_active(Dispatcher :: dispatcher(),
                         Name :: service_name(),
                         Request :: request(),
-                        Timeout :: timeout_milliseconds() | 'undefined') ->
+                        Timeout :: timeout_milliseconds()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -648,6 +673,9 @@ send_async_active(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
+
+send_async_active(Dispatcher, Name, Request, immediate) ->
+    send_async_active(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
 
 send_async_active(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -672,7 +700,7 @@ send_async_active(Dispatcher, Name, Request, Timeout)
 -spec send_async_active(Dispatcher :: dispatcher(),
                         Name :: service_name(),
                         Request :: request(),
-                        Timeout :: timeout_milliseconds() | 'undefined',
+                        Timeout :: timeout_milliseconds(),
                         PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -686,6 +714,10 @@ send_async_active(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
+
+send_async_active(Dispatcher, Name, Request, immediate, PatternPid) ->
+    send_async_active(Dispatcher, Name, Request,
+                      ?SEND_ASYNC_INTERVAL - 1, PatternPid);
 
 send_async_active(Dispatcher, Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -719,8 +751,8 @@ send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
                         Name :: service_name(),
                         RequestInfo :: request_info(),
                         Request :: request(),
-                        Timeout :: timeout_milliseconds() | 'undefined',
-                        Priority :: priority() | 'undefined') ->
+                        Timeout :: timeout_milliseconds(),
+                        Priority :: priority()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -740,6 +772,11 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  immediate, Priority) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?SEND_ASYNC_INTERVAL - 1, Priority);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   Timeout, undefined)
@@ -778,8 +815,8 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                         Name :: service_name(),
                         RequestInfo :: request_info(),
                         Request :: request(),
-                        Timeout :: timeout_milliseconds() | 'undefined',
-                        Priority :: priority() | 'undefined',
+                        Timeout :: timeout_milliseconds(),
+                        Priority :: priority(),
                         PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -816,6 +853,11 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority, PatternPid}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  immediate, Priority, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
 
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   Timeout, undefined, undefined)
@@ -888,7 +930,7 @@ send_async_passive(Dispatcher, Name, Request) ->
 -spec send_async_passive(Dispatcher :: dispatcher(),
                          Name :: service_name(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined') ->
+                         Timeout :: timeout_milliseconds()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -906,7 +948,7 @@ send_async_passive(Dispatcher, Name, Request, Timeout) ->
 -spec send_async_passive(Dispatcher :: dispatcher(),
                          Name :: service_name(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined',
+                         Timeout :: timeout_milliseconds(),
                          PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -926,8 +968,8 @@ send_async_passive(Dispatcher, Name, Request, Timeout, PatternPid) ->
                          Name :: service_name(),
                          RequestInfo :: request_info(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined',
-                         Priority :: priority() | 'undefined') ->
+                         Timeout :: timeout_milliseconds(),
+                         Priority :: priority()) ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
@@ -948,8 +990,8 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                          Name :: service_name(),
                          RequestInfo :: request_info(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined',
-                         Priority :: priority() | 'undefined',
+                         Timeout :: timeout_milliseconds(),
+                         Priority :: priority(),
                          PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', TransId :: trans_id()} |
     {'error', Reason :: atom()}.
@@ -986,7 +1028,7 @@ send_sync(Dispatcher, Name, Request)
 -spec send_sync(Dispatcher :: dispatcher(),
                 Name :: service_name(),
                 Request :: request(),
-                Timeout :: timeout_milliseconds() | 'undefined') ->
+                Timeout :: timeout_milliseconds()) ->
     {'ok', ResponseInfo :: response_info(), Response :: response()} |
     {'ok', Response :: response()} |
     {'error', Reason :: atom()}.
@@ -995,6 +1037,9 @@ send_sync(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
+
+send_sync(Dispatcher, Name, Request, immediate) ->
+    send_sync(Dispatcher, Name, Request, ?SEND_SYNC_INTERVAL - 1);
 
 send_sync(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1013,7 +1058,7 @@ send_sync(Dispatcher, Name, Request, Timeout)
 -spec send_sync(Dispatcher :: dispatcher(),
                 Name :: service_name(),
                 Request :: request(),
-                Timeout :: timeout_milliseconds() | 'undefined',
+                Timeout :: timeout_milliseconds(),
                 PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', ResponseInfo :: response_info(), Response :: response()} |
     {'ok', Response :: response()} |
@@ -1028,6 +1073,10 @@ send_sync(Dispatcher, Name, Request, undefined, PatternPid)
     when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
+
+send_sync(Dispatcher, Name, Request, immediate, PatternPid) ->
+    send_sync(Dispatcher, Name, Request,
+              ?SEND_SYNC_INTERVAL - 1, PatternPid);
 
 send_sync(Dispatcher, Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1055,8 +1104,8 @@ send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
                 Name :: service_name(),
                 RequestInfo :: request_info(),
                 Request :: request(),
-                Timeout :: timeout_milliseconds() | 'undefined', 
-                Priority :: priority() | 'undefined') ->
+                Timeout :: timeout_milliseconds(),
+                Priority :: priority()) ->
     {'ok', ResponseInfo :: response_info(), Response :: response()} |
     {'ok', Response :: response()} |
     {'error', Reason :: atom()}.
@@ -1075,6 +1124,11 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  undefined, Priority}, infinity);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          immediate, Priority) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
+              ?SEND_SYNC_INTERVAL - 1, Priority);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, undefined)
@@ -1107,8 +1161,8 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                 Name :: service_name(),
                 RequestInfo :: request_info(),
                 Request :: request(),
-                Timeout :: timeout_milliseconds() | 'undefined',
-                Priority :: priority() | 'undefined',
+                Timeout :: timeout_milliseconds(),
+                Priority :: priority(),
                 PatternPid :: pattern_pid() | 'undefined') ->
     {'ok', ResponseInfo :: response_info(), Response :: response()} |
     {'ok', Response :: response()} |
@@ -1146,6 +1200,11 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                  RequestInfo, Request,
                                  undefined,
                                  Priority, PatternPid}, infinity);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          immediate, Priority, PatternPid) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
+              ?SEND_SYNC_INTERVAL - 1, Priority, PatternPid);
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, undefined, undefined)
@@ -1220,7 +1279,7 @@ mcast_async(Dispatcher, Name, Request)
 -spec mcast_async(Dispatcher :: dispatcher(),
                   Name :: service_name(),
                   Request :: request(),
-                  Timeout :: timeout_milliseconds() | 'undefined') ->
+                  Timeout :: timeout_milliseconds()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1228,6 +1287,9 @@ mcast_async(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
+
+mcast_async(Dispatcher, Name, Request, immediate) ->
+    mcast_async(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
 
 mcast_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1249,8 +1311,8 @@ mcast_async(Dispatcher, Name, Request, Timeout)
                   Name :: service_name(),
                   RequestInfo :: request_info(),
                   Request :: request(),
-                  Timeout :: timeout_milliseconds() | 'undefined',
-                  Priority :: priority() | 'undefined') ->
+                  Timeout :: timeout_milliseconds(),
+                  Priority :: priority()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1268,6 +1330,10 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
                                  RequestInfo, Request,
                                  undefined,
                                  Priority}, infinity);
+
+mcast_async(Dispatcher, Name, RequestInfo, Request, immediate, Priority) ->
+    mcast_async(Dispatcher, Name, RequestInfo, Request,
+                ?MCAST_ASYNC_INTERVAL - 1, Priority);
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1330,7 +1396,7 @@ mcast_async_active(Dispatcher, Name, Request)
 -spec mcast_async_active(Dispatcher :: dispatcher(),
                          Name :: service_name(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined') ->
+                         Timeout :: timeout_milliseconds()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1338,6 +1404,9 @@ mcast_async_active(Dispatcher, Name, Request, undefined)
     when is_pid(Dispatcher), is_list(Name) ->
     gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
+
+mcast_async_active(Dispatcher, Name, Request, immediate) ->
+    mcast_async_active(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
 
 mcast_async_active(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1365,8 +1434,8 @@ mcast_async_active(Dispatcher, Name, Request, Timeout)
                          Name :: service_name(),
                          RequestInfo :: request_info(),
                          Request :: request(),
-                         Timeout :: timeout_milliseconds() | 'undefined',
-                         Priority :: priority() | 'undefined') ->
+                         Timeout :: timeout_milliseconds(),
+                         Priority :: priority()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1384,6 +1453,11 @@ mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
                                  RequestInfo, Request,
                                  undefined,
                                  Priority}, infinity);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                   immediate, Priority) ->
+    mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                       ?MCAST_ASYNC_INTERVAL - 1, Priority);
 
 mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
@@ -1432,7 +1506,7 @@ mcast_async_passive(Dispatcher, Name, Request) ->
 -spec mcast_async_passive(Dispatcher :: dispatcher(),
                           Name :: service_name(),
                           Request :: request(),
-                          Timeout :: timeout_milliseconds() | 'undefined') ->
+                          Timeout :: timeout_milliseconds()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1451,8 +1525,8 @@ mcast_async_passive(Dispatcher, Name, Request, Timeout) ->
                           Name :: service_name(),
                           RequestInfo :: request_info(),
                           Request :: request(),
-                          Timeout :: timeout_milliseconds() | 'undefined',
-                          Priority :: priority() | 'undefined') ->
+                          Timeout :: timeout_milliseconds(),
+                          Priority :: priority()) ->
     {'ok', TransIdList :: list(trans_id())} |
     {'error', Reason :: atom()}.
 
@@ -1471,7 +1545,7 @@ mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
               Name :: service_name(),
               RequestInfo :: request_info(),
               Request :: request(),
-              Timeout :: timeout_milliseconds(),
+              Timeout :: timeout_value_milliseconds(),
               Priority :: priority(),
               TransId :: trans_id(),
               Pid :: pid()) ->
@@ -1497,7 +1571,7 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Name :: service_name(),
                     RequestInfo :: request_info(),
                     Request :: request(),
-                    Timeout :: timeout_milliseconds(),
+                    Timeout :: timeout_value_milliseconds(),
                     Priority :: priority(),
                     TransId :: trans_id(),
                     Pid :: pid()) ->
@@ -1507,7 +1581,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
               Timeout, Priority, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid),
-         Timeout > 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     erlang:throw({cloudi_service_forward,
                   {'cloudi_service_forward_async_retry', Name,
@@ -1524,7 +1598,7 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Name :: service_name(),
                    RequestInfo :: request_info(),
                    Request :: request(),
-                   Timeout :: timeout_milliseconds(),
+                   Timeout :: timeout_value_milliseconds(),
                    Priority :: priority(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
@@ -1534,7 +1608,7 @@ forward_sync(Dispatcher, Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid)
     when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid),
-         Timeout > 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     erlang:throw({cloudi_service_forward,
                   {'cloudi_service_forward_sync_retry', Name,
@@ -1582,7 +1656,7 @@ return(Dispatcher, ResponseInfo, Response)
              Pattern :: service_name_pattern(),
              ResponseInfo :: response_info(),
              Response :: response(),
-             Timeout :: timeout_milliseconds(),
+             Timeout :: timeout_value_milliseconds(),
              TransId :: trans_id(),
              Pid :: pid()) ->
     no_return().
@@ -1608,7 +1682,7 @@ return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
                    Pattern :: service_name_pattern(),
                    ResponseInfo :: response_info(),
                    Response :: response(),
-                   Timeout :: timeout_milliseconds(),
+                   Timeout :: timeout_value_milliseconds(),
                    TransId :: trans_id(),
                    Pid :: pid()) ->
     no_return().
@@ -1634,7 +1708,7 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   Pattern :: service_name_pattern(),
                   ResponseInfo :: response_info(),
                   Response :: response(),
-                  Timeout :: timeout_milliseconds(),
+                  Timeout :: timeout_value_milliseconds(),
                   TransId :: trans_id(),
                   Pid :: pid()) ->
     no_return().
@@ -1666,7 +1740,7 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
                      Pattern :: service_name_pattern(),
                      ResponseInfo :: response_info(),
                      Response :: response(),
-                     Timeout :: timeout_milliseconds(),
+                     Timeout :: timeout_value_milliseconds(),
                      TransId :: trans_id(),
                      Pid :: pid()) -> 'ok'.
 
@@ -1726,6 +1800,14 @@ recv_async(Dispatcher, TransId)
     gen_server:call(Dispatcher,
                     {'recv_async', TransId, true}, infinity);
 
+recv_async(Dispatcher, undefined)
+    when is_pid(Dispatcher) ->
+    gen_server:call(Dispatcher,
+                    {'recv_async', <<0:128>>, true}, infinity);
+
+recv_async(Dispatcher, immediate) ->
+    recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1);
+
 recv_async(Dispatcher, Timeout)
     when is_pid(Dispatcher), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
@@ -1742,7 +1824,7 @@ recv_async(Dispatcher, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec recv_async(Dispatcher :: dispatcher(),
-                 timeout_milliseconds() | 'undefined' | trans_id(),
+                 timeout_milliseconds() | trans_id(),
                  trans_id() | boolean()) ->
     {'ok', ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
@@ -1752,6 +1834,9 @@ recv_async(Dispatcher, undefined, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
     gen_server:call(Dispatcher,
                     {'recv_async', TransId, true}, infinity);
+
+recv_async(Dispatcher, immediate, TransId) ->
+    recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransId);
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -1786,6 +1871,14 @@ recv_async(Dispatcher, TransId, Consume)
      TransId :: trans_id()} |
     {'error', Reason :: atom()}.
 
+recv_async(Dispatcher, undefined, TransId, Consume)
+    when is_pid(Dispatcher), is_binary(TransId), is_boolean(Consume) ->
+    gen_server:call(Dispatcher,
+                    {'recv_async', TransId, Consume}, infinity);
+
+recv_async(Dispatcher, immediate, TransId, Consume) ->
+    recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransId, Consume);
+
 recv_async(Dispatcher, Timeout, TransId, Consume)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
          is_boolean(Consume), Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
@@ -1819,7 +1912,7 @@ recv_asyncs(Dispatcher, [_ | _] = TransIdList)
 %%-------------------------------------------------------------------------
 
 -spec recv_asyncs(Dispatcher :: dispatcher(),
-                  Timeout :: timeout_milliseconds() | 'undefined',
+                  Timeout :: timeout_milliseconds(),
                   TransIdList :: list(trans_id())) ->
     {'ok', list({ResponseInfo :: response_info(), Response :: response(),
                  TransId :: trans_id()})} |
@@ -1831,6 +1924,9 @@ recv_asyncs(Dispatcher, undefined, [_ | _] = TransIdList)
                     {'recv_asyncs',
                      [{<<>>, <<>>, TransId} ||
                       TransId <- TransIdList], true}, infinity);
+
+recv_asyncs(Dispatcher, immediate, TransIdList) ->
+    recv_asyncs(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransIdList);
 
 recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
@@ -1854,6 +1950,9 @@ recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
     {'ok', list({ResponseInfo :: response_info(), Response :: response(),
                  TransId :: trans_id()})} |
     {'error', Reason :: atom()}.
+
+recv_asyncs(Dispatcher, immediate, TransIdList, Consume) ->
+    recv_asyncs(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransIdList, Consume);
 
 recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList, Consume)
     when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
@@ -2031,6 +2130,7 @@ request_info_key_value_parse(RequestInfo)
 %% ===Initialize the internal service.===
 %% Create the internal service state.  Do any initial service subscriptions
 %% necessary.  Send service requests, if required for service initialization.
+%% State implicitly becomes 'undefined' if not provided to 'stop'.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2057,7 +2157,8 @@ request_info_key_value_parse(RequestInfo)
                                              Pattern :: service_name_pattern(),
                                              RequestInfo :: request_info(),
                                              Request :: request(),
-                                             Timeout :: timeout_milliseconds(),
+                                             Timeout ::
+                                                timeout_value_milliseconds(),
                                              Priority :: priority(),
                                              TransId :: trans_id(),
                                              Pid :: pid(),
@@ -2071,7 +2172,7 @@ request_info_key_value_parse(RequestInfo)
      NewState :: any()} |
     {'forward', NextName :: service_name(),
      NextRequestInfo :: request_info(), NextRequest :: request(),
-     NextTimeout :: timeout_milliseconds(), NextPriority :: priority(),
+     NextTimeout :: timeout_value_milliseconds(), NextPriority :: priority(),
      NewState :: any()} |
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
