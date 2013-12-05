@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -144,7 +144,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_boolean(NoDelay),
     true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
     true = (WebsocketTimeout =:= infinity) orelse
-           (is_integer(WebsocketTimeout) andalso WebsocketTimeout > 0),
+           (is_integer(WebsocketTimeout) andalso (WebsocketTimeout > 0)),
     true = is_boolean(Compress),
     true = is_integer(MaxConnections),
     true = is_integer(MaxEmptyLines),
@@ -153,8 +153,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(MaxHeaders),
     true = is_integer(MaxKeepAlive),
     true = is_integer(MaxRequestLineLength),
-    true = OutputType =:= external orelse OutputType =:= internal orelse
-           OutputType =:= list orelse OutputType =:= binary,
+    true = (OutputType =:= external) orelse (OutputType =:= internal) orelse
+           (OutputType =:= list) orelse (OutputType =:= binary),
     ContentTypeForced1 = if
         ContentTypeForced0 =:= undefined ->
             undefined;

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -290,10 +290,10 @@ websocket_init(_Transport, Req0,
             ok
     end,
     RequestInfo = if
-        OutputType =:= internal; OutputType =:= list ->
-            HeadersIncoming;
-        OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(HeadersIncoming)
+        (OutputType =:= external); (OutputType =:= binary) ->
+            headers_external_incoming(HeadersIncoming);
+        (OutputType =:= internal); (OutputType =:= list) ->
+            HeadersIncoming
     end,
     {ok, ReqN,
      State#cowboy_state{websocket_state = #websocket_state{
@@ -320,11 +320,11 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
     when WebSocketResponseType =:= text;
          WebSocketResponseType =:= binary ->
     Response = if
-        OutputType =:= list ->
-            erlang:binary_to_list(ResponseBinary);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            ResponseBinary
+        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= binary) ->
+            ResponseBinary;
+        (OutputType =:= list) ->
+            erlang:binary_to_list(ResponseBinary)
     end,
     Timeout = case erlang:cancel_timer(ResponseTimer) of
         false ->
@@ -370,21 +370,25 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
          WebSocketRequestType =:= binary ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     Request = if
-        OutputType =:= list ->
-            erlang:binary_to_list(RequestBinary);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            RequestBinary
+        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= binary) ->
+            RequestBinary;
+        (OutputType =:= list) ->
+            erlang:binary_to_list(RequestBinary)
     end,
     Service ! {cowboy_request, self(), NameOutgoing, RequestInfo, Request},
     receive
         {cowboy_response, _ResponseInfo, Response} ->
             ResponseBinary = if
-                OutputType =:= list, is_list(Response) ->
-                    erlang:list_to_binary(Response);
-                OutputType =:= internal; OutputType =:= external;
-                OutputType =:= binary; is_binary(Response) ->
-                    Response
+                (((OutputType =:= external) orelse
+                  (OutputType =:= internal)) andalso
+                 (is_binary(Response) orelse is_list(Response))); % iolist
+                ((OutputType =:= binary) andalso
+                 is_binary(Response)) ->
+                    Response;
+                (OutputType =:= list),
+                is_list(Response) ->
+                    erlang:list_to_binary(Response)
             end,
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
@@ -421,6 +425,29 @@ websocket_info(response_timeout, Req,
                           request_pending = undefined}
                       });
 
+websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
+                Timeout, _Priority, _TransId, _Source} = T, Req,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = false} = WebSocketState
+                             } = State)
+    when ((((OutputType =:= external) orelse
+            (OutputType =:= internal)) andalso
+           (is_binary(RequestBinary) orelse is_list(RequestBinary))) orelse
+          ((OutputType =:= binary) andalso
+           is_binary(RequestBinary))),
+         (Type =:= 'cloudi_service_send_async' orelse
+          Type =:= 'cloudi_service_send_sync') ->
+    ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    % RequestBinary may be an iolist
+    {reply, {binary, RequestBinary}, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+                            response_pending = true,
+                            response_timer = ResponseTimer,
+                            request_pending = T}
+                        }};
+
 websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
                #cowboy_state{output_type = OutputType,
@@ -428,7 +455,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
                              } = State)
-    when (OutputType =:= list), (is_list(Request) orelse is_binary(Request)),
+    when (OutputType =:= list),
+         (is_list(Request) orelse is_binary(Request)),
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync') ->
     RequestBinary = if
@@ -445,27 +473,6 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                             request_pending = T}
                         }};
 
-websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
-                Timeout, _Priority, _TransId, _Source} = T, Req,
-               #cowboy_state{output_type = OutputType,
-                             use_websockets = true,
-                             websocket_state = #websocket_state{
-                                 response_pending = false} = WebSocketState
-                             } = State)
-    when (OutputType =:= internal orelse OutputType =:= external orelse
-          OutputType =:= binary),
-         (is_binary(RequestBinary) orelse is_list(RequestBinary)),
-         (Type =:= 'cloudi_service_send_async' orelse
-          Type =:= 'cloudi_service_send_sync') ->
-    ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
-    % RequestBinary may be an iolist
-    {reply, {binary, RequestBinary}, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-                            response_pending = true,
-                            response_timer = ResponseTimer,
-                            request_pending = T}
-                        }};
-
 websocket_info({Type, _, _, _, Request,
                 Timeout, Priority, TransId, _} = T, Req,
                #cowboy_state{output_type = OutputType,
@@ -475,11 +482,13 @@ websocket_info({Type, _, _, _, Request,
                                  queued = Queue,
                                  recv_timeouts = RecvTimeouts} = WebSocketState
                              } = State)
-    when (((OutputType =:= list) andalso
-           (is_list(Request) orelse is_binary(Request))) or
-          ((OutputType =:= internal orelse OutputType =:= external orelse
-            OutputType =:= binary) andalso
-           (is_binary(Request) orelse is_list(Request)))),
+    when ((((OutputType =:= external) orelse
+            (OutputType =:= internal)) andalso
+           (is_binary(Request) orelse is_list(Request))) orelse
+          ((OutputType =:= binary) andalso
+           is_binary(Request)) orelse
+          ((OutputType =:= list) andalso
+           (is_list(Request) orelse is_binary(Request)))),
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync'),
          (Timeout > 0) ->
@@ -491,13 +500,20 @@ websocket_info({Type, _, _, _, Request,
          queued = cloudi_x_pqueue4:in(T, Priority, Queue)}
      }};
 
-websocket_info({Type, Name, _, _, _, _, _, TransId, _}, Req,
+websocket_info({Type, Name, _, _, _,
+                Timeout, _, TransId, _}, Req,
                #cowboy_state{output_type = OutputType,
                              use_websockets = true} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
-    ?LOG_ERROR("output ~p config ignoring service request to ~s (~s)",
-               [OutputType, Name, cloudi_x_uuid:uuid_to_string(TransId)]),
+    if
+        Timeout > 0 ->
+            ?LOG_ERROR("output ~p config ignoring service request to ~s (~s)",
+                       [OutputType, Name,
+                        cloudi_x_uuid:uuid_to_string(TransId)]);
+        true ->
+            ok
+    end,
     {ok, Req, State};
 
 websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
@@ -675,17 +691,17 @@ handle_request(Service, Name, Headers,
                OutputType, Timeout, Body, Req)
     when is_binary(Body) ->
     RequestInfo = if
-        OutputType =:= internal; OutputType =:= list ->
-            Headers;
-        OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(Headers)
+        (OutputType =:= external); (OutputType =:= binary) ->
+            headers_external_incoming(Headers);
+        (OutputType =:= internal); (OutputType =:= list) ->
+            Headers
     end,
     Request = if
-        OutputType =:= list ->
-            erlang:binary_to_list(Body);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            Body
+        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= binary) ->
+            Body;
+        (OutputType =:= list) ->
+            erlang:binary_to_list(Body)
     end,
     Service ! {cowboy_request, self(),
                Name, RequestInfo, Request},
@@ -722,17 +738,17 @@ handle_request_multipart(Service, Name, Headers,
              HeadersPart1]
     end,
     RequestInfo = if
-        OutputType =:= internal; OutputType =:= list ->
-            HeadersPart2;
-        OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(HeadersPart2)
+        (OutputType =:= external); (OutputType =:= binary) ->
+            headers_external_incoming(HeadersPart2);
+        (OutputType =:= internal); (OutputType =:= list) ->
+            HeadersPart2
     end,
     Request = if
-        OutputType =:= list ->
-            erlang:binary_to_list(BodyPart);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            BodyPart
+        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= binary) ->
+            BodyPart;
+        (OutputType =:= list) ->
+            erlang:binary_to_list(BodyPart)
     end,
     Service ! {cowboy_request, self(),
                Name, RequestInfo, Request},
@@ -810,11 +826,15 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                 ReqN, OutputType, ContentTypeForced,
                 ContentTypeLookup) ->
     ResponseBinary = if
-        OutputType =:= list, is_list(Response) ->
-            erlang:list_to_binary(Response);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary; is_binary(Response) ->
-            Response
+        (((OutputType =:= external) orelse
+          (OutputType =:= internal)) andalso
+         (is_binary(Response) orelse is_list(Response)));
+        ((OutputType =:= binary) andalso
+         is_binary(Response)) ->
+            Response;
+        (OutputType =:= list),
+        is_list(Response) ->
+            erlang:list_to_binary(Response)
     end,
     {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
                                                       HeadersOutgoing0) of

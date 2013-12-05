@@ -9,6 +9,9 @@
       service requests don't match the output configuration
     * Add "immediate" timeout value usage to the cloudi module and the
       cloudi_service module to avoid blocking on a service name lookup
+    * Fix and simplify the guards within cloudi_service_http_cowboy
+      to make sure iolists are allowed into cowboy when
+      'output' is configured as 'external' or 'internal'
 
 2013-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
