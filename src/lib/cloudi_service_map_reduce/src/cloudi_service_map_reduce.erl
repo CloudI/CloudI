@@ -83,8 +83,10 @@
 %%%------------------------------------------------------------------------
 
 -callback cloudi_service_map_reduce_new(ModuleReduceArgs :: list(),
+                                        Prefix :: string(),
                                         Dispatcher :: pid()) ->
-    ModuleReduceState :: any().
+    {'ok', ModuleReduceState :: any()} |
+    {'error', Reason :: any()}.
 
 -callback cloudi_service_map_reduce_send(ModuleReduceState :: any(),
                                          Dispatcher :: pid()) ->
@@ -129,25 +131,41 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {error, _} ->
             ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
     end,
-    MapReduceState =
-        MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
-                                                      Dispatcher),
-    MapCount = cloudi_configurator:concurrency(Concurrency),
-    case map_send(MapCount, orddict:new(), Dispatcher,
-                  MapReduceModule, MapReduceState) of
-        {ok, MapRequests, NewMapReduceState} ->
-            {ok, #state{map_reduce_module = MapReduceModule,
-                        map_reduce_state = NewMapReduceState,
-                        map_count = MapCount,
-                        map_requests = MapRequests}};
-        {error, _} = Error ->
-            {stop, Error}
-    end.
+    cloudi_service:self(Dispatcher) !
+        {init, MapReduceModule, MapReduceArguments, Concurrency},
+    {ok, undefined}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
+
+cloudi_service_handle_info({init,
+                            MapReduceModule, MapReduceArguments, Concurrency},
+                           undefined, Dispatcher) ->
+    % cloudi_service_map_reduce_new/3 execution occurs outside of
+    % cloudi_service_init/3 to allow send_sync and recv_sync function calls
+    % because no Erlang process linking/spawning/etc. should be occurring,
+    % only algorithmic initialization
+    Prefix = cloudi_service:prefix(Dispatcher),
+    case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
+                                                       Prefix,
+                                                       Dispatcher) of
+        {ok, MapReduceState} ->
+            MapCount = cloudi_configurator:concurrency(Concurrency),
+            case map_send(MapCount, orddict:new(), Dispatcher,
+                          MapReduceModule, MapReduceState) of
+                {ok, MapRequests, NewMapReduceState} ->
+                    {noreply, #state{map_reduce_module = MapReduceModule,
+                                     map_reduce_state = NewMapReduceState,
+                                     map_count = MapCount,
+                                     map_requests = MapRequests}};
+                {error, _} = Error ->
+                    {stop, Error, undefined}
+            end;
+        {error, _} = Error ->
+            {stop, Error, undefined}
+    end;
 
 cloudi_service_handle_info({timeout_async_active, TransId},
                            #state{map_reduce_module = MapReduceModule,

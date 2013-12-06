@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_hexpi).
@@ -53,7 +53,7 @@
 -behaviour(cloudi_service_map_reduce).
 
 %% cloudi_service_map_reduce callbacks
--export([cloudi_service_map_reduce_new/2,
+-export([cloudi_service_map_reduce_new/3,
          cloudi_service_map_reduce_send/2,
          cloudi_service_map_reduce_resend/2,
          cloudi_service_map_reduce_recv/7]).
@@ -107,12 +107,12 @@
 %%% Callback functions from cloudi_service_map_reduce
 %%%------------------------------------------------------------------------
 
-cloudi_service_map_reduce_new([IndexStart, IndexEnd], Dispatcher)
+cloudi_service_map_reduce_new([IndexStart, IndexEnd], _Prefix, Dispatcher)
     when is_integer(IndexStart), is_integer(IndexEnd),
          is_pid(Dispatcher) ->
-    setup(#state{index = IndexStart,
-                 index_start = IndexStart,
-                 index_end = IndexEnd}, Dispatcher).
+    {ok, setup(#state{index = IndexStart,
+                      index_start = IndexStart,
+                      index_end = IndexEnd}, Dispatcher)}.
 
 cloudi_service_map_reduce_send(#state{done = true} = State, _) ->
     {done, State};
