@@ -5,6 +5,8 @@
 
     * Change the cloudi_service_map_reduce:cloudi_service_map_reduce_new/3
       callback functionality to be more useful for algorithm initialization
+    * Add the cloudi_service_map_reduce:cloudi_service_map_reduce_info/3
+      for handling active service requests
 
 2013-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

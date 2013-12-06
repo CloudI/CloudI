@@ -56,7 +56,8 @@
 -export([cloudi_service_map_reduce_new/3,
          cloudi_service_map_reduce_send/2,
          cloudi_service_map_reduce_resend/2,
-         cloudi_service_map_reduce_recv/7]).
+         cloudi_service_map_reduce_recv/7,
+         cloudi_service_map_reduce_info/3]).
 
 -include("cloudi_logger.hrl").
 
@@ -211,6 +212,10 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
         true ->
             {ok, NextState}
     end.
+
+cloudi_service_map_reduce_info(Request, State, _) ->
+    ?LOG_WARN("Unknown info \"~p\"", [Request]),
+    {error, {unknown_info, Request}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
