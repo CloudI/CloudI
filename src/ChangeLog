@@ -7,6 +7,8 @@
       callback functionality to be more useful for algorithm initialization
     * Add the cloudi_service_map_reduce:cloudi_service_map_reduce_info/3
       for handling active service requests
+    * Add binary usage to cloudi_service_db_pgsql internal usage and simplify
+      internal usage
 
 2013-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

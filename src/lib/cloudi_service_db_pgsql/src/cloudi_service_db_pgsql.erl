@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -98,8 +98,8 @@
 %%-------------------------------------------------------------------------
 
 equery(Dispatcher, Name, String, Parameters)
-    when is_list(Name),
-         is_list(String), is_list(Parameters) ->
+    when is_list(Name), (is_binary(String) orelse is_list(String)),
+         is_list(Parameters) ->
     cloudi:send_sync(Dispatcher, Name,
                      {equery_argument_parse(String), Parameters}).
 
@@ -110,8 +110,8 @@ equery(Dispatcher, Name, String, Parameters)
 %%-------------------------------------------------------------------------
 
 equery(Dispatcher, Name, String, Parameters, Timeout)
-    when is_list(Name),
-         is_list(String), is_list(Parameters), is_integer(Timeout) ->
+    when is_list(Name), (is_binary(String) orelse is_list(String)),
+         is_list(Parameters), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
                      {equery_argument_parse(String), Parameters}, Timeout).
 
@@ -122,9 +122,9 @@ equery(Dispatcher, Name, String, Parameters, Timeout)
 %%-------------------------------------------------------------------------
 
 squery(Dispatcher, Name, String)
-    when is_list(Name),
-         is_list(String) ->
-    cloudi:send_sync(Dispatcher, Name, String).
+    when is_list(Name), (is_binary(String) orelse is_list(String)) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {String, []}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -133,9 +133,10 @@ squery(Dispatcher, Name, String)
 %%-------------------------------------------------------------------------
 
 squery(Dispatcher, Name, String, Timeout)
-    when is_list(Name),
-         is_list(String), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name, String, Timeout).
+    when is_list(Name), (is_binary(String) orelse is_list(String)),
+         is_integer(Timeout) ->
+    cloudi:send_sync(Dispatcher, Name,
+                     {String, []}, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -178,12 +179,27 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
-                          _Timeout, _Priority, TransId, _Pid,
-                          #state{connection = Connection,
-                                 endian = Endian} = State,
-                          _Dispatcher) ->
+                              _Timeout, _Priority, TransId, _Pid,
+                              #state{connection = Connection,
+                                     endian = Endian} = State,
+                              _Dispatcher) ->
     case Request of
-        {String, Parameters} when is_list(String), is_list(Parameters) ->
+        {String, []}
+            when (is_binary(String) orelse is_list(String)) ->
+            case cloudi_x_pgsql:squery(Connection, String) of
+                {ok, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                {ok, _, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                {ok, _, _, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                {error, _} = Response ->
+                    {reply, response_internal(Response, Request), State};
+                Response when is_list(Response) ->
+                    {reply, response_internal(Response, Request), State}
+            end;
+        {String, [_ | _] = Parameters}
+            when (is_binary(String) orelse is_list(String)) ->
             case cloudi_x_pgsql:equery(Connection, String, Parameters) of
                 {ok, _} = Response ->
                     {reply, response_internal(Response, Request), State};
@@ -354,11 +370,16 @@ do_queries_in_transaction(SQLQueryList, Connection)
             {error, Reason}
     end.
 
-%% provide the "?"s parameter syntax externally like cloudi_x_mysql, but provide the
-%% $1, $2, $3, etc. PostgreSQL parameter syntax internally to cloudi_x_epgsql,
-%% as required.
+%% provide the "?"s parameter syntax externally like cloudi_x_mysql,
+%% but provide the $1, $2, $3, etc. PostgreSQL parameter syntax internally
+%% to cloudi_x_epgsql, as required.
 equery_argument_parse(String) ->
-    equery_argument_parse_get([], 1, String).
+    if
+        is_list(String) ->
+            equery_argument_parse_get([], 1, String);
+        is_binary(String) ->
+            equery_argument_parse_get([], 1, erlang:binary_to_list(String))
+    end.
 
 -define(SPACE,   32).
 -define(QUOTE,   39). % '
