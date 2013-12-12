@@ -121,7 +121,8 @@ handle(Req0,
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {QsVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
     {PathRaw, Req4} = cloudi_x_cowboy_req:path(Req3),
-    {{ClientIpAddr, _} = Client, Req5} = cloudi_x_cowboy_req:peer(Req4),
+    {{ClientIpAddr, ClientPort} = Client,
+     Req5} = cloudi_x_cowboy_req:peer(Req4),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
@@ -170,13 +171,15 @@ handle(Req0,
                         string:to_lower(erlang:binary_to_list(Method))]
             end,
             Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            HeadersIncoming1 = [{<<"peer">>, Peer} | HeadersIncoming0],
+            HeadersIncoming1 = [{<<"peer">>, Peer},
+                                {<<"peer-port">>,
+                                 erlang:integer_to_binary(ClientPort)} |
+                                HeadersIncoming0],
             HeadersIncomingN = if
                 SetXForwardedFor =:= true ->
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
                                        HeadersIncoming0) of
                         false ->
-                            {ClientIpAddr, _ClientPort} = Client,
                             [{<<"x-forwarded-for">>, Peer} | HeadersIncoming1];
                         _ ->
                             HeadersIncoming1
@@ -273,7 +276,8 @@ websocket_init(_Transport, Req0,
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
-    {{ClientIpAddr, _} = Client, Req4} = cloudi_x_cowboy_req:peer(Req3),
+    {{ClientIpAddr, ClientPort} = Client,
+     Req4} = cloudi_x_cowboy_req:peer(Req3),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
@@ -298,7 +302,10 @@ websocket_init(_Transport, Req0,
             ok
     end,
     Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-    HeadersIncoming1 = [{<<"peer">>, Peer} | HeadersIncoming0],
+    HeadersIncoming1 = [{<<"peer">>, Peer},
+                        {<<"peer-port">>,
+                         erlang:integer_to_binary(ClientPort)} |
+                        HeadersIncoming0],
     HeadersIncomingN = if
         SetXForwardedFor =:= true ->
             case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of

@@ -7,6 +7,8 @@
       connection to close
     * Have cloudi_service_http_cowboy always add the peer ip address to the
       RequestInfo with the key <<"peer">>
+    * Have cloudi_service_http_cowboy always add the peer port number to the
+      RequestInfo with the key <<"peer-port">>
 
 2013-12-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
