@@ -121,7 +121,7 @@ handle(Req0,
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {QsVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
     {PathRaw, Req4} = cloudi_x_cowboy_req:path(Req3),
-    {Client, Req5} = cloudi_x_cowboy_req:peer(Req4),
+    {{ClientIpAddr, _} = Client, Req5} = cloudi_x_cowboy_req:peer(Req4),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
@@ -169,22 +169,21 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         string:to_lower(erlang:binary_to_list(Method))]
             end,
+            Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+            HeadersIncoming1 = [{<<"peer">>, Peer} | HeadersIncoming0],
             HeadersIncomingN = if
                 SetXForwardedFor =:= true ->
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
                                        HeadersIncoming0) of
                         false ->
                             {ClientIpAddr, _ClientPort} = Client,
-                            [{<<"x-forwarded-for">>,
-                              erlang:list_to_binary(
-                                  inet_parse:ntoa(ClientIpAddr))} |
-                             HeadersIncoming0];
+                            [{<<"x-forwarded-for">>, Peer} | HeadersIncoming1];
                         _ ->
-                            HeadersIncoming0
+                            HeadersIncoming1
                             
                     end;
                 SetXForwardedFor =:= false ->
-                    HeadersIncoming0
+                    HeadersIncoming1
             end,
             Body = if
                 Method =:= <<"GET">> ->
@@ -240,6 +239,14 @@ handle(Req0,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, timeout]),
                     {ok, Req, State};
+                {{cowboy_error, shutdown}, ReqN0} ->
+                    HttpCode = 408,
+                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
+                                                          ReqN0),
+                    ?LOG_INFO_APPLY(fun request_time_end_error/5,
+                                    [HttpCode, Method, NameIncoming,
+                                     RequestStartMicroSec, shutdown]),
+                    {ok, Req, State};
                 {{cowboy_error, Reason}, ReqN0} ->
                     HttpCode = 500,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
@@ -258,14 +265,15 @@ websocket_init(_Transport, Req0,
                #cowboy_state{prefix = Prefix,
                              timeout_websocket = TimeoutWebsocket,
                              output_type = OutputType,
+                             set_x_forwarded_for = SetXForwardedFor,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
                              use_client_ip_prefix = UseClientIpPrefix,
                              use_method_suffix = UseMethodSuffix} = State) ->
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
-    {HeadersIncoming, Req2} = cloudi_x_cowboy_req:headers(Req1),
+    {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
-    {Client, Req4} = cloudi_x_cowboy_req:peer(Req3),
+    {{ClientIpAddr, _} = Client, Req4} = cloudi_x_cowboy_req:peer(Req3),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
@@ -289,11 +297,25 @@ websocket_init(_Transport, Req0,
         false ->
             ok
     end,
+    Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+    HeadersIncoming1 = [{<<"peer">>, Peer} | HeadersIncoming0],
+    HeadersIncomingN = if
+        SetXForwardedFor =:= true ->
+            case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
+                false ->
+                    [{<<"x-forwarded-for">>, Peer} | HeadersIncoming1];
+                _ ->
+                    HeadersIncoming1
+                    
+            end;
+        SetXForwardedFor =:= false ->
+            HeadersIncoming1
+    end,
     RequestInfo = if
         (OutputType =:= external); (OutputType =:= binary) ->
-            headers_external_incoming(HeadersIncoming);
+            headers_external_incoming(HeadersIncomingN);
         (OutputType =:= internal); (OutputType =:= list) ->
-            HeadersIncoming
+            HeadersIncomingN
     end,
     {ok, ReqN,
      State#cowboy_state{websocket_state = #websocket_state{
@@ -399,6 +421,11 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                             [NameIncoming,
                              RequestStartMicroSec, timeout]),
             {reply, {WebSocketRequestType, <<>>}, Req, State};
+        {cowboy_error, shutdown} ->
+            ?LOG_INFO_APPLY(fun websocket_time_end_error/3,
+                            [NameIncoming,
+                             RequestStartMicroSec, shutdown]),
+            {reply, {close, 1011, <<>>}, Req, State};
         {cowboy_error, Reason} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
                             [NameIncoming,
@@ -534,8 +561,15 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
 websocket_info({cowboy_response, _ResponseInfo, _Response}, Req, State) ->
     {ok, Req, State};
 
-websocket_info({cowboy_error, _Reason}, Req, State) ->
+websocket_info({cowboy_error, timeout}, Req, State) ->
     {ok, Req, State};
+
+websocket_info({cowboy_error, shutdown}, Req, State) ->
+    {reply, {close, 1011, <<>>}, Req, State};
+
+websocket_info({cowboy_error, Reason}, Req, State) ->
+    ?LOG_ERROR("websocket request error: ~p", [Reason]),
+    {reply, {close, 1011, <<>>}, Req, State};
 
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->

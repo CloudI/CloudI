@@ -54,6 +54,7 @@
 -behaviour(cloudi_service).
 
 %% external interface
+-export([close/1]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -100,6 +101,28 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Close a cowboy handler socket pid which represents a live connection.===
+%% Use the Pid from cloudi_service_handle_request/11.  Otherwise, you can
+%% use either the get_pid function or get_pids function in the cloudi module
+%% (or the cloudi_service module) to find a match for the connection URL.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec close(pid() | {string(), pid()}) ->
+    ok.
+
+close(Pid)
+    when is_pid(Pid) ->
+    Pid ! {cowboy_error, shutdown},
+    ok;
+close({Pattern, Pid})
+    when is_list(Pattern), is_pid(Pid) ->
+    Pid ! {cowboy_error, shutdown},
+    ok.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
