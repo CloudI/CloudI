@@ -282,7 +282,7 @@ self(Dispatcher) ->
 
 -spec subscribe(Dispatcher :: dispatcher(),
                 Pattern :: service_name_pattern()) ->
-    ok.
+    ok | error.
 
 subscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->

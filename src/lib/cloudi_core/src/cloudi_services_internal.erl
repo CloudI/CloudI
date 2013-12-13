@@ -238,7 +238,7 @@ handle_call({'subscribe', Pattern}, _,
             cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
                               ReceiverPid, infinity);
         true ->
-            {error, invalid_state}
+            error
     end,
     hibernate_check({reply, Result, State});
 
@@ -254,7 +254,7 @@ handle_call({'unsubscribe', Pattern}, _,
             cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
                                ReceiverPid, infinity);
         true ->
-            {error, invalid_state}
+            error
     end,
     hibernate_check({reply, Result, State});
 
