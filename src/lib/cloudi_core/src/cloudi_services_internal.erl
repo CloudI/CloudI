@@ -178,7 +178,7 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
           info_pid_options = InfoPidOptions} = ConfigOptions]) ->
     Dispatcher = self(),
     cloudi_x_quickrand:seed(),
-    NewConfigOptions = check_init(ConfigOptions),
+    NewConfigOptions = check_init_send(ConfigOptions),
     DuoModePid = if
         DuoMode =:= true ->
             proc_lib:spawn_opt(fun() ->
@@ -230,18 +230,32 @@ handle_call({'subscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,
                    options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic,
                        scope = Scope}} = State) ->
-    Result = cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
-                               ReceiverPid, infinity),
+    Result = case cloudi_rate_based_configuration:
+                  count_process_dynamic_terminated(CountProcessDynamic) of
+        false ->
+            cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
+                              ReceiverPid, infinity);
+        true ->
+            {error, invalid_state}
+    end,
     hibernate_check({reply, Result, State});
 
 handle_call({'unsubscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,
                    options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic,
                        scope = Scope}} = State) ->
-    Result = cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
-                                ReceiverPid, infinity),
+    Result = case cloudi_rate_based_configuration:
+                  count_process_dynamic_terminated(CountProcessDynamic) of
+        false ->
+            cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
+                               ReceiverPid, infinity);
+        true ->
+            {error, invalid_state}
+    end,
     hibernate_check({reply, Result, State});
 
 handle_call({'get_pid', Name}, Client,
@@ -587,13 +601,17 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
         Timeout, ProcessDictionary, State),
     Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
     {NewProcessDictionary,
-     NewState} = cloudi_services_internal_init:stop_link(DispatcherProxy),
+     #state{options = ConfigOptions} = NewState} =
+        cloudi_services_internal_init:stop_link(DispatcherProxy),
     ok = cloudi_services_internal_init:process_dictionary_set(
         NewProcessDictionary),
     hibernate_check(case Result of
         {ok, ServiceState} ->
+            NewConfigOptions = check_init_receive(ConfigOptions),
             erlang:process_flag(trap_exit, true),
-            {noreply, process_queues(ServiceState, NewState)};
+            {noreply,
+             process_queues(ServiceState,
+                            NewState#state{options = NewConfigOptions})};
         {stop, Reason, ServiceState} ->
             {stop, Reason, NewState#state{service_state = ServiceState,
                                           duo_mode_pid = undefined}};
@@ -937,17 +955,19 @@ handle_info({'cloudi_service_send_async',
                    service_state = ServiceState,
                    request_pid = RequestPid,
                    options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
-    hibernate_check({noreply, State#state{
-        queue_requests = true,
-        request_pid = handle_module_request_loop_pid(RequestPid,
-            {'cloudi_service_request_loop',
-             'send_async', Name, Pattern,
-             RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             Module, Dispatcher, NewConfigOptions,
-             ServiceState}, NewConfigOptions, Dispatcher),
-        options = NewConfigOptions}});
+    NewConfigOptions = check_incoming(true, ConfigOptions),
+    hibernate_check({noreply,
+                     State#state{
+                         queue_requests = true,
+                         request_pid = handle_module_request_loop_pid(
+                             RequestPid,
+                             {'cloudi_service_request_loop',
+                              'send_async', Name, Pattern,
+                              RequestInfo, Request,
+                              Timeout, Priority, TransId, Source,
+                              Module, Dispatcher, NewConfigOptions,
+                              ServiceState}, NewConfigOptions, Dispatcher),
+                         options = NewConfigOptions}});
 
 handle_info({'cloudi_service_send_sync',
              Name, Pattern, RequestInfo, Request,
@@ -958,17 +978,19 @@ handle_info({'cloudi_service_send_sync',
                    service_state = ServiceState,
                    request_pid = RequestPid,
                    options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
-    hibernate_check({noreply, State#state{
-        queue_requests = true,
-        request_pid = handle_module_request_loop_pid(RequestPid,
-            {'cloudi_service_request_loop',
-             'send_sync', Name, Pattern,
-             RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             Module, Dispatcher, NewConfigOptions,
-             ServiceState}, NewConfigOptions, Dispatcher),
-        options = NewConfigOptions}});
+    NewConfigOptions = check_incoming(true, ConfigOptions),
+    hibernate_check({noreply,
+                     State#state{
+                         queue_requests = true,
+                         request_pid = handle_module_request_loop_pid(
+                             RequestPid,
+                             {'cloudi_service_request_loop',
+                              'send_sync', Name, Pattern,
+                              RequestInfo, Request,
+                              Timeout, Priority, TransId, Source,
+                              Module, Dispatcher, NewConfigOptions,
+                              ServiceState}, NewConfigOptions, Dispatcher),
+                         options = NewConfigOptions}});
 
 handle_info({Type, _, _, _, _, 0, _, _, _},
             #state{queue_requests = true} = State)
@@ -1176,6 +1198,88 @@ handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
             State) ->
     hibernate_check({noreply, send_timeout_dead(Pid, State)});
 
+handle_info('cloudi_hibernate_rate',
+            #state{duo_mode_pid = undefined,
+                   request_pid = RequestPid,
+                   info_pid = InfoPid,
+                   options = #config_service_options{
+                       hibernate = Hibernate} = ConfigOptions} = State) ->
+    {Value, NewHibernate} = cloudi_rate_based_configuration:
+                            hibernate_reinit(Hibernate),
+    if
+        is_pid(RequestPid) ->
+            RequestPid ! {'cloudi_hibernate', Value};
+        true ->
+            ok
+    end,
+    if
+        is_pid(InfoPid) ->
+            InfoPid ! {'cloudi_hibernate', Value};
+        true ->
+            ok
+    end,
+    hibernate_check({noreply,
+                     State#state{
+                         options = ConfigOptions#config_service_options{
+                             hibernate = NewHibernate}}});
+
+handle_info({'cloudi_hibernate', Hibernate},
+            #state{duo_mode_pid = DuoModePid,
+                   options = ConfigOptions} = State) ->
+    true = is_pid(DuoModePid),
+    % force the hibernate state
+    hibernate_check({noreply,
+                     State#state{
+                         options = ConfigOptions#config_service_options{
+                             hibernate = Hibernate}}});
+
+handle_info('cloudi_count_process_dynamic_rate',
+            #state{dispatcher = Dispatcher,
+                   duo_mode_pid = undefined,
+                   options = #config_service_options{
+                       count_process_dynamic =
+                           CountProcessDynamic} = ConfigOptions} = State) ->
+    NewCountProcessDynamic = cloudi_rate_based_configuration:
+                             count_process_dynamic_reinit(Dispatcher,
+                                                          CountProcessDynamic),
+    hibernate_check({noreply,
+                     State#state{
+                         options = ConfigOptions#config_service_options{
+                             count_process_dynamic =
+                                 NewCountProcessDynamic}}});
+
+handle_info('cloudi_count_process_dynamic_terminate',
+            #state{receiver_pid = ReceiverPid,
+                   options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic,
+                       scope = Scope} = ConfigOptions} = State) ->
+    cloudi_x_cpg:leave(Scope, ReceiverPid, infinity),
+    NewCountProcessDynamic =
+        cloudi_rate_based_configuration:
+        count_process_dynamic_terminate_set(ReceiverPid, CountProcessDynamic),
+    hibernate_check({noreply,
+                     State#state{
+                         options = ConfigOptions#config_service_options{
+                             count_process_dynamic =
+                                 NewCountProcessDynamic}}});
+
+handle_info('cloudi_count_process_dynamic_terminate_check',
+            #state{dispatcher = Dispatcher,
+                   queue_requests = QueueRequests,
+                   duo_mode_pid = undefined} = State) ->
+    if
+        QueueRequests =:= false ->
+            {stop, cloudi_count_process_dynamic_terminate, State};
+        QueueRequests =:= true ->
+            erlang:send_after(500, Dispatcher,
+                              'cloudi_count_process_dynamic_terminate_check'),
+            hibernate_check({noreply, State})
+    end;
+
+handle_info('cloudi_count_process_dynamic_terminate_now',
+            #state{duo_mode_pid = undefined} = State) ->
+    {stop, cloudi_count_process_dynamic_terminate, State};
+
 handle_info(Request,
             #state{queue_requests = true,
                    queued_info = QueueInfo,
@@ -1191,14 +1295,15 @@ handle_info(Request,
                    info_pid = InfoPid,
                    duo_mode_pid = undefined,
                    options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
-    hibernate_check({noreply, State#state{
-        queue_requests = true,
-        info_pid = handle_module_info_loop_pid(InfoPid,
-            {'cloudi_service_info_loop',
-             Request, Module, Dispatcher, ServiceState},
-            NewConfigOptions, Dispatcher),
-        options = NewConfigOptions}});
+    NewConfigOptions = check_incoming(false, ConfigOptions),
+    hibernate_check({noreply,
+                     State#state{
+                         queue_requests = true,
+                         info_pid = handle_module_info_loop_pid(InfoPid,
+                             {'cloudi_service_info_loop',
+                              Request, Module, Dispatcher, ServiceState},
+                              NewConfigOptions, Dispatcher),
+                         options = NewConfigOptions}});
 
 handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
     true = is_pid(DuoModePid),
@@ -2045,7 +2150,7 @@ process_queue(NewServiceState,
                 V ->
                     V
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
@@ -2067,7 +2172,7 @@ process_queue(NewServiceState,
                 V ->
                     V
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
@@ -2094,7 +2199,7 @@ process_queue_info(NewServiceState,
                         queued_info = NewQueueInfo,
                         service_state = NewServiceState};
         {{value, Request}, NewQueueInfo} ->
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(false, ConfigOptions),
             State#state{
                 queued_info = NewQueueInfo,
                 info_pid = handle_module_info_loop_pid(InfoPid,
@@ -2138,7 +2243,29 @@ hibernate_check({reply, Reply,
 hibernate_check({noreply,
                  #state{options = #config_service_options{
                             hibernate = true}} = State}) ->
-    {noreply, State, hibernate}.
+    {noreply, State, hibernate};
+
+hibernate_check({reply, Reply,
+                 #state{options = #config_service_options{
+                            hibernate = Hibernate}} = State})
+    when is_tuple(Hibernate) ->
+    case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+        false ->
+            {reply, Reply, State};
+        true ->
+            {reply, Reply, State, hibernate}
+    end;
+
+hibernate_check({noreply,
+                 #state{options = #config_service_options{
+                            hibernate = Hibernate}} = State})
+    when is_tuple(Hibernate) ->
+    case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+        false ->
+            {noreply, State};
+        true ->
+            {noreply, State, hibernate}
+    end.
 
 handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                #config_service_options{
@@ -2150,14 +2277,14 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                        Hibernate}, ResultPid) ->
     if
         OldRequestPid =:= undefined ->
-            if
-                Hibernate =:= false ->
+            case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+                false ->
                     erlang:spawn_opt(fun() ->
                         handle_module_request_loop_normal(RequestPidUses,
                                                           ModuleRequest,
                                                           ResultPid)
                     end, RequestPidOptions);
-                Hibernate =:= true ->
+                true ->
                     erlang:spawn_opt(fun() ->
                         handle_module_request_loop_hibernate(RequestPidUses,
                                                              ModuleRequest,
@@ -2171,6 +2298,11 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
 
 handle_module_request_loop_normal(Uses, ResultPid) ->
     receive
+        {'cloudi_hibernate', false} ->
+            handle_module_request_loop_normal(Uses, ResultPid);
+        {'cloudi_hibernate', true} ->
+            erlang:hibernate(?MODULE, handle_module_request_loop_hibernate,
+                             [Uses, ResultPid]);
         {'cloudi_service_request_loop',
          _Type, _Name, _Pattern,
          _RequestInfo, _Request,
@@ -2184,6 +2316,11 @@ handle_module_request_loop_normal(Uses, ResultPid) ->
 
 handle_module_request_loop_hibernate(Uses, ResultPid) ->
     receive
+        {'cloudi_hibernate', false} ->
+            handle_module_request_loop_normal(Uses, ResultPid);
+        {'cloudi_hibernate', true} ->
+            erlang:hibernate(?MODULE, handle_module_request_loop_hibernate,
+                             [Uses, ResultPid]);
         {'cloudi_service_request_loop',
          _Type, _Name, _Pattern,
          _RequestInfo, _Request,
@@ -2255,14 +2392,14 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
                                     Hibernate}, ResultPid) ->
     if
         OldInfoPid =:= undefined ->
-            if
-                Hibernate =:= false ->
+            case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+                false ->
                     erlang:spawn_opt(fun() ->
                         handle_module_info_loop_normal(InfoPidUses,
                                                        ModuleInfo,
                                                        ResultPid)
                     end, InfoPidOptions);
-                Hibernate =:= true ->
+                true ->
                     erlang:spawn_opt(fun() ->
                         handle_module_info_loop_hibernate(InfoPidUses,
                                                           ModuleInfo,
@@ -2276,6 +2413,11 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
 
 handle_module_info_loop_normal(Uses, ResultPid) ->
     receive
+        {'cloudi_hibernate', false} ->
+            handle_module_info_loop_normal(Uses, ResultPid);
+        {'cloudi_hibernate', true} ->
+            erlang:hibernate(?MODULE, handle_module_info_loop_hibernate,
+                             [Uses, ResultPid]);
         {'cloudi_service_info_loop',
          _Request, _Module, _Dispatcher,
          _NewServiceState} = ModuleInfo ->
@@ -2286,6 +2428,11 @@ handle_module_info_loop_normal(Uses, ResultPid) ->
 
 handle_module_info_loop_hibernate(Uses, ResultPid) ->
     receive
+        {'cloudi_hibernate', false} ->
+            handle_module_info_loop_normal(Uses, ResultPid);
+        {'cloudi_hibernate', true} ->
+            erlang:hibernate(?MODULE, handle_module_info_loop_hibernate,
+                             [Uses, ResultPid]);
         {'cloudi_service_info_loop',
          _Request, _Module, _Dispatcher,
          _NewServiceState} = ModuleInfo ->
@@ -2335,9 +2482,7 @@ handle_module_info_loop_hibernate(Uses,
 % duo_mode specific logic
 
 duo_mode_loop_init(#state_duo{module = Module,
-                              dispatcher = Dispatcher,
-                              options = #config_service_options{
-                                  hibernate = Hibernate}} = State) ->
+                              dispatcher = Dispatcher} = State) ->
     receive
         {'cloudi_service_init_execute', Args, Timeout,
          DispatcherProcessDictionary,
@@ -2345,38 +2490,45 @@ duo_mode_loop_init(#state_duo{module = Module,
             {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(
                 Timeout, DispatcherProcessDictionary, DispatcherState),
             Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
-            {NewDispatcherProcessDictionary, NewDispatcherState} =
+            {NewDispatcherProcessDictionary,
+             #state{recv_timeouts = RecvTimeouts,
+                    queue_requests = QueueRequests,
+                    queued = Queued,
+                    queued_info = QueuedInfo,
+                    options = ConfigOptions} = NewDispatcherState} =
                 cloudi_services_internal_init:stop_link(DispatcherProxy),
             case Result of
                 {ok, ServiceState} ->
+                    NewConfigOptions = check_init_receive(ConfigOptions),
                     erlang:process_flag(trap_exit, true),
                     % duo_mode_pid takes control of any state that may
                     % have been updated during initialization that is now
                     % only relevant to the duo_mode pid
                     NewState = State#state_duo{
-                        recv_timeouts =
-                            NewDispatcherState#state.recv_timeouts,
-                        queue_requests =
-                            NewDispatcherState#state.queue_requests,
-                        queued =
-                            NewDispatcherState#state.queued,
-                        queued_info =
-                            NewDispatcherState#state.queued_info},
+                        recv_timeouts = RecvTimeouts,
+                        queue_requests = QueueRequests,
+                        queued = Queued,
+                        queued_info = QueuedInfo,
+                        options = NewConfigOptions},
                     Dispatcher ! {'cloudi_service_init_state',
                                   NewDispatcherProcessDictionary,
                                   NewDispatcherState#state{
                                       recv_timeouts = undefined,
                                       queue_requests = undefined,
                                       queued = undefined,
-                                      queued_info = undefined}},
-                    if
-                        Hibernate =:= true ->
+                                      queued_info = undefined,
+                                      options = NewConfigOptions}},
+                    #config_service_options{
+                        hibernate = Hibernate} = NewConfigOptions,
+                    case cloudi_rate_based_configuration:
+                         hibernate_check(Hibernate) of
+                        false ->
+                            duo_mode_loop(duo_process_queues(ServiceState,
+                                                             NewState));
+                        true ->
                             proc_lib:hibernate(?MODULE, duo_mode_loop,
                                 [duo_process_queues(ServiceState,
-                                                    NewState)]);
-                        Hibernate =:= false ->
-                            duo_mode_loop(duo_process_queues(ServiceState,
-                                                             NewState))
+                                                    NewState)])
                     end;
                 {stop, Reason, ServiceState} ->
                     Module:cloudi_service_terminate(Reason, ServiceState),
@@ -2387,24 +2539,24 @@ duo_mode_loop_init(#state_duo{module = Module,
             end
     end.
 
-duo_mode_loop(#state_duo{dispatcher = Dispatcher,
-                         options = #config_service_options{
-                             hibernate = Hibernate}} = State) ->
+duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
     receive
         Request ->
-            % mimic a gen_server handle_info for code reuse
+            % mimic a gen_server:handle_info/2 for code reuse
             case duo_handle_info(Request, State) of
                 {stop, Reason, #state_duo{module = Module,
                                           service_state = ServiceState}} ->
                     Module:cloudi_service_terminate(Reason, ServiceState),
                     erlang:exit(Dispatcher, Reason);
-                {noreply, NewState} ->
-                    if
-                        Hibernate =:= true ->
+                {noreply, #state_duo{options = #config_service_options{
+                                         hibernate = Hibernate}} = NewState} ->
+                    case cloudi_rate_based_configuration:
+                         hibernate_check(Hibernate) of
+                        false ->
+                            duo_mode_loop(NewState);
+                        true ->
                             proc_lib:hibernate(?MODULE, duo_mode_loop,
-                                               [NewState]);
-                        Hibernate =:= false ->
-                            duo_mode_loop(NewState)
+                                               [NewState])
                     end
             end
     end.
@@ -2499,7 +2651,7 @@ duo_handle_info({'cloudi_service_send_async',
                            dispatcher = Dispatcher,
                            request_pid = RequestPid,
                            options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
+    NewConfigOptions = check_incoming(true, ConfigOptions),
     {noreply, State#state_duo{
         queue_requests = true,
         request_pid = handle_module_request_loop_pid(RequestPid,
@@ -2521,7 +2673,7 @@ duo_handle_info({'cloudi_service_send_sync',
                            dispatcher = Dispatcher,
                            request_pid = RequestPid,
                            options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
+    NewConfigOptions = check_incoming(true, ConfigOptions),
     {noreply, State#state_duo{
         queue_requests = true,
         request_pid = handle_module_request_loop_pid(RequestPid,
@@ -2576,6 +2728,55 @@ duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId},
     {noreply, State#state_duo{recv_timeouts = dict:erase(TransId, RecvTimeouts),
                               queued = NewQueue}};
 
+duo_handle_info('cloudi_hibernate_rate',
+                #state_duo{dispatcher = Dispatcher,
+                           request_pid = RequestPid,
+                           options = #config_service_options{
+                               hibernate = Hibernate} = ConfigOptions
+                           } = State) ->
+    {Value, NewHibernate} = cloudi_rate_based_configuration:
+                            hibernate_reinit(Hibernate),
+    Dispatcher ! {'cloudi_hibernate', Value},
+    if
+        is_pid(RequestPid) ->
+            RequestPid ! {'cloudi_hibernate', Value};
+        true ->
+            ok
+    end,
+    {noreply,
+     State#state_duo{options = ConfigOptions#config_service_options{
+                         hibernate = NewHibernate}}};
+
+duo_handle_info('cloudi_count_process_dynamic_rate',
+                #state_duo{dispatcher = Dispatcher,
+                           options = #config_service_options{
+                               count_process_dynamic =
+                                   CountProcessDynamic} = ConfigOptions
+                           } = State) ->
+    NewCountProcessDynamic = cloudi_rate_based_configuration:
+                             count_process_dynamic_reinit(Dispatcher,
+                                                          CountProcessDynamic),
+    {noreply,
+     State#state_duo{options = ConfigOptions#config_service_options{
+                         count_process_dynamic = NewCountProcessDynamic}}};
+
+duo_handle_info('cloudi_count_process_dynamic_terminate_check',
+                #state_duo{duo_mode_pid = DuoModePid,
+                           queue_requests = QueueRequests} = State) ->
+    % count_process_dynamic does not have terminate set within the duo_mode_pid
+    % (not yet necessary)
+    if
+        QueueRequests =:= false ->
+            {stop, cloudi_count_process_dynamic_terminate, State};
+        QueueRequests =:= true ->
+            erlang:send_after(500, DuoModePid,
+                              'cloudi_count_process_dynamic_terminate_check'),
+            {noreply, State}
+    end;
+
+duo_handle_info('cloudi_count_process_dynamic_terminate_now', State) ->
+    {stop, cloudi_count_process_dynamic_terminate, State};
+
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,
                            queued_info = QueueInfo} = State) ->
@@ -2586,7 +2787,7 @@ duo_handle_info(Request,
                            service_state = ServiceState,
                            dispatcher = Dispatcher,
                            options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
+    NewConfigOptions = check_incoming(false, ConfigOptions),
     case handle_module_info(Request, Module, Dispatcher, ServiceState) of
         {'cloudi_service_info_success', NewServiceState} ->
             {noreply,
@@ -2618,7 +2819,7 @@ duo_process_queue_info(NewServiceState,
                             queue_requests = false,
                             queued_info = NewQueueInfo};
         {{value, Request}, NewQueueInfo} ->
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(false, ConfigOptions),
             case handle_module_info(Request, Module, Dispatcher,
                                     NewServiceState) of
                 {'cloudi_service_info_success', NextServiceState} ->
@@ -2666,7 +2867,7 @@ duo_process_queue(NewServiceState,
                 V ->
                     V
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state_duo{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
@@ -2688,7 +2889,7 @@ duo_process_queue(NewServiceState,
                 V ->
                     V
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state_duo{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,

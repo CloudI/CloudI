@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -52,7 +52,7 @@
 
 %% external interface
 -export([start_internal/12,
-         start_external/15]).
+         start_external/16]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -117,12 +117,13 @@ start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
             {error, {service_internal_module_not_loaded, Module}}
     end.
 
-start_external(ThreadsPerProcess,
+start_external(ProcessIndex, ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList, ConfigOptions, UUID)
-    when is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
+    when is_integer(ProcessIndex),
+         is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),

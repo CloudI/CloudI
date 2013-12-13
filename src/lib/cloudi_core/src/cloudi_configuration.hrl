@@ -112,6 +112,20 @@
         % instead of a returned null response message
         response_timeout_immediate_max = 20000 % milliseconds
             :: cloudi_service_api:response_timeout_immediate_max_milliseconds(),
+        % should the process count be varied automatically based on the
+        % rate of service processing within a specific time period.
+        % the count max/min specify limits for the count_process changes
+        % as either floating point percentages (the result is rounded) or
+        % as integer absolutes.
+        count_process_dynamic = false
+            :: false |
+               list({period,
+                     cloudi_rate_based_configuration:period_seconds()} |
+                    {rate_request_max, number()} | % service reqs/second
+                    {rate_request_min, number()} | % service reqs/second
+                    {count_max, number()} | % float multiplier or
+                    {count_min, number()}) | % integer absolute
+               tuple(),
         % provide a scope for all subscribe/unsubscribe and messaging
         % (i.e., all service name usage is within the scope).  Using a
         % different scope can help avoid contention when using an immediate
@@ -124,12 +138,17 @@
         % checked during service startup (e.g., after service restarts).
         % (all time parameters are specified in milliseconds)
         monkey_latency = false
-            :: list({time_uniform_min, pos_integer()} |
-                    {time_uniform_max, pos_integer()} |
-                    {time_gaussian_mean, pos_integer()} |
+            :: list({time_uniform_min,
+                     cloudi_runtime_testing:time_milliseconds()} |
+                    {time_uniform_max,
+                     cloudi_runtime_testing:time_milliseconds()} |
+                    {time_gaussian_mean,
+                     cloudi_runtime_testing:time_milliseconds()} |
                     {time_gaussian_stddev, float()} |
-                    {time_absolute, pos_integer()}) |
-               system | false,
+                    {time_absolute,
+                     cloudi_runtime_testing:time_milliseconds()}) |
+               system | false |
+               tuple(),
         % cause service termination based on the probability parameter
         % (checked for each service request and info message, if necessary).
         % If "system" is set, the cloudi_core Erlang application env value
@@ -139,7 +158,8 @@
         monkey_chaos = false
             :: list({probability_request, float()} |
                     {probability_day, float()}) |
-               system | false,
+               system | false |
+               tuple(),
 
         % Only Relevant For Internal Services:
 
@@ -182,9 +202,14 @@
             :: boolean(),
         % should a mostly idle service hibernate automatically to conserve
         % memory at the expense of extra garbage collections and an empty
-        % stack trace.
+        % stack trace.  if a list is provided, hibernate will occur when
+        % the rate of service processing drops below the minimum specified.
         hibernate = false
-            :: boolean(),
+            :: boolean() |
+               list({period,
+                     cloudi_rate_based_configuration:period_seconds()} |
+                    {rate_request_min, number()}) | % service reqs/second
+               tuple(),
         % should the service be reloaded automatically when an Erlang module
         % file changes?  should only be used during service development.
         reload = false
@@ -194,8 +219,6 @@
         automatic_loading = true
             :: boolean()
     }).
--define(CONFIG_SERVICE_OPTIONS_EXTERNAL_SIZE,
-        (#config_service_options.application_name - 1)).
 
 % internal service parameters
 -record(config_service_internal,

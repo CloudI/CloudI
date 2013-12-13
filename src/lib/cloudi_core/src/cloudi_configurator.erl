@@ -175,9 +175,12 @@ service_start(#config_service_internal{
             Error
     end;
 
-service_start(#config_service_external{count_process = Count} = Service,
+service_start(#config_service_external{count_process = Count,
+                                       count_thread = CountThread} = Service,
               Timeout) ->
-    service_start_external(concurrency(Count), Service, timeout_decr(Timeout)).
+    NewCountThread = concurrency(CountThread),
+    service_start_external(concurrency(Count), Service,
+                           NewCountThread, timeout_decr(Timeout)).
 
 service_stop(#config_service_internal{} = Service, Remove, Timeout)
     when is_boolean(Remove) ->
@@ -199,7 +202,7 @@ concurrency(I)
     when is_float(I) ->
     if
         I > 1.0 ->
-            ceil(I * erlang:system_info(schedulers));
+            cloudi_math:ceil(I * erlang:system_info(schedulers));
         I > 0.0, I < 1.0 ->
             erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
         I == 1.0 ->
@@ -584,23 +587,21 @@ service_start_internal(Count0,
                            uuid = ID} = Service, Timeout) ->
     Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
-                                         [Count1,
-                                          Module, Args, TimeoutInit,
+                                         [Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
-                                         MaxR, MaxT, ID, Timeout) of
+                                         Count1, 1, MaxR, MaxT, ID, Timeout) of
         ok ->
             service_start_internal(Count1, Service, Timeout);
         {error, _} = Error ->
             Error
     end.
 
-service_start_external(0, Service, _) ->
+service_start_external(0, Service, _, _) ->
     {ok, Service};
 service_start_external(Count0,
                        #config_service_external{
-                           count_thread = CountThread,
                            file_path = FilePath,
                            args = Args,
                            env = Env,
@@ -616,17 +617,19 @@ service_start_external(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = ID} = Service, Timeout) ->
+                           uuid = ID} = Service, CountThread, Timeout) ->
+    Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
-                                         [concurrency(CountThread),
+                                         [CountThread,
                                           FilePath, Args, Env,
                                           Protocol, BufferSize, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
+                                         Count1, CountThread,
                                          MaxR, MaxT, ID, Timeout) of
         ok ->
-            service_start_external(Count0 - 1, Service, Timeout);
+            service_start_external(Count1, Service, CountThread, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -699,22 +702,4 @@ timeout_decr(infinity) ->
     infinity;
 timeout_decr(Timeout) when is_integer(Timeout) ->
     Timeout - ?TIMEOUT_DELTA.
-
-ceil(X) ->
-    T = erlang:trunc(X),
-    if
-        X > T ->
-            T + 1;
-        true ->
-            T
-    end.
-
-%floor(X) ->
-%    T = erlang:trunc(X),
-%    if
-%        X < T ->
-%            T - 1;
-%        true ->
-%            T
-%    end.
 

@@ -183,7 +183,8 @@ init([Protocol, SocketPath,
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, State} ->
             cloudi_x_quickrand:seed(),
-            NewConfigOptions = check_init(ConfigOptions),
+            NewConfigOptions =
+                check_init_receive(check_init_send(ConfigOptions)),
             destination_refresh_first(DestRefresh, NewConfigOptions),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, erlang},
@@ -252,20 +253,36 @@ init([Protocol, SocketPath,
          #state{dispatcher = Dispatcher,
                 prefix = Prefix,
                 options = #config_service_options{
+                    count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
-    ok = cloudi_x_cpg:join(Scope, Prefix ++ Pattern, Dispatcher, infinity),
+    case cloudi_rate_based_configuration:
+         count_process_dynamic_terminated(CountProcessDynamic) of
+        false ->
+            ok = cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
+                                   Dispatcher, infinity);
+        true ->
+            ok
+    end,
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix,
                 options = #config_service_options{
+                    count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
-    case cloudi_x_cpg:leave(Scope, Prefix ++ Pattern, Dispatcher, infinity) of
-        ok ->
-            {next_state, 'HANDLE', State};
-        error ->
-            {stop, {error, {unsubscribe_invalid, Pattern}}, State}
+    case cloudi_rate_based_configuration:
+         count_process_dynamic_terminated(CountProcessDynamic) of
+        false ->
+            case cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
+                                    Dispatcher, infinity) of
+                ok ->
+                    {next_state, 'HANDLE', State};
+                error ->
+                    {stop, {error, {unsubscribe_invalid, Pattern}}, State}
+            end;
+        true ->
+            {next_state, 'HANDLE', State}
     end;
 
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
@@ -680,7 +697,7 @@ handle_info({'cloudi_service_send_async', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
             #state{queue_requests = false,
                    options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
+    NewConfigOptions = check_incoming(true, ConfigOptions),
     send('send_async_out'(Name, Pattern, RequestInfo, Request,
                           Timeout, Priority, TransId, Pid), State),
     {next_state, StateName,
@@ -697,7 +714,7 @@ handle_info({'cloudi_service_send_sync', Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Pid}, StateName,
             #state{queue_requests = false,
                    options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(ConfigOptions),
+    NewConfigOptions = check_incoming(true, ConfigOptions),
     send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Pid), State),
     {next_state, StateName,
@@ -878,6 +895,46 @@ handle_info({'EXIT', _, Reason}, _, State) ->
 handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName,
             State) ->
     {next_state, StateName, send_timeout_dead(Pid, State)};
+
+handle_info('cloudi_count_process_dynamic_rate', StateName,
+            #state{dispatcher = Dispatcher,
+                   options = #config_service_options{
+                       count_process_dynamic =
+                           CountProcessDynamic} = ConfigOptions} = State) ->
+    NewCountProcessDynamic = cloudi_rate_based_configuration:
+                             count_process_dynamic_reinit(Dispatcher,
+                                                          CountProcessDynamic),
+    {next_state, StateName,
+     State#state{options = ConfigOptions#config_service_options{
+                     count_process_dynamic = NewCountProcessDynamic}}};
+
+handle_info('cloudi_count_process_dynamic_terminate', StateName,
+            #state{dispatcher = Dispatcher,
+                   options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic,
+                       scope = Scope} = ConfigOptions} = State) ->
+    cloudi_x_cpg:leave(Scope, Dispatcher, infinity),
+    NewCountProcessDynamic =
+        cloudi_rate_based_configuration:
+        count_process_dynamic_terminate_set(Dispatcher, CountProcessDynamic),
+    {next_state, StateName,
+     State#state{options = ConfigOptions#config_service_options{
+                     count_process_dynamic = NewCountProcessDynamic}}};
+
+handle_info('cloudi_count_process_dynamic_terminate_check', StateName,
+            #state{dispatcher = Dispatcher,
+                   queue_requests = QueueRequests} = State) ->
+    if
+        QueueRequests =:= false ->
+            {stop, cloudi_count_process_dynamic_terminate, State};
+        QueueRequests =:= true ->
+            erlang:send_after(500, Dispatcher,
+                              'cloudi_count_process_dynamic_terminate_check'),
+            {next_state, StateName, State}
+    end;
+
+handle_info('cloudi_count_process_dynamic_terminate_now', _, State) ->
+    {stop, cloudi_count_process_dynamic_terminate, State};
 
 handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -1223,7 +1280,7 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
                 V ->    
                     V       
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             send('send_async_out'(Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Pid),
                  State),
@@ -1240,7 +1297,7 @@ process_queue(#state{recv_timeouts = RecvTimeouts,
                 V ->    
                     V       
             end,
-            NewConfigOptions = check_incoming(ConfigOptions),
+            NewConfigOptions = check_incoming(true, ConfigOptions),
             send('send_sync_out'(Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Pid),
                  State),

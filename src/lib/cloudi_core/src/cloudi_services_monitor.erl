@@ -56,11 +56,13 @@
 
 %% external interface
 -export([start_link/0,
-         monitor/7,
+         monitor/9,
          shutdown/2,
          restart/2,
          search/2,
-         pids/2]).
+         pids/2,
+         increase/5,
+         decrease/5]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -76,22 +78,39 @@
 
 -record(state,
     {
-        services = cloudi_x_key2value:new(dict) % {cloudi_x_uuid, pid} ->
-                                                %     configuration
+        services = cloudi_x_key2value:new(dict), % {cloudi_x_uuid, pid} ->
+                                                 %     configuration
+        changes = dict:new() :: dict() % cloudi_x_uuid -> list()
     }).
 
 -record(service,
     {
-        service_m,
-        service_f,
-        service_a,
-        pids,
-        monitor,
-        restart_count = 0,
-        restart_times = [],
-        max_r, % from the supervisor behavior documentation:
-        max_t  % If more than MaxR restarts occur within MaxT seconds,
-               % the supervisor terminates all child processes...
+        service_m :: atom(),
+        service_f :: fun(),
+        service_a :: list(),
+        process_index :: non_neg_integer(),
+        count_thread :: pos_integer(),
+        % pids is only accurate on the pid lookup (find2)
+        % due to the overwrite of #service{}
+        pids :: list(pid()),
+        monitor :: reference(),
+        restart_count = 0 :: non_neg_integer(),
+        restart_times = [] :: list(erlang:timestamp()),
+        % from the supervisor behavior documentation:
+        % If more than MaxR restarts occur within MaxT seconds,
+        % the supervisor terminates all child processes...
+        max_r :: non_neg_integer(),
+        max_t :: non_neg_integer()
+    }).
+
+-record(pids_change,
+    {
+        count_process :: pos_integer(),
+        count_increase = 0 :: non_neg_integer(),
+        count_decrease = 0 :: non_neg_integer(),
+        increase = 0 :: non_neg_integer(),
+        decrease = 0 :: non_neg_integer(),
+        rate = 0.0 :: float()
     }).
 
 %%%------------------------------------------------------------------------
@@ -101,12 +120,16 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-monitor(M, F, A, MaxR, MaxT, ServiceId, Timeout)
+monitor(M, F, A, ProcessIndex, CountThread, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
+         is_integer(ProcessIndex), ProcessIndex >= 0,
+         is_integer(CountThread), CountThread > 0,
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {monitor, M, F, A, MaxR, MaxT, ServiceId},
+                                {monitor, M, F, A,
+                                 ProcessIndex, CountThread, 
+                                 MaxR, MaxT, ServiceId},
                                 Timeout)).
 
 shutdown(ServiceId, Timeout)
@@ -132,6 +155,22 @@ pids(ServiceId, Timeout)
                                 {pids, ServiceId},
                                 Timeout)).
 
+increase(Pid, Period, RateCurrent, RateMax, CountProcessMax)
+    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
+         is_number(RateMax), is_number(CountProcessMax) ->
+    ?CATCH_EXIT(gen_server:cast(?MODULE,
+                                {increase,
+                                 Pid, Period, RateCurrent,
+                                 RateMax, CountProcessMax})).
+
+decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
+    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
+         is_number(RateMin), is_number(CountProcessMin) ->
+    ?CATCH_EXIT(gen_server:cast(?MODULE,
+                                {decrease,
+                                 Pid, Period, RateCurrent,
+                                 RateMin, CountProcessMin})).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -139,28 +178,34 @@ pids(ServiceId, Timeout)
 init([]) ->
     {ok, #state{}}.
 
-handle_call({monitor, M, F, A, MaxR, MaxT, ServiceId}, _,
+handle_call({monitor, M, F, A, ProcessIndex, CountThread,
+             MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
-    case erlang:apply(M, F, A) of
+    FA = [ProcessIndex | A],
+    case erlang:apply(M, F, FA) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p", [F, A, Pid]),
+            ?LOG_INFO("~p ~p -> ~p", [F, FA, Pid]),
             NewServices =
                 cloudi_x_key2value:store(ServiceId, Pid,
                     #service{service_m = M,
                              service_f = F,
                              service_a = A,
+                             process_index = ProcessIndex,
+                             count_thread = CountThread,
                              pids = [Pid],
                              monitor = erlang:monitor(process, Pid),
                              max_r = MaxR,
                              max_t = MaxT}, Services),
             {reply, ok, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p", [F, A, Pids]),
+            ?LOG_INFO("~p ~p -> ~p", [F, FA, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     #service{service_m = M,
                              service_f = F,
                              service_a = A,
+                             process_index = ProcessIndex,
+                             count_thread = CountThread,
                              pids = Pids,
                              monitor = erlang:monitor(process, P),
                              max_r = MaxR,
@@ -232,9 +277,67 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
+handle_cast({Direction,
+             Pid, Period, RateCurrent,
+             RateLimit, CountProcessLimit},
+            #state{services = Services,
+                   changes = Changes} = State)
+    when (Direction =:= increase);
+         (Direction =:= decrease) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], _}} ->
+            Entry = {Direction, RateCurrent, RateLimit, CountProcessLimit},
+            NewChangeList = case dict:find(ServiceId, Changes) of
+                {ok, ChangeList} ->
+                    [Entry | ChangeList];
+                error ->
+                    erlang:send_after(Period * 1000, self(),
+                                      {changes, ServiceId}),
+                    [Entry]
+            end,
+            {noreply, State#state{changes = dict:store(ServiceId,
+                                                       NewChangeList,
+                                                       Changes)}};
+        error ->
+            % discard old change
+            {noreply, State}
+    end;
+
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
+
+handle_info({changes, ServiceId},
+            #state{services = Services,
+                   changes = Changes} = State) ->
+    NewChanges = dict:erase(ServiceId, Changes),
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {Pids, #service{count_thread = CountThread}}} ->
+            ChangeList = dict:fetch(ServiceId, Changes),
+            CountProcessCurrent = erlang:round(erlang:length(Pids) /
+                                               CountThread),
+            {I, Rate} = pids_change(ChangeList, CountProcessCurrent),
+            NewServices = if
+                I == 0 ->
+                    Services;
+                I > 0 ->
+                    ?LOG_INFO("count_process_dynamic: "
+                              "increasing ~p with ~p for ~p requests/second",
+                              [CountProcessCurrent, I,
+                               erlang:round(Rate * 10) / 10]),
+                    pids_increase(I, Pids, ServiceId, Services);
+                I < 0 ->
+                    ?LOG_INFO("count_process_dynamic: "
+                              "decreasing ~p with ~p for ~p requests/second",
+                              [CountProcessCurrent, I,
+                               erlang:round(Rate * 10) / 10]),
+                    pids_decrease(I, Pids, ServiceId, Services)
+            end,
+            {noreply, State#state{services = NewServices,
+                                  changes = NewChanges}};
+        error ->
+            {noreply, State#state{changes = NewChanges}}
+    end;
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
@@ -242,12 +345,31 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
         {ok, {[ServiceId], #service{service_m = M,
                                     service_f = F,
                                     service_a = A,
+                                    process_index = ProcessIndex,
                                     pids = Pids}}} ->
-            ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, A]),
+            FA = [ProcessIndex | A],
+            ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, FA]),
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
                 cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
+            {noreply, State#state{services = NewServices}};
+        error ->
+            {noreply, State}
+    end;
+
+handle_info({'DOWN', _MonitorRef, 'process', Pid,
+             cloudi_count_process_dynamic_terminate},
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], #service{service_m = M,
+                                    service_f = F,
+                                    service_a = A,
+                                    process_index = ProcessIndex}}} ->
+            FA = [ProcessIndex | A],
+            ?LOG_INFO("Service pid ~p terminated (count_process_dynamic)~n"
+                      " ~p:~p~p", [Pid, M, F, FA]),
+            NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
             {noreply, State#state{services = NewServices}};
         error ->
             {noreply, State}
@@ -258,9 +380,11 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{service_m = M,
                                     service_f = F,
-                                    service_a = A} = Service}} ->
+                                    service_a = A,
+                                    process_index = ProcessIndex} = Service}} ->
+            FA = [ProcessIndex | A],
             ?LOG_WARN("Service pid ~p error: ~p~n ~p:~p~p~n",
-                      [Pid, Info, M, F, A]),
+                      [Pid, Info, M, F, FA]),
             {noreply, restart(Service, Services, State, ServiceId, Pid)};
         error ->
             % Pids started together as threads for one OS process may
@@ -276,11 +400,13 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
 handle_info({kill, Shutdown, Pid,
              #service{service_m = M,
                       service_f = F,
-                      service_a = A}}, State) ->
+                      service_a = A,
+                      process_index = ProcessIndex}}, State) ->
     case erlang:is_process_alive(Pid) of
         true ->
+            FA = [ProcessIndex | A],
             ?LOG_ERROR("Service pid ~p brutal_kill after ~p ms (MaxT/MaxR)~n"
-                       " ~p:~p~p~n", [Pid, Shutdown, M, F, A]),
+                       " ~p:~p~p~n", [Pid, Shutdown, M, F, FA]),
             erlang:exit(Pid, kill);
         false ->
             ok
@@ -323,26 +449,30 @@ restart_stage1(#service{pids = Pids,
 restart_stage2(#service{service_m = M,
                         service_f = F,
                         service_a = A,
+                        process_index = ProcessIndex,
                         restart_count = 0,
                         max_r = 0},
                Services, State, _, OldPid) ->
     % no restarts allowed
-    ?LOG_WARN("max restarts (MaxR = 0) ~p~n ~p:~p~p", [OldPid, M, F, A]),
+    FA = [ProcessIndex | A],
+    ?LOG_WARN("max restarts (MaxR = 0) ~p~n ~p:~p~p", [OldPid, M, F, FA]),
     State#state{services = Services};
 
 restart_stage2(#service{service_m = M,
                         service_f = F,
                         service_a = A,
+                        process_index = ProcessIndex,
                         restart_count = 0,
                         restart_times = []} = Service,
                Services, State, ServiceId, OldPid) ->
     % first restart
     Now = erlang:now(),
-    NewServices = case erlang:apply(M, F, A) of
+    FA = [ProcessIndex | A],
+    NewServices = case erlang:apply(M, F, FA) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now ~p)~n"
-                      " ~p:~p~p", [OldPid, Pid, M, F, A]),
+                      " ~p:~p~p", [OldPid, Pid, M, F, FA]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = [Pid],
@@ -352,7 +482,7 @@ restart_stage2(#service{service_m = M,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now one of ~p)~n"
-                      " ~p:~p~p", [OldPid, Pids, M, F, A]),
+                      " ~p:~p~p", [OldPid, Pids, M, F, FA]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
@@ -362,7 +492,7 @@ restart_stage2(#service{service_m = M,
                                     restart_times = [Now]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
+            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, FA]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [Now]},
@@ -375,6 +505,7 @@ restart_stage2(#service{service_m = M,
 restart_stage2(#service{service_m = M,
                         service_f = F,
                         service_a = A,
+                        process_index = ProcessIndex,
                         restart_count = RestartCount,
                         restart_times = RestartTimes,
                         max_r = MaxR,
@@ -393,14 +524,16 @@ restart_stage2(#service{service_m = M,
                                            restart_times = NewRestartTimes},
                            Services, State, ServiceId, OldPid);
         true ->
+            FA = [ProcessIndex | A],
             ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
-                      " ~p:~p~p", [MaxR, MaxT, OldPid, M, F, A]),
+                      " ~p:~p~p", [MaxR, MaxT, OldPid, M, F, FA]),
             State#state{services = Services}
     end;
 
 restart_stage2(#service{service_m = M,
                         service_f = F,
                         service_a = A,
+                        process_index = ProcessIndex,
                         restart_count = RestartCount,
                         restart_times = RestartTimes} = Service,
                Services, State, ServiceId, OldPid) ->
@@ -408,11 +541,12 @@ restart_stage2(#service{service_m = M,
     Now = erlang:now(),
     R = RestartCount + 1,
     T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
-    NewServices = case erlang:apply(M, F, A) of
+    FA = [ProcessIndex | A],
+    NewServices = case erlang:apply(M, F, FA) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now ~p)~n"
-                      " ~p:~p~p", [R, T, OldPid, Pid, M, F, A]),
+                      " ~p:~p~p", [R, T, OldPid, Pid, M, F, FA]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = [Pid],
@@ -423,7 +557,7 @@ restart_stage2(#service{service_m = M,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now one of ~p)~n"
-                      " ~p:~p~p", [R, T, OldPid, Pids, M, F, A]),
+                      " ~p:~p~p", [R, T, OldPid, Pids, M, F, FA]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
@@ -433,7 +567,7 @@ restart_stage2(#service{service_m = M,
                                     restart_times = [Now | RestartTimes]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, A]),
+            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, FA]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
                                       restart_times = [Now | RestartTimes]},
@@ -442,6 +576,159 @@ restart_stage2(#service{service_m = M,
             Services
     end,
     State#state{services = NewServices}.
+
+pids_change(ChangeList, CountProcessCurrent) ->
+    pids_change_loop(ChangeList,
+                     #pids_change{count_process = CountProcessCurrent}).
+
+pids_change_loop([],
+                 #pids_change{count_process = CountProcess,
+                              count_increase = CountIncrease,
+                              count_decrease = CountDecrease,
+                              increase = Increase,
+                              decrease = Decrease,
+                              rate = Rate}) ->
+    Change = erlang:round(if
+        CountIncrease == CountDecrease ->
+            CountBoth = CountIncrease + CountDecrease,
+            ((Increase / CountIncrease) *
+             (CountIncrease / CountBoth) +
+             (Decrease / CountDecrease) *
+             (CountDecrease / CountBoth)) - CountProcess;
+        CountIncrease > CountDecrease ->
+            (Increase / CountIncrease) - CountProcess;
+        CountIncrease < CountDecrease ->
+            (Decrease / CountDecrease) - CountProcess
+    end),
+    {Change, Rate};
+pids_change_loop([{increase, RateCurrent,
+                   RateMax, CountProcessMax} | ChangeList],
+                 #pids_change{count_process = CountProcess,
+                              count_increase = CountIncrease,
+                              increase = Increase,
+                              rate = Rate} = State)
+    when RateCurrent > RateMax ->
+    NewIncrease = Increase + (if
+        CountProcessMax =< CountProcess ->
+            % if floating point CountProcess was specified in the configuration
+            % and the number of schedulers changed, it would be possible to
+            % have: CountProcessMax < CountProcess
+            CountProcess;
+        CountProcessMax > CountProcess ->
+            erlang:min(cloudi_math:ceil((CountProcess * RateCurrent) /
+                                        RateMax),
+                       CountProcessMax)
+    end),
+    pids_change_loop(ChangeList,
+                     State#pids_change{count_increase = (CountIncrease + 1),
+                                       increase = NewIncrease,
+                                       rate = (Rate + RateCurrent)});
+pids_change_loop([{decrease, RateCurrent,
+                   RateMin, CountProcessMin} | ChangeList],
+                 #pids_change{count_process = CountProcess,
+                              count_decrease = CountDecrease,
+                              decrease = Decrease,
+                              rate = Rate} = State)
+    when RateCurrent < RateMin ->
+    NewDecrease = Decrease + (if
+        CountProcessMin >= CountProcess ->
+            % if floating point CountProcess was specified in the configuration
+            % and the number of schedulers changed, it would be possible to
+            % have: CountProcessMin > CountProcess
+            CountProcess;
+        CountProcessMin < CountProcess ->
+            erlang:max(cloudi_math:floor((CountProcess * RateCurrent) /
+                                         RateMin),
+                       CountProcessMin)
+    end),
+    pids_change_loop(ChangeList,
+                     State#pids_change{count_decrease = (CountDecrease + 1),
+                                       decrease = NewDecrease,
+                                       rate = (Rate + RateCurrent)}).
+
+service_instance(Pids, ServiceId, Services) ->
+    service_instance(Pids, [], ServiceId, Services).
+
+service_instance([], Results, _, _) ->
+    Results;
+service_instance([Pid | Pids], Results, ServiceId, Services) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], #service{pids = [Pid]} = Service}} ->
+            service_instance(Pids,
+                             lists:keymerge(#service.process_index,
+                                            Results, [Service]),
+                             ServiceId, Services);
+        {ok, {[ServiceId], #service{pids = ThreadPids} = Service}} ->
+            NewPids = lists:foldl(fun lists:delete/2, Pids, ThreadPids),
+            service_instance(NewPids,
+                             lists:keymerge(#service.process_index,
+                                            Results, [Service]),
+                             ServiceId, Services)
+    end.
+
+pids_increase_loop(0, _, _, _, Services) ->
+    Services;
+pids_increase_loop(Count, ProcessIndex,
+                   #service{service_m = M,
+                            service_f = F,
+                            service_a = A,
+                            count_thread = CountThread,
+                            max_r = MaxR,
+                            max_t = MaxT} = Service, ServiceId, Services) ->
+    FA = [ProcessIndex | A],
+    NewServices = case erlang:apply(M, F, FA) of
+        {ok, Pid} when is_pid(Pid) ->
+            ?LOG_INFO("~p ~p -> ~p (count_process_dynamic)", [F, FA, Pid]),
+            cloudi_x_key2value:store(ServiceId, Pid,
+                #service{service_m = M,
+                         service_f = F,
+                         service_a = A,
+                         process_index = ProcessIndex,
+                         count_thread = CountThread,
+                         pids = [Pid],
+                         monitor = erlang:monitor(process, Pid),
+                         max_r = MaxR,
+                         max_t = MaxT}, Services);
+        {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+            ?LOG_INFO("~p ~p -> ~p (count_process_dynamic)", [F, FA, Pids]),
+            lists:foldl(fun(P, D) ->
+                cloudi_x_key2value:store(ServiceId, P,
+                    #service{service_m = M,
+                             service_f = F,
+                             service_a = A,
+                             process_index = ProcessIndex,
+                             count_thread = CountThread,
+                             pids = Pids,
+                             monitor = erlang:monitor(process, P),
+                             max_r = MaxR,
+                             max_t = MaxT}, D)
+            end, Services, Pids);
+        {error, _} = Error ->
+            ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p:~p~p",
+                       [Error, M, F, FA]),
+            Services
+    end,
+    pids_increase_loop(Count - 1, ProcessIndex + 1,
+                       Service, ServiceId, NewServices).
+
+pids_increase(Count, OldPids, ServiceId, Services) ->
+    [Service | _] = lists:reverse(service_instance(OldPids,
+                                                   ServiceId, Services)),
+    #service{process_index = ProcessIndex} = Service,
+    pids_increase_loop(Count, ProcessIndex + 1, Service, ServiceId, Services).
+
+pids_decrease_loop(0, _) ->
+    ok;
+pids_decrease_loop(Count, [#service{pids = Pids} | ServiceL]) ->
+    lists:foreach(fun(P) ->
+        cloudi_rate_based_configuration:count_process_dynamic_terminate(P)
+    end, Pids),
+    pids_decrease_loop(Count + 1, ServiceL).
+
+pids_decrease(Count, OldPids, ServiceId, Services) ->
+    ServiceL = lists:reverse(service_instance(OldPids, ServiceId, Services)),
+    pids_decrease_loop(Count, ServiceL),
+    Services.
 
 terminate_delay(_, 0) ->
     ?TERMINATE_DELAY_MIN;

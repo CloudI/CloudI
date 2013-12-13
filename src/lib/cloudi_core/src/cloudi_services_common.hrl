@@ -436,13 +436,13 @@ recv_async_select_oldest([{TransId, _} | L], Time0, TransIdCurrent) ->
             recv_async_select_oldest(L, Time0, TransIdCurrent)
     end.
 
-check_init(#config_service_options{
-               monkey_latency = false,
-               monkey_chaos = false} = ConfigOptions) ->
+check_init_send(#config_service_options{
+                    monkey_latency = false,
+                    monkey_chaos = false} = ConfigOptions) ->
     ConfigOptions;
-check_init(#config_service_options{
-               monkey_latency = MonkeyLatency,
-               monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+check_init_send(#config_service_options{
+                    monkey_latency = MonkeyLatency,
+                    monkey_chaos = MonkeyChaos} = ConfigOptions) ->
     NewMonkeyLatency = if
         MonkeyLatency =/= false ->
             cloudi_runtime_testing:monkey_latency_init(MonkeyLatency);
@@ -459,13 +459,52 @@ check_init(#config_service_options{
         monkey_latency = NewMonkeyLatency,
         monkey_chaos = NewMonkeyChaos}.
 
-check_incoming(#config_service_options{
-                   monkey_latency = false,
-                   monkey_chaos = false} = ConfigOptions) ->
+check_init_receive(#config_service_options{
+                       count_process_dynamic = false,
+                       hibernate = Hibernate} = ConfigOptions)
+    when is_boolean(Hibernate) ->
     ConfigOptions;
-check_incoming(#config_service_options{
+check_init_receive(#config_service_options{
+                       count_process_dynamic = CountProcessDynamic,
+                       hibernate = Hibernate} = ConfigOptions) ->
+    NewCountProcessDynamic = if
+        CountProcessDynamic =/= false ->
+            cloudi_rate_based_configuration:
+            count_process_dynamic_init(CountProcessDynamic);
+        true ->
+            CountProcessDynamic
+    end,
+    NewHibernate = if
+        not is_boolean(Hibernate) ->
+            cloudi_rate_based_configuration:hibernate_init(Hibernate);
+        true ->
+            Hibernate
+    end,
+    ConfigOptions#config_service_options{
+        count_process_dynamic = NewCountProcessDynamic,
+        hibernate = NewHibernate}.
+
+check_incoming(_ServiceRequest,
+               #config_service_options{
+                   count_process_dynamic = false,
+                   monkey_latency = false,
+                   monkey_chaos = false,
+                   hibernate = Hibernate} = ConfigOptions)
+    when is_boolean(Hibernate) ->
+    ConfigOptions;
+check_incoming(ServiceRequest,
+               #config_service_options{
+                   count_process_dynamic = CountProcessDynamic,
                    monkey_latency = MonkeyLatency,
-                   monkey_chaos = MonkeyChaos} = ConfigOptions) ->
+                   monkey_chaos = MonkeyChaos,
+                   hibernate = Hibernate} = ConfigOptions) ->
+    NewCountProcessDynamic = if
+        (CountProcessDynamic =/= false), ServiceRequest ->
+            cloudi_rate_based_configuration:
+            count_process_dynamic_request(CountProcessDynamic);
+        true ->
+            CountProcessDynamic
+    end,
     NewMonkeyLatency = if
         MonkeyLatency =/= false ->
             cloudi_runtime_testing:monkey_latency_check(MonkeyLatency);
@@ -478,7 +517,15 @@ check_incoming(#config_service_options{
         true ->
             MonkeyChaos
     end,
+    NewHibernate = if
+        (not is_boolean(Hibernate)), ServiceRequest ->
+            cloudi_rate_based_configuration:hibernate_request(Hibernate);
+        true ->
+            Hibernate
+    end,
     ConfigOptions#config_service_options{
+        count_process_dynamic = NewCountProcessDynamic,
         monkey_latency = NewMonkeyLatency,
-        monkey_chaos = NewMonkeyChaos}.
+        monkey_chaos = NewMonkeyChaos,
+        hibernate = NewHibernate}.
 
