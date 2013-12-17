@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update erlang_cassandra
+
 2013-12-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the count_process_dynamic service configuration option for

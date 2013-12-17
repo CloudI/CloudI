@@ -15,7 +15,7 @@
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("common_test/include/ct.hrl").
--include_lib("erlang_cassandra/include/cassandra_types.hrl").
+-include_lib("erlang_cassandra/include/erlang_cassandra_types.hrl").
 
 -compile(export_all).
 
@@ -32,6 +32,9 @@
 -define(CONSISTENCY_LEVEL, 1).
 -define(MAX_COLUMNS, 100).
 -define(MAX_ROWS, 10).
+% Thrift
+-define(THRIFT_HOST, "localhost").
+-define(THRIFT_PORT, 9160).
 
 
 suite() ->
@@ -45,9 +48,15 @@ init_per_suite(Config) ->
 end_per_suite(_Config) ->
     ok.
 
+keyspace(Name) ->
+    case random:uniform(2) of
+        1 -> {?THRIFT_HOST, ?THRIFT_PORT, Name};
+        2 -> Name
+    end.
+
 connection_options() ->
-    [{thrift_host, "localhost"},
-     {thrift_port, 9160},
+    [{thrift_host, ?THRIFT_HOST},
+     {thrift_port, ?THRIFT_PORT},
      {thrift_options, [{framed, true}]}].
 
 pool_options(1) ->
@@ -58,12 +67,21 @@ pool_options(_) ->
     [{size, 7},
      {max_overflow, 14}].
 
+retry_options(1) ->
+    [];
+retry_options(2) ->
+    [{retry_interval, 500}];
+retry_options(_) ->
+    [{retry_interval, 500},
+     {retry_amount, 5}].
+
 update_config(Config) ->
     Version = cassandra_test_version(Config),
     Config1 = lists:foldl(fun(X, Acc) -> 
                     proplists:delete(X, Acc)
             end, Config, [cassandra_test_version,
                           pool_options,
+                          retry_options,
                           keyspace]),
     [{cassandra_test_version, Version + 1} | Config1].
 
@@ -75,7 +93,7 @@ cassandra_test_version(Config) ->
 
 
 init_per_group(_GroupName, Config) ->
-    Keyspace = random_name(<<"keyspace">>),
+    Keyspace = keyspace(random_name(<<"keyspace">>)),
 
     Config1 = 
     case ?config(saved_config, Config) of
@@ -85,10 +103,12 @@ init_per_group(_GroupName, Config) ->
     Version = cassandra_test_version(Config1),
     PoolOptions = pool_options(Version),
     ConnectionOptions = connection_options(),
+    RetryOptions = retry_options(Version),
 
     Config2 = [{keyspace, Keyspace},
                {pool_options, PoolOptions},
-               {connection_options, ConnectionOptions} | Config1],
+               {connection_options, ConnectionOptions ++ RetryOptions} 
+               | Config1],
     start(Config2),
     Config2.
 
@@ -141,6 +161,10 @@ groups() ->
                 t_add_counter,
                 t_remove_counter
          ]},
+        {test, [],
+         [      
+                t_describe_keyspace
+         ]},
         {cql, [{repeat, 3}],
          [
                 t_execute_cql_query,
@@ -158,6 +182,7 @@ all() ->
         {group, column_slice},
         {group, count},
         {group, cql}
+%         {group, test}
     ].
 
 t_add_drop_keyspace(_) ->
@@ -308,7 +333,8 @@ validate_set_keyspace(Keyspace) ->
 validate_describe_keyspace(Keyspace) ->
     {ok, _} = create_keyspace(Keyspace),
     {ok, KeyspaceDefinition} = erlang_cassandra:describe_keyspace(Keyspace),
-    Keyspace = KeyspaceDefinition#ksDef.name,
+    ActualKeyspace = actual_keyspace(Keyspace),
+    ActualKeyspace = KeyspaceDefinition#ksDef.name,
     {ok, _} = erlang_cassandra:system_drop_keyspace(Keyspace),
     true.
 
@@ -607,7 +633,8 @@ validate_remove_counter(Keyspace, RowKey, ColumnParent, CounterColumn) ->
 
 validate_execute_cql_query(Keyspace) ->
     {ok, _} = create_keyspace(Keyspace),
-    Query = <<"use ", Keyspace/binary, ";">>,
+    ActualKeyspace = actual_keyspace(Keyspace),
+    Query = <<"use ", ActualKeyspace/binary, ";">>,
     {ok, Response} = erlang_cassandra:execute_cql_query(Keyspace, Query, 2),
     true = is_record(Response, cqlResult),
     {ok, _} = erlang_cassandra:system_drop_keyspace(Keyspace),
@@ -616,7 +643,8 @@ validate_execute_cql_query(Keyspace) ->
 validate_prepare_and_execute_cql_query(CqlPool, Keyspace) ->
     {ok, _} = erlang_cassandra:start_cql_pool(CqlPool),
     {ok, _} = create_keyspace(Keyspace),
-    Query1 = <<"use ", Keyspace/binary, ";">>,
+    ActualKeyspace = actual_keyspace(Keyspace),
+    Query1 = <<"use ", ActualKeyspace/binary, ";">>,
     {ok, _Response1} = erlang_cassandra:execute_cql_query(CqlPool, Query1, 2),
     Query2 = <<"CREATE COLUMNFAMILY test (KEY int PRIMARY KEY, text_field text);">>,
     {ok, _Response2} = erlang_cassandra:execute_cql_query(CqlPool, Query2, 2),
@@ -648,9 +676,12 @@ delete_keyspace(Keyspace) ->
 keyspace_replication_factor(KeyspaceDefinition) ->
     dict:fetch(<<"replication_factor">>, KeyspaceDefinition#ksDef.strategy_options).
 
+actual_keyspace({_, _, Keyspace}) -> Keyspace;
+actual_keyspace(Keyspace) -> Keyspace.
+
 % types
 keyspace_word() ->
-    ?LET(X, non_empty(limited_word(?KEYSPACE_PREFIX)), list_to_binary(X)).
+    ?LET(X, non_empty(limited_word(?KEYSPACE_PREFIX)), keyspace(list_to_binary(X))).
 
 column_family_word() ->
     ?LET(X, non_empty(limited_word(?COLUMN_FAMILY_PREFIX)), list_to_binary(X)).
@@ -676,7 +707,7 @@ keyspace_and_column_family_definition_item() ->
          {Keyspace, erlang_cassandra:column_family_definition(Keyspace, ColumnFamily)}).
 
 column_parent_item() ->
-    ?LET({ColumnFamily, SuperColumn}, {column_family_word(),
+    ?LET({ColumnFamily, _SuperColumn}, {column_family_word(),
                                        super_column_word()},
 %         erlang_cassandra:column_parent(ColumnFamily, SuperColumn)).
          erlang_cassandra:column_parent(ColumnFamily, undefined)).
@@ -751,9 +782,9 @@ setup_lager() ->
 start(Config) ->
     ConnectionOptions = ?config(connection_options, Config),
     PoolOptions = ?config(pool_options, Config),
-    reltool_util:application_start(erlang_cassandra),
     application:set_env(erlang_cassandra, pool_options, PoolOptions),
     application:set_env(erlang_cassandra, connection_options, ConnectionOptions),
+    reltool_util:application_start(erlang_cassandra),
     % Eliminate the test keyspaces at start
     cleanup_keyspaces(),
     Config.

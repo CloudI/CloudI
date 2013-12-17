@@ -5,7 +5,7 @@
 %%
 
 
--include("cassandra_types.hrl").
+-include("erlang_cassandra_types.hrl").
 
 -define(cassandra_VERSION, "19.36.0").
 

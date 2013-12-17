@@ -12,7 +12,7 @@
 {application, erlang_cassandra,
  [
   {description, "thrift based cassandra"},
-  {vsn, "1.0.7"},
+  {vsn, "1.0.10"},
   {registered, []},
   {modules, []},
   {applications, [

@@ -105,8 +105,8 @@ to its integration and dependencies).
 `Erlang Cassandra (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlang_cassandra`
-- `tag v1.0.7`
-- `Sun Nov 10 10:31:36 2013 -0500`
+- `commit 6d026bfb06f8efd53e63a32f9b887a01bcc550ad`
+- `Tue Dec 17 09:29:27 PST 2013`
 - `BSD`
 
 `etokyotyrant (medici)`

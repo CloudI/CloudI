@@ -88,8 +88,12 @@
 -record(state, {
         keyspace                            :: keyspace(),
         set_keyspace                        :: boolean(),
+        connection                          :: connection(),
         connection_options                  :: params(),
-        connection                          :: connection()}).
+        retries_left = 1                    :: non_neg_integer(),
+        retry_interval = 0                  :: non_neg_integer()}).
+
+-type state() :: #state{}.
 
 %% ------------------------------------------------------------------
 %% API
@@ -537,27 +541,45 @@ key_range(StartKey, EndKey) ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([ConnectionOptions0]) ->
-    {Keyspace1, ConnectionOptions2} = 
-    case lists:keytake(keyspace, 1, ConnectionOptions0) of
-        {value, {keyspace, Keyspace0}, ConnectionOptions1} -> 
-            {Keyspace0, ConnectionOptions1};
+init([ConnectionOptions]) ->
+    {Keyspace1, ConnectionOptions1} = 
+    case lists:keytake(keyspace, 1, ConnectionOptions) of
+        {value, {keyspace, Keyspace0}, Options0} -> 
+            {Keyspace0, Options0};
         false ->
-            {?DEFAULT_KEYSPACE_OPS_POOL, ConnectionOptions0}
+            {?DEFAULT_KEYSPACE_OPS_POOL, ConnectionOptions}
     end,
-    {SetKeyspace, ConnectionOptions4} = 
-    case lists:keytake(set_keyspace, 1, ConnectionOptions2) of
-        {value, {set_keyspace, Bool}, ConnectionOptions3} -> 
-            {Bool, ConnectionOptions3};
+    {SetKeyspace, ConnectionOptions2} = 
+    case lists:keytake(set_keyspace, 1, ConnectionOptions1) of
+        {value, {set_keyspace, Bool}, Options1} -> 
+            {Bool, Options1};
         false ->
             % By default, set the keyspace
-            {true, ConnectionOptions2}
+            {true, ConnectionOptions1}
+    end,
+    {RetryInterval, ConnectionOptions3} = 
+    case lists:keytake(retry_interval, 1, ConnectionOptions2) of
+        {value, {retry_interval, Interval}, Options2} ->
+            {Interval, Options2};
+        false ->
+            % By default, set the keyspace
+            {0, ConnectionOptions2}
+    end,
+    {RetryAmount, ConnectionOptions4} =
+    case lists:keytake(retry_amount, 1, ConnectionOptions3) of
+        {value, {retry_amount, Amount}, Options3} ->
+            {Amount, Options3};
+        false ->
+            % By default, set the keyspace
+            {1, ConnectionOptions3}
     end,
     Connection0 = connection(ConnectionOptions4),
     State0 = #state{keyspace = Keyspace1, 
                     set_keyspace = SetKeyspace,
                     connection_options = ConnectionOptions4,
-                    connection = Connection0},
+                    connection = Connection0,
+                    retries_left = RetryAmount,
+                    retry_interval = RetryInterval},
     {Connection1, _Response} = 
     case SetKeyspace of 
         true ->
@@ -612,7 +634,7 @@ connection(ConnectionOptions) ->
     ThriftOptions2 = lists:keydelete(framed, 1, ThriftOptions1),
     ThriftOptions3 = [{framed, true} | ThriftOptions2],
     try
-        {ok, Connection} = thrift_client_util:new(ThriftHost, ThriftPort, cassandra_thrift, ThriftOptions3),
+        {ok, Connection} = thrift_client_util:new(ThriftHost, ThriftPort, erlang_cassandra_thrift, ThriftOptions3),
         Connection
     catch
         _:_ -> undefined
@@ -638,51 +660,65 @@ request({F, A1, A2, A3, A4}) ->
 %%      this will retry the request (w/ a new thrift connection)
 %%      before choking
 -spec process_request(connection(), request(), #state{}) -> {connection(), response()}.
-process_request(Connection, {Function, Args}, State) ->
-    try process_request_1(_Retry = true, Connection, {Function, Args}, State)
-    catch
-        Exception:Reason ->
-            case {Exception, Reason} of
-                {throw, {retry_request, true}} ->
-                    process_request_1(false, undefined, {Function, Args}, State);
-                _ ->
-                    {undefined, ?CONNECTION_REFUSED}
-            end
+process_request(undefined, Request, State = #state{connection_options = ConnectionOptions}) ->
+    Connection = connection(ConnectionOptions),
+    process_request(Connection, Request, State);
+process_request(Connection, Request, State) ->
+    case do_request(Connection, Request, State) of
+        {error, closed, NewState} ->
+            error_or_retry({error, closed}, Request, NewState);
+        {error, econnrefused, NewState} ->
+            error_or_retry({error, econnrefused}, Request, NewState);
+        {Connection1, Response} ->
+            {Connection1, Response}
     end.
 
-%% @doc Actually perform the request
--spec process_request_1(boolean(), connection(), request(), #state{}) -> {connection(), response()}.
-process_request_1(Retry, undefined, {Function, Args}, State = #state{connection_options = ConnectionOptions}) ->
-    Connection = connection(ConnectionOptions),
-    do_request(Retry, Connection, {Function, Args}, State);
-process_request_1(Retry, Connection, {Function, Args}, State) ->
-    do_request(Retry, Connection, {Function, Args}, State).
+-spec increase_reconnect_interval(state()) -> state().
+increase_reconnect_interval(#state{retry_interval = Interval} = State) ->
+    if Interval < ?MAX_RECONNECT_INTERVAL ->
+            NewInterval = min(Interval + Interval, ?MAX_RECONNECT_INTERVAL),
+            State#state{retry_interval = NewInterval};
+       true ->
+            State
+    end.
 
--spec do_request(boolean(), connection(), request(), #state{}) -> {connection(),  response()}.
-do_request(Retry, Connection, {Function, Args}, _State) ->
+-spec update_reconnect_state(state()) -> state().
+update_reconnect_state(State) ->
+    State1 = increase_reconnect_interval(State),
+    State2 = decrease_retries_left(State1),
+    State2.
+
+-spec decrease_retries_left(state()) -> state().
+decrease_retries_left(#state{retries_left = N} = State) ->
+    State#state{retries_left = N - 1}.
+
+-spec error_or_retry({error, atom()}, request(), state()) ->
+                            {error, atom()} | {connection(), response()}.
+error_or_retry({error, Reason},
+               Request, #state{retries_left = N, retry_interval = W} = State)
+  when N > 0 andalso W >= 0
+       andalso (Reason =:= closed orelse Reason =:= econnrefused) ->
+    timer:sleep(W),
+    ShorterRetryState = update_reconnect_state(State),
+    process_request(undefined, Request, ShorterRetryState);
+error_or_retry(Error, _Request, _State) ->
+    Error.
+
+do_request(Connection, {Function, Args}, State) ->
     try thrift_client:call(Connection, Function, Args) of
         {Connection1, Response = {ok, _}} ->
             {Connection1, Response};
         {Connection1, Response = {error, _}} ->
             {Connection1, Response}
     catch
-        Exception:Reason ->
-            case {Exception, Reason} of
-                {throw, {Connection1, Response = {exception, _}}} ->
-                    {Connection1, Response};
-                % Thrift client closes the connection
-                {error, {case_clause, {error, closed}}} ->
-                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
-                        true -> throw({retry_request, Retry})
-                    end;
-                {error, {case_clause,{error, econnrefused}}} ->
-                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
-                        true -> throw({retry_request, Retry})
-                    end;
-                {error, badarg} ->
-                    {Connection, {error, badarg}}
-
-            end
+        throw:{Connection1, Response = {exception, _}} ->
+            {Connection1, Response};
+        error:badarg ->
+            {Connection, {error, badarg}};
+        error:{case_clause, {error, closed}} ->
+            {error, closed, State};
+        error:{case_clause, {error, econnrefused}} ->
+            {error, econnrefused, State}
     end.
 
 %% @doc Send the request to the gen_server

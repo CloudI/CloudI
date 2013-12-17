@@ -4,9 +4,9 @@
 %% DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 %%
 
--module(cassandra_types).
+-module(erlang_cassandra_types).
 
--include("cassandra_types.hrl").
+-include("erlang_cassandra_types.hrl").
 
 -export([struct_info/1, struct_info_ext/1]).
 
@@ -19,7 +19,7 @@ struct_info('column') ->
 
 struct_info('superColumn') ->
   {struct, [{1, string},
-          {2, {list, {struct, {'cassandra_types', 'column'}}}}]}
+          {2, {list, {struct, {'erlang_cassandra_types', 'column'}}}}]}
 ;
 
 struct_info('counterColumn') ->
@@ -29,14 +29,14 @@ struct_info('counterColumn') ->
 
 struct_info('counterSuperColumn') ->
   {struct, [{1, string},
-          {2, {list, {struct, {'cassandra_types', 'counterColumn'}}}}]}
+          {2, {list, {struct, {'erlang_cassandra_types', 'counterColumn'}}}}]}
 ;
 
 struct_info('columnOrSuperColumn') ->
-  {struct, [{1, {struct, {'cassandra_types', 'column'}}},
-          {2, {struct, {'cassandra_types', 'superColumn'}}},
-          {3, {struct, {'cassandra_types', 'counterColumn'}}},
-          {4, {struct, {'cassandra_types', 'counterSuperColumn'}}}]}
+  {struct, [{1, {struct, {'erlang_cassandra_types', 'column'}}},
+          {2, {struct, {'erlang_cassandra_types', 'superColumn'}}},
+          {3, {struct, {'erlang_cassandra_types', 'counterColumn'}}},
+          {4, {struct, {'erlang_cassandra_types', 'counterSuperColumn'}}}]}
 ;
 
 struct_info('notFoundException') ->
@@ -88,7 +88,7 @@ struct_info('sliceRange') ->
 
 struct_info('slicePredicate') ->
   {struct, [{1, {list, string}},
-          {2, {struct, {'cassandra_types', 'sliceRange'}}}]}
+          {2, {struct, {'erlang_cassandra_types', 'sliceRange'}}}]}
 ;
 
 struct_info('indexExpression') ->
@@ -98,7 +98,7 @@ struct_info('indexExpression') ->
 ;
 
 struct_info('indexClause') ->
-  {struct, [{1, {list, {struct, {'cassandra_types', 'indexExpression'}}}},
+  {struct, [{1, {list, {struct, {'erlang_cassandra_types', 'indexExpression'}}}},
           {2, string},
           {3, i32}]}
 ;
@@ -108,13 +108,13 @@ struct_info('keyRange') ->
           {2, string},
           {3, string},
           {4, string},
-          {6, {list, {struct, {'cassandra_types', 'indexExpression'}}}},
+          {6, {list, {struct, {'erlang_cassandra_types', 'indexExpression'}}}},
           {5, i32}]}
 ;
 
 struct_info('keySlice') ->
   {struct, [{1, string},
-          {2, {list, {struct, {'cassandra_types', 'columnOrSuperColumn'}}}}]}
+          {2, {list, {struct, {'erlang_cassandra_types', 'columnOrSuperColumn'}}}}]}
 ;
 
 struct_info('keyCount') ->
@@ -125,12 +125,12 @@ struct_info('keyCount') ->
 struct_info('deletion') ->
   {struct, [{1, i64},
           {2, string},
-          {3, {struct, {'cassandra_types', 'slicePredicate'}}}]}
+          {3, {struct, {'erlang_cassandra_types', 'slicePredicate'}}}]}
 ;
 
 struct_info('mutation') ->
-  {struct, [{1, {struct, {'cassandra_types', 'columnOrSuperColumn'}}},
-          {2, {struct, {'cassandra_types', 'deletion'}}}]}
+  {struct, [{1, {struct, {'erlang_cassandra_types', 'columnOrSuperColumn'}}},
+          {2, {struct, {'erlang_cassandra_types', 'deletion'}}}]}
 ;
 
 struct_info('endpointDetails') ->
@@ -144,7 +144,7 @@ struct_info('tokenRange') ->
           {2, string},
           {3, {list, string}},
           {4, {list, string}},
-          {5, {list, {struct, {'cassandra_types', 'endpointDetails'}}}}]}
+          {5, {list, {struct, {'erlang_cassandra_types', 'endpointDetails'}}}}]}
 ;
 
 struct_info('authenticationRequest') ->
@@ -167,7 +167,7 @@ struct_info('cfDef') ->
           {6, string},
           {8, string},
           {12, double},
-          {13, {list, {struct, {'cassandra_types', 'columnDef'}}}},
+          {13, {list, {struct, {'erlang_cassandra_types', 'columnDef'}}}},
           {14, i32},
           {15, string},
           {16, i32},
@@ -200,13 +200,13 @@ struct_info('ksDef') ->
           {2, string},
           {3, {map, string, string}},
           {4, i32},
-          {5, {list, {struct, {'cassandra_types', 'cfDef'}}}},
+          {5, {list, {struct, {'erlang_cassandra_types', 'cfDef'}}}},
           {6, bool}]}
 ;
 
 struct_info('cqlRow') ->
   {struct, [{1, string},
-          {2, {list, {struct, {'cassandra_types', 'column'}}}}]}
+          {2, {list, {struct, {'erlang_cassandra_types', 'column'}}}}]}
 ;
 
 struct_info('cqlMetadata') ->
@@ -218,9 +218,9 @@ struct_info('cqlMetadata') ->
 
 struct_info('cqlResult') ->
   {struct, [{1, i32},
-          {2, {list, {struct, {'cassandra_types', 'cqlRow'}}}},
+          {2, {list, {struct, {'erlang_cassandra_types', 'cqlRow'}}}},
           {3, i32},
-          {4, {struct, {'cassandra_types', 'cqlMetadata'}}}]}
+          {4, {struct, {'erlang_cassandra_types', 'cqlMetadata'}}}]}
 ;
 
 struct_info('cqlPreparedResult') ->
@@ -247,7 +247,7 @@ struct_info_ext('column') ->
 
 struct_info_ext('superColumn') ->
   {struct, [{1, required, string, 'name', undefined},
-          {2, required, {list, {struct, {'cassandra_types', 'column'}}}, 'columns', []}]}
+          {2, required, {list, {struct, {'erlang_cassandra_types', 'column'}}}, 'columns', []}]}
 ;
 
 struct_info_ext('counterColumn') ->
@@ -257,14 +257,14 @@ struct_info_ext('counterColumn') ->
 
 struct_info_ext('counterSuperColumn') ->
   {struct, [{1, required, string, 'name', undefined},
-          {2, required, {list, {struct, {'cassandra_types', 'counterColumn'}}}, 'columns', []}]}
+          {2, required, {list, {struct, {'erlang_cassandra_types', 'counterColumn'}}}, 'columns', []}]}
 ;
 
 struct_info_ext('columnOrSuperColumn') ->
-  {struct, [{1, optional, {struct, {'cassandra_types', 'column'}}, 'column', #column{}},
-          {2, optional, {struct, {'cassandra_types', 'superColumn'}}, 'super_column', #superColumn{}},
-          {3, optional, {struct, {'cassandra_types', 'counterColumn'}}, 'counter_column', #counterColumn{}},
-          {4, optional, {struct, {'cassandra_types', 'counterSuperColumn'}}, 'counter_super_column', #counterSuperColumn{}}]}
+  {struct, [{1, optional, {struct, {'erlang_cassandra_types', 'column'}}, 'column', #column{}},
+          {2, optional, {struct, {'erlang_cassandra_types', 'superColumn'}}, 'super_column', #superColumn{}},
+          {3, optional, {struct, {'erlang_cassandra_types', 'counterColumn'}}, 'counter_column', #counterColumn{}},
+          {4, optional, {struct, {'erlang_cassandra_types', 'counterSuperColumn'}}, 'counter_super_column', #counterSuperColumn{}}]}
 ;
 
 struct_info_ext('notFoundException') ->
@@ -316,7 +316,7 @@ struct_info_ext('sliceRange') ->
 
 struct_info_ext('slicePredicate') ->
   {struct, [{1, optional, {list, string}, 'column_names', []},
-          {2, optional, {struct, {'cassandra_types', 'sliceRange'}}, 'slice_range', #sliceRange{}}]}
+          {2, optional, {struct, {'erlang_cassandra_types', 'sliceRange'}}, 'slice_range', #sliceRange{}}]}
 ;
 
 struct_info_ext('indexExpression') ->
@@ -326,7 +326,7 @@ struct_info_ext('indexExpression') ->
 ;
 
 struct_info_ext('indexClause') ->
-  {struct, [{1, required, {list, {struct, {'cassandra_types', 'indexExpression'}}}, 'expressions', []},
+  {struct, [{1, required, {list, {struct, {'erlang_cassandra_types', 'indexExpression'}}}, 'expressions', []},
           {2, required, string, 'start_key', undefined},
           {3, required, i32, 'count', 100}]}
 ;
@@ -336,13 +336,13 @@ struct_info_ext('keyRange') ->
           {2, optional, string, 'end_key', undefined},
           {3, optional, string, 'start_token', undefined},
           {4, optional, string, 'end_token', undefined},
-          {6, optional, {list, {struct, {'cassandra_types', 'indexExpression'}}}, 'row_filter', []},
+          {6, optional, {list, {struct, {'erlang_cassandra_types', 'indexExpression'}}}, 'row_filter', []},
           {5, required, i32, 'count', 100}]}
 ;
 
 struct_info_ext('keySlice') ->
   {struct, [{1, required, string, 'key', undefined},
-          {2, required, {list, {struct, {'cassandra_types', 'columnOrSuperColumn'}}}, 'columns', []}]}
+          {2, required, {list, {struct, {'erlang_cassandra_types', 'columnOrSuperColumn'}}}, 'columns', []}]}
 ;
 
 struct_info_ext('keyCount') ->
@@ -353,12 +353,12 @@ struct_info_ext('keyCount') ->
 struct_info_ext('deletion') ->
   {struct, [{1, optional, i64, 'timestamp', undefined},
           {2, optional, string, 'super_column', undefined},
-          {3, optional, {struct, {'cassandra_types', 'slicePredicate'}}, 'predicate', #slicePredicate{}}]}
+          {3, optional, {struct, {'erlang_cassandra_types', 'slicePredicate'}}, 'predicate', #slicePredicate{}}]}
 ;
 
 struct_info_ext('mutation') ->
-  {struct, [{1, optional, {struct, {'cassandra_types', 'columnOrSuperColumn'}}, 'column_or_supercolumn', #columnOrSuperColumn{}},
-          {2, optional, {struct, {'cassandra_types', 'deletion'}}, 'deletion', #deletion{}}]}
+  {struct, [{1, optional, {struct, {'erlang_cassandra_types', 'columnOrSuperColumn'}}, 'column_or_supercolumn', #columnOrSuperColumn{}},
+          {2, optional, {struct, {'erlang_cassandra_types', 'deletion'}}, 'deletion', #deletion{}}]}
 ;
 
 struct_info_ext('endpointDetails') ->
@@ -372,7 +372,7 @@ struct_info_ext('tokenRange') ->
           {2, required, string, 'end_token', undefined},
           {3, required, {list, string}, 'endpoints', []},
           {4, optional, {list, string}, 'rpc_endpoints', []},
-          {5, optional, {list, {struct, {'cassandra_types', 'endpointDetails'}}}, 'endpoint_details', []}]}
+          {5, optional, {list, {struct, {'erlang_cassandra_types', 'endpointDetails'}}}, 'endpoint_details', []}]}
 ;
 
 struct_info_ext('authenticationRequest') ->
@@ -395,7 +395,7 @@ struct_info_ext('cfDef') ->
           {6, optional, string, 'subcomparator_type', undefined},
           {8, optional, string, 'comment', undefined},
           {12, optional, double, 'read_repair_chance', undefined},
-          {13, optional, {list, {struct, {'cassandra_types', 'columnDef'}}}, 'column_metadata', []},
+          {13, optional, {list, {struct, {'erlang_cassandra_types', 'columnDef'}}}, 'column_metadata', []},
           {14, optional, i32, 'gc_grace_seconds', undefined},
           {15, optional, string, 'default_validation_class', undefined},
           {16, optional, i32, 'id', undefined},
@@ -428,13 +428,13 @@ struct_info_ext('ksDef') ->
           {2, required, string, 'strategy_class', undefined},
           {3, optional, {map, string, string}, 'strategy_options', dict:new()},
           {4, optional, i32, 'replication_factor', undefined},
-          {5, required, {list, {struct, {'cassandra_types', 'cfDef'}}}, 'cf_defs', []},
+          {5, required, {list, {struct, {'erlang_cassandra_types', 'cfDef'}}}, 'cf_defs', []},
           {6, optional, bool, 'durable_writes', true}]}
 ;
 
 struct_info_ext('cqlRow') ->
   {struct, [{1, required, string, 'key', undefined},
-          {2, required, {list, {struct, {'cassandra_types', 'column'}}}, 'columns', []}]}
+          {2, required, {list, {struct, {'erlang_cassandra_types', 'column'}}}, 'columns', []}]}
 ;
 
 struct_info_ext('cqlMetadata') ->
@@ -446,9 +446,9 @@ struct_info_ext('cqlMetadata') ->
 
 struct_info_ext('cqlResult') ->
   {struct, [{1, required, i32, 'type', undefined},
-          {2, optional, {list, {struct, {'cassandra_types', 'cqlRow'}}}, 'rows', []},
+          {2, optional, {list, {struct, {'erlang_cassandra_types', 'cqlRow'}}}, 'rows', []},
           {3, optional, i32, 'num', undefined},
-          {4, optional, {struct, {'cassandra_types', 'cqlMetadata'}}, 'schema', #cqlMetadata{}}]}
+          {4, optional, {struct, {'erlang_cassandra_types', 'cqlMetadata'}}, 'schema', #cqlMetadata{}}]}
 ;
 
 struct_info_ext('cqlPreparedResult') ->

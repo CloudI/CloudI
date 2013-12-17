@@ -10,7 +10,7 @@
 %%% retrieved from: http://www.opensource.org/licenses/bsd-license.php
 %%%-------------------------------------------------------------------
 
--include("cassandra_types.hrl").
+-include("erlang_cassandra_types.hrl").
 
 
 -type error()           :: {error, Reason :: term()}.
@@ -84,6 +84,7 @@
 -define(POOL_TIMEOUT, 10000).
 -define(REGISTERED_NAME_PREFIX, "erlang_cassandra_").
 -define(DEFAULT_SLICE_COUNT, 1000).
+-define(MAX_RECONNECT_INTERVAL, 30000).
 
 %% Errors
 -define(INVALID_KEYSPACE, invalid_keyspace).

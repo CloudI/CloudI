@@ -110,7 +110,7 @@
          cloudi_service_terminate/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
--include_lib("erlang_cassandra/include/cloudi_x_cassandra_types.hrl").
+-include_lib("erlang_cassandra/include/cloudi_x_erlang_cassandra_types.hrl").
 
 -define(DEFAULT_DATABASE, undefined).
 -define(DEFAULT_THRIFT_HOST, "localhost").
