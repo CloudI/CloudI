@@ -3,8 +3,9 @@
 {packages,[]}.
 {modules,[cloudi,cloudi_configuration,cloudi_configurator,cloudi_core_app,
           cloudi_core_sup,cloudi_ip_address,cloudi_lists,cloudi_logger,
-          cloudi_logger_interface,cloudi_nodes,cloudi_os_spawn,cloudi_pool,
-          cloudi_pool_sup,cloudi_proplists,cloudi_request,cloudi_response,
+          cloudi_logger_interface,cloudi_math,cloudi_nodes,cloudi_os_spawn,
+          cloudi_pool,cloudi_pool_sup,cloudi_proplists,
+          cloudi_rate_based_configuration,cloudi_request,cloudi_response,
           cloudi_runtime_testing,cloudi_service,cloudi_service_api,
           cloudi_services_external,cloudi_services_external_sup,
           cloudi_services_internal,cloudi_services_internal_init,

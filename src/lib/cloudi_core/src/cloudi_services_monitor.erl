@@ -359,7 +359,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
     end;
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid,
-             cloudi_count_process_dynamic_terminate},
+             {shutdown, cloudi_count_process_dynamic_terminate}},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{service_m = M,

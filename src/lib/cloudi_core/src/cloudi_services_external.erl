@@ -926,7 +926,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check', StateName,
                    queue_requests = QueueRequests} = State) ->
     if
         QueueRequests =:= false ->
-            {stop, cloudi_count_process_dynamic_terminate, State};
+            {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
             erlang:send_after(500, Dispatcher,
                               'cloudi_count_process_dynamic_terminate_check'),
@@ -934,7 +934,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check', StateName,
     end;
 
 handle_info('cloudi_count_process_dynamic_terminate_now', _, State) ->
-    {stop, cloudi_count_process_dynamic_terminate, State};
+    {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
 
 handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

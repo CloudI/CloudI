@@ -88,7 +88,8 @@
          timeout_sync/1,
          timeout_max/1,
          destination_refresh_immediate/1,
-         destination_refresh_lazy/1]).
+         destination_refresh_lazy/1,
+         trans_id_age/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_constants.hrl").
@@ -1278,6 +1279,20 @@ destination_refresh_lazy(#cloudi_context{
      DestRefresh =:= lazy_remote orelse
      DestRefresh =:= lazy_newest orelse
      DestRefresh =:= lazy_oldest).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the age of the transaction id.===
+%% The result is microseconds since the Unix epoch 1970-01-01 00:00:00.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id_age(TransId :: <<_:128>>) ->
+    non_neg_integer().
+
+trans_id_age(TransId)
+    when is_binary(TransId) ->
+    cloudi_x_uuid:get_v1_time(TransId).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

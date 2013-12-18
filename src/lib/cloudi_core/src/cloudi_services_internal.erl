@@ -1269,7 +1269,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check',
                    duo_mode_pid = undefined} = State) ->
     if
         QueueRequests =:= false ->
-            {stop, cloudi_count_process_dynamic_terminate, State};
+            {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
             erlang:send_after(500, Dispatcher,
                               'cloudi_count_process_dynamic_terminate_check'),
@@ -1278,7 +1278,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check',
 
 handle_info('cloudi_count_process_dynamic_terminate_now',
             #state{duo_mode_pid = undefined} = State) ->
-    {stop, cloudi_count_process_dynamic_terminate, State};
+    {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
 
 handle_info(Request,
             #state{queue_requests = true,
@@ -2767,7 +2767,7 @@ duo_handle_info('cloudi_count_process_dynamic_terminate_check',
     % (not yet necessary)
     if
         QueueRequests =:= false ->
-            {stop, cloudi_count_process_dynamic_terminate, State};
+            {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
             erlang:send_after(500, DuoModePid,
                               'cloudi_count_process_dynamic_terminate_check'),
@@ -2775,7 +2775,7 @@ duo_handle_info('cloudi_count_process_dynamic_terminate_check',
     end;
 
 duo_handle_info('cloudi_count_process_dynamic_terminate_now', State) ->
-    {stop, cloudi_count_process_dynamic_terminate, State};
+    {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
 
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,

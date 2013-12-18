@@ -4,6 +4,9 @@
 2013-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update erlang_cassandra
+    * Fix the termination of service processes when count_process_dynamic
+      ramps-down a service instance
+    * Add cloudi:trans_id_age/1
 
 2013-12-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
