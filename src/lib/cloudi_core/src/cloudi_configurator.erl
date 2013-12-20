@@ -202,7 +202,7 @@ concurrency(I)
     when is_float(I) ->
     if
         I > 1.0 ->
-            cloudi_math:ceil(I * erlang:system_info(schedulers));
+            cloudi_math:floor(I * erlang:system_info(schedulers));
         I > 0.0, I < 1.0 ->
             erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
         I == 1.0 ->
