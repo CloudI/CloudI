@@ -25,7 +25,7 @@
 
 -export([encoder/3]).
 
--spec encoder(Handler::module(), State::any(), Config::jsx:config()) -> jsx:encoder().
+-spec encoder(Handler::module(), State::any(), Config::list()) -> jsx:encoder().
 
 encoder(Handler, State, Config) ->
     fun(JSON) ->
@@ -68,6 +68,8 @@ value(Int, {Handler, State}, _Config) when is_integer(Int) ->
 value(Literal, {Handler, State}, _Config)
         when Literal == true; Literal == false; Literal == null ->
     Handler:handle_event({literal, Literal}, State);
+value(String, {Handler, State}, Config) when is_atom(String) ->
+    Handler:handle_event({string, clean_string(atom_to_binary(String,latin1), {Handler, State}, Config)}, State);
 value([{}], {Handler, State}, _Config) ->
     Handler:handle_event(end_object, Handler:handle_event(start_object, State));
 value([], {Handler, State}, _Config) ->
@@ -79,14 +81,14 @@ value(Term, Handler, Config) -> ?error(value, Term, Handler, Config).
 
 list_or_object([Term|Rest], {Handler, State}, Config) ->
     case pre_encode(Term, Config) of
-        {K, V} when is_atom(K); is_binary(K) ->
+        {K, V} when is_atom(K); is_binary(K); is_integer(K) ->
             object([{K, V}|Rest], {Handler, Handler:handle_event(start_object, State)}, Config)
         ; T ->
             list([T|Rest], {Handler, Handler:handle_event(start_array, State)}, Config)
     end.
 
 
-object([{Key, Value}, Next|Rest], {Handler, State}, Config) when is_atom(Key); is_binary(Key) ->
+object([{Key, Value}, Next|Rest], {Handler, State}, Config) when is_atom(Key); is_binary(Key); is_integer(Key) ->
     V = pre_encode(Value, Config),
     object(
         [pre_encode(Next, Config)|Rest],
@@ -100,7 +102,7 @@ object([{Key, Value}, Next|Rest], {Handler, State}, Config) when is_atom(Key); i
         },
         Config
     );
-object([{Key, Value}], {Handler, State}, Config) when is_atom(Key); is_binary(Key) ->
+object([{Key, Value}], {Handler, State}, Config) when is_atom(Key); is_binary(Key); is_integer(Key) ->
     object(
         [],
         {
@@ -128,6 +130,7 @@ pre_encode(Value, Config) -> (Config#config.pre_encode)(Value).
 
 
 fix_key(Key) when is_atom(Key) -> fix_key(atom_to_binary(Key, utf8));
+fix_key(Key) when is_integer(Key) -> fix_key(list_to_binary(integer_to_list(Key)));
 fix_key(Key) when is_binary(Key) -> Key.
 
 
@@ -163,6 +166,7 @@ encode(Term, Config) -> start(Term, {jsx, []}, jsx_config:parse_config(Config)).
 pre_encoders_test_() ->
     Term = [
         {<<"object">>, [
+            {atomkey, atomvalue},
             {<<"literals">>, [true, false, null]},
             {<<"strings">>, [<<"foo">>, <<"bar">>, <<"baz">>]},
             {<<"numbers">>, [1, 1.0, 1.0e0]}
@@ -173,6 +177,7 @@ pre_encoders_test_() ->
             [
                 start_object,
                     {key, <<"object">>}, start_object,
+                        {key, <<"atomkey">>}, {string, <<"atomvalue">>},
                         {key, <<"literals">>}, start_array,
                             {literal, true}, {literal, false}, {literal, null},
                         end_array,
@@ -192,6 +197,7 @@ pre_encoders_test_() ->
             [
                 start_object,
                     {key, <<"object">>}, start_object,
+                        {key, <<"atomkey">>}, {string, <<"atomvalue">>},
                         {key, <<"literals">>}, start_array, end_array,
                         {key, <<"strings">>}, start_array, end_array,
                         {key, <<"numbers">>}, start_array, end_array,
@@ -213,6 +219,7 @@ pre_encoders_test_() ->
             [
                 start_object,
                     {key, <<"object">>}, start_object,
+                        {key, <<"atomkey">>}, {literal, false},
                         {key, <<"literals">>}, start_array,
                             {literal, false}, {literal, false}, {literal, false},
                         end_array,
@@ -232,6 +239,7 @@ pre_encoders_test_() ->
             [
                 start_object,
                     {key, <<"object">>}, start_object,
+                        {key, <<"atomkey">>}, {string, <<"atomvalue">>},
                         {key, <<"literals">>}, start_array,
                             {string, <<"true">>}, {string, <<"false">>}, {string, <<"null">>},
                         end_array,
@@ -301,6 +309,24 @@ custom_error_handler_test_() ->
         {"string error", ?_assertEqual(
             {string, <<239, 191, 191>>},
             encode(<<239, 191, 191>>, [{error_handler, Error}])
+        )}
+    ].
+
+integer_key_test_() ->
+    Term =  [{123, [{456, 789}]}],
+    [
+        {"basic integer keys", ?_assertEqual(
+            [
+                start_object,
+                    {key, <<"123">>},
+                    start_object,
+                        {key, <<"456">>},
+                        {integer, 789},
+                    end_object,
+                end_object,
+                end_json
+            ],
+            encode(Term, [])
         )}
     ].
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2013-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update jsx (no more dialyzer errors, yay!)
+
 2013-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix floating point usage of count_process and count_thread > 1.0 so that

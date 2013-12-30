@@ -150,8 +150,8 @@ to its integration and dependencies).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit e50af6e109cb03bd26acf715cbc77de746507d1d (master, v1.4.3)`
-- `Thu Sep 26 16:51:24 PDT 2013`
+- `commit d011411c23e9f8c29d98aa1b7a50ddf9709b6a60 (master, v1.4.5)`
+- `Mon Dec 30 13:31:51 PST 2013`
 - `MIT`
 
 `lager`

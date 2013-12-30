@@ -34,25 +34,29 @@
 -export([to_term/1, to_term/2]).
 
 -export_type([json_term/0, json_text/0, token/0]).
--export_type([encoder/0, decoder/0, parser/0, internal_state/0]).
+-export_type([config/0, encoder/0, decoder/0, parser/0, internal_state/0]).
 
 
 -ifdef(TEST).
 -include("jsx_tests.hrl").
+-else.
+-include("jsx_config.hrl").
 -endif.
 
+-type config() :: #config{}.
 
--type json_term() :: list({binary(), json_term()})
-    | list(json_term())
+-type json_term()
+   :: [{binary() | atom(), json_term()}]
+    | [json_term()]
     | true
     | false
     | null
     | integer()
     | float()
-    | binary().
+    | binary()
+    | atom().
 
 -type json_text() :: binary().
-
 
 -spec encode(Source::json_term()) -> json_text() | {incomplete, encoder()}.
 -spec encode(Source::json_term(), Config::jsx_to_json:config()) -> json_text() | {incomplete, encoder()}.
@@ -62,8 +66,15 @@ encode(Source, Config) -> jsx_to_json:to_json(Source, Config).
 
 %% old api, alias for encode/x
 
+-spec to_json(Source::json_term()) -> json_text() | {incomplete, encoder()}.
+-spec to_json(Source::json_term(), Config::jsx_to_json:config()) -> json_text() | {incomplete, encoder()}.
+
 to_json(Source) -> encode(Source, []).
 to_json(Source, Config) -> encode(Source, Config).
+
+-spec term_to_json(Source::json_term()) -> json_text() | {incomplete, encoder()}.
+-spec term_to_json(Source::json_term(), Config::jsx_to_json:config()) -> json_text() | {incomplete, encoder()}.
+
 term_to_json(Source) -> encode(Source, []).
 term_to_json(Source, Config) -> encode(Source, Config).
 
@@ -93,8 +104,15 @@ decode(Source, Config) -> jsx_to_term:to_term(Source, Config).
 
 %% old api, alias for to_term/x
 
+-spec to_term(Source::json_text()) -> json_term() | {incomplete, decoder()}.
+-spec to_term(Source::json_text(), Config::jsx_to_term:config()) -> json_term()  | {incomplete, decoder()}.
+
 to_term(Source) -> decode(Source, []).
 to_term(Source, Config) -> decode(Source, Config).
+
+-spec json_to_term(Source::json_text()) -> json_term() | {incomplete, decoder()}.
+-spec json_to_term(Source::json_text(), Config::jsx_to_term:config()) -> json_term()  | {incomplete, decoder()}.
+
 json_to_term(Source) -> decode(Source, []).
 json_to_term(Source, Config) -> decode(Source, Config).
 
@@ -163,3 +181,4 @@ resume(Term, {decoder, State, Handler, Acc, Stack}, Config) ->
     jsx_decoder:resume(Term, State, Handler, Acc, Stack, jsx_config:parse_config(Config));
 resume(Term, {parser, State, Handler, Stack}, Config) ->
     jsx_parser:resume(Term, State, Handler, Stack, jsx_config:parse_config(Config)).
+
