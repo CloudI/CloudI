@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_quorum timeout bug
+    * Make cloudi_service_quorum handle Byzantine service request failures
+      (by default)
+
 2013-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update jsx (no more dialyzer errors, yay!)

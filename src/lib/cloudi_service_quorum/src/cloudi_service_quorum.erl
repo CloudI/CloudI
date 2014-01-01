@@ -4,7 +4,14 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Quorum Service==
-%%% Provide quorum for service requests.
+%%% Using this service can provide Byzantine fault tolerance for any other
+%%% services.  The service prefix is used to accept any service requests
+%%% that match the prefix, while the suffix is used to achieve the
+%%% configured number of service request responses
+%%% (i.e., quorum: the minimum number of services able to process a
+%%%  service request to achieve the same response).  If quorum is met,
+%%% the agreed upon response is returned.  Otherwise, the service request to
+%%% to this service will timeout (i.e., receive no response).
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -45,7 +52,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_quorum).
@@ -64,7 +71,11 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_QUORUM,                      0.51). % percent or integer count
+% quorum is specified either as an absolute integer or percentage,
+% or as 'byzantine' for (N - floor((N - 1) / 3))
+% ('byzantine' requires that less than 1/3rd of the responses be erroneous
+%  (e.g., a timeout or a non-matching response))
+-define(DEFAULT_QUORUM,                 byzantine).
 -define(DEFAULT_USE_RESPONSE_INFO,           true). % check for match
 
 -record(request,
@@ -74,7 +85,9 @@
         pattern :: cloudi_service:service_name_pattern(),
         timeout :: cloudi_service:timeout_milliseconds(),
         pid :: pid(),
-        required_count :: pos_integer(),
+        count_required :: pos_integer(),
+        count_total :: pos_integer(),
+        count_responses = 0 :: non_neg_integer(),
         responses = [] :: list({{cloudi_service:response_info(),
                                  cloudi_service:response()},
                                 pos_integer()}) % response -> count
@@ -83,7 +96,7 @@
 -record(state,
     {
         prefix :: string(),
-        quorum :: number(),
+        quorum :: byzantine | number(),
         use_response_info :: boolean(),
         requests = dict:new() :: dict(), % Original TransId -> #request{}
         pending = dict:new() :: dict() % TransId -> Original TransId
@@ -102,13 +115,16 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {quorum,                   ?DEFAULT_QUORUM},
         {use_response_info,        ?DEFAULT_USE_RESPONSE_INFO}],
     [Quorum, UseResponseInfo] = cloudi_proplists:take_values(Defaults, Args),
-    true = ((is_float(Quorum) andalso
+    true = ((is_atom(Quorum) andalso
+             (Quorum =:= byzantine)) orelse
+            (is_float(Quorum) andalso
              (Quorum > 0.0) andalso (Quorum =< 1.0)) orelse
             (is_integer(Quorum) andalso
              (Quorum > 0))),
     true = is_boolean(UseResponseInfo),
     cloudi_service:subscribe(Dispatcher, "*"),
-    {ok, #state{quorum = Quorum}}.
+    {ok, #state{quorum = Quorum,
+                use_response_info = UseResponseInfo}}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
@@ -123,22 +139,37 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
         {ok, QuorumTransIds} ->
             {Count, NewPending} = pending_store(QuorumTransIds,
                                                 Pending, TransId),
-            RequiredCount = if
+            CountRequired = if
+                Quorum =:= byzantine ->
+                    if
+                        Count < 4 ->
+                            ?LOG_ERROR("Byzantine quorum not met! ~p N=~p",
+                                       [QuorumName, Count]),
+                            undefined;
+                        true ->
+                            Count - cloudi_math:floor((Count - 1) / 3)
+                    end;
                 is_integer(Quorum) ->
                     erlang:min(Count, Quorum);
                 is_float(Quorum) ->
                     erlang:min(Count,
-                               erlang:round(Quorum * Count + 0.5)) % ceil
+                               cloudi_math:ceil(Quorum * Count))
             end,
-            Request = #request{type = Type,
-                               name = Name,
-                               pattern = Pattern,
-                               timeout = Timeout,
-                               pid = Pid,
-                               required_count = RequiredCount},
-            {noreply, State#state{requests = dict:store(TransId,
-                                                        Request,
-                                                        Requests),
+            NewRequests = if
+                CountRequired =:= undefined ->
+                    Requests;
+                true ->
+                    dict:store(TransId,
+                               #request{type = Type,
+                                        name = Name,
+                                        pattern = Pattern,
+                                        timeout = Timeout,
+                                        pid = Pid,
+                                        count_required = CountRequired,
+                                        count_total = Count},
+                               Requests)
+            end,
+            {noreply, State#state{requests = NewRequests,
                                   pending = NewPending}};
         {error, timeout} ->
             {reply, <<>>, State};
@@ -163,9 +194,10 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
                            #state{requests = Requests,
                                   pending = Pending} = State,
-                           _Dispatcher) ->
+                           Dispatcher) ->
     OriginalTransId = dict:fetch(TransId, Pending),
-    {noreply, State#state{requests = dict:erase(OriginalTransId, Requests),
+    {noreply, State#state{requests = request_timeout(OriginalTransId, Requests,
+                                                     Dispatcher),
                           pending = dict:erase(TransId, Pending)}};
 
 cloudi_service_handle_info(Request, State, _) ->
@@ -199,7 +231,9 @@ request_check(ResponseInfo, Response, OriginalTransId, Requests,
                       timeout = ResponseTimeout,
                       pid = ResponsePid,
                       % quorum data
-                      required_count = RequiredCount,
+                      count_required = CountRequired,
+                      count_total = CountTotal,
+                      count_responses = CountResponses,
                       responses = Responses} = Request} ->
             Key = if
                 UseResponseInfo =:= true ->
@@ -209,12 +243,18 @@ request_check(ResponseInfo, Response, OriginalTransId, Requests,
             end,
             Count = case orddict:find(Key, Responses) of
                 {ok, I} ->
+                    % do not check to see if it is impossible to meet the
+                    % CountRequired, given the CountTotal, since that should
+                    % not be the typical case and only causes the current
+                    % memory consumption to last a little bit longer
+                    % (i.e., until all responses or timeouts are received)
                     I + 1;
                 error ->
                     1
             end,
+            NewCountResponses = CountResponses + 1,
             if
-                Count == RequiredCount ->
+                Count == CountRequired ->
                     cloudi_service:return_nothrow(Dispatcher, ResponseType,
                                                   ResponseName,
                                                   ResponsePattern,
@@ -223,9 +263,52 @@ request_check(ResponseInfo, Response, OriginalTransId, Requests,
                                                   OriginalTransId,
                                                   ResponsePid),
                     dict:erase(OriginalTransId, Requests);
+                NewCountResponses == CountTotal ->
+                    cloudi_service:return_nothrow(Dispatcher, ResponseType,
+                                                  ResponseName,
+                                                  ResponsePattern,
+                                                  <<>>, <<>>,
+                                                  ResponseTimeout,
+                                                  OriginalTransId,
+                                                  ResponsePid),
+                    dict:erase(OriginalTransId, Requests);
                 true ->
                     NewResponses = orddict:store(Key, Count, Responses),
-                    NewRequest = Request#request{responses = NewResponses},
+                    NewRequest = Request#request{
+                                     count_responses = NewCountResponses,
+                                     responses = NewResponses},
+                    dict:store(OriginalTransId, NewRequest, Requests)
+            end;
+        error ->
+            % already met quorum and was returned
+            Requests
+    end.
+
+request_timeout(OriginalTransId, Requests, Dispatcher) ->
+    case dict:find(OriginalTransId, Requests) of
+        {ok, #request{% return data
+                      type = ResponseType,
+                      name = ResponseName,
+                      pattern = ResponsePattern,
+                      timeout = ResponseTimeout,
+                      pid = ResponsePid,
+                      % quorum data
+                      count_total = CountTotal,
+                      count_responses = CountResponses} = Request} ->
+            NewCountResponses = CountResponses + 1,
+            if
+                NewCountResponses == CountTotal ->
+                    cloudi_service:return_nothrow(Dispatcher, ResponseType,
+                                                  ResponseName,
+                                                  ResponsePattern,
+                                                  <<>>, <<>>,
+                                                  ResponseTimeout,
+                                                  OriginalTransId,
+                                                  ResponsePid),
+                    dict:erase(OriginalTransId, Requests);
+                true ->
+                    NewRequest = Request#request{
+                                     count_responses = NewCountResponses},
                     dict:store(OriginalTransId, NewRequest, Requests)
             end;
         error ->

@@ -246,6 +246,12 @@
         immediate_closest, % quickstart testing, to avoid false negatives
         5000, 5000, 5000, undefined, undefined, 1, 5, 300,
         [{duo_mode, true}]},
+    {internal,
+        "/byzantine",
+        cloudi_service_quorum,
+        [{quorum, byzantine}],
+        immediate_closest,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     {external,
         "/tests/http/",
         "@PYTHON@",
