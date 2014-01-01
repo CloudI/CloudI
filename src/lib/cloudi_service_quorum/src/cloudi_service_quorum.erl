@@ -11,7 +11,7 @@
 %%% (i.e., quorum: the minimum number of services able to process a
 %%%  service request to achieve the same response).  If quorum is met,
 %%% the agreed upon response is returned.  Otherwise, the service request to
-%%% to this service will timeout (i.e., receive no response).
+%%% this service will timeout (i.e., receive no response).
 %%% @end
 %%%
 %%% BSD LICENSE
