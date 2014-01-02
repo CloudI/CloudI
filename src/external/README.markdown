@@ -42,9 +42,9 @@ to its integration and dependencies).
 `dynamic_compile`
 -----------------
 `Dynamic compilation of Erlang modules`
-- `https://github.com/JacobVorreuter/dynamic_compile`
-- `commit 6a165715178dae8ea1c72e6ef171b9fc3435badc`
-- `Mon Mar  4 15:43:22 PST 2013`
+- `https://github.com/okeuday/dynamic_compile`
+- `commit 993bb0eba609fc80bd7481365febfc05f4eb51e0`
+- `Thu Jan  2 13:08:39 PST 2014`
 - `BSD`
 
 `ecouchdb (erlang_couchdb)`

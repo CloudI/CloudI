@@ -5,5 +5,5 @@
 		dynamic_compile
     ]},
     {registered, []},
-    {applications, [kernel, stdlib]}
+    {applications, [compiler, kernel, stdlib]}
 ]}.

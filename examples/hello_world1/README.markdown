@@ -5,25 +5,36 @@
 Provide the simplest example of an Erlang application running within the same
 Erlang VM as CloudI, with a CloudI service (`hello_world1.erl`).  The example
 uses separate OTP release generation for both CloudI and the internal
-CloudI service release, application, or module.
+CloudI service module, application, or release.
 
 ## DETAILS
 
 The approach with the Hello World 1 Example is for CloudI to load the
 `hello_world1` application after CloudI has started.  The `hello_world1`
 application can be specified within the cloudi.conf or provided
-dynamically to the CloudI Service API.  Using this method of deployment
-requires that the `hello_world1` application file not specify
-CloudI as a dependency, because if a reltool generated release is used
-to start the `hello_world1` service (with the release script file), reltool
-will attempt to pull CloudI dependencies into the release.  Since the CloudI
-dependencies are already loaded and running within the Erlang VM,
-the dependencies are unnecessary for the `hello_world1` release.
+dynamically to the CloudI Service API.
 
 The other usage examples show the other file types that are supported
 when providing a string for the internal service module name.
 
-## USAGE
+## USAGE (Different ways of adding the same internal service)
+
+To use an Erlang/OTP application or module for an internal service in the code path (if the application name is different from the `cloudi_service` module, use the `application_name` service configuration option):
+
+    $ make
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/erlang/code_path_add
+    $ cat << EOF > hello_world1_module.conf
+    [{internal,
+      "/examples/",
+      hello_world1,
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1_module.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/erlang/code_path_remove
+    $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
 
 To use an Erlang/OTP application file for an internal service with the same
 module name:

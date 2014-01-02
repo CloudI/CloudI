@@ -163,6 +163,7 @@
          request_http_qs_parse/1,
          request_info_key_value_new/1,
          request_info_key_value_parse/1,
+         key_value_find/2,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
          'Module:cloudi_service_handle_request'/11,
@@ -196,6 +197,12 @@
 
 -type dispatcher() :: pid().
 -export_type([dispatcher/0]).
+
+% used for accessing RequestInfo data
+-type key_value() :: list({binary() | string() | atom(),
+                           binary() | string() | any()}) |
+                     dict().
+-export_type([key_value/0]).
 
 -define(CATCH_TIMEOUT(F),
         try F catch exit:{timeout, _} -> {error, timeout} end).
@@ -2087,10 +2094,7 @@ request_http_qs_parse(Request)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec request_info_key_value_new(RequestInfo ::
-                                     list({binary() | string() | atom(),
-                                           binary() | string() | any()}) |
-                                     dict()) ->
+-spec request_info_key_value_new(RequestInfo :: key_value()) ->
     Result :: binary().
 
 request_info_key_value_new([{_, _} | _] = RequestInfo) ->
@@ -2106,12 +2110,13 @@ request_info_key_value_new(RequestInfo) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
+-spec request_info_key_value_parse(RequestInfo :: binary() |
+                                                  list({any(), any()})) ->
     Result :: dict().
 
 request_info_key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->
-    % atom() -> string()
+    % any() -> any()
     lists:foldl(fun({K, V}, D) ->
         dict:store(K, V, D)
     end, dict:new(), RequestInfo);
@@ -2120,6 +2125,31 @@ request_info_key_value_parse(RequestInfo)
     % binary() -> binary()
     binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
                                 dict:new()).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value find.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to access the request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_find(Key :: any(),
+                     KeyValue :: key_value()) ->
+    {ok, Value :: any()} |
+    error.
+
+key_value_find(Key, KeyValue)
+    when is_list(KeyValue) ->
+    case lists:keyfind(Key, 1, KeyValue) of
+        {Key, Value} ->
+            {ok, Value};
+        false ->
+            error
+    end;
+key_value_find(Key, KeyValue) ->
+    dict:find(Key, KeyValue).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

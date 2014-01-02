@@ -9,20 +9,29 @@ service.
 
 ## DETAILS
 
-The approach with the Hello World 4 Example is for CloudI to load the
-`hello_world4` application after CloudI has started.  The `hello_world4`
-application can be specified within the cloudi.conf or provided
-dynamically to the CloudI Service API, to start the CloudI service
-(separate from the application's supervision hierarchy, if one is present).
-Using this method of deployment (within the same OTP release) the
-`hello_world4` application file can specify CloudI as a dependency by
-listing the `cloudi_core` application as a dependency, unlike the
-approach within the `hello_world1` example.
+The approach with the Hello World 4 Example is for relx to build
+a release using the CloudI installation on the system at the default
+installation location (e.g., ./configure --prefix="/usr/local/").
+The `hello_world4` internal service configuration can use the
+`automatic_loading` service configuration option set to `false` to depend
+fully on the generated release loading the `hello_world4` application
+and its `hello_world4` module implementation of the `cloudi_service`
+interface.  The relx.config file includes the applications
+`cloudi_service_api_requests` and `cloudi_service_http_cowboy` since
+they are used in the cloudi.conf but are not listed as `hello_world4`
+application dependencies.  This means that both
+`cloudi_service_api_requests` and `cloudi_service_http_cowboy` utilize
+`automatic_loading` to make sure both the application and the internal
+service module is loaded before each service instance is added.
+So, this is a method of embedding CloudI into an Erlang application by
+using a system installation of CloudI with relx to package a new release.
+
+`hello_world2` provides the equivalent for reltool.
 
 ## USAGE
 
 To use an Erlang/OTP application file for an internal service with the same
-module name:
+module name (the directions assume you don't have relx installed):
 
     $ git clone https://github.com/erlware/relx
     $ cd relx
@@ -30,7 +39,7 @@ module name:
     $ cd ..
     $ make
     $ relx/relx
-    $ cd release
+    $ cd _rel
     $ bin/cloudi start
     $ curl http://localhost:6467/examples/hello_world4
     Hello World!
