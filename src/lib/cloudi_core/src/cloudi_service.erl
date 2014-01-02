@@ -199,10 +199,10 @@
 -export_type([dispatcher/0]).
 
 % used for accessing RequestInfo data
--type key_value() :: list({binary() | string() | atom(),
-                           binary() | string() | any()}) |
-                     dict().
--export_type([key_value/0]).
+-type key_values() :: list({binary() | string() | atom(),
+                            binary() | string() | any()}) |
+                      dict().
+-export_type([key_values/0]).
 
 -define(CATCH_TIMEOUT(F),
         try F catch exit:{timeout, _} -> {error, timeout} end).
@@ -2094,7 +2094,7 @@ request_http_qs_parse(Request)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec request_info_key_value_new(RequestInfo :: key_value()) ->
+-spec request_info_key_value_new(RequestInfo :: key_values()) ->
     Result :: binary().
 
 request_info_key_value_new([{_, _} | _] = RequestInfo) ->
@@ -2136,20 +2136,20 @@ request_info_key_value_parse(RequestInfo)
 %%-------------------------------------------------------------------------
 
 -spec key_value_find(Key :: any(),
-                     KeyValue :: key_value()) ->
+                     KeyValues :: key_values()) ->
     {ok, Value :: any()} |
     error.
 
-key_value_find(Key, KeyValue)
-    when is_list(KeyValue) ->
-    case lists:keyfind(Key, 1, KeyValue) of
+key_value_find(Key, KeyValues)
+    when is_list(KeyValues) ->
+    case lists:keyfind(Key, 1, KeyValues) of
         {Key, Value} ->
             {ok, Value};
         false ->
             error
     end;
-key_value_find(Key, KeyValue) ->
-    dict:find(Key, KeyValue).
+key_value_find(Key, KeyValues) ->
+    dict:find(Key, KeyValues).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

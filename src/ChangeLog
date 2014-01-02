@@ -5,6 +5,7 @@
 
     * Add cloudi_service:key_value_find/2 to provide an generic interface
       for accessing the RequestInfo key/value pairs
+    * Add cloudi_service:key_values type
     * Update the examples to provide more details and fix a few
       release problems
     * Update dynamic_compile
