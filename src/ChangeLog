@@ -7,6 +7,7 @@
       the cached filesystem data at a specific interval in seconds
     * Add cloudi_service:key_value_store/3
     * Add cloudi_service:key_value_erase/3
+    * Fix cloudi_service_http_cowboy file attachment names
 
 2014-01-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
