@@ -629,6 +629,7 @@ dialyze: all \
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
               external/cowboy/ebin \
+              external/cowlib/ebin \
               external/elli/ebin \
               external/dynamic_compile/ebin \
               external/etokyotyrant/ebin \

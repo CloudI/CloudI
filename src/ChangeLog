@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the refresh option to cloudi_service_filesystem to refresh
+      the cached filesystem data at a specific interval in seconds
+    * Add cloudi_service:key_value_store/3
+    * Add cloudi_service:key_value_erase/3
+
 2014-01-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:key_value_find/2 to provide an generic interface

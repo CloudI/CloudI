@@ -56,7 +56,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -91,7 +91,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
+%%% @copyright 2011-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -163,7 +163,9 @@
          request_http_qs_parse/1,
          request_info_key_value_new/1,
          request_info_key_value_parse/1,
+         key_value_erase/2,
          key_value_find/2,
+         key_value_store/3,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
          'Module:cloudi_service_handle_request'/11,
@@ -2128,6 +2130,25 @@ request_info_key_value_parse(RequestInfo)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Generic key/value erase.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to erase request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_erase(Key :: any(),
+                      KeyValues :: key_values()) ->
+    NewKeyValues :: key_values().
+
+key_value_erase(Key, KeyValues)
+    when is_list(KeyValues) ->
+    lists:keydelete(Key, 1, KeyValues);
+key_value_erase(Key, KeyValues) ->
+    dict:erase(Key, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Generic key/value find.===
 %% RequestInfo's key/value result from request_info_key_value_parse/1
 %% can be used here to access the request meta-data while encapsulating
@@ -2150,6 +2171,26 @@ key_value_find(Key, KeyValues)
     end;
 key_value_find(Key, KeyValues) ->
     dict:find(Key, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value store.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to store request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_store(Key :: any(),
+                      Value :: any(),
+                      KeyValues :: key_values()) ->
+    NewKeyValues :: key_values().
+
+key_value_store(Key, Value, KeyValues)
+    when is_list(KeyValues) ->
+    lists:keystore(Key, 1, KeyValues, {Key, Value});
+key_value_store(Key, Value, KeyValues) ->
+    dict:store(Key, Value, KeyValues).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

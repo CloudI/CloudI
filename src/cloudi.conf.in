@@ -341,7 +341,9 @@
     {internal,
         "/tests/http_req/",
         cloudi_service_filesystem,
-        [{directory, "tests/http_req/public_html/"}],
+        [{directory, "tests/http_req/public_html/"},
+         {refresh, 5} % seconds
+         ],
         none,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
     {external,
