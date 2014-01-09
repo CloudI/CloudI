@@ -101,6 +101,7 @@
 %% behavior interface
 -export([process_index/1,
          self/1,
+         dispatcher/1,
          subscribe/2,
          unsubscribe/2,
          get_pid/2,
@@ -152,12 +153,15 @@
          recv_asyncs/2,
          recv_asyncs/3,
          recv_asyncs/4,
+         % service configuration
          prefix/1,
          timeout_async/1,
          timeout_sync/1,
          timeout_max/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
+         context_options/1,
+         % service request parameter helpers
          service_name_parse/2,
          service_name_parse_with_suffix/2,
          request_http_qs_parse/1,
@@ -282,6 +286,22 @@ process_index(Dispatcher) ->
 
 self(Dispatcher) ->
     gen_server:call(Dispatcher, self, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the Erlang pid representing the service sender.===
+%% Use when the Dispatcher is stored and used after the current
+%% cloudi_service callback has returned.  This is only necessary when
+%% storing the dispatcher within the cloudi_service_init/3 callback,
+%% for use in a different callback.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec dispatcher(Dispatcher :: dispatcher()) ->
+    NewDispatcher :: pid().
+
+dispatcher(Dispatcher) ->
+    gen_server:call(Dispatcher, dispatcher, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2046,6 +2066,20 @@ destination_refresh_immediate(Dispatcher) ->
 
 destination_refresh_lazy(Dispatcher) ->
     gen_server:call(Dispatcher, destination_refresh_lazy, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the context options from the service's configuration.===
+%% A service would only use this when delaying the creation of a context
+%% for child processes.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec context_options(Dispatcher :: dispatcher()) ->
+    cloudi:options().
+
+context_options(Dispatcher) ->
+    gen_server:call(Dispatcher, context_options, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -72,8 +72,7 @@
 
 %% Reply with a normal response. 'ok' can be used instead of '200'
 %%     to signal success.
-handle(Req, #elli_state{service = Service,
-                        timeout_async = TimeoutAsync,
+handle(Req, #elli_state{dispatcher = Dispatcher,
                         output_type = OutputType,
                         default_content_type = DefaultContentType,
                         use_host_prefix = UseHostPrefix,
@@ -162,10 +161,11 @@ handle(Req, #elli_state{service = Service,
         OutputType =:= external; OutputType =:= binary ->
             headers_external_incoming(HeadersIncoming)
     end,
-    Self = self(),
-    Service ! {elli_request, Self, NameOutgoing, RequestInfo, Request},
-    receive
-        {elli_response, ResponseInfo, Response} ->
+    Context = cloudi:new([{groups_static, true} |
+                          cloudi_service:context_options(Dispatcher)]),
+    case cloudi:send_sync(Context, NameOutgoing, RequestInfo, Request,
+                          undefined, undefined) of
+        {ok, ResponseInfo, Response} ->
             HeadersOutgoing = if
                 OutputType =:= internal; OutputType =:= list ->
                     ResponseInfo;
@@ -180,24 +180,26 @@ handle(Req, #elli_state{service = Service,
                              [HttpCode, Method, NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             Result;
-        {elli_error, timeout} ->
+        {ok, Response} ->
+            {HttpCode, _, _} = Result =
+                return_response(NameIncoming, [], Response,
+                                OutputType, DefaultContentType,
+                                ContentTypeLookup),
+            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
+                             [HttpCode, Method, NameIncoming, NameOutgoing,
+                              RequestStartMicroSec]),
+            Result;
+        {error, timeout} ->
             HttpCode = 504,
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, timeout]),
             {HttpCode, [], <<>>};
-        {elli_error, Reason} ->
+        {error, Reason} ->
             HttpCode = 500,
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, Reason]),
-            {HttpCode, [], <<>>}
-    after
-        TimeoutAsync ->
-            HttpCode = 504,
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, timeout]),
             {HttpCode, [], <<>>}
     end.
 

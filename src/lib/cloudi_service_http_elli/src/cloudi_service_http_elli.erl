@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -76,9 +76,7 @@
 
 -record(state,
     {
-        listener,
-        service,
-        requests = dict:new()
+        listener
     }).
 
 %%%------------------------------------------------------------------------
@@ -119,10 +117,8 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     end,
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseMethodSuffix),
-    Service = cloudi_service:self(Dispatcher),
-    TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
-    CallbackArgs = #elli_state{service = Service,
-                               timeout_async = TimeoutAsync,
+    CallbackArgs = #elli_state{dispatcher =
+                                   cloudi_service:dispatcher(Dispatcher),
                                output_type = OutputType,
                                default_content_type = DefaultContentType1,
                                use_host_prefix = UseHostPrefix,
@@ -147,43 +143,12 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
-cloudi_service_handle_info({elli_request, HandlerPid, NameOutgoing,
-                            RequestInfo, Request},
-                           #state{requests = Requests} = State, Dispatcher) ->
-    case cloudi_service:send_async_active(Dispatcher, NameOutgoing,
-                                          RequestInfo, Request,
-                                          undefined, undefined) of
-        {ok, TransId} ->
-            {noreply, State#state{requests = dict:store(TransId, HandlerPid,
-                                                        Requests)}};
-        {error, Reason} ->
-            HandlerPid ! {elli_error, Reason},
-            {noreply, State}
-    end;
-
-cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
-                            ResponseInfo, Response, _Timeout, TransId},
-                           #state{requests = Requests} = State, _) ->
-    HandlerPid = dict:fetch(TransId, Requests),
-    HandlerPid ! {elli_response, ResponseInfo, Response},
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
-
-cloudi_service_handle_info({'timeout_async_active', TransId},
-                           #state{requests = Requests} = State, _) ->
-    HandlerPid = dict:fetch(TransId, Requests),
-    HandlerPid ! {elli_error, timeout},
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
-
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{listener = ListenerPid,
-                                   requests = Requests}) ->
+cloudi_service_terminate(_, #state{listener = ListenerPid}) ->
     (catch cloudi_x_elli:stop(ListenerPid)),
-    dict:map(fun(_, HandlerPid) ->
-        HandlerPid ! {elli_error, timeout}
-    end, Requests),
     ok.
 
 %%%------------------------------------------------------------------------

@@ -1,6 +1,24 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make {error, _} results from the cloudi module consistent with the
+      {error, _} results from the cloudi_service module
+      ('timeout' is used instead of cpg specific Reasons)
+    * Change cloudi_service_tcp, cloudi_service_http_cowboy, and
+      cloudi_service_http_elli to use the cloudi module to avoid making
+      the parent Erlang process a bottleneck
+    * Add the websocket_connect and websocket_disconnect arguments to
+      cloudi_service_http_cowboy, so that service requests can be sent
+      when a websocket connection is created or destroyed
+    * Add the use_spdy argument to cloudi_service_http_cowboy
+    * Add cloudi_service:dispatcher/1 to provide a Dispatcher Erlang pid
+      which can be used beyond the lifetime of the current callback
+      (only important in cloudi_service_init/3)
+    * Add cloudi_service:context_options/1 for creating cloudi:new/1 options
+      based on the current service configuration (for child Erlang pids)
+
 2014-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the refresh option to cloudi_service_filesystem to refresh

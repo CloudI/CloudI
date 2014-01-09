@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
+%%% @copyright 2013-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -144,7 +144,12 @@
          {timeout_async, cloudi_service_api:timeout_milliseconds()} |
          {timeout_sync, cloudi_service_api:timeout_milliseconds()} |
          {priority_default, priority()} |
-         {scope, atom()}).
+         {scope, atom()} |
+         % advanced:
+         % options for internal coordination with cloudi_service
+         {groups, any()} |
+         {groups_scope, atom()} |
+         {groups_static, boolean()}).
 -type context() :: #cloudi_context{}.
 -export_type([options/0,
               context/0]).
@@ -190,11 +195,14 @@ new(Options)
         {timeout_async,                   ?DEFAULT_TIMEOUT_ASYNC},
         {timeout_sync,                     ?DEFAULT_TIMEOUT_SYNC},
         {priority_default,                     ?DEFAULT_PRIORITY},
-        {scope,                                   ?DEFAULT_SCOPE}
+        {scope,                                   ?DEFAULT_SCOPE},
+        {groups,            cloudi_x_cpg_data:get_empty_groups()},
+        {groups_scope,                                 undefined},
+        {groups_static,                                    false}
         ],
     [DestRefresh, DestRefreshStart, DestRefreshDelay,
      DefaultTimeoutAsync, DefaultTimeoutSync,
-     PriorityDefault, Scope] =
+     PriorityDefault, Scope, OldGroups, GroupsScope, GroupsStatic] =
         cloudi_proplists:take_values(Defaults, Options),
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
@@ -225,33 +233,48 @@ new(Options)
     true = (PriorityDefault >= ?PRIORITY_HIGH) andalso
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
-    ConfiguredScope = ?SCOPE_ASSIGN(Scope),
+    true = is_atom(GroupsScope),
+    true = is_boolean(GroupsStatic),
+    ConfiguredScope = if
+        GroupsScope =:= undefined ->
+            ?SCOPE_ASSIGN(Scope);
+        true ->
+            GroupsScope
+    end,
     ok = cloudi_x_cpg:scope_exists(ConfiguredScope),
     Self = self(),
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
                                     {mac_address, MacAddress}]),
-    ok = destination_refresh_first(DestRefresh, DestRefreshStart, Scope),
     Groups = if
-        ((DestRefresh =:= lazy_closest) orelse
-         (DestRefresh =:= lazy_furthest) orelse
-         (DestRefresh =:= lazy_random) orelse
-         (DestRefresh =:= lazy_local) orelse
-         (DestRefresh =:= lazy_remote) orelse
-         (DestRefresh =:= lazy_newest) orelse
-         (DestRefresh =:= lazy_oldest)),
-        DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
-            receive
-                {cloudi_cpg_data, G} ->
-                    ok = destination_refresh_start(DestRefresh,
-                                                   DestRefreshDelay, Scope),
-                    G
-            after
-                ?DEFAULT_DEST_REFRESH_START ->
-                    cloudi_x_cpg_data:get_empty_groups()
-            end;
-        true ->
-            cloudi_x_cpg_data:get_empty_groups()
+        GroupsStatic =:= true ->
+            OldGroups;
+        GroupsStatic =:= false ->
+            ok = destination_refresh_first(DestRefresh,
+                                           DestRefreshStart,
+                                           Scope),
+            if
+                ((DestRefresh =:= lazy_closest) orelse
+                 (DestRefresh =:= lazy_furthest) orelse
+                 (DestRefresh =:= lazy_random) orelse
+                 (DestRefresh =:= lazy_local) orelse
+                 (DestRefresh =:= lazy_remote) orelse
+                 (DestRefresh =:= lazy_newest) orelse
+                 (DestRefresh =:= lazy_oldest)),
+                DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
+                    receive
+                        {cloudi_cpg_data, G} ->
+                            ok = destination_refresh_start(DestRefresh,
+                                                           DestRefreshDelay,
+                                                           Scope),
+                            G
+                    after
+                        ?DEFAULT_DEST_REFRESH_START ->
+                            OldGroups
+                    end;
+                true ->
+                    OldGroups
+            end
     end,
     #cloudi_context{
         dest_refresh = DestRefresh,
@@ -344,8 +367,8 @@ get_pid(#cloudi_context{} = Context, Name, Timeout)
              Timeout >= ?SEND_SYNC_INTERVAL ->
             get_pid(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
                     Timeout - ?SEND_SYNC_INTERVAL);
-        {error, _} = Error ->
-            result(NewContext, Error);
+        {error, _} ->
+            result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
             result(NewContext, {ok, {Pattern, Pid}})
     end.
@@ -405,8 +428,8 @@ get_pids(#cloudi_context{} = Context, Name, Timeout)
         when Timeout >= ?SEND_SYNC_INTERVAL ->
             get_pids(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
                      Timeout - ?SEND_SYNC_INTERVAL);
-        {error, _} = Error ->
-            result(NewContext, Error);
+        {error, _} ->
+            result(NewContext, {error, timeout});
         {ok, Pattern, Pids} ->
             result(NewContext, {ok, [{Pattern, Pid} || Pid <- Pids]})
     end.
@@ -559,8 +582,8 @@ send_async(#cloudi_context{} = Context,
                        RequestInfo, Request,
                        Timeout - ?SEND_ASYNC_INTERVAL,
                        Priority, undefined);
-        {error, _} = Error ->
-            result(NewContext, Error);
+        {error, _} ->
+            result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
             send_async(NewContext, Name, RequestInfo, Request,
                        Timeout, Priority, {Pattern, Pid})
@@ -831,8 +854,8 @@ send_sync(#cloudi_context{} = Context,
                       RequestInfo, Request,
                       Timeout - ?SEND_SYNC_INTERVAL,
                       Priority, undefined);
-        {error, _} = Error ->
-            result(NewContext, Error);
+        {error, _} ->
+            result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
             send_sync(NewContext, Name, RequestInfo, Request,
                       Timeout, Priority, {Pattern, Pid})
@@ -953,8 +976,8 @@ mcast_async(#cloudi_context{} = Context,
             mcast_async(sleep(NewContext, ?MCAST_ASYNC_INTERVAL), Name,
                         RequestInfo, Request,
                         Timeout - ?MCAST_ASYNC_INTERVAL, Priority);
-        {error, _} = Error ->
-            result(NewContext, Error);
+        {error, _} ->
+            result(NewContext, {error, timeout});
         {ok, Pattern, PidList} ->
             TransIdList = lists:map(fun(Pid) ->
                 TransId = cloudi_x_uuid:get_v1(UUID),

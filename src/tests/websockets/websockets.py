@@ -59,11 +59,27 @@ class Task(threading.Thread):
         try:
             self.__api.subscribe('bounce/get', self.__request)
             self.__api.subscribe('bounce/delay', self.__delay)
+            self.__api.subscribe('bounce/websocket/connect',
+                                 self.__connect)
+            self.__api.subscribe('bounce/websocket/disconnect',
+                                 self.__disconnect)
 
             result = self.__api.poll()
             print >> sys.stderr, 'exited thread:', result
         except:
             traceback.print_exc(file=sys.stdout)
+
+    def __connect(self, command, name, pattern, request_info, request,
+                  timeout, priority, trans_id, pid):
+        assert request == 'CONNECT'
+        print "connect:", self.__api.info_key_value_parse(request_info)
+        return ''
+
+    def __disconnect(self, command, name, pattern, request_info, request,
+                     timeout, priority, trans_id, pid):
+        assert request == 'DISCONNECT'
+        print "disconnect:", self.__api.info_key_value_parse(request_info)
+        return ''
 
     def __request(self, command, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):

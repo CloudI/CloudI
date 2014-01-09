@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,7 @@
 %% cloudi_x_cowboy handler state
 -record(cowboy_state,
     {
-        service,
-        timeout_async,
+        context,
         prefix,
         timeout_websocket,
         output_type,
@@ -53,6 +52,8 @@
         content_types_accepted,
         set_x_forwarded_for,
         status_code_timeout,
+        websocket_connect,
+        websocket_disconnect,
         use_websockets,
         use_host_prefix,
         use_client_ip_prefix,

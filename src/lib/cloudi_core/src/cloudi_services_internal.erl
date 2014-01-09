@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
+%%% @copyright 2011-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -225,6 +225,10 @@ handle_call(process_index, _,
 handle_call(self, _,
             #state{receiver_pid = ReceiverPid} = State) ->
     hibernate_check({reply, ReceiverPid, State});
+
+handle_call(dispatcher, _,
+            #state{dispatcher = Dispatcher} = State) ->
+    hibernate_check({reply, Dispatcher, State});
 
 handle_call({'subscribe', Pattern}, _,
             #state{prefix = Prefix,
@@ -581,6 +585,26 @@ handle_call(destination_refresh_lazy, _,
             DestRefresh =:= lazy_newest orelse
             DestRefresh =:= lazy_oldest),
     hibernate_check({reply, Lazy, State});
+
+handle_call(context_options, _,
+            #state{timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   dest_refresh = DestRefresh,
+                   cpg_data = Groups,
+                   options = #config_service_options{
+                       priority_default = PriorityDefault,
+                       dest_refresh_start = DestRefreshStart,
+                       dest_refresh_delay = DestRefreshDelay,
+                       scope = Scope}} = State) ->
+    Options = [{dest_refresh, DestRefresh},
+               {dest_refresh_start, DestRefreshStart},
+               {dest_refresh_delay, DestRefreshDelay},
+               {timeout_async, TimeoutAsync},
+               {timeout_sync, TimeoutSync},
+               {priority_default, PriorityDefault},
+               {groups, Groups},
+               {groups_scope, Scope}],
+    hibernate_check({reply, Options, State});
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
