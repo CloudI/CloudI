@@ -158,6 +158,7 @@
          timeout_async/1,
          timeout_sync/1,
          timeout_max/1,
+         priority_default/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
          context_options/1,
@@ -170,6 +171,7 @@
          key_value_erase/2,
          key_value_find/2,
          key_value_store/3,
+         trans_id/1,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
          'Module:cloudi_service_handle_request'/11,
@@ -2045,6 +2047,18 @@ timeout_max(Dispatcher)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Configured service default priority.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec priority_default(Dispatcher :: dispatcher()) ->
+    PriorityDefault :: ?PRIORITY_HIGH..?PRIORITY_LOW.
+
+priority_default(Dispatcher) ->
+    gen_server:call(Dispatcher, priority_default, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Configured service destination refresh is immediate.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -2225,6 +2239,19 @@ key_value_store(Key, Value, KeyValues)
     lists:keystore(Key, 1, KeyValues, {Key, Value});
 key_value_store(Key, Value, KeyValues) ->
     dict:store(Key, Value, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a new transaction id.===
+%% The same data as used when sending service requests is used.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id(Dispatcher :: dispatcher()) ->
+    <<_:128>>.
+
+trans_id(Dispatcher) ->
+    gen_server:call(Dispatcher, trans_id, infinity).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

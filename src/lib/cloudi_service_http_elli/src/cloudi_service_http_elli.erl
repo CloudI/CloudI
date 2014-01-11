@@ -62,6 +62,7 @@
          cloudi_service_terminate/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_elli_handler.hrl").
 
 -define(DEFAULT_INTERFACE,         {127,0,0,1}). % ip address
@@ -119,6 +120,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     true = is_boolean(UseMethodSuffix),
     CallbackArgs = #elli_state{dispatcher =
                                    cloudi_service:dispatcher(Dispatcher),
+                               context = create_context(Dispatcher),
                                output_type = OutputType,
                                default_content_type = DefaultContentType1,
                                use_host_prefix = UseHostPrefix,

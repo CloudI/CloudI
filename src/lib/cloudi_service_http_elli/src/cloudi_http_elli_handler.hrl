@@ -45,6 +45,7 @@
 -record(elli_state,
     {
         dispatcher,
+        context,
         output_type,
         default_content_type,
         use_host_prefix,

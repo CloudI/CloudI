@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_ip_address).
@@ -77,12 +77,28 @@
 -spec to_binary(inet:ip_address()) -> format_binary().
 
 to_binary({B1, B2, B3, B4}) ->
-    cloudi_string:format_to_binary("~3..0b.~3..0b.~3..0b.~3..0b",
-                                   [B1, B2, B3, B4]);
+    [B1a, B1b, B1c] = int_to_dec_list_3(B1),
+    [B2a, B2b, B2c] = int_to_dec_list_3(B2),
+    [B3a, B3b, B3c] = int_to_dec_list_3(B3),
+    [B4a, B4b, B4c] = int_to_dec_list_3(B4),
+    <<B1a, B1b, B1c, $., B2a, B2b, B2c, $., B3a, B3b, B3c, $., B4a, B4b, B4c>>;
 to_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    cloudi_string:format_to_binary("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
-                                   "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
-                                   [S1, S2, S3, S4, S5, S6, S7, S8]).
+    [S1a, S1b, S1c, S1d] = int_to_hex_list_4(S1),
+    [S2a, S2b, S2c, S2d] = int_to_hex_list_4(S2),
+    [S3a, S3b, S3c, S3d] = int_to_hex_list_4(S3),
+    [S4a, S4b, S4c, S4d] = int_to_hex_list_4(S4),
+    [S5a, S5b, S5c, S5d] = int_to_hex_list_4(S5),
+    [S6a, S6b, S6c, S6d] = int_to_hex_list_4(S6),
+    [S7a, S7b, S7c, S7d] = int_to_hex_list_4(S7),
+    [S8a, S8b, S8c, S8d] = int_to_hex_list_4(S8),
+    <<S1a, S1b, S1c, S1d, $:,
+      S2a, S2b, S2c, S2d, $:,
+      S3a, S3b, S3c, S3d, $:,
+      S4a, S4b, S4c, S4d, $:,
+      S5a, S5b, S5c, S5d, $:,
+      S6a, S6b, S6c, S6d, $:,
+      S7a, S7b, S7c, S7d, $:,
+      S8a, S8b, S8c, S8d>>.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -93,12 +109,28 @@ to_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
 -spec to_string(inet:ip_address()) -> format_string().
 
 to_string({B1, B2, B3, B4}) ->
-    cloudi_string:format_to_list("~3..0b.~3..0b.~3..0b.~3..0b",
-                                 [B1, B2, B3, B4]);
+    [B1a, B1b, B1c] = int_to_dec_list_3(B1),
+    [B2a, B2b, B2c] = int_to_dec_list_3(B2),
+    [B3a, B3b, B3c] = int_to_dec_list_3(B3),
+    [B4a, B4b, B4c] = int_to_dec_list_3(B4),
+    [B1a, B1b, B1c, $., B2a, B2b, B2c, $., B3a, B3b, B3c, $., B4a, B4b, B4c];
 to_string({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    cloudi_string:format_to_list("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:"
-                                 "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b",
-                                 [S1, S2, S3, S4, S5, S6, S7, S8]).
+    [S1a, S1b, S1c, S1d] = int_to_hex_list_4(S1),
+    [S2a, S2b, S2c, S2d] = int_to_hex_list_4(S2),
+    [S3a, S3b, S3c, S3d] = int_to_hex_list_4(S3),
+    [S4a, S4b, S4c, S4d] = int_to_hex_list_4(S4),
+    [S5a, S5b, S5c, S5d] = int_to_hex_list_4(S5),
+    [S6a, S6b, S6c, S6d] = int_to_hex_list_4(S6),
+    [S7a, S7b, S7c, S7d] = int_to_hex_list_4(S7),
+    [S8a, S8b, S8c, S8d] = int_to_hex_list_4(S8),
+    [S1a, S1b, S1c, S1d, $:,
+     S2a, S2b, S2c, S2d, $:,
+     S3a, S3b, S3c, S3d, $:,
+     S4a, S4b, S4c, S4d, $:,
+     S5a, S5b, S5c, S5d, $:,
+     S6a, S6b, S6c, S6d, $:,
+     S7a, S7b, S7c, S7d, $:,
+     S8a, S8b, S8c, S8d].
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -155,4 +187,35 @@ from_string([S1a, S1b, S1c, S1d, $:, S2a, S2b, S2c, S2d, $:,
      erlang:list_to_integer([S6a, S6b, S6c, S6d], 16),
      erlang:list_to_integer([S7a, S7b, S7c, S7d], 16),
      erlang:list_to_integer([S8a, S8b, S8c, S8d], 16)}.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+int_to_dec_list_3(Value0)
+    when is_integer(Value0), Value0 >= 0, Value0 =< 255 ->
+    C1 = (Value0 rem 10) + $0,
+    Value1 = Value0 div 10,
+    C2 = (Value1 rem 10) + $0,
+    Value2 = Value1 div 10,
+    C3 = Value2 + $0,
+    [C3, C2, C1].
+
+int_to_hex_list_4(Value0)
+    when is_integer(Value0), Value0 >= 0, Value0 =< 65535 ->
+    C1 = int_to_hex(Value0 rem 16),
+    Value1 = Value0 div 16,
+    C2 = int_to_hex(Value1 rem 16),
+    Value2 = Value1 div 16,
+    C3 = int_to_hex(Value2 rem 16),
+    Value3 = Value2 div 16,
+    C4 = int_to_hex(Value3),
+    [C4, C3, C2, C1].
+
+-compile({inline, [{int_to_hex,1}]}).
+
+int_to_hex(I) when 0 =< I, I =< 9 ->
+    I + $0;
+int_to_hex(I) when 10 =< I, I =< 15 ->
+    (I - 10) + $a.
 

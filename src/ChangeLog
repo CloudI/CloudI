@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix performance issues that have been creeping into
+      cloudi_service_http_cowboy and apply the same fixes to
+      cloudi_service_http_elli and cloudi_service_tcp
+
 2014-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make {error, _} results from the cloudi module consistent with the

@@ -63,6 +63,7 @@
          cloudi_service_terminate/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
 -define(DEFAULT_INTERFACE,            {127,0,0,1}). % ip address
@@ -210,7 +211,9 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     Dispatch = cloudi_x_cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
-                #cowboy_state{context = cloudi_service:dispatcher(Dispatcher),
+                #cowboy_state{dispatcher =
+                                  cloudi_service:dispatcher(Dispatcher),
+                              context = create_context(Dispatcher),
                               prefix = Prefix,
                               timeout_websocket = WebsocketTimeout,
                               output_type = OutputType,

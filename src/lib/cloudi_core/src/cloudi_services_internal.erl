@@ -564,6 +564,11 @@ handle_call(timeout_sync, _,
             #state{timeout_sync = TimeoutSync} = State) ->
     hibernate_check({reply, TimeoutSync, State});
 
+handle_call(priority_default, _,
+            #state{options = #config_service_options{
+                       priority_default = PriorityDefault}} = State) ->
+    hibernate_check({reply, PriorityDefault, State});
+
 handle_call(destination_refresh_immediate, _,
             #state{dest_refresh = DestRefresh} = State) ->
     Immediate = (DestRefresh =:= immediate_closest orelse
@@ -590,6 +595,7 @@ handle_call(context_options, _,
             #state{timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,
                    dest_refresh = DestRefresh,
+                   uuid_generator = UUID,
                    cpg_data = Groups,
                    options = #config_service_options{
                        priority_default = PriorityDefault,
@@ -602,9 +608,14 @@ handle_call(context_options, _,
                {timeout_async, TimeoutAsync},
                {timeout_sync, TimeoutSync},
                {priority_default, PriorityDefault},
+               {uuid, UUID},
                {groups, Groups},
                {groups_scope, Scope}],
     hibernate_check({reply, Options, State});
+
+handle_call(trans_id, _,
+            #state{uuid_generator = UUID} = State) ->
+    hibernate_check({reply, cloudi_x_uuid:get_v1(UUID), State});
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

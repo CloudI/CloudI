@@ -68,6 +68,7 @@
          websocket_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
 %%%------------------------------------------------------------------------
@@ -92,28 +93,22 @@
 %%% Callback functions from cloudi_x_cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init(_Transport, Req0, #cowboy_state{context = Dispatcher,
-                                     use_websockets = true} = State) ->
+init(_Transport, Req0, #cowboy_state{use_websockets = true} = State) ->
     case upgrade_request(Req0) of
         {websocket, Req1} ->
-            {upgrade, protocol, cloudi_x_cowboy_websocket, Req1,
-             State#cowboy_state{context = create_context(false,
-                                                         Dispatcher)}};
+            {upgrade, protocol, cloudi_x_cowboy_websocket, Req1, State};
         {undefined, Req1} ->
-            {ok, Req1,
-             State#cowboy_state{context = create_context(true,
-                                                         Dispatcher)}};
+            {ok, Req1, State};
         {Upgrade, Req1} ->
             ?LOG_ERROR("Unknown protocol: ~p", [Upgrade]),
             {shutdown, Req1, State}
     end;
-init(_Transport, Req, #cowboy_state{context = Dispatcher,
-                                    use_websockets = false} = State) ->
-    {ok, Req, State#cowboy_state{context = create_context(true,
-                                                          Dispatcher)}}.
+init(_Transport, Req, #cowboy_state{use_websockets = false} = State) ->
+    {ok, Req, State}.
 
 handle(Req0,
-       #cowboy_state{context = Context,
+       #cowboy_state{dispatcher = Dispatcher,
+                     context = Context,
                      output_type = OutputType,
                      content_type_forced = ContentTypeForced,
                      content_types_accepted = ContentTypesAccepted,
@@ -217,7 +212,8 @@ handle(Req0,
                 true ->
                     'normal'
             end,
-            case handle_request(Context, NameOutgoing, HeadersIncomingN,
+            case handle_request(Dispatcher, Context,
+                                NameOutgoing, HeadersIncomingN,
                                 OutputType, Body, ReqN) of
                 {{cowboy_response, HeadersOutgoing, Response}, ReqN0} ->
                     {HttpCode,
@@ -249,14 +245,6 @@ handle(Req0,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, timeout]),
                     {ok, Req, State};
-                {{cowboy_error, shutdown}, ReqN0} ->
-                    HttpCode = 408,
-                    {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
-                                                          ReqN0),
-                    ?LOG_INFO_APPLY(fun request_time_end_error/5,
-                                    [HttpCode, Method, NameIncoming,
-                                     RequestStartMicroSec, shutdown]),
-                    {ok, Req, State};
                 {{cowboy_error, Reason}, ReqN0} ->
                     HttpCode = 500,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
@@ -276,7 +264,8 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 websocket_init(_Transport, Req0,
-               #cowboy_state{context = Context,
+               #cowboy_state{dispatcher = Dispatcher,
+                             context = Context,
                              prefix = Prefix,
                              timeout_websocket = TimeoutWebsocket,
                              output_type = OutputType,
@@ -339,9 +328,8 @@ websocket_init(_Transport, Req0,
     end,
     if
         is_list(WebsocketConnect) ->
-            cloudi:send_async(Context, WebsocketConnect,
-                              RequestInfo, <<"CONNECT">>,
-                              undefined, undefined);
+            send_async_minimal(Dispatcher, Context, WebsocketConnect,
+                               RequestInfo, <<"CONNECT">>, self());
         true ->
             ok
     end,
@@ -407,7 +395,8 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
                       });
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
-                 #cowboy_state{context = Context,
+                 #cowboy_state{dispatcher = Dispatcher,
+                               context = Context,
                                output_type = OutputType,
                                use_websockets = true,
                                websocket_state = #websocket_state{
@@ -438,14 +427,8 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                 erlang:list_to_binary(Data)
         end
     end,
-    case cloudi:send_sync(Context, NameOutgoing, RequestInfo, Request,
-                          undefined, undefined) of
-        {ok, Response} ->
-            ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
-                             [NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
-            {reply, {WebSocketRequestType,
-                     ResponseBinaryF(Response)}, Req, State};
+    case send_sync_minimal(Dispatcher, Context,
+                           NameOutgoing, RequestInfo, Request, self()) of
         {ok, _ResponseInfo, Response} ->
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
@@ -456,12 +439,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
             ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
                             [NameIncoming,
                              RequestStartMicroSec, timeout]),
-            {reply, {WebSocketRequestType, <<>>}, Req, State};
-        {error, Reason} ->
-            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
-                            [NameIncoming,
-                             RequestStartMicroSec, Reason]),
-            {reply, {close, 1011, <<>>}, Req, State}
+            {reply, {WebSocketRequestType, <<>>}, Req, State}
     end.
 
 websocket_info(response_timeout, Req,
@@ -583,11 +561,6 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
          queued = NewQueue}
      }};
 
-websocket_info({cloudi_cpg_data, _} = DestinationsRefresh, Req,
-               #cowboy_state{context = Context} = State) ->
-    NewContext = cloudi:destinations_refresh(Context, DestinationsRefresh),
-    {ok, Req, State#cowboy_state{context = NewContext}};
-
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
     ?LOG_ERROR("Invalid websocket request state: \"~p\"", [Info]),
@@ -595,6 +568,7 @@ websocket_info(Info, Req,
 
 websocket_terminate(Reason, _Req,
                     #cowboy_state{
+                        dispatcher = Dispatcher,
                         context = Context,
                         output_type = OutputType,
                         websocket_disconnect = WebsocketDisconnect,
@@ -620,9 +594,8 @@ websocket_terminate(Reason, _Req,
                 (OutputType =:= internal); (OutputType =:= list) ->
                     [{<<"disconnection">>, Disconnect} | RequestInfo]
             end,
-            cloudi:send_async(Context, WebsocketDisconnect,
-                              NewRequestInfo, <<"DISCONNECT">>,
-                              undefined, undefined);
+            send_async_minimal(Dispatcher, Context, WebsocketDisconnect,
+                               NewRequestInfo, <<"DISCONNECT">>, self());
         true ->
             ok
     end,
@@ -631,11 +604,6 @@ websocket_terminate(Reason, _Req,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-create_context(Static, Dispatcher)
-    when is_boolean(Static), is_pid(Dispatcher) ->
-    cloudi:new([{groups_static, Static} |
-                cloudi_service:context_options(Dispatcher)]).
 
 upgrade_request(Req0) ->
     case cloudi_x_cowboy_req:parse_header(<<"connection">>, Req0) of
@@ -764,24 +732,25 @@ websocket_time_end_error(NameIncoming,
 websocket_request_end(Name, NewTimeout, OldTimeout) ->
     ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
 
-handle_request(Context, Name, Headers,
+handle_request(Dispatcher, Context, Name, Headers,
                OutputType, 'normal', Req) ->
     {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req),
-    handle_request(Context, Name, Headers,
+    handle_request(Dispatcher, Context, Name, Headers,
                    OutputType, Body, NextReq);
-handle_request(Context, Name, Headers,
+handle_request(Dispatcher, Context, Name, Headers,
                OutputType, 'application_zip', Req) ->
     {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req),
-    handle_request(Context, Name, Headers,
+    handle_request(Dispatcher, Context, Name, Headers,
                    OutputType, zlib:unzip(Body), NextReq);
-handle_request(Context, Name, Headers,
+handle_request(Dispatcher, Context, Name, Headers,
                OutputType, 'multipart', Req) ->
     MultipartId = erlang:list_to_binary(erlang:pid_to_list(self())),
     MultipartData = cloudi_x_cowboy_req:multipart_data(Req),
     PartFirst = handle_request_multipart_send(MultipartData, [], 0),
-    handle_request_multipart([], Context, Name, lists:keysort(1, Headers),
+    handle_request_multipart([], Dispatcher, Context, Name,
+                             lists:keysort(1, Headers),
                              OutputType, MultipartId, PartFirst);
-handle_request(Context, Name, Headers,
+handle_request(Dispatcher, Context, Name, Headers,
                OutputType, Body, Req)
     when is_binary(Body) ->
     RequestInfo = if
@@ -797,19 +766,17 @@ handle_request(Context, Name, Headers,
         (OutputType =:= list) ->
             erlang:binary_to_list(Body)
     end,
-    case cloudi:send_sync(Context, Name, RequestInfo, Request,
-                          undefined, undefined) of
+    case send_sync_minimal(Dispatcher, Context,
+                           Name, RequestInfo, Request, self()) of
         {ok, ResponseInfo, Response} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {{cowboy_response, HeadersOutgoing, Response}, Req};
-        {ok, Response} ->
-            {{cowboy_response, [], Response}, Req};
-        {error, Reason} ->
-            {{cowboy_error, Reason}, Req}
+        {error, timeout} ->
+            {{cowboy_error, timeout}, Req}
     end.
 
-handle_request_multipart(TransIdList, Context, Name, Headers,
-                         OutputType, MultipartId,
+handle_request_multipart(TransIdList, Dispatcher, Context,
+                         Name, Headers, OutputType, MultipartId,
                          {HeadersPart0, BodyPart, I, Req}) ->
     MultipartData = cloudi_x_cowboy_req:multipart_data(Req),
     PartNext = handle_request_multipart_send(MultipartData,
@@ -842,17 +809,12 @@ handle_request_multipart(TransIdList, Context, Name, Headers,
         (OutputType =:= list) ->
             erlang:binary_to_list(BodyPart)
     end,
-    NewTransIdList = case cloudi:send_async(Context, Name, RequestInfo, Request,
-                                            undefined, undefined) of
-        {ok, TransId} ->
-            [TransId | TransIdList];
-        {error, _} ->
-            TransIdList
-    end,
-    handle_request_multipart(NewTransIdList, Context, Name, Headers,
-                             OutputType, MultipartId, PartNext);
-handle_request_multipart(TransIdList, Context, _Name, _Headers,
-                         _OutputType, _MultipartId,
+    {ok, TransId} = send_async_minimal(Dispatcher, Context, Name,
+                                       RequestInfo, Request, self()),
+    handle_request_multipart([TransId | TransIdList], Dispatcher, Context,
+                             Name, Headers, OutputType, MultipartId, PartNext);
+handle_request_multipart(TransIdList, _Dispatcher, Context,
+                         _Name, _Headers, _OutputType, _MultipartId,
                          {I, Req}) ->
     handle_request_multipart_receive(lists:reverse(TransIdList),
                                      Context, I, Req).
@@ -915,12 +877,12 @@ handle_request_multipart_receive(TransIdList, _, I, Req)
     when erlang:length(TransIdList) /= I ->
     {{cowboy_error, timeout}, Req};
 handle_request_multipart_receive(TransIdList, Context, _, Req) ->
-    case cloudi:recv_asyncs(Context, TransIdList) of
+    case recv_asyncs_minimal(Context, TransIdList) of
         {ok, ResponseList} ->
             handle_request_multipart_receive_results(ResponseList,
                                                      [], [], Req);
-        {error, Reason} ->
-            {{cowboy_error, Reason}, Req}
+        {error, timeout} ->
+            {{cowboy_error, timeout}, Req}
     end.
 
 handle_response(NameIncoming, HeadersOutgoing0, Response,

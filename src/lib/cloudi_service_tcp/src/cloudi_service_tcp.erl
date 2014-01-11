@@ -61,6 +61,7 @@
          cloudi_service_terminate/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_children.hrl").
 
 -define(DEFAULT_INTERFACE,            {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                        8080).
@@ -92,6 +93,7 @@
         socket,
         timeout_recv,
         service,
+        dispatcher,
         context,
         destination,
         request_info
@@ -210,11 +212,11 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                  {<<"destination_address">>, DestinationAddressFormatted},
                  {<<"destination_port">>, DestinationPortFormatted}]),
             SocketPid = proc_lib:spawn_opt(fun() ->
-                ContextOptions = cloudi_service:context_options(Dispatcher),
-                Context = cloudi:new([{groups_static, true} | ContextOptions]),
+                Context = create_context(Dispatcher),
                 socket_loop_init(#state_socket{socket = Socket,
                                                timeout_recv = TimeoutRecv,
                                                service = Service,
+                                               dispatcher = Dispatcher,
                                                context = Context,
                                                destination = Destination,
                                                request_info = RequestInfo})
@@ -271,29 +273,23 @@ socket_loop_init(#state_socket{socket = Socket} = StateSocket) ->
 
 socket_loop(#state_socket{socket = Socket,
                           timeout_recv = TimeoutRecv,
+                          dispatcher = Dispatcher,
                           context = Context,
                           destination = Destination,
                           request_info = RequestInfo} = StateSocket) ->
     receive
         {tcp, Socket, Request} ->
-            case cloudi:send_sync(Context, Destination,
-                                  RequestInfo, Request,
-                                  undefined, undefined) of
+            case send_sync_minimal(Dispatcher, Context, Destination,
+                                   RequestInfo, Request, self()) of
                 {ok, _, Response} ->
                     socket_send(Response, StateSocket);
-                {ok, Response} ->
-                    socket_send(Response, StateSocket);
-                {error, _} ->
+                {error, timeout} ->
                     socket_send(<<>>, StateSocket)
             end,
             ok = inet:setopts(Socket, [{active, once}]),
             socket_loop(StateSocket);
         {tcp_closed, Socket} ->
-            socket_loop_terminate(normal, StateSocket);
-        {cloudi_cpg_data, _} = DestinationsRefresh ->
-            NewContext = cloudi:destinations_refresh(Context,
-                                                     DestinationsRefresh),
-            socket_loop(StateSocket#state_socket{context = NewContext})
+            socket_loop_terminate(normal, StateSocket)
     after
         TimeoutRecv ->
             socket_loop_terminate(normal, StateSocket)

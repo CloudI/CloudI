@@ -59,6 +59,7 @@
          handle_event/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_elli_handler.hrl").
 -include_lib("elli/include/cloudi_x_elli.hrl").
 
@@ -73,6 +74,7 @@
 %% Reply with a normal response. 'ok' can be used instead of '200'
 %%     to signal success.
 handle(Req, #elli_state{dispatcher = Dispatcher,
+                        context = Context,
                         output_type = OutputType,
                         default_content_type = DefaultContentType,
                         use_host_prefix = UseHostPrefix,
@@ -161,10 +163,8 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
         OutputType =:= external; OutputType =:= binary ->
             headers_external_incoming(HeadersIncoming)
     end,
-    Context = cloudi:new([{groups_static, true} |
-                          cloudi_service:context_options(Dispatcher)]),
-    case cloudi:send_sync(Context, NameOutgoing, RequestInfo, Request,
-                          undefined, undefined) of
+    case send_sync_minimal(Dispatcher, Context,
+                           NameOutgoing, RequestInfo, Request, self()) of
         {ok, ResponseInfo, Response} ->
             HeadersOutgoing = if
                 OutputType =:= internal; OutputType =:= list ->
@@ -180,26 +180,11 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
                              [HttpCode, Method, NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             Result;
-        {ok, Response} ->
-            {HttpCode, _, _} = Result =
-                return_response(NameIncoming, [], Response,
-                                OutputType, DefaultContentType,
-                                ContentTypeLookup),
-            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                             [HttpCode, Method, NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
-            Result;
         {error, timeout} ->
             HttpCode = 504,
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
                              RequestStartMicroSec, timeout]),
-            {HttpCode, [], <<>>};
-        {error, Reason} ->
-            HttpCode = 500,
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, Reason]),
             {HttpCode, [], <<>>}
     end.
 

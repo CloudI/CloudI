@@ -44,6 +44,7 @@
 %% cloudi_x_cowboy handler state
 -record(cowboy_state,
     {
+        dispatcher,
         context,
         prefix,
         timeout_websocket,

@@ -87,8 +87,10 @@
          timeout_async/1,
          timeout_sync/1,
          timeout_max/1,
+         priority_default/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
+         trans_id/1,
          trans_id_age/1]).
 
 -include("cloudi_logger.hrl").
@@ -128,7 +130,7 @@
                 :: cloudi_service_api:dest_refresh_delay_milliseconds(),
             timeout_async :: cloudi_service_api:timeout_milliseconds(),
             timeout_sync :: cloudi_service_api:timeout_milliseconds(),
-            priority_default :: priority(),
+            priority_default :: ?PRIORITY_HIGH..?PRIORITY_LOW,
             scope :: atom(),
             receiver :: pid(),
             uuid_generator :: cloudi_x_uuid:state(),
@@ -147,6 +149,7 @@
          {scope, atom()} |
          % advanced:
          % options for internal coordination with cloudi_service
+         {uuid, cloudi_x_uuid:state()} |
          {groups, any()} |
          {groups_scope, atom()} |
          {groups_static, boolean()}).
@@ -196,13 +199,14 @@ new(Options)
         {timeout_sync,                     ?DEFAULT_TIMEOUT_SYNC},
         {priority_default,                     ?DEFAULT_PRIORITY},
         {scope,                                   ?DEFAULT_SCOPE},
+        {uuid,                                         undefined},
         {groups,            cloudi_x_cpg_data:get_empty_groups()},
         {groups_scope,                                 undefined},
         {groups_static,                                    false}
         ],
     [DestRefresh, DestRefreshStart, DestRefreshDelay,
-     DefaultTimeoutAsync, DefaultTimeoutSync,
-     PriorityDefault, Scope, OldGroups, GroupsScope, GroupsStatic] =
+     DefaultTimeoutAsync, DefaultTimeoutSync, PriorityDefault, Scope,
+     OldUUID, OldGroups, GroupsScope, GroupsStatic] =
         cloudi_proplists:take_values(Defaults, Options),
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
@@ -233,19 +237,27 @@ new(Options)
     true = (PriorityDefault >= ?PRIORITY_HIGH) andalso
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
+    true = (OldUUID =:= undefined) orelse
+           (element(1, OldUUID) =:= uuid_state),
     true = is_atom(GroupsScope),
     true = is_boolean(GroupsStatic),
     ConfiguredScope = if
         GroupsScope =:= undefined ->
-            ?SCOPE_ASSIGN(Scope);
+            CpgScope = ?SCOPE_ASSIGN(Scope),
+            ok = cloudi_x_cpg:scope_exists(CpgScope),
+            CpgScope;
         true ->
             GroupsScope
     end,
-    ok = cloudi_x_cpg:scope_exists(ConfiguredScope),
     Self = self(),
-    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
-    UUID = cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
-                                    {mac_address, MacAddress}]),
+    UUID = if
+        OldUUID =:= undefined ->
+            {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
+            cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
+                                     {mac_address, MacAddress}]);
+        true ->
+            OldUUID
+    end,
     Groups = if
         GroupsStatic =:= true ->
             OldGroups;
@@ -1257,6 +1269,22 @@ timeout_max(#cloudi_context{}) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Configured service default priority.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec priority_default(Context :: context() | cloudi_service:dispatcher()) ->
+    PriorityDefault :: ?PRIORITY_HIGH..?PRIORITY_LOW.
+
+priority_default(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:priority_default(Dispatcher);
+
+priority_default(#cloudi_context{priority_default = PriorityDefault}) ->
+    PriorityDefault.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Configured service destination refresh is immediate.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1302,6 +1330,24 @@ destination_refresh_lazy(#cloudi_context{
      DestRefresh =:= lazy_remote orelse
      DestRefresh =:= lazy_newest orelse
      DestRefresh =:= lazy_oldest).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a new transaction id.===
+%% The same data as used when sending service requests is used.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id(Context :: context() |
+                          cloudi_service:dispatcher()) ->
+    <<_:128>>.
+
+trans_id(Dispatcher)
+    when is_pid(Dispatcher) ->
+    cloudi_service:trans_id(Dispatcher);
+
+trans_id(#cloudi_context{uuid_generator = UUID}) ->
+    cloudi_x_uuid:get_v1(UUID).
 
 %%-------------------------------------------------------------------------
 %% @doc
