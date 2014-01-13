@@ -396,9 +396,16 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int)
-                    ((System.nanoTime() - this.request_timer) * 1e-6);
-                timeout = java.lang.Math.max(0, timeout - elapsed);
+                final int elapsed = (int) java.lang.Math.max(0,
+                    ((System.nanoTime() - this.request_timer) * 1e-6));
+                if (elapsed > timeout)
+                {
+                    timeout = 0;
+                }
+                else
+                {
+                    timeout -= elapsed;
+                }
             }
         }
         try
@@ -432,9 +439,16 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int)
-                    ((System.nanoTime() - this.request_timer) * 1e-6);
-                timeout = java.lang.Math.max(0, timeout - elapsed);
+                final int elapsed = (int) java.lang.Math.max(0,
+                    ((System.nanoTime() - this.request_timer) * 1e-6));
+                if (elapsed > timeout)
+                {
+                    timeout = 0;
+                }
+                else
+                {
+                    timeout -= elapsed;
+                }
             }
         }
         try
@@ -486,9 +500,18 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int)
-                    ((System.nanoTime() - this.request_timer) * 1e-6);
-                timeout = java.lang.Math.max(0, timeout - elapsed);
+                final int elapsed = (int) java.lang.Math.max(0,
+                    ((System.nanoTime() - this.request_timer) * 1e-6));
+                if (elapsed > timeout)
+                {
+                    response_info = new byte[0];
+                    response = new byte[0];
+                    timeout = 0;
+                }
+                else
+                {
+                    timeout -= elapsed;
+                }
             }
         }
         try
@@ -522,9 +545,18 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int)
-                    ((System.nanoTime() - this.request_timer) * 1e-6);
-                timeout = java.lang.Math.max(0, timeout - elapsed);
+                final int elapsed = (int) java.lang.Math.max(0,
+                    ((System.nanoTime() - this.request_timer) * 1e-6));
+                if (elapsed > timeout)
+                {
+                    response_info = new byte[0];
+                    response = new byte[0];
+                    timeout = 0;
+                }
+                else
+                {
+                    timeout -= elapsed;
+                }
             }
         }
         try

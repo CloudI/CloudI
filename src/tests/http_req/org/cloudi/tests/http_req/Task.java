@@ -67,19 +67,26 @@ public class Task implements Runnable
         HashMap<String, List<String> > http_qs =
             api.request_http_qs_parse(request);
         final List<String> value = http_qs.remove("value");
-        String response;
-        if (value == null)
+        String response = null;
+        if (value != null)
+        {
+            try
+            {
+                final long value_long = Long.parseLong(value.get(0), 10);
+                response =
+                    "<http_test><value>" +
+                    Long.toString(value_long) +
+                    "</value></http_test>";
+            }
+            catch (java.lang.NumberFormatException e)
+            {
+                response = null;
+            }
+        }
+        if (response == null)
         {
             response =
                 "<http_test><error>no value specified</error></http_test>";
-        }
-        else
-        {
-            final long value_long = Long.parseLong(value.get(0), 10);
-            response =
-                "<http_test><value>" +
-                Long.toString(value_long) +
-                "</value></http_test>";
         }
         api.return_(command, name, pattern,
                     ("").getBytes(), response.getBytes(),

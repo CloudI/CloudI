@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * When an external service is using the request_timeout_adjustment
+      send a null response if the timeout was exceeded, to prevent extra
+      data from being sent to the Erlang VM
+    * Fix the java http_req test parsing
+
 2014-01-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix performance issues that have been creeping into

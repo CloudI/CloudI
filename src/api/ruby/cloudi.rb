@@ -176,8 +176,13 @@ module CloudI
                           timeout, priority, trans_id, pid)
             if @requestTimeoutAdjustment
                 if timeout == @request_timeout
-                    elapsed = ((Time.now - @request_timer) * 1000.0).floor
-                    timeout = [0, timeout - elapsed].max
+                    elapsed = [0,
+                               ((Time.now - @request_timer) * 1000.0).floor].max
+                    if elapsed > timeout
+                        timeout = 0
+                    else
+                        timeout -= elapsed
+                    end
                 end
             end
             send(term_to_binary([:forward_async, name,
@@ -192,8 +197,13 @@ module CloudI
                          timeout, priority, trans_id, pid)
             if @requestTimeoutAdjustment
                 if timeout == @request_timeout
-                    elapsed = ((Time.now - @request_timer) * 1000.0).floor
-                    timeout = [0, timeout - elapsed].max
+                    elapsed = [0,
+                               ((Time.now - @request_timer) * 1000.0).floor].max
+                    if elapsed > timeout
+                        timeout = 0
+                    else
+                        timeout -= elapsed
+                    end
                 end
             end
             send(term_to_binary([:forward_sync, name, 
@@ -220,8 +230,15 @@ module CloudI
                          timeout, trans_id, pid)
             if @requestTimeoutAdjustment
                 if timeout == @request_timeout
-                    elapsed = ((Time.now - @request_timer) * 1000.0).floor
-                    timeout = [0, timeout - elapsed].max
+                    elapsed = [0,
+                               ((Time.now - @request_timer) * 1000.0).floor].max
+                    if elapsed > timeout
+                        response_info = ''
+                        response = ''
+                        timeout = 0
+                    else
+                        timeout -= elapsed
+                    end
                 end
             end
             send(term_to_binary([:return_async, name, pattern,
@@ -236,8 +253,15 @@ module CloudI
                         timeout, trans_id, pid)
             if @requestTimeoutAdjustment
                 if timeout == @request_timeout
-                    elapsed = ((Time.now - @request_timer) * 1000.0).floor
-                    timeout = [0, timeout - elapsed].max
+                    elapsed = [0,
+                               ((Time.now - @request_timer) * 1000.0).floor].max
+                    if elapsed > timeout
+                        response_info = ''
+                        response = ''
+                        timeout = 0
+                    else
+                        timeout -= elapsed
+                    end
                 end
             end
             send(term_to_binary([:return_sync, name, pattern,

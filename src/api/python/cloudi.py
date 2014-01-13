@@ -186,8 +186,11 @@ class API(object):
                       timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = default_timer() - self.__request_timer
-                timeout = int(max(0, timeout - elapsed))
+                elapsed = max(0, int(default_timer() - self.__request_timer))
+                if elapsed > timeout:
+                    timeout = 0
+                else:
+                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom('forward_async'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -199,8 +202,11 @@ class API(object):
                      timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = default_timer() - self.__request_timer
-                timeout = int(max(0, timeout - elapsed))
+                elapsed = max(0, int(default_timer() - self.__request_timer))
+                if elapsed > timeout:
+                    timeout = 0
+                else:
+                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom('forward_sync'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -225,8 +231,13 @@ class API(object):
                      timeout, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = default_timer() - self.__request_timer
-                timeout = int(max(0, timeout - elapsed))
+                elapsed = max(0, int(default_timer() - self.__request_timer))
+                if elapsed > timeout:
+                    response_info = ''
+                    response = ''
+                    timeout = 0
+                else:
+                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom('return_async'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),
@@ -238,8 +249,13 @@ class API(object):
                     timeout, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = default_timer() - self.__request_timer
-                timeout = int(max(0, timeout - elapsed))
+                elapsed = max(0, int(default_timer() - self.__request_timer))
+                if elapsed > timeout:
+                    response_info = ''
+                    response = ''
+                    timeout = 0
+                else:
+                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom('return_sync'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),

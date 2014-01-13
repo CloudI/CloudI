@@ -831,15 +831,19 @@ static int cloudi_forward_(cloudi_instance_t * p,
     int index = 0;
     if (p->use_header)
         index = 4;
-    if (p->request_timeout_adjustment)
+    if (p->request_timeout_adjustment &&
+        timeout == p->request_timeout)
     {
         timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
-        int32_t const elapsed =
-            static_cast<int32_t>(request_timer.elapsed() * 1000.0);
-        if (elapsed > 0 && timeout == p->request_timeout)
+        uint32_t const elapsed = static_cast<uint32_t>(
+            std::max(0, static_cast<int>(request_timer.elapsed() * 1000.0)));
+        if (elapsed > timeout)
         {
-            timeout = static_cast<uint32_t>(
-                std::max(0, static_cast<int32_t>(timeout) - elapsed));
+            timeout = 0;
+        }
+        else
+        {
+            timeout -= elapsed;
         }
     }
     if (ei_encode_version(buffer.get<char>(), &index))
@@ -977,9 +981,9 @@ static int cloudi_return_(cloudi_instance_t * p,
                           char const * const name,
                           char const * const pattern,
                           void const * const response_info,
-                          uint32_t const response_info_size,
+                          uint32_t response_info_size,
                           void const * const response,
-                          uint32_t const response_size,
+                          uint32_t response_size,
                           uint32_t timeout,
                           char const * const trans_id,
                           char const * const pid,
@@ -989,15 +993,21 @@ static int cloudi_return_(cloudi_instance_t * p,
     int index = 0;
     if (p->use_header)
         index = 4;
-    if (p->request_timeout_adjustment)
+    if (p->request_timeout_adjustment &&
+        timeout == p->request_timeout)
     {
         timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
-        int32_t const elapsed =
-            static_cast<int32_t>(request_timer.elapsed() * 1000.0);
-        if (elapsed > 0 && timeout == p->request_timeout)
+        uint32_t const elapsed = static_cast<uint32_t>(
+            std::max(0, static_cast<int>(request_timer.elapsed() * 1000.0)));
+        if (elapsed > timeout)
         {
-            timeout = static_cast<uint32_t>(
-                std::max(0, static_cast<int32_t>(timeout) - elapsed));
+            response_info_size = 0;
+            response_size = 0;
+            timeout = 0;
+        }
+        else
+        {
+            timeout -= elapsed;
         }
     }
     if (ei_encode_version(buffer.get<char>(), &index))
