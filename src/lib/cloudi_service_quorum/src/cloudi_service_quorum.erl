@@ -150,7 +150,14 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                             Count - cloudi_math:floor((Count - 1) / 3)
                     end;
                 is_integer(Quorum) ->
-                    erlang:min(Count, Quorum);
+                    if
+                        Quorum > Count ->
+                            ?LOG_ERROR("Absolute quorum not met! ~p N=~p",
+                                       [QuorumName, Count]),
+                            undefined;
+                        true ->
+                            Quorum
+                    end;
                 is_float(Quorum) ->
                     erlang:min(Count,
                                cloudi_math:ceil(Quorum * Count))

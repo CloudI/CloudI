@@ -7,6 +7,7 @@
       send a null response if the timeout was exceeded, to prevent extra
       data from being sent to the Erlang VM
     * Fix the java http_req test parsing
+    * Fix cloudi_service_quorum absolute integer requirement
 
 2014-01-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
