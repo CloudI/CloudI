@@ -63,6 +63,8 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_ADD_PREFIX,                  true).
+
 -record(destination,
     {
         mode = round_robin :: random | round_robin,
@@ -86,10 +88,12 @@
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {destinations,             []}],
-    [DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
+        {destinations,             []},
+        {add_prefix,               ?DEFAULT_ADD_PREFIX}],
+    [DestinationsL, AddPrefix] = cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DestinationsL) andalso
            (erlang:length(DestinationsL) > 0),
+    true = is_boolean(AddPrefix),
     ConfigDefaults = [
         {mode,                     round_robin},
         {service_names,            []}],
@@ -97,23 +101,35 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         cloudi_service:subscribe(Dispatcher, PatternSuffix),
         case L of
             [I | _] when is_integer(I) ->
+                Names = if
+                    AddPrefix =:= true ->
+                        [Prefix ++ L];
+                    AddPrefix =:= false ->
+                        [L]
+                end,
                 cloudi_x_trie:store(Prefix ++ PatternSuffix,
-                                    #destination{service_names = [L]}, D);
+                                    #destination{service_names = Names}, D);
             [_ | _] ->
                 [Mode,
-                 Names] = cloudi_proplists:take_values(ConfigDefaults, L),
+                 Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
                 true = is_atom(Mode) andalso
                        ((Mode =:= random) orelse
                         (Mode =:= round_robin)),
-                true = is_list(Names) andalso
-                       (erlang:length(Names) > 0),
+                true = is_list(Names0) andalso
+                       (erlang:length(Names0) > 0),
                 true = lists:all(fun(Name) ->
                     not cloudi_x_trie:is_pattern(Name)
-                end, Names),
-                Length = erlang:length(Names),
+                end, Names0),
+                Length = erlang:length(Names0),
+                Names1 = if
+                    AddPrefix =:= true ->
+                        [Prefix ++ Suffix || Suffix <- Names0];
+                    AddPrefix =:= false ->
+                        Names0
+                end,
                 cloudi_x_trie:store(Prefix ++ PatternSuffix,
                                     #destination{mode = Mode,
-                                                 service_names = Names,
+                                                 service_names = Names1,
                                                  length = Length}, D)
         end
     end, cloudi_x_trie:new(), DestinationsL),
