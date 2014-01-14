@@ -201,6 +201,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
     lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
+    lib/cloudi_service_router/src/cloudi_service_router.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_timers/src/cloudi_service_timers.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src

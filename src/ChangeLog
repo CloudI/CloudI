@@ -8,6 +8,7 @@
       data from being sent to the Erlang VM
     * Fix the java http_req test parsing
     * Fix cloudi_service_quorum absolute integer requirement
+    * Add cloudi_service_router
 
 2014-01-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 

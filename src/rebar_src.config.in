@@ -17,6 +17,7 @@
   "lib/cloudi_service_http_elli",
   "lib/cloudi_service_map_reduce",
   "lib/cloudi_service_quorum",
+  "lib/cloudi_service_router",
   "lib/cloudi_service_tcp",
   "lib/cloudi_service_timers",
   "lib/cloudi_service_udp",
