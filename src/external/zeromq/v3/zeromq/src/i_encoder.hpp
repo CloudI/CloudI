@@ -27,7 +27,7 @@ namespace zmq
 {
 
     //  Forward declaration
-    class i_msg_source;
+    struct i_msg_source;
 
     //  Interface to be implemented by message encoder.
 
@@ -47,6 +47,7 @@ namespace zmq
         virtual void get_data (unsigned char **data_, size_t *size_,
             int *offset_ = NULL) = 0;
 
+        virtual bool has_data () = 0;
     };
 
 }

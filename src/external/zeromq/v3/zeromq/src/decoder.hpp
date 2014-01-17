@@ -35,8 +35,6 @@
 namespace zmq
 {
 
-    class i_msg_sink;
-
     //  Helper base class for decoders that know the amount of data to read
     //  in advance at any moment. Knowing the amount in advance is a property
     //  of the protocol used. 0MQ framing protocol is based size-prefixed
@@ -149,7 +147,7 @@ namespace zmq
         bool stalled ()
         {
             //  Check whether there was decoding error.
-            if (unlikely (static_cast <T*> (this)->next == NULL))
+            if (unlikely (!(static_cast <T*> (this)->next)))
                 return false;
 
             while (!to_read) {

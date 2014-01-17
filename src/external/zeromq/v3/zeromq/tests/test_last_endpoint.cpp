@@ -29,11 +29,10 @@ static void do_bind_and_verify (void *s, const char *endpoint)
 {
     int rc = zmq_bind (s, endpoint);
     assert (rc == 0);
-
-    char test [255];
-    size_t siz = 255;
-    rc = zmq_getsockopt (s, ZMQ_LAST_ENDPOINT, test, &siz);
-    assert (rc == 0 && strcmp (test, endpoint) == 0);
+    char reported [255];
+    size_t size = 255;
+    rc = zmq_getsockopt (s, ZMQ_LAST_ENDPOINT, reported, &size);
+    assert (rc == 0 && strcmp (reported, endpoint) == 0);
 }
 
 int main (void)
@@ -49,6 +48,12 @@ int main (void)
     do_bind_and_verify (sb, "tcp://127.0.0.1:5561");
     do_bind_and_verify (sb, "ipc:///tmp/testep");
 
-    return 0 ;
+    int rc = zmq_close (sb);
+    assert (rc == 0);
+    
+    rc = zmq_term (ctx);
+    assert (rc == 0);
+
+    return 0;
 }
 

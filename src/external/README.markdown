@@ -271,10 +271,10 @@ to its integration and dependencies).
 
 `zeromq/v?/zeromq`
 ------------------
-`ZeroMQ 2.2.0 and 3.2.2`
+`ZeroMQ 2.2.0 and 3.2.4`
 
 - `http://download.zeromq.org/zeromq-2.2.0.tar.gz`
-- `http://download.zeromq.org/zeromq-3.2.2.tar.gz`
-- `Thu Feb  7 14:18:10 PST 2013`
+- `http://download.zeromq.org/zeromq-3.2.4.tar.gz`
+- `Fri Jan 17 11:48:27 PST 2014`
 - `LGPL` (requires explicit enable from configure)
 

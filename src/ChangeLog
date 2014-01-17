@@ -10,6 +10,7 @@
       (to ignore the cloudi_core Erlang application)
     * Update proper
     * Update reltool_util
+    * Update v3 ZeroMQ to 3.2.4
 
 2014-01-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
