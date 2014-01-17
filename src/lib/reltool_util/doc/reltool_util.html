@@ -1,0 +1,376 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module reltool_util</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module reltool_util</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="reltool_Utility_Functions">reltool Utility Functions</a></h3>
+   All the functions here are probably considered unorthodox, but
+   are useful for runtime usage of applications and releases.
+<p>Copyright © 2013-2014 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.1 Jan 15 2014 20:12:22
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="reltool_Utility_Functions">reltool Utility Functions</a></h3>
+   All the functions here are probably considered unorthodox, but
+   are useful for runtime usage of applications and releases.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#application_loaded-1">application_loaded/1</a></td><td>
+  <h4><a name="Check_if_an_application_is_currently_loaded.">Check if an application is currently loaded.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_modules-1">application_modules/1</a></td><td>
+  <h4><a name="Retrieve_a_list_of_application_modules.">Retrieve a list of application modules.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_modules-2">application_modules/2</a></td><td>
+  <h4><a name="Retrieve_a_list_of_application_modules_with_filter_options.">Retrieve a list of application modules with filter options.</a></h4>
+  Options can contain {behavior, ModuleName} to list all the modules
+  that use a specific behaviour (the information will not be present if
+  the beam file was stripped).</td></tr>
+<tr><td valign="top"><a href="#application_purged-1">application_purged/1</a></td><td>
+  <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application.">Purge a loaded application's modules and unload the application.</a></h4>
+  The application is stopped if it is running, but its dependencies are
+  ignored.</td></tr>
+<tr><td valign="top"><a href="#application_purged-2">application_purged/2</a></td><td>
+  <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application_with_a_specific_timeout.">Purge a loaded application's modules and unload the application with a specific timeout.</a></h4>
+  The application is stopped if it is running, but its dependencies are
+  ignored.</td></tr>
+<tr><td valign="top"><a href="#application_remove-1">application_remove/1</a></td><td>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies.">Stop and purge the modules of an application and all of its dependencies.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</td></tr>
+<tr><td valign="top"><a href="#application_remove-2">application_remove/2</a></td><td>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout.">Stop and purge the modules of an application and all of its dependencies with a timeout.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</td></tr>
+<tr><td valign="top"><a href="#application_remove-3">application_remove/3</a></td><td>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</td></tr>
+<tr><td valign="top"><a href="#application_running-1">application_running/1</a></td><td>
+  <h4><a name="Check_if_an_application_is_currently_running.">Check if an application is currently running.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_running-2">application_running/2</a></td><td>
+  <h4><a name="Check_if_an_application_is_currently_running_with_a_timeout.">Check if an application is currently running with a timeout.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_start-1">application_start/1</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_start-2">application_start/2</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration.">Start all the dependent applications manually with a specific configuration.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_start-3">application_start/3</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration_and_timeout.">Start all the dependent applications manually with a specific configuration and timeout.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_stop-1">application_stop/1</a></td><td>
+  <h4><a name="Stop_an_application_and_its_dependencies.">Stop an application and its dependencies.</a></h4>
+  Only stop dependencies that are not required for other applications.</td></tr>
+<tr><td valign="top"><a href="#application_stop-2">application_stop/2</a></td><td>
+  <h4><a name="Stop_an_application_and_its_dependencies_with_a_list_of_applications_to_ignore.">Stop an application and its dependencies with a list of applications to ignore.</a></h4>
+  Only stop dependencies that are not required for other applications.</td></tr>
+<tr><td valign="top"><a href="#applications_start-1">applications_start/1</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#applications_start-2">applications_start/2</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#ensure_application_loaded-1">ensure_application_loaded/1</a></td><td>
+  <h4><a name="Make_sure_an_application_is_loaded.">Make sure an application is loaded.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#ensure_application_started-1">ensure_application_started/1</a></td><td>
+  <h4><a name="Make_sure_an_application_is_started.">Make sure an application is started.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#ensure_application_stopped-1">ensure_application_stopped/1</a></td><td>
+  <h4><a name="Make_sure_an_application_is_stopped.">Make sure an application is stopped.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_module_loaded-1">is_module_loaded/1</a></td><td>
+  <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_module_loaded-2">is_module_loaded/2</a></td><td>
+  <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
+  Return a new timeout value with the elapsed time subtracted.</td></tr>
+<tr><td valign="top"><a href="#module_exports-1">module_exports/1</a></td><td>
+  <h4><a name="List_the_exported_functions_of_a_module.">List the exported functions of a module.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#module_loaded-1">module_loaded/1</a></td><td>
+  <h4><a name="Make_sure_a_module_is_loaded.">Make sure a module is loaded.</a></h4>
+  If the module is not loaded, attempt to load it.</td></tr>
+<tr><td valign="top"><a href="#module_purged-1">module_purged/1</a></td><td>
+  <h4><a name="Make_sure_a_module_is_purged.">Make sure a module is purged.</a></h4>
+  If the module is not loaded, ignore it.</td></tr>
+<tr><td valign="top"><a href="#module_purged-2">module_purged/2</a></td><td>
+  <h4><a name="Make_sure_a_module_is_purged_with_a_timeout.">Make sure a module is purged with a timeout.</a></h4>
+  If the module is not loaded, ignore it.</td></tr>
+<tr><td valign="top"><a href="#script_remove-1">script_remove/1</a></td><td>
+  <h4><a name="Stop_everything_specified_within_a_script_file.">Stop everything specified within a script file.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.</td></tr>
+<tr><td valign="top"><a href="#script_remove-2">script_remove/2</a></td><td>
+  <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout.">Stop everything specified within a script file with a timeout.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.</td></tr>
+<tr><td valign="top"><a href="#script_remove-3">script_remove/3</a></td><td>
+  <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop everything specified within a script file with a timeout and a list of applications to ignore.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.</td></tr>
+<tr><td valign="top"><a href="#script_start-1">script_start/1</a></td><td>
+  <h4><a name="Start_everything_specified_within_a_script_file.">Start everything specified within a script file.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="application_loaded-1">application_loaded/1</a></h3>
+<div class="spec">
+<p><tt>application_loaded(Application::atom()) -&gt; {ok, {atom(), string()}} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_an_application_is_currently_loaded.">Check if an application is currently loaded.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_modules-1">application_modules/1</a></h3>
+<div class="spec">
+<p><tt>application_modules(Application::atom()) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Retrieve_a_list_of_application_modules.">Retrieve a list of application modules.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_modules-2">application_modules/2</a></h3>
+<div class="spec">
+<p><tt>application_modules(Application::atom(), Options::[{atom(), any()}]) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Retrieve_a_list_of_application_modules_with_filter_options.">Retrieve a list of application modules with filter options.</a></h4>
+  Options can contain {behavior, ModuleName} to list all the modules
+  that use a specific behaviour (the information will not be present if
+  the beam file was stripped).</p>
+
+<h3 class="function"><a name="application_purged-1">application_purged/1</a></h3>
+<div class="spec">
+<p><tt>application_purged(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application.">Purge a loaded application's modules and unload the application.</a></h4>
+  The application is stopped if it is running, but its dependencies are
+  ignored.</p>
+
+<h3 class="function"><a name="application_purged-2">application_purged/2</a></h3>
+<div class="spec">
+<p><tt>application_purged(Application::atom(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application_with_a_specific_timeout.">Purge a loaded application's modules and unload the application with a specific timeout.</a></h4>
+  The application is stopped if it is running, but its dependencies are
+  ignored.</p>
+
+<h3 class="function"><a name="application_remove-1">application_remove/1</a></h3>
+<div class="spec">
+<p><tt>application_remove(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies.">Stop and purge the modules of an application and all of its dependencies.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</p>
+
+<h3 class="function"><a name="application_remove-2">application_remove/2</a></h3>
+<div class="spec">
+<p><tt>application_remove(Application::atom(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout.">Stop and purge the modules of an application and all of its dependencies with a timeout.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</p>
+
+<h3 class="function"><a name="application_remove-3">application_remove/3</a></h3>
+<div class="spec">
+<p><tt>application_remove(Application::atom(), Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.</a></h4>
+  Only application dependencies that are not required for other
+  applications are removed.</p>
+
+<h3 class="function"><a name="application_running-1">application_running/1</a></h3>
+<div class="spec">
+<p><tt>application_running(Application::atom()) -&gt; {ok, {atom(), string()}} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_an_application_is_currently_running.">Check if an application is currently running.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_running-2">application_running/2</a></h3>
+<div class="spec">
+<p><tt>application_running(Application::atom(), Timeout::pos_integer() | infinity) -&gt; {ok, {atom(), string()}} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_an_application_is_currently_running_with_a_timeout.">Check if an application is currently running with a timeout.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_start-1">application_start/1</a></h3>
+<div class="spec">
+<p><tt>application_start(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_start-2">application_start/2</a></h3>
+<div class="spec">
+<p><tt>application_start(Application::atom(), Env::[{atom(), any()}]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration.">Start all the dependent applications manually with a specific configuration.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_start-3">application_start/3</a></h3>
+<div class="spec">
+<p><tt>application_start(Application::atom(), Env::[{atom(), any()}], Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration_and_timeout.">Start all the dependent applications manually with a specific configuration and timeout.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_stop-1">application_stop/1</a></h3>
+<div class="spec">
+<p><tt>application_stop(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_application_and_its_dependencies.">Stop an application and its dependencies.</a></h4>
+  Only stop dependencies that are not required for other applications.</p>
+
+<h3 class="function"><a name="application_stop-2">application_stop/2</a></h3>
+<div class="spec">
+<p><tt>application_stop(Application::atom(), Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_application_and_its_dependencies_with_a_list_of_applications_to_ignore.">Stop an application and its dependencies with a list of applications to ignore.</a></h4>
+  Only stop dependencies that are not required for other applications.</p>
+
+<h3 class="function"><a name="applications_start-1">applications_start/1</a></h3>
+<div class="spec">
+<p><tt>applications_start(Applications::[atom() | {atom(), list()}]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
+</p>
+
+<h3 class="function"><a name="applications_start-2">applications_start/2</a></h3>
+<div class="spec">
+<p><tt>applications_start(Applications::[atom() | {atom(), list()}], Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
+</p>
+
+<h3 class="function"><a name="ensure_application_loaded-1">ensure_application_loaded/1</a></h3>
+<div class="spec">
+<p><tt>ensure_application_loaded(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_an_application_is_loaded.">Make sure an application is loaded.</a></h4>
+</p>
+
+<h3 class="function"><a name="ensure_application_started-1">ensure_application_started/1</a></h3>
+<div class="spec">
+<p><tt>ensure_application_started(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_an_application_is_started.">Make sure an application is started.</a></h4>
+</p>
+
+<h3 class="function"><a name="ensure_application_stopped-1">ensure_application_stopped/1</a></h3>
+<div class="spec">
+<p><tt>ensure_application_stopped(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_an_application_is_stopped.">Make sure an application is stopped.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_module_loaded-1">is_module_loaded/1</a></h3>
+<div class="spec">
+<p><tt>is_module_loaded(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_module_loaded-2">is_module_loaded/2</a></h3>
+<div class="spec">
+<p><tt>is_module_loaded(Module::atom(), Timeout::non_neg_integer()) -&gt; {ok, non_neg_integer()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
+  Return a new timeout value with the elapsed time subtracted.</p>
+
+<h3 class="function"><a name="module_exports-1">module_exports/1</a></h3>
+<div class="spec">
+<p><tt>module_exports(Module::atom()) -&gt; [{atom(), pos_integer()}]</tt><br></p>
+</div><p>
+  <h4><a name="List_the_exported_functions_of_a_module.">List the exported functions of a module.</a></h4>
+</p>
+
+<h3 class="function"><a name="module_loaded-1">module_loaded/1</a></h3>
+<div class="spec">
+<p><tt>module_loaded(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_a_module_is_loaded.">Make sure a module is loaded.</a></h4>
+  If the module is not loaded, attempt to load it.</p>
+
+<h3 class="function"><a name="module_purged-1">module_purged/1</a></h3>
+<div class="spec">
+<p><tt>module_purged(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_a_module_is_purged.">Make sure a module is purged.</a></h4>
+  If the module is not loaded, ignore it.</p>
+
+<h3 class="function"><a name="module_purged-2">module_purged/2</a></h3>
+<div class="spec">
+<p><tt>module_purged(Module::atom(), Timeout::non_neg_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Make_sure_a_module_is_purged_with_a_timeout.">Make sure a module is purged with a timeout.</a></h4>
+  If the module is not loaded, ignore it.</p>
+
+<h3 class="function"><a name="script_remove-1">script_remove/1</a></h3>
+<div class="spec">
+<p><tt>script_remove(FilePath::string()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_everything_specified_within_a_script_file.">Stop everything specified within a script file.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.  This function checks
+  all applications to determine applications which can be safely removed
+  (assuming the application dependencies are correct).  The applications
+  will then be stopped and their modules will be purged.  Normally,
+  the script is only used in the binary boot file format and only a single
+  boot file is used during the lifetime of the Erlang VM
+  (so it is unclear if using this function is bad or just unorthodox).
+  The script file is expected to be within a release directory created
+  by reltool.</p>
+
+<h3 class="function"><a name="script_remove-2">script_remove/2</a></h3>
+<div class="spec">
+<p><tt>script_remove(FilePath::string(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout.">Stop everything specified within a script file with a timeout.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.  This function checks
+  all applications to determine applications which can be safely removed
+  (assuming the application dependencies are correct).  The applications
+  will then be stopped and their modules will be purged.  Normally,
+  the script is only used in the binary boot file format and only a single
+  boot file is used during the lifetime of the Erlang VM
+  (so it is unclear if using this function is bad or just unorthodox).
+  The script file is expected to be within a release directory created
+  by reltool.</p>
+
+<h3 class="function"><a name="script_remove-3">script_remove/3</a></h3>
+<div class="spec">
+<p><tt>script_remove(FilePath::string(), Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop everything specified within a script file with a timeout and a list of applications to ignore.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.  This function checks
+  all applications to determine applications which can be safely removed
+  (assuming the application dependencies are correct).  The applications
+  will then be stopped and their modules will be purged.  Normally,
+  the script is only used in the binary boot file format and only a single
+  boot file is used during the lifetime of the Erlang VM
+  (so it is unclear if using this function is bad or just unorthodox).
+  The script file is expected to be within a release directory created
+  by reltool.</p>
+
+<h3 class="function"><a name="script_start-1">script_start/1</a></h3>
+<div class="spec">
+<p><tt>script_start(FilePath::string()) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_everything_specified_within_a_script_file.">Start everything specified within a script file.</a></h4>
+  A script file is the input used when creating a boot file, which is the
+  file used when first starting the Erlang VM.  This function checks
+  all applications to determine if they are already running with the
+  expected versions.  All modules are checked to make sure they have
+  been loaded, if they are expected to have been loaded. Normally,
+  the script is only used in the binary boot file format and only a single
+  boot file is used during the lifetime of the Erlang VM
+  (so it is unclear if using this function is bad or just unorthodox).
+  The script file is expected to be within a release directory created
+  by reltool.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 15 2014, 20:12:22.</i></p>
+</body>
+</html>

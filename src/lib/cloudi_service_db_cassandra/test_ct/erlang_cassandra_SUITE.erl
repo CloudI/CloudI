@@ -96,25 +96,25 @@ init_per_testcase(_TestCase, Config) ->
 end_per_testcase(_TestCase, _Config) ->
     ok.
 
-groups_condition(Groups) ->
+test_condition(L) ->
     case gen_tcp:connect(?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT, []) of
         {ok, Socket} ->
             catch gen_tcp:close(Socket),
-            Groups;
+            L;
         {error, econnrefused} ->
             error_logger:error_msg("unable to test ~p",
                                    [{?DEFAULT_THRIFT_HOST,
                                      ?DEFAULT_THRIFT_PORT}]),
-            [];
+            {skip, cassandra_dead};
         {error, Reason} ->
             error_logger:error_msg("unable to test ~p: ~p",
                                    [{?DEFAULT_THRIFT_HOST,
                                      ?DEFAULT_THRIFT_PORT}, Reason]),
-            []
+            {skip, cassandra_dead}
     end.
 
 groups() ->
-    groups_condition([
+    [
         {keyspace_crud, [{repeat, 1}],
          [
                 t_update_keyspace,
@@ -161,10 +161,10 @@ groups() ->
                 t_update_keyspace
          ]}
 
-    ]).
+    ].
 
 all() ->
-    [
+    test_condition([
         {group, keyspace_crud},
         {group, column_family_crud},
         {group, column_crud},
@@ -172,7 +172,7 @@ all() ->
         {group, count},
         {group, counter_crud},
         {group, cql}
-    ].
+    ]).
 
 t_add_drop_keyspace(Config) ->
     ?PROPTEST(prop_add_drop_keyspace, Config).

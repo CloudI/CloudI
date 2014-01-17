@@ -104,25 +104,25 @@ init_per_testcase(_TestCase, Config) ->
 end_per_testcase(_TestCase, _Config) ->
     ok.
 
-groups_condition(Groups) ->
+test_condition(L) ->
     case gen_tcp:connect(?DEFAULT_THRIFT_HOST, ?DEFAULT_THRIFT_PORT, []) of
         {ok, Socket} ->
             catch gen_tcp:close(Socket),
-            Groups;
+            L;
         {error, econnrefused} ->
             error_logger:error_msg("unable to test ~p",
                                    [{?DEFAULT_THRIFT_HOST,
                                      ?DEFAULT_THRIFT_PORT}]),
-            [];
+            {skip, elasticsearch_dead};
         {error, Reason} ->
             error_logger:error_msg("unable to test ~p: ~p",
                                    [{?DEFAULT_THRIFT_HOST,
                                      ?DEFAULT_THRIFT_PORT}, Reason]),
-            []
+            {skip, elasticsearch_dead}
     end.
 
 groups() ->
-    groups_condition([
+    [
         {crud_index, [],
           [t_is_index_1,
            t_is_index_all,
@@ -196,10 +196,10 @@ groups() ->
           t_delete_by_query_param,
           t_delete_by_query_doc
          ]}
-    ]).
+    ].
 
 all() ->
-    [
+    test_condition([
 %        {group, test}
         {group, crud_index},
         {group, crud_doc},
@@ -209,7 +209,8 @@ all() ->
         {group, doc_helpers},
         {group, crud_mapping},
         {group, aliases}
-    ].
+    ]).
+
 t_health(Config) ->
     Context  = ?config(context, Config),
     Target  = ?config(target, Config),

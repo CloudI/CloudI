@@ -1,4 +1,4 @@
-%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Eirini Arvaniti
 
@@ -464,9 +464,7 @@ move_shrinker(Seq, Par, I) ->
 %%   {{@type dynamic_state()}, {@type term()}}, specifying the state prior to
 %%   command execution and the actual result of the command.</li>
 %% <li>`DynamicState' contains the state of the abstract state machine at
-%%   the moment when execution stopped. In case execution has stopped due to a
-%%   false postcondition, `DynamicState' corresponds to the state prior to
-%%   execution of the last command.</li>
+%%   the moment when execution stopped.</li>
 %% <li>`Result' specifies the outcome of command execution. It can be
 %%   classified in one of the following categories:
 %%   <ul>

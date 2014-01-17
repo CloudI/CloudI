@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
+%%% @copyright 2011-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -551,9 +551,11 @@ service_stop_remove_internal(#config_service_internal{
         ".beam" ->
             cloudi_x_reltool_util:module_purged(Module, Timeout);
         ".app" ->
-            cloudi_x_reltool_util:application_remove(Module, Timeout);
+            cloudi_x_reltool_util:application_remove(Module, Timeout,
+                                                     [cloudi_core]);
         ".script" ->
-            cloudi_x_reltool_util:script_remove(FilePath, Timeout)
+            cloudi_x_reltool_util:script_remove(FilePath, Timeout,
+                                                [cloudi_core])
     end;
 service_stop_remove_internal(#config_service_internal{
                                  module = Module},
@@ -561,7 +563,8 @@ service_stop_remove_internal(#config_service_internal{
     when is_atom(Module) ->
     case cloudi_x_reltool_util:application_running(Module, Timeout) of
         {ok, _} ->
-            cloudi_x_reltool_util:application_remove(Module, Timeout);
+            cloudi_x_reltool_util:application_remove(Module, Timeout,
+                                                     [cloudi_core]);
         {error, {not_found, Module}} ->
             cloudi_x_reltool_util:module_purged(Module, Timeout);
         {error, _} = Error ->

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
+%%% @copyright 2013-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -203,9 +203,11 @@ monkey_chaos_init(system) ->
     Options = application:get_env(cloudi_core, monkey_chaos, false),
     true = (Options =/= system),
     {ok, MonkeyChaos} = monkey_chaos_validate(Options),
+    monkey_chaos_init(MonkeyChaos);
+monkey_chaos_init(#monkey_chaos{method = probability_day} = MonkeyChaos) ->
     monkey_chaos_check(MonkeyChaos);
 monkey_chaos_init(#monkey_chaos{} = MonkeyChaos) ->
-    monkey_chaos_check(MonkeyChaos).
+    MonkeyChaos.
 
 -spec monkey_chaos_check(#monkey_chaos{}) ->
     #monkey_chaos{}.
@@ -250,7 +252,7 @@ monkey_latency_validate([{time_uniform_min, Min} | Options],
                         #monkey_latency{method = Method,
                                         value2 = Max} = MonkeyLatency)
     when ((Method =:= undefined) orelse (Method =:= time_uniform)),
-         is_integer(Min), Min > 0, Min =< ?TIMEOUT_MAX_ERLANG ->
+         is_integer(Min), Min >= 0, Min =< ?TIMEOUT_MAX_ERLANG ->
     NewMax = if
         Max =:= undefined ->
             Min;
@@ -283,7 +285,7 @@ monkey_latency_validate([{time_gaussian_mean, Mean} | Options],
                             method = Method,
                             value2 = StdDev} = MonkeyLatency)
     when ((Method =:= undefined) orelse (Method =:= time_gaussian)),
-         is_integer(Mean), Mean > 0, Mean =< ?TIMEOUT_MAX_ERLANG ->
+         is_integer(Mean), Mean >= 0, Mean =< ?TIMEOUT_MAX_ERLANG ->
     NewStdDev = if
         StdDev =:= undefined ->
             % most values are within 3-sigma,

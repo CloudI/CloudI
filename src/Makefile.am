@@ -589,7 +589,8 @@ distclean-local: rebar-directories-distclean \
            $(top_srcdir)/tests/ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs
+           $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_quorum/test_ct/logs
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f

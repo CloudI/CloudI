@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_sup).
@@ -115,8 +115,8 @@ create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
 %%%------------------------------------------------------------------------
 
 init([]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
+    MaxRestarts = 0,
+    MaxTime = 1,
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,

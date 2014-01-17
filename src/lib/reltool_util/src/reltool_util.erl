@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 0.8.0 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -58,8 +58,10 @@
          applications_start/1,
          applications_start/2,
          application_stop/1,
+         application_stop/2,
          application_remove/1,
          application_remove/2,
+         application_remove/3,
          application_purged/1,
          application_purged/2,
          application_running/1,
@@ -78,7 +80,8 @@
          module_exports/1,
          script_start/1,
          script_remove/1,
-         script_remove/2]).
+         script_remove/2,
+         script_remove/3]).
 
 -define(IS_MODULE_LOADED_DELTA, 100).
 -define(MODULES_PURGED_DELTA, 100).
@@ -193,7 +196,23 @@ applications_start([_ | _] = Applications, Timeout) ->
     {error, any()}.
 
 application_stop(Application) ->
-    case application_stop_dependencies(Application) of
+    application_stop(Application, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop an application and its dependencies with a list of applications to ignore.===
+%% Only stop dependencies that are not required for other applications.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_stop(Application :: atom(),
+                       Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+application_stop(Application, Ignore)
+    when is_atom(Application), is_list(Ignore) ->
+    case application_stop_dependencies(Application, Ignore) of
         {ok, _} ->
             ok;
         {error, _} = Error ->
@@ -213,7 +232,7 @@ application_stop(Application) ->
     {error, any()}.
 
 application_remove(Application) ->
-    application_remove(Application, 5000).
+    application_remove(Application, 5000, []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -228,17 +247,35 @@ application_remove(Application) ->
     ok |
     {error, any()}.
 
-application_remove(Application, infinity)
-    when is_atom(Application) ->
-    case application_stop_dependencies(Application) of
+application_remove(Application, Timeout) ->
+    application_remove(Application, Timeout, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom(),
+                         Timeout :: pos_integer() | infinity,
+                         Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application, infinity, Ignore)
+    when is_atom(Application), is_list(Ignore) ->
+    case application_stop_dependencies(Application, Ignore) of
         {ok, Applications} ->
             applications_purged(Applications, infinity);
         {error, _} = Error ->
             Error
     end;
-application_remove(Application, Timeout)
-    when is_atom(Application), is_integer(Timeout), Timeout > 0 ->
-    case application_stop_dependencies(Application) of
+application_remove(Application, Timeout, Ignore)
+    when is_atom(Application), is_integer(Timeout), Timeout > 0,
+         is_list(Ignore) ->
+    case application_stop_dependencies(Application, Ignore) of
         {ok, Applications} ->
             TimeoutSlice = erlang:round(
                 0.5 + Timeout / erlang:length(Applications)),
@@ -671,7 +708,7 @@ script_start(FilePath)
     {error, any()}.
 
 script_remove(FilePath) ->
-    script_remove(FilePath, 5000).
+    script_remove(FilePath, 5000, []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -694,10 +731,35 @@ script_remove(FilePath) ->
     ok |
     {error, any()}.
 
-script_remove(FilePath, Timeout)
+script_remove(FilePath, Timeout) ->
+    script_remove(FilePath, Timeout, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a script file with a timeout and a list of applications to ignore.===
+%% A script file is the input used when creating a boot file, which is the
+%% file used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% the script is only used in the binary boot file format and only a single
+%% boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The script file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec script_remove(FilePath :: string(),
+                    Timeout :: pos_integer() | infinity,
+                    Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+script_remove(FilePath, Timeout, Ignore)
     when is_list(FilePath),
          ((is_integer(Timeout) andalso (Timeout > 0)) orelse
-          (Timeout =:= infinity))->
+          (Timeout =:= infinity)), is_list(Ignore) ->
     true = lists:suffix(".script", FilePath),
     % system name and version are ignored
     {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
@@ -718,7 +780,9 @@ script_remove(FilePath, Timeout)
                                     erlang:round(0.5 + Timeout /
                                         erlang:length(Applications))
                             end,
-                            applications_remove(Applications, NewTimeout);
+                            applications_remove(Applications,
+                                                NewTimeout,
+                                                Ignore);
                         {error, _} = Error ->
                             Error
                     end;
@@ -775,6 +839,11 @@ applications_start_element([{Application, Env} | Applications], Timeout)
             Error
     end.
 
+application_stop_dependencies_ignore([], L) ->
+    L;
+application_stop_dependencies_ignore([Application | Ignore], L) ->
+    application_stop_dependencies_ignore(Ignore, delete_all(Application, L)).
+
 application_stop_external([], Apps) ->
     {ok, Apps};
 application_stop_external([A | As], Apps) ->
@@ -809,19 +878,21 @@ application_stop_all([A | As]) ->
             Error
     end.
 
-application_stop_dependencies(Application)
+application_stop_dependencies(Application, Ignore)
     when is_atom(Application) ->
     case applications_dependencies(Application) of
         {ok, StopAs0} ->
             case ensure_application_stopped(Application) of
                 ok ->
-                    StopAs1 = delete_all(kernel, StopAs0),
-                    StopAs2 = delete_all(stdlib, StopAs1),
+                    StopAs1 = application_stop_dependencies_ignore([kernel,
+                                                                    stdlib |
+                                                                    Ignore],
+                                                                   StopAs0),
                     Apps = application:loaded_applications(),
                     {value, _, OtherApps0} = lists:keytake(Application,
                                                            1, Apps),
                     % determine applications which are not dependencies
-                    case application_stop_external(StopAs2, OtherApps0) of
+                    case application_stop_external(StopAs1, OtherApps0) of
                         {ok, OtherAppsN} ->
                             % check to see the required applications
                             % separate from the application dependencies
@@ -830,7 +901,7 @@ application_stop_dependencies(Application)
                             % of other applications
                             StopAsN = lists:reverse(lists:foldl(fun(A, As) ->
                                 delete_all(A, As)
-                            end, StopAs2, RequiredAs)),
+                            end, StopAs1, RequiredAs)),
                             % stop all the application dependencies
                             % that are no longer required
                             case application_stop_all(StopAsN) of
@@ -849,12 +920,12 @@ application_stop_dependencies(Application)
             Error
     end.
 
-applications_remove([], _) ->
+applications_remove([], _, _) ->
     ok;
-applications_remove([Application | Applications], Timeout) ->
-    case application_remove(Application, Timeout) of
+applications_remove([Application | Applications], Timeout, Ignore) ->
+    case application_remove(Application, Timeout, Ignore) of
         ok ->
-            applications_remove(Applications, Timeout);
+            applications_remove(Applications, Timeout, Ignore);
         {error, _} = Error ->
             Error
     end.
@@ -881,6 +952,16 @@ applications_dependencies(A) ->
             case application:get_key(A, applications) of
                 undefined ->
                     {error, {undefined_dependencies, A}};
+                {ok, As} when A =:= common_test ->
+                    % XXX avoid error in Erlang/OTP until ct gets fixed
+                    % (necessary for Erlang =< R16B02)
+                    AsCT = case lists:member(sasl, As) of
+                        true ->
+                            As;
+                        false ->
+                            [sasl | As]
+                    end,
+                    applications_dependencies(AsCT, AsCT);
                 {ok, As} ->
                     applications_dependencies(As, As)
             end;
