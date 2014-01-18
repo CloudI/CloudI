@@ -185,15 +185,14 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,
                                    RequestInfo, Request),
-    case results_valid(QuorumType, CountProcess, Monkey,
-                       Result, ProperResult, 0.5) of
-        true ->
-            true;
-        false ->
+    if
+        Result /= ProperResult ->
             error_logger:error_msg("quorum_timeout (~p, ~p, ~p)~n ~p /= ~p~n",
                                    [QuorumType, CountProcess, Monkey,
                                     Result, ProperResult]),
-            false
+            false;
+        true ->
+            true
     end.
 
 t_quorum_crash_byzantine(Config) ->
@@ -270,15 +269,14 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,
                                    RequestInfo, Request),
-    case results_valid(QuorumType, CountProcess, Monkey,
-                       Result, ProperResult, 0.5) of
-        true ->
-            true;
-        false ->
+    if
+        Result /= ProperResult ->
             error_logger:error_msg("quorum_crash (~p, ~p, ~p)~n ~p /= ~p~n",
                                    [QuorumType, CountProcess, Monkey,
                                     Result, ProperResult]),
-            false
+            false;
+        true ->
+            true
     end.
 
 %%%------------------------------------------------------------------------
@@ -320,43 +318,6 @@ result_expected(Quorum, CountProcess, Monkey, RequestInfo, Request)
             result_success(RequestInfo, Request);
         false ->
             result_error()
-    end.
-
-results_valid(byzantine, CountProcess, Monkey, Result, ProperResult, Delta) ->
-    LiveProcesses = CountProcess * (1.0 - Monkey),
-    QuorumProcesses = CountProcess - cloudi_math:floor((CountProcess - 1) / 3),
-    OnEdge = ((QuorumProcesses =< (LiveProcesses + Delta)) andalso
-              (QuorumProcesses >= (LiveProcesses - Delta))),
-    if
-        OnEdge =:= true ->
-            true;
-        true ->
-            (Result == ProperResult)
-    end;
-results_valid(Quorum, CountProcess, Monkey, Result, ProperResult, Delta)
-    when is_integer(Quorum) ->
-    LiveProcesses = CountProcess * (1.0 - Monkey),
-    QuorumProcesses = Quorum,
-    OnEdge = ((QuorumProcesses =< (LiveProcesses + Delta)) andalso
-              (QuorumProcesses >= (LiveProcesses - Delta))),
-    if
-        OnEdge =:= true ->
-            true;
-        true ->
-            (Result == ProperResult)
-    end;
-results_valid(Quorum, CountProcess, Monkey, Result, ProperResult, Delta)
-    when is_float(Quorum) ->
-    LiveProcesses = CountProcess * (1.0 - Monkey),
-    QuorumProcesses = erlang:min(CountProcess,
-                                 cloudi_math:ceil(Quorum * CountProcess)),
-    OnEdge = ((QuorumProcesses =< (LiveProcesses + Delta)) andalso
-              (QuorumProcesses >= (LiveProcesses - Delta))),
-    if
-        OnEdge =:= true ->
-            true;
-        true ->
-            (Result == ProperResult)
     end.
 
 count_process_successes(CountProcess, Monkey) ->
