@@ -5,6 +5,8 @@
 
     * Make the C/C++ CloudI API include all processing time in the
       poll timeout value, when a poll timeout value is provided
+    * Add destination_connect and destination_disconnect arguments to
+      cloudi_service_tcp
 
 2014-01-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

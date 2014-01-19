@@ -66,6 +66,8 @@
 -define(DEFAULT_INTERFACE,            {127,0,0,1}). % ip address
 -define(DEFAULT_PORT,                        8080).
 -define(DEFAULT_DESTINATION,            undefined). % service name
+-define(DEFAULT_DESTINATION_CONNECT,    undefined). % service name
+-define(DEFAULT_DESTINATION_DISCONNECT, undefined). % service name
 -define(DEFAULT_BACKLOG,                      128).
 -define(DEFAULT_NODELAY,                     true).
 -define(DEFAULT_KEEPALIVE,                   true).
@@ -83,6 +85,8 @@
         port_formatted,
         service,
         destination,
+        destination_connect,
+        destination_disconnect,
         connection_count = 0,
         connection_max,
         requests = dict:new()
@@ -96,6 +100,7 @@
         dispatcher,
         context,
         destination,
+        destination_disconnect,
         request_info
     }).
 
@@ -112,17 +117,23 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
         {destination,              ?DEFAULT_DESTINATION},
+        {destination_connect,      ?DEFAULT_DESTINATION_CONNECT},
+        {destination_disconnect,   ?DEFAULT_DESTINATION_DISCONNECT},
         {backlog,                  ?DEFAULT_BACKLOG},
         {nodelay,                  ?DEFAULT_NODELAY},
         {keepalive,                ?DEFAULT_KEEPALIVE},
         {recv_timeout,             ?DEFAULT_RECV_TIMEOUT},
         {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
         {packet_type,              ?DEFAULT_PACKET_TYPE}],
-    [Interface, Port, Destination, Backlog, NoDelay, KeepAlive,
-     RecvTimeout, MaxConnections, PacketType] =
+    [Interface, Port, Destination, DestinationConnect, DestinationDisconnect,
+     Backlog, NoDelay, KeepAlive, RecvTimeout, MaxConnections, PacketType] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_list(Destination),
+    true = (DestinationConnect =:= undefined) orelse
+           is_list(DestinationConnect),
+    true = (DestinationDisconnect =:= undefined) orelse
+           is_list(DestinationDisconnect),
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
     true = is_boolean(KeepAlive),
@@ -154,6 +165,10 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                                             PortFormatted,
                                         service = Service,
                                         destination = Destination,
+                                        destination_connect =
+                                            DestinationConnect,
+                                        destination_disconnect =
+                                            DestinationDisconnect,
                                         connection_max = MaxConnections}};
                         {error, _} = Error ->
                             {stop, Error, #state{listener = Listener}}
@@ -198,6 +213,10 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                                       DestinationPortFormatted,
                                   service = Service,
                                   destination = Destination,
+                                  destination_connect =
+                                      DestinationConnect,
+                                  destination_disconnect =
+                                      DestinationDisconnect,
                                   connection_count = ConnectionCount} = State,
                            Dispatcher) ->
     true = inet_db:register_socket(Socket, inet_tcp),
@@ -213,12 +232,22 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                  {<<"destination_port">>, DestinationPortFormatted}]),
             SocketPid = proc_lib:spawn_opt(fun() ->
                 Context = create_context(Dispatcher),
+                if
+                    is_list(DestinationConnect) ->
+                        send_async_minimal(Dispatcher, Context,
+                                           DestinationConnect,
+                                           RequestInfo, <<"CONNECT">>, self());
+                    true ->
+                        ok
+                end,
                 socket_loop_init(#state_socket{socket = Socket,
                                                timeout_recv = TimeoutRecv,
                                                service = Service,
                                                dispatcher = Dispatcher,
                                                context = Context,
                                                destination = Destination,
+                                               destination_disconnect =
+                                                   DestinationDisconnect,
                                                request_info = RequestInfo})
             end, [link]),
             case gen_tcp:controlling_process(Socket, SocketPid) of
@@ -296,7 +325,20 @@ socket_loop(#state_socket{socket = Socket,
     end.
 
 socket_loop_terminate(Reason, #state_socket{socket = Socket,
-                                            service = Service}) ->
+                                            service = Service,
+                                            dispatcher = Dispatcher,
+                                            context = Context,
+                                            destination_disconnect =
+                                                DestinationDisconnect,
+                                            request_info = RequestInfo}) ->
+    if
+        is_list(DestinationDisconnect) ->
+            send_async_minimal(Dispatcher, Context,
+                               DestinationDisconnect,
+                               RequestInfo, <<"DISCONNECT">>, self());
+        true ->
+            ok
+    end,
     if
         Reason =:= normal ->
             ?LOG_TRACE("socket ~p closed", [Socket]);
