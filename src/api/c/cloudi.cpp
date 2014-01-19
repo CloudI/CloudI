@@ -563,6 +563,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     p->buffer_recv = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->buffer_recv_index = 0;
     p->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
+    p->poll_timer = new timer();
     p->request_timer = new timer();
     p->prefix = 0;
 
@@ -603,6 +604,7 @@ void cloudi_destroy(cloudi_instance_t * p)
         delete reinterpret_cast<buffer_t *>(p->buffer_send);
         delete reinterpret_cast<buffer_t *>(p->buffer_recv);
         delete reinterpret_cast<buffer_t *>(p->buffer_call);
+        delete reinterpret_cast<timer *>(p->poll_timer);
         delete reinterpret_cast<timer *>(p->request_timer);
         if (p->prefix)
             delete p->prefix;
@@ -1410,6 +1412,11 @@ static int poll_request(cloudi_instance_t * p,
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
     buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
 
+    timer & poll_timer = *reinterpret_cast<timer *>(p->poll_timer);
+    if (timeout > 0)
+    {
+        poll_timer.restart();
+    }
     struct pollfd fds[1] = {{p->fd_in, POLLIN | POLLPRI, 0}};
     int count = ::poll(fds, 1, timeout);
     if (count == 0)
@@ -1467,8 +1474,8 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_call, index, request_size);
                 char * request = &buffer_call[index];
                 index += request_size + 1;
-                uint32_t timeout;
-                store_incoming_uint32(buffer_call, index, timeout);
+                uint32_t request_timeout;
+                store_incoming_uint32(buffer_call, index, request_timeout);
                 int8_t priority;
                 store_incoming_int8(buffer_call, index, priority);
                 char * trans_id = &buffer_call[index];
@@ -1482,8 +1489,8 @@ static int poll_request(cloudi_instance_t * p,
                 p->buffer_recv_index = 0;
                 callback(p, command, name, pattern,
                          request_info, request_info_size,
-                         request, request_size,
-                         timeout, priority, trans_id, pid, pid_size);
+                         request, request_size, request_timeout,
+                         priority, trans_id, pid, pid_size);
                 break;
             }
             case MESSAGE_RECV_ASYNC:
@@ -1554,6 +1561,19 @@ static int poll_request(cloudi_instance_t * p,
             }
         }
 
+        if (timeout > 0)
+        {
+            timeout -= std::min(static_cast<int>(::round(poll_timer.elapsed() *
+                                                         1000.0)), timeout);
+        }
+        if (timeout == 0)
+        {
+            return cloudi_timeout;
+        }
+        else if (timeout > 0)
+        {
+            poll_timer.restart();
+        }
         fds[0].revents = 0;
         count = ::poll(fds, 1, timeout);
         if (count == 0)
