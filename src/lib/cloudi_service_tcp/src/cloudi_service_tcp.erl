@@ -310,7 +310,8 @@ socket_loop(#state_socket{socket = Socket,
         {tcp, Socket, Request} ->
             case send_sync_minimal(Dispatcher, Context, Destination,
                                    RequestInfo, Request, self()) of
-                {ok, _, Response} ->
+                {ok, ResponseInfo, Response} ->
+                    socket_response_info_check(Socket, ResponseInfo),
                     socket_send(Response, StateSocket);
                 {error, timeout} ->
                     socket_send(<<>>, StateSocket)
@@ -349,6 +350,19 @@ socket_loop_terminate(Reason, #state_socket{socket = Socket,
     Service ! socket_closed,
     erlang:unlink(Service),
     erlang:exit(Reason).
+
+socket_response_info_check(Socket, ResponseInfo)
+    when is_binary(ResponseInfo); is_list(ResponseInfo) ->
+    KeyValues = cloudi_service:request_info_key_value_parse(ResponseInfo),
+    case cloudi_service:key_value_find(<<"connection">>, KeyValues) of
+        {ok, <<"close">>} ->
+            self() ! {tcp_closed, Socket},
+            ok;
+        error ->
+            ok
+    end;
+socket_response_info_check(_, _) ->
+    ok.
 
 socket_send(Data, #state_socket{socket = Socket} = StateSocket) ->
     case gen_tcp:send(Socket, Data) of

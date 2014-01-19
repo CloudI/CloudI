@@ -96,6 +96,7 @@ void process_requests(void * p)
     cloudi_instance_t api;
     process_requests_t * data = (process_requests_t *) p;
     int result = cloudi_initialize(&api, data->thread_index);
+    assert(result == cloudi_success);
 
     result = cloudi_subscribe(&api, "c.xml/get", &request);
     assert(result == cloudi_success);
