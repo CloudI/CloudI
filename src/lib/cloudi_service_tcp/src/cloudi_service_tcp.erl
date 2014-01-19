@@ -63,17 +63,20 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 
--define(DEFAULT_INTERFACE,            {127,0,0,1}). % ip address
--define(DEFAULT_PORT,                        8080).
--define(DEFAULT_DESTINATION,            undefined). % service name
--define(DEFAULT_DESTINATION_CONNECT,    undefined). % service name
--define(DEFAULT_DESTINATION_DISCONNECT, undefined). % service name
--define(DEFAULT_BACKLOG,                      128).
--define(DEFAULT_NODELAY,                     true).
--define(DEFAULT_KEEPALIVE,                   true).
--define(DEFAULT_RECV_TIMEOUT,           30 * 1000). % milliseconds
--define(DEFAULT_MAX_CONNECTIONS,             4096).
--define(DEFAULT_PACKET_TYPE,                 line). % inet:setopts/2 packet
+-define(DEFAULT_INTERFACE,             {127,0,0,1}). % ip address
+-define(DEFAULT_PORT,                         8080).
+-define(DEFAULT_DESTINATION,             undefined). % service name
+-define(DEFAULT_DESTINATION_CONNECT,     undefined). % service name
+-define(DEFAULT_DESTINATION_DISCONNECT,  undefined). % service name
+-define(DEFAULT_BACKLOG,                       128).
+-define(DEFAULT_NODELAY,                      true).
+-define(DEFAULT_KEEPALIVE,                    true).
+-define(DEFAULT_RECV_TIMEOUT,            30 * 1000). % milliseconds
+-define(DEFAULT_MAX_CONNECTIONS,              4096).
+-define(DEFAULT_PACKET_TYPE,                  line). % inet:setopts/2 packet
+-define(DEFAULT_PACKET_BUFFER_RECV_SIZE, undefined).
+-define(DEFAULT_PACKET_BUFFER_SEND_SIZE, undefined).
+-define(DEFAULT_PACKET_BUFFER_SIZE,      undefined). % Erlang driver buffer
 
 -record(state,
     {
@@ -124,9 +127,13 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {keepalive,                ?DEFAULT_KEEPALIVE},
         {recv_timeout,             ?DEFAULT_RECV_TIMEOUT},
         {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
-        {packet_type,              ?DEFAULT_PACKET_TYPE}],
+        {packet_type,              ?DEFAULT_PACKET_TYPE},
+        {packet_buffer_recv_size,  ?DEFAULT_PACKET_BUFFER_RECV_SIZE},
+        {packet_buffer_send_size,  ?DEFAULT_PACKET_BUFFER_SEND_SIZE},
+        {packet_buffer_size,       ?DEFAULT_PACKET_BUFFER_SIZE}],
     [Interface, Port, Destination, DestinationConnect, DestinationDisconnect,
-     Backlog, NoDelay, KeepAlive, RecvTimeout, MaxConnections, PacketType] =
+     Backlog, NoDelay, KeepAlive, RecvTimeout, MaxConnections, PacketType,
+     BufferRecvSize, BufferSendSize, BufferSize] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_list(Destination),
@@ -141,11 +148,32 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     true = (is_integer(MaxConnections) andalso (MaxConnections > 0)),
     true = lists:member(PacketType,
                         [raw, 0, 1, 2, 4, asn1, cdr, sunrm, fcgi, tpkt, line]),
-    SocketOptions = [binary, {active, false},
-                     {nodelay, NoDelay}, {delay_send, false},
-                     {keepalive, KeepAlive}, {packet, PacketType}],
+    true = (BufferRecvSize =:= undefined) orelse is_integer(BufferRecvSize),
+    true = (BufferSendSize =:= undefined) orelse is_integer(BufferSendSize),
+    true = (BufferSize =:= undefined) orelse is_integer(BufferSize),
+    SocketOptions0 = [binary, {active, false},
+                      {nodelay, NoDelay}, {delay_send, false},
+                      {keepalive, KeepAlive}, {packet, PacketType}],
+    SocketOptions1 = if
+        BufferRecvSize =:= undefined ->
+            SocketOptions0;
+        true ->
+            [{recbuf, BufferRecvSize} | SocketOptions0]
+    end,
+    SocketOptions2 = if
+        BufferSendSize =:= undefined ->
+            SocketOptions1;
+        true ->
+            [{sndbuf, BufferSendSize} | SocketOptions1]
+    end,
+    SocketOptionsN = if
+        BufferSize =:= undefined ->
+            SocketOptions2;
+        true ->
+            [{buffer, BufferSize} | SocketOptions2]
+    end,
     case gen_tcp:listen(Port, [{ip, Interface}, {backlog, Backlog},
-                               {reuseaddr, true} | SocketOptions]) of
+                               {reuseaddr, true} | SocketOptionsN]) of
         {ok, Listener} ->
             case inet:sockname(Listener) of
                 {ok, {InterfaceUsed, PortUsed}} ->
@@ -158,7 +186,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                             {ok, #state{listener = Listener,
                                         acceptor = Acceptor,
                                         timeout_recv = RecvTimeout,
-                                        socket_options = SocketOptions,
+                                        socket_options = SocketOptionsN,
                                         interface_formatted =
                                             InterfaceFormatted,
                                         port_formatted =
