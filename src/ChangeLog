@@ -6,6 +6,8 @@
     * Add ResponseInfo connection/close support in cloudi_service_tcp
     * Add packet_buffer_recv_size, packet_buffer_send_size, and
       packet_buffer_size arguments to cloudi_service_tcp
+    * Make sure destination_connect can provide a response in
+      cloudi_service_tcp
 
 2014-01-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 

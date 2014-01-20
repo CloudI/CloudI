@@ -4,6 +4,8 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==Basic CloudI TCP Integration==
+%%% This service requires that the service configuration option
+%%% "duo_mode" be set to true (its default is false).
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -260,15 +262,8 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                  {<<"destination_port">>, DestinationPortFormatted}]),
             SocketPid = proc_lib:spawn_opt(fun() ->
                 Context = create_context(Dispatcher),
-                if
-                    is_list(DestinationConnect) ->
-                        send_async_minimal(Dispatcher, Context,
-                                           DestinationConnect,
-                                           RequestInfo, <<"CONNECT">>, self());
-                    true ->
-                        ok
-                end,
-                socket_loop_init(#state_socket{socket = Socket,
+                socket_loop_init(DestinationConnect,
+                                 #state_socket{socket = Socket,
                                                timeout_recv = TimeoutRecv,
                                                service = Service,
                                                dispatcher = Dispatcher,
@@ -319,9 +314,27 @@ cloudi_service_terminate(_, #state{listener = Listener}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-socket_loop_init(#state_socket{socket = Socket} = StateSocket) ->
+socket_loop_init(DestinationConnect,
+                 #state_socket{socket = Socket,
+                               dispatcher = Dispatcher,
+                               context = Context,
+                               request_info = RequestInfo} = StateSocket) ->
     receive
         {init, ok} ->
+            if
+                is_list(DestinationConnect) ->
+                    case send_sync_minimal(Dispatcher, Context,
+                                           DestinationConnect, RequestInfo,
+                                           <<"CONNECT">>, self()) of
+                        {ok, ResponseInfo, Response} ->
+                            socket_response_info_check(Socket, ResponseInfo),
+                            socket_send(Response, StateSocket);
+                        {error, timeout} ->
+                            socket_send(<<>>, StateSocket)
+                    end;
+                true ->
+                    ok
+            end,
             ok = inet:setopts(Socket, [{active, once}]),
             socket_loop(StateSocket);
         {init, Error} ->
