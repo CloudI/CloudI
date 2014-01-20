@@ -78,6 +78,7 @@
 -record(websocket_state,
     {
         % for service requests entering CloudI
+        websocket_connect_trans_id,
         name_incoming,
         name_outgoing,
         request_info,
@@ -321,23 +322,35 @@ websocket_init(_Transport, Req0,
             HeadersIncoming1
     end,
     RequestInfo = if
-        (OutputType =:= external); (OutputType =:= binary) ->
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
             headers_external_incoming(HeadersIncomingN);
-        (OutputType =:= internal); (OutputType =:= list) ->
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
             HeadersIncomingN
     end,
-    if
+    WebsocketConnectTransId = if
         is_list(WebsocketConnect) ->
-            send_async_minimal(Dispatcher, Context, WebsocketConnect,
-                               RequestInfo, <<"CONNECT">>, self());
+            Request = if
+                (OutputType =:= external) orelse
+                (OutputType =:= internal) orelse
+                (OutputType =:= binary) ->
+                    <<"CONNECT">>;
+                (OutputType =:= list) ->
+                    "CONNECT"
+            end,
+            {ok, TransId} = send_async_minimal(Dispatcher, Context,
+                                               WebsocketConnect,
+                                               RequestInfo, Request, self()),
+            TransId;
         true ->
-            ok
+            undefined
     end,
     {ok, ReqN,
-     State#cowboy_state{websocket_state = #websocket_state{
-                            name_incoming = NameIncoming,
-                            name_outgoing = NameOutgoing,
-                            request_info = RequestInfo}}, TimeoutWebsocket}.
+     State#cowboy_state{
+         websocket_state = #websocket_state{
+             websocket_connect_trans_id = WebsocketConnectTransId,
+             name_incoming = NameIncoming,
+             name_outgoing = NameOutgoing,
+             request_info = RequestInfo}}, TimeoutWebsocket}.
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
@@ -358,7 +371,7 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
     when WebSocketResponseType =:= text;
          WebSocketResponseType =:= binary ->
     Response = if
-        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
         (OutputType =:= binary) ->
             ResponseBinary;
         (OutputType =:= list) ->
@@ -408,7 +421,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
          WebSocketRequestType =:= binary ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     Request = if
-        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
         (OutputType =:= binary) ->
             RequestBinary;
         (OutputType =:= list) ->
@@ -418,23 +431,29 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
         if
             (((OutputType =:= external) orelse
               (OutputType =:= internal)) andalso
-             (is_binary(Data) orelse is_list(Data))); % iolist
+             (is_binary(Data) orelse
+              is_list(Data))) orelse % iolist
             ((OutputType =:= binary) andalso
              is_binary(Data)) ->
                 Data;
-            (OutputType =:= list),
-            is_list(Data) ->
+            ((OutputType =:= list) andalso
+             is_list(Data)) ->
                 erlang:list_to_binary(Data)
         end
     end,
     case send_sync_minimal(Dispatcher, Context,
                            NameOutgoing, RequestInfo, Request, self()) of
-        {ok, _ResponseInfo, Response} ->
+        {ok, ResponseInfo, Response} ->
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
-            {reply, {WebSocketRequestType,
-                     ResponseBinaryF(Response)}, Req, State};
+            case websocket_terminate_check(ResponseInfo) of
+                true ->
+                    {shutdown, Req, State};
+                false ->
+                    {reply, {WebSocketRequestType,
+                             ResponseBinaryF(Response)}, Req, State}
+            end;
         {error, timeout} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
                             [NameIncoming,
@@ -485,8 +504,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
                              } = State)
-    when (OutputType =:= list),
-         (is_list(Request) orelse is_binary(Request)),
+    when ((OutputType =:= list) andalso
+          (is_list(Request) orelse is_binary(Request))),
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync') ->
     RequestBinary = if
@@ -561,6 +580,49 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
          queued = NewQueue}
      }};
 
+websocket_info({'cloudi_service_return_async',
+                _, _, <<>>, <<>>, _, TransId, _}, Req,
+               #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 websocket_connect_trans_id = TransId
+                                 } = WebSocketState
+                             } = State) ->
+    {ok, Req,
+     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
+         websocket_connect_trans_id = undefined}
+     }};
+
+websocket_info({'cloudi_service_return_async',
+                _, _, ResponseInfo, Response, _, TransId, _}, Req,
+               #cowboy_state{output_type = OutputType,
+                             use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 websocket_connect_trans_id = TransId
+                                 } = WebSocketState
+                             } = State) ->
+    case websocket_terminate_check(ResponseInfo) of
+        true ->
+            {shutdown, Req, State};
+        false ->
+            WebSocketResponse = if
+                ((((OutputType =:= external) orelse
+                   (OutputType =:= internal)) andalso
+                  (is_binary(Response) orelse
+                   is_list(Response))) orelse % iolist
+                 ((OutputType =:= binary) andalso
+                  is_binary(Response))) ->
+                    {binary, Response};
+                ((OutputType =:= list) andalso
+                 (is_list(Response))) ->
+                    {text, erlang:list_to_binary(Response)}
+            end,
+            {reply, WebSocketResponse, Req,
+             State#cowboy_state{
+                 websocket_state = WebSocketState#websocket_state{
+                     websocket_connect_trans_id = undefined}
+             }}
+    end;
+
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
     ?LOG_ERROR("Invalid websocket request state: \"~p\"", [Info]),
@@ -587,15 +649,23 @@ websocket_terminate(Reason, _Req,
                      erlang:atom_to_binary(ReasonDescription, utf8)]
             end,
             NewRequestInfo = if
-                (OutputType =:= external); (OutputType =:= binary) ->
+                (OutputType =:= external) orelse (OutputType =:= binary) ->
                     erlang:iolist_to_binary([<<"disconnection">>, 0,
                                              Disconnect, 0,
                                              RequestInfo]);
-                (OutputType =:= internal); (OutputType =:= list) ->
+                (OutputType =:= internal) orelse (OutputType =:= list) ->
                     [{<<"disconnection">>, Disconnect} | RequestInfo]
             end,
+            Request = if
+                (OutputType =:= external) orelse
+                (OutputType =:= internal) orelse
+                (OutputType =:= binary) ->
+                    <<"DISCONNECT">>;
+                (OutputType =:= list) ->
+                    "DISCONNECT"
+            end,
             send_async_minimal(Dispatcher, Context, WebsocketDisconnect,
-                               NewRequestInfo, <<"DISCONNECT">>, self());
+                               NewRequestInfo, Request, self());
         true ->
             ok
     end,
@@ -754,13 +824,13 @@ handle_request(Dispatcher, Context, Name, Headers,
                OutputType, Body, Req)
     when is_binary(Body) ->
     RequestInfo = if
-        (OutputType =:= external); (OutputType =:= binary) ->
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
             headers_external_incoming(Headers);
-        (OutputType =:= internal); (OutputType =:= list) ->
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
             Headers
     end,
     Request = if
-        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
         (OutputType =:= binary) ->
             Body;
         (OutputType =:= list) ->
@@ -797,13 +867,13 @@ handle_request_multipart(TransIdList, Dispatcher, Context,
              HeadersPart1]
     end,
     RequestInfo = if
-        (OutputType =:= external); (OutputType =:= binary) ->
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
             headers_external_incoming(HeadersPart2);
-        (OutputType =:= internal); (OutputType =:= list) ->
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
             HeadersPart2
     end,
     Request = if
-        (OutputType =:= external); (OutputType =:= internal);
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
         (OutputType =:= binary) ->
             BodyPart;
         (OutputType =:= list) ->
@@ -891,12 +961,13 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
     ResponseBinary = if
         (((OutputType =:= external) orelse
           (OutputType =:= internal)) andalso
-         (is_binary(Response) orelse is_list(Response)));
+         (is_binary(Response) orelse
+          is_list(Response))) orelse % iolist
         ((OutputType =:= binary) andalso
          is_binary(Response)) ->
             Response;
-        (OutputType =:= list),
-        is_list(Response) ->
+        ((OutputType =:= list) andalso
+         is_list(Response)) ->
             erlang:list_to_binary(Response)
     end,
     {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
@@ -967,7 +1038,20 @@ service_name_incoming_merge({ClientIpAddr, _ClientPort}, undefined, PathRaw) ->
 service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
     cloudi_ip_address:to_string(ClientIpAddr) ++
     erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
-    
+
+websocket_terminate_check(<<>>) ->
+    false;
+websocket_terminate_check(ResponseInfo) ->
+    case lists:keyfind(<<"connection">>, 1,
+                       headers_external_outgoing(ResponseInfo)) of
+        {<<"connection">>, <<"close">>} ->
+            true;
+        {<<"connection">>, _} ->
+            false;
+        false ->
+            false
+    end.
+
 process_queue(Req,
               #cowboy_state{websocket_state =
                   #websocket_state{

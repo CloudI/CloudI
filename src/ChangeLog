@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow the cloudi_service_http_cowboy websocket_connect request
+      to provide a response
+    * Shutdown websocket connections in cloudi_service_http_cowboy when
+      a CloudI service request has provided {<<"connection">>, <<"close">>}
+      in the ResponseInfo data
+
 2014-01-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add ResponseInfo connection/close support in cloudi_service_tcp
