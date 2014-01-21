@@ -607,7 +607,7 @@ void cloudi_destroy(cloudi_instance_t * p)
         delete reinterpret_cast<timer *>(p->poll_timer);
         delete reinterpret_cast<timer *>(p->request_timer);
         if (p->prefix)
-            delete p->prefix;
+            delete [] p->prefix;
     }
 }
 
