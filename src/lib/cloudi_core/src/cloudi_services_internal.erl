@@ -591,6 +591,12 @@ handle_call(destination_refresh_lazy, _,
             DestRefresh =:= lazy_oldest),
     hibernate_check({reply, Lazy, State});
 
+handle_call({source_subscriptions, Pid}, _,
+            #state{options = #config_service_options{
+                       scope = Scope}} = State) ->
+    Subscriptions = cloudi_x_cpg:which_groups(Scope, Pid, infinity),
+    hibernate_check({reply, Subscriptions, State});
+
 handle_call(context_options, _,
             #state{timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,

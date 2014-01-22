@@ -161,6 +161,7 @@
          priority_default/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
+         source_subscriptions/2,
          context_options/1,
          % service request parameter helpers
          service_name_parse/2,
@@ -204,7 +205,9 @@
               pattern_pid/0]).
 
 -type dispatcher() :: pid().
--export_type([dispatcher/0]).
+-type source() :: pid().
+-export_type([dispatcher/0,
+              source/0]).
 
 % used for accessing RequestInfo data
 -type key_values() :: list({binary() | string() | atom(),
@@ -234,7 +237,7 @@
                                         Timeout :: timeout_value_milliseconds(),
                                         Priority :: priority(),
                                         TransId :: trans_id(),
-                                        Pid :: pid(),
+                                        Pid :: source(),
                                         State :: any(),
                                         Dispatcher :: dispatcher()) ->
     {'reply', Response :: response(), NewState :: any()} |
@@ -2083,6 +2086,23 @@ destination_refresh_lazy(Dispatcher) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Get a list of all service name patterns a service request source is subscribed to.===
+%% The source pid can be found at:
+%%
+%% `cloudi_service_handle_request(_, _, _, _, _, _, _, _, Pid, _, _)'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec source_subscriptions(Dispatcher :: dispatcher(),
+                           Pid :: source()) ->
+    list(service_name_pattern()).
+
+source_subscriptions(Dispatcher, Pid)
+    when is_pid(Pid) ->
+    gen_server:call(Dispatcher, {source_subscriptions, Pid}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get the context options from the service's configuration.===
 %% A service would only use this when delaying the creation of a context
 %% for child processes.
@@ -2293,7 +2313,7 @@ trans_id(Dispatcher) ->
                                                 timeout_value_milliseconds(),
                                              Priority :: priority(),
                                              TransId :: trans_id(),
-                                             Pid :: pid(),
+                                             Pid :: source(),
                                              State :: any(),
                                              Dispatcher :: dispatcher()) ->
     {'reply', Response :: response(), NewState :: any()} |
