@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add source-address and source-port to the RequestInfo provided by
+      cloudi_service_http_cowboy to provide the same format as
+      cloudi_service_tcp and cloudi_service_udp
+    * Add service-name to the RequestInfo provided by
+      cloudi_service_http_cowboy for websocket initiated service requests
+
 2014-01-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:source_subscriptions/2 for determining the current

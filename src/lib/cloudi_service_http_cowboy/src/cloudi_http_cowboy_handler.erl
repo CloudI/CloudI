@@ -173,17 +173,21 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         string:to_lower(erlang:binary_to_list(Method))]
             end,
-            Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            HeadersIncoming1 = [{<<"peer">>, Peer},
-                                {<<"peer-port">>,
-                                 erlang:integer_to_binary(ClientPort)} |
+            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
+            PeerPort = erlang:integer_to_binary(ClientPort),
+            HeadersIncoming1 = [{<<"peer">>, PeerShort},
+                                {<<"peer-port">>, PeerPort},
+                                {<<"source-address">>, PeerLong},
+                                {<<"source-port">>, PeerPort} |
                                 HeadersIncoming0],
             HeadersIncomingN = if
                 SetXForwardedFor =:= true ->
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
                                        HeadersIncoming0) of
                         false ->
-                            [{<<"x-forwarded-for">>, Peer} | HeadersIncoming1];
+                            [{<<"x-forwarded-for">>, PeerShort} |
+                             HeadersIncoming1];
                         _ ->
                             HeadersIncoming1
                             
@@ -296,30 +300,34 @@ websocket_init(_Transport, Req0,
     % cause a conflict with service requests coming from HTTP into CloudI
     % when UseMethodSuffix == false
     NameWebsocket = erlang:binary_to_list(PathRaw) ++ "/websocket",
-    case lists:prefix(Prefix, NameWebsocket) of
+    HeadersIncoming1 = case lists:prefix(Prefix, NameWebsocket) of
         true ->
             % service requests are only received if they relate to
             % the service's prefix
-            ok = cloudi_x_cpg:join(NameWebsocket);
+            ok = cloudi_x_cpg:join(NameWebsocket),
+            [{<<"service-name">>, erlang:list_to_binary(NameWebsocket)} |
+             HeadersIncoming0];
         false ->
-            ok
+            HeadersIncoming0
     end,
-    Peer = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-    HeadersIncoming1 = [{<<"peer">>, Peer},
-                        {<<"peer-port">>,
-                         erlang:integer_to_binary(ClientPort)} |
-                        HeadersIncoming0],
+    PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+    PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
+    PeerPort = erlang:integer_to_binary(ClientPort),
+    HeadersIncoming2 = [{<<"peer">>, PeerShort},
+                        {<<"peer-port">>, PeerPort},
+                        {<<"source-address">>, PeerLong},
+                        {<<"source-port">>, PeerPort} | HeadersIncoming1],
     HeadersIncomingN = if
         SetXForwardedFor =:= true ->
             case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
                 false ->
-                    [{<<"x-forwarded-for">>, Peer} | HeadersIncoming1];
+                    [{<<"x-forwarded-for">>, PeerShort} | HeadersIncoming2];
                 _ ->
-                    HeadersIncoming1
+                    HeadersIncoming2
                     
             end;
         SetXForwardedFor =:= false ->
-            HeadersIncoming1
+            HeadersIncoming2
     end,
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
