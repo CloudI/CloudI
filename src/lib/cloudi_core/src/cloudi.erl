@@ -106,7 +106,7 @@
 -type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX.
 -type timeout_milliseconds() :: timeout_value_milliseconds() |
                                 undefined | immediate.
--type priority() :: ?PRIORITY_HIGH..?PRIORITY_LOW | undefined. % (high)..(low)
+-type priority() :: cloudi_service_api:priority() | undefined.
 -type trans_id() :: <<_:128>>. % version 1 UUID
 -type pattern_pid() :: {service_name_pattern(), pid()}.
 -export_type([service_name/0,
@@ -130,7 +130,7 @@
                 :: cloudi_service_api:dest_refresh_delay_milliseconds(),
             timeout_async :: cloudi_service_api:timeout_milliseconds(),
             timeout_sync :: cloudi_service_api:timeout_milliseconds(),
-            priority_default :: ?PRIORITY_HIGH..?PRIORITY_LOW,
+            priority_default :: cloudi_service_api:priority(),
             scope :: atom(),
             receiver :: pid(),
             uuid_generator :: cloudi_x_uuid:state(),
@@ -1274,7 +1274,7 @@ timeout_max(#cloudi_context{}) ->
 %%-------------------------------------------------------------------------
 
 -spec priority_default(Context :: context() | cloudi_service:dispatcher()) ->
-    PriorityDefault :: ?PRIORITY_HIGH..?PRIORITY_LOW.
+    PriorityDefault :: cloudi_service_api:priority().
 
 priority_default(Dispatcher)
     when is_pid(Dispatcher) ->

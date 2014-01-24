@@ -1,11 +1,11 @@
-Items waiting for after the release of version 1.2.3
+Items waiting for after the release of version 1.3.1
 ----------------------------------------------------
-Add more examples, specifically one for including CloudI in an Erlang release
-   with other Erlang applications
-Solve accept block on OSX in "local" protocol socket within NIF
-Add websockets cowboy integration
-Add to http://0install.net/ ?
+julia CloudI API
+    * fdio([name::String], fd::Integer[, own::Bool]) -> IOStream
+      name not needed, own == false, then write/read
+    * doesn't yet have an impl of erlang binary term format
 X-HTTP-Method-Override usage in cowboy integration
+Add to http://0install.net/ ?
 Add https://github.com/Amadiro/erlang-statistics integration
     or something similar
 EC2 automatic node configuration
@@ -20,8 +20,6 @@ Add better database integration
     * add native CouchDB support
     * add MongoDB support
     * add Kyoto Tycoon support?
-Add more features to the HTTP integration
-    * websockets integration
 Lua CloudI API
     * can base this on the Python-C CloudI API integration
       (within api/python/cloudi_py.cpp)

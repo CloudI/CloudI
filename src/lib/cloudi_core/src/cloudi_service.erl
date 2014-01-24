@@ -2055,7 +2055,7 @@ timeout_max(Dispatcher)
 %%-------------------------------------------------------------------------
 
 -spec priority_default(Dispatcher :: dispatcher()) ->
-    PriorityDefault :: ?PRIORITY_HIGH..?PRIORITY_LOW.
+    PriorityDefault :: cloudi_service_api:priority().
 
 priority_default(Dispatcher) ->
     gen_server:call(Dispatcher, priority_default, infinity).

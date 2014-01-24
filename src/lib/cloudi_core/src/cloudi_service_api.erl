@@ -85,6 +85,10 @@
     none.
 -export_type([dest_refresh/0]).
 
+-type priority() ::
+    ?PRIORITY_HIGH..?PRIORITY_LOW.
+-export_type([priority/0]).
+
 -type dest_refresh_delay_milliseconds() ::
     (?TIMEOUT_DELTA + 1)..?TIMEOUT_MAX_ERLANG.
 -export_type([dest_refresh_delay_milliseconds/0]).
@@ -114,7 +118,7 @@
 -export_type([seconds/0]).
 
 -type service_options_internal() ::
-    list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
+    list({priority_default, priority()} |
          {queue_limit, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
