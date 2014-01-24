@@ -1,0 +1,22 @@
+
+## Name of the node
+-sname cloudi_hello_world5
+
+## Cookie for distributed erlang
+-setcookie cloudi_hello_world5
+
+## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
+## (Disabled by default..use with caution!)
+##-heart
+
+## Enable kernel poll and a few async threads
++K true
++A 5
+
+## Increase number of Erlang processes
++P 65536
+
+## Increase number of concurrent ports/sockets
+-env ERL_MAX_PORTS 32768
+#+Q 32768 # change for R17
+

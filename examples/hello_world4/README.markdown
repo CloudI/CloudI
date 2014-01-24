@@ -39,7 +39,7 @@ module name (the directions assume you don't have relx installed):
     $ cd ..
     $ make
     $ relx/relx
-    $ cd _rel
+    $ cd release
     $ bin/cloudi start
     $ curl http://localhost:6467/examples/hello_world4
     Hello World!
