@@ -4,6 +4,8 @@
 2014-01-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_service_api:priority() type
+    * Add the service Erlang application with an autoconf commandline option
+      to exclude it (for if it would cause a module name conflict)
 
 2014-01-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

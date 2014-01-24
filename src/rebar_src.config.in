@@ -50,7 +50,8 @@
   "lib/uuid",
   "lib/trie",
   "lib/reltool_util",
-  "lib/key2value"]}.
+  "lib/key2value"
+  @SERVICE_PATH@]}.
 {edoc_opts,
  [{preprocess, true},
   {includes,

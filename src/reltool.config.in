@@ -28,6 +28,7 @@
   % CloudI source code, including dependencies
   {app, cloudi_core,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  @SERVICE_RELTOOL@
 
   % CloudI services, not automatically started
   % (i.e., started by the internal service configuration entries)
@@ -85,6 +86,7 @@
    [
     % CloudI
     cloudi_core,
+    @SERVICE_APPCONF@
     % Erlang
     sasl,
     stdlib,

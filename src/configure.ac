@@ -181,6 +181,32 @@ AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 AX_ZEROMQ_ERLZMQ
 
+# service Erlang application
+AC_ARG_WITH([service],
+    [AS_HELP_STRING([--with-service@<:@=ARG@:>@],
+        [include the service Erlang application (ARG=yes),
+         or exclude the service Erlang application to avoid module name
+         conflicts with external modules that use the service prefix (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        want_service="no"
+    elif test "x$withval" = "xyes"; then
+        want_service="yes"
+    else
+        want_service="yes"
+    fi
+    ],
+    [want_service="yes"])
+if test "x$want_service" = "xyes"; then
+    SERVICE_RELTOOL="{app, service, @<:@{incl_cond, include}, {mod_cond, all}, {app_file, keep}@:>@},"
+    SERVICE_APPCONF="service,"
+    SERVICE_PATH=',"lib/service"'
+    AC_SUBST(SERVICE_RELTOOL)
+    AC_SUBST(SERVICE_APPCONF)
+    AC_SUBST(SERVICE_PATH)
+fi
+
 AC_CONFIG_FILES([
     cloudi.conf
     rebar_src.config

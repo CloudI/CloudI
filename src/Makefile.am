@@ -145,6 +145,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) lib/reltool_util/ebin
 	$(MKDIR_P) lib/key2value/ebin
+	$(MKDIR_P) lib/service/ebin
 	$(MKDIR_P) external/nodefinder/combonodefinder/ebin
 	$(MKDIR_P) external/nodefinder/ec2nodefinder/ebin
 	$(MKDIR_P) external/nodefinder/nodefinder/ebin
@@ -249,6 +250,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/key2value/src && \
         test ! -e $(SCOPE_EXTERNAL)key2value.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/key2value/src/$(SCOPE_EXTERNAL)key2value.app.src || exit 0)
+	(cd $(top_srcdir)/lib/service/src && \
+        test ! -e service.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/service/src/service.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
@@ -333,12 +337,15 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/key2value && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/key2value/ebin || exit 0)
+	(cd $(top_srcdir)/lib/service && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/service/ebin || exit 0)
 	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
-       $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
-       cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
-        test ! -e erlzmq && \
-        $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0; \
-   fi)
+        $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
+        cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
+            test ! -e erlzmq && \
+            $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0; \
+     fi)
 	(cd $(top_srcdir)/external/nodefinder/nodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/nodefinder/nodefinder/ebin || \
@@ -499,6 +506,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/reltool_util/ebin
 	rmdir $(top_builddir)/lib/key2value/ebin || exit 0
 	rm -f $(top_srcdir)/lib/key2value/ebin
+	rmdir $(top_builddir)/lib/service/ebin || exit 0
+	rm -f $(top_srcdir)/lib/service/ebin
 	rmdir $(top_builddir)/external/nodefinder/nodefinder/ebin || exit 0
 	rm -f $(top_srcdir)/external/nodefinder/nodefinder/ebin
 	rmdir $(top_builddir)/external/nodefinder/ec2nodefinder/ebin || exit 0
