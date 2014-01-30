@@ -98,12 +98,13 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {directory,              undefined},
         {refresh,                ?DEFAULT_REFRESH},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [Directory, Refresh, UseHttpGetSuffix] =
+    [DirectoryRaw, Refresh, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
-    true = is_list(Directory),
+    true = is_list(DirectoryRaw),
     true = ((Refresh =:= undefined) orelse
             (is_integer(Refresh) andalso
              (Refresh > 0) andalso (Refresh =< 4294967))),
+    Directory = cloudi_service:environment_transform(DirectoryRaw),
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
         #file_info{mtime = MTime} = FileInfo,

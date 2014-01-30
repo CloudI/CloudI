@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,cloudi_service_router}.
+{packages,[]}.
+{modules,[cloudi_service_router]}.

@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-01-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service:environment_lookup/0,
+      cloudi_service:environment_transform/1, and
+      cloudi_service:environment_transform/2
+    * Allow the cloudi_service_filesystem directory configuration value
+      to use environment variables
+    * Update edoc documentation
+
 2014-01-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_service_api:priority() type

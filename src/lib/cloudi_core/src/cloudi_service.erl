@@ -163,6 +163,9 @@
          destination_refresh_lazy/1,
          source_subscriptions/2,
          context_options/1,
+         environment_lookup/0,
+         environment_transform/1,
+         environment_transform/2,
          % service request parameter helpers
          service_name_parse/2,
          service_name_parse_with_suffix/2,
@@ -2114,6 +2117,49 @@ source_subscriptions(Dispatcher, Pid)
 
 context_options(Dispatcher) ->
     gen_server:call(Dispatcher, context_options, infinity).
+
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get an environment variable lookup for cloudi_service:environment_transform().===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec environment_lookup() ->
+    any().
+
+environment_lookup() ->
+    cloudi_spawn:environment_lookup().
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Transform a string, substituting environment variable values from the lookup.===
+%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+%% [a-zA-Z0-9_] ASCII characters.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec environment_transform(String :: string()) ->
+    string().
+
+environment_transform(String) ->
+    Lookup = environment_lookup(),
+    cloudi_spawn:environment_transform(String, Lookup).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Transform a string, substituting environment variable values from the lookup.===
+%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+%% [a-zA-Z0-9_] ASCII characters.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec environment_transform(String :: string(),
+                            Lookup :: any()) ->
+    string().
+
+environment_transform(String, Lookup) ->
+    cloudi_spawn:environment_transform(String, Lookup).
 
 %%-------------------------------------------------------------------------
 %% @doc

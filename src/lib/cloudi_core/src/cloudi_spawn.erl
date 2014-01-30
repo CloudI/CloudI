@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
+%%% @copyright 2011-2014 Michael Truog
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -51,7 +51,10 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([start_internal/12,
+-export([environment_lookup/0,
+         environment_transform/1,
+         environment_transform/2,
+         start_internal/12,
          start_external/16]).
 
 -include("cloudi_configuration.hrl").
@@ -68,6 +71,22 @@
 %%%------------------------------------------------------------------------
 %%% External interface
 %%%------------------------------------------------------------------------
+
+% all environment variables currently in the Erlang VM shell
+% are used as possible substitution values
+environment_lookup() ->
+    cloudi_x_trie:new(lists:map(fun(Entry) ->
+        cloudi_string:splitl($=, Entry, input)
+    end, os:getenv())).
+
+environment_transform(String) ->
+    EnvironmentLookup = environment_lookup(),
+    environment_transform(String, EnvironmentLookup).
+
+% update external service strings based on the Erlang VM shell
+% environmental variables
+environment_transform(String, EnvironmentLookup) ->
+    environment_transform(String, [], undefined, EnvironmentLookup).
 
 start_internal(ProcessIndex, Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
@@ -262,18 +281,6 @@ start_external_thread(I, Pids, Ports,
 string_terminate([_ | _] = L) ->
     L ++ [0].
 
-% all environment variables currently in the Erlang VM shell
-% are used as possible substitution values
-environment_lookup() ->
-    cloudi_x_trie:new(lists:map(fun(Entry) ->
-        cloudi_string:splitl($=, Entry, input)
-    end, os:getenv())).
-
-% update external service strings based on the Erlang VM shell
-% environmental variables
-environment_transform(String, EnvironmentLookup) ->
-    environment_transform(String, [], undefined, EnvironmentLookup).
-
 environment_transform([], Output,
                       undefined, _) ->
     lists:reverse(Output);
@@ -381,18 +388,30 @@ arguments_parse(Output, Delim, [H | T]) ->
 
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++
-environment_parse(Environment0, ThreadsPerProcess,
-                  Protocol, BufferSize, EnvironmentLookup) ->
+environment_parse(Environment0, ThreadsPerProcess0,
+                  Protocol0, BufferSize0, EnvironmentLookup0) ->
+    ThreadsPerProcess1 = erlang:integer_to_list(ThreadsPerProcess0),
+    Protocol1 = erlang:atom_to_list(Protocol0),
+    BufferSize1 = erlang:integer_to_list(BufferSize0),
     Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1, Environment0,
                                   {?ENVIRONMENT_THREAD_COUNT,
-                                   erlang:integer_to_list(ThreadsPerProcess)}),
+                                   ThreadsPerProcess1}),
     Environment2 = lists:keystore(?ENVIRONMENT_PROTOCOL, 1, Environment1,
                                   {?ENVIRONMENT_PROTOCOL,
-                                   erlang:atom_to_list(Protocol)}),
+                                   Protocol1}),
     Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1, Environment2,
                                   {?ENVIRONMENT_BUFFER_SIZE,
-                                   erlang:integer_to_list(BufferSize)}),
-    environment_format(Environment3, EnvironmentLookup).
+                                   BufferSize1}),
+    EnvironmentLookup1 = cloudi_x_trie:store(?ENVIRONMENT_THREAD_COUNT,
+                                             ThreadsPerProcess1,
+                                             EnvironmentLookup0),
+    EnvironmentLookup2 = cloudi_x_trie:store(?ENVIRONMENT_PROTOCOL,
+                                             Protocol1,
+                                             EnvironmentLookup1),
+    EnvironmentLookup3 = cloudi_x_trie:store(?ENVIRONMENT_BUFFER_SIZE,
+                                             BufferSize1,
+                                             EnvironmentLookup2),
+    environment_format(Environment3, EnvironmentLookup3).
 
 environment_format(Environment, EnvironmentLookup) ->
     environment_format([], Environment, EnvironmentLookup).
