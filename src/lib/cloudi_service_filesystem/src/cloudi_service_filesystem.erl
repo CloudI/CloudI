@@ -312,7 +312,8 @@ fold_files(Directory, F, A)
     case file:list_dir_all(Directory) of
         {ok, FileNames} ->
             fold_files_directory(FileNames, Directory, F, A);
-        {error, _} ->
+        {error, Reason} ->
+            ?LOG_WARN("directory ~s error: ~p", [Directory, Reason]),
             A
     end.
 
@@ -342,7 +343,8 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
             fold_files_directory(FileNames, Directory, F,
                                  fold_files_f(FilePath, FileName, FileInfo,
                                               F, A));
-        {error, _} ->
-            A
+        {error, Reason} ->
+            ?LOG_WARN("file ~s error: ~p", [FilePath, Reason]),
+            fold_files_directory(FileNames, Directory, F, A)
     end.
 
