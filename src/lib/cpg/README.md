@@ -1,5 +1,5 @@
-CPG (CloudI Process Groups)
-===========================
+CPG ([CloudI](http://cloudi.org) Process Groups)
+================================================
 
 Purpose
 -------

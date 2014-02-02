@@ -1,0 +1,103 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module key2value</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module key2value</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Key2Value">Key2Value</a></h3>
+   Maintain 2 associative lookups for 2 separate keys and 1 value.
+<p>Copyright © 2011 Michael Truog</p>
+
+<p><b>Version:</b> 0.1.8 Feb 1 2014 17:22:03
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Key2Value">Key2Value</a></h3>
+   Maintain 2 associative lookups for 2 separate keys and 1 value.
+   The interface creates a bidirectional lookup where key1 can store
+   multiple key2 associations to the same value.
+   The supplied data structure module must have dict interface functions.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#erase-3">erase/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#erase1-2">erase1/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#erase2-2">erase2/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#fetch1-2">fetch1/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#fetch2-2">fetch2/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#find1-2">find1/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#find2-2">find2/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#is_key1-2">is_key1/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#is_key2-2">is_key2/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#store-4">store/4</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="erase-3">erase/3</a></h3>
+<div class="spec">
+<p><tt>erase(K1::any(), K2::any(), State::{atom(), any(), any()}) -&gt; {atom(), any(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="erase1-2">erase1/2</a></h3>
+<div class="spec">
+<p><tt>erase1(K::any(), State::{atom(), any(), any()}) -&gt; {atom(), any(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="erase2-2">erase2/2</a></h3>
+<div class="spec">
+<p><tt>erase2(K::any(), State::{atom(), any(), any()}) -&gt; {atom(), any(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="fetch1-2">fetch1/2</a></h3>
+<div class="spec">
+<p><tt>fetch1(K::any(), X2::{atom(), any(), any()}) -&gt; {list(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="fetch2-2">fetch2/2</a></h3>
+<div class="spec">
+<p><tt>fetch2(K::any(), X2::{atom(), any(), any()}) -&gt; {list(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="find1-2">find1/2</a></h3>
+<div class="spec">
+<p><tt>find1(K::any(), State::{atom(), any(), any()}) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+</div>
+
+<h3 class="function"><a name="find2-2">find2/2</a></h3>
+<div class="spec">
+<p><tt>find2(K::any(), State::{atom(), any(), any()}) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+</div>
+
+<h3 class="function"><a name="is_key1-2">is_key1/2</a></h3>
+<div class="spec">
+<p><tt>is_key1(K::any(), X2::{atom(), any(), any()}) -&gt; boolean()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="is_key2-2">is_key2/2</a></h3>
+<div class="spec">
+<p><tt>is_key2(K::any(), X2::{atom(), any(), any()}) -&gt; boolean()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Module::atom()) -&gt; {atom(), any(), any()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="store-4">store/4</a></h3>
+<div class="spec">
+<p><tt>store(K1::any(), K2::any(), V::any(), X4::{atom(), any(), any()}) -&gt; {atom(), any(), any()}</tt><br></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 1 2014, 17:22:03.</i></p>
+</body>
+</html>

@@ -1,7 +1,7 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
 
-AC_INIT([CloudI], [1.3.0], [mjtruog at gmail dot com],
+AC_INIT([CloudI], [1.3.1], [mjtruog at gmail dot com],
     [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
@@ -21,7 +21,7 @@ AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([1.10 no-define no-dependencies])
+AM_INIT_AUTOMAKE([1.10 no-define no-dependencies foreign])
 AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
@@ -233,6 +233,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src
     lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
+    lib/service/src/service.app.src
     Makefile
     api/Makefile
     api/c/Makefile

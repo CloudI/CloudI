@@ -10,12 +10,12 @@
 <hr>
 
 <h1>Module uuid</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
    <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
-<p>Copyright © 2011-2012 Michael Truog</p>
+<p>Copyright © 2011-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.1.1 Mar 4 2013 14:38:07
+<p><b>Version:</b> 1.3.1 Feb 1 2014 17:14:30
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -32,6 +32,12 @@
    The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
    The version 3 (MD5), version 4 (random), and version 5 (SHA)
    methods are provided as specified within the RFC.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #uuid_state{}</tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_v1-1">get_v1/1</a></td><td>
   <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>.</td></tr>
@@ -45,6 +51,14 @@
   <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_v3-2">get_v3/2</a></td><td>
   <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v3_compat-1">get_v3_compat/1</a></td><td>
+  <h4><a name="Get_a_compatible_v3_UUID.">Get a compatible v3 UUID.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</td></tr>
+<tr><td valign="top"><a href="#get_v3_compat-2">get_v3_compat/2</a></td><td>
+  <h4><a name="Get_a_compatible_v3_UUID_in_a_particular_namespace.">Get a compatible v3 UUID in a particular namespace.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</td></tr>
 <tr><td valign="top"><a href="#get_v4-0">get_v4/0</a></td><td>
   <h4><a name="Get_a_v4_UUID_(using_crypto/openssl).">Get a v4 UUID (using crypto/openssl).</a></h4>
   crypto:strong_rand_bytes/1 repeats in the same way as
@@ -70,10 +84,30 @@ because multiple function calls are necessary)</p>.</td></tr>
   <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_v5-2">get_v5/2</a></td><td>
   <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_v5_compat-1">get_v5_compat/1</a></td><td>
+  <h4><a name="Get_a_compatible_v5_UUID.">Get a compatible v5 UUID.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</td></tr>
+<tr><td valign="top"><a href="#get_v5_compat-2">get_v5_compat/2</a></td><td>
+  <h4><a name="Get_a_compatible_v5_UUID_in_a_particular_namespace.">Get a compatible v5 UUID in a particular namespace.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</td></tr>
 <tr><td valign="top"><a href="#increment-1">increment/1</a></td><td>
   <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state.">Increment the clock sequence of v1 UUID state.</a></h4>
   The RFC said to increment the clock sequence counter
   if the system clock was set backwards.</td></tr>
+<tr><td valign="top"><a href="#is_uuid-1">is_uuid/1</a></td><td>
+  <h4><a name="Is_the_binary_a_UUID?">Is the binary a UUID?</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_v1-1">is_v1/1</a></td><td>
+  <h4><a name="Is_the_binary_a_v1_UUID?">Is the binary a v1 UUID?</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_v3-1">is_v3/1</a></td><td>
+  <h4><a name="Is_the_binary_a_v3_UUID?">Is the binary a v3 UUID?</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_v4-1">is_v4/1</a></td><td>
+  <h4><a name="Is_the_binary_a_v4_UUID?">Is the binary a v4 UUID?</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_v5-1">is_v5/1</a></td><td>
+  <h4><a name="Is_the_binary_a_v5_UUID?">Is the binary a v5 UUID?</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#mac_address-0">mac_address/0</a></td><td>
+  <h4><a name="Provide_a_usable_network_interface_MAC_address.">Provide a usable network interface MAC address.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#new-1">new/1</a></td><td>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#new-2">new/2</a></td><td>
@@ -88,7 +122,8 @@ because multiple function calls are necessary)</p>.</td></tr>
   <h4><a name="Convert_a_UUID_to_a_list.">Convert a UUID to a list.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#uuid_to_string-1">uuid_to_string/1</a></td><td>
   <h4><a name="Convert_a_UUID_to_a_string_representation.">Convert a UUID to a string representation.</a></h4>.</td></tr>
-<tr><td valign="top"><a href="#uuid_to_string-2">uuid_to_string/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#uuid_to_string-2">uuid_to_string/2</a></td><td>
+  <h4><a name="Convert_a_UUID_to_a_string_representation_based_on_an_option.">Convert a UUID to a string representation based on an option.</a></h4>.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -116,17 +151,33 @@ because multiple function calls are necessary)</p>.</td></tr>
 
 <h3 class="function"><a name="get_v3-1">get_v3/1</a></h3>
 <div class="spec">
-<p><tt>get_v3(Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+<p><tt>get_v3(Data::binary()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_v3-2">get_v3/2</a></h3>
 <div class="spec">
-<p><tt>get_v3(Namespace::binary(), Data::binary() | list()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+<p><tt>get_v3(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>
 </p>
+
+<h3 class="function"><a name="get_v3_compat-1">get_v3_compat/1</a></h3>
+<div class="spec">
+<p><tt>get_v3_compat(Data::binary()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_compatible_v3_UUID.">Get a compatible v3 UUID.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</p>
+
+<h3 class="function"><a name="get_v3_compat-2">get_v3_compat/2</a></h3>
+<div class="spec">
+<p><tt>get_v3_compat(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_compatible_v3_UUID_in_a_particular_namespace.">Get a compatible v3 UUID in a particular namespace.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</p>
 
 <h3 class="function"><a name="get_v4-0">get_v4/0</a></h3>
 <div class="spec">
@@ -143,8 +194,7 @@ because multiple function calls are necessary)</p>.</td></tr>
   (<a href="http://eprint.iacr.org/2008/469.pdf" target="_top"><tt>http://eprint.iacr.org/2008/469.pdf</tt></a>).  So, that means "weak" would
   repeat ideally every 1.21e24 and at worst every 2.25e15.
   if OpenSSL was compiled in FIPS mode, it uses ANSI X9.31 RNG
-  and would have collisions based on 3DES (which is a black-box algorithm,
-  i.e., the DES S-boxes used within the cipher were never published).</p>
+  and would have collisions based on 3DES.</p>
 
 <h3 class="function"><a name="get_v4-1">get_v4/1</a></h3>
 <div class="spec">
@@ -206,17 +256,33 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="get_v5-1">get_v5/1</a></h3>
 <div class="spec">
-<p><tt>get_v5(Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+<p><tt>get_v5(Data::binary()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_v5-2">get_v5/2</a></h3>
 <div class="spec">
-<p><tt>get_v5(Namespace::binary(), Data::binary() | list()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+<p><tt>get_v5(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>
 </p>
+
+<h3 class="function"><a name="get_v5_compat-1">get_v5_compat/1</a></h3>
+<div class="spec">
+<p><tt>get_v5_compat(Data::binary()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_compatible_v5_UUID.">Get a compatible v5 UUID.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</p>
+
+<h3 class="function"><a name="get_v5_compat-2">get_v5_compat/2</a></h3>
+<div class="spec">
+<p><tt>get_v5_compat(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_compatible_v5_UUID_in_a_particular_namespace.">Get a compatible v5 UUID in a particular namespace.</a></h4>
+  Do not use all bits from the checksum so that the UUID matches external
+  implementations.</p>
 
 <h3 class="function"><a name="increment-1">increment/1</a></h3>
 <div class="spec">
@@ -240,6 +306,48 @@ R - trunc(R).</p>
    possibly if an external distribution mechanism was used between
    Erlang VMs, not connected with distributed Erlang).</p>
 
+<h3 class="function"><a name="is_uuid-1">is_uuid/1</a></h3>
+<div class="spec">
+<p><tt>is_uuid(Value::any()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Is_the_binary_a_UUID?">Is the binary a UUID?</a></h4>
+</p>
+
+<h3 class="function"><a name="is_v1-1">is_v1/1</a></h3>
+<div class="spec">
+<p><tt>is_v1(Value::any()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Is_the_binary_a_v1_UUID?">Is the binary a v1 UUID?</a></h4>
+</p>
+
+<h3 class="function"><a name="is_v3-1">is_v3/1</a></h3>
+<div class="spec">
+<p><tt>is_v3(Value::any()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Is_the_binary_a_v3_UUID?">Is the binary a v3 UUID?</a></h4>
+</p>
+
+<h3 class="function"><a name="is_v4-1">is_v4/1</a></h3>
+<div class="spec">
+<p><tt>is_v4(Value::any()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Is_the_binary_a_v4_UUID?">Is the binary a v4 UUID?</a></h4>
+</p>
+
+<h3 class="function"><a name="is_v5-1">is_v5/1</a></h3>
+<div class="spec">
+<p><tt>is_v5(Value::any()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Is_the_binary_a_v5_UUID?">Is the binary a v5 UUID?</a></h4>
+</p>
+
+<h3 class="function"><a name="mac_address-0">mac_address/0</a></h3>
+<div class="spec">
+<p><tt>mac_address() -&gt; [non_neg_integer()]</tt><br></p>
+</div><p>
+  <h4><a name="Provide_a_usable_network_interface_MAC_address.">Provide a usable network interface MAC address.</a></h4>
+</p>
+
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
 <p><tt>new(Pid::pid()) -&gt; #uuid_state{}</tt><br></p>
@@ -249,7 +357,7 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="new-2">new/2</a></h3>
 <div class="spec">
-<p><tt>new(Pid::pid(), TimestampType::os | erlang) -&gt; #uuid_state{}</tt><br></p>
+<p><tt>new(Pid::pid(), Options::os | erlang | [{timestamp_type, os | erlang} | {mac_address, [non_neg_integer()]}]) -&gt; #uuid_state{}</tt><br></p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
   The timestamp can either be based on erlang:now/0 with erlang or
@@ -259,7 +367,7 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="string_to_uuid-1">string_to_uuid/1</a></h3>
 <div class="spec">
-<p><tt>string_to_uuid(X1::string()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+<p><tt>string_to_uuid(X1::string() | binary()) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
 </div><p>
   <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>
 </p>
@@ -287,11 +395,13 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="uuid_to_string-2">uuid_to_string/2</a></h3>
 <div class="spec">
-<p><tt>uuid_to_string(Value, X2) -&gt; any()</tt></p>
-</div>
+<p><tt>uuid_to_string(Value::&lt;&lt;_:128&gt;&gt;, Option::standard | nodash | list_standard | list_nodash | binary_standard | binary_nodash) -&gt; string() | binary()</tt><br></p>
+</div><p>
+  <h4><a name="Convert_a_UUID_to_a_string_representation_based_on_an_option.">Convert a UUID to a string representation based on an option.</a></h4>
+</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Mar 4 2013, 14:38:07.</i></p>
+<p><i>Generated by EDoc, Feb 1 2014, 17:14:30.</i></p>
 </body>
 </html>

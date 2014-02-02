@@ -1,7 +1,7 @@
 Erlang Priority Queue Implementation
 ====================================
 
-The priority queue implementations implement a subset of the stdlib Erlang queue interface as seen in the implementation used by both [Riak and RabbitMQ](https://github.com/basho/riak_core/blob/master/src/priority_queue.erl).
+The priority queue implementations implement a subset of the stdlib Erlang queue interface as seen in the implementation used by both [Riak and RabbitMQ](https://github.com/basho/riak_core/blob/master/src/riak_core_priority_queue.erl).
 
 The implementations:
 

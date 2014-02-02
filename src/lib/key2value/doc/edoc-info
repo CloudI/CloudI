@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,key2value}.
+{packages,[]}.
+{modules,[key2value]}.

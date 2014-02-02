@@ -3,7 +3,7 @@
 
 {application, service, 
   [{description, "CloudI Service Behavior"},
-   {vsn, "1.3.1"},
+   {vsn, "@VERSION@"},
    {applications, [
         cloudi_core,
         stdlib,
