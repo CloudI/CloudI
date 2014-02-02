@@ -746,13 +746,7 @@ headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
     ResponseInfo;
 headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo) ->
-    Options = case binary:last(ResponseInfo) of
-        0 ->
-            [global, {scope, {0, erlang:byte_size(ResponseInfo) - 1}}];
-        _ ->
-            [global]
-    end,
-    headers_external_outgoing(binary:split(ResponseInfo, <<0>>, Options), []).
+    headers_external_outgoing(binary:split(ResponseInfo, <<0>>, [global]), []).
 
 headers_external_outgoing([<<>>], Result) ->
     lists:reverse(Result);

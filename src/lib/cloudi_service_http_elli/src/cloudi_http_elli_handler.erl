@@ -225,19 +225,18 @@ headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
 
 headers_external_outgoing(<<>>) ->
     [];
-headers_external_outgoing(ResponseInfo) ->
-    Options = case binary:last(ResponseInfo) of
-        0 ->
-            [global, {scope, {0, erlang:byte_size(ResponseInfo) - 1}}];
-        _ ->
-            [global]
-    end,
-    headers_external_outgoing([], binary:split(ResponseInfo, <<0>>, Options)).
+headers_external_outgoing([] = ResponseInfo) ->
+    ResponseInfo;
+headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
+    ResponseInfo;
+headers_external_outgoing(ResponseInfo)
+    when is_binary(ResponseInfo) ->
+    headers_external_outgoing(binary:split(ResponseInfo, <<0>>, [global]), []).
 
-headers_external_outgoing(Result, []) ->
-    Result;
-headers_external_outgoing(Result, [K, V | L]) ->
-    headers_external_outgoing([{K, V} | Result], L).
+headers_external_outgoing([<<>>], Result) ->
+    lists:reverse(Result);
+headers_external_outgoing([K, V | L], Result) ->
+    headers_external_outgoing(L, [{K, V} | Result]).
 
 request_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
