@@ -180,12 +180,20 @@ service_name_suffix_root(true) ->
 service_name_suffix_root(false) ->
     "".
 
+service_name_suffix_root_join([], Suffix) ->
+    Suffix;
+service_name_suffix_root_join(PathParts, Suffix) ->
+    filename:join(lists:reverse(PathParts)) ++ [$/ | Suffix].
+
 service_name_suffix_root(FileName, UseHttpGetSuffix) ->
-    case filename:basename(FileName) of
+    [File | PathParts] = lists:reverse(filename:split(FileName)),
+    case File of
         "index.htm" ->
-            service_name_suffix_root(UseHttpGetSuffix);
+            service_name_suffix_root_join(PathParts,
+                service_name_suffix_root(UseHttpGetSuffix));
         "index.html" ->
-            service_name_suffix_root(UseHttpGetSuffix);
+            service_name_suffix_root_join(PathParts,
+                service_name_suffix_root(UseHttpGetSuffix));
         _ ->
             undefined
     end.
