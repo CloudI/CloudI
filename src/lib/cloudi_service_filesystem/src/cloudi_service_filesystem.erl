@@ -179,12 +179,16 @@ service_name_suffix_root(true) ->
     "/get";
 service_name_suffix_root(false) ->
     "".
-service_name_suffix_root("index.htm", UseHttpGetSuffix) ->
-    service_name_suffix_root(UseHttpGetSuffix);
-service_name_suffix_root("index.html", UseHttpGetSuffix) ->
-    service_name_suffix_root(UseHttpGetSuffix);
-service_name_suffix_root(_, _) ->
-    undefined.
+
+service_name_suffix_root(FileName, UseHttpGetSuffix) ->
+    case filename:basename(FileName) of
+        "index.htm" ->
+            service_name_suffix_root(UseHttpGetSuffix);
+        "index.html" ->
+            service_name_suffix_root(UseHttpGetSuffix);
+        _ ->
+            undefined
+    end.
 
 service_name_suffix(FileName, true) ->
     FileName ++ "/get";
@@ -317,6 +321,19 @@ fold_files(Directory, F, A)
             A
     end.
 
+fold_files(Directory, Path, F, A)
+    when is_function(F, 4) ->
+    case file:list_dir_all(filename:join(Directory, Path)) of
+        {ok, FileNames} ->
+            fold_files_directory([filename:join(Path, FileName) ||
+                                  FileName <- FileNames],
+                                 Directory, F, A);
+        {error, Reason} ->
+            ?LOG_WARN("directory ~s path ~s error: ~p",
+                      [Directory, Path, Reason]),
+            A
+    end.
+
 fold_files_f(FilePath, FileName, FileInfo, F, A) ->
     FilePathString = if
         is_binary(FilePath) ->
@@ -338,7 +355,8 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
     FilePath = filename:join(Directory, FileName),
     case file:read_file_info(FilePath, [{time, universal}]) of
         {ok, #file_info{type = directory}} ->
-            fold_files(FilePath, F, A);
+            fold_files_directory(FileNames, Directory, F,
+                                 fold_files(Directory, FileName, F, A));
         {ok, FileInfo} ->
             fold_files_directory(FileNames, Directory, F,
                                  fold_files_f(FilePath, FileName, FileInfo,
