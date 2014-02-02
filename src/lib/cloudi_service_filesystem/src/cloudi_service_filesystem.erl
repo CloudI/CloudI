@@ -116,8 +116,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                              toggle = Toggle},
                 file_add(FileName, File, Files0,
                          UseHttpGetSuffix, Prefix, Dispatcher);
-            {error, _} ->
-                % file was removed during traversal
+            {error, Reason} ->
+                ?LOG_WARN("file read ~s error: ~p", [FilePath, Reason]),
                 Files0
         end
     end, cloudi_x_trie:new()),
