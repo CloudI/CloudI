@@ -1602,7 +1602,7 @@ static char const ** binary_key_value_parse(void const * const binary,
     realloc_ptr<char const *> result(16, 8192);
     result[0] = p;
     size_t i = 1;
-    for (size_t binary_i = 1; binary_i < binary_size; ++binary_i)
+    for (size_t binary_i = 1; binary_i < binary_size - 1; ++binary_i)
     {
         if (p[binary_i] == '\0')
         {
