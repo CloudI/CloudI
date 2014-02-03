@@ -26,7 +26,7 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <li><a href="api.html">API</a></li>
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
-    <li><a href="https://github.com/okeuday/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
   </ul>
 </div>
 
@@ -54,9 +54,9 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <h3>Get CloudI Running</h3>
 
 <pre>
-$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.0.tar.gz
-$ tar zxvf cloudi-1.3.0.tar.gz
-$ cd cloudi-1.3.0/src
+$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.1.tar.gz
+$ tar zxvf cloudi-1.3.1.tar.gz
+$ cd cloudi-1.3.1/src
 $ ./configure
 $ make
 $ sudo make install
@@ -110,7 +110,7 @@ cloudi_service_handle_info(Request, State, _) -&gt;
 cloudi_service_terminate(_, #state{}) -&gt;
     ok.
 EOF
-$ erlc -pz /usr/local/lib/cloudi-1.3.0/lib/cloudi_core-1.3.0 -pz /usr/local/lib/cloudi-1.3.0/lib/cloudi_core-1.3.0/ebin hello_world.erl
+$ erlc -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1 -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1/ebin hello_world.erl
 </pre>
 
     <p>
@@ -167,7 +167,7 @@ Hello World!
 <pre>
 $ cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.3.0/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.3.1/api/python/')
 from cloudi_c import API
 
 class Task(object):

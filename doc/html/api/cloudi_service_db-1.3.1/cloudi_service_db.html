@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_db</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_db</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Database">CloudI Database</a></h3>
+   Provide a simple in-memory database.
+<p>Copyright © 2013 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.0 Dec 3 2013 12:54:09
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="../../cloudi_core/doc/cloudi_service.html"><tt>cloudi_service</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Database">CloudI Database</a></h3>
+   Provide a simple in-memory database.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-dispatcher">dispatcher()</a></h3>
+<p><tt>dispatcher() = <a href="../../cloudi_core/doc/cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a> | <a href="../../cloudi_core/doc/cloudi.html#type-context">cloudi:context()</a></tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_init-3">cloudi_service_init/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_terminate-2">cloudi_service_terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#kv_delete-4">kv_delete/4</a></td><td>
+  <h4><a name="Delete_all_table_values_in_the_key-value_db.">Delete all table values in the key-value db.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kv_delete-5">kv_delete/5</a></td><td>
+  <h4><a name="Delete_a_value_in_the_key-value_db.">Delete a value in the key-value db.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kv_get-4">kv_get/4</a></td><td>
+  <h4><a name="Retrieve_all_table_values_in_the_key-value_db.">Retrieve all table values in the key-value db.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kv_get-5">kv_get/5</a></td><td>
+  <h4><a name="Retrieve_a_table_value_in_the_key-value_db.">Retrieve a table value in the key-value db.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kv_new-5">kv_new/5</a></td><td>
+  <h4><a name="Store_a_new_value_in_the_key-value_db.">Store a new value in the key-value db.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kv_put-6">kv_put/6</a></td><td>
+  <h4><a name="Store_a_table_value_in_the_key-value_db.">Store a table value in the key-value db.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_info(Request, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, State, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_init-3">cloudi_service_init/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_init(Args, Prefix, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_terminate-2">cloudi_service_terminate/2</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_terminate(X1, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="kv_delete-4">kv_delete/4</a></h3>
+<div class="spec">
+<p><tt>kv_delete(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Delete_all_table_values_in_the_key-value_db.">Delete all table values in the key-value db.</a></h4>
+</p>
+
+<h3 class="function"><a name="kv_delete-5">kv_delete/5</a></h3>
+<div class="spec">
+<p><tt>kv_delete(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Key::binary(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_value_in_the_key-value_db.">Delete a value in the key-value db.</a></h4>
+</p>
+
+<h3 class="function"><a name="kv_get-4">kv_get/4</a></h3>
+<div class="spec">
+<p><tt>kv_get(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; {ok, [{Key::binary(), Value::any()}]} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Retrieve_all_table_values_in_the_key-value_db.">Retrieve all table values in the key-value db.</a></h4>
+</p>
+
+<h3 class="function"><a name="kv_get-5">kv_get/5</a></h3>
+<div class="spec">
+<p><tt>kv_get(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Key::binary(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; {ok, Key::binary(), Value::any()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Retrieve_a_table_value_in_the_key-value_db.">Retrieve a table value in the key-value db.</a></h4>
+</p>
+
+<h3 class="function"><a name="kv_new-5">kv_new/5</a></h3>
+<div class="spec">
+<p><tt>kv_new(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Value::any(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; {ok, Key::binary(), NewValue::any()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_new_value_in_the_key-value_db.">Store a new value in the key-value db.</a></h4>
+</p>
+
+<h3 class="function"><a name="kv_put-6">kv_put/6</a></h3>
+<div class="spec">
+<p><tt>kv_put(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="../../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Table::string() | binary(), Key::binary(), Value::any(), Timeout::<a href="../../cloudi_core/doc/cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>) -&gt; {ok, Key::binary(), Value::any()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_table_value_in_the_key-value_db.">Store a table value in the key-value db.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Dec 3 2013, 12:54:09.</i></p>
+</body>
+</html>

@@ -1,3 +1,46 @@
+February 1, 2014
+  Version 1.3.1 (beta) released.
+  * Added a demo of CloudI scaling a game server (a MUD) that is 20+ years old
+    (see https://github.com/okeuday/sillymud)
+  * Added the service configuration option count_process_dynamic to
+    dynamically adjust the number of service processes based on the
+    incoming service request rate
+    * The hibernate service configuration option can provide
+      rate based service hibernation now
+  * The C++ CloudI API can provide backtrace information from
+    CloudI::API::backtrace() when configured using --with-cxx-backtrace
+  * A few of the new internal service functions:
+    * cloudi_service_api:service_subscriptions/2
+    * cloudi_service:recv_asyncs/4
+    * cloudi_service:source_subscriptions/2
+    * cloudi_service:context_options/1
+    * cloudi_service:environment_transform/1
+    * cloudi:trans_id_age/1
+  * The cloudi module can use lazy destination refresh methods and works best if
+    you update the destination data with the cloudi:destinations_refresh/2
+    function
+  * Latency of the following services was reduced:
+    * cloudi_service_http_cowboy
+    * cloudi_service_http_elli
+    * cloudi_service_tcp
+  * Fixed cloudi_service_quorum and added a byzantine mode
+  * Added the cloudi_service_router internal service
+  * The cloudi_service_filesystem can refresh its data after a
+    configured time period
+  * Now CloudI has separate repositories for each CloudI Erlang application
+    if you want only internal service support with simple rebar integration
+    (see https://github.com/CloudI/cloudi_core#readme)
+  * The service Erlang application is provided to make service creation
+    a bit less complex (see https://github.com/CloudI/service)
+  * The automatic loading of an internal service can be disabled with the
+    automatic_loading service configuration option set to false
+    (see the hello_world5 example to understand why)
+  * Service configuration now can use a proplist format, if you dislike
+    the tuple format
+    (see https://github.com/CloudI/CloudI/blob/master/examples/hello_world5/apps/hello_world5/src/hello_world5_app.erl#L57 or
+     https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl#L186)
+  * Various bugfixes, small additions, and documentation improvements
+
 October 18, 2013
   Version 1.3.0 (beta) released.
   * backwards compatibility difference:

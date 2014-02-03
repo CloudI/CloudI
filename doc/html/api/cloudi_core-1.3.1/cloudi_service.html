@@ -1,0 +1,1034 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Internal_Service_Behavior">CloudI Internal Service Behavior</a></h3>
+   The interface which all internal services must implement.
+<p>Copyright © 2011-2014 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.1 Jan 29 2014 20:02:12
+  ------------------------------------------------------------------------</p>
+<p><b>This module defines the <tt>cloudi_service</tt> behaviour.</b><br> Required callback functions: <tt>cloudi_service_init/3</tt>, <tt>cloudi_service_handle_request/11</tt>, <tt>cloudi_service_handle_info/3</tt>, <tt>cloudi_service_terminate/2</tt>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Internal_Service_Behavior">CloudI Internal Service Behavior</a></h3>
+   The interface which all internal services must implement.
+   <pre>   The user module should export:
+  
+     cloudi_service_init(Args, Prefix, Dispatcher)
+      ==&gt; {ok, State}
+          {stop, Reason}
+          {stop, Reason, State}
+  
+     cloudi_service_handle_request(Type, Name, Pattern,
+                                   RequestInfo, Request, Timeout, Priority,
+                                   TransId, Pid, State, Dispatcher)
+      ==&gt; {reply, Response, NewState}
+          {reply, ResponseInfo, Response, NewState}
+          {forward, NextName, NextRequestInfo, NextRequest, NewState}
+          {forward, NextName, NextRequestInfo, NextRequest,
+           NextTimeout, NextPriority, NewState}
+          {noreply, NewState}
+          {stop, Reason, NewState}
+                 Reason = normal | shutdown | Term terminate(State) is called
+  
+     cloudi_service_handle_info(Request, State, Dispatcher)
+  
+      ==&gt; {noreply, State}
+          {stop, Reason, NewState}
+                 Reason = normal | shutdown | Term, terminate(State) is called
+  
+     cloudi_service_terminate(Reason, State) Let the user module clean up
+          always called when the service terminates
+  
+      ==&gt; ok
+  
+  
+   The work flow (of the service) can be described as follows:
+  
+      User module                                          Generic
+      -----------                                          -------
+      cloudi_service_init              &lt;-----              .
+  
+                                                           loop
+      cloudi_service_handle_request    &lt;-----              .
+                                       -----&gt;              reply
+  
+      cloudi_service_handle_info       &lt;-----              .
+  
+      cloudi_service_terminate         &lt;-----              .</pre>
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-dispatcher">dispatcher()</a></h3>
+<p><tt>dispatcher() = pid()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-key_values">key_values()</a></h3>
+<p><tt>key_values() = [{binary() | string() | atom(), binary() | string() | any()}] | dict()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-pattern_pid">pattern_pid()</a></h3>
+<p><tt>pattern_pid() = <a href="cloudi.html#type-pattern_pid">cloudi:pattern_pid()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-priority">priority()</a></h3>
+<p><tt>priority() = <a href="cloudi.html#type-priority">cloudi:priority()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-request">request()</a></h3>
+<p><tt>request() = <a href="cloudi.html#type-request">cloudi:request()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-request_info">request_info()</a></h3>
+<p><tt>request_info() = <a href="cloudi.html#type-request_info">cloudi:request_info()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-request_type">request_type()</a></h3>
+<p><tt>request_type() = send_async | send_sync</tt></p>
+
+
+<h3 class="typedecl"><a name="type-response">response()</a></h3>
+<p><tt>response() = <a href="cloudi.html#type-response">cloudi:response()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-response_info">response_info()</a></h3>
+<p><tt>response_info() = <a href="cloudi.html#type-response_info">cloudi:response_info()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-service_name">service_name()</a></h3>
+<p><tt>service_name() = <a href="cloudi.html#type-service_name">cloudi:service_name()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-service_name_pattern">service_name_pattern()</a></h3>
+<p><tt>service_name_pattern() = <a href="cloudi.html#type-service_name_pattern">cloudi:service_name_pattern()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-source">source()</a></h3>
+<p><tt>source() = pid()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-timeout_milliseconds">timeout_milliseconds()</a></h3>
+<p><tt>timeout_milliseconds() = <a href="cloudi.html#type-timeout_milliseconds">cloudi:timeout_milliseconds()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-timeout_value_milliseconds">timeout_value_milliseconds()</a></h3>
+<p><tt>timeout_value_milliseconds() = <a href="cloudi.html#type-timeout_value_milliseconds">cloudi:timeout_value_milliseconds()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-trans_id">trans_id()</a></h3>
+<p><tt>trans_id() = <a href="cloudi.html#type-trans_id">cloudi:trans_id()</a></tt></p>
+<p> version 1 UUID</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#Module%3acloudi_service_handle_info-3">'Module:cloudi_service_handle_info'/3</a></td><td>
+  <h4><a name="Handle_an_incoming_Erlang_message.">Handle an incoming Erlang message.</a></h4>
+  The info_pid_uses and info_pid_options service configuration options
+  control the Erlang process used to call this function.</td></tr>
+<tr><td valign="top"><a href="#Module%3acloudi_service_handle_request-11">'Module:cloudi_service_handle_request'/11</a></td><td>
+  <h4><a name="Handle_an_incoming_service_request.">Handle an incoming service request.</a></h4>
+  The request_pid_uses and request_pid_options service configuration options
+  control the Erlang process used to call this function.</td></tr>
+<tr><td valign="top"><a href="#Module%3acloudi_service_init-3">'Module:cloudi_service_init'/3</a></td><td>
+  <h4><a name="Initialize_the_internal_service.">Initialize the internal service.</a></h4>
+  Create the internal service state.</td></tr>
+<tr><td valign="top"><a href="#Module%3acloudi_service_terminate-2">'Module:cloudi_service_terminate'/2</a></td><td>
+  <h4><a name="Handle_service_termination.">Handle service termination.</a></h4>
+  cloudi_service_terminate/2 is always called, even when cloudi_service_init/3
+  returns a stop tuple.</td></tr>
+<tr><td valign="top"><a href="#context_options-1">context_options/1</a></td><td>
+  <h4><a name="Get_the_context_options_from_the_service's_configuration.">Get the context options from the service's configuration.</a></h4>
+  A service would only use this when delaying the creation of a context
+  for child processes.</td></tr>
+<tr><td valign="top"><a href="#destination_refresh_immediate-1">destination_refresh_immediate/1</a></td><td>
+  <h4><a name="Configured_service_destination_refresh_is_immediate.">Configured service destination refresh is immediate.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#destination_refresh_lazy-1">destination_refresh_lazy/1</a></td><td>
+  <h4><a name="Configured_service_destination_refresh_is_lazy.">Configured service destination refresh is lazy.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#dispatcher-1">dispatcher/1</a></td><td>
+  <h4><a name="Return_the_Erlang_pid_representing_the_service_sender.">Return the Erlang pid representing the service sender.</a></h4>
+  Use when the Dispatcher is stored and used after the current
+  cloudi_service callback has returned.</td></tr>
+<tr><td valign="top"><a href="#environment_lookup-0">environment_lookup/0</a></td><td>
+  <h4><a name="Get_an_environment_variable_lookup_for_cloudi_service:environment_transform().">Get an environment variable lookup for cloudi_service:environment_transform().</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#environment_transform-1">environment_transform/1</a></td><td>
+  <h4><a name="Transform_a_string,_substituting_environment_variable_values_from_the_lookup.">Transform a string, substituting environment variable values from the lookup.</a></h4>
+  Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+  [a-zA-Z0-9_] ASCII characters.</td></tr>
+<tr><td valign="top"><a href="#environment_transform-2">environment_transform/2</a></td><td>
+  <h4><a name="Transform_a_string,_substituting_environment_variable_values_from_the_lookup.">Transform a string, substituting environment variable values from the lookup.</a></h4>
+  Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+  [a-zA-Z0-9_] ASCII characters.</td></tr>
+<tr><td valign="top"><a href="#forward-9">forward/9</a></td><td>
+  <h4><a name="Forward_a_service_request.">Forward a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#forward_async-8">forward_async/8</a></td><td>
+  <h4><a name="Forward_an_asynchronous_service_request.">Forward an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#forward_sync-8">forward_sync/8</a></td><td>
+  <h4><a name="Forward_a_synchronous_service_request.">Forward a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pid-2">get_pid/2</a></td><td>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pid-3">get_pid/3</a></td><td>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pids-2">get_pids/2</a></td><td>
+  <h4><a name="Get_all_service_destinations_based_on_a_service_name.">Get all service destinations based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_pids-3">get_pids/3</a></td><td>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#key_value_erase-2">key_value_erase/2</a></td><td>
+  <h4><a name="Generic_key/value_erase.">Generic key/value erase.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to erase request meta-data while encapsulating
+  the data structure used for the lookup.</td></tr>
+<tr><td valign="top"><a href="#key_value_find-2">key_value_find/2</a></td><td>
+  <h4><a name="Generic_key/value_find.">Generic key/value find.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to access the request meta-data while encapsulating
+  the data structure used for the lookup.</td></tr>
+<tr><td valign="top"><a href="#key_value_store-3">key_value_store/3</a></td><td>
+  <h4><a name="Generic_key/value_store.">Generic key/value store.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to store request meta-data while encapsulating
+  the data structure used for the lookup.</td></tr>
+<tr><td valign="top"><a href="#mcast_async-3">mcast_async/3</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async-4">mcast_async/4</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async-6">mcast_async/6</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_active-3">mcast_async_active/3</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_active-4">mcast_async_active/4</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_active-6">mcast_async_active/6</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_passive-3">mcast_async_passive/3</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_passive-4">mcast_async_passive/4</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.</td></tr>
+<tr><td valign="top"><a href="#mcast_async_passive-6">mcast_async_passive/6</a></td><td>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.</td></tr>
+<tr><td valign="top"><a href="#prefix-1">prefix/1</a></td><td>
+  <h4><a name="Configured_service_default_prefix.">Configured service default prefix.</a></h4>
+  All subscribed/unsubscribed service names use this prefix.</td></tr>
+<tr><td valign="top"><a href="#priority_default-1">priority_default/1</a></td><td>
+  <h4><a name="Configured_service_default_priority.">Configured service default priority.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#process_index-1">process_index/1</a></td><td>
+  <h4><a name="Return_the_index_of_this_instance_of_the_service.">Return the index of this instance of the service.</a></h4>
+  The configuration of the service defined how many instances should exist.</td></tr>
+<tr><td valign="top"><a href="#recv_async-1">recv_async/1</a></td><td>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Use a null TransId to receive the oldest service request.</td></tr>
+<tr><td valign="top"><a href="#recv_async-2">recv_async/2</a></td><td>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Either use the supplied TransId to receive the specific service request
+  or use a null TransId to receive the oldest service request.</td></tr>
+<tr><td valign="top"><a href="#recv_async-3">recv_async/3</a></td><td>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Either use the supplied TransId to receive the specific service request
+  or use a null TransId to receive the oldest service request.</td></tr>
+<tr><td valign="top"><a href="#recv_async-4">recv_async/4</a></td><td>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#recv_asyncs-2">recv_asyncs/2</a></td><td>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#recv_asyncs-3">recv_asyncs/3</a></td><td>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#recv_asyncs-4">recv_asyncs/4</a></td><td>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#request_http_qs_parse-1">request_http_qs_parse/1</a></td><td>
+  <h4><a name="Parse_HTTP_Request_query_string_data.">Parse HTTP Request query string data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#request_info_key_value_new-1">request_info_key_value_new/1</a></td><td>
+  <h4><a name="New_RequestInfo_key/value_data.">New RequestInfo key/value data.</a></h4>
+  RequestInfo is meant to contain key/value pairs that is request
+  meta-data.</td></tr>
+<tr><td valign="top"><a href="#request_info_key_value_parse-1">request_info_key_value_parse/1</a></td><td>
+  <h4><a name="Parse_RequestInfo_key/value_data.">Parse RequestInfo key/value data.</a></h4>
+  RequestInfo is meant to contain key/value pairs that is request
+  meta-data.</td></tr>
+<tr><td valign="top"><a href="#return-2">return/2</a></td><td>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#return-3">return/3</a></td><td>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#return-9">return/9</a></td><td>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#return_async-8">return_async/8</a></td><td>
+  <h4><a name="Return_an_asynchronous_service_response.">Return an asynchronous service response.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#return_nothrow-9">return_nothrow/9</a></td><td>
+  <h4><a name="Return_a_service_response_without_exiting_the_request_handler.">Return a service response without exiting the request handler.</a></h4>
+  Should rarely, if ever, be used.</td></tr>
+<tr><td valign="top"><a href="#return_sync-8">return_sync/8</a></td><td>
+  <h4><a name="Return_a_synchronous_service_response.">Return a synchronous service response.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#self-1">self/1</a></td><td>
+  <h4><a name="Return_the_Erlang_pid_representing_the_service.">Return the Erlang pid representing the service.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async-3">send_async/3</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async-4">send_async/4</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async-5">send_async/5</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async-6">send_async/6</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async-7">send_async/7</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_async_active-3">send_async_active/3</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_active-4">send_async_active/4</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_active-5">send_async_active/5</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_active-6">send_async_active/6</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_active-7">send_async_active/7</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_passive-3">send_async_passive/3</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.</td></tr>
+<tr><td valign="top"><a href="#send_async_passive-4">send_async_passive/4</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.</td></tr>
+<tr><td valign="top"><a href="#send_async_passive-5">send_async_passive/5</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.</td></tr>
+<tr><td valign="top"><a href="#send_async_passive-6">send_async_passive/6</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.</td></tr>
+<tr><td valign="top"><a href="#send_async_passive-7">send_async_passive/7</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.</td></tr>
+<tr><td valign="top"><a href="#send_sync-3">send_sync/3</a></td><td>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_sync-4">send_sync/4</a></td><td>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_sync-5">send_sync/5</a></td><td>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_sync-6">send_sync/6</a></td><td>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send_sync-7">send_sync/7</a></td><td>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#service_name_parse-2">service_name_parse/2</a></td><td>
+  <h4><a name="Parse_a_service_name_pattern.">Parse a service name pattern.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#service_name_parse_with_suffix-2">service_name_parse_with_suffix/2</a></td><td>
+  <h4><a name="Parse_a_service_name_pattern_and_return_the_common_suffix.">Parse a service name pattern and return the common suffix.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#source_subscriptions-2">source_subscriptions/2</a></td><td>
+  <h4><a name="Get_a_list_of_all_service_name_patterns_a_service_request_source_is_subscribed_to.">Get a list of all service name patterns a service request source is subscribed to.</a></h4><p>  
+The source pid can be found at:</p>
+ 
+  <code>cloudi_service_handle_request(_, _, _, _, _, _, _, _, Pid, _, _)</code></td></tr>
+<tr><td valign="top"><a href="#subscribe-2">subscribe/2</a></td><td>
+  <h4><a name="Subscribe_to_a_service_name_pattern.">Subscribe to a service name pattern.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#timeout_async-1">timeout_async/1</a></td><td>
+  <h4><a name="Configured_service_default_asynchronous_timeout_(in_milliseconds).">Configured service default asynchronous timeout (in milliseconds).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#timeout_max-1">timeout_max/1</a></td><td>
+  <h4><a name="Maximum_possible_service_request_timeout_(in_milliseconds).">Maximum possible service request timeout (in milliseconds).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#timeout_sync-1">timeout_sync/1</a></td><td>
+  <h4><a name="Configured_service_default_synchronous_timeout_(in_milliseconds).">Configured service default synchronous timeout (in milliseconds).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#trans_id-1">trans_id/1</a></td><td>
+  <h4><a name="Return_a_new_transaction_id.">Return a new transaction id.</a></h4>
+  The same data as used when sending service requests is used.</td></tr>
+<tr><td valign="top"><a href="#unsubscribe-2">unsubscribe/2</a></td><td>
+  <h4><a name="Unsubscribe_from_a_service_name_pattern.">Unsubscribe from a service name pattern.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="Module%3acloudi_service_handle_info-3">'Module:cloudi_service_handle_info'/3</a></h3>
+<div class="spec">
+<p><tt>'Module:cloudi_service_handle_info'(Request::any(), State::any(), Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {noreply, NewState::any()} | {stop, Reason::any(), NewState::any()}</tt><br></p>
+</div><p>
+  <h4><a name="Handle_an_incoming_Erlang_message.">Handle an incoming Erlang message.</a></h4>
+  The info_pid_uses and info_pid_options service configuration options
+  control the Erlang process used to call this function.</p>
+
+<h3 class="function"><a name="Module%3acloudi_service_handle_request-11">'Module:cloudi_service_handle_request'/11</a></h3>
+<div class="spec">
+<p><tt>'Module:cloudi_service_handle_request'(Type::<a href="#type-request_type">request_type()</a>, Name::<a href="#type-service_name">service_name()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::<a href="#type-source">source()</a>, State::any(), Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {reply, Response::<a href="#type-response">response()</a>, NewState::any()} | {reply, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, NewState::any()} | {forward, NextName::<a href="#type-service_name">service_name()</a>, NextRequestInfo::<a href="#type-request_info">request_info()</a>, NextRequest::<a href="#type-request">request()</a>, NewState::any()} | {forward, NextName::<a href="#type-service_name">service_name()</a>, NextRequestInfo::<a href="#type-request_info">request_info()</a>, NextRequest::<a href="#type-request">request()</a>, NextTimeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, NextPriority::<a href="#type-priority">priority()</a>, NewState::any()} | {noreply, NewState::any()} | {stop, Reason::any(), NewState::any()}</tt><br></p>
+</div><p>
+  <h4><a name="Handle_an_incoming_service_request.">Handle an incoming service request.</a></h4>
+  The request_pid_uses and request_pid_options service configuration options
+  control the Erlang process used to call this function.</p>
+
+<h3 class="function"><a name="Module%3acloudi_service_init-3">'Module:cloudi_service_init'/3</a></h3>
+<div class="spec">
+<p><tt>'Module:cloudi_service_init'(Args::list(), Prefix::<a href="#type-service_name_pattern">service_name_pattern()</a>, Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, State::any()} | {stop, Reason::any()} | {stop, Reason::any(), State::any()}</tt><br></p>
+</div><p>
+  <h4><a name="Initialize_the_internal_service.">Initialize the internal service.</a></h4>
+  Create the internal service state.  Do any initial service subscriptions
+  necessary.  Send service requests, if required for service initialization.
+  State implicitly becomes 'undefined' if not provided to 'stop'.</p>
+
+<h3 class="function"><a name="Module%3acloudi_service_terminate-2">'Module:cloudi_service_terminate'/2</a></h3>
+<div class="spec">
+<p><tt>'Module:cloudi_service_terminate'(Reason::any(), State::any()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Handle_service_termination.">Handle service termination.</a></h4>
+  cloudi_service_terminate/2 is always called, even when cloudi_service_init/3
+  returns a stop tuple.  When State is unset in the stop tuple, the
+  cloudi_service_terminate/2 function is called with State equal to
+  'undefined'.  Always calling the cloudi_service_terminate/2 function differs
+  from how Erlang/OTP behaviours handle the init/1 function returning a stop
+  tuple, but this approach can help prevent problems managing any global
+  state that might exist that is connected to a service, or simply services
+  that are only partially initialized.</p>
+
+<h3 class="function"><a name="context_options-1">context_options/1</a></h3>
+<div class="spec">
+<p><tt>context_options(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; <a href="cloudi.html#type-options">cloudi:options()</a></tt><br></p>
+</div><p>
+  <h4><a name="Get_the_context_options_from_the_service's_configuration.">Get the context options from the service's configuration.</a></h4>
+  A service would only use this when delaying the creation of a context
+  for child processes.</p>
+
+<h3 class="function"><a name="destination_refresh_immediate-1">destination_refresh_immediate/1</a></h3>
+<div class="spec">
+<p><tt>destination_refresh_immediate(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_destination_refresh_is_immediate.">Configured service destination refresh is immediate.</a></h4>
+</p>
+
+<h3 class="function"><a name="destination_refresh_lazy-1">destination_refresh_lazy/1</a></h3>
+<div class="spec">
+<p><tt>destination_refresh_lazy(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_destination_refresh_is_lazy.">Configured service destination refresh is lazy.</a></h4>
+</p>
+
+<h3 class="function"><a name="dispatcher-1">dispatcher/1</a></h3>
+<div class="spec">
+<p><tt>dispatcher(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; NewDispatcher::pid()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_Erlang_pid_representing_the_service_sender.">Return the Erlang pid representing the service sender.</a></h4>
+  Use when the Dispatcher is stored and used after the current
+  cloudi_service callback has returned.  This is only necessary when
+  storing the dispatcher within the cloudi_service_init/3 callback,
+  for use in a different callback.</p>
+
+<h3 class="function"><a name="environment_lookup-0">environment_lookup/0</a></h3>
+<div class="spec">
+<p><tt>environment_lookup() -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Get_an_environment_variable_lookup_for_cloudi_service:environment_transform().">Get an environment variable lookup for cloudi_service:environment_transform().</a></h4>
+</p>
+
+<h3 class="function"><a name="environment_transform-1">environment_transform/1</a></h3>
+<div class="spec">
+<p><tt>environment_transform(String::string()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Transform_a_string,_substituting_environment_variable_values_from_the_lookup.">Transform a string, substituting environment variable values from the lookup.</a></h4>
+  Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+  [a-zA-Z0-9_] ASCII characters.</p>
+
+<h3 class="function"><a name="environment_transform-2">environment_transform/2</a></h3>
+<div class="spec">
+<p><tt>environment_transform(String::string(), Lookup::any()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Transform_a_string,_substituting_environment_variable_values_from_the_lookup.">Transform a string, substituting environment variable values from the lookup.</a></h4>
+  Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+  [a-zA-Z0-9_] ASCII characters.</p>
+
+<h3 class="function"><a name="forward-9">forward/9</a></h3>
+<div class="spec">
+<p><tt>forward(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Type::<a href="#type-request_type">request_type()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Forward_a_service_request.">Forward a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="forward_async-8">forward_async/8</a></h3>
+<div class="spec">
+<p><tt>forward_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Forward_an_asynchronous_service_request.">Forward an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="forward_sync-8">forward_sync/8</a></h3>
+<div class="spec">
+<p><tt>forward_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Forward_a_synchronous_service_request.">Forward a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pid-2">get_pid/2</a></h3>
+<div class="spec">
+<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pid-3">get_pid/3</a></h3>
+<div class="spec">
+<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pids-2">get_pids/2</a></h3>
+<div class="spec">
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_all_service_destinations_based_on_a_service_name.">Get all service destinations based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_pids-3">get_pids/3</a></h3>
+<div class="spec">
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
+</p>
+
+<h3 class="function"><a name="key_value_erase-2">key_value_erase/2</a></h3>
+<div class="spec">
+<p><tt>key_value_erase(Key::any(), KeyValues::<a href="#type-key_values">key_values()</a>) -&gt; NewKeyValues::<a href="#type-key_values">key_values()</a></tt><br></p>
+</div><p>
+  <h4><a name="Generic_key/value_erase.">Generic key/value erase.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to erase request meta-data while encapsulating
+  the data structure used for the lookup.</p>
+
+<h3 class="function"><a name="key_value_find-2">key_value_find/2</a></h3>
+<div class="spec">
+<p><tt>key_value_find(Key::any(), KeyValues::<a href="#type-key_values">key_values()</a>) -&gt; {ok, Value::any()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Generic_key/value_find.">Generic key/value find.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to access the request meta-data while encapsulating
+  the data structure used for the lookup.</p>
+
+<h3 class="function"><a name="key_value_store-3">key_value_store/3</a></h3>
+<div class="spec">
+<p><tt>key_value_store(Key::any(), Value::any(), KeyValues::<a href="#type-key_values">key_values()</a>) -&gt; NewKeyValues::<a href="#type-key_values">key_values()</a></tt><br></p>
+</div><p>
+  <h4><a name="Generic_key/value_store.">Generic key/value store.</a></h4>
+  RequestInfo's key/value result from request_info_key_value_parse/1
+  can be used here to store request meta-data while encapsulating
+  the data structure used for the lookup.</p>
+
+<h3 class="function"><a name="mcast_async-3">mcast_async/3</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</p>
+
+<h3 class="function"><a name="mcast_async-4">mcast_async/4</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</p>
+
+<h3 class="function"><a name="mcast_async-6">mcast_async/6</a></h3>
+<div class="spec">
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.</p>
+
+<h3 class="function"><a name="mcast_async_active-3">mcast_async_active/3</a></h3>
+<div class="spec">
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.
+  The responses are sent to the service as Erlang messages that are either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="mcast_async_active-4">mcast_async_active/4</a></h3>
+<div class="spec">
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.
+  The responses are sent to the service as Erlang messages that are either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="mcast_async_active-6">mcast_async_active/6</a></h3>
+<div class="spec">
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  Asynchronous service requests are sent to all services that have
+  subscribed to the service name pattern that matches the destination.
+  The responses are sent to the service as Erlang messages that are either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="mcast_async_passive-3">mcast_async_passive/3</a></h3>
+<div class="spec">
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.  The asynchronous service requests are returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="mcast_async_passive-4">mcast_async_passive/4</a></h3>
+<div class="spec">
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.  The asynchronous service requests are returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="mcast_async_passive-6">mcast_async_passive/6</a></h3>
+<div class="spec">
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
+  An alias for mcast_async.  The asynchronous service requests are returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="prefix-1">prefix/1</a></h3>
+<div class="spec">
+<p><tt>prefix(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; Prefix::<a href="#type-service_name_pattern">service_name_pattern()</a></tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_default_prefix.">Configured service default prefix.</a></h4>
+  All subscribed/unsubscribed service names use this prefix.  The prefix
+  defines the scope of the service.</p>
+
+<h3 class="function"><a name="priority_default-1">priority_default/1</a></h3>
+<div class="spec">
+<p><tt>priority_default(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; PriorityDefault::<a href="cloudi_service_api.html#type-priority">cloudi_service_api:priority()</a></tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_default_priority.">Configured service default priority.</a></h4>
+</p>
+
+<h3 class="function"><a name="process_index-1">process_index/1</a></h3>
+<div class="spec">
+<p><tt>process_index(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; ProcessIndex::non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_index_of_this_instance_of_the_service.">Return the index of this instance of the service.</a></h4>
+  The configuration of the service defined how many instances should exist.</p>
+
+<h3 class="function"><a name="recv_async-1">recv_async/1</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Use a null TransId to receive the oldest service request.</p>
+
+<h3 class="function"><a name="recv_async-2">recv_async/2</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransId::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Either use the supplied TransId to receive the specific service request
+  or use a null TransId to receive the oldest service request.</p>
+
+<h3 class="function"><a name="recv_async-3">recv_async/3</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>, TransId::<a href="#type-trans_id">trans_id()</a> | boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+  Either use the supplied TransId to receive the specific service request
+  or use a null TransId to receive the oldest service request.</p>
+
+<h3 class="function"><a name="recv_async-4">recv_async/4</a></h3>
+<div class="spec">
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Consume::boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="recv_asyncs-2">recv_asyncs/2</a></h3>
+<div class="spec">
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
+</p>
+
+<h3 class="function"><a name="recv_asyncs-3">recv_asyncs/3</a></h3>
+<div class="spec">
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
+</p>
+
+<h3 class="function"><a name="recv_asyncs-4">recv_asyncs/4</a></h3>
+<div class="spec">
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>], Consume::boolean()) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
+</p>
+
+<h3 class="function"><a name="request_http_qs_parse-1">request_http_qs_parse/1</a></h3>
+<div class="spec">
+<p><tt>request_http_qs_parse(Request::binary()) -&gt; Result::dict()</tt><br></p>
+</div><p>
+  <h4><a name="Parse_HTTP_Request_query_string_data.">Parse HTTP Request query string data.</a></h4>
+</p>
+
+<h3 class="function"><a name="request_info_key_value_new-1">request_info_key_value_new/1</a></h3>
+<div class="spec">
+<p><tt>request_info_key_value_new(RequestInfo::<a href="#type-key_values">key_values()</a>) -&gt; Result::binary()</tt><br></p>
+</div><p>
+  <h4><a name="New_RequestInfo_key/value_data.">New RequestInfo key/value data.</a></h4>
+  RequestInfo is meant to contain key/value pairs that is request
+  meta-data.  Create the binary RequestInfo data with a list of pairs or
+  a dict data structure.</p>
+
+<h3 class="function"><a name="request_info_key_value_parse-1">request_info_key_value_parse/1</a></h3>
+<div class="spec">
+<p><tt>request_info_key_value_parse(RequestInfo::binary() | [{any(), any()}]) -&gt; Result::dict()</tt><br></p>
+</div><p>
+  <h4><a name="Parse_RequestInfo_key/value_data.">Parse RequestInfo key/value data.</a></h4>
+  RequestInfo is meant to contain key/value pairs that is request
+  meta-data.</p>
+
+<h3 class="function"><a name="return-2">return/2</a></h3>
+<div class="spec">
+<p><tt>return(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Response::<a href="#type-response">response()</a>) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>
+</p>
+
+<h3 class="function"><a name="return-3">return/3</a></h3>
+<div class="spec">
+<p><tt>return(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>
+</p>
+
+<h3 class="function"><a name="return-9">return/9</a></h3>
+<div class="spec">
+<p><tt>return(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Type::<a href="#type-request_type">request_type()</a>, Name::<a href="#type-service_name">service_name()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_service_response.">Return a service response.</a></h4>
+</p>
+
+<h3 class="function"><a name="return_async-8">return_async/8</a></h3>
+<div class="spec">
+<p><tt>return_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Return_an_asynchronous_service_response.">Return an asynchronous service response.</a></h4>
+</p>
+
+<h3 class="function"><a name="return_nothrow-9">return_nothrow/9</a></h3>
+<div class="spec">
+<p><tt>return_nothrow(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Type::<a href="#type-request_type">request_type()</a>, Name::<a href="#type-service_name">service_name()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_service_response_without_exiting_the_request_handler.">Return a service response without exiting the request handler.</a></h4>
+  Should rarely, if ever, be used.  If the service has the option
+  request_timeout_adjustment == true, the adjustment will not occur when
+  this function is used.  Also, the service's
+  response_timeout_immediate_max option will not prevent a null response
+  from being sent when this function is used.</p>
+
+<h3 class="function"><a name="return_sync-8">return_sync/8</a></h3>
+<div class="spec">
+<p><tt>return_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, Timeout::<a href="#type-timeout_value_milliseconds">timeout_value_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Pid::pid()) -&gt; no_return()</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_synchronous_service_response.">Return a synchronous service response.</a></h4>
+</p>
+
+<h3 class="function"><a name="self-1">self/1</a></h3>
+<div class="spec">
+<p><tt>self(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; Self::pid()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_Erlang_pid_representing_the_service.">Return the Erlang pid representing the service.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async-3">send_async/3</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async-4">send_async/4</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async-5">send_async/5</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async-6">send_async/6</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async-7">send_async/7</a></h3>
+<div class="spec">
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_async_active-3">send_async_active/3</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="send_async_active-4">send_async_active/4</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="send_async_active-5">send_async_active/5</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="send_async_active-6">send_async_active/6</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="send_async_active-7">send_async_active/7</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
+<h3 class="function"><a name="send_async_passive-3">send_async_passive/3</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.  The asynchronous service request is returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="send_async_passive-4">send_async_passive/4</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.  The asynchronous service request is returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="send_async_passive-5">send_async_passive/5</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.  The asynchronous service request is returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="send_async_passive-6">send_async_passive/6</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.  The asynchronous service request is returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="send_async_passive-7">send_async_passive/7</a></h3>
+<div class="spec">
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
+  An alias for send_async.  The asynchronous service request is returned
+  and handled the same way as within external services.</p>
+
+<h3 class="function"><a name="send_sync-3">send_sync/3</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_sync-4">send_sync/4</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_sync-5">send_sync/5</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_sync-6">send_sync/6</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send_sync-7">send_sync/7</a></h3>
+<div class="spec">
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="service_name_parse-2">service_name_parse/2</a></h3>
+<div class="spec">
+<p><tt>service_name_parse(Name::string(), Pattern::string()) -&gt; [string()] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_service_name_pattern.">Parse a service name pattern.</a></h4>
+</p>
+
+<h3 class="function"><a name="service_name_parse_with_suffix-2">service_name_parse_with_suffix/2</a></h3>
+<div class="spec">
+<p><tt>service_name_parse_with_suffix(Name::string(), Pattern::string()) -&gt; {[string()], string()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_service_name_pattern_and_return_the_common_suffix.">Parse a service name pattern and return the common suffix.</a></h4>
+</p>
+
+<h3 class="function"><a name="source_subscriptions-2">source_subscriptions/2</a></h3>
+<div class="spec">
+<p><tt>source_subscriptions(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pid::<a href="#type-source">source()</a>) -&gt; [<a href="#type-service_name_pattern">service_name_pattern()</a>]</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_list_of_all_service_name_patterns_a_service_request_source_is_subscribed_to.">Get a list of all service name patterns a service request source is subscribed to.</a></h4><p>  
+The source pid can be found at:</p>
+ 
+  <code>cloudi_service_handle_request(_, _, _, _, _, _, _, _, Pid, _, _)</code></p>
+
+<h3 class="function"><a name="subscribe-2">subscribe/2</a></h3>
+<div class="spec">
+<p><tt>subscribe(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Subscribe_to_a_service_name_pattern.">Subscribe to a service name pattern.</a></h4>
+</p>
+
+<h3 class="function"><a name="timeout_async-1">timeout_async/1</a></h3>
+<div class="spec">
+<p><tt>timeout_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; TimeoutAsync::<a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a></tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_default_asynchronous_timeout_(in_milliseconds).">Configured service default asynchronous timeout (in milliseconds).</a></h4>
+</p>
+
+<h3 class="function"><a name="timeout_max-1">timeout_max/1</a></h3>
+<div class="spec">
+<p><tt>timeout_max(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; TimeoutMax::<a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a></tt><br></p>
+</div><p>
+  <h4><a name="Maximum_possible_service_request_timeout_(in_milliseconds).">Maximum possible service request timeout (in milliseconds).</a></h4>
+</p>
+
+<h3 class="function"><a name="timeout_sync-1">timeout_sync/1</a></h3>
+<div class="spec">
+<p><tt>timeout_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; TimeoutSync::<a href="cloudi_service_api.html#type-timeout_milliseconds">cloudi_service_api:timeout_milliseconds()</a></tt><br></p>
+</div><p>
+  <h4><a name="Configured_service_default_synchronous_timeout_(in_milliseconds).">Configured service default synchronous timeout (in milliseconds).</a></h4>
+</p>
+
+<h3 class="function"><a name="trans_id-1">trans_id/1</a></h3>
+<div class="spec">
+<p><tt>trans_id(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; &lt;&lt;_:128&gt;&gt;</tt><br></p>
+</div><p>
+  <h4><a name="Return_a_new_transaction_id.">Return a new transaction id.</a></h4>
+  The same data as used when sending service requests is used.</p>
+
+<h3 class="function"><a name="unsubscribe-2">unsubscribe/2</a></h3>
+<div class="spec">
+<p><tt>unsubscribe(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Pattern::<a href="#type-service_name_pattern">service_name_pattern()</a>) -&gt; ok | error</tt><br></p>
+</div><p>
+  <h4><a name="Unsubscribe_from_a_service_name_pattern.">Unsubscribe from a service name pattern.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 29 2014, 20:02:12.</i></p>
+</body>
+</html>

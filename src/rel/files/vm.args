@@ -1,3 +1,5 @@
+## make sure enif_send can be used in NIFs
+-smp
 
 ## Name of the node
 -sname cloudi

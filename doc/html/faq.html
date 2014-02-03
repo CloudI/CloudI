@@ -26,13 +26,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="api.html">API</a></li>
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
-    <li><a href="https://github.com/okeuday/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
   </ul>
 </div>
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.3.0b<br />last updated on October 18<sup>th</sup> 2013</h3></center>
+  <center><h3>version 1.3.1b<br />
+              last updated on February 1<sup>st</sup> 2014</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -49,8 +50,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_OnlineService">1.10 - Can I use CloudI as an Online Service?</a></li>
     <li><a href="#1_CAP"          >1.11 - What CAP theorem guarantees does CloudI provide?</a></li>
     <li><a href="#1_REST"         >1.12 - Does CloudI support REST?</a></li>
-    <li><a href="#1_PaaS"         >1.13 - Is CloudI a Platform as a Service (PaaS)?</a></li>
-    <li><a href="#1_HowAbout"     >1.14 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_HowAbout"     >1.13 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -81,13 +81,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_PubSub"     >4.3 - How do I use Publisher/Subscriber messaging?</a></li>
     <li><a href="#4_RPC"        >4.4 - How do I use Remote Procedure Calls (RPC)?</a></li>
     <li><a href="#4_WebServices">4.5 - How do I create Web Services?</a></li>
-    <li><a href="#4_ACLs"       >4.6 - How do I use Access Control Lists (ACLs)?</a></li>
-    <li><a href="#4_ServiceFail">4.7 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
-    <li><a href="#4_URLregex"   >4.8 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
-    <li><a href="#4_NamePattern">4.9 - How do service name patterns work?</a></li>
-    <li><a href="#4_ThreadSafe" >4.10 - Is the CloudI API thread-safe?</a></li>
-    <li><a href="#4_Speed"      >4.11 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
-    <li><a href="#4_Erlang"     >4.12 - Why not just use Erlang directly?</a></li>
+    <li><a href="#4_WebSockets" >4.6 - Does CloudI support WebSockets?</a></li>
+    <li><a href="#4_ACLs"       >4.7 - How do I use Access Control Lists (ACLs)?</a></li>
+    <li><a href="#4_ServiceFail">4.8 - How do I Migrate a Service from a Failed or Failing Node?</a></li>
+    <li><a href="#4_URLregex"   >4.9 - Can I use Regular Expressions with Service Names (URLs)?</a></li>
+    <li><a href="#4_NamePattern">4.10 - How do Service Name Patterns work?</a></li>
+    <li><a href="#4_ThreadSafe" >4.11 - Is the CloudI API thread-safe?</a></li>
+    <li><a href="#4_Speed"      >4.12 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
+    <li><a href="#4_Erlang"     >4.13 - Why not just use Erlang directly?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -108,14 +109,15 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#6_Ruby"    >6.5 - Ruby Service Implementation</a></li>
     <li><a href="#6_HTTP"    >6.6 - HTTP Integration</a></li>
     <li><a href="#6_ZeroMQ"  >6.7 - ZeroMQ Integration</a></li>
+    <li><a href="#6_FaultTolerance">6.8 - Service Fault-Tolerance</a></li>
   </ul>
   <a name="7_contents"></a>
   <h2>7 - Databases</h2>
   <ul class="faq">
     <li><a href="#7_CouchDB"    >7.1 - CouchDB Integration</a></li>
     <li><a href="#7_memcached"  >7.2 - memcached Integration</a></li>
-    <li><a href="#7_PostgreSQL" >7.3 - PostgreSQL Integration</a></li>
-    <li><a href="#7_MySQL"      >7.4 - MySQL Integration</a></li>
+    <li><a href="#7_MySQL"      >7.3 - MySQL Integration</a></li>
+    <li><a href="#7_PostgreSQL" >7.4 - PostgreSQL Integration</a></li>
     <li><a href="#7_TokyoTyrant">7.5 - Tokyo Tyrant Integration</a></li>
     <li><a href="#7_Other"      >7.6 - Other Database Integration</a></li>
   </ul>
@@ -205,7 +207,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     Popular examples include:
     <a href="http://en.wikipedia.org/wiki/AppScale" target="_blank">AppScale</a>,
     <a href="http://en.wikipedia.org/wiki/Cloud_Foundry" target="_blank">CloudFoundry</a>,
-    OpenShift,
+    <a href="http://en.wikipedia.org/wiki/OpenShift" target="_blank">OpenShift</a>,
     and
     <a href="http://en.wikipedia.org/wiki/Heroku" target="_blank">Heroku</a>.
     Generally, Integration "Clouds" provide software packages for common
@@ -221,11 +223,11 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     light-weight interfaces for integration.  Scalability and fault-tolerance
     are both provided by CloudI's usage of the 
     <a href="http://en.wikipedia.org/wiki/Erlang_%28programming_language%29" target="_blank">Erlang programming language</a>.
-    This means that no Hypervisor is necessary to make CloudI's processes
-    reliable, so there can be a performance benefit when using CloudI.
-    Scalability is a natural gain with CloudI's Erlang concurrency which 
-    reduces the amount of power and hardware necessary to facilitate
-    external connections, making CloudI a greener solution!
+    This means that no Hypervisor or commercial service is necessary to make
+    CloudI's processes reliable, so there can be a performance benefit when
+    using CloudI.  Scalability is a natural gain with CloudI's Erlang
+    concurrency which reduces the amount of power and hardware necessary to
+    facilitate external connections, making CloudI a greener solution!
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -285,7 +287,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     CloudI Service API is accessible remotely by using Erlang terms or JSON-RPC
     over HTTP when using the cloudi_service_api_requests service with the
     cloudi_service_http_cowboy service.
-    <a href="https://github.com/okeuday/CloudI/tree/master/src/service_api#readme" target="_blank">Examples of using the CloudI Service API</a>
+    <a href="https://github.com/CloudI/CloudI/tree/master/src/service_api#readme" target="_blank">Examples of using the CloudI Service API</a>
     are provided as separate integration tests.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
@@ -327,13 +329,13 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
     which permits reuse for personal or commercial purposes.  Small amounts of
     source code is included that is under the <a href="http://www.erlang.org/EPLICENSE" target="_blank">Erlang Public License</a>
-    (e.g., part of the <a href="https://github.com/okeuday/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cpg/src/cpg.erl" target="_blank">cpg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
+    (e.g., part of the <a href="https://github.com/CloudI/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cpg/src/cpg.erl" target="_blank">cpg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
     itself.  All external source code dependencies are also under a
     BSD license.  Some conditional external source code dependencies
     (not included by default) are under other licenses
     (e.g., <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
     is under the LGPL license).  For a more detailed look at the
-    licenses of external dependencies, please check the <a href="https://github.com/okeuday/CloudI/blob/master/src/external/README.markdown#readme" target="_blank">src/external/README</a>.
+    licenses of external dependencies, please check the <a href="https://github.com/CloudI/CloudI/blob/master/src/external/README.markdown#readme" target="_blank">src/external/README</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -373,6 +375,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     message queue).  In both cases, a request can be sent to the CloudI
     service with the <a href="api.html#Service">CloudI API</a>
     (if a response is returned, the request succeeded).
+    To understand consistency, as it relates to CloudI service
+    fault-tolerance, please refer to <a href="#6_FaultTolerance">"6.8 - Service Fault-Tolerance"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -384,20 +388,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
-  <a name="1_PaaS"></a>
-  <h3>1.13 - Is CloudI a Platform as a Service (PaaS)?</h3>
-  <p class="paragraph">
-    Yes!  CloudI can be used as a <a href="http://en.wikipedia.org/wiki/Platform_as_a_service" target="_blank">Platform as a Service (PaaS)</a>
-    and is the first <a href="#1_Clouds">fault-tolerant PaaS open source project</a>.
-    CloudI is not limited to the development of web services and has
-    a broader focus.  CloudI also does not enforce particular development
-    libraries on the programmer, so it is a much more flexible framework.
-    For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
-  </p>
-  <div class="top"><a href="#1_contents">Top</a></div>
-
   <a name="1_HowAbout"></a>
-  <h3>1.14 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.13 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -418,7 +410,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Source Code:
   </td><td>
-  <a href="https://github.com/okeuday/CloudI#readme" target="_blank">https://github.com/okeuday/CloudI</a>
+  <a href="https://github.com/CloudI/CloudI#readme" target="_blank">https://github.com/CloudI/CloudI</a>
   </td></tr><tr><td>
   Releases:
   </td><td>
@@ -461,7 +453,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   Development:
   </td><td>
-  <a href="https://github.com/feeds/okeuday/commits/CloudI/develop" target="_blank">https://github.com/feeds/okeuday/commits/CloudI/develop</a>
+  <a href="https://github.com/CloudI/CloudI/commits/develop.atom" target="_blank">https://github.com/CloudI/CloudI/commits/develop.atom</a>
   </td></tr><tr><td>
   Releases:
   </td><td>
@@ -521,7 +513,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   Bug Reports:
   </td><td>
-  <a href="https://github.com/okeuday/CloudI/issues/new" target="_blank">https://github.com/okeuday/CloudI/issues/new</a>
+  <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">https://github.com/CloudI/CloudI/issues/new</a>
   </td></tr><tr><td>
   <a href="#2_MailingList">Mailing List:</a>
   </td><td>
@@ -531,7 +523,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     If you are unsure whether you have found a bug, please send an email to the
     mailing list or utilize the <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">IRC chat room</a>.
     Otherwise, you can easily enter a bug report for the problem by using the
-    <a href="https://github.com/okeuday/CloudI/issues/new" target="_blank">online form</a>.
+    <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">online form</a>.
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -556,7 +548,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     So, that means that the configuration will expect a C compiler,
     a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
     Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R16</a>).
-    CloudI is tested on each release of Erlang (currently R16B02).
+    CloudI is tested on each release of Erlang (currently R16B03).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -615,7 +607,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <p class="paragraph">
     For more installation configuration option details, please execute
     "./configure --help" (otherwise, you can refer to
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>
     for basic configuration information).
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
@@ -660,7 +652,7 @@ sudo cloudi stop
     and Logging.  The ACLs provide a name which can be referenced by a Service
     to either explicitly allow or deny communication between services
     (based on service name prefixes, see 
-    <a href="#4_ACLs">"4.6 - How do I use Access Control Lists (ACLs)?"</a>
+    <a href="#4_ACLs">"4.7 - How do I use Access Control Lists (ACLs)?"</a>
     for more information).
   </p>
   <p class="paragraph">
@@ -691,17 +683,17 @@ sudo cloudi stop
     <a href="api.html#CloudI">configuration</a> file.  The
     ()s have been used to specify the configuration parameters that are
     supplied.  You can find this file in
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">src/cloudi.conf.in</a>
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in" target="_blank">src/cloudi.conf.in</a>
     within the source code repository (in its state before it gets modified
     by the local operating system configuration parameters) or
     PREFIX/etc/cloudi/cloudi.conf after the installation.
 <pre>
-{acl, [
+{acl, <a href="api.html#2_acl_add">[
     {(AliasName), [(ServiceNamePrefix) or (AliasName), ...]}
     ...
-]}.
+]</a>}.
 {services, [
-    {internal,
+    {internal, <a href="api.html#2_services_add">
      (ServiceNamePrefix),
      (ErlangModuleName),
      (ModuleInitializationList),
@@ -713,9 +705,9 @@ sudo cloudi stop
      (DestinationAllowACL),
      (ProcessCount),
      (MaxR),
-     (MaxT),
-     (ServiceOptionsPropList)},
-    {external,
+     (MaxT),</a><a href="api.html#2_services_add_config_opts">
+     (ServiceOptionsPropList)</a>},
+    {external, <a href="api.html#2_services_add">
      (ServiceNamePrefix),
      (ExecutableFilePath),
      (ExecutableCommandLineArguments),
@@ -731,19 +723,19 @@ sudo cloudi stop
      (ProcessCount),
      (ThreadCount),
      (MaxR),
-     (MaxT),
-     (ServiceOptionsPropList)},
-    ...
+     (MaxT),</a><a href="api.html#2_services_add_config_opts">
+     (ServiceOptionsPropList)</a>},<a href="api.html#2_services_add">
+    ...</a>
 ]}.
-{nodes, [
+{nodes, <a href="api.html#2_nodes_add">[
     'cloudi@hostname1',
     ...
-] % or 'automatic' for automatic LAN node configuration
+] % or 'automatic' for automatic LAN node configuration </a>
 }.
-{logging, [
+{logging, <a href="api.html#2_loglevel_set">[
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     {redirect, undefined or (Node)}
-]}.
+]</a>}.
 </pre>
   </p>
   <p class="paragraph">
@@ -759,7 +751,7 @@ sudo cloudi stop
     </ul>
     Some of the tests are explained within <a href="#6_C">"6 - Services"</a>.
     All of the tests can be found within the source code repository in
-    <a href="https://github.com/okeuday/CloudI/tree/master/src/tests" target="_blank">src/tests</a>.  There is no reason to keep the tests within the
+    <a href="https://github.com/CloudI/CloudI/tree/master/src/tests" target="_blank">src/tests</a>.  There is no reason to keep the tests within the
     configuration once you start using CloudI for your own integration.
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
@@ -992,7 +984,8 @@ sudo cloudi stop
   <a name="4_API_HTTP"></a>
   <h4>HTTP</h4>
   <p class="paragraph">
-    The Erlang service cloudi_service_http_cowboy accepts HTTP traffic and
+    The Erlang service cloudi_service_http_cowboy
+    (or cloudi_service_http_elli) accepts HTTP traffic and
     makes the HTTP requests CloudI requests where the HTTP path in the URL
     is used as the service name.
     By default, the HTTP method is specified as a suffix on the HTTP path
@@ -1031,11 +1024,11 @@ sudo cloudi stop
     CloudI Service API would use raw HTTP requests or JSON-RPC over HTTP, using
     both a configured cloudi_service_http_cowboy service and a configured
     cloudi_service_api_requests service.  A complex example of using the
-    CloudI Service API through JSON-RPC over HTTP with python code can be found in <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/run.py" target="_blank">src/tests/service_api/run.py</a>.
+    CloudI Service API through JSON-RPC over HTTP with python code can be found in <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/run.py" target="_blank">src/tests/service_api/run.py</a>.
     Some simpler examples of using the CloudI Service API can be found at
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/path.py" target="_blank">src/tests/service_api/path.py</a>,
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_off.py" target="_blank">src/tests/service_api/logging_off.py</a> and
-    <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/service_api/logging_on.py" target="_blank">src/tests/service_api/logging_on.py</a>.
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/path.py" target="_blank">src/tests/service_api/path.py</a>,
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/logging_off.py" target="_blank">src/tests/service_api/logging_off.py</a> and
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/logging_on.py" target="_blank">src/tests/service_api/logging_on.py</a>.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
@@ -1072,12 +1065,42 @@ sudo cloudi stop
     coming from the cloudi_service_http_cowboy service.  The request body is
     either the body of the uncompressed PUT or POST request, or it is the
     GET query string.
-    For more details please refer to the <a href="#4_API">CloudI API documentation</a>.
+    For more details please refer to the
+    <a href="#6_HTTP">HTTP Integration</a> documentation.
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
+  <a name="4_WebSockets"></a>
+  <h3>4.6 - Does CloudI support WebSockets?</h3>
+  <p class="paragraph">
+    CloudI supports WebSocket connections with the cloudi_service_http_cowboy
+    service, when it is configured with "{use_websockets, true}".  Incoming
+    HTTP requests become CloudI service requests which return the service
+    response as a HTTP response, with the HTTP headers passed in the
+    RequestInfo and ResponseInfo as key-value data
+    (<a href="#6_HTTP">HTTP Integration</a>).  Incoming WebSocket requests
+    add a "/get" suffix on the URL to create the service name used for the
+    service request (when configured with "{use_method_suffix, true}",
+    the default).
+  </p>
+  <p class="paragraph">
+    Outgoing WebSocket CloudI service requests are also possible if the
+    WebSocket connection URL matches the cloudi_service_http_cowboy
+    service prefix in its service configuration.  The outgoing CloudI service
+    requests can be sent to the WebSocket URL with a "/websocket" suffix added.
+    All outgoing CloudI service requests expect a response from the WebSocket
+    client within the service request timeout period.  An <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/public_html/websockets.html" target="_blank">example</a>
+    (using an <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/websockets/websockets.py" target="_blank">example service</a>)
+    of the WebSocket functionality exists at <a href="http://127.0.0.1:6464/tests/http_req/websockets.html" target="_blank">http://127.0.0.1:6464/tests/http_req/websockets.html</a>
+    when CloudI is running with the default configuration.  It is important
+    to enforce the request/response order within the WebSocket client to avoid
+    erroneous service request responses (the example demonstrates this when
+    the "Request" link is rapidly clicked repeatedly).
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_ACLs"></a>
-  <h3>4.6 - How do I use Access Control Lists (ACLs)?</h3>
+  <h3>4.7 - How do I use Access Control Lists (ACLs)?</h3>
   <p class="paragraph">
     Access Control Lists (ACLs) are used to explicitly allow or deny requests
     from being sent to service name patterns.
@@ -1158,7 +1181,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_ServiceFail"></a>
-  <h3>4.7 - How do I Migrate a Service from a Failed or Failing Node?</h3>
+  <h3>4.8 - How do I Migrate a Service from a Failed or Failing Node?</h3>
   <p class="paragraph">
     A migration would imply that there is unavoidable latency during a
     switchover from a failed node to a healthy node.  To avoid failover latency
@@ -1187,7 +1210,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_URLregex"></a>
-  <h3>4.8 - Can I use Regular Expressions with Service Names (URLs)?</h3>
+  <h3>4.9 - Can I use Regular Expressions with Service Names (URLs)?</h3>
   <p class="paragraph">
     A simpler substitute for regular expressions is provided for matching
     CloudI service names.  The "*" character (a wildcard character) is
@@ -1200,7 +1223,7 @@ sudo cloudi stop
     may seem unusual, it helps keep service name lookups both efficient
     and parallel (i.e., within the Erlang code, without any need to call an
     external regex integration library).  For more details refer to
-    <a href="4_NamePattern">"4.9 - How do service name patterns work?"</a>.
+    <a href="#4_NamePattern">"4.10 - How do Service Name Patterns work?"</a>.
   </p>
   <p class="paragraph">
     Another possibility is just using explicit service names, even when the
@@ -1222,7 +1245,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_NamePattern"></a>
-  <h3>4.9 - How do service name patterns work?</h3>
+  <h3>4.10 - How do Service Name Patterns work?</h3>
   <p class="paragraph">
     Service name patterns are service names that contain any number of "*"
     character (while "**" is invalid).  The "*" character (a wildcard character)
@@ -1268,7 +1291,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_ThreadSafe"></a>
-  <h3>4.10 - Is the CloudI API thread-safe?</h3>
+  <h3>4.11 - Is the CloudI API thread-safe?</h3>
   <p class="paragraph">
     The <a href="api.html#Service">CloudI API</a> is not thread-safe
     (i.e., it is not reentrant)
@@ -1281,7 +1304,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_Speed"></a>
-  <h3>4.11 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</h3>
+  <h3>4.12 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</h3>
   <p class="paragraph">
     To provide better computing node grouping, service names should uniquely
     describe the context of the node.  If the context is provided, then there
@@ -1297,7 +1320,7 @@ sudo cloudi stop
   <div class="top"><a href="#4_contents">Top</a></div>
 
   <a name="4_Erlang"></a>
-  <h3>4.12 - Why not just use Erlang directly?</h3>
+  <h3>4.13 - Why not just use Erlang directly?</h3>
   <p class="block">
     Erlang does naturally support integration in the following ways:
     <ul>
@@ -1500,9 +1523,9 @@ sudo cloudi stop
     loadtesting results can be compared when making CloudI integration
     decisions.  Below are summaries specific to past releases:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf" target="_blank">1.2.2 summary</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">1.2.1 summary</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">1.1.0 summary</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf" target="_blank">1.2.2 summary</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">1.2.1 summary</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">1.1.0 summary</a></li>
     </ul>
   </p>
   <p>
@@ -1511,28 +1534,28 @@ sudo cloudi stop
     (with cowboy, Erlang R16B, and Ubuntu 12.04.2):
     <ul>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/c.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/c.tar.gz" target="_blank">
         C++/C
         <img src="images/201306_graphes-Transactions-mean_c.png" /><br />
         <img src="images/201306_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_c.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/erlang.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/erlang.tar.gz" target="_blank">
         Erlang
         <img src="images/201306_graphes-Transactions-mean_erlang.png" /><br />
         <img src="images/201306_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_erlang.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/java.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/java.tar.gz" target="_blank">
         Java
         <img src="images/201306_graphes-Transactions-mean_java.png" /><br />
         <img src="images/201306_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_java.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python_c.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python_c.tar.gz" target="_blank">
         Python
         <img src="images/201306_graphes-Transactions-mean_python_c.png" />
         (with C integration)
@@ -1541,14 +1564,14 @@ sudo cloudi stop
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/python.tar.gz" target="_blank">
         Python
         <img src="images/201306_graphes-Transactions-mean_python.png" /><br />
         <img src="images/201306_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_python.png" width="280" />
         </a><br /><br />
       </li>
       <li>
-        <a href="https://github.com/okeuday/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/ruby.tar.gz" target="_blank">
+        <a href="https://github.com/CloudI/CloudI/tree/master/src/tests/http_req/loadtest/results_v1_2_2/201306_20k_10kreqs_local/ruby.tar.gz" target="_blank">
         Ruby
         <img src="images/201306_graphes-Transactions-mean_ruby.png" /><br />
         <img src="images/201306_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201306_graphes-Transactions-max_sample_ruby.png" width="280" />
@@ -1565,19 +1588,29 @@ sudo cloudi stop
   <h3>6.1 - C++/C Service Implementation</h3>
   <p class="paragraph">
     There are separate header files that provide both a C CloudI API
-    (<a href="https://github.com/okeuday/CloudI/blob/master/src/api/c/cloudi.h" target="_blank">cloudi.h</a>)
+    (<a href="https://github.com/CloudI/CloudI/blob/master/src/api/c/cloudi.h" target="_blank">cloudi.h</a>)
     and a C++ CloudI API
-    (<a href="https://github.com/okeuday/CloudI/blob/master/src/api/c/cloudi.hpp" target="_blank">cloudi.hpp</a>) which are mutually exclusive.  The header
+    (<a href="https://github.com/CloudI/CloudI/blob/master/src/api/c/cloudi.hpp" target="_blank">cloudi.hpp</a>) which are mutually exclusive.  The header
     files do not bring in external dependencies but both require the standard
     C++ library as a link-time dependency.  Some of the integration
     tests that provide example usage of the C++/C
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++ example with threads)</a>
-          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/" target="_blank">Hexadecimal PI Test</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C example without threads)</a>
-          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/" target="_blank">HTTP Request Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++ example with threads)</a>
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/" target="_blank">Hexadecimal PI Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C example without threads)</a>
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/" target="_blank">HTTP Request Test</a></li>
     </ul>
+  </p>
+  <p class="paragraph">
+    If you need to run your service with valgrind, use valgrind as the
+    executable in the service configuration and use the valgrind command line
+    argument "--track-fds=yes" with the service command line after it.
+    The valgrind output will appear within the cloudi.log output.  If you plan
+    on using vgdb while valgrind is running, make sure {"USER", "${USER}"} is
+    specified in the list of environment variables provided for valgrind
+    (running as a CloudI service) so valgrind can properly create its
+    vgdb file names.
   </p>
   <p>
     For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
@@ -1606,10 +1639,10 @@ sudo cloudi stop
     functionality.  Some example usage of the Erlang
     <a href="api.html#Service">CloudI API</a> includes:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem Service for Caching Static File Data</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_work_manager/src/cloudi_service_work_manager.erl" target="_blank">cloudi_service_work_manager Service For Caching Database Updates</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_timers/src/cloudi_service_timers.erl" target="_blank">cloudi_service_timers service for Sending Service Messages On Timers</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl" target="_blank">Hexadecimal PI Test Load Balancer</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem Service for Caching Static File Data</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_work_manager/src/cloudi_service_work_manager.erl" target="_blank">cloudi_service_work_manager Service For Caching Database Updates</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_timers/src/cloudi_service_timers.erl" target="_blank">cloudi_service_timers service for Sending Service Messages On Timers</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl" target="_blank">Hexadecimal PI Test Load Balancer</a></li>
     </ul>
   </p>
   <p>
@@ -1625,8 +1658,8 @@ sudo cloudi stop
     that provide example usage of the Java
     <a href="api.html#Service">CloudI API</a> include:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">src/tests/http</a>
-          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/" target="_blank">HTTP Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">src/tests/http</a>
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/" target="_blank">HTTP Test</a></li>
     </ul>
   </p>
   <p>
@@ -1642,12 +1675,12 @@ sudo cloudi stop
     of the Python
     <a href="api.html#Service">CloudI API</a> include:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">src/tests/http</a>
-          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">src/tests/zeromq</a>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">src/tests/http</a>
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">src/tests/zeromq</a>
           ZeroMQ Test</li>
     </ul>
-    An example configuration (from the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>)
+    An example configuration (from the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>)
     is provided below:
     <pre>
 {external,
@@ -1664,7 +1697,7 @@ sudo cloudi stop
     CloudI API (module "cloudi") and a Python/C CloudI API (module "cloudi_c").
     Just specify the Python library by the module imported, since the same
     interface is provided within both choices.  The "cloudi_c" module has
-    been shown to provide a <a href="https://github.com/okeuday/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">speedup greater than 400%</a>
+    been shown to provide a <a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">speedup greater than 400%</a>
     when compared with the "cloudi" module, with both under a load of 10,000
     requests/second.  For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
   </p>
@@ -1677,8 +1710,8 @@ sudo cloudi stop
     CloudI services.  Some of the integration tests that provide example
     usage of the Ruby <a href="api.html#Service">CloudI API</a> include:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">src/tests/http</a>
-          <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">src/tests/http</a>
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/" target="_blank">HTTP Test</a></li>
     </ul>
   </p>
   <p>
@@ -1693,8 +1726,8 @@ sudo cloudi stop
     that matches the Uniform Resource Locator (URL) path.  A simple example
     caches static filesystem files recursively so that the file path is
     the service name suffix (with the "/get" HTTP method suffix at the end,
-    e.g., "index.html/get").  The example can be found in the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
-    usage of the <a href="https://github.com/okeuday/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem</a> which is shown below:
+    e.g., "index.html/get").  The example can be found in the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
+    usage of the <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem</a> which is shown below:
     <pre>
 {internal,
     "/tests/http_req/",
@@ -1707,12 +1740,19 @@ sudo cloudi stop
     in the path tests/http_req/public_html/ are browsable at <a href="http://127.0.0.1:6464/tests/http_req/" target="_blank">http://127.0.0.1:6464/tests/http_req/</a>.
   </p>
   <p class="paragraph">
-    The incoming HTTP traffic goes through the cloudi_service_http_cowboy Erlang
-    CloudI service and simply uses the URL path to send a request to
-    the subscribing CloudI service, where the prefix of the service name
-    was set in the service configuration but the suffix of the service name
-    was declared programmatically by calling the CloudI API
+    The incoming HTTP traffic goes through the <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl" target="_blank">cloudi_service_http_cowboy</a>
+    Erlang CloudI service (or <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl" target="_blank">cloudi_service_http_elli</a>)
+    and simply uses the URL path
+    to send a request to the subscribing CloudI service, where the prefix of
+    the service name was set in the service configuration but the suffix of
+    the service name was declared programmatically by calling the CloudI API
     <a href="api.html#1_subscribe">subscribe</a> function.
+    cloudi_service_http_cowboy adds the "/get" suffix
+    (when configured with "{use_method_suffix, true}", the default)
+    on the URL to make the service name for the CloudI service request
+    which contains the HTTP request headers in the RequestInfo value of the
+    service request (RequestInfo is normally used for key-value service
+    request meta-data).
   </p>
   <p class="paragraph">
     Quicker access to static files can be provided by nginx or other simple HTTP
@@ -1724,11 +1764,12 @@ sudo cloudi stop
     Other simple HTTP integration examples can be found among the integration
     tests:
     <ul>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/" target="_blank">src/tests/http HTTP Test</a>
-          (with <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/run.sh" target="_blank">curl file-based test requests</a>
-           and <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">Python</a>/<a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">Ruby</a>/<a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">Java</a> services)</li>
-      <li><a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/" target="_blank">src/tests/http_req HTTP Request Test</a>
-          (with a <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">C service</a>)</li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/" target="_blank">src/tests/http HTTP Test</a>
+          (with <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/run.sh" target="_blank">curl file-based test requests</a>
+           and <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">Python</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">Ruby</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">Java</a> services)</li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/" target="_blank">src/tests/http_req HTTP Request Test</a>
+          (with a <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">C service</a>)</li>
+      <li><a href="#4_WebSockets" target="_blank">WebSocket Integration</a></li>
     </ul>
   </p>
   <p class="paragraph">
@@ -1744,8 +1785,39 @@ sudo cloudi stop
     the service name represents a path which is a destination in a tree or
     hierarchy, then there should be no problems when adding or removing
     services dynamically (since the ACL entries will remain valid for the
-    consistent service name pattern usage).
+    consistent service name pattern usage).  URLs can be matched dynamically
+    using <a href="#4_URLregex">service name patterns</a>.
   </p>
+  <p class="paragraph">
+    The cloudi_service_http_cowboy configuration allows you to specify various
+    output formats for the incoming HTTP requests with the "output"
+    configuration value.  The possible values are:
+  </p>
+  <table><tr><td>
+    external<br />
+    (default)
+  </td><td>
+    All service request data is Erlang binaries
+    (can be sent to either internal or external services) but service
+    response data can have ResponseInfo as an Erlang list of two element
+    tuples (list({binary(),&nbsp;binary()), convenient within internal services)
+  </td></tr><tr><td>
+    internal
+  </td><td>
+    RequestInfo is sent in service requests as an Erlang list of two
+    element tuples (list({binary(),&nbsp;binary()), can only be sent to
+    internal services)
+  </td></tr><tr><td>
+    binary
+  </td><td>
+    All service request and response data are Erlang binaries
+    (can be sent to either internal or external services)
+  </td></tr><tr><td>
+    lists
+  </td><td>
+    All service request and response data are Erlang lists
+    (can only be sent to internal services)
+  </td></tr></table>
   <p>
     For more information, please refer to <a href="#4_API_HTTP">"4.1 - How do I integrate external software with CloudI?"</a>.
   </p>
@@ -1758,7 +1830,7 @@ sudo cloudi stop
     integration is provided by the cloudi_service_zeromq Erlang CloudI service.
     The CloudI configuration uses the cloudi_service_zeromq service to create
     service names that represent ZeroMQ messaging endpoints.  There are three
-    ZeroMQ configuration examples in the <a href="https://github.com/okeuday/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
+    ZeroMQ configuration examples in the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>
     which are (partially) shown below:
     <pre>
 % Zig-Zag test
@@ -1829,10 +1901,60 @@ sudo cloudi stop
   </p>
   <p class="paragraph">
   The three cloudi_service_zeromq Erlang CloudI services are used by the
-  <a href="https://github.com/okeuday/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">ZeroMQ integration test</a>
+  <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">ZeroMQ integration test</a>
   to test the ZeroMQ messaging when the integration test service starts.
   ZeroMQ configuration within CloudI is dynamic through usage of the Service
   API.  For more information, please refer to <a href="#4_API_ZeroMQ">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_FaultTolerance"></a>
+  <h3>6.8 - Service Fault-Tolerance</h3>
+  <p class="paragraph">
+    General fault-tolerance considerations within the CloudI framework are
+    described in <a href="#5_Stability">"5.3 - Stability and Fault-Tolerance Considerations"</a>.
+    State migration is not necessary for fault-tolerance within the
+    CloudI framework, as explained in <a href="#4_ServiceFail">"4.8 - How do I Migrate a Service from a Failed or Failing Node?"</a>.
+    Instead, multiple service instances are used to ensure redundancy
+    provides system fault-tolerance.
+  </p>
+  <p class="paragraph">
+    An example of <a href="http://en.wikipedia.org/wiki/Byzantine_fault_tolerance" target="_blank">Byzantine fault-tolerance</a>
+    which can be used with any CloudI service requests is provided as <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl" target="_blank">cloudi_service_quorum</a>.
+    The cloudi_service_quorum uses its configured service name prefix it
+    was started with to match any incoming service requests
+    (i.e., any service names that match the prefix) which it proxies with
+    mcast_async_active to all available service name destinations, using
+    the suffix that was matched.  So, if cloudi_service_quorum was started
+    with the prefix "/byzantine", like the example found in the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in" target="_blank">default CloudI configuration</a>:
+    <pre>
+    {internal,
+        "/byzantine",
+        cloudi_service_quorum,
+        [{quorum, byzantine}],
+        immediate_closest,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
+    </pre>
+    then all service requests that match the "/byzantine*" service name pattern
+    will be sent with mcast_async_active to the suffix matched by "*".
+    When the quorum configuration is set to 'byzantine', it makes sure that
+    less than 1/3rd of the responses are erroneous (or timeouts) before
+    responding to the original cloudi_service_quorum service request.
+    However, the 'byzantine' setting (the default) requires that at least
+    4 destination service processes exist, otherwise the original
+    cloudi_service_quorum service request will timeout.  The quorum can also
+    be configured as a percentage of the total available destination service
+    processes or as an absolute integer count of required destination service
+    processes.
+  </p>
+  <p class="paragraph">
+    For system fault-tolerance testing, the system configuration
+    options <a href="api.html#2_services_add_config_opts_monkey_latency">monkey_latency</a>
+    and <a href="api.html#2_services_add_config_opts_monkey_chaos">monkey_chaos</a>
+    can be used to simulate failures.  The simulated failures can then be used
+    with higher-level processing to make sure the system remains robust
+    during the internal failures (i.e., to prove system fault-tolerance
+    during higher-level system testing).
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
@@ -1903,42 +2025,8 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
 
-  <a name="7_PostgreSQL"></a>
-  <h3>7.3 - PostgreSQL Integration</h3>
-  <p class="paragraph">
-    The cloudi_service_db_pgsql internal service accepts requests from other
-    CloudI services.  The service expects SQL input and provides the query
-    result either as an Erlang tuple or as binary encoded data based on whether
-    the input was binary or a list.  All data coming from external services
-    is received as binary and is returned as binary that can be used to
-    determine the result of a query.  Internal services are able to send SQL
-    as an Erlang list and will then receive a tuple from the database driver
-    that is the result of the query.  The service name used to communicate
-    with the database is the configured database service name prefix with
-    the database name appended (i.e., "/db/pgsql/cloudi_tests" in the example
-    below).
-  </p>
-  <p class="paragraph">
-    An example configuration for a single database that is represented as a
-    single service is below:
-<pre>
-    {internal,
-        "/db/pgsql/",
-        cloudi_service_db_pgsql,
-        [{database, "cloudi_tests"},
-         {timeout, 20000}, % ms
-         {hostname, "127.0.0.1"},
-         {username, "cloudi"},
-         {password, "XXXXXXXXX"},
-         {port, 5432}],
-        none,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
-</pre>
-  </p>
-  <div class="top"><a href="#7_contents">Top</a></div>
-
   <a name="7_MySQL"></a>
-  <h3>7.4 - MySQL Integration</h3>
+  <h3>7.3 - MySQL Integration</h3>
   <p class="paragraph">
     The cloudi_service_db_mysql internal service accepts requests from other
     CloudI services.  The service expects SQL input and provides the query
@@ -1966,6 +2054,40 @@ sudo cloudi stop
          {username, "cloudi"},
          {password, "XXXXXXXXX"},
          {port, 3306}],
+        none,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
+</pre>
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_PostgreSQL"></a>
+  <h3>7.4 - PostgreSQL Integration</h3>
+  <p class="paragraph">
+    The cloudi_service_db_pgsql internal service accepts requests from other
+    CloudI services.  The service expects SQL input and provides the query
+    result either as an Erlang tuple or as binary encoded data based on whether
+    the input was binary or a list.  All data coming from external services
+    is received as binary and is returned as binary that can be used to
+    determine the result of a query.  Internal services are able to send SQL
+    as an Erlang list and will then receive a tuple from the database driver
+    that is the result of the query.  The service name used to communicate
+    with the database is the configured database service name prefix with
+    the database name appended (i.e., "/db/pgsql/cloudi_tests" in the example
+    below).
+  </p>
+  <p class="paragraph">
+    An example configuration for a single database that is represented as a
+    single service is below:
+<pre>
+    {internal,
+        "/db/pgsql/",
+        cloudi_service_db_pgsql,
+        [{database, "cloudi_tests"},
+         {timeout, 20000}, % ms
+         {hostname, "127.0.0.1"},
+         {username, "cloudi"},
+         {password, "XXXXXXXXX"},
+         {port, 5432}],
         none,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
 </pre>

@@ -7,9 +7,9 @@
 
 ### Get CloudI Running
 
-    $ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.0.tar.gz
-    $ tar zxvf cloudi-1.3.0.tar.gz
-    $ cd cloudi-1.3.0/src
+    $ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.1.tar.gz
+    $ tar zxvf cloudi-1.3.1.tar.gz
+    $ cd cloudi-1.3.1/src
     $ ./configure
     $ make
     $ sudo make install
@@ -56,7 +56,7 @@ The Quick Start guide below shows how to create both an internal (Erlang) CloudI
     cloudi_service_terminate(_, #state{}) ->
         ok.
     EOF
-    $ erlc -pz /usr/local/lib/cloudi-1.3.0/lib/cloudi_core-1.3.0 -pz /usr/local/lib/cloudi-1.3.0/lib/cloudi_core-1.3.0/ebin hello_world.erl
+    $ erlc -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1 -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1/ebin hello_world.erl
 
 You now have a compiled internal CloudI service which is ready to run.  You can also provide an OTP application file with the same name, if the internal CloudI service has application dependencies.
 
@@ -92,7 +92,7 @@ You can get the same behavior with an external CloudI service, which is written 
 
     $ cat << EOF > hello_world.py
     import sys
-    sys.path.append('/usr/local/lib/cloudi-1.3.0/api/python/')
+    sys.path.append('/usr/local/lib/cloudi-1.3.1/api/python/')
     from cloudi_c import API
     
     class Task(object):

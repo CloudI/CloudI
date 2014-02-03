@@ -1,0 +1,363 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_db_cassandra</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_db_cassandra</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Cassandra_Data_Module">CloudI Cassandra Data Module</a></h3>
+  
+       This ia a _very_ thin shim on top of erlang_cassandra from
+           https://github.com/dieswaytoofast/erlang_cassandra<code>Note that your results are "double ok"</code>d.
+<p>Copyright © 2013 Mahesh Paolini-Subramanya</p>
+
+<p><b>Version:</b> 1.3.0 Dec 17 2013 19:44:32
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="../../cloudi_service_db_cassandra/../cloudi_core/doc/cloudi_service.html"><tt>cloudi_service</tt></a>.</p>
+<p><b>Authors:</b> Mahesh Paolini-Subramanya (<a href="mailto:mahesh@dieswaytoofast.com"><tt>mahesh@dieswaytoofast.com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Cassandra_Data_Module">CloudI Cassandra Data Module</a></h3>
+  
+       This ia a _very_ thin shim on top of erlang_cassandra from
+           https://github.com/dieswaytoofast/erlang_cassandra<code>Note that your results are "double ok"</code>d.  i.e., whatever
+       erlang_cassandra sends back is sent back from send_sync.
+       As a result, all successful responses will be of the form
+           {ok, {ok, Response}}
+       All failures from erlang_cassandra will be of the form
+           {ok, {error, Reason}}
+       send_sync errors will be standard 'cloudi' errors
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-client_name">client_name()</a></h3>
+<p><tt>client_name() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column">column()</a></h3>
+<p><tt>column() = #column{name = undefined | string() | binary(), value = undefined | string() | binary(), timestamp = undefined | integer(), ttl = undefined | integer()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column_family">column_family()</a></h3>
+<p><tt>column_family() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column_family_definition">column_family_definition()</a></h3>
+<p><tt>column_family_definition() = #cfDef{keyspace = undefined | string() | binary(), name = undefined | string() | binary(), column_type = string() | binary(), comparator_type = string() | binary(), subcomparator_type = undefined | string() | binary(), comment = undefined | string() | binary(), read_repair_chance = undefined | float(), column_metadata = undefined | list(), gc_grace_seconds = undefined | integer(), default_validation_class = undefined | string() | binary(), id = undefined | integer(), min_compaction_threshold = undefined | integer(), max_compaction_threshold = undefined | integer(), replicate_on_write = undefined | boolean(), key_validation_class = undefined | string() | binary(), key_alias = undefined | string() | binary(), compaction_strategy = undefined | string() | binary(), compaction_strategy_options = undefined | dict(), compression_options = undefined | dict(), bloom_filter_fp_chance = undefined | float(), caching = string() | binary(), dclocal_read_repair_chance = float(), populate_io_cache_on_flush = undefined | boolean(), row_cache_size = undefined | float(), key_cache_size = undefined | float(), row_cache_save_period_in_seconds = undefined | integer(), key_cache_save_period_in_seconds = undefined | integer(), memtable_flush_after_mins = undefined | integer(), memtable_throughput_in_mb = undefined | integer(), memtable_operations_in_millions = undefined | float(), merge_shards_chance = undefined | float(), row_cache_provider = undefined | string() | binary(), row_cache_keys_to_save = undefined | integer()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column_parent">column_parent()</a></h3>
+<p><tt>column_parent() = #columnParent{column_family = undefined | string() | binary(), super_column = undefined | string() | binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column_path">column_path()</a></h3>
+<p><tt>column_path() = #columnPath{column_family = undefined | string() | binary(), super_column = undefined | string() | binary(), column = undefined | string() | binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-column_timestamp">column_timestamp()</a></h3>
+<p><tt>column_timestamp() = non_neg_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-compression">compression()</a></h3>
+<p><tt>compression() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-consistency_level">consistency_level()</a></h3>
+<p><tt>consistency_level() = non_neg_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-counter_column">counter_column()</a></h3>
+<p><tt>counter_column() = #counterColumn{name = undefined | string() | binary(), value = undefined | integer()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-cql_query">cql_query()</a></h3>
+<p><tt>cql_query() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-cql_query_id">cql_query_id()</a></h3>
+<p><tt>cql_query_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-destination">destination()</a></h3>
+<p><tt>destination() = <a href="#type-server_ref">server_ref()</a> | <a href="#type-fq_server_ref">fq_server_ref()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-dispatcher">dispatcher()</a></h3>
+<p><tt>dispatcher() = <a href="../../cloudi_service_db_cassandra/../cloudi_core/doc/cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a> | <a href="../../cloudi_service_db_cassandra/../cloudi_core/doc/cloudi.html#type-context">cloudi:context()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-error">error()</a></h3>
+<p><tt>error() = {error, Reason::term()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-fq_server_ref">fq_server_ref()</a></h3>
+<p><tt>fq_server_ref() = {<a href="#type-thrift_host">thrift_host()</a>, <a href="#type-thrift_port">thrift_port()</a>, <a href="#type-server_ref">server_ref()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-key_range">key_range()</a></h3>
+<p><tt>key_range() = #keyRange{start_key = undefined | string() | binary(), end_key = undefined | string() | binary(), start_token = undefined | string() | binary(), end_token = undefined | string() | binary(), row_filter = undefined | list(), count = integer()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-keyspace_definition">keyspace_definition()</a></h3>
+<p><tt>keyspace_definition() = #ksDef{name = undefined | string() | binary(), strategy_class = undefined | string() | binary(), strategy_options = undefined | dict(), replication_factor = undefined | integer(), cf_defs = list(), durable_writes = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-name">name()</a></h3>
+<p><tt>name() = <a href="../../cloudi_service_db_cassandra/../cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-response">response()</a></h3>
+<p><tt>response() = [tuple()] | <a href="#type-error">error()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-row_key">row_key()</a></h3>
+<p><tt>row_key() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-server_ref">server_ref()</a></h3>
+<p><tt>server_ref() = atom() | pid() | <a href="#type-client_name">client_name()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-slice_predicate">slice_predicate()</a></h3>
+<p><tt>slice_predicate() = #slicePredicate{column_names = undefined | list(), slice_range = undefined | #sliceRange{start = undefined | string() | binary(), finish = undefined | string() | binary(), reversed = boolean(), count = integer()}}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-thrift_host">thrift_host()</a></h3>
+<p><tt>thrift_host() = undefined | string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-thrift_port">thrift_port()</a></h3>
+<p><tt>thrift_port() = undefined | integer()</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add-7">add/7</a></td><td>Increment a counter column.</td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_init-3">cloudi_service_init/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_terminate-2">cloudi_service_terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#describe_cluster_name-2">describe_cluster_name/2</a></td><td>Get the cluster_name.</td></tr>
+<tr><td valign="top"><a href="#describe_keyspace-3">describe_keyspace/3</a></td><td>Describe the keyspace used by the connection.</td></tr>
+<tr><td valign="top"><a href="#describe_keyspaces-2">describe_keyspaces/2</a></td><td>Get the list of all the keyspaces.</td></tr>
+<tr><td valign="top"><a href="#describe_partitioner-2">describe_partitioner/2</a></td><td>Get the partitioner used for the cluster.</td></tr>
+<tr><td valign="top"><a href="#describe_ring-3">describe_ring/3</a></td><td>Gets the token ring; a map of ranges to host addresses.</td></tr>
+<tr><td valign="top"><a href="#describe_schema_versions-2">describe_schema_versions/2</a></td><td>Get the schema_versions used for the cluster.</td></tr>
+<tr><td valign="top"><a href="#describe_snitch-2">describe_snitch/2</a></td><td>Get the snitch used for the cluster.</td></tr>
+<tr><td valign="top"><a href="#describe_version-2">describe_version/2</a></td><td>Get the Thrift API version.</td></tr>
+<tr><td valign="top"><a href="#execute_cql_query-4">execute_cql_query/4</a></td><td>Execute a CQL query.</td></tr>
+<tr><td valign="top"><a href="#execute_prepared_cql_query-4">execute_prepared_cql_query/4</a></td><td>Execute a prepared a CQL query.</td></tr>
+<tr><td valign="top"><a href="#get-6">get/6</a></td><td>Get a column.</td></tr>
+<tr><td valign="top"><a href="#get_count-7">get_count/7</a></td><td>Count columns based on a slice
+       WARNING: NOT O(1).</td></tr>
+<tr><td valign="top"><a href="#get_indexed_slices-7">get_indexed_slices/7</a></td><td>Get a list of slices using IndexRange.</td></tr>
+<tr><td valign="top"><a href="#get_range_slices-7">get_range_slices/7</a></td><td>Get a list of slices for the keys within the specified KeyRange.</td></tr>
+<tr><td valign="top"><a href="#get_slice-7">get_slice/7</a></td><td>Get a group of columns based on a slice.</td></tr>
+<tr><td valign="top"><a href="#insert-7">insert/7</a></td><td>Insert a column.</td></tr>
+<tr><td valign="top"><a href="#multiget_count-7">multiget_count/7</a></td><td>Count columns based on a slice and a list of rows
+       WARNING: NOT O(1).</td></tr>
+<tr><td valign="top"><a href="#multiget_slice-7">multiget_slice/7</a></td><td>Get a group of columns based on a slice and a list of rows.</td></tr>
+<tr><td valign="top"><a href="#prepare_cql_query-4">prepare_cql_query/4</a></td><td>Prepare a CQL query.</td></tr>
+<tr><td valign="top"><a href="#remove-7">remove/7</a></td><td>Remove data from the row specified by key at the granularity
+       specified by column_path, and the given timestamp.</td></tr>
+<tr><td valign="top"><a href="#remove_counter-6">remove_counter/6</a></td><td>Remove a counter.</td></tr>
+<tr><td valign="top"><a href="#set_keyspace-3">set_keyspace/3</a></td><td>Set the keyspace to be used by the connection.</td></tr>
+<tr><td valign="top"><a href="#system_add_column_family-3">system_add_column_family/3</a></td><td>Add a column family.</td></tr>
+<tr><td valign="top"><a href="#system_add_keyspace-3">system_add_keyspace/3</a></td><td>Add a keyspace.</td></tr>
+<tr><td valign="top"><a href="#system_describe_column_family-4">system_describe_column_family/4</a></td><td>Get the column family definition.</td></tr>
+<tr><td valign="top"><a href="#system_drop_column_family-4">system_drop_column_family/4</a></td><td>Drop a column family.</td></tr>
+<tr><td valign="top"><a href="#system_drop_keyspace-3">system_drop_keyspace/3</a></td><td>Remove a keyspace.</td></tr>
+<tr><td valign="top"><a href="#system_update_column_family-3">system_update_column_family/3</a></td><td>Update a column family.</td></tr>
+<tr><td valign="top"><a href="#system_update_keyspace-3">system_update_keyspace/3</a></td><td>Update a keyspace.</td></tr>
+<tr><td valign="top"><a href="#truncate-4">truncate/4</a></td><td>Remove all rows from a column family.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add-7">add/7</a></h3>
+<div class="spec">
+<p><tt>add(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, CounterColumn::<a href="#type-counter_column">counter_column()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Increment a counter column</p>
+
+<h3 class="function"><a name="cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_info(Request, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, State, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_init-3">cloudi_service_init/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_init(Args, Prefix, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_terminate-2">cloudi_service_terminate/2</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_terminate(X1, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="describe_cluster_name-2">describe_cluster_name/2</a></h3>
+<div class="spec">
+<p><tt>describe_cluster_name(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the cluster_name</p>
+
+<h3 class="function"><a name="describe_keyspace-3">describe_keyspace/3</a></h3>
+<div class="spec">
+<p><tt>describe_keyspace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Describe the keyspace used by the connection</p>
+
+<h3 class="function"><a name="describe_keyspaces-2">describe_keyspaces/2</a></h3>
+<div class="spec">
+<p><tt>describe_keyspaces(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the list of all the keyspaces</p>
+
+<h3 class="function"><a name="describe_partitioner-2">describe_partitioner/2</a></h3>
+<div class="spec">
+<p><tt>describe_partitioner(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the partitioner used for the cluster</p>
+
+<h3 class="function"><a name="describe_ring-3">describe_ring/3</a></h3>
+<div class="spec">
+<p><tt>describe_ring(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Gets the token ring; a map of ranges to host addresses</p>
+
+<h3 class="function"><a name="describe_schema_versions-2">describe_schema_versions/2</a></h3>
+<div class="spec">
+<p><tt>describe_schema_versions(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the schema_versions used for the cluster</p>
+
+<h3 class="function"><a name="describe_snitch-2">describe_snitch/2</a></h3>
+<div class="spec">
+<p><tt>describe_snitch(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the snitch used for the cluster</p>
+
+<h3 class="function"><a name="describe_version-2">describe_version/2</a></h3>
+<div class="spec">
+<p><tt>describe_version(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the Thrift API version</p>
+
+<h3 class="function"><a name="execute_cql_query-4">execute_cql_query/4</a></h3>
+<div class="spec">
+<p><tt>execute_cql_query(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, CqlQuery::<a href="#type-cql_query">cql_query()</a>, Compression::<a href="#type-compression">compression()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Execute a CQL query</p>
+
+<h3 class="function"><a name="execute_prepared_cql_query-4">execute_prepared_cql_query/4</a></h3>
+<div class="spec">
+<p><tt>execute_prepared_cql_query(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, CqlQuery::<a href="#type-cql_query_id">cql_query_id()</a>, Values::list()) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Execute a prepared a CQL query</p>
+
+<h3 class="function"><a name="get-6">get/6</a></h3>
+<div class="spec">
+<p><tt>get(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnPath::<a href="#type-column_path">column_path()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get a column</p>
+
+<h3 class="function"><a name="get_count-7">get_count/7</a></h3>
+<div class="spec">
+<p><tt>get_count(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, SlicePredicate::<a href="#type-slice_predicate">slice_predicate()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Count columns based on a slice
+       WARNING: NOT O(1)</p>
+
+<h3 class="function"><a name="get_indexed_slices-7">get_indexed_slices/7</a></h3>
+<div class="spec">
+<p><tt>get_indexed_slices(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, IndexClause::<a href="#type-slice_predicate">slice_predicate()</a>, SlicePredicate::<a href="#type-key_range">key_range()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get a list of slices using IndexRange</p>
+
+<h3 class="function"><a name="get_range_slices-7">get_range_slices/7</a></h3>
+<div class="spec">
+<p><tt>get_range_slices(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, SlicePredicate::<a href="#type-slice_predicate">slice_predicate()</a>, KeyRange::<a href="#type-key_range">key_range()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get a list of slices for the keys within the specified KeyRange</p>
+
+<h3 class="function"><a name="get_slice-7">get_slice/7</a></h3>
+<div class="spec">
+<p><tt>get_slice(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, SlicePredicate::<a href="#type-slice_predicate">slice_predicate()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get a group of columns based on a slice</p>
+
+<h3 class="function"><a name="insert-7">insert/7</a></h3>
+<div class="spec">
+<p><tt>insert(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnParent::<a href="#type-column_parent">column_parent()</a>, Column::<a href="#type-column">column()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Insert a column</p>
+
+<h3 class="function"><a name="multiget_count-7">multiget_count/7</a></h3>
+<div class="spec">
+<p><tt>multiget_count(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKeys::[<a href="#type-row_key">row_key()</a>], ColumnParent::<a href="#type-column_parent">column_parent()</a>, SlicePredicate::<a href="#type-slice_predicate">slice_predicate()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Count columns based on a slice and a list of rows
+       WARNING: NOT O(1)</p>
+
+<h3 class="function"><a name="multiget_slice-7">multiget_slice/7</a></h3>
+<div class="spec">
+<p><tt>multiget_slice(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKeys::[<a href="#type-row_key">row_key()</a>], ColumnParent::<a href="#type-column_parent">column_parent()</a>, SlicePredicate::<a href="#type-slice_predicate">slice_predicate()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get a group of columns based on a slice and a list of rows</p>
+
+<h3 class="function"><a name="prepare_cql_query-4">prepare_cql_query/4</a></h3>
+<div class="spec">
+<p><tt>prepare_cql_query(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, CqlQuery::<a href="#type-cql_query">cql_query()</a>, Compression::<a href="#type-compression">compression()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Prepare a CQL query</p>
+
+<h3 class="function"><a name="remove-7">remove/7</a></h3>
+<div class="spec">
+<p><tt>remove(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnPath::<a href="#type-column_path">column_path()</a>, ColumnTimestamp::<a href="#type-column_timestamp">column_timestamp()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Remove data from the row specified by key at the granularity
+       specified by column_path, and the given timestamp</p>
+
+<h3 class="function"><a name="remove_counter-6">remove_counter/6</a></h3>
+<div class="spec">
+<p><tt>remove_counter(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, RowKey::<a href="#type-row_key">row_key()</a>, ColumnPath::<a href="#type-column_path">column_path()</a>, ConsistencyLevel::<a href="#type-consistency_level">consistency_level()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Remove a counter</p>
+
+<h3 class="function"><a name="set_keyspace-3">set_keyspace/3</a></h3>
+<div class="spec">
+<p><tt>set_keyspace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Set the keyspace to be used by the connection</p>
+
+<h3 class="function"><a name="system_add_column_family-3">system_add_column_family/3</a></h3>
+<div class="spec">
+<p><tt>system_add_column_family(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, ColumnFamilyDefinition::<a href="#type-column_family_definition">column_family_definition()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Add a column family</p>
+
+<h3 class="function"><a name="system_add_keyspace-3">system_add_keyspace/3</a></h3>
+<div class="spec">
+<p><tt>system_add_keyspace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, KeyspaceDefinition::<a href="#type-keyspace_definition">keyspace_definition()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Add a keyspace</p>
+
+<h3 class="function"><a name="system_describe_column_family-4">system_describe_column_family/4</a></h3>
+<div class="spec">
+<p><tt>system_describe_column_family(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, ColumnFamily::<a href="#type-column_family">column_family()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Get the column family definition</p>
+
+<h3 class="function"><a name="system_drop_column_family-4">system_drop_column_family/4</a></h3>
+<div class="spec">
+<p><tt>system_drop_column_family(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, ColumnFamily::<a href="#type-column_family">column_family()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Drop a column family</p>
+
+<h3 class="function"><a name="system_drop_keyspace-3">system_drop_keyspace/3</a></h3>
+<div class="spec">
+<p><tt>system_drop_keyspace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Remove a keyspace</p>
+
+<h3 class="function"><a name="system_update_column_family-3">system_update_column_family/3</a></h3>
+<div class="spec">
+<p><tt>system_update_column_family(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, ColumnFamilyDefinition::<a href="#type-column_family_definition">column_family_definition()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Update a column family</p>
+
+<h3 class="function"><a name="system_update_keyspace-3">system_update_keyspace/3</a></h3>
+<div class="spec">
+<p><tt>system_update_keyspace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, KeyspaceDefinition::<a href="#type-keyspace_definition">keyspace_definition()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Update a keyspace</p>
+
+<h3 class="function"><a name="truncate-4">truncate/4</a></h3>
+<div class="spec">
+<p><tt>truncate(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-name">name()</a>, Destination::<a href="#type-destination">destination()</a>, ColumnFamily::<a href="#type-column_family">column_family()</a>) -&gt; <a href="#type-response">response()</a></tt><br></p>
+</div><p>Remove all rows from a column family</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Dec 17 2013, 19:44:32.</i></p>
+</body>
+</html>

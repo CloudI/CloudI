@@ -1,0 +1,334 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_db_memcached</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_db_memcached</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Memcached_Data_Module">CloudI Memcached Data Module</a></h3>.
+<p>Copyright © 2009-2013 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.0 Sep 30 2013 13:30:52
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="../../cloudi_core/doc/cloudi_service.html"><tt>cloudi_service</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Memcached_Data_Module">CloudI Memcached Data Module</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-dispatcher">dispatcher()</a></h3>
+<p><tt>dispatcher() = <a href="../../cloudi_core/doc/cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a> | <a href="../../cloudi_core/doc/cloudi.html#type-context">cloudi:context()</a></tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add-4">add/4</a></td><td>
+  <h4><a name="Store_a_binary_value_for_a_key_if_the_server_doesn't_hold_data_for_the_key.">Store a binary value for a key if the server doesn't hold data for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#add-5">add/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#add_exp-5">add_exp/5</a></td><td>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key_if_the_server_doesn't_hold_data_for_the_key.">Store a binary value with an expiration for a key if the server doesn't hold data for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#add_exp-6">add_exp/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#append-4">append/4</a></td><td>
+  <h4><a name="Add_the_binary_value_after_the_existing_value_for_the_key.">Add the binary value after the existing value for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#append-5">append/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_init-3">cloudi_service_init/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_terminate-2">cloudi_service_terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#decrement-6">decrement/6</a></td><td>
+  <h4><a name="Decrement_an_integer_value_stored_for_a_key_with_the_provided_initial_value_and_expiration.">Decrement an integer value stored for a key with the provided initial value and expiration.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#decrement-7">decrement/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#delete-3">delete/3</a></td><td>
+  <h4><a name="Remove_the_binary_value_stored_for_a_key.">Remove the binary value stored for a key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#delete-4">delete/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#flush-2">flush/2</a></td><td>
+  <h4><a name="Invalidate_all_data_currently_stored.">Invalidate all data currently stored.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#flush-3">flush/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#flush_exp-3">flush_exp/3</a></td><td>
+  <h4><a name="Invalidate_all_data_currently_stored_after_an_expiration.">Invalidate all data currently stored after an expiration.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#flush_exp-4">flush_exp/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get-3">get/3</a></td><td>
+  <h4><a name="Get_the_binary_value_stored_for_the_key.">Get the binary value stored for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get-4">get/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_many-3">get_many/3</a></td><td>
+  <h4><a name="Get_a_list_of_binary_values_for_a_list_of_keys.">Get a list of binary values for a list of keys.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#get_many-4">get_many/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#increment-6">increment/6</a></td><td>
+  <h4><a name="Increment_an_integer_value_stored_for_a_key_with_the_provided_initial_value_and_expiration.">Increment an integer value stored for a key with the provided initial value and expiration.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#increment-7">increment/7</a></td><td></td></tr>
+<tr><td valign="top"><a href="#prepend-4">prepend/4</a></td><td>
+  <h4><a name="Add_the_binary_value_before_the_existing_value_for_the_key.">Add the binary value before the existing value for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#prepend-5">prepend/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#quit-2">quit/2</a></td><td>
+  <h4><a name="Make_the_server_close_the_connection.">Make the server close the connection.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#quit-3">quit/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#replace-4">replace/4</a></td><td>
+  <h4><a name="Store_a_binary_value_for_a_key_if_the_server_already_holds_data_for_the_key.">Store a binary value for a key if the server already holds data for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#replace-5">replace/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#replace_exp-5">replace_exp/5</a></td><td>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key_if_the_server_already_holds_data_for_the_key.">Store a binary value with an expiration for a key if the server already holds data for the key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#replace_exp-6">replace_exp/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set-4">set/4</a></td><td>
+  <h4><a name="Store_a_binary_value_for_a_key.">Store a binary value for a key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#set-5">set/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set_exp-5">set_exp/5</a></td><td>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key.">Store a binary value with an expiration for a key.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#set_exp-6">set_exp/6</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stats-2">stats/2</a></td><td>
+  <h4><a name="Get_internal_server_statistics">Get internal server statistics</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#stats-3">stats/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#version-2">version/2</a></td><td>
+  <h4><a name="Get_the_server's_version_string.">Get the server's version string.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#version-3">version/3</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add-4">add/4</a></h3>
+<div class="spec">
+<p><tt>add(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_for_a_key_if_the_server_doesn't_hold_data_for_the_key.">Store a binary value for a key if the server doesn't hold data for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="add-5">add/5</a></h3>
+<div class="spec">
+<p><tt>add(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="add_exp-5">add_exp/5</a></h3>
+<div class="spec">
+<p><tt>add_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key_if_the_server_doesn't_hold_data_for_the_key.">Store a binary value with an expiration for a key if the server doesn't hold data for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="add_exp-6">add_exp/6</a></h3>
+<div class="spec">
+<p><tt>add_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="append-4">append/4</a></h3>
+<div class="spec">
+<p><tt>append(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Add_the_binary_value_after_the_existing_value_for_the_key.">Add the binary value after the existing value for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="append-5">append/5</a></h3>
+<div class="spec">
+<p><tt>append(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_info(Request, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, State, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_init-3">cloudi_service_init/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_init(X1, Prefix, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_terminate-2">cloudi_service_terminate/2</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_terminate(X1, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="decrement-6">decrement/6</a></h3>
+<div class="spec">
+<p><tt>decrement(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Initial::binary(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Decrement_an_integer_value_stored_for_a_key_with_the_provided_initial_value_and_expiration.">Decrement an integer value stored for a key with the provided initial value and expiration.</a></h4>
+</p>
+
+<h3 class="function"><a name="decrement-7">decrement/7</a></h3>
+<div class="spec">
+<p><tt>decrement(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Initial::binary(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="delete-3">delete/3</a></h3>
+<div class="spec">
+<p><tt>delete(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Remove_the_binary_value_stored_for_a_key.">Remove the binary value stored for a key.</a></h4>
+</p>
+
+<h3 class="function"><a name="delete-4">delete/4</a></h3>
+<div class="spec">
+<p><tt>delete(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="flush-2">flush/2</a></h3>
+<div class="spec">
+<p><tt>flush(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Invalidate_all_data_currently_stored.">Invalidate all data currently stored.</a></h4>
+</p>
+
+<h3 class="function"><a name="flush-3">flush/3</a></h3>
+<div class="spec">
+<p><tt>flush(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="flush_exp-3">flush_exp/3</a></h3>
+<div class="spec">
+<p><tt>flush_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Invalidate_all_data_currently_stored_after_an_expiration.">Invalidate all data currently stored after an expiration.</a></h4>
+</p>
+
+<h3 class="function"><a name="flush_exp-4">flush_exp/4</a></h3>
+<div class="spec">
+<p><tt>flush_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="get-3">get/3</a></h3>
+<div class="spec">
+<p><tt>get(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_binary_value_stored_for_the_key.">Get the binary value stored for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="get-4">get/4</a></h3>
+<div class="spec">
+<p><tt>get(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="get_many-3">get_many/3</a></h3>
+<div class="spec">
+<p><tt>get_many(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Keys::list()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Get_a_list_of_binary_values_for_a_list_of_keys.">Get a list of binary values for a list of keys.</a></h4>
+</p>
+
+<h3 class="function"><a name="get_many-4">get_many/4</a></h3>
+<div class="spec">
+<p><tt>get_many(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Keys::list(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="increment-6">increment/6</a></h3>
+<div class="spec">
+<p><tt>increment(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Initial::binary(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Increment_an_integer_value_stored_for_a_key_with_the_provided_initial_value_and_expiration.">Increment an integer value stored for a key with the provided initial value and expiration.</a></h4>
+</p>
+
+<h3 class="function"><a name="increment-7">increment/7</a></h3>
+<div class="spec">
+<p><tt>increment(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Initial::binary(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="prepend-4">prepend/4</a></h3>
+<div class="spec">
+<p><tt>prepend(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Add_the_binary_value_before_the_existing_value_for_the_key.">Add the binary value before the existing value for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="prepend-5">prepend/5</a></h3>
+<div class="spec">
+<p><tt>prepend(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="quit-2">quit/2</a></h3>
+<div class="spec">
+<p><tt>quit(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Make_the_server_close_the_connection.">Make the server close the connection.</a></h4>
+</p>
+
+<h3 class="function"><a name="quit-3">quit/3</a></h3>
+<div class="spec">
+<p><tt>quit(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="replace-4">replace/4</a></h3>
+<div class="spec">
+<p><tt>replace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_for_a_key_if_the_server_already_holds_data_for_the_key.">Store a binary value for a key if the server already holds data for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="replace-5">replace/5</a></h3>
+<div class="spec">
+<p><tt>replace(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="replace_exp-5">replace_exp/5</a></h3>
+<div class="spec">
+<p><tt>replace_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key_if_the_server_already_holds_data_for_the_key.">Store a binary value with an expiration for a key if the server already holds data for the key.</a></h4>
+</p>
+
+<h3 class="function"><a name="replace_exp-6">replace_exp/6</a></h3>
+<div class="spec">
+<p><tt>replace_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="set-4">set/4</a></h3>
+<div class="spec">
+<p><tt>set(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_for_a_key.">Store a binary value for a key.</a></h4>
+</p>
+
+<h3 class="function"><a name="set-5">set/5</a></h3>
+<div class="spec">
+<p><tt>set(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="set_exp-5">set_exp/5</a></h3>
+<div class="spec">
+<p><tt>set_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Store_a_binary_value_with_an_expiration_for_a_key.">Store a binary value with an expiration for a key.</a></h4>
+</p>
+
+<h3 class="function"><a name="set_exp-6">set_exp/6</a></h3>
+<div class="spec">
+<p><tt>set_exp(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Key::any(), Value::binary(), Expiration::non_neg_integer(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="stats-2">stats/2</a></h3>
+<div class="spec">
+<p><tt>stats(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Get_internal_server_statistics">Get internal server statistics</a></h4>
+</p>
+
+<h3 class="function"><a name="stats-3">stats/3</a></h3>
+<div class="spec">
+<p><tt>stats(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="version-2">version/2</a></h3>
+<div class="spec">
+<p><tt>version(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_server's_version_string.">Get the server's version string.</a></h4>
+</p>
+
+<h3 class="function"><a name="version-3">version/3</a></h3>
+<div class="spec">
+<p><tt>version(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::string(), Timeout::pos_integer()) -&gt; any()</tt><br></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 30 2013, 13:30:52.</i></p>
+</body>
+</html>

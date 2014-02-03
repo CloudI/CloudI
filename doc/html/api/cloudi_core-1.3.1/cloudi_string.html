@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_string</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_string</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="String_extensions">String extensions</a></h3>.
+<p>Copyright © 2009-2013 Michael Truog</p>
+
+<p><b>Version:</b> 1.2.0 Jan 29 2014 20:02:11
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="String_extensions">String extensions</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#afterl-2">afterl/2</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the string that occurs after a character, otherwise return an empty string, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#afterl-3">afterl/3</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the string that occurs after a character, otherwise return based on the failure atom, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#afterr-2">afterr/2</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the string that occurs after a character, otherwise return an empty string, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#afterr-3">afterr/3</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the string that occurs after a character, otherwise return based on the failure atom, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#beforel-2">beforel/2</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the string that occurs before a character, otherwise return an empty string, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#beforel-3">beforel/3</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the string that occurs before a character, otherwise return based on the failure atom, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#beforer-2">beforer/2</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the string that occurs before a character, otherwise return an empty string, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#beforer-3">beforer/3</a></td><td>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the string that occurs before a character, otherwise return based on the failure atom, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#binary_to_term-1">binary_to_term/1</a></td><td>
+  <h4><a name="Convert_a_binary_string_to_an_Erlang_term.">Convert a binary string to an Erlang term.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#format-2">format/2</a></td><td>
+  <h4><a name="Format_a_string_based_on_the_arguments.">Format a string based on the arguments.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#format_to_binary-2">format_to_binary/2</a></td><td>
+  <h4><a name="Format_a_string_based_on_the_arguments,_stored_as_a_binary.">Format a string based on the arguments, stored as a binary.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#format_to_list-2">format_to_list/2</a></td><td>
+  <h4><a name="Format_a_string_based_on_the_arguments,_stored_as_a_list.">Format a string based on the arguments, stored as a list.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#list_to_term-1">list_to_term/1</a></td><td>
+  <h4><a name="Convert_a_string_to_an_Erlang_term.">Convert a string to an Erlang term.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#splitl-2">splitl/2</a></td><td>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#splitl-3">splitl/3</a></td><td>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing left to right.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#splitr-2">splitr/2</a></td><td>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#splitr-3">splitr/3</a></td><td>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing right to left.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#term_to_binary-1">term_to_binary/1</a></td><td>
+  <h4><a name="Convert_an_Erlang_term_to_a_binary_string.">Convert an Erlang term to a binary string.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#term_to_list-1">term_to_list/1</a></td><td>
+  <h4><a name="Convert_an_Erlang_term_to_a_string.">Convert an Erlang term to a string.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="afterl-2">afterl/2</a></h3>
+<div class="spec">
+<p><tt>afterl(Char::pos_integer(), Rest::string()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the string that occurs after a character, otherwise return an empty string, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="afterl-3">afterl/3</a></h3>
+<div class="spec">
+<p><tt>afterl(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the string that occurs after a character, otherwise return based on the failure atom, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="afterr-2">afterr/2</a></h3>
+<div class="spec">
+<p><tt>afterr(Char::pos_integer(), Input::string()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the string that occurs after a character, otherwise return an empty string, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="afterr-3">afterr/3</a></h3>
+<div class="spec">
+<p><tt>afterr(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_after_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the string that occurs after a character, otherwise return based on the failure atom, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="beforel-2">beforel/2</a></h3>
+<div class="spec">
+<p><tt>beforel(Char::pos_integer(), Input::string()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the string that occurs before a character, otherwise return an empty string, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="beforel-3">beforel/3</a></h3>
+<div class="spec">
+<p><tt>beforel(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the string that occurs before a character, otherwise return based on the failure atom, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="beforer-2">beforer/2</a></h3>
+<div class="spec">
+<p><tt>beforer(Char::pos_integer(), Input::string()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the string that occurs before a character, otherwise return an empty string, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="beforer-3">beforer/3</a></h3>
+<div class="spec">
+<p><tt>beforer(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_string_that_occurs_before_a_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the string that occurs before a character, otherwise return based on the failure atom, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="binary_to_term-1">binary_to_term/1</a></h3>
+<div class="spec">
+<p><tt>binary_to_term(B::binary()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Convert_a_binary_string_to_an_Erlang_term.">Convert a binary string to an Erlang term.</a></h4>
+</p>
+
+<h3 class="function"><a name="format-2">format/2</a></h3>
+<div class="spec">
+<p><tt>format(L::string(), A::list()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Format_a_string_based_on_the_arguments.">Format a string based on the arguments.</a></h4>
+</p>
+
+<h3 class="function"><a name="format_to_binary-2">format_to_binary/2</a></h3>
+<div class="spec">
+<p><tt>format_to_binary(L::string(), A::list()) -&gt; binary()</tt><br></p>
+</div><p>
+  <h4><a name="Format_a_string_based_on_the_arguments,_stored_as_a_binary.">Format a string based on the arguments, stored as a binary.</a></h4>
+</p>
+
+<h3 class="function"><a name="format_to_list-2">format_to_list/2</a></h3>
+<div class="spec">
+<p><tt>format_to_list(L::string(), A::list()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Format_a_string_based_on_the_arguments,_stored_as_a_list.">Format a string based on the arguments, stored as a list.</a></h4>
+</p>
+
+<h3 class="function"><a name="list_to_term-1">list_to_term/1</a></h3>
+<div class="spec">
+<p><tt>list_to_term(L::string()) -&gt; any()</tt><br></p>
+</div><p>
+  <h4><a name="Convert_a_string_to_an_Erlang_term.">Convert a string to an Erlang term.</a></h4>
+</p>
+
+<h3 class="function"><a name="splitl-2">splitl/2</a></h3>
+<div class="spec">
+<p><tt>splitl(Char::pos_integer(), Input::string()) -&gt; {string(), string()}</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_an_empty_string,_when_traversing_left_to_right.">Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="splitl-3">splitl/3</a></h3>
+<div class="spec">
+<p><tt>splitl(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; {string(), string()}</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_left_to_right.">Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing left to right.</a></h4>
+</p>
+
+<h3 class="function"><a name="splitr-2">splitr/2</a></h3>
+<div class="spec">
+<p><tt>splitr(Char::pos_integer(), Input::string()) -&gt; {string(), string()}</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_an_empty_string,_when_traversing_right_to_left.">Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="splitr-3">splitr/3</a></h3>
+<div class="spec">
+<p><tt>splitr(Char::pos_integer(), Input::string(), X3::empty | input) -&gt; {string(), string()}</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_two_strings_split_at_the_first_occurrence_of_the_character,_otherwise_return_based_on_the_failure_atom,_when_traversing_right_to_left.">Return the two strings split at the first occurrence of the character, otherwise return based on the failure atom, when traversing right to left.</a></h4>
+</p>
+
+<h3 class="function"><a name="term_to_binary-1">term_to_binary/1</a></h3>
+<div class="spec">
+<p><tt>term_to_binary(T) -&gt; any()</tt></p>
+</div><p>
+  <h4><a name="Convert_an_Erlang_term_to_a_binary_string.">Convert an Erlang term to a binary string.</a></h4>
+</p>
+
+<h3 class="function"><a name="term_to_list-1">term_to_list/1</a></h3>
+<div class="spec">
+<p><tt>term_to_list(T::any()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Convert_an_Erlang_term_to_a_string.">Convert an Erlang term to a string.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 29 2014, 20:02:11.</i></p>
+</body>
+</html>
