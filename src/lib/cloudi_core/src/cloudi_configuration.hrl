@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,14 +43,33 @@
 
 -include("cloudi_configuration_defaults.hrl").
 
+-record(config_logging_syslog,
+    {
+        identity = "CloudI"
+            :: string(),
+        facility = local0
+            :: syslog:facility(),
+        % The mapping for CloudI levels to syslog priorities is:
+        % fatal  -> emerg    (0)
+        % error  -> err      (3)
+        % warn   -> warning  (4)
+        % info   -> info     (6)
+        % debug  -> debug    (7)
+        % trace  -> 8
+        level = trace
+            :: cloudi_service_api:loglevel()
+    }).
+
 -record(config_logging,
     {
+        file = "logs/cloudi.log"
+            :: undefined | file:filename(),
         level = trace
             :: cloudi_service_api:loglevel(),
-        file = "logs/cloudi.log"
-            :: file:filename(),
         redirect = undefined
-            :: undefined | node()
+            :: undefined | node(),
+        syslog = undefined
+            :: undefined | #config_logging_syslog{}
     }).
 
 -record(config_service_options,

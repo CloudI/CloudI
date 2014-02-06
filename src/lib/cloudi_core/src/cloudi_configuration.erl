@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configuration).
@@ -530,40 +530,68 @@ new([{'logging', [T | _] = Value} | Terms], Config)
     Defaults = [
         {level, (Config#config.logging)#config_logging.level},
         {file, (Config#config.logging)#config_logging.file},
-        {redirect, (Config#config.logging)#config_logging.redirect}],
+        {redirect, (Config#config.logging)#config_logging.redirect},
+        {syslog, (Config#config.logging)#config_logging.syslog}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _ | _]
+        [Level, _, _, _ | _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
-                      (Level =:= off)) ->
+                      (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_level_invalid, Level}};
-        [_, File, _ | _]
-            when not (is_list(File) andalso is_integer(hd(File))) ->
+        [_, File, _, _ | _]
+            when not ((is_list(File) andalso
+                       (length(File) > 0) andalso
+                       is_integer(hd(File))) orelse
+                      (File =:= undefined))->
             {error, {logging_file_invalid, File}};
-        [Level, File, Redirect] ->
-            if
-                Redirect =:= undefined ->
+        [_, _, Redirect, _ | _]
+            when not is_atom(Redirect) ->
+            {error, {logging_redirect_invalid, Redirect}};
+        [_, _, _, Syslog | _]
+            when not ((Syslog =:= undefined) orelse
+                      is_list(Syslog)) ->
+            {error, {logging_syslog_invalid, Syslog}};
+        [Level, File, Redirect, Syslog] ->
+            NewFile = if
+                Level =:= undefined ->
+                    undefined;
+                true ->
+                    File
+            end,
+            NewLevel = if
+                File =:= undefined ->
+                    undefined;
+                true ->
+                    Level
+            end,
+            case logging_syslog_validate(Syslog) of
+                {ok, SyslogConfig}
+                when Redirect =:= undefined ->
                     new(Terms,
                         Config#config{
                             logging = #config_logging{
-                                level = Level,
-                                file = File,
-                                redirect = Redirect}});
-                true ->
+                                level = NewLevel,
+                                file = NewFile,
+                                redirect = Redirect,
+                                syslog = SyslogConfig}});
+                {ok, SyslogConfig} ->
                     case nodes_validate([Redirect]) of
                         ok ->
                             new(Terms,
                                 Config#config{
                                     logging = #config_logging{
-                                        level = Level,
-                                        file = File,
-                                        redirect = Redirect}});
+                                        level = NewLevel,
+                                        file = NewFile,
+                                        redirect = Redirect,
+                                        syslog = SyslogConfig}});
                         {error, _} = Error ->
                             Error
-                    end
+                    end;
+                {error, _} = Error ->
+                    Error
             end;
-        [_, _, _ | Extra] ->
+        [_, _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end;
 new([Term | _], _) ->
@@ -644,7 +672,7 @@ services_acl_update_list([E | L], Output, Lookup)
             {error, {acl_not_found, E}}
     end;
 services_acl_update_list([E | L], Output, Lookup)
-    when is_list(E), is_integer(hd(E)) ->
+    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern(E) of
         true ->
             services_acl_update_list(L, [E | Output], Lookup);
@@ -868,11 +896,15 @@ services_validate([_ | _] = Services, UUID) ->
 
 -define(CLOUDI_CORE_SUPPORT_INTERNAL,
 services_validate([#internal{prefix = Prefix} | _], _, _, _)
-    when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
+    when not (is_list(Prefix) andalso
+              (length(Prefix) > 0) andalso
+              is_integer(hd(Prefix))) ->
     {error, {service_internal_prefix_invalid, Prefix}};
 services_validate([#internal{module = Module} | _], _, _, _)
     when not (is_atom(Module) or
-              (is_list(Module) andalso is_integer(hd(Module)))) ->
+              (is_list(Module) andalso
+               (length(Module) > 0) andalso
+               is_integer(hd(Module)))) ->
     {error, {service_internal_module_invalid, Module}};
 services_validate([#internal{args = Args} | _], _, _, _)
     when not is_list(Args) ->
@@ -981,14 +1013,19 @@ services_validate([#internal{
     end).
 -define(CLOUDI_CORE_SUPPORT_EXTERNAL,
 services_validate([#external{prefix = Prefix} | _], _, _, _)
-    when not (is_list(Prefix) andalso is_integer(hd(Prefix))) ->
+    when not (is_list(Prefix) andalso
+              (length(Prefix) > 0) andalso
+              is_integer(hd(Prefix))) ->
     {error, {service_external_prefix_invalid, Prefix}};
 services_validate([#external{file_path = FilePath} | _], _, _, _)
-    when not (is_list(FilePath) andalso is_integer(hd(FilePath))) ->
+    when not (is_list(FilePath) andalso
+              (length(FilePath) > 0) andalso
+              is_integer(hd(FilePath))) ->
     {error, {service_external_file_path_invalid, FilePath}};
 services_validate([#external{args = Args} | _], _, _, _)
     when not (is_list(Args) andalso
-              (Args == "" orelse is_integer(hd(Args)))) ->
+              ((Args == "") orelse
+               is_integer(hd(Args)))) ->
     {error, {service_external_args_invalid, Args}};
 services_validate([#external{env = Env} | _], _, _, _)
     when not is_list(Env) ->
@@ -1743,7 +1780,8 @@ acl_lookup_add(L, OldLookup) ->
 acl_store([], Lookup) ->
     {ok, Lookup};
 acl_store([{Key, [E | _] = Value} | L], Lookup)
-    when is_atom(E); (is_list(E) andalso is_integer(hd(E))) ->
+    when is_atom(E);
+         (is_list(E) andalso (length(E) > 0) andalso is_integer(hd(E))) ->
     acl_store(L, dict:store(Key, Value, Lookup));
 acl_store([H | _], _) ->
     {error, {acl_invalid, H}}.
@@ -1781,7 +1819,7 @@ acl_expand_values([E | L], Output, Path, Key, Lookup)
             end
     end;
 acl_expand_values([E | L], Output, Path, Key, Lookup)
-    when is_list(E), is_integer(hd(E)) ->
+    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern(E) of
         true ->
             acl_expand_values(L, [E | Output], Path, Key, Lookup);
@@ -1881,6 +1919,15 @@ services_restart_all([Service | RestartServices], Timeout) ->
             Error
     end.
 
+service_name_valid(Name, ErrorReason) ->
+    try cloudi_x_trie:is_pattern(Name) of
+        _ ->
+            ok
+    catch
+        exit:badarg ->
+            {error, {ErrorReason, Name}}
+    end.
+
 nodes_validate([]) ->
     ok;
 nodes_validate([A | As])
@@ -1907,12 +1954,48 @@ nodes_remove_elements([A | As], Nodes)
 nodes_remove_elements([A | _], _) ->
     {error, {node_invalid, A}}.
 
-service_name_valid(Name, ErrorReason) ->
-    try cloudi_x_trie:is_pattern(Name) of
-        _ ->
-            ok
-    catch
-        exit:badarg ->
-            {error, {ErrorReason, Name}}
+logging_syslog_validate(undefined) ->
+    {ok, undefined};
+logging_syslog_validate([]) ->
+    {ok, #config_logging_syslog{}};
+logging_syslog_validate([_ | _] = Value) ->
+    SyslogConfig = #config_logging_syslog{},
+    Defaults = [
+        {identity, SyslogConfig#config_logging_syslog.identity},
+        {facility, SyslogConfig#config_logging_syslog.facility},
+        {level, SyslogConfig#config_logging_syslog.level}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Identity, _, _ | _]
+            when not (is_list(Identity) andalso
+                      (length(Identity) > 0) andalso
+                      is_integer(hd(Identity))) ->
+            {error, {logging_syslog_identity_invalid, Identity}};
+        [_, Facility, _ | _]
+            when not (is_atom(Facility) orelse
+                      (is_integer(Facility) andalso
+                       (Facility >= 0))) ->
+            {error, {logging_syslog_facility_invalid, Facility}};
+        [_, _, Level | _]
+            when not ((Level =:= fatal) orelse (Level =:= error) orelse
+                      (Level =:= warn) orelse (Level =:= info) orelse
+                      (Level =:= debug) orelse (Level =:= trace) orelse
+                      (Level =:= off) orelse (Level =:= undefined)) ->
+            {error, {logging_syslog_level_invalid, Level}};
+        [Identity, Facility, Level] ->
+            try syslog:facility(Facility) of
+                _ when (Level =:= undefined) ->
+                    {ok, undefined};
+                _ ->
+                    {ok,
+                     SyslogConfig#config_logging_syslog{
+                        identity = Identity,
+                        facility = Facility,
+                        level = Level}}
+            catch
+                error:badarg ->
+                    {error, {logging_syslog_facility_invalid, Facility}}
+            end;
+        [_, _, _ | Extra] ->
+            {error, {logging_syslog_invalid, Extra}}
     end.
 

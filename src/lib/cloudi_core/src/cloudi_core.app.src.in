@@ -50,7 +50,8 @@
    {included_applications, [
         cloudi_x_combonodefinder,
         cloudi_x_ec2nodefinder,
-        cloudi_x_nodefinder
+        cloudi_x_nodefinder,
+        syslog
         ]},
    {applications, [
         % nodefinder dependencies are started manually

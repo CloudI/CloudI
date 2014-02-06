@@ -165,6 +165,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cowlib/ebin
 	$(MKDIR_P) external/ranch/ebin
 	$(MKDIR_P) external/elli/ebin
+	$(MKDIR_P) external/syslog/ebin
 	$(MKDIR_P) external/dynamic_compile/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
@@ -406,6 +407,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/elli && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/elli/ebin || exit 0)
+	(cd $(top_srcdir)/external/syslog && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/syslog/ebin || exit 0)
 	(cd $(top_srcdir)/external/dynamic_compile && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/dynamic_compile/ebin || exit 0)
@@ -546,6 +550,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/ranch/ebin
 	rmdir $(top_builddir)/external/elli/ebin || exit 0
 	rm -f $(top_srcdir)/external/elli/ebin
+	rmdir $(top_builddir)/external/syslog/ebin || exit 0
+	rm -f $(top_srcdir)/external/syslog/ebin
 	rmdir $(top_builddir)/external/dynamic_compile/ebin || exit 0
 	rm -f $(top_srcdir)/external/dynamic_compile/ebin
 	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
@@ -660,7 +666,8 @@ dialyze: all \
               external/ememcached/ebin \
               external/ecouchdb/ebin \
               external/emysql/ebin \
-              external/jsx/ebin
+              external/jsx/ebin \
+              external/syslog/ebin
 
 dialyzer: dialyze
 

@@ -250,6 +250,15 @@ to its integration and dependencies).
 - `Tue Feb 12 12:32:53 PST 2013`
 - `Apache License`
 
+`syslog`
+--------
+`Erlang syslog port driver`
+
+- `https://github.com/okeuday/erlang-syslog`
+- `commit bce08564f78c997f25f47a0e1426c9c6d990e434`
+- `Wed Feb  5 18:44:11 PST 2014`
+- `BSD`
+
 `thrift`
 --------
 `Erlang Thrift software library`

@@ -43,6 +43,7 @@
   "external/poolboy",
   "external/proper",
   "external/ranch",
+  "external/syslog",
   "external/thrift",
   "lib/pqueue",
   "lib/quickrand",
