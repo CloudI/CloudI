@@ -20,6 +20,8 @@ Add better database integration
     * add native CouchDB support
     * add MongoDB support
     * add Kyoto Tycoon support?
+javascript CloudI API
+    * http://nodejs.org/api/net.html#net_new_net_socket_options
 Lua CloudI API
     * can base this on the Python-C CloudI API integration
       (within api/python/cloudi_py.cpp)

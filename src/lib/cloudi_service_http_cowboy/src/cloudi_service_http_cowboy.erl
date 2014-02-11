@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -247,6 +247,9 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                               keyfile,
                                               password,
                                               verify], SSLOpts),
+            Environment = cloudi_service:environment_lookup(),
+            NewSSLOpts = environment_transform_ssl_options(SSLOpts,
+                                                           Environment),
             cloudi_x_cowboy:StartFunction(
                 Service, % Ref
                 100, % Number of acceptor processes
@@ -256,7 +259,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                  {nodelay, NoDelay},
                  {max_connections, MaxConnections},
                  {certfile, CertFile}] ++
-                SSLOpts, % Transport options
+                NewSSLOpts, % Transport options
                 [{env, [{dispatch, Dispatch}]},
                  {compress, Compress},
                  {max_empty_lines, MaxEmptyLines},
@@ -306,6 +309,20 @@ cloudi_service_terminate(_, #state{service = Service}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+environment_transform_ssl_options(SSLOpts, Environment) ->
+    environment_transform_ssl_options(SSLOpts, [], Environment).
+
+environment_transform_ssl_options([], Output, _) ->
+    lists:reverse(Output);
+environment_transform_ssl_options([{K, FilePath} | SSLOpts],
+                                  Output, Environment)
+    when K =:= certfile; K =:= cacertfile; K =:= keyfile ->
+    NewFilePath = cloudi_service:environment_transform(FilePath, Environment),
+    environment_transform_ssl_options(SSLOpts, [{K, NewFilePath} | Output],
+                                      Environment);
+environment_transform_ssl_options([E | SSLOpts], Output, Environment) ->
+    environment_transform_ssl_options(SSLOpts, [E | Output], Environment).
 
 content_types_accepted_pattern(ContentTypesAccepted) ->
     content_types_accepted_pattern(ContentTypesAccepted, [<<"*/*">>]).

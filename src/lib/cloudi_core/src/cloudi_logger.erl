@@ -279,7 +279,7 @@ init([#config_logging{file = FilePath,
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel} ->
-            syslog:load(),
+            ok = syslog:load(),
             {ok, Syslog} = syslog:open(SyslogIdentity,
                                        [ndelay, pid],
                                        SyslogFacility),
@@ -402,8 +402,13 @@ handle_info(Request, State) ->
 terminate(_, #state{fd = Fd,
                     syslog = Syslog}) ->
     file:close(Fd),
-    (catch syslog:close(Syslog)),
-    syslog:unload(),
+    if
+        is_port(Syslog) ->
+            (catch syslog:close(Syslog)),
+            syslog:unload();
+        true ->
+            ok
+    end,
     ok.
 
 code_change(_, State, _) ->
