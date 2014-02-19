@@ -239,7 +239,6 @@ erase_chunk(#chunk{size = ChunkSize,
             State#state{position = ChunkPosition};
         true ->
             chunk_free(ChunkSize, ChunkPosition, Fd),
-            {ok, _} = file:position(Fd, Position),
             ChunkFree = Chunk#chunk{request = undefined},
             State#state{chunks_free = lists:umerge(ChunksFree, [ChunkFree])}
     end.
@@ -332,7 +331,6 @@ chunks_recover(Position, Chunks, ChunksFree, Fd, SendF) ->
         eof ->
             {ok, Position, Chunks, ChunksFree};
         {ok, <<0:64>>} ->
-            {ok, _} = file:position(Fd, Position),
             {ok, Position, Chunks, ChunksFree};
         {ok, <<ChunkSize:64/unsigned-integer-big>>} ->
             chunk_recover(Position, ChunkSize,
