@@ -6,12 +6,12 @@
 %%% ==CloudI Persistent Queue Service==
 %%% Use Write Ahead Logging (WAL) to persist service requests.  This
 %%% service provides a leaner alternative to persistent messaging queues
-%%% (e.g., with RabbitMQ, both topics/queues).  The filesystem is used
-%%% for keeping the queue service requests persistent and the queue file path
-%%% is provided to this service's configuration arguments.  You must make
-%%% sure the queue file path is unique.  If you use a process count higher
-%%% than 1, make sure to have "${I}" within the file path, so the process
-%%% index is used within the file path.
+%%% (e.g., when compared to RabbitMQ, both topics/queues).
+%%% The filesystem is used for keeping the queue service requests persistent
+%%% and the queue file path is provided to this service's configuration
+%%% arguments.  You must make sure the queue file path is unique.  If you
+%%% use a process count higher than 1, make sure to have "${I}" within the
+%%% file path, so the process index is used within the file path.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -107,11 +107,13 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     QueueFilePath = cloudi_service:environment_transform(FilePath,
                                                          Environment),
     SendF = fun({QueueName, _Type, _Name, _Pattern, RequestInfo, Request,
-                 Timeout, Priority, TransId, _Pid}) ->
+                 Timeout, Priority, TransId, Pid}) ->
         Age = (cloudi_x_uuid:get_v1_time(erlang) -
                cloudi_x_uuid:get_v1_time(TransId)) div 1000, % milliseconds
-        if
-            Age >= Timeout ->
+        case erlang:is_process_alive(Pid) of
+            false ->
+                {error, timeout};
+            true when Age >= Timeout ->
                 {error, timeout};
             true ->
                 NewTimeout = Timeout - Age,
