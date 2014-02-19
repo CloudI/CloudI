@@ -141,7 +141,6 @@ t_wal_sequence0(Config) ->
     % request2, request3, request5, request6
 
     % restart1:
-    ok = cloudi_write_ahead_logging:close(State16),
     SendF1 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
                   Timeout, _Priority, TransId, _Pid} = T) ->
         Age = (cloudi_x_uuid:get_v1_time(erlang) -
@@ -160,7 +159,6 @@ t_wal_sequence0(Config) ->
     State17 = cloudi_write_ahead_logging:new(?config(file, Config), SendF1),
 
     % restart2:
-    ok = cloudi_write_ahead_logging:close(State17),
     SendF2 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
                   Timeout, _Priority, TransId, _Pid} = T) ->
         Age = (cloudi_x_uuid:get_v1_time(erlang) -
@@ -219,7 +217,6 @@ t_wal_sequence0(Config) ->
     true = (cloudi_write_ahead_logging:size_free(State25) == 3),
 
     % restart3
-    ok = cloudi_write_ahead_logging:close(State25),
     SendF3 = fun({_, _, _, _, _, _, _, _, _, _}) ->
         erlang:exit(queue_file_not_empty)
     end,
@@ -228,7 +225,6 @@ t_wal_sequence0(Config) ->
     true = (cloudi_write_ahead_logging:size_free(State26) == 3),
 
     % finish
-    ok = cloudi_write_ahead_logging:close(State26),
     ok = file:delete(?config(file, Config)),
     ok.
 

@@ -58,6 +58,8 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_map_reduce,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_service_queue,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_quorum,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_router,

@@ -53,8 +53,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([close/1,
-         erase/2,
+-export([erase/2,
          fetch_keys/1,
          size/1,
          size_free/1,
@@ -79,7 +78,7 @@
 
 -record(state,
     {
-        file :: file:fd(),
+        file :: binary() | string(),
         position :: non_neg_integer(),
         chunks = dict:new() :: dict(),       % chunk_id -> #chunk{}
         chunks_free = [] :: list(#chunk{})   % ordered
@@ -89,22 +88,19 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec close(State :: #state{}) ->
-    ok.
-
-close(#state{file = Fd}) ->
-    file:close(Fd),
-    ok.
-
 -spec erase(ChunkId :: cloudi_service:trans_id(),
             State :: #state{}) ->
     {cloudi_service_queue:request(), #state{}}.
 
 erase(ChunkId,
-      #state{chunks = Chunks} = State) ->
+      #state{file = FilePath,
+             chunks = Chunks} = State) ->
     Chunk = dict:fetch(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
-    NewState = erase_chunk(Chunk, State),
+    {ok, Fd} = file_open(FilePath),
+    NewState = erase_chunk(Chunk, Fd, State),
+    ok = file:datasync(Fd),
+    ok = file:close(Fd),
     {ChunkRequest, NewState#state{chunks = dict:erase(ChunkId, Chunks)}}.
 
 -spec fetch_keys(State :: #state{}) ->
@@ -138,17 +134,22 @@ store_end(ChunkId, Chunk,
                  State :: #state{}) ->
     #state{}.
 
-store_fail(Chunk, State) ->
-    erase_chunk(Chunk, State).
+store_fail(Chunk, #state{file = FilePath} = State) ->
+    {ok, Fd} = file_open(FilePath),
+    NewState = erase_chunk(Chunk, Fd, State),
+    ok = file:datasync(Fd),
+    ok = file:close(Fd),
+    NewState.
 
 -spec store_start(ChunkRequest :: cloudi_service_queue:request(),
                   State :: #state{}) ->
     {#chunk{}, #state{}}.
 
 store_start(ChunkRequest,
-            #state{file = Fd,
+            #state{file = FilePath,
                    position = Position,
                    chunks_free = ChunksFree} = State) ->
+    {ok, Fd} = file_open(FilePath),
     ChunkData = erlang:term_to_binary(ChunkRequest),
     ChunkSizeUsed = erlang:byte_size(ChunkData),
     case chunk_free_check(ChunksFree, ChunkSizeUsed) of
@@ -156,19 +157,19 @@ store_start(ChunkRequest,
             ChunkSize = ChunkSizeUsed,
             NewPosition = chunk_write(ChunkSize, ChunkSizeUsed,
                                       ChunkData, Position, Fd),
+            ok = file:datasync(Fd),
+            ok = file:close(Fd),
             NewChunk = #chunk{size = ChunkSize,
                               position = Position,
                               request = ChunkRequest},
-            ok = file:datasync(Fd),
             {NewChunk, State#state{position = NewPosition}};
         {#chunk{size = ChunkSize,
                 position = ChunkPosition} = ChunkFree, NewChunksFree} ->
-            {ok, _} = file:position(Fd, ChunkPosition),
             chunk_write(ChunkSize, ChunkSizeUsed,
                         ChunkData, ChunkPosition, Fd),
-            {ok, _} = file:position(Fd, Position),
-            NewChunk = ChunkFree#chunk{request = ChunkRequest},
             ok = file:datasync(Fd),
+            ok = file:close(Fd),
+            NewChunk = ChunkFree#chunk{request = ChunkRequest},
             {NewChunk, State#state{chunks_free = NewChunksFree}}
     end.
 
@@ -185,13 +186,14 @@ new(FilePath, SendF)
     State = #state{},
     #state{chunks = Chunks,
            chunks_free = ChunksFree} = State,
-    {ok, Fd} = file:open(FilePath, [raw, write, read, binary]),
+    {ok, Fd} = file_open(FilePath),
     {ok,
      Position,
      NewChunks,
      NewChunksFree} = chunks_recover(Chunks, ChunksFree, Fd, SendF),
     ok = file:datasync(Fd),
-    State#state{file = Fd,
+    ok = file:close(Fd),
+    State#state{file = FilePath,
                 position = Position,
                 chunks = NewChunks,
                 chunks_free = NewChunksFree}.
@@ -200,8 +202,12 @@ new(FilePath, SendF)
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+file_open(FilePath) ->
+    file:open(FilePath, [raw, write, read, binary]).
+
 chunk_write(ChunkSize, ChunkSizeUsed, ChunkData, Position, Fd) ->
     ChunkSizeZero = (ChunkSize - ChunkSizeUsed),
+    {ok, _} = file:position(Fd, Position),
     ok = file:write(Fd, <<ChunkSize:64/unsigned-integer-big,
                           ChunkSizeUsed:64/unsigned-integer-big,
                           ChunkData/binary,
@@ -213,7 +219,6 @@ chunk_erase_last(ChunkSize, Position, Fd) ->
     ok = file:write(Fd, <<0:64,
                           0:64,
                           0:(ChunkSize * 8)>>),
-    {ok, _} = file:position(Fd, Position),
     ok.
 
 chunk_free(ChunkSize, Position, Fd) ->
@@ -225,19 +230,17 @@ chunk_free(ChunkSize, Position, Fd) ->
 
 erase_chunk(#chunk{size = ChunkSize,
                    position = ChunkPosition} = Chunk,
-            #state{file = Fd,
-                   position = Position,
+            Fd,
+            #state{position = Position,
                    chunks_free = ChunksFree} = State) ->
     if
         (ChunkPosition + ?CHUNK_OVERHEAD + ChunkSize) == Position ->
             chunk_erase_last(ChunkSize, ChunkPosition, Fd),
-            ok = file:datasync(Fd),
             State#state{position = ChunkPosition};
         true ->
             chunk_free(ChunkSize, ChunkPosition, Fd),
             {ok, _} = file:position(Fd, Position),
             ChunkFree = Chunk#chunk{request = undefined},
-            ok = file:datasync(Fd),
             State#state{chunks_free = lists:umerge(ChunksFree, [ChunkFree])}
     end.
 
