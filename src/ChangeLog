@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-02-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service_queue for persistent queuing of
+      service requests
+
 2014-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Tweak syslog integration

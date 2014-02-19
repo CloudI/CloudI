@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.9 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_json_rpc).
@@ -107,16 +107,16 @@ request_to_json(Method, Params, Id)
     if
         Params == [] ->
             cloudi_x_jsx:term_to_json([{<<"method">>, MethodBin},
-                              {<<"id">>, Id},
-                              {<<"jsonrpc">>, <<"2.0">>}]);
+                                       {<<"id">>, Id},
+                                       {<<"jsonrpc">>, <<"2.0">>}]);
         true ->
             ParamsBin = lists:map(fun(E) ->
                 cloudi_string:term_to_binary(E)
             end, Params),
             cloudi_x_jsx:term_to_json([{<<"method">>, MethodBin},
-                              {<<"params">>, ParamsBin},
-                              {<<"id">>, Id},
-                              {<<"jsonrpc">>, <<"2.0">>}])
+                                       {<<"params">>, ParamsBin},
+                                       {<<"id">>, Id},
+                                       {<<"jsonrpc">>, <<"2.0">>}])
     end.
 
 -spec response_to_term(Data :: binary() | string()) ->
@@ -178,12 +178,12 @@ response_to_json(Result, ErrorCode, ErrorMessage, Id)
             <<"1.1">>
     end,
     cloudi_x_jsx:term_to_json([{<<"result">>, Result},
-                      {<<"error">>, [
-                       {<<"code">>, ErrorCode},
-                       {<<"message">>, ErrorMessage}
-                      ]},
-                      {<<"id">>, Id},
-                      {<<"jsonrpc">>, Version}]).
+                               {<<"error">>, [
+                                 {<<"code">>, ErrorCode},
+                                 {<<"message">>, ErrorMessage}
+                                ]},
+                               {<<"id">>, Id},
+                               {<<"jsonrpc">>, Version}]).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

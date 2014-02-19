@@ -52,7 +52,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_quorum).
@@ -110,7 +110,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
         {quorum,                   ?DEFAULT_QUORUM},
         {use_response_info,        ?DEFAULT_USE_RESPONSE_INFO}],
@@ -122,6 +122,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             (is_integer(Quorum) andalso
              (Quorum > 0))),
     true = is_boolean(UseResponseInfo),
+    false = cloudi_x_trie:is_pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{quorum = Quorum,
                 use_response_info = UseResponseInfo}}.
@@ -187,25 +188,25 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
-                                                trans_id = TransId},
+                                                trans_id = QuorumTransId},
                            #state{use_response_info = UseResponseInfo,
                                   requests = Requests,
                                   pending = Pending} = State,
                            Dispatcher) ->
-    OriginalTransId = dict:fetch(TransId, Pending),
+    TransId = dict:fetch(QuorumTransId, Pending),
     {noreply, State#state{requests = request_check(ResponseInfo, Response,
-                                                   OriginalTransId, Requests,
+                                                   TransId, Requests,
                                                    UseResponseInfo, Dispatcher),
-                          pending = dict:erase(TransId, Pending)}};
+                          pending = dict:erase(QuorumTransId, Pending)}};
 
-cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
+cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
                            #state{requests = Requests,
                                   pending = Pending} = State,
                            Dispatcher) ->
-    OriginalTransId = dict:fetch(TransId, Pending),
-    {noreply, State#state{requests = request_timeout(OriginalTransId, Requests,
+    TransId = dict:fetch(QuorumTransId, Pending),
+    {noreply, State#state{requests = request_timeout(TransId, Requests,
                                                      Dispatcher),
-                          pending = dict:erase(TransId, Pending)}};
+                          pending = dict:erase(QuorumTransId, Pending)}};
 
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -218,19 +219,19 @@ cloudi_service_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-pending_store(QuorumTransIds, Pending, OriginalTransId) ->
-    pending_store(QuorumTransIds, 0, Pending, OriginalTransId).
+pending_store(QuorumTransIds, Pending, TransId) ->
+    pending_store(QuorumTransIds, 0, Pending, TransId).
 
-pending_store([], Count, Pending, _OriginalTransId)
+pending_store([], Count, Pending, _TransId)
     when Count > 0 ->
     {Count, Pending};
-pending_store([TransId | L], Count, Pending, OriginalTransId) ->
-    pending_store(L, Count + 1, dict:store(TransId, OriginalTransId, Pending),
-                  OriginalTransId).
+pending_store([QuorumTransId | L], Count, Pending, TransId) ->
+    pending_store(L, Count + 1,
+                  dict:store(QuorumTransId, TransId, Pending), TransId).
 
-request_check(ResponseInfo, Response, OriginalTransId, Requests,
+request_check(ResponseInfo, Response, TransId, Requests,
               UseResponseInfo, Dispatcher) ->
-    case dict:find(OriginalTransId, Requests) of
+    case dict:find(TransId, Requests) of
         {ok, #request{% return data
                       type = ResponseType,
                       name = ResponseName,
@@ -267,32 +268,32 @@ request_check(ResponseInfo, Response, OriginalTransId, Requests,
                                                   ResponsePattern,
                                                   ResponseInfo, Response,
                                                   ResponseTimeout,
-                                                  OriginalTransId,
+                                                  TransId,
                                                   ResponsePid),
-                    dict:erase(OriginalTransId, Requests);
+                    dict:erase(TransId, Requests);
                 NewCountResponses == CountTotal ->
                     cloudi_service:return_nothrow(Dispatcher, ResponseType,
                                                   ResponseName,
                                                   ResponsePattern,
                                                   <<>>, <<>>,
                                                   ResponseTimeout,
-                                                  OriginalTransId,
+                                                  TransId,
                                                   ResponsePid),
-                    dict:erase(OriginalTransId, Requests);
+                    dict:erase(TransId, Requests);
                 true ->
                     NewResponses = orddict:store(Key, Count, Responses),
                     NewRequest = Request#request{
                                      count_responses = NewCountResponses,
                                      responses = NewResponses},
-                    dict:store(OriginalTransId, NewRequest, Requests)
+                    dict:store(TransId, NewRequest, Requests)
             end;
         error ->
             % already met quorum and was returned
             Requests
     end.
 
-request_timeout(OriginalTransId, Requests, Dispatcher) ->
-    case dict:find(OriginalTransId, Requests) of
+request_timeout(TransId, Requests, Dispatcher) ->
+    case dict:find(TransId, Requests) of
         {ok, #request{% return data
                       type = ResponseType,
                       name = ResponseName,
@@ -310,13 +311,13 @@ request_timeout(OriginalTransId, Requests, Dispatcher) ->
                                                   ResponsePattern,
                                                   <<>>, <<>>,
                                                   ResponseTimeout,
-                                                  OriginalTransId,
+                                                  TransId,
                                                   ResponsePid),
-                    dict:erase(OriginalTransId, Requests);
+                    dict:erase(TransId, Requests);
                 true ->
                     NewRequest = Request#request{
                                      count_responses = NewCountResponses},
-                    dict:store(OriginalTransId, NewRequest, Requests)
+                    dict:store(TransId, NewRequest, Requests)
             end;
         error ->
             % already met quorum and was returned

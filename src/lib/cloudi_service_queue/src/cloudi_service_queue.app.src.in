@@ -1,0 +1,17 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+
+{application, cloudi_service_queue, 
+  [{description, "CloudI Persistent Queue Service"},
+   {vsn, "@VERSION@"},
+   {modules, [
+        cloudi_service_queue,
+        cloudi_write_ahead_logging
+        ]},
+   {registered, []},
+   {applications, [
+        cloudi_core,
+        stdlib,
+        kernel
+        ]}]}.
+

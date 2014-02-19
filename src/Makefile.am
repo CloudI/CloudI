@@ -20,6 +20,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
+     -d $(top_srcdir)/lib/cloudi_service_queue/src \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
      -d $(top_srcdir)/lib/cloudi_service_router/src \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
@@ -131,6 +132,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
 	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
 	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
+	$(MKDIR_P) lib/cloudi_service_queue/ebin
 	$(MKDIR_P) lib/cloudi_service_quorum/ebin
 	$(MKDIR_P) lib/cloudi_service_router/ebin
 	$(MKDIR_P) lib/cloudi_service_tcp/ebin
@@ -209,6 +211,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce/src && \
         test ! -e cloudi_service_map_reduce.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_queue/src && \
+        test ! -e cloudi_service_queue.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_queue/src/cloudi_service_queue.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_quorum/src && \
         test ! -e cloudi_service_quorum.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src || exit 0)
@@ -296,6 +301,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_queue && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_queue/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_quorum && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_quorum/ebin || exit 0)
@@ -482,6 +490,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_http_elli/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_map_reduce/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_queue/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_queue/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_quorum/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_quorum/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_router/ebin || exit 0
@@ -605,6 +615,7 @@ distclean-local: rebar-directories-distclean \
            $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_queue/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_quorum/test_ct/logs
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
@@ -641,6 +652,7 @@ dialyze: all \
               lib/cloudi_service_http_cowboy/ebin/ \
               lib/cloudi_service_http_elli/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
+              lib/cloudi_service_queue/ebin/ \
               lib/cloudi_service_quorum/ebin/ \
               lib/cloudi_service_router/ebin/ \
               lib/cloudi_service_tcp/ebin/ \
