@@ -69,6 +69,8 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_RETRY,                          0).
+
 -type request() ::
     {cloudi_service:service_name(),
      cloudi_service:request_type(),
@@ -84,7 +86,11 @@
 
 -record(state,
     {
-        logging
+        logging,
+        retry :: non_neg_integer(),
+        retry_f :: fun((request()) ->
+                       {ok, cloudi_service:trans_id()} |
+                       {error, any()})
     }).
 
 %%%------------------------------------------------------------------------
@@ -97,35 +103,26 @@
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
+        {retry,               ?DEFAULT_RETRY},
         {file,                     undefined}],
-    [FilePath] = cloudi_proplists:take_values(Defaults, Args),
-    true = (is_list(FilePath) andalso
-            is_integer(hd(FilePath))),
+    [Retry, FilePath] = cloudi_proplists:take_values(Defaults, Args),
+    true = (is_integer(Retry) andalso (Retry >= 0)),
+    true = (is_list(FilePath) andalso is_integer(hd(FilePath))),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
                                       cloudi_service:environment_lookup()),
     QueueFilePath = cloudi_service:environment_transform(FilePath,
                                                          Environment),
-    SendF = fun({QueueName, _Type, _Name, _Pattern, RequestInfo, Request,
-                 Timeout, Priority, TransId, Pid}) ->
-        Age = (cloudi_x_uuid:get_v1_time(erlang) -
-               cloudi_x_uuid:get_v1_time(TransId)) div 1000, % milliseconds
-        case erlang:is_process_alive(Pid) of
-            false ->
-                {error, timeout};
-            true when Age >= Timeout ->
-                {error, timeout};
-            true ->
-                NewTimeout = Timeout - Age,
-                cloudi_service:send_async_active(Dispatcher, QueueName,
-                                                 RequestInfo, Request,
-                                                 NewTimeout, Priority)
-        end
-    end,
-    Logging = cloudi_write_ahead_logging:new(QueueFilePath, SendF),
+    Logging = cloudi_write_ahead_logging:new(QueueFilePath,
+                                             fun(T) ->
+                                                retry(Dispatcher, T)
+                                             end),
     false = cloudi_x_trie:is_pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
-    {ok, #state{logging = Logging}}.
+    DispatcherPid = cloudi_service:dispatcher(Dispatcher),
+    {ok, #state{logging = Logging,
+                retry = Retry,
+                retry_f = fun(T) -> retry(DispatcherPid, T) end}}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
@@ -178,10 +175,14 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
     {noreply, State#state{logging = NewLogging}};
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
-                           #state{logging = Logging} = State,
+                           #state{logging = Logging,
+                                  retry = Retry,
+                                  retry_f = RetryF} = State,
                            _Dispatcher) ->
-    {_, NewLogging} = cloudi_write_ahead_logging:erase(QueueTransId, Logging),
-    % PERSISTENCE END:
+    NewLogging = cloudi_write_ahead_logging:erase_retry(QueueTransId,
+                                                        Retry, RetryF,
+                                                        Logging),
+    % PERSISTENCE END (if a retry didn't occur):
     % at this point the service request is no longer persisted
     % due to the service request's timeout
     {noreply, State#state{logging = NewLogging}};
@@ -196,4 +197,27 @@ cloudi_service_terminate(_, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+-spec retry(Dispatcher :: cloudi_service:dispatcher(),
+            request()) ->
+    {ok, cloudi_service:trans_id()} |
+    {error, any()}.
+-compile({inline, [{retry, 2}]}).
+
+retry(Dispatcher,
+      {QueueName, _Type, _Name, _Pattern, RequestInfo, Request,
+       Timeout, Priority, TransId, Pid}) ->
+    Age = (cloudi_x_uuid:get_v1_time(erlang) -
+           cloudi_x_uuid:get_v1_time(TransId)) div 1000 + 100, % milliseconds
+    case erlang:is_process_alive(Pid) of
+        false ->
+            {error, timeout};
+        true when Age >= Timeout ->
+            {error, timeout};
+        true ->
+            NewTimeout = Timeout - Age,
+            cloudi_service:send_async_active(Dispatcher, QueueName,
+                                             RequestInfo, Request,
+                                             NewTimeout, Priority)
+    end.
 

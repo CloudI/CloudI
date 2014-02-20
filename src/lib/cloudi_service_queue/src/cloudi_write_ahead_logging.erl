@@ -54,6 +54,7 @@
 
 %% external interface
 -export([erase/2,
+         erase_retry/4,
          fetch_keys/1,
          size/1,
          size_free/1,
@@ -73,7 +74,8 @@
     {
         size :: pos_integer_64bit(),         % bytes (wo/overhead)
         position :: non_neg_integer_64bit(), % file position (bof) in bytes
-        request :: cloudi_service_queue:request() | undefined
+        request :: cloudi_service_queue:request() | undefined,
+        retries = 0 :: non_neg_integer()
     }).
 
 -record(state,
@@ -102,6 +104,44 @@ erase(ChunkId,
     ok = file:datasync(Fd),
     ok = file:close(Fd),
     {ChunkRequest, NewState#state{chunks = dict:erase(ChunkId, Chunks)}}.
+
+-spec erase_retry(ChunkId :: cloudi_service:trans_id(),
+                  RetryMax :: non_neg_integer(),
+                  RetryF :: fun((cloudi_service_queue:request()) ->
+                               {ok, cloudi_service:trans_id()} |
+                               {error, any()}),
+                  State :: #state{}) ->
+    #state{}.
+
+erase_retry(ChunkId, RetryMax, RetryF,
+            #state{file = FilePath,
+                   chunks = Chunks} = State) ->
+    Chunk = dict:fetch(ChunkId, Chunks),
+    #chunk{request = ChunkRequest,
+           retries = Retries} = Chunk,
+    NewChunkId = if
+        Retries < RetryMax ->
+            case RetryF(ChunkRequest) of
+                {error, _} ->
+                    undefined;
+                {ok, TransId} ->
+                    TransId
+            end;
+        true ->
+            undefined
+    end,
+    if
+        NewChunkId =:= undefined ->
+            {ok, Fd} = file_open(FilePath),
+            NewState = erase_chunk(Chunk, Fd, State),
+            ok = file:datasync(Fd),
+            ok = file:close(Fd),
+            NewState#state{chunks = dict:erase(ChunkId, Chunks)};
+        true ->
+            NewChunk = Chunk#chunk{retries = Retries + 1},
+            NewChunks = dict:erase(ChunkId, Chunks),
+            State#state{chunks = dict:store(NewChunkId, NewChunk, NewChunks)}
+    end.
 
 -spec fetch_keys(State :: #state{}) ->
     list(cloudi_service:trans_id()).
@@ -174,15 +214,13 @@ store_start(ChunkRequest,
     end.
 
 -spec new(FilePath :: string() | binary(),
-          SendF :: fun((cloudi_service_queue:request()) ->
-                       {ok, cloudi_service:trans_id()} |
-                       {error, any()})) ->
+          RetryF :: fun((cloudi_service_queue:request()) ->
+                        {ok, cloudi_service:trans_id()} |
+                        {error, any()})) ->
     #state{}.
 
-% SendF must check TransId with timeout value to determine
-% if it still needs to be sent
-new(FilePath, SendF)
-    when is_function(SendF, 1) ->
+new(FilePath, RetryF)
+    when is_function(RetryF, 1) ->
     State = #state{},
     #state{chunks = Chunks,
            chunks_free = ChunksFree} = State,
@@ -190,7 +228,7 @@ new(FilePath, SendF)
     {ok,
      Position,
      NewChunks,
-     NewChunksFree} = chunks_recover(Chunks, ChunksFree, Fd, SendF),
+     NewChunksFree} = chunks_recover(Chunks, ChunksFree, Fd, RetryF),
     ok = file:datasync(Fd),
     ok = file:close(Fd),
     State#state{file = FilePath,
@@ -239,7 +277,8 @@ erase_chunk(#chunk{size = ChunkSize,
             State#state{position = ChunkPosition};
         true ->
             chunk_free(ChunkSize, ChunkPosition, Fd),
-            ChunkFree = Chunk#chunk{request = undefined},
+            ChunkFree = Chunk#chunk{request = undefined,
+                                    retries = 0},
             State#state{chunks_free = lists:umerge(ChunksFree, [ChunkFree])}
     end.
 
@@ -254,27 +293,27 @@ chunk_free_check([#chunk{size = ChunkSize} = Chunk | ChunksFree], L, Size)
 chunk_free_check([Chunk | ChunksFree], L, Size) ->
     chunk_free_check(ChunksFree, [Chunk | L], Size).
 
-chunk_recover_free(Position, ChunkSize, Chunks, ChunksFree, Fd, SendF) ->
+chunk_recover_free(Position, ChunkSize, Chunks, ChunksFree, Fd, RetryF) ->
     NewPosition = Position + ?CHUNK_OVERHEAD + ChunkSize,
     ChunkFree = #chunk{size = ChunkSize,
                        position = Position,
                        request = undefined},
     chunks_recover(NewPosition, Chunks,
                    lists:umerge(ChunksFree, [ChunkFree]),
-                   Fd, SendF).
+                   Fd, RetryF).
 
 chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
-                   Chunks, ChunksFree, Fd, SendF) ->
+                   Chunks, ChunksFree, Fd, RetryF) ->
     case file:read(Fd, ChunkSizeUsed) of
         {ok, ChunkData} ->
             ChunkRequest = erlang:binary_to_term(ChunkData),
-            case SendF(ChunkRequest) of
+            case RetryF(ChunkRequest) of
                 {error, _} ->
                     {ok, _} = file:position(Fd, Position + 8),
                     ok = file:write(Fd, <<0:64,
                                           0:(ChunkSize * 8)>>),
                     chunk_recover_free(Position, ChunkSize,
-                                       Chunks, ChunksFree, Fd, SendF);
+                                       Chunks, ChunksFree, Fd, RetryF);
                 {ok, ChunkId} when ChunkSize == ChunkSizeUsed ->
                     NewPosition = Position + ?CHUNK_OVERHEAD + ChunkSize,
                     Chunk = #chunk{size = ChunkSize,
@@ -282,7 +321,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
                                    request = ChunkRequest},
                     chunks_recover(NewPosition,
                                    dict:store(ChunkId, Chunk, Chunks),
-                                   ChunksFree, Fd, SendF);
+                                   ChunksFree, Fd, RetryF);
                 {ok, ChunkId} ->
                     ChunkEnd = (ChunkSize - ChunkSizeUsed),
                     case file:position(Fd, {cur, ChunkEnd}) of
@@ -292,7 +331,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
                                            request = ChunkRequest},
                             chunks_recover(NewPosition,
                                            dict:store(ChunkId, Chunk, Chunks),
-                                           ChunksFree, Fd, SendF);
+                                           ChunksFree, Fd, RetryF);
                         {error, Reason} ->
                             {error, {chunk_corrupt, Reason}}
                     end
@@ -301,7 +340,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
             {error, {chunk_size_used_invalid, Reason}}
     end.
 
-chunk_recover(Position, ChunkSize, Chunks, ChunksFree, Fd, SendF) ->
+chunk_recover(Position, ChunkSize, Chunks, ChunksFree, Fd, RetryF) ->
     case file:read(Fd, 8) of
         {error, Reason} ->
             {error, {chunk_used_size_invalid, Reason}};
@@ -311,20 +350,20 @@ chunk_recover(Position, ChunkSize, Chunks, ChunksFree, Fd, SendF) ->
             case file:position(Fd, {cur, ChunkSize}) of
                 {ok, _} ->
                     chunk_recover_free(Position, ChunkSize,
-                                       Chunks, ChunksFree, Fd, SendF);
+                                       Chunks, ChunksFree, Fd, RetryF);
                 {error, Reason} ->
                     {error, {chunk_corrupt, Reason}}
             end;
         {ok, <<ChunkSizeUsed:64/unsigned-integer-big>>} ->
             true = (ChunkSize >= ChunkSizeUsed),
             chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
-                               Chunks, ChunksFree, Fd, SendF)
+                               Chunks, ChunksFree, Fd, RetryF)
     end.
 
-chunks_recover(Chunks, ChunksFree, Fd, SendF) ->
-    chunks_recover(0, Chunks, ChunksFree, Fd, SendF).
+chunks_recover(Chunks, ChunksFree, Fd, RetryF) ->
+    chunks_recover(0, Chunks, ChunksFree, Fd, RetryF).
 
-chunks_recover(Position, Chunks, ChunksFree, Fd, SendF) ->
+chunks_recover(Position, Chunks, ChunksFree, Fd, RetryF) ->
     case file:read(Fd, 8) of
         {error, Reason} ->
             {error, {chunk_size_missing, Reason}};
@@ -334,6 +373,6 @@ chunks_recover(Position, Chunks, ChunksFree, Fd, SendF) ->
             {ok, Position, Chunks, ChunksFree};
         {ok, <<ChunkSize:64/unsigned-integer-big>>} ->
             chunk_recover(Position, ChunkSize,
-                          Chunks, ChunksFree, Fd, SendF)
+                          Chunks, ChunksFree, Fd, RetryF)
     end.
 

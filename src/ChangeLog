@@ -5,6 +5,8 @@
 
     * Add cloudi_service_queue for persistent queuing of
       service requests
+    * Add retries to cloudi_service_queue
+    * Simplify the default configuration
 
 2014-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
