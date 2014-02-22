@@ -61,7 +61,8 @@
          store_end/3,
          store_fail/2,
          store_start/2,
-         new/2]).
+         new/2,
+         update/3]).
 
 % overhead: chunk_size, chunk_size_used
 -define(CHUNK_OVERHEAD, 8 + 8).
@@ -235,6 +236,56 @@ new(FilePath, RetryF)
                 position = Position,
                 chunks = NewChunks,
                 chunks_free = NewChunksFree}.
+
+-spec update(ChunkId :: cloudi_service:trans_id(),
+             UpdateF :: fun((cloudi_service_queue:request()) ->
+                            {cloudi_service:trans_id(),
+                             cloudi_service_queue:request()} | undefined),
+             State :: #state{}) ->
+    {cloudi_service_queue:request() | undefined, #state{}}.
+
+update(ChunkId, UpdateF,
+       #state{file = FilePath,
+              position = Position,
+              chunks = Chunks,
+              chunks_free = ChunksFree} = State) ->
+    Chunk = dict:fetch(ChunkId, Chunks),
+    #chunk{request = ChunkRequest} = Chunk,
+    case UpdateF(ChunkRequest) of
+        undefined ->
+            {_, NewState} = erase(ChunkId, State),
+            {undefined, NewState};
+        {NewChunkId, NewChunkRequest} ->
+            {ok, Fd} = file_open(FilePath),
+            % store update
+            NewChunkData = erlang:term_to_binary(NewChunkRequest),
+            NewChunkSizeUsed = erlang:byte_size(NewChunkData),
+            NextState = case chunk_free_check(ChunksFree, NewChunkSizeUsed) of
+                false ->
+                    NewChunkSize = NewChunkSizeUsed,
+                    NewPosition = chunk_write(NewChunkSize, NewChunkSizeUsed,
+                                              NewChunkData, Position, Fd),
+                    NewChunk = #chunk{size = NewChunkSize,
+                                      position = Position,
+                                      request = NewChunkRequest},
+                    NewChunks = dict:store(NewChunkId, NewChunk, Chunks),
+                    State#state{chunks = NewChunks,
+                                position = NewPosition};
+                {#chunk{size = ChunkSize,
+                        position = ChunkPosition} = ChunkFree, NewChunksFree} ->
+                    chunk_write(ChunkSize, NewChunkSizeUsed,
+                                NewChunkData, ChunkPosition, Fd),
+                    NewChunk = ChunkFree#chunk{request = NewChunkRequest},
+                    NewChunks = dict:store(NewChunkId, NewChunk, Chunks),
+                    State#state{chunks = NewChunks,
+                                chunks_free = NewChunksFree}
+            end,
+            % erase previous entry
+            NewState = erase_chunk(Chunk, Fd, NextState),
+            ok = file:datasync(Fd),
+            ok = file:close(Fd),
+            {NewChunkRequest, NewState}
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

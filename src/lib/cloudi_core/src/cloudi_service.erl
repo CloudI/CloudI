@@ -118,6 +118,7 @@
          send_async_active/5,
          send_async_active/6,
          send_async_active/7,
+         send_async_active/8,
          send_async_passive/3,
          send_async_passive/4,
          send_async_passive/5,
@@ -937,6 +938,77 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                    {'send_async_active', Name,
                                     RequestInfo, Request,
                                     Timeout, Priority, PatternPid},
+                                   Timeout + ?TIMEOUT_DELTA)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send an asynchronous service request with a previously generated transaction id.===
+%% Only meant for special transaction handling.
+%% The response is sent to the service as an Erlang message which is either:
+%% `{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}'
+%% (or)
+%% `{timeout_async_active, TransId}'
+%% use `-include_lib("cloudi_core/include/cloudi_service.hrl").' to have:
+%% `#return_async_active{}' (or) `#timeout_async_active{}'
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_async_active(Dispatcher :: dispatcher(),
+                        Name :: service_name(),
+                        RequestInfo :: request_info(),
+                        Request :: request(),
+                        Timeout :: timeout_milliseconds(),
+                        Priority :: priority(),
+                        TransId :: trans_id(),
+                        PatternPid :: pattern_pid()) ->
+    {'ok', TransId :: trans_id()} |
+    {'error', Reason :: atom()}.
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  undefined, undefined, TransId, PatternPid)
+    when is_pid(Dispatcher), is_list(Name),
+         is_binary(TransId), is_tuple(PatternPid) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined, undefined,
+                                 TransId, PatternPid}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  undefined, Priority, TransId, PatternPid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
+         is_binary(TransId), is_tuple(PatternPid) ->
+    gen_server:call(Dispatcher, {'send_async_active', Name,
+                                 RequestInfo, Request,
+                                 undefined, Priority,
+                                 TransId, PatternPid}, infinity);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  immediate, Priority, TransId, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?SEND_ASYNC_INTERVAL - 1, Priority, TransId, PatternPid);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, undefined, TransId, PatternPid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX,
+         is_binary(TransId), is_tuple(PatternPid) ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'send_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, undefined, TransId, PatternPid},
+                                   Timeout + ?TIMEOUT_DELTA));
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, Priority, TransId, PatternPid)
+    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
+         is_binary(TransId), is_tuple(PatternPid) ->
+    ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
+                                   {'send_async_active', Name,
+                                    RequestInfo, Request,
+                                    Timeout, Priority, TransId, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA)).
 
 %%-------------------------------------------------------------------------

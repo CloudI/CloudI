@@ -378,7 +378,28 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
     hibernate_check(handle_send_async_active_pid(Name, Pattern,
                                                  RequestInfo, Request,
                                                  Timeout, Priority,
-                                                 Pid, State));
+                                                 undefined, Pid, State));
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             undefined, Priority, TransId, PatternPid}, Client,
+            #state{timeout_async = TimeoutAsync} = State) ->
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 TimeoutAsync, Priority, TransId, PatternPid}, Client, State);
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, undefined, TransId, PatternPid}, Client,
+            #state{options = #config_service_options{
+                       priority_default = PriorityDefault}} = State) ->
+    handle_call({'send_async_active', Name, RequestInfo, Request,
+                 Timeout, PriorityDefault, TransId, PatternPid}, Client, State);
+
+handle_call({'send_async_active', Name, RequestInfo, Request,
+             Timeout, Priority, TransId, {Pattern, Pid}}, _,
+            State) ->
+    hibernate_check(handle_send_async_active_pid(Name, Pattern,
+                                                 RequestInfo, Request,
+                                                 Timeout, Priority,
+                                                 TransId, Pid, State));
 
 handle_call({'send_sync', Name, RequestInfo, Request,
              undefined, Priority}, Client,
@@ -1497,10 +1518,15 @@ handle_send_async_active(Name, RequestInfo, Request,
     end.
 
 handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
-                             Timeout, Priority, Pid,
+                             Timeout, Priority, OldTransId, Pid,
                              #state{receiver_pid = ReceiverPid,
                                     uuid_generator = UUID} = State) ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    TransId = if
+        OldTransId =:= undefined ->
+            cloudi_x_uuid:get_v1(UUID);
+        true ->
+            OldTransId
+    end,
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
