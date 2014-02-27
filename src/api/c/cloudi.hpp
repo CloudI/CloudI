@@ -45,6 +45,7 @@
 #define CLOUDI_HPP
 
 #include <stdint.h>
+#include <sstream>
 #include <string>
 
 #define CLOUDI_MAX_BUFFERSIZE 2147483648U /* 2GB */
@@ -1296,12 +1297,19 @@ class API
         class invalid_input_exception : public std::exception
         {
             public:
-                invalid_input_exception() throw() {}
+                invalid_input_exception(int const status) throw()
+                {
+                    std::ostringstream str;
+                    str << "Invalid Input (" << status << ")";
+                    m_what = str.str();
+                }
                 virtual ~invalid_input_exception() throw() {}
                 virtual char const * what() const throw()
                 {
-                    return "Invalid Input";
+                    return m_what.c_str();
                 }
+            private:
+                std::string m_what;
         };
 
         class return_async_exception : public std::exception

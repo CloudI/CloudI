@@ -271,8 +271,10 @@ static void on_unload(ErlNifEnv * /*env*/,
 {
     local_thread_running = false;
     char const c = 0;
-    ::write(local_queue_event[1], &c, 1);
-    ::erl_drv_thread_join(local_thread_id, 0);
+    if (::write(local_queue_event[1], &c, 1) == 1)
+    {
+        ::erl_drv_thread_join(local_thread_id, 0);
+    }
     for (int i = 1; i < local_queue_size; ++i)
     {
         local_t & parameters = local_queue[i];

@@ -1656,7 +1656,7 @@ API::API(unsigned int const thread_index) :
     (*m_count) = 1;
     int const result = cloudi_initialize(m_api, thread_index);
     if (result != return_value::success)
-        throw invalid_input_exception();
+        throw invalid_input_exception(result);
 }
 
 API::~API()
@@ -1681,7 +1681,7 @@ unsigned int API::thread_count()
     unsigned int thread_count;
     int const result = cloudi_initialize_thread_count(&thread_count);
     if (result != return_value::success)
-        throw invalid_input_exception();
+        throw invalid_input_exception(result);
     return thread_count;
 }
 

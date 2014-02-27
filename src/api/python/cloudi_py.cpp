@@ -113,9 +113,9 @@ python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
         object->api = new CloudI::API(thread_index);
         object->thread_state = 0;
     }
-    catch (CloudI::API::invalid_input_exception const *)
+    catch (CloudI::API::invalid_input_exception const & e)
     {
-        PyErr_SetString(python_cloudi_invalid_input_exception, "Invalid Input");
+        PyErr_SetString(python_cloudi_invalid_input_exception, e.what());
         return -1;
     }
     return 0;

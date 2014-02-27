@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-02-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix LinuxMint compilation issues
+
 2014-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add fault_isolation argument to cloudi_service_queue

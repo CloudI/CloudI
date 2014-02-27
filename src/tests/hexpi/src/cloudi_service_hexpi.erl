@@ -213,7 +213,7 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
             {ok, NextState}
     end.
 
-cloudi_service_map_reduce_info(Request, State, _) ->
+cloudi_service_map_reduce_info(Request, _, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {error, {unknown_info, Request}}.
 
