@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -201,29 +201,12 @@ start_external(ProcessIndex, ThreadsPerProcess,
                         Protocol =:= local ->
                             $l  % tcp local (unix domain socket)
                     end,
-                    SpawnSocketPath = string_terminate(SocketPath),
-                    EnvironmentLookup = environment_lookup(),
-                    SpawnFilename = filename_parse(Filename, EnvironmentLookup),
-                    case arguments_parse(Arguments, EnvironmentLookup) of
-                        {ok, SpawnArguments} ->
-                            SpawnEnvironment = environment_parse(
-                                Environment, ThreadsPerProcess,
-                                Protocol, BufferSize, EnvironmentLookup),
-                            case cloudi_os_spawn:spawn(SpawnProcess,
-                                                       SpawnProtocol,
-                                                       SpawnSocketPath,
-                                                       Ports,
-                                                       SpawnFilename,
-                                                       SpawnArguments,
-                                                       SpawnEnvironment) of
-                                {ok, _OsPid} ->
-                                    {ok, Pids};
-                                {error, _} = Error ->
-                                    Error
-                            end;
-                        {error, _} = Error ->
-                            Error
-                    end;
+                    start_external_spawn(SpawnProcess, SpawnProtocol,
+                                         string_terminate(SocketPath),
+                                         Pids, Ports, ThreadsPerProcess,
+                                         Filename, Arguments, Environment,
+                                         environment_lookup(),
+                                         Protocol, BufferSize);
                 {error, _} = Error ->
                     Error
             end;
@@ -242,17 +225,6 @@ create_socket_path(TemporaryDirectory, UUID)
                           cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
     false = filelib:is_file(Path),
     Path.
-
-start_external_threads(ThreadsPerProcess,
-                       Protocol, SocketPath, BufferSize, Timeout,
-                       Prefix, TimeoutAsync, TimeoutSync,
-                       DestRefresh, DestDeny, DestAllow,
-                       ConfigOptions) ->
-    start_external_thread(ThreadsPerProcess, [], [],
-                          Protocol, SocketPath, BufferSize, Timeout,
-                          Prefix, TimeoutAsync, TimeoutSync,
-                          DestRefresh, DestDeny, DestAllow,
-                          ConfigOptions).
 
 start_external_thread(0, Pids, Ports, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
@@ -277,21 +249,58 @@ start_external_thread(I, Pids, Ports,
             Error
     end.
 
-% terminate the string for easy access within C/C++
-string_terminate([_ | _] = L) ->
-    L ++ [0].
+start_external_threads(ThreadsPerProcess,
+                       Protocol, SocketPath, BufferSize, Timeout,
+                       Prefix, TimeoutAsync, TimeoutSync,
+                       DestRefresh, DestDeny, DestAllow,
+                       ConfigOptions) ->
+    start_external_thread(ThreadsPerProcess, [], [],
+                          Protocol, SocketPath, BufferSize, Timeout,
+                          Prefix, TimeoutAsync, TimeoutSync,
+                          DestRefresh, DestDeny, DestAllow,
+                          ConfigOptions).
 
-environment_transform([], Output,
-                      undefined, _) ->
+start_external_spawn(SpawnProcess, SpawnProtocol, SpawnSocketPath, Pids, Ports,
+                     ThreadsPerProcess, Filename, Arguments, Environment,
+                     EnvironmentLookup, Protocol, BufferSize) ->
+    case filename_parse(Filename, EnvironmentLookup) of
+        {ok, SpawnFilename} ->
+            case arguments_parse(Arguments, EnvironmentLookup) of
+                {ok, SpawnArguments} ->
+                    SpawnEnvironment =  environment_parse(Environment,
+                                                          ThreadsPerProcess,
+                                                          Protocol, BufferSize,
+                                                          EnvironmentLookup),
+                    case cloudi_os_spawn:spawn(SpawnProcess,
+                                               SpawnProtocol,
+                                               SpawnSocketPath,
+                                               Ports,
+                                               SpawnFilename,
+                                               SpawnArguments,
+                                               SpawnEnvironment) of
+                        {ok, OsPid} ->
+                            ?LOG_INFO("OS pid ~p spawned ~p", [OsPid, Pids]),
+                            {ok, Pids};
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+% transform a string using a lookup containing environment variables
+% (the loop doesn't have error conditions by design)
+environment_transform([], Output, undefined, _) ->
     lists:reverse(Output);
 
 environment_transform([$\\, $$ | String], Output,
                       undefined, EnvironmentLookup) ->
-    environment_transform(String, [$$ | Output],
-                          undefined, EnvironmentLookup);
+    environment_transform(String, [$$ | Output], undefined, EnvironmentLookup);
 
-environment_transform([$$ | String], Output,
-                      undefined, EnvironmentLookup) ->
+environment_transform([$$ | String], Output, undefined, EnvironmentLookup) ->
     case String of
         [${ | Rest] ->
             environment_transform(Rest, Output, [], EnvironmentLookup);
@@ -299,30 +308,24 @@ environment_transform([$$ | String], Output,
             environment_transform(String, Output, [], EnvironmentLookup)
     end;
 
-environment_transform([C | String], Output,
-                      undefined, EnvironmentLookup) ->
-    environment_transform(String, [C | Output],
-                          undefined, EnvironmentLookup);
+environment_transform([C | String], Output, undefined, EnvironmentLookup) ->
+    environment_transform(String, [C | Output], undefined, EnvironmentLookup);
 
-environment_transform([$} | String], Output,
-                      Key, EnvironmentLookup) ->
+environment_transform([$} | String], Output, Key, EnvironmentLookup) ->
     environment_transform_value(Key, String, Output, EnvironmentLookup);
 
-environment_transform([C | String], Output,
-                      Key, EnvironmentLookup)
+environment_transform([C | String], Output, Key, EnvironmentLookup)
     when (C >= $A andalso C =< $Z); (C == $_);
          (C >= $a andalso C =< $z);
          (C >= $0 andalso C =< $9) ->
     % handles ASCII only
     environment_transform(String, Output, [C | Key], EnvironmentLookup);
 
-environment_transform(String, Output,
-                      Key, EnvironmentLookup) ->
+environment_transform(String, Output, Key, EnvironmentLookup) ->
     environment_transform_value(Key, String, Output, EnvironmentLookup).
 
 environment_transform_value([], String, Output, EnvironmentLookup) ->
-    environment_transform(String, Output,
-                          undefined, EnvironmentLookup);
+    environment_transform(String, Output, undefined, EnvironmentLookup);
 
 environment_transform_value(Key, String, Output, EnvironmentLookup) ->
     case cloudi_x_trie:find(lists:reverse(Key), EnvironmentLookup) of
@@ -336,8 +339,12 @@ environment_transform_value(Key, String, Output, EnvironmentLookup) ->
 
 % update filename, including path
 filename_parse(Filename, EnvironmentLookup) ->
-    NewFilename = environment_transform(Filename, EnvironmentLookup),
-    string_terminate(NewFilename).
+    case environment_transform(Filename, EnvironmentLookup) of
+        [] ->
+            {error, {service_external_file_path_invalid_expanded, Filename}};
+        NewFilename ->
+            {ok, string_terminate(NewFilename)}
+    end.
 
 % remove beginning whitespace and validate delimiters
 % within the command-line arguments
@@ -413,6 +420,13 @@ environment_parse(Environment0, ThreadsPerProcess0,
                                              EnvironmentLookup2),
     environment_format(Environment3, EnvironmentLookup3).
 
+environment_format_value([], _) ->
+    [];
+environment_format_value(_, []) ->
+    [];
+environment_format_value([_ | _] = K, [_ | _] = V) ->
+    K ++ [$= | V] ++ [0].
+
 environment_format(Environment, EnvironmentLookup) ->
     environment_format([], Environment, EnvironmentLookup).
 
@@ -420,9 +434,12 @@ environment_format(Output, [], _) ->
     Output;
 
 environment_format(Output, [{K, V} | Environment], EnvironmentLookup) ->
-    environment_format(Output ++
-                       environment_transform(K, EnvironmentLookup) ++ [$=] ++
-                       environment_transform(V, EnvironmentLookup) ++ [0],
-                       Environment,
-                       EnvironmentLookup).
+    NewK = environment_transform(K, EnvironmentLookup),
+    NewV = environment_transform(V, EnvironmentLookup),
+    environment_format(Output ++ environment_format_value(NewK, NewV),
+                       Environment, EnvironmentLookup).
+
+% terminate the string for easy access within C/C++
+string_terminate([_ | _] = L) ->
+    L ++ [0].
 
