@@ -232,7 +232,8 @@
          {websocket_connect,
           "/tests/websockets/bounce/websocket/connect"},
          {websocket_disconnect,
-          "/tests/websockets/bounce/websocket/disconnect"}],
+          "/tests/websockets/bounce/websocket/disconnect"},
+         {websocket_ping, 30000}], % milliseconds
         immediate_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300,
         []},
@@ -390,7 +391,8 @@
         "/tests/http_req/",
         cloudi_service_filesystem,
         [{directory, "tests/http_req/public_html/"},
-         {refresh, 5} % seconds
+         {refresh, 5}, % seconds
+         {cache, 300} % seconds
          ],
         none,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},

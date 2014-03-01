@@ -27,6 +27,10 @@
 %%% the response.  So, 'both' does not assume the source Erlang pid
 %%% remains alive during the request/response exchange.  If you need
 %%% requests to survive an Erlang VM restart, this is the mode you should use.
+%%% (This assumes the source is also meant to receive the response, which
+%%%  doesn't need to be the case with 'both'.  Only a valid service name
+%%%  needs to be specified for the destination of the response and it
+%%%  doesn't need to be the source of the request).
 %%%
 %%% The retry service argument controls the number of retries during the
 %%% lifetime of this service's instance.  So, this means that after an

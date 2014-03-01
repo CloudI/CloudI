@@ -272,10 +272,11 @@ websocket_init(_Transport, Req0,
                #cowboy_state{dispatcher = Dispatcher,
                              context = Context,
                              prefix = Prefix,
-                             timeout_websocket = TimeoutWebsocket,
+                             timeout_websocket = TimeoutWebSocket,
                              output_type = OutputType,
                              set_x_forwarded_for = SetXForwardedFor,
-                             websocket_connect = WebsocketConnect,
+                             websocket_connect = WebSocketConnect,
+                             websocket_ping = WebSocketPing,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
                              use_client_ip_prefix = UseClientIpPrefix,
@@ -299,13 +300,13 @@ websocket_init(_Transport, Req0,
     % can not turn-off the /websocket suffix, since it would otherwise
     % cause a conflict with service requests coming from HTTP into CloudI
     % when UseMethodSuffix == false
-    NameWebsocket = erlang:binary_to_list(PathRaw) ++ "/websocket",
-    HeadersIncoming1 = case lists:prefix(Prefix, NameWebsocket) of
+    NameWebSocket = erlang:binary_to_list(PathRaw) ++ "/websocket",
+    HeadersIncoming1 = case lists:prefix(Prefix, NameWebSocket) of
         true ->
             % service requests are only received if they relate to
             % the service's prefix
-            ok = cloudi_x_cpg:join(NameWebsocket),
-            [{<<"service-name">>, erlang:list_to_binary(NameWebsocket)} |
+            ok = cloudi_x_cpg:join(NameWebSocket),
+            [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
              HeadersIncoming0];
         false ->
             HeadersIncoming0
@@ -335,8 +336,16 @@ websocket_init(_Transport, Req0,
         (OutputType =:= internal) orelse (OutputType =:= list) ->
             HeadersIncomingN
     end,
-    WebsocketConnectTransId = if
-        is_list(WebsocketConnect) ->
+    WebSocketPingStatus = if
+        WebSocketPing =:= undefined ->
+            undefined;
+        is_integer(WebSocketPing) ->
+            erlang:send_after(WebSocketPing, self(),
+                              {websocket_ping, WebSocketPing}),
+            received
+    end,
+    WebSocketConnectTransId = if
+        is_list(WebSocketConnect) ->
             Request = if
                 (OutputType =:= external) orelse
                 (OutputType =:= internal) orelse
@@ -346,7 +355,7 @@ websocket_init(_Transport, Req0,
                     "CONNECT"
             end,
             {ok, TransId} = send_async_minimal(Dispatcher, Context,
-                                               WebsocketConnect,
+                                               WebSocketConnect,
                                                RequestInfo, Request, self()),
             TransId;
         true ->
@@ -354,18 +363,19 @@ websocket_init(_Transport, Req0,
     end,
     {ok, ReqN,
      State#cowboy_state{
+         websocket_ping = WebSocketPingStatus,
          websocket_state = #websocket_state{
-             websocket_connect_trans_id = WebsocketConnectTransId,
+             websocket_connect_trans_id = WebSocketConnectTransId,
              name_incoming = NameIncoming,
              name_outgoing = NameOutgoing,
-             request_info = RequestInfo}}, TimeoutWebsocket}.
+             request_info = RequestInfo}}, TimeoutWebSocket}.
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
     {ok, Req, State};
 
 websocket_handle({pong, _Payload}, Req, State) ->
-    {ok, Req, State};
+    {ok, Req, State#cowboy_state{websocket_ping = received}};
 
 websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
                  #cowboy_state{output_type = OutputType,
@@ -631,6 +641,18 @@ websocket_info({'cloudi_service_return_async',
              }}
     end;
 
+websocket_info({websocket_ping, WebSocketPing}, Req,
+               #cowboy_state{websocket_ping = WebSocketPingStatus} = State) ->
+    if
+        WebSocketPingStatus =:= undefined ->
+            {shutdown, Req, State};
+        WebSocketPingStatus =:= received ->
+            erlang:send_after(WebSocketPing, self(),
+                              {websocket_ping, WebSocketPing}),
+            {reply, {ping, <<>>}, Req,
+             State#cowboy_state{websocket_ping = undefined}}
+    end;
+
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
     ?LOG_ERROR("Invalid websocket request state: \"~p\"", [Info]),
@@ -641,11 +663,11 @@ websocket_terminate(Reason, _Req,
                         dispatcher = Dispatcher,
                         context = Context,
                         output_type = OutputType,
-                        websocket_disconnect = WebsocketDisconnect,
+                        websocket_disconnect = WebSocketDisconnect,
                         websocket_state = #websocket_state{
                             request_info = RequestInfo}}) ->
     if
-        is_list(WebsocketDisconnect) ->
+        is_list(WebSocketDisconnect) ->
             Disconnect = case Reason of
                 {remote, CloseCode, CloseBinary}
                     when is_integer(CloseCode) ->
@@ -672,7 +694,7 @@ websocket_terminate(Reason, _Req,
                 (OutputType =:= list) ->
                     "DISCONNECT"
             end,
-            send_async_minimal(Dispatcher, Context, WebsocketDisconnect,
+            send_async_minimal(Dispatcher, Context, WebSocketDisconnect,
                                NewRequestInfo, Request, self());
         true ->
             ok

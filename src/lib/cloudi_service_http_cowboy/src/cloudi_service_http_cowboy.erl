@@ -74,6 +74,7 @@
 -define(DEFAULT_WEBSOCKET_TIMEOUT,       infinity). % milliseconds
 -define(DEFAULT_WEBSOCKET_CONNECT,      undefined).
 -define(DEFAULT_WEBSOCKET_DISCONNECT,   undefined).
+-define(DEFAULT_WEBSOCKET_PING,         undefined). % milliseconds
 -define(DEFAULT_SSL,                        false).
 -define(DEFAULT_COMPRESS,                   false).
 -define(DEFAULT_MAX_CONNECTIONS,             4096).
@@ -140,6 +141,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {websocket_timeout,        ?DEFAULT_WEBSOCKET_TIMEOUT},
         {websocket_connect,        ?DEFAULT_WEBSOCKET_CONNECT},
         {websocket_disconnect,     ?DEFAULT_WEBSOCKET_DISCONNECT},
+        {websocket_ping,           ?DEFAULT_WEBSOCKET_PING},
         {ssl,                      ?DEFAULT_SSL},
         {compress,                 ?DEFAULT_COMPRESS},
         {max_connections,          ?DEFAULT_MAX_CONNECTIONS},
@@ -160,8 +162,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {use_client_ip_prefix,     ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_method_suffix,        ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, NoDelay, RecvTimeout, WebsocketTimeout,
-     WebsocketConnect, WebsocketDisconnect, SSL, Compress, MaxConnections,
-     MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
+     WebsocketConnect, WebsocketDisconnect, WebsocketPing, SSL, Compress,
+     MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
      StatusCodeTimeout, UseWebSockets, UseSpdy,
@@ -177,6 +179,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
            is_list(WebsocketConnect),
     true = (WebsocketDisconnect =:= undefined) orelse
            is_list(WebsocketDisconnect),
+    true = (WebsocketPing =:= undefined) orelse
+           (is_integer(WebsocketPing) andalso (WebsocketPing > 0)),
     true = is_boolean(Compress),
     true = is_integer(MaxConnections),
     true = is_integer(MaxEmptyLines),
@@ -223,6 +227,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               status_code_timeout = StatusCodeTimeout,
                               websocket_connect = WebsocketConnect,
                               websocket_disconnect = WebsocketDisconnect,
+                              websocket_ping = WebsocketPing,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
                               use_client_ip_prefix = UseClientIpPrefix,

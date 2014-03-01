@@ -4,6 +4,9 @@
 2014-02-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix external service validation done during OS process spawn
+    * Add websocket_ping to cloudi_service_http_cowboy
+    * Add cache to cloudi_service_filesystem
+      (so HTTP cache controls can be used when the cached files are refreshed)
 
 2014-02-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

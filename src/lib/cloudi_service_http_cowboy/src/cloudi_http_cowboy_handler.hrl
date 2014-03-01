@@ -55,6 +55,7 @@
         status_code_timeout,
         websocket_connect,
         websocket_disconnect,
+        websocket_ping,
         use_websockets,
         use_host_prefix,
         use_client_ip_prefix,

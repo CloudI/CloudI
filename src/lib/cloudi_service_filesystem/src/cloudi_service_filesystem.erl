@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -66,22 +66,24 @@
 
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % get as a name suffix
 -define(DEFAULT_REFRESH,             undefined). % seconds
+-define(DEFAULT_CACHE,               undefined). % seconds
 
 -record(state,
     {
+        prefix :: string(),
         directory :: string(),
         refresh :: undefined | pos_integer(),
-        toggle :: boolean(),
-        files :: cloudi_x_trie:cloudi_x_trie(),
+        cache :: undefined | pos_integer(),
         use_http_get_suffix :: boolean(),
-        prefix :: string()
+        toggle :: boolean(),
+        files :: cloudi_x_trie:cloudi_x_trie()
     }).
 
 -record(file,
     {
         contents :: binary(),
         path :: string(),
-        mtime,
+        mtime :: calendar:datetime(),
         toggle :: boolean()
     }).
 
@@ -97,13 +99,18 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
         {directory,              undefined},
         {refresh,                ?DEFAULT_REFRESH},
+        {cache,                  ?DEFAULT_CACHE},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [DirectoryRaw, Refresh, UseHttpGetSuffix] =
+    [DirectoryRaw, Refresh, Cache, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
     true = ((Refresh =:= undefined) orelse
             (is_integer(Refresh) andalso
              (Refresh > 0) andalso (Refresh =< 4294967))),
+    true = ((Cache =:= undefined) orelse
+            ((Refresh /= undefined) andalso
+             is_integer(Cache) andalso
+             (Cache > 0) andalso (Cache =< 31536000))),
     Directory = cloudi_service:environment_transform(DirectoryRaw),
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
@@ -128,19 +135,36 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         true ->
             ok
     end,
-    {ok, #state{directory = Directory,
+    {ok, #state{prefix = Prefix,
+                directory = Directory,
                 refresh = Refresh,
+                cache = Cache,
                 toggle = Toggle,
                 files = Files1,
-                use_http_get_suffix = UseHttpGetSuffix,
-                prefix = Prefix}}.
+                use_http_get_suffix = UseHttpGetSuffix}}.
 
-cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, _Request,
+cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{files = Files} = State, _Dispatcher) ->
+                              #state{cache = Cache,
+                                     files = Files} = State, _Dispatcher) ->
     case cloudi_x_trie:find(Pattern, Files) of
-        {ok, #file{contents = Contents}} ->
+        {ok, #file{contents = Contents}} when Cache =:= undefined ->
             {reply, Contents, State};
+        {ok, #file{mtime = MTime,
+                   contents = Contents}} ->
+            NowTime = calendar:now_to_universal_time(os:timestamp()),
+            KeyValues = cloudi_service:
+                        request_info_key_value_parse(RequestInfo),
+            case cache_status(KeyValues, MTime) of
+                200 ->
+                    {reply, cache_headers_data(NowTime, MTime, Cache),
+                     Contents, State};
+                Status ->
+                    % not modified due to caching
+                    {reply,
+                     [{<<"status">>, erlang:integer_to_binary(Status)} |
+                      cache_headers_empty(NowTime, MTime)], <<>>, State}
+            end;
         error ->
             % possible if a sending service has stale service name lookup data
             % with a file that was removed during a refresh
@@ -149,12 +173,13 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, _Request,
     end.
 
 cloudi_service_handle_info(refresh,
-                           #state{directory = Directory,
+                           #state{prefix = Prefix,
+                                  directory = Directory,
                                   refresh = Refresh,
                                   toggle = Toggle,
                                   files = Files,
-                                  use_http_get_suffix = UseHttpGetSuffix,
-                                  prefix = Prefix} = State,
+                                  use_http_get_suffix =
+                                      UseHttpGetSuffix} = State,
                            Dispatcher) ->
     NewToggle = not Toggle,
     NewFiles = files_refresh(Directory, NewToggle,
@@ -373,4 +398,142 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
             ?LOG_WARN("file ~s error: ~p", [FilePath, Reason]),
             fold_files_directory(FileNames, Directory, F, A)
     end.
+
+cache_status(KeyValues, MTime) ->
+    ETag = cache_header_etag(MTime),
+    cache_status_0(ETag, KeyValues, MTime).
+
+cache_status_0(ETag, KeyValues, MTime) ->
+    case cloudi_service:key_value_find(<<"if-none-match">>, KeyValues) of
+        {ok, <<"*">>} ->
+            cache_status_1(ETag, KeyValues, MTime);
+        error ->
+            cache_status_1(ETag, KeyValues, MTime);
+        {ok, IfNoneMatch} ->
+            case binary:match(IfNoneMatch, ETag) of
+                nomatch ->
+                    cache_status_1(ETag, KeyValues, MTime);
+                _ ->
+                    304
+            end
+    end.
+
+cache_status_1(ETag, KeyValues, MTime) ->
+    case cloudi_service:key_value_find(<<"if-match">>, KeyValues) of
+        {ok, <<"*">>} ->
+            cache_status_2(KeyValues, MTime);
+        error ->
+            cache_status_2(KeyValues, MTime);
+        {ok, IfMatch} ->
+            case binary:match(IfMatch, ETag) of
+                nomatch ->
+                    412;
+                _ ->
+                    cache_status_2(KeyValues, MTime)
+            end
+    end.
+
+cache_status_2(KeyValues, MTime) ->
+    case cloudi_service:key_value_find(<<"if-modified-since">>, KeyValues) of
+        {ok, DateTimeBinary} ->
+            case cloudi_service_filesystem_datetime:parse(DateTimeBinary) of
+                {error, _} ->
+                    cache_status_3(KeyValues, MTime);
+                DateTime when MTime > DateTime ->
+                    200;
+                _ ->
+                    304
+            end;
+        error ->
+            cache_status_3(KeyValues, MTime)
+    end.
+
+cache_status_3(KeyValues, MTime) ->
+    case cloudi_service:key_value_find(<<"if-unmodified-since">>, KeyValues) of
+        {ok, DateTimeBinary} ->
+            case cloudi_service_filesystem_datetime:parse(DateTimeBinary) of
+                {error, _} ->
+                    200;
+                DateTime when MTime =< DateTime ->
+                    412;
+                _ ->
+                    200
+            end;
+        error ->
+            200
+    end.
+
+cache_header_etag(MTime) ->
+    Output = io_lib:format("\"~.16b\"",
+                           [calendar:datetime_to_gregorian_seconds(MTime)]),
+    erlang:iolist_to_binary(Output).
+
+cache_header_control(Cache) ->
+    Output = io_lib:format("public,max-age=~w", [Cache]),
+    erlang:iolist_to_binary(Output).
+
+cache_header_expires(ATime, Cache) ->
+    Seconds = calendar:datetime_to_gregorian_seconds(ATime),
+    Expires = calendar:gregorian_seconds_to_datetime(Seconds + Cache),
+    rfc1123_format(Expires).
+
+cache_headers_data(NowTime, MTime, Cache) ->
+    [{<<"etag">>, cache_header_etag(MTime)},
+     {<<"cache-control">>, cache_header_control(Cache)},
+     {<<"expires">>, cache_header_expires(NowTime, Cache)},
+     {<<"last-modified">>, rfc1123_format(MTime)},
+     {<<"date">>, rfc1123_format(NowTime)}].
+
+cache_headers_empty(NowTime, MTime) ->
+    [{<<"last-modified">>, rfc1123_format(MTime)},
+     {<<"date">>, rfc1123_format(NowTime)}].
+
+rfc1123_format_day(1) ->
+    "Mon";
+rfc1123_format_day(2) ->
+    "Tue";
+rfc1123_format_day(3) ->
+    "Wed";
+rfc1123_format_day(4) ->
+    "Thu";
+rfc1123_format_day(5) ->
+    "Fri";
+rfc1123_format_day(6) ->
+    "Sat";
+rfc1123_format_day(7) ->
+    "Sun".
+
+rfc1123_format_month(1) ->
+    "Jan";
+rfc1123_format_month(2) ->
+    "Feb";
+rfc1123_format_month(3) ->
+    "Mar";
+rfc1123_format_month(4) ->
+    "Apr";
+rfc1123_format_month(5) ->
+    "May";
+rfc1123_format_month(6) ->
+    "Jun";
+rfc1123_format_month(7) ->
+    "Jul";
+rfc1123_format_month(8) ->
+    "Aug";
+rfc1123_format_month(9) ->
+    "Sep";
+rfc1123_format_month(10) ->
+    "Oct";
+rfc1123_format_month(11) ->
+    "Nov";
+rfc1123_format_month(12) ->
+    "Dec".
+
+rfc1123_format({{Year, Month, Day}, {Hour, Minute, Second}}) ->
+    % e.g., Sun, 06 Nov 1994 08:49:37 GMT
+    %       Mon, 29 Apr 2013 21:44:55 GMT
+    DayStr = rfc1123_format_day(calendar:day_of_the_week(Year, Month, Day)),
+    MonthStr = rfc1123_format_month(Month),
+    Output = io_lib:format("~s, ~2..0w ~s ~4..0w ~2..0w:~2..0w:~2..0w GMT",
+                           [DayStr, Day, MonthStr, Year, Hour, Minute, Second]),
+    erlang:iolist_to_binary(Output).
 
