@@ -5,7 +5,8 @@
   [{description, "Filesystem CloudI Service"},
    {vsn, "@VERSION@"},
    {modules, [
-        cloudi_service_filesystem
+        cloudi_service_filesystem,
+        cloudi_service_filesystem_datetime
         ]},
    {registered, []},
    {applications, [

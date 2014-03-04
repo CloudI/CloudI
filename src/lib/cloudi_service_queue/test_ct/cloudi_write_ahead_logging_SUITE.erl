@@ -135,8 +135,8 @@ t_wal_sequence0(Config) ->
     {Chunk6, State15} = cloudi_write_ahead_logging:store_start(ChunkRequest6,
                                                                State14),
     ChunkRequestId6 = cloudi_x_uuid:get_v1(UUID),
-    State16 = cloudi_write_ahead_logging:store_end(ChunkRequestId6,
-                                                   Chunk6, State15),
+    _State16 = cloudi_write_ahead_logging:store_end(ChunkRequestId6,
+                                                    Chunk6, State15),
     % at this point, the requests (oldest to newest) are:
     % request2, request3, request5, request6
 
@@ -156,7 +156,7 @@ t_wal_sequence0(Config) ->
                 {ok, NewTransId}
         end
     end,
-    State17 = cloudi_write_ahead_logging:new(?config(file, Config), SendF1),
+    _State17 = cloudi_write_ahead_logging:new(?config(file, Config), SendF1),
 
     % restart2:
     SendF2 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,

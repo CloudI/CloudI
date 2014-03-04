@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CT tests for cloudi_service_queue
+    * Add a constraint based on testing for NextName in
+      cloudi_service_queue both fault_isolation mode
+
 2014-02-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix external service validation done during OS process spawn

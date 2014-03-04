@@ -29,8 +29,10 @@
 %%% requests to survive an Erlang VM restart, this is the mode you should use.
 %%% (This assumes the source is also meant to receive the response, which
 %%%  doesn't need to be the case with 'both'.  Only a valid service name
-%%%  needs to be specified for the destination of the response and it
-%%%  doesn't need to be the source of the request).
+%%%  needs to be specified for the destination of the response
+%%%  (with a <<"service_name">> key/value entry in the RequestInfo of the
+%%%   initial service request) and it doesn't need to be the source
+%%%  of the request).
 %%%
 %%% The retry service argument controls the number of retries during the
 %%% lifetime of this service's instance.  So, this means that after an
@@ -97,32 +99,42 @@
 -define(DEFAULT_FAULT_ISOLATION,      destination). % | both
 
 % fault_isolation: destination
--type request_destination_mode() ::
-    {cloudi_service:request_type(),
-     cloudi_service:service_name(),
-     cloudi_service:service_name_pattern(),
-     cloudi_service:request_info(),
-     cloudi_service:request(),
-     cloudi_service:timeout_value_milliseconds(),
-     cloudi_service:priority(),
-     cloudi_service:trans_id(),
-     cloudi_service:source()}.
+-record(destination_request,
+    {
+        type :: cloudi_service:request_type(),
+        name :: cloudi_service:service_name(),
+        pattern :: cloudi_service:service_name_pattern(),
+        request_info :: cloudi_service:request_info(),
+        request :: cloudi_service:request(),
+        timeout :: cloudi_service:timeout_value_milliseconds(),
+        priority :: cloudi_service:priority(),
+        trans_id :: cloudi_service:trans_id(),
+        pid :: cloudi_service:source()
+    }).
+-type request_destination_mode() :: #destination_request{}.
 % fault_isolation: both
--type request_both_mode() ::
-    {cloudi_service:service_name(),
-     cloudi_service:request_info(),
-     cloudi_service:request(),
-     cloudi_service:timeout_value_milliseconds(),
-     cloudi_service:priority(),
-     cloudi_service:trans_id(),
-     cloudi_service:service_name(),
-     cloudi_service:trans_id()} |
-    {cloudi_service:service_name(),
-     cloudi_service:response_info(),
-     cloudi_service:response(),
-     cloudi_service:timeout_value_milliseconds(),
-     cloudi_service:priority(),
-     cloudi_service:trans_id()}.
+-record(both_request,
+    {
+        name :: cloudi_service:service_name(),
+        request_info :: cloudi_service:request_info(),
+        request :: cloudi_service:request(),
+        timeout :: cloudi_service:timeout_value_milliseconds(),
+        priority :: cloudi_service:priority(),
+        trans_id :: cloudi_service:trans_id(),
+        next_name :: cloudi_service:service_name(),
+        next_trans_id :: cloudi_service:trans_id()
+    }).
+-record(both_response,
+    {
+        name :: cloudi_service:service_name(),
+        response_info :: cloudi_service:response_info(),
+        response :: cloudi_service:response(),
+        timeout :: cloudi_service:timeout_value_milliseconds(),
+        priority :: cloudi_service:priority(),
+        trans_id :: cloudi_service:trans_id()
+    }).
+-type request_both_mode() :: #both_request{} | #both_response{}.
+% cloudi_write_ahead_logging 
 -type request() :: request_destination_mode() |
                    request_both_mode().
 -export_type([request/0]).
@@ -177,8 +189,15 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                      mode = destination} = State,
                               Dispatcher) ->
     [QueueName] = cloudi_service:service_name_parse(Name, Pattern),
-    ChunkRequest = {Type, Name, Pattern, RequestInfo, Request,
-                    Timeout, Priority, TransId, Pid},
+    ChunkRequest = #destination_request{type = Type,
+                                        name = Name,
+                                        pattern = Pattern,
+                                        request_info = RequestInfo,
+                                        request = Request,
+                                        timeout = Timeout,
+                                        priority = Priority,
+                                        trans_id = TransId,
+                                        pid = Pid},
     {Chunk, NextLogging} = cloudi_write_ahead_logging:
                            store_start(ChunkRequest, Logging),
     % PERSISTENCE START:
@@ -209,11 +228,23 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Dispatcher) ->
     RequestMetaData = cloudi_service:request_info_key_value_parse(RequestInfo),
     case cloudi_service:key_value_find(<<"service_name">>, RequestMetaData) of
-        {ok, NextName} ->
+        {ok, NextNameAnyType} ->
             [QueueName] = cloudi_service:service_name_parse(Name, Pattern),
+            NextName = if
+                is_binary(NextNameAnyType) ->
+                    erlang:binary_to_list(NextNameAnyType);
+                is_list(NextNameAnyType), is_integer(hd(NextNameAnyType)) ->
+                    NextNameAnyType
+            end,
             NextTransId = cloudi_service:trans_id(Dispatcher),
-            ChunkRequest = {QueueName, RequestInfo, Request,
-                            Timeout, Priority, TransId, NextName, NextTransId},
+            ChunkRequest = #both_request{name = QueueName,
+                                         request_info = RequestInfo,
+                                         request = Request,
+                                         timeout = Timeout,
+                                         priority = Priority,
+                                         trans_id = TransId,
+                                         next_name = NextName,
+                                         next_trans_id = NextTransId},
             {Chunk, NextLogging} = cloudi_write_ahead_logging:
                                    store_start(ChunkRequest, Logging),
             % PERSISTENCE START:
@@ -250,7 +281,11 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                            #state{logging = Logging,
                                   mode = destination} = State,
                            Dispatcher) ->
-    {{Type, Name, Pattern, _, _, _, _, TransId, Pid},
+    {#destination_request{type = Type,
+                          name = Name,
+                          pattern = Pattern,
+                          trans_id = TransId,
+                          pid = Pid},
      NewLogging} = cloudi_write_ahead_logging:
                    erase(QueueTransId, Logging),
     % PERSISTENCE END:
@@ -267,13 +302,18 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   mode = both} = State,
                            Dispatcher) ->
     UpdateF = fun
-        ({_QueueName, _RequestInfo, _Request,
-          Timeout, Priority, _TransId, NextName, NextTransId}) ->
+        (#both_request{timeout = Timeout,
+                       priority = Priority,
+                       next_name = NextName,
+                       next_trans_id = NextTransId}) ->
             {NextTransId,
-             {NextName, ResponseInfo, Response,
-              Timeout, Priority, NextTransId}};
-        ({_NextName, _ResponseInfo, _Response,
-          _NextTimeout, _NextPriority, _NextTransId}) ->
+             #both_response{name = NextName,
+                            response_info = ResponseInfo,
+                            response = Response,
+                            timeout = Timeout,
+                            priority = Priority,
+                            trans_id = NextTransId}};
+        (#both_response{}) ->
             undefined
     end,
     {NewChunkRequest,
@@ -285,8 +325,12 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
             % at this point the service request is no longer persisted
             % because both the request and the response were delivered
             {noreply, State#state{logging = NewLogging}};
-        {NextName, ResponseInfo, Response,
-         NextTimeout, NextPriority, NextTransId} ->
+        #both_response{name = NextName,
+                       response_info = ResponseInfo,
+                       response = Response,
+                       timeout = NextTimeout,
+                       priority = NextPriority,
+                       trans_id = NextTransId} ->
             % deliver the response as a service request
             case cloudi_service:get_pid(Dispatcher, NextName, NextTimeout) of
                 {ok, PatternPid} ->
@@ -332,8 +376,14 @@ cloudi_service_terminate(_, #state{}) ->
 -compile({inline, [{retry, 3}]}).
 
 retry(destination, Dispatcher,
-      {_Type, Name, Pattern, RequestInfo, Request,
-       Timeout, Priority, TransId, Pid}) ->
+      #destination_request{name = Name,
+                           pattern = Pattern,
+                           request_info = RequestInfo,
+                           request = Request,
+                           timeout = Timeout,
+                           priority = Priority,
+                           trans_id = TransId,
+                           pid = Pid}) ->
     Age = (cloudi_x_uuid:get_v1_time(erlang) -
            cloudi_x_uuid:get_v1_time(TransId)) div 1000 + 100, % milliseconds
     case erlang:is_process_alive(Pid) of
@@ -349,8 +399,14 @@ retry(destination, Dispatcher,
                                              NewTimeout, Priority)
     end;
 retry(both, Dispatcher,
-      {QueueName, RequestInfo, Request,
-       Timeout, Priority, TransId, NextName, NextTransId}) ->
+      #both_request{name = QueueName,
+                    request_info = RequestInfo,
+                    request = Request,
+                    timeout = Timeout,
+                    priority = Priority,
+                    trans_id = TransId,
+                    next_name = NextName,
+                    next_trans_id = NextTransId}) ->
     Age = (cloudi_x_uuid:get_v1_time(erlang) -
            cloudi_x_uuid:get_v1_time(TransId)) div 1000 + 100, % milliseconds
     if
@@ -372,8 +428,12 @@ retry(both, Dispatcher,
                                              NewTimeout, Priority)
     end;
 retry(both, Dispatcher,
-      {NextName, ResponseInfo, Response,
-       NextTimeout, NextPriority, NextTransId}) ->
+      #both_response{name = NextName,
+                     response_info = ResponseInfo,
+                     response = Response,
+                     timeout = NextTimeout,
+                     priority = NextPriority,
+                     trans_id = NextTransId}) ->
     case cloudi_service:get_pid(Dispatcher, NextName, NextTimeout) of
         {ok, PatternPid} ->
             cloudi_service:send_async_active(Dispatcher, NextName,
