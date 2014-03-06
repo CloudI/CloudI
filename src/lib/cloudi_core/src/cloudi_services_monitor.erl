@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_monitor).
@@ -181,10 +181,8 @@ init([]) ->
 handle_call({monitor, M, F, A, ProcessIndex, CountThread,
              MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
-    FA = [ProcessIndex | A],
-    case erlang:apply(M, F, FA) of
+    case erlang:apply(M, F, [ProcessIndex | A]) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p", [F, FA, Pid]),
             NewServices =
                 cloudi_x_key2value:store(ServiceId, Pid,
                     #service{service_m = M,
@@ -196,9 +194,8 @@ handle_call({monitor, M, F, A, ProcessIndex, CountThread,
                              monitor = erlang:monitor(process, Pid),
                              max_r = MaxR,
                              max_t = MaxT}, Services),
-            {reply, ok, State#state{services = NewServices}};
+            {reply, {ok, Pid}, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p", [F, FA, Pids]),
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     #service{service_m = M,
@@ -211,7 +208,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountThread,
                              max_r = MaxR,
                              max_t = MaxT}, D)
             end, Services, Pids),
-            {reply, ok, State#state{services = NewServices}};
+            {reply, {ok, Pids}, State#state{services = NewServices}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -226,7 +223,7 @@ handle_call({shutdown, ServiceId}, _,
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
                 erlang:send_after(Shutdown, Self,
-                                  {kill, Shutdown, P, Service}),
+                                  {kill, Shutdown, P, ServiceId, Service}),
                 cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
             {reply, ok, State#state{services = NewServices}};
@@ -342,13 +339,9 @@ handle_info({changes, ServiceId},
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], #service{service_m = M,
-                                    service_f = F,
-                                    service_a = A,
-                                    process_index = ProcessIndex,
-                                    pids = Pids}}} ->
-            FA = [ProcessIndex | A],
-            ?LOG_INFO("Service pid ~p shutdown~n ~p:~p~p", [Pid, M, F, FA]),
+        {ok, {[ServiceId], #service{pids = Pids}}} ->
+            ?LOG_INFO("Service pid ~p shutdown~n ~p",
+                      [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             NewServices = lists:foldl(fun(P, D) ->
                 erlang:exit(P, shutdown),
                 cloudi_x_key2value:erase(ServiceId, P, D)
@@ -362,13 +355,9 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid,
              {shutdown, cloudi_count_process_dynamic_terminate}},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], #service{service_m = M,
-                                    service_f = F,
-                                    service_a = A,
-                                    process_index = ProcessIndex}}} ->
-            FA = [ProcessIndex | A],
-            ?LOG_INFO("Service pid ~p terminated (count_process_dynamic)~n"
-                      " ~p:~p~p", [Pid, M, F, FA]),
+        {ok, {[ServiceId], #service{}}} ->
+            ?LOG_INFO("Service pid ~p terminated (count_process_dynamic)~n ~p",
+                      [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
             {noreply, State#state{services = NewServices}};
         error ->
@@ -378,14 +367,16 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid,
 handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], #service{service_m = M,
-                                    service_f = F,
-                                    service_a = A,
-                                    process_index = ProcessIndex} = Service}} ->
-            FA = [ProcessIndex | A],
-            ?LOG_WARN("Service pid ~p error: ~p~n ~p:~p~p~n",
-                      [Pid, Info, M, F, FA]),
-            {noreply, restart(Service, Services, State, ServiceId, Pid)};
+        {ok, {[ServiceId], #service{} = Service}} ->
+            ?LOG_WARN("Service pid ~p error: ~p~n ~p",
+                      [Pid, Info, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+            case restart(Service, Services, State, ServiceId, Pid) of
+                {true, NewState} ->
+                    {noreply, NewState};
+                {false, NewState} ->
+                    cloudi_configurator:service_dead(ServiceId),
+                    {noreply, NewState}
+            end;
         error ->
             % Pids started together as threads for one OS process may
             % have died together.  The first death triggers the restart and
@@ -395,18 +386,20 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
 
 handle_info({restart_stage2, Service, ServiceId, OldPid},
             #state{services = Services} = State) ->
-    {noreply, restart_stage2(Service, Services, State, ServiceId, OldPid)};
+    case restart_stage2(Service, Services, State, ServiceId, OldPid) of
+        {true, NewState} ->
+            {noreply, NewState};
+        {false, NewState} ->
+            cloudi_configurator:service_dead(ServiceId),
+            {noreply, NewState}
+    end;
 
-handle_info({kill, Shutdown, Pid,
-             #service{service_m = M,
-                      service_f = F,
-                      service_a = A,
-                      process_index = ProcessIndex}}, State) ->
+handle_info({kill, Shutdown, Pid, ServiceId, #service{}}, State) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            FA = [ProcessIndex | A],
             ?LOG_ERROR("Service pid ~p brutal_kill after ~p ms (MaxT/MaxR)~n"
-                       " ~p:~p~p~n", [Pid, Shutdown, M, F, FA]),
+                       " ~p",[Pid, Shutdown,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
             erlang:exit(Pid, kill);
         false ->
             ok
@@ -439,24 +432,20 @@ restart_stage1(#service{pids = Pids,
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, shutdown),
         erlang:send_after(Shutdown, Self,
-                          {kill, Shutdown, P, Service}),
+                          {kill, Shutdown, P, ServiceId, Service}),
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
                    NewServices, State, ServiceId, OldPid).
 
-restart_stage2(#service{service_m = M,
-                        service_f = F,
-                        service_a = A,
-                        process_index = ProcessIndex,
-                        restart_count = 0,
+restart_stage2(#service{restart_count = 0,
                         max_r = 0},
-               Services, State, _, OldPid) ->
+               Services, State, ServiceId, OldPid) ->
     % no restarts allowed
-    FA = [ProcessIndex | A],
-    ?LOG_WARN("max restarts (MaxR = 0) ~p~n ~p:~p~p", [OldPid, M, F, FA]),
-    State#state{services = Services};
+    ?LOG_WARN("max restarts (MaxR = 0) ~p~n ~p",
+              [OldPid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+    {false, State#state{services = Services}};
 
 restart_stage2(#service{service_m = M,
                         service_f = F,
@@ -467,12 +456,12 @@ restart_stage2(#service{service_m = M,
                Services, State, ServiceId, OldPid) ->
     % first restart
     Now = erlang:now(),
-    FA = [ProcessIndex | A],
-    NewServices = case erlang:apply(M, F, FA) of
+    NewServices = case erlang:apply(M, F, [ProcessIndex | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now ~p)~n"
-                      " ~p:~p~p", [OldPid, Pid, M, F, FA]),
+                      " ~p", [OldPid, Pid,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = [Pid],
@@ -482,7 +471,8 @@ restart_stage2(#service{service_m = M,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now one of ~p)~n"
-                      " ~p:~p~p", [OldPid, Pids, M, F, FA]),
+                      " ~p", [OldPid, Pids,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
@@ -492,7 +482,8 @@ restart_stage2(#service{service_m = M,
                                     restart_times = [Now]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, FA]),
+            ?LOG_ERROR("failed ~p restart~n ~p",
+                       [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [Now]},
@@ -500,13 +491,9 @@ restart_stage2(#service{service_m = M,
                       OldPid},
             Services
     end,
-    State#state{services = NewServices};
+    {true, State#state{services = NewServices}};
     
-restart_stage2(#service{service_m = M,
-                        service_f = F,
-                        service_a = A,
-                        process_index = ProcessIndex,
-                        restart_count = RestartCount,
+restart_stage2(#service{restart_count = RestartCount,
                         restart_times = RestartTimes,
                         max_r = MaxR,
                         max_t = MaxT} = Service,
@@ -524,10 +511,10 @@ restart_stage2(#service{service_m = M,
                                            restart_times = NewRestartTimes},
                            Services, State, ServiceId, OldPid);
         true ->
-            FA = [ProcessIndex | A],
             ?LOG_WARN("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
-                      " ~p:~p~p", [MaxR, MaxT, OldPid, M, F, FA]),
-            State#state{services = Services}
+                      " ~p", [MaxR, MaxT, OldPid,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
+            {false, State#state{services = Services}}
     end;
 
 restart_stage2(#service{service_m = M,
@@ -541,12 +528,12 @@ restart_stage2(#service{service_m = M,
     Now = erlang:now(),
     R = RestartCount + 1,
     T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
-    FA = [ProcessIndex | A],
-    NewServices = case erlang:apply(M, F, FA) of
+    NewServices = case erlang:apply(M, F, [ProcessIndex | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now ~p)~n"
-                      " ~p:~p~p", [R, T, OldPid, Pid, M, F, FA]),
+                      " ~p", [R, T, OldPid, Pid,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
             Monitor = erlang:monitor(process, Pid),
             cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = [Pid],
@@ -557,7 +544,8 @@ restart_stage2(#service{service_m = M,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now one of ~p)~n"
-                      " ~p:~p~p", [R, T, OldPid, Pids, M, F, FA]),
+                      " ~p", [R, T, OldPid, Pids,
+                              cloudi_x_uuid:uuid_to_string(ServiceId)]),
             lists:foldl(fun(P, D) ->
                 Monitor = erlang:monitor(process, P),
                 cloudi_x_key2value:store(ServiceId, P,
@@ -567,7 +555,8 @@ restart_stage2(#service{service_m = M,
                                     restart_times = [Now | RestartTimes]}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p restart~n ~p:~p~p", [Error, M, F, FA]),
+            ?LOG_ERROR("failed ~p restart~n ~p",
+                       [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
                                       restart_times = [Now | RestartTimes]},
@@ -575,7 +564,7 @@ restart_stage2(#service{service_m = M,
                       OldPid},
             Services
     end,
-    State#state{services = NewServices}.
+    {true, State#state{services = NewServices}}.
 
 pids_change(ChangeList, CountProcessCurrent) ->
     pids_change_loop(ChangeList,
@@ -675,10 +664,10 @@ pids_increase_loop(Count, ProcessIndex,
                             count_thread = CountThread,
                             max_r = MaxR,
                             max_t = MaxT} = Service, ServiceId, Services) ->
-    FA = [ProcessIndex | A],
-    NewServices = case erlang:apply(M, F, FA) of
+    NewServices = case erlang:apply(M, F, [ProcessIndex | A]) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p (count_process_dynamic)", [F, FA, Pid]),
+            ?LOG_INFO("~p -> ~p (count_process_dynamic)",
+                      [cloudi_x_uuid:uuid_to_string(ServiceId), Pid]),
             cloudi_x_key2value:store(ServiceId, Pid,
                 #service{service_m = M,
                          service_f = F,
@@ -690,7 +679,8 @@ pids_increase_loop(Count, ProcessIndex,
                          max_r = MaxR,
                          max_t = MaxT}, Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_INFO("~p ~p -> ~p (count_process_dynamic)", [F, FA, Pids]),
+            ?LOG_INFO("~p -> ~p (count_process_dynamic)",
+                      [cloudi_x_uuid:uuid_to_string(ServiceId), Pids]),
             lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     #service{service_m = M,
@@ -704,8 +694,8 @@ pids_increase_loop(Count, ProcessIndex,
                              max_t = MaxT}, D)
             end, Services, Pids);
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p:~p~p",
-                       [Error, M, F, FA]),
+            ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p",
+                       [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             Services
     end,
     pids_increase_loop(Count - 1, ProcessIndex + 1,

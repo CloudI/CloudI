@@ -59,6 +59,7 @@
          services_restart/3,
          services_search/2,
          services/1,
+         service_format/1,
          nodes_add/2,
          nodes_remove/2]).
 
@@ -354,74 +355,85 @@ services_search([ID | _] = Value, Config)
          {cloudi_service_api:service_id(), #external{}}).
 
 services(#config{services = Services}) ->
-    lists:map(fun(Service) ->
-        if
-            is_record(Service, config_service_internal) ->
-                {Service#config_service_internal.uuid,
-                 #internal{prefix =
-                               Service#config_service_internal.prefix,
-                           module =
-                               Service#config_service_internal.module,
-                           args =
-                               Service#config_service_internal.args,
-                           dest_refresh =
-                               Service#config_service_internal.dest_refresh,
-                           timeout_init =
-                               Service#config_service_internal.timeout_init,
-                           timeout_async =
-                               Service#config_service_internal.timeout_async,
-                           timeout_sync =
-                               Service#config_service_internal.timeout_sync,
-                           dest_list_deny =
-                               Service#config_service_internal.dest_list_deny,
-                           dest_list_allow =
-                               Service#config_service_internal.dest_list_allow,
-                           count_process =
-                               Service#config_service_internal.count_process,
-                           max_r =
-                               Service#config_service_internal.max_r,
-                           max_t =
-                               Service#config_service_internal.max_t,
-                           options = services_format_options_internal(
-                               Service#config_service_internal.options)}};
-            is_record(Service, config_service_external) ->
-                {Service#config_service_external.uuid,
-                 #external{prefix =
-                               Service#config_service_external.prefix,
-                           file_path =
-                               Service#config_service_external.file_path,
-                           args =
-                               Service#config_service_external.args,
-                           env =
-                               Service#config_service_external.env,
-                           dest_refresh =
-                               Service#config_service_external.dest_refresh,
-                           protocol =
-                               Service#config_service_external.protocol,
-                           buffer_size =
-                               Service#config_service_external.buffer_size,
-                           timeout_init =
-                               Service#config_service_external.timeout_init,
-                           timeout_async =
-                               Service#config_service_external.timeout_async,
-                           timeout_sync =
-                               Service#config_service_external.timeout_sync,
-                           dest_list_deny =
-                               Service#config_service_external.dest_list_deny,
-                           dest_list_allow =
-                               Service#config_service_external.dest_list_allow,
-                           count_process =
-                               Service#config_service_external.count_process,
-                           count_thread =
-                               Service#config_service_external.count_thread,
-                           max_r =
-                               Service#config_service_external.max_r,
-                           max_t =
-                               Service#config_service_external.max_t,
-                           options = services_format_options_external(
-                               Service#config_service_external.options)}}
-        end
-    end, Services).
+    [service_format(Service) || Service <- Services].
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the configuration format, as it was provided.===
+%% Using the tuple format.  If necessary, the proplist format could be added
+%% based on a separate function option parameter.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_format(#config_service_internal{} |
+                     #config_service_external{}) ->
+    {cloudi_service_api:service_id(), #internal{}} |
+    {cloudi_service_api:service_id(), #external{}}.
+
+service_format(#config_service_internal{prefix = Prefix,
+                                        module = Module,
+                                        args = Args,
+                                        dest_refresh = DestRefresh,
+                                        timeout_init = TimeoutInit,
+                                        timeout_async = TimeoutAsync,
+                                        timeout_sync = TimeoutSync,
+                                        dest_list_deny = DestListDeny,
+                                        dest_list_allow = DestListAllow,
+                                        count_process = CountProcess,
+                                        max_r = MaxR,
+                                        max_t = MaxT,
+                                        options = Options,
+                                        uuid = ID}) ->
+    {ID,
+     #internal{prefix = Prefix,
+               module = Module,
+               args = Args,
+               dest_refresh = DestRefresh,
+               timeout_init = TimeoutInit,
+               timeout_async = TimeoutAsync,
+               timeout_sync = TimeoutSync,
+               dest_list_deny = DestListDeny,
+               dest_list_allow = DestListAllow,
+               count_process = CountProcess,
+               max_r = MaxR,
+               max_t = MaxT,
+               options = services_format_options_internal(Options)}};
+service_format(#config_service_external{prefix = Prefix,
+                                        file_path = FilePath,
+                                        args = Args,
+                                        env = Env,
+                                        dest_refresh = DestRefresh,
+                                        protocol = Protocol,
+                                        buffer_size = BufferSize,
+                                        timeout_init = TimeoutInit,
+                                        timeout_async = TimeoutAsync,
+                                        timeout_sync = TimeoutSync,
+                                        dest_list_deny = DestListDeny,
+                                        dest_list_allow = DestListAllow,
+                                        count_process = CountProcess,
+                                        count_thread = CountThread,
+                                        max_r = MaxR,
+                                        max_t = MaxT,
+                                        options = Options,
+                                        uuid = ID}) ->
+    {ID,
+     #external{prefix = Prefix,
+               file_path = FilePath,
+               args = Args,
+               env = Env,
+               dest_refresh = DestRefresh,
+               protocol = Protocol,
+               buffer_size = BufferSize,
+               timeout_init = TimeoutInit,
+               timeout_async = TimeoutAsync,
+               timeout_sync = TimeoutSync,
+               dest_list_deny = DestListDeny,
+               dest_list_allow = DestListAllow,
+               count_process = CountProcess,
+               count_thread = CountThread,
+               max_r = MaxR,
+               max_t = MaxT,
+               options = services_format_options_external(Options)}}.
 
 %%-------------------------------------------------------------------------
 %% @doc

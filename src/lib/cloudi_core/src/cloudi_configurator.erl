@@ -69,6 +69,7 @@
          service_start/2,
          service_stop/3,
          service_restart/2,
+         service_dead/1,
          concurrency/1]).
 
 %% gen_server callbacks
@@ -194,6 +195,10 @@ service_restart(#config_service_internal{} = Service, Timeout) ->
 
 service_restart(#config_service_external{} = Service, Timeout) ->
     service_restart_external(Service, timeout_decr(Timeout)).
+
+service_dead(ID)
+    when is_binary(ID) ->
+    gen_server:cast(?MODULE, {service_dead, ID}).
 
 concurrency(I)
     when is_integer(I) ->
@@ -331,6 +336,19 @@ handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
+
+handle_cast({service_dead, ID}, #state{configuration = Config} = State) ->
+    #config{services = Services} = Config,
+    NewServices = lists:filter(fun(Service) ->
+        if
+            is_record(Service, config_service_internal) ->
+                Service#config_service_internal.uuid /= ID;
+            is_record(Service, config_service_external) ->
+                Service#config_service_external.uuid /= ID
+        end
+    end, Services),
+    NewConfig = Config#config{services = NewServices},
+    {noreply, State#state{configuration = NewConfig}};
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
@@ -595,7 +613,10 @@ service_start_internal(Count0,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
                                          Count1, 1, MaxR, MaxT, ID, Timeout) of
-        ok ->
+        {ok, P} ->
+            {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
+            ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
+                                    ServiceConfig}, P]),
             service_start_internal(Count1, Service, Timeout);
         {error, _} = Error ->
             Error
@@ -631,7 +652,10 @@ service_start_external(Count0,
                                           DestListAllow, Options, ID],
                                          Count1, CountThread,
                                          MaxR, MaxT, ID, Timeout) of
-        ok ->
+        {ok, P} ->
+            {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
+            ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
+                                    ServiceConfig}, P]),
             service_start_external(Count1, Service, CountThread, Timeout);
         {error, _} = Error ->
             Error
@@ -654,7 +678,8 @@ service_stop_internal(#config_service_internal{
                 Remove =:= true ->
                     % no service processes are using the service module
                     % so it is safe to remove the service module
-                    % dependencies (applications, if they were used)
+                    % dependencies (applications, if they were used, or
+                    % unload the service module)
                     service_stop_remove_internal(Service, Timeout);
                 Remove =:= false ->
                     ok

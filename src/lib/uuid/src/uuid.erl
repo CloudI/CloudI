@@ -19,7 +19,7 @@
 %%%
 %%% BSD LICENSE
 %%%
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%%
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -289,7 +289,7 @@ get_v1_time(Value)
       _:14,
       _:48>> = Value,
     <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
-    erlang:trunc((Time - 16#01b21dd213814000) / 10). % microseconds since epoch
+    ((Time - 16#01b21dd213814000) div 10). % microseconds since epoch
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1193,13 +1193,13 @@ mac_address([{_, L} | Rest]) ->
     case lists:keyfind(hwaddr, 1, L) of
         false ->
             mac_address(Rest);
-        {hwaddr, [0, 0, 0, 0, 0, 0]} ->
-            mac_address(Rest);
-        {hwaddr, [_, N2, N3, N4, N5, N6] = MAC}
-            when N2 /= 0, N3 /= 0, N4 /= 0, N5 /= 0, N6 /= 0 ->
-            MAC;
-        {hwaddr, _} ->
-            mac_address(Rest)
+        {hwaddr, MAC} ->
+            case lists:sum(MAC) of
+                0 ->
+                    mac_address(Rest);
+                _ ->
+                    MAC
+            end
     end.
 
 -ifdef(TEST).
