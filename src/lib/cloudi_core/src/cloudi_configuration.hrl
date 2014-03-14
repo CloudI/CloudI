@@ -302,6 +302,12 @@
         % maximum wait time before a reconnect is attempted with a node
         reconnect_delay = ?DEFAULT_NODE_RECONNECT_DELAY
             :: cloudi_service_api:node_reconnect_delay_seconds(),
+        % how should node connections be monitored
+        listen = visible
+            :: visible | all,
+        % how should node connections be created
+        connect = visible
+            :: visible | hidden,
         % discovery format (with defaults) is:
         %
         % [{multicast,

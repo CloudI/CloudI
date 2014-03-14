@@ -2126,29 +2126,42 @@ nodes_options(Nodes0, Value) ->
         {nodes, NodesConfig#config_nodes.nodes},
         {reconnect_start, NodesConfig#config_nodes.reconnect_start},
         {reconnect_delay, NodesConfig#config_nodes.reconnect_delay},
+        {listen, NodesConfig#config_nodes.listen},
+        {connect, NodesConfig#config_nodes.connect},
         {discovery, NodesConfig#config_nodes.discovery}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _ | _]
+        [Nodes1, _, _, _, _, _ | _]
             when not is_list(Nodes1) ->
             {error, {nodes_nodes_invalid, Nodes1}};
-        [_, ReconnectStart, _, _ | _]
+        [_, ReconnectStart, _, _, _, _ | _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0)) ->
             {error, {nodes_reconnect_start_invalid, ReconnectStart}};
-        [_, _, ReconnectDelay, _ | _]
+        [_, _, ReconnectDelay, _, _, _ | _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0)) ->
             {error, {nodes_reconnect_delay_invalid, ReconnectDelay}};
-        [_, _, _, Discovery | _]
+        [_, _, _, Listen, _, _ | _]
+            when not ((Listen =:= visible) orelse
+                      (Listen =:= all)) ->
+            {error, {nodes_listen_invalid, Listen}};
+        [_, _, _, _, Connect, _ | _]
+            when not ((Connect =:= visible) orelse
+                      (Connect =:= hidden)) ->
+            {error, {nodes_connect_invalid, Connect}};
+        [_, _, _, _, _, Discovery | _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {nodes_discovery_invalid, Discovery}};
-        [Nodes1, ReconnectStart, ReconnectDelay, Discovery] ->
+        [Nodes1, ReconnectStart, ReconnectDelay,
+         Listen, Connect, Discovery] ->
             case nodes_elements_add(lists:delete(node(), Nodes1),
                                     NodesConfig#config_nodes{
                                         nodes = Nodes0,
                                         reconnect_start = ReconnectStart,
-                                        reconnect_delay = ReconnectDelay}) of
+                                        reconnect_delay = ReconnectDelay,
+                                        listen = Listen,
+                                        connect = Connect}) of
                 {ok, NextNodesConfig} ->
                     case nodes_discovery_options(Discovery, NextNodesConfig) of
                         {ok, NewNodesConfig} ->

@@ -9,6 +9,8 @@
       security groups and/or tags
     * Move external Erlang dependencies into directories with
       cloudi_x_ prefix so that include_lib can be used without problems
+    * Add the ability to change the distributed Erlang node connection type
+      with the listen and connect nodes configuration options
 
 2014-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

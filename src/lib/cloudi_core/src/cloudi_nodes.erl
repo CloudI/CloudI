@@ -78,6 +78,8 @@
         logger_redirect :: node() | undefined,
         reconnect_interval :: pos_integer(),
         reconnect_timer,
+        listen :: visible | all,
+        connect :: visible | hidden,
         discovery :: #config_nodes_discovery{} | undefined
     }).
 
@@ -114,8 +116,11 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
               nodes = #config_nodes{nodes = Nodes,
                                     reconnect_start = ReconnectStart,
                                     reconnect_delay = ReconnectDelay,
+                                    listen = Listen,
+                                    connect = Connect,
                                     discovery = Discovery}}]) ->
-    net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
+    applications_set(Listen, Connect),
+    monitor_nodes(true, Listen),
     NewNodeLogger = if
         NodeLogger == node(); NodeLogger =:= undefined ->
             undefined;
@@ -144,14 +149,19 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 logger_redirect = NewNodeLogger,
                 reconnect_interval = ReconnectInterval,
                 reconnect_timer = ReconnectTimer,
+                listen = Listen,
+                connect = Connect,
                 discovery = Discovery}}.
 
 handle_call({reconfigure,
              #config{logging = #config_logging{redirect = NodeLogger},
                      nodes = #config_nodes{nodes = Nodes,
                                            reconnect_delay = ReconnectDelay,
+                                           listen = Listen,
+                                           connect = Connect,
                                            discovery = Discovery}}}, _,
             #state{nodes_alive = NodesAlive,
+                   listen = OldListen,
                    discovery = OldDiscovery} = State) ->
     NewNodes = lists:usort(Nodes ++ nodes()),
     NewNodesDead = lists:foldl(fun(N, L) ->
@@ -169,11 +179,21 @@ handle_call({reconfigure,
     end, NewNodes),
     ReconnectInterval = ReconnectDelay * 1000,
     logger_redirect(NodeLogger),
-    discovery_update(OldDiscovery, Discovery),
+    applications_set(Listen, Connect),
+    if
+        OldListen /= Listen ->
+            monitor_nodes(false, OldListen),
+            monitor_nodes(true, Listen),
+            discovery_stop(OldDiscovery),
+            discovery_start(Discovery);
+        true ->
+            discovery_update(OldDiscovery, Discovery)
+    end,
     {reply, ok, State#state{nodes_alive = NewNodesAlive,
                             nodes_dead = NewNodesDead,
                             nodes = NewNodes,
                             reconnect_interval = ReconnectInterval,
+                            connect = Connect,
                             discovery = Discovery}};
 
 handle_call(alive, _,
@@ -268,6 +288,7 @@ handle_info({'nodedown', Node, InfoList},
 handle_info(reconnect,
             #state{nodes_dead = NodesDead,
                    reconnect_interval = ReconnectInterval,
+                   connect = Connect,
                    discovery = Discovery} = State) ->
     discovery_check(Discovery),
     if
@@ -275,7 +296,7 @@ handle_info(reconnect,
             ?LOG_INFO("currently dead nodes ~p", [NodesDead]),
             pforeach(fun(Node) ->
                 % avoid the possibly long synchronous call here
-                net_kernel:connect_node(Node)
+                connect_node(Connect, Node)
             end, NodesDead);
         true ->
             ok
@@ -297,6 +318,14 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+applications_set(Listen, Connect) ->
+    application:set_env(cloudi_x_cpg, node_type, Listen),
+    application:set_env(cloudi_x_nodefinder, node_type, Connect),
+    ok.
+
+monitor_nodes(Flag, Listen) ->
+    net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
 
 discovery_start(undefined) ->
     ok;
@@ -350,6 +379,20 @@ discovery_update(#config_nodes_discovery{} = OldDiscovery,
                  #config_nodes_discovery{} = NewDiscovery) ->
     discovery_stop(OldDiscovery),
     discovery_start(NewDiscovery).
+
+%cpg_scopes() ->
+%    % due to settings in cloudi_constants.hrl of
+%    % SCOPE_CUSTOM_PREFIX and SCOPE_DEFAULT
+%    CustomScopes = lists:filter(fun(RegisteredName) ->
+%        lists:prefix(?SCOPE_CUSTOM_PREFIX,
+%                     erlang:atom_to_list(RegisteredName))
+%    end, erlang:registered()),
+%    [?SCOPE_DEFAULT | CustomScopes].
+
+connect_node(visible, Node) ->
+    net_kernel:connect_node(Node);
+connect_node(hidden, Node) ->
+    net_kernel:hidden_connect_node(Node).
 
 pforeach(_, []) ->
     ok;
