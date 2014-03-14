@@ -162,6 +162,7 @@
 %% ====nodes:====
 %%   `{nodes, [cloudi@hostname1, cloudi@hostname2]}'
 %%   `{nodes, automatic}'
+%%   `{nodes, Options}'
 %%
 %%   Remote CloudI nodes that are started separately
 %%   (CloudI operates as a master-less system).  Instead of providing the
@@ -446,11 +447,11 @@ service_format(#config_service_external{prefix = Prefix,
     {ok, #config{}} |
     {error, any()}.
 
-nodes_add([A | _] = Value, #config{nodes = Nodes} = Config)
+nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
-    case nodes_validate(Value) of
-        ok ->
-            {ok, Config#config{nodes = Nodes ++ Value}};
+    case nodes_elements_add(lists:delete(node(), Value), NodesConfig) of
+        {ok, NewNodesConfig} ->
+            {ok, Config#config{nodes = NewNodesConfig}};
         {error, _} = Error ->
             Error
     end;
@@ -468,11 +469,11 @@ nodes_add(Value, _) ->
     {ok, #config{}} |
     {error, any()}.
 
-nodes_remove([A | _] = Value, #config{nodes = Nodes} = Config)
+nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
-    case nodes_remove_elements(Value, Nodes) of
-        {ok, NewNodes} ->
-            {ok, Config#config{nodes = NewNodes}};
+    case nodes_elements_remove(Value, NodesConfig) of
+        {ok, NewNodesConfig} ->
+            {ok, Config#config{nodes = NewNodesConfig}};
         {error, _} = Error ->
             Error
     end;
@@ -517,21 +518,21 @@ new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
             Error
     end;
 new([{'nodes', automatic} | Terms], Config) ->
-    case cloudi_x_reltool_util:ensure_application_started(
-        cloudi_x_combonodefinder) of
-        ok ->
-            new(Terms, Config);
-        {error, _} = Error ->
-            Error
-    end;
+    {ok, NodesConfig} = nodes_options([], [{discovery, [{multicast, []}]}]),
+    new(Terms, Config#config{nodes = NodesConfig});
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'nodes', [A | _] = Value} | Terms], Config)
-    when is_atom(A) ->
-    Nodes = lists:delete(node(), lists:usort(Value)),
+new([{'nodes', [_ | _] = Value} | Terms], Config) ->
+    {NodeLiterals, Options} = lists:partition(fun erlang:is_atom/1, Value),
+    Nodes = lists:delete(node(), lists:usort(NodeLiterals)),
     case nodes_validate(Nodes) of
         ok ->
-            new(Terms, Config#config{nodes = Nodes});
+            case nodes_options(Nodes, Options) of
+                {ok, NodesConfig} ->
+                    new(Terms, Config#config{nodes = NodesConfig});
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end;
@@ -588,7 +589,7 @@ new([{'logging', [T | _] = Value} | Terms], Config)
                                 redirect = Redirect,
                                 syslog = SyslogConfig}});
                 {ok, SyslogConfig} ->
-                    case nodes_validate([Redirect]) of
+                    case node_validate(Redirect) of
                         ok ->
                             new(Terms,
                                 Config#config{
@@ -1940,31 +1941,227 @@ service_name_valid(Name, ErrorReason) ->
             {error, {ErrorReason, Name}}
     end.
 
+node_validate(A) ->
+    case lists:member($@, erlang:atom_to_list(A)) of
+        true ->
+            ok;
+        false ->
+            {error, {node_invalid, A}}
+    end.
+
 nodes_validate([]) ->
     ok;
 nodes_validate([A | As])
     when is_atom(A) ->
-    case lists:member($@, erlang:atom_to_list(A)) of
-        true ->
+    case node_validate(A) of
+        ok ->
             nodes_validate(As);
-        false ->
-            {error, {node_invalid, A}}
+        {error, _} = Error ->
+            Error
     end;
 nodes_validate([A | _]) ->
     {error, {node_invalid, A}}.
 
-nodes_remove_elements([], Nodes) ->
-    {ok, Nodes};
-nodes_remove_elements([A | As], Nodes)
+nodes_elements_add([], NodesConfig) ->
+    {ok, NodesConfig};
+nodes_elements_add([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
+    when is_atom(A) ->
+    case node_validate(A) of
+        ok ->
+            NewNodes = lists:umerge(Nodes, [A]),
+            nodes_elements_add(As,
+                               NodesConfig#config_nodes{nodes = NewNodes});
+        {error, _} = Error ->
+            Error
+    end;
+nodes_elements_add([A | _], _) ->
+    {error, {node_invalid, A}}.
+
+nodes_elements_remove([], NodesConfig) ->
+    {ok, NodesConfig};
+nodes_elements_remove([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     when is_atom(A) ->
     case cloudi_lists:delete_checked(A, Nodes) of
         false ->
             {error, {node_not_found, A}};
         NewNodes ->
-            nodes_remove_elements(As, NewNodes)
+            nodes_elements_remove(As,
+                                  NodesConfig#config_nodes{nodes = NewNodes})
     end;
-nodes_remove_elements([A | _], _) ->
+nodes_elements_remove([A | _], _) ->
     {error, {node_invalid, A}}.
+
+nodes_discovery_ec2_validate(Groups, Tags) ->
+    case lists:all(fun(Group) -> is_integer(hd(Group)) end, Groups) of
+        true ->
+            TagsValid = lists:all(fun(Tag) ->
+                case Tag of
+                    {K, V} when is_integer(hd(K)), is_integer(hd(V)) ->
+                        true;
+                    [I | _] when is_integer(I) ->
+                        true;
+                    _ ->
+                        false
+                end
+            end, Tags),
+            if
+                TagsValid =:= true ->
+                    ok;
+                TagsValid =:= false ->
+                    {error, {nodes_discovery_ec2_tags_invalid, Tags}}
+            end;
+        false ->
+            {error, {nodes_discovery_ec2_groups_invalid, Groups}}
+    end.
+
+nodes_discovery_ec2_options(Value, NodesConfig) ->
+    #config_nodes{reconnect_delay = TimeoutSeconds} = NodesConfig,
+    Defaults = [
+        {access_key_id, undefined},
+        {secret_access_key, undefined},
+        {host, "ec2.amazonaws.com"},
+        {groups, []},
+        {tags, []}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [AccessKeyId, _, _, _, _ | _]
+            when not (is_list(AccessKeyId) orelse
+                      is_integer(hd(AccessKeyId))) ->
+            {error, {nodes_discovery_ec2_access_key_id_invalid,
+                     AccessKeyId}};
+        [_, SecretAccessKey, _, _, _ | _]
+            when not (is_list(SecretAccessKey) orelse
+                      is_integer(hd(SecretAccessKey))) ->
+            {error, {nodes_discovery_ec2_secret_access_key_invalid,
+                     SecretAccessKey}};
+        [_, _, Host, _, _ | _]
+            when not (is_list(Host) orelse
+                      is_integer(hd(Host))) ->
+            {error, {nodes_discovery_ec2_host_invalid, Host}};
+        [_, _, _, [], []] ->
+            {error, {nodes_discovery_ec2_tags_selection_null, []}};
+        [_, _, _, Groups, _ | _]
+            when not is_list(Groups) ->
+            {error, {nodes_discovery_ec2_groups_invalid, Groups}};
+        [_, _, _, _, Tags | _]
+            when not is_list(Tags) ->
+            {error, {nodes_discovery_ec2_tags_invalid, Tags}};
+        [AccessKeyId, SecretAccessKey, Host, Groups, Tags] ->
+            case nodes_discovery_ec2_validate(Groups, Tags) of
+                ok ->
+                    Discovery = #config_nodes_discovery{
+                        module = cloudi_x_nodefinder,
+                        start_f = ec2_start,
+                        start_a = [AccessKeyId, SecretAccessKey,
+                                   Host, Groups, Tags],
+                        discover_f = ec2_discover,
+                        discover_a = [TimeoutSeconds * 1000],
+                        stop_f = ec2_stop,
+                        stop_a = []},
+                    {ok, NodesConfig#config_nodes{discovery = Discovery}};
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _ | Extra] ->
+            {error, {nodes_discovery_ec2_invalid, Extra}}
+    end.
+
+nodes_discovery_multicast_options(Value, NodesConfig) ->
+    #config_nodes{reconnect_delay = TimeoutSeconds} = NodesConfig,
+    Defaults = [
+        {address, {224,0,0,1}},
+        {port, 4475},
+        {ttl, 1}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Address, _, _ | _]
+            when not is_tuple(Address) ->
+            {error, {nodes_discovery_multicast_address_invalid, Address}};
+        [_, Port, _ | _]
+            when not (is_integer(Port) andalso
+                      (Port > 0)) ->
+            {error, {nodes_discovery_multicast_port_invalid, Port}};
+        [_, _, TTL | _]
+            when not (is_integer(TTL) andalso
+                      (TTL >= 0)) ->
+            {error, {nodes_discovery_multicast_ttl_invalid, TTL}};
+        [Address, Port, TTL] ->
+            Discovery = #config_nodes_discovery{
+                module = cloudi_x_nodefinder,
+                start_f = multicast_start,
+                start_a = [Address, Port, TTL, TimeoutSeconds],
+                discover_f = multicast_discover,
+                discover_a = [TimeoutSeconds * 1000],
+                stop_f = multicast_stop,
+                stop_a = []},
+            {ok, NodesConfig#config_nodes{discovery = Discovery}};
+        [_, _, _ | Extra] ->
+            {error, {nodes_discovery_multicast_invalid, Extra}}
+    end.
+
+nodes_discovery_options(undefined, NodesConfig) ->
+    {ok, NodesConfig};
+nodes_discovery_options(Value, NodesConfig) ->
+    Defaults = [
+        {multicast, []},
+        {ec2, []}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [MulticastOptions, _ | _]
+            when not is_list(MulticastOptions) ->
+            {error, {nodes_discovery_multicast_invalid, MulticastOptions}};
+        [_, EC2Options | _]
+            when not is_list(EC2Options) ->
+            {error, {nodes_discovery_ec2_invalid, EC2Options}};
+        [[_ | _], [_ | _]] ->
+            {error, {nodes_discovery_ambiguous, Value}};
+        [MulticastOptions, []] ->
+            nodes_discovery_multicast_options(MulticastOptions, NodesConfig);
+        [[], EC2Options] ->
+            nodes_discovery_ec2_options(EC2Options, NodesConfig);
+        [_, _ | Extra] ->
+            {error, {nodes_discovery_invalid, Extra}}
+    end.
+
+nodes_options(Nodes0, Value) ->
+    NodesConfig = #config_nodes{},
+    Defaults = [
+        {nodes, NodesConfig#config_nodes.nodes},
+        {reconnect_start, NodesConfig#config_nodes.reconnect_start},
+        {reconnect_delay, NodesConfig#config_nodes.reconnect_delay},
+        {discovery, NodesConfig#config_nodes.discovery}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Nodes1, _, _, _ | _]
+            when not is_list(Nodes1) ->
+            {error, {nodes_nodes_invalid, Nodes1}};
+        [_, ReconnectStart, _, _ | _]
+            when not (is_integer(ReconnectStart) andalso
+                      (ReconnectStart > 0)) ->
+            {error, {nodes_reconnect_start_invalid, ReconnectStart}};
+        [_, _, ReconnectDelay, _ | _]
+            when not (is_integer(ReconnectDelay) andalso
+                      (ReconnectDelay > 0)) ->
+            {error, {nodes_reconnect_delay_invalid, ReconnectDelay}};
+        [_, _, _, Discovery | _]
+            when not ((Discovery =:= undefined) orelse
+                      is_list(Discovery)) ->
+            {error, {nodes_discovery_invalid, Discovery}};
+        [Nodes1, ReconnectStart, ReconnectDelay, Discovery] ->
+            case nodes_elements_add(lists:delete(node(), Nodes1),
+                                    NodesConfig#config_nodes{
+                                        nodes = Nodes0,
+                                        reconnect_start = ReconnectStart,
+                                        reconnect_delay = ReconnectDelay}) of
+                {ok, NextNodesConfig} ->
+                    case nodes_discovery_options(Discovery, NextNodesConfig) of
+                        {ok, NewNodesConfig} ->
+                            {ok, NewNodesConfig};
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _ | Extra] ->
+            {error, {nodes_invalid, Extra}}
+    end.
 
 logging_syslog_validate(undefined) ->
     {ok, undefined};

@@ -54,3 +54,7 @@
 -define(DEFAULT_PRIORITY,                           0).
 -define(DEFAULT_SCOPE,                        default).
 
+% CloudI system defaults
+-define(DEFAULT_NODE_RECONNECT_START, 300). % seconds
+-define(DEFAULT_NODE_RECONNECT_DELAY, 60). % seconds
+

@@ -1,7 +1,9 @@
 [{kernel, [
+    % epmd needs port 4369
     {inet_dist_listen_min, 4374},
     {inet_dist_listen_max, 4474},
     %{inet_dist_use_interface,"127.0.0.1"},
+    %{net_setuptime, 7000}, % milliseconds
     {net_ticktime, 60}
 ]},
 {sasl, [

@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add more flexible nodes configuration
+    * Update nodefinder (a rewrite) and remove the older nodefinder cruft
+    * Support EC2 Erlang node auto-discovery based on
+      security groups and/or tags
+    * Move external Erlang dependencies into directories with
+      cloudi_x_ prefix so that include_lib can be used without problems
+
 2014-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify cloudi_services_monitor log messages

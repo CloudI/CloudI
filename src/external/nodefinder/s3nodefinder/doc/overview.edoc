@@ -1,4 +1,0 @@
-@author Paul Mineiro
-@copyright 2007 N54, Inc.
-@title S3 Node Finder
-@doc This is an Erlang node discovery service which uses S3 to rendezvous.

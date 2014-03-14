@@ -1,5 +1,0 @@
-@author Paul Mineiro
-@copyright 2007 N54, Inc.
-@title Nodefinder
-@doc Erlang node LAN discovery service.  Uses multicast IP to discover other 
-Erlang nodes on the LAN and establishes connections to them.

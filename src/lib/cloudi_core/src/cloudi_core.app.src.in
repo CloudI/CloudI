@@ -48,13 +48,10 @@
         cloudi_services_monitor
         ]},
    {included_applications, [
-        cloudi_x_combonodefinder,
-        cloudi_x_ec2nodefinder,
-        cloudi_x_nodefinder,
         syslog
         ]},
    {applications, [
-        % nodefinder dependencies are started manually
+        cloudi_x_nodefinder,
         cloudi_x_dynamic_compile,
         cloudi_x_pqueue,
         cloudi_x_quickrand,

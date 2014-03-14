@@ -1,2 +1,0 @@
-This is a Erlang node discovery service which uses an S3 bucket to 
-store node locations.

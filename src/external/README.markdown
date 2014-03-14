@@ -3,8 +3,8 @@ External Dependencies
 
 All CloudI Erlang dependencies are now moved to exist with a `"cloudi_x_"`
 prefix to avoid any conflicts when CloudI shares the Erlang VM with other
-applications that may share common dependencies (erlzmq2 is an exception due
-to its integration and dependencies).
+applications that may share common dependencies (erlzmq2 and syslog are
+exceptions due to their C integration).
 
 `backward-cpp`
 --------------
@@ -109,6 +109,15 @@ to its integration and dependencies).
 - `Tue Dec 17 09:29:27 PST 2013`
 - `BSD`
 
+`erlcloud`
+----------
+`Cloud Service Integration APIs`
+
+- `https://github.com/gleber/erlcloud`
+- `commit 2c47abb3ac8f03d8a3c65778e8957f677da82fd3`
+- `Fri Mar 14 09:50:36 PDT 2014`
+- `MIT`
+
 `etokyotyrant (medici)`
 -----------------------
 `Erlang TokyoTyrant (native) Driver`
@@ -209,10 +218,10 @@ to its integration and dependencies).
 ------------
 `Strategies for automatic node discovery in Erlang`
 
-- `http://code.google.com/p/nodefinder/`
-- `r84`
-- `2012-06-16 23:10:00 PST`
-- `New BSD`
+- `https://github.com/okeuday/nodefinder`
+- `commit 05adee33764f9a3d55485ee704d078b5481a419c`
+- `Thu Mar 13 17:08:01 PDT 2014`
+- `BSD`
 
 `poolboy`
 ---------

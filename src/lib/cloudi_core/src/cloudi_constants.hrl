@@ -39,12 +39,6 @@
 % (should be less than all INTERVAL constants)
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
-% maximum wait time before a reconnect is attempted with a node
--define(NODE_RECONNECT, 60000). % milliseconds
-
-% time to wait before the first reconnect is attempted with a node
--define(NODE_RECONNECT_START, 300000). % milliseconds
-
 % interval to reload all internal services which have been configured to
 % reload their modules automatically
 -define(SERVICE_INTERNAL_RELOAD, 1000). % milliseconds

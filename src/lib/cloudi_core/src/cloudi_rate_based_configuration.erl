@@ -79,14 +79,10 @@
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MAX_DEFAULT, 4.0). % float%/integer_abs
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MIN_DEFAULT, 0.5). % float%/integer_abs
 
--type period_seconds() ::
-    1..(?TIMEOUT_MAX_ERLANG div 1000).
--export_type([period_seconds/0]).
-
 -record(hibernate,
     {
         method :: rate_request,
-        period :: period_seconds(), % seconds
+        period :: cloudi_service_api:period_seconds(),
         count = 0 :: non_neg_integer(),
         rate_min :: number(), % per seconds
         hibernate = false :: boolean()
@@ -95,7 +91,7 @@
 -record(count_process_dynamic,
     {
         method :: rate_request,
-        period :: period_seconds(), % seconds
+        period :: cloudi_service_api:period_seconds(),
         count = 0 :: non_neg_integer(),
         rate_max :: number(), % per seconds
         rate_min :: number(), % per seconds

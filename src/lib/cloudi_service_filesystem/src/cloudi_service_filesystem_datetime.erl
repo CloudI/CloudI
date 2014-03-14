@@ -288,6 +288,7 @@ whitespace(Data, Fun) ->
 %% Tests.
 
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 http_date_test_() ->
     %% {Tokens, Result}

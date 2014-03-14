@@ -138,8 +138,7 @@
         % as integer absolutes.
         count_process_dynamic = false
             :: false |
-               list({period,
-                     cloudi_rate_based_configuration:period_seconds()} |
+               list({period, cloudi_service_api:period_seconds()} |
                     {rate_request_max, number()} | % service reqs/second
                     {rate_request_min, number()} | % service reqs/second
                     {count_max, number()} | % float multiplier or
@@ -158,14 +157,14 @@
         % (all time parameters are specified in milliseconds)
         monkey_latency = false
             :: list({time_uniform_min,
-                     cloudi_runtime_testing:time_milliseconds()} |
+                     cloudi_service_api:latency_time_milliseconds()} |
                     {time_uniform_max,
-                     cloudi_runtime_testing:time_milliseconds()} |
+                     cloudi_service_api:latency_time_milliseconds()} |
                     {time_gaussian_mean,
-                     cloudi_runtime_testing:time_milliseconds()} |
+                     cloudi_service_api:latency_time_milliseconds()} |
                     {time_gaussian_stddev, float()} |
                     {time_absolute,
-                     cloudi_runtime_testing:time_milliseconds()}) |
+                     cloudi_service_api:latency_time_milliseconds()}) |
                system | false |
                tuple(),
         % cause service termination based on the probability parameter
@@ -225,8 +224,7 @@
         % the rate of service processing drops below the minimum specified.
         hibernate = false
             :: boolean() |
-               list({period,
-                     cloudi_rate_based_configuration:period_seconds()} |
+               list({period, cloudi_service_api:period_seconds()} |
                     {rate_request_min, number()}) | % service reqs/second
                tuple(),
         % should the service be reloaded automatically when an Erlang module
@@ -282,6 +280,48 @@
         uuid               :: cloudi_service_api:service_id()
     }).
 
+-record(config_nodes_discovery,
+    {
+        % nodefinder interface
+        mode :: multicast | ec2,
+        module :: module(),
+        start_f :: atom(),
+        start_a :: list(),
+        discover_f :: atom(),
+        discover_a :: list(),
+        stop_f :: atom(),
+        stop_a :: list()
+    }).
+
+-record(config_nodes,
+    {
+        nodes = [] :: list(node()),
+        % time to wait before the first reconnect is attempted with a node
+        reconnect_start = ?DEFAULT_NODE_RECONNECT_START
+            :: cloudi_service_api:node_reconnect_delay_seconds(),
+        % maximum wait time before a reconnect is attempted with a node
+        reconnect_delay = ?DEFAULT_NODE_RECONNECT_DELAY
+            :: cloudi_service_api:node_reconnect_delay_seconds(),
+        % discovery format (with defaults) is:
+        %
+        % [{multicast,
+        %   [{address, {224,0,0,1}},
+        %    {port, 4475},
+        %    {ttl, 1}]}]
+        %
+        % (or)
+        %
+        % [{ec2,
+        %   [{access_key_id, undefined},
+        %    {secret_access_key, undefined},
+        %    {ec2_host, "ec2.amazonaws.com"},
+        %    {groups, []},
+        %    {tags, []}]}]
+        %
+        discovery = undefined
+            :: #config_nodes_discovery{} | undefined
+    }).
+
 -record(config,
     {
         uuid_generator :: cloudi_x_uuid:state(),
@@ -289,6 +329,6 @@
         acl = dict:new(),
         services = [] :: list(#config_service_internal{} |
                               #config_service_external{}),
-        nodes = [] :: dynamic | list(node())
+        nodes = #config_nodes{} :: #config_nodes{}
     }).
 

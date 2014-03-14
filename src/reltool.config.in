@@ -79,8 +79,7 @@
   {lib_dirs,
    [
     "lib",
-    "external",
-    "external/nodefinder"
+    "external"
     @ZEROMQ_ERLZMQ_PATH@
    ]},
   % application startup for release generation

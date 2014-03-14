@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_nodes).
@@ -72,11 +72,13 @@
 
 -record(state,
     {
-        nodes_alive = [],
-        nodes_dead = [],
-        logger_redirect = undefined,
-        timer_reconnect = undefined,
-        nodes = []
+        nodes_alive = [] :: list(node()),
+        nodes_dead :: list(node()),
+        nodes :: list(node()),
+        logger_redirect :: node() | undefined,
+        reconnect_interval :: pos_integer(),
+        reconnect_timer,
+        discovery :: #config_nodes_discovery{} | undefined
     }).
 
 -define(CATCH_EXIT(F),
@@ -108,9 +110,12 @@ logger_redirect(Node) when is_atom(Node) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Config]) ->
+init([#config{logging = #config_logging{redirect = NodeLogger},
+              nodes = #config_nodes{nodes = Nodes,
+                                    reconnect_start = ReconnectStart,
+                                    reconnect_delay = ReconnectDelay,
+                                    discovery = Discovery}}]) ->
     net_kernel:monitor_nodes(true, [{node_type, visible}, nodedown_reason]),
-    NodeLogger = (Config#config.logging)#config_logging.redirect,
     NewNodeLogger = if
         NodeLogger == node(); NodeLogger =:= undefined ->
             undefined;
@@ -119,7 +124,7 @@ init([Config]) ->
     end,
     if
         NewNodeLogger =/= undefined ->
-            case lists:member(NewNodeLogger, Config#config.nodes) of
+            case lists:member(NewNodeLogger, Nodes) of
                 true ->
                     ok;
                 false ->
@@ -130,17 +135,25 @@ init([Config]) ->
         true ->
             ok
     end,
-    {ok, #state{nodes_dead = Config#config.nodes,
+    discovery_start(Discovery),
+    ReconnectInterval = ReconnectDelay * 1000,
+    ReconnectTimer = erlang:send_after(ReconnectStart * 1000,
+                                       self(), reconnect),
+    {ok, #state{nodes_dead = Nodes,
+                nodes = Nodes,
                 logger_redirect = NewNodeLogger,
-                timer_reconnect = erlang:send_after(?NODE_RECONNECT_START,
-                                                    self(),
-                                                    reconnect),
-                nodes = Config#config.nodes}}.
+                reconnect_interval = ReconnectInterval,
+                reconnect_timer = ReconnectTimer,
+                discovery = Discovery}}.
 
-handle_call({reconfigure, Config}, _,
+handle_call({reconfigure,
+             #config{logging = #config_logging{redirect = NodeLogger},
+                     nodes = #config_nodes{nodes = Nodes,
+                                           reconnect_delay = ReconnectDelay,
+                                           discovery = Discovery}}}, _,
             #state{nodes_alive = NodesAlive,
-                   timer_reconnect = TimerReconnect} = State) ->
-    Nodes = lists:usort(Config#config.nodes ++ nodes()),
+                   discovery = OldDiscovery} = State) ->
+    NewNodes = lists:usort(Nodes ++ nodes()),
     NewNodesDead = lists:foldl(fun(N, L) ->
         case cloudi_lists:delete_checked(N, L) of
             false ->
@@ -150,22 +163,18 @@ handle_call({reconfigure, Config}, _,
             NewL ->
                 NewL
         end
-    end, Nodes, NodesAlive),
+    end, NewNodes, NodesAlive),
     NewNodesAlive = lists:filter(fun(N) ->
         not lists:member(N, NewNodesDead)
-    end, Nodes),
-    NewTimerReconnect = if
-        NewNodesDead /= [], TimerReconnect == undefined ->
-            erlang:send_after(?NODE_RECONNECT, self(), reconnect);
-        true ->
-            TimerReconnect
-    end,
-    % assume the logger_redirect node does not need to be checked
-    % if the node was removed intentionally
+    end, NewNodes),
+    ReconnectInterval = ReconnectDelay * 1000,
+    logger_redirect(NodeLogger),
+    discovery_update(OldDiscovery, Discovery),
     {reply, ok, State#state{nodes_alive = NewNodesAlive,
                             nodes_dead = NewNodesDead,
-                            timer_reconnect = NewTimerReconnect,
-                            nodes = Nodes}};
+                            nodes = NewNodes,
+                            reconnect_interval = ReconnectInterval,
+                            discovery = Discovery}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -223,13 +232,13 @@ handle_cast({logger_redirect, NodeLogger},
 
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown cast \"~p\"", [Request]), State}.
 
 handle_info({'nodeup', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
-                   logger_redirect = NodeLogger,
-                   nodes = Nodes} = State) ->
+                   nodes = Nodes,
+                   logger_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
             cloudi_logger:redirect(NodeLogger);
@@ -238,16 +247,14 @@ handle_info({'nodeup', Node, InfoList},
     end,
     ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
     {noreply,
-     State#state{nodes_alive = [Node | NodesAlive],
-                 nodes_dead = cloudi_lists:delete_all(Node, NodesDead),
+     State#state{nodes_alive = lists:umerge(NodesAlive, [Node]),
+                 nodes_dead = lists:delete(Node, NodesDead),
                  nodes = lists:umerge(Nodes, [Node])}};
 
 handle_info({'nodedown', Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
-                   logger_redirect = NodeLogger,
-                   timer_reconnect = TimerReconnect,
-                   nodes = Nodes} = State) ->
+                   logger_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
             cloudi_logger:redirect(undefined);
@@ -255,37 +262,33 @@ handle_info({'nodedown', Node, InfoList},
             ok
     end,
     ?LOG_INFO("nodedown ~p ~p", [Node, InfoList]),
-    NewTimerReconnect = if
-        TimerReconnect == undefined, Nodes /= [] ->
-            erlang:send_after(?NODE_RECONNECT, self(), reconnect);
-        true ->
-            TimerReconnect
-    end,
     {noreply, State#state{nodes_alive = lists:delete(Node, NodesAlive),
-                          nodes_dead = [Node | NodesDead],
-                          timer_reconnect = NewTimerReconnect}};
+                          nodes_dead = lists:umerge(NodesDead, [Node])}};
 
-handle_info(reconnect, #state{nodes_dead = NodesDead,
-                              nodes = Nodes} = State) ->
+handle_info(reconnect,
+            #state{nodes_dead = NodesDead,
+                   reconnect_interval = ReconnectInterval,
+                   discovery = Discovery} = State) ->
+    discovery_check(Discovery),
     if
-        NodesDead /= [], Nodes /= [] ->
+        NodesDead /= [] ->
             ?LOG_INFO("currently dead nodes ~p", [NodesDead]),
-            lists:foreach(fun(Node) ->
+            pforeach(fun(Node) ->
+                % avoid the possibly long synchronous call here
                 net_kernel:connect_node(Node)
-            end, NodesDead),
-            {noreply,
-             State#state{timer_reconnect = erlang:send_after(?NODE_RECONNECT,
-                                                             self(),
-                                                             reconnect)}};
+            end, NodesDead);
         true ->
-            {noreply, State#state{timer_reconnect = undefined}}
-    end;
+            ok
+    end,
+    ReconnectTimer = erlang:send_after(ReconnectInterval, self(), reconnect),
+    {noreply, State#state{reconnect_timer = ReconnectTimer}};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown cast \"~p\"", [Request]), State}.
 
-terminate(_, _) ->
+terminate(_, #state{discovery = Discovery}) ->
+    discovery_stop(Discovery),
     ok.
 
 code_change(_, State, _) ->
@@ -295,3 +298,61 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+discovery_start(undefined) ->
+    ok;
+discovery_start(#config_nodes_discovery{module = Module,
+                                        start_f = StartF,
+                                        start_a = StartA}) ->
+    case erlang:apply(Module, StartF, StartA) of
+        {ok, _} ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("~p:~p error: ~p", [Module, StartF, Reason])
+    end,
+    ok.
+
+discovery_check(undefined) ->
+    ok;
+discovery_check(#config_nodes_discovery{module = Module,
+                                        discover_f = DiscoverF,
+                                        discover_a = DiscoverA}) ->
+    case erlang:apply(Module, DiscoverF, DiscoverA) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("~p:~p error: ~p", [Module, DiscoverF, Reason])
+    end,
+    ok.
+
+discovery_stop(undefined) ->
+    ok;
+discovery_stop(#config_nodes_discovery{module = Module,
+                                       start_f = StopF,
+                                       start_a = StopA}) ->
+    case erlang:apply(Module, StopF, StopA) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("~p:~p error: ~p", [Module, StopF, Reason])
+    end,
+    ok.
+
+discovery_update(undefined, undefined) ->
+    ok;
+discovery_update(undefined, #config_nodes_discovery{} = NewDiscovery) ->
+    discovery_start(NewDiscovery);
+discovery_update(#config_nodes_discovery{} = OldDiscovery, undefined) ->
+    discovery_stop(OldDiscovery);
+discovery_update(#config_nodes_discovery{discover_f = OldF},
+                 #config_nodes_discovery{discover_f = OldF}) ->
+    ok;
+discovery_update(#config_nodes_discovery{} = OldDiscovery,
+                 #config_nodes_discovery{} = NewDiscovery) ->
+    discovery_stop(OldDiscovery),
+    discovery_start(NewDiscovery).
+
+pforeach(_, []) ->
+    ok;
+pforeach(F, L) ->
+    [erlang:spawn_link(fun() -> F(E) end) || E <- L],
+    ok.

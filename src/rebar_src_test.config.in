@@ -3,8 +3,7 @@
 
 {lib_dirs,
  ["lib",
-  "external",
-  "external/nodefinder"
+  "external"
   @ZEROMQ_ERLZMQ_PATH@]}.
 {sub_dirs,
  ["tests",

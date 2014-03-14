@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_runtime_testing).
@@ -66,10 +66,6 @@
 
 -define(MONKEY_LATENCY_DEFAULT, 5000). % milliseconds
 -define(MONKEY_LATENCY_LOG, 5000). % milliseconds
-
--type time_milliseconds() ::
-    1..?TIMEOUT_MAX_ERLANG.
--export_type([time_milliseconds/0]).
 
 -record(monkey_latency,
     {

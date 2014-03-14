@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -117,6 +117,14 @@
     pos_integer().
 -export_type([seconds/0]).
 
+-type period_seconds() ::
+    1..(?TIMEOUT_MAX_ERLANG div 1000).
+-export_type([period_seconds/0]).
+
+-type latency_time_milliseconds() ::
+    1..?TIMEOUT_MAX_ERLANG.
+-export_type([latency_time_milliseconds/0]).
+
 -type service_options_internal() ::
     list({priority_default, priority()} |
          {queue_limit, undefined | pos_integer()} |
@@ -128,13 +136,19 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
+         {count_process_dynamic,
+          list({period, period_seconds()} |
+               {rate_request_max, number()} |
+               {rate_request_min, number()} |
+               {count_max, number()} |
+               {count_min, number()}) | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, pos_integer()} |
-               {time_uniform_max, pos_integer()} |
-               {time_gaussian_mean, pos_integer()} |
+          list({time_uniform_min, latency_time_milliseconds()} |
+               {time_uniform_max, latency_time_milliseconds()} |
+               {time_gaussian_mean, latency_time_milliseconds()} |
                {time_gaussian_stddev, float()} |
-               {time_absolute, pos_integer()}) | system | false} |
+               {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
@@ -164,13 +178,19 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
+         {count_process_dynamic,
+          list({period, period_seconds()} |
+               {rate_request_max, number()} |
+               {rate_request_min, number()} |
+               {count_max, number()} |
+               {count_min, number()}) | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, pos_integer()} |
-               {time_uniform_max, pos_integer()} |
-               {time_gaussian_mean, pos_integer()} |
+          list({time_uniform_min, latency_time_milliseconds()} |
+               {time_uniform_max, latency_time_milliseconds()} |
+               {time_gaussian_mean, latency_time_milliseconds()} |
                {time_gaussian_stddev, float()} |
-               {time_absolute, pos_integer()}) | system | false} |
+               {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false}).
@@ -209,6 +229,10 @@
               service_external/0,
               service/0,
               service_proplist/0]).
+
+-type node_reconnect_delay_seconds() ::
+    period_seconds().
+-export_type([node_reconnect_delay_seconds/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

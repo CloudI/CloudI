@@ -1,5 +1,0 @@
-@author Paul Mineiro
-@copyright 2008 N54, Inc.
-@title Combonodefinder
-@doc An Erlang application which includes ec2nodefinder and nodefinder and
-invokes the former on EC2 and the latter everywhere else.

@@ -135,7 +135,7 @@ handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
             {noreply, State#state{pool = erlang:list_to_tuple(Pids),
                                   count = erlang:length(Pids)}};
         {error, _} = Error ->
-            Error
+            {stop, Error, State}
     end;
 
 handle_info(Request, State) ->
