@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012 Michael Truog
-%%% @version 1.0.1 {@date} {@time}
+%%% @copyright 2012-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_app).
@@ -52,10 +52,27 @@
 
 -behaviour(application).
 
+%% external interface
+-export([listen_type/0]).
+
 %% application callbacks
--export([start/2, stop/1]).
+-export([start/2,
+         stop/1]).
 
 -include("cpg_constants.hrl").
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+listen_type() ->
+    % must be called within internal Erlang processes
+    case application:get_env(node_type) of
+        {ok, V} when (V =:= visible) orelse (V =:= all) ->
+            V;
+        undefined ->
+            visible
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from application

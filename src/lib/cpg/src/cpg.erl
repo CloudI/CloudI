@@ -14,7 +14,7 @@
 %%% @end
 %%% The pg2 module copyright is below:
 %%%
-%%% Copyright (c) 2011-2013 Michael Truog. All Rights Reserved.
+%%% Copyright (c) 2011-2014 Michael Truog. All Rights Reserved.
 %%%
 %%% %CopyrightBegin%
 %%%
@@ -34,8 +34,8 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -125,7 +125,8 @@
          get_remote_newest_pid/1,
          get_remote_newest_pid/2,
          get_remote_newest_pid/3,
-         get_remote_newest_pid/4]).
+         get_remote_newest_pid/4,
+         reset/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
@@ -139,6 +140,7 @@
     {
         scope = undefined, % locally registered process name
         groups = cpg_data:get_empty_groups(), % string() -> #cpg_data{}
+        listen :: visible | all,
         pids = dict:new()                     % pid() -> list(string())
     }).
 
@@ -2489,6 +2491,20 @@ get_remote_newest_pid(Scope, GroupName, Exclude, Timeout)
                     {get_remote_newest_pid, GroupName, Exclude},
                     Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset any internal scope state.===
+%% Updates cpg application node_type monitoring
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec reset(scope()) ->
+    ok.
+
+reset(Scope)
+    when is_atom(Scope) ->
+    gen_server:cast(Scope, reset).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -2501,7 +2517,8 @@ get_remote_newest_pid(Scope, GroupName, Exclude, Timeout)
 
 init([Scope]) ->
     Ns = nodes(),
-    net_kernel:monitor_nodes(true),
+    Listen = cpg_app:listen_type(),
+    monitor_nodes(true, Listen),
     lists:foreach(fun(N) ->
                           {Scope, N} ! {new, node()}
                           % data is not persistent in ets, so trust the
@@ -2511,7 +2528,8 @@ init([Scope]) ->
                   end, Ns),
     quickrand:seed(),
     {ok, #state{scope = Scope,
-                groups = cpg_data:get_empty_groups()}}.
+                groups = cpg_data:get_empty_groups(),
+                listen = Listen}}.
 
 %% @private
 %% @doc
@@ -2724,6 +2742,18 @@ handle_cast({leave, GroupName, Pid},
             {noreply, State}
     end;
 
+handle_cast(reset,
+            #state{listen = OldListen} = State) ->
+    Listen = cpg_app:listen_type(),
+    if
+        Listen /= OldListen ->
+            monitor_nodes(false, OldListen),
+            monitor_nodes(true, Listen);
+        true ->
+            ok
+    end,
+    {noreply, State#state{listen = Listen}};
+
 handle_cast(_, State) ->
     {noreply, State}.
 
@@ -2773,6 +2803,9 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+monitor_nodes(Flag, Listen) ->
+    net_kernel:monitor_nodes(Flag, [{node_type, Listen}]).
 
 create_group(GroupName, #state{groups = Groups} = State) ->
     NewGroups = ?GROUP_STORAGE:update(GroupName,

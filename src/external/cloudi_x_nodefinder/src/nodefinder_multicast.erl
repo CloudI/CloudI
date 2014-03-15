@@ -24,7 +24,8 @@
         recvsock,
         addr,
         port,
-        timeout :: pos_integer() % seconds
+        timeout :: pos_integer(), % seconds
+        connect :: visible | hidden
     }).
 
 % how much time synchronization error to handle between nodes
@@ -57,11 +58,13 @@ init([Addr, Port, TTL, TimeoutSeconds]) ->
             {reuseaddr, true},
             list],
     {ok, RecvSocket} = gen_udp:open(Port, Opts),
+    Connect = nodefinder_app:connect_type(),
     {ok, send_discover(#state{recvsock = RecvSocket,
                               sendsock = send_socket(TTL),
                               addr = Addr,
                               port = Port,
-                              timeout = TimeoutSeconds})}.
+                              timeout = TimeoutSeconds,
+                              connect = Connect})}.
 
 handle_call(discover, _From, State) ->
     {reply, ok, send_discover(State)};
@@ -111,7 +114,8 @@ identifier(Message) ->
     crypto:hmac(sha, Key, Message).
 
 process_packet("DISCOVERV2 " ++ Rest, IP, InPortNo,
-               #state{timeout = Timeout} = State) -> 
+               #state{timeout = Timeout,
+                      connect = Connect} = State) -> 
     case erlang:list_to_binary(Rest) of
         <<Identifier:20/binary, " ", 
           Time:64, " ",
@@ -124,7 +128,7 @@ process_packet("DISCOVERV2 " ++ Rest, IP, InPortNo,
                 Delta >= (-1 * ?SECONDS_DELTA), Delta < Timeout ->
                     Node = erlang:list_to_atom(
                         erlang:binary_to_list(NodeString)),
-                    net_kernel:connect_node(Node);
+                    connect_node(Connect, Node);
                 true ->
                     error_logger:warning_msg("expired DISCOVERV2 (~p) "
                                              "from ~p:~p~n",
@@ -147,4 +151,9 @@ send_socket(TTL) ->
                 {multicast_loop, true}],
     {ok, SendSocket} = gen_udp:open(0, SendOpts),
     SendSocket.
+
+connect_node(visible, Node) ->
+    net_kernel:connect_node(Node);
+connect_node(hidden, Node) ->
+    net_kernel:hidden_connect_node(Node).
 

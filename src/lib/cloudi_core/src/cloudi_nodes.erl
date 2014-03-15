@@ -162,6 +162,7 @@ handle_call({reconfigure,
                                            discovery = Discovery}}}, _,
             #state{nodes_alive = NodesAlive,
                    listen = OldListen,
+                   connect = OldConnect,
                    discovery = OldDiscovery} = State) ->
     NewNodes = lists:usort(Nodes ++ nodes()),
     NewNodesDead = lists:foldl(fun(N, L) ->
@@ -184,6 +185,12 @@ handle_call({reconfigure,
         OldListen /= Listen ->
             monitor_nodes(false, OldListen),
             monitor_nodes(true, Listen),
+            cpg_scopes_reset();
+        true ->
+            ok
+    end,
+    if
+        OldConnect /= Connect ->
             discovery_stop(OldDiscovery),
             discovery_start(Discovery);
         true ->
@@ -380,14 +387,19 @@ discovery_update(#config_nodes_discovery{} = OldDiscovery,
     discovery_stop(OldDiscovery),
     discovery_start(NewDiscovery).
 
-%cpg_scopes() ->
-%    % due to settings in cloudi_constants.hrl of
-%    % SCOPE_CUSTOM_PREFIX and SCOPE_DEFAULT
-%    CustomScopes = lists:filter(fun(RegisteredName) ->
-%        lists:prefix(?SCOPE_CUSTOM_PREFIX,
-%                     erlang:atom_to_list(RegisteredName))
-%    end, erlang:registered()),
-%    [?SCOPE_DEFAULT | CustomScopes].
+cpg_scopes() ->
+    % due to settings in cloudi_constants.hrl of
+    % SCOPE_CUSTOM_PREFIX and SCOPE_DEFAULT
+    CustomScopes = lists:filter(fun(RegisteredName) ->
+        lists:prefix(?SCOPE_CUSTOM_PREFIX,
+                     erlang:atom_to_list(RegisteredName))
+    end, erlang:registered()),
+    [?SCOPE_DEFAULT | CustomScopes].
+
+cpg_scopes_reset() ->
+    lists:foreach(fun(Scope) ->
+        cloudi_x_cpg:reset(Scope)
+    end, cpg_scopes()).
 
 connect_node(visible, Node) ->
     net_kernel:connect_node(Node);

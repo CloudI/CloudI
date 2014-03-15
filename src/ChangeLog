@@ -11,6 +11,8 @@
       cloudi_x_ prefix so that include_lib can be used without problems
     * Add the ability to change the distributed Erlang node connection type
       with the listen and connect nodes configuration options
+    * Make configuration changes to the listen and connect nodes configuration
+      options reset the configuration of cpg and nodefinder
 
 2014-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

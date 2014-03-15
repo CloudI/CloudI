@@ -7,9 +7,25 @@
 
 -behaviour (application).
 
+%% external interface
+-export([connect_type/0]).
+
 %% application callbacks
 -export([start/2,
          stop/1]).
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+connect_type() ->
+    % must be called within internal Erlang processes
+    case application:get_env(node_type) of
+        {ok, V} when (V =:= visible) orelse (V =:= hidden) ->
+            V;
+        undefined ->
+            visible
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from application

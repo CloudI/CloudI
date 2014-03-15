@@ -22,5 +22,7 @@
         stdlib,
         kernel
         ]},
-   {mod, {nodefinder_app, []}}]}.
+   {mod, {nodefinder_app, []}},
+   {env, [
+        {node_type, visible}]}]}. % visible | hidden
 

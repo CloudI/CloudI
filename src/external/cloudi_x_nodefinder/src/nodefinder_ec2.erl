@@ -33,7 +33,8 @@
         ec2_tagged_instances,
         groups :: list(group()),
         tags :: list(tag()),
-        nodes :: list(node())
+        nodes :: list(node()),
+        connect :: visible | hidden
     }).
 
 %%%------------------------------------------------------------------------
@@ -73,10 +74,12 @@ discover(Timeout) ->
 
 init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
     Config = erlcloud_ec2:new(AccessKeyID, SecretAccessKey, EC2Host),
+    Connect = nodefinder_app:connect_type(),
     case do_discover(#state{ec2_config = Config,
                             groups = Groups,
                             tags = Tags,
-                            nodes = []}) of
+                            nodes = [],
+                            connect = Connect}) of
         {ok, #state{}} = Success ->
             Success;
         {error, _} = Error ->
@@ -262,11 +265,12 @@ updates_gather(false, false,
                #state{nodes = OldNodes} = State) ->
     {ok, OldNodes, State}.
 
-update_nodes(Nodes, State) ->
+update_nodes(Nodes,
+             #state{connect = Connect} = State) ->
     ConnectNodes = lists:subtract(Nodes, nodes()),
     pforeach(fun(Node) ->
         % avoid the possibly long synchronous call here
-        net_kernel:connect_node(Node)
+        connect_node(Connect, Node)
     end, ConnectNodes),
     State#state{nodes = Nodes}.
 
@@ -288,6 +292,11 @@ do_discover(#state{} = State) ->
         {error, _} = Error ->
             Error
     end.
+
+connect_node(visible, Node) ->
+    net_kernel:connect_node(Node);
+connect_node(hidden, Node) ->
+    net_kernel:hidden_connect_node(Node).
 
 pforeach(_, []) ->
     ok;

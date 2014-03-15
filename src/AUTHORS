@@ -17,11 +17,15 @@ emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
 epgsql           Will Glozer
 erlang_cassandra Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlasticsearch   Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
+erlcloud         Brian Buchanan <bwb@holo.org>
+                 Ransom Richardson <ransom@ransomr.net>
+                 Gleb Peregud <gleber.p@gmail.com>
 erlzmq           Yurii Rashkovskii <yrashk@gmail.com>
 etokyotyrant     Jim McCoy <mccoy@mad-scientist.com>
 jinterface       Ericsson's OTP Team
 jsonlib          Josh Marshall
 jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+nodefinder       Paul Mineiro <paul@n54.com>
 poolboy          Devin Torres (devinus) devin@devintorres.com,
                  Andrew Thompson (Vagabond) andrew@hijacked.us,
                  Kurt Williams (onkel-dirtus) kurt.r.williams@gmail.com
