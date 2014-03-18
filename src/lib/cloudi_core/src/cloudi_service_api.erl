@@ -62,6 +62,7 @@
          services/1,
          nodes_add/2,
          nodes_remove/2,
+         nodes_set/2,
          nodes_alive/1,
          nodes_dead/1,
          nodes/1,
@@ -233,6 +234,25 @@
 -type node_reconnect_delay_seconds() ::
     period_seconds().
 -export_type([node_reconnect_delay_seconds/0]).
+-type nodes_proplist() ::
+    list(node() |
+         {nodes, list(node())} |
+         {reconnect_start, node_reconnect_delay_seconds()} |
+         {reconnect_delay, node_reconnect_delay_seconds()} |
+         {listen, visible | all} |
+         {connect, visible | hidden} |
+         {timestamp_type, erlang | os} |
+         {discovery,
+          list({ec2, list({address, inet:ip_address()} |
+                          {port, inet:port_number()} |
+                          {ttl, non_neg_integer()})} |
+               {multicast, list({access_key_id, string()} |
+                                {secret_access_key, string()} |
+                                {ec2_host, string()} |
+                                {groups, list(string())} |
+                                {tags, list({string(), string()} |
+                                            string())})})}).
+-export_type([nodes_proplist/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -447,6 +467,7 @@ nodes_add([_ | _] = L, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Explicitly remove CloudI nodes.===
+%% The node must be currently dead to be removed.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -461,6 +482,24 @@ nodes_remove([_ | _] = L, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_configurator:nodes_remove(L, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_set(L :: nodes_proplist(),
+                Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error, any()}.
+
+nodes_set([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_configurator:nodes_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

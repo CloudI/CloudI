@@ -253,7 +253,9 @@ new(Options)
     UUID = if
         OldUUID =:= undefined ->
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
-            cloudi_x_uuid:new(Self, [{timestamp_type, erlang},
+            {ok, TimestampType} = application:get_env(cloudi_core,
+                                                      timestamp_type),
+            cloudi_x_uuid:new(Self, [{timestamp_type, TimestampType},
                                      {mac_address, MacAddress}]);
         true ->
             OldUUID

@@ -308,6 +308,9 @@
         % how should node connections be created
         connect = visible
             :: visible | hidden,
+        % what timestamp is used for generating service request transaction ids
+        timestamp_type = erlang
+            :: erlang | os,
         % discovery format (with defaults) is:
         %
         % [{multicast,

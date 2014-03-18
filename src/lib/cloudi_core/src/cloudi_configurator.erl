@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_configurator).
@@ -66,6 +66,7 @@
          services/1,
          nodes_add/2,
          nodes_remove/2,
+         nodes_set/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -152,6 +153,14 @@ nodes_remove(L, Timeout) ->
     check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {nodes_remove, L,
+                               timeout_decr(Timeout)}, Timeout)
+    end)).
+
+nodes_set(L, Timeout) ->
+    Nodes = [node() | nodes()],
+    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
+        gen_server:multi_call(Nodes, ?MODULE,
+                              {nodes_set, L,
                                timeout_decr(Timeout)}, Timeout)
     end)).
 
@@ -321,6 +330,20 @@ handle_call({nodes_add, L, Timeout}, _,
 handle_call({nodes_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
     case cloudi_configuration:nodes_remove(L, Config) of
+        {ok, NewConfig} ->
+            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
+                ok ->
+                    {reply, ok, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({nodes_set, L, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_configuration:nodes_set(L, Config) of
         {ok, NewConfig} ->
             case cloudi_nodes:reconfigure(NewConfig, Timeout) of
                 ok ->

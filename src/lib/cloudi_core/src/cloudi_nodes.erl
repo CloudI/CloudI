@@ -90,7 +90,11 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Config) ->
+start_link(#config{nodes = #config_nodes{listen = Listen,
+                                         connect = Connect,
+                                         timestamp_type = TimestampType}} =
+           Config) ->
+    applications_set(Listen, Connect, TimestampType),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 reconfigure(Config, Timeout) ->
@@ -119,7 +123,6 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     listen = Listen,
                                     connect = Connect,
                                     discovery = Discovery}}]) ->
-    applications_set(Listen, Connect),
     monitor_nodes(true, Listen),
     NewNodeLogger = if
         NodeLogger == node(); NodeLogger =:= undefined ->
@@ -159,6 +162,7 @@ handle_call({reconfigure,
                                            reconnect_delay = ReconnectDelay,
                                            listen = Listen,
                                            connect = Connect,
+                                           timestamp_type = TimestampType,
                                            discovery = Discovery}}}, _,
             #state{nodes_alive = NodesAlive,
                    listen = OldListen,
@@ -180,7 +184,7 @@ handle_call({reconfigure,
     end, NewNodes),
     ReconnectInterval = ReconnectDelay * 1000,
     logger_redirect(NodeLogger),
-    applications_set(Listen, Connect),
+    applications_set(Listen, Connect, TimestampType),
     if
         OldListen /= Listen ->
             monitor_nodes(false, OldListen),
@@ -326,9 +330,10 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-applications_set(Listen, Connect) ->
+applications_set(Listen, Connect, TimestampType) ->
     application:set_env(cloudi_x_cpg, node_type, Listen),
     application:set_env(cloudi_x_nodefinder, node_type, Connect),
+    application:set_env(cloudi_core, timestamp_type, TimestampType),
     ok.
 
 monitor_nodes(Flag, Listen) ->

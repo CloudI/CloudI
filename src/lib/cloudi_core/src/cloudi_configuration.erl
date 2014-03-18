@@ -61,7 +61,8 @@
          services/1,
          service_format/1,
          nodes_add/2,
-         nodes_remove/2]).
+         nodes_remove/2,
+         nodes_set/2]).
 
 -include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
@@ -480,6 +481,25 @@ nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
 nodes_remove(Value, _) ->
     {error, {nodes_invalid, Value}}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
+                Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, any()}.
+
+nodes_set([_ | _] = Value, #config{} = Config) ->
+    case nodes_proplist(Value) of
+        {ok, NodesConfig} ->
+            {ok, Config#config{nodes = NodesConfig}};
+        {error, _} = Error ->
+            Error
+    end.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -523,16 +543,9 @@ new([{'nodes', automatic} | Terms], Config) ->
 new([{'nodes', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'nodes', [_ | _] = Value} | Terms], Config) ->
-    {NodeLiterals, Options} = lists:partition(fun erlang:is_atom/1, Value),
-    Nodes = lists:delete(node(), lists:usort(NodeLiterals)),
-    case nodes_validate(Nodes) of
-        ok ->
-            case nodes_options(Nodes, Options) of
-                {ok, NodesConfig} ->
-                    new(Terms, Config#config{nodes = NodesConfig});
-                {error, _} = Error ->
-                    Error
-            end;
+    case nodes_proplist(Value) of
+        {ok, NodesConfig} ->
+            new(Terms, Config#config{nodes = NodesConfig});
         {error, _} = Error ->
             Error
     end;
@@ -2128,40 +2141,46 @@ nodes_options(Nodes0, Value) ->
         {reconnect_delay, NodesConfig#config_nodes.reconnect_delay},
         {listen, NodesConfig#config_nodes.listen},
         {connect, NodesConfig#config_nodes.connect},
+        {timestamp_type, NodesConfig#config_nodes.timestamp_type},
         {discovery, NodesConfig#config_nodes.discovery}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _, _, _ | _]
+        [Nodes1, _, _, _, _, _, _ | _]
             when not is_list(Nodes1) ->
             {error, {nodes_nodes_invalid, Nodes1}};
-        [_, ReconnectStart, _, _, _, _ | _]
+        [_, ReconnectStart, _, _, _, _, _ | _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0)) ->
             {error, {nodes_reconnect_start_invalid, ReconnectStart}};
-        [_, _, ReconnectDelay, _, _, _ | _]
+        [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0)) ->
             {error, {nodes_reconnect_delay_invalid, ReconnectDelay}};
-        [_, _, _, Listen, _, _ | _]
+        [_, _, _, Listen, _, _, _ | _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->
             {error, {nodes_listen_invalid, Listen}};
-        [_, _, _, _, Connect, _ | _]
+        [_, _, _, _, Connect, _, _ | _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
             {error, {nodes_connect_invalid, Connect}};
-        [_, _, _, _, _, Discovery | _]
+        [_, _, _, _, _, TimestampType, _ | _]
+            when not ((TimestampType =:= erlang) orelse
+                      (TimestampType =:= os)) ->
+            {error, {nodes_timestamp_type_invalid, TimestampType}};
+        [_, _, _, _, _, _, Discovery | _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {nodes_discovery_invalid, Discovery}};
         [Nodes1, ReconnectStart, ReconnectDelay,
-         Listen, Connect, Discovery] ->
+         Listen, Connect, TimestampType, Discovery] ->
             case nodes_elements_add(lists:delete(node(), Nodes1),
                                     NodesConfig#config_nodes{
                                         nodes = Nodes0,
                                         reconnect_start = ReconnectStart,
                                         reconnect_delay = ReconnectDelay,
                                         listen = Listen,
-                                        connect = Connect}) of
+                                        connect = Connect,
+                                        timestamp_type = TimestampType}) of
                 {ok, NextNodesConfig} ->
                     case nodes_discovery_options(Discovery, NextNodesConfig) of
                         {ok, NewNodesConfig} ->
@@ -2172,8 +2191,18 @@ nodes_options(Nodes0, Value) ->
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _ | Extra] ->
             {error, {nodes_invalid, Extra}}
+    end.
+
+nodes_proplist(Value) ->
+    {NodeLiterals, Options} = lists:partition(fun erlang:is_atom/1, Value),
+    Nodes = lists:delete(node(), lists:usort(NodeLiterals)),
+    case nodes_validate(Nodes) of
+        ok ->
+            nodes_options(Nodes, Options);
+        {error, _} = Error ->
+            Error
     end.
 
 logging_syslog_validate(undefined) ->
