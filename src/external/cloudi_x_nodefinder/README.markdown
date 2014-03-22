@@ -9,11 +9,29 @@ refactored.
 
 (The source code is a fork of http://code.google.com/p/nodefinder/)
 
+EC2 tags and groups selection are selected with the following syntax
+(if a tuple doesn't make the boolean expression
+ explicitly AND or OR the list is implicitly an OR):
+
+    [Entry... |
+     {'AND', [Entry...]} |
+     {'OR', [Entry...]}]
+     
+      tags: Entry == "key" |
+                     ["key1", "key2"] |
+                     {"key3", "value3"} |
+                     {["key4", "key5"], "value4"} |
+                     {"key6", ["value6", "value7"]} |
+                     {["key8", "key9"], ["value9", "value8"]}
+     
+    groups: Entry == "security_group_name"
+
+
 Build
 -----
 
-    $ rebar get-deps
-    $ rebar compile
+    rebar get-deps
+    rebar compile
 
 Example
 -------
@@ -63,7 +81,6 @@ Functionality details:
 
 * The same Erlang distributed node name is used
   (separate Erlang VMs must be on separate EC2 instances)
-* All instance selection criteria uses OR boolean checks to create a set union
 * Connections between availability zones are not supported due to the
   high latency
 
@@ -105,6 +122,13 @@ Example:
   that are running with a 'test' node name
 * Third, connect to all EC2 instances with a tag Tag1
   that are running with a 'test' node name
+
+Tests
+-----
+
+    rebar get-deps
+    rebar compile
+    rebar eunit skip_deps=true
 
 License
 -------

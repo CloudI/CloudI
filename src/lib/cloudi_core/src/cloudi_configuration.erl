@@ -2067,7 +2067,7 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
                         start_a = [AccessKeyId, SecretAccessKey,
                                    Host, Groups, Tags],
                         discover_f = ec2_discover,
-                        discover_a = [TimeoutSeconds * 1000],
+                        discover_a = [TimeoutSeconds * 1000 + ?TIMEOUT_DELTA],
                         stop_f = ec2_stop,
                         stop_a = []},
                     {ok, NodesConfig#config_nodes{discovery = Discovery}};
@@ -2102,7 +2102,7 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
                 start_f = multicast_start,
                 start_a = [Address, Port, TTL, TimeoutSeconds],
                 discover_f = multicast_discover,
-                discover_a = [TimeoutSeconds * 1000],
+                discover_a = [TimeoutSeconds * 1000 + ?TIMEOUT_DELTA],
                 stop_f = multicast_stop,
                 stop_a = []},
             {ok, NodesConfig#config_nodes{discovery = Discovery}};
@@ -2143,6 +2143,7 @@ nodes_options(Nodes0, Value) ->
         {connect, NodesConfig#config_nodes.connect},
         {timestamp_type, NodesConfig#config_nodes.timestamp_type},
         {discovery, NodesConfig#config_nodes.discovery}],
+    ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
         [Nodes1, _, _, _, _, _, _ | _]
             when not is_list(Nodes1) ->
@@ -2151,10 +2152,16 @@ nodes_options(Nodes0, Value) ->
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0)) ->
             {error, {nodes_reconnect_start_invalid, ReconnectStart}};
+        [_, ReconnectStart, _, _, _, _, _ | _]
+            when not (ReconnectStart >= ConnectTimeSeconds) ->
+            {error, {nodes_reconnect_start_min, ConnectTimeSeconds}};
         [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0)) ->
             {error, {nodes_reconnect_delay_invalid, ReconnectDelay}};
+        [_, _, ReconnectDelay, _, _, _, _ | _]
+            when not (ReconnectDelay >= ConnectTimeSeconds) ->
+            {error, {nodes_reconnect_delay_min, ConnectTimeSeconds}};
         [_, _, _, Listen, _, _, _ | _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->

@@ -16,12 +16,21 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--type group() :: string().
--type tag() :: {list(string()) | string(), list(string()) | string()} |
-               list(string()) |
-               string().
+-type group_input() :: string().
+-type tag_input() :: {list(string()) | string(), list(string()) | string()} |
+                     list(string()) |
+                     string().
+-type condition(Value) :: {'AND', list(Value)} | {'OR', list(Value)}.
+-type condition_meta(Value) :: condition(condition(condition(Value))).
+-type tag() :: condition_meta(tag_input()) | tag_input().
+-type group() :: condition_meta(group_input()) | group_input().
 -export_type([group/0,
               tag/0]).
+
+-type tag_output() :: list({string(), list(string())}).
+-type group_output() :: string().
+-type tag_value() :: condition_meta(tag_output()).
+-type group_value() :: condition_meta(group_output()).
 
 -include_lib("erlcloud/include/erlcloud.hrl").
 -include_lib("erlcloud/include/erlcloud_ec2.hrl").
@@ -31,11 +40,15 @@
         ec2_config,
         ec2_instances,
         ec2_tagged_instances,
-        groups :: list(group()),
-        tags :: list(tag()),
+        groups :: list(group_value()),
+        tags :: list(tag_value()),
+        tags_filter :: list({key, list(string())} |
+                            {value, list(string())}),
         nodes :: list(node()),
         connect :: visible | hidden
     }).
+
+-define(NULL_EXPRESSION, [{'OR', []}]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -75,13 +88,30 @@ discover(Timeout) ->
 init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
     Config = erlcloud_ec2:new(AccessKeyID, SecretAccessKey, EC2Host),
     Connect = nodefinder_app:connect_type(),
-    case do_discover(#state{ec2_config = Config,
-                            groups = Groups,
-                            tags = Tags,
-                            nodes = [],
-                            connect = Connect}) of
-        {ok, #state{}} = Success ->
-            Success;
+    case preprocess(Tags, tag) of
+        {ok, TagsExpressionTree} ->
+            case preprocess(Groups, group) of
+                {ok, GroupsExpressionTree}
+                    when TagsExpressionTree == ?NULL_EXPRESSION,
+                         GroupsExpressionTree == ?NULL_EXPRESSION ->
+                    {stop, {error, null_selection}};
+                {ok, GroupsExpressionTree} ->
+                    TagsMerged = tags_merge(TagsExpressionTree),
+                    TagsFilter = tags_filter(TagsMerged),
+                    case do_discover(#state{ec2_config = Config,
+                                            groups = GroupsExpressionTree,
+                                            tags = TagsExpressionTree,
+                                            tags_filter = TagsFilter,
+                                            nodes = [],
+                                            connect = Connect}) of
+                        {ok, #state{}} = Success ->
+                            Success;
+                        {error, _} = Error ->
+                            {stop, Error}
+                    end;
+                {error, _} = Error ->
+                    {stop, Error}
+            end;
         {error, _} = Error ->
             {stop, Error}
     end.
@@ -115,6 +145,201 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+preprocess_set_cleanup([], [], L2, _) ->
+    lists:reverse(L2);
+preprocess_set_cleanup([], Merged, L2, Condition) ->
+    [{Condition, Merged} | lists:reverse(L2)];
+preprocess_set_cleanup([{Condition, L1} | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged ++ L1, L2, Condition);
+preprocess_set_cleanup([{'AND', []} | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged, L2, Condition);
+preprocess_set_cleanup([{'AND', _} = Entry | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged, [Entry | L2], Condition);
+preprocess_set_cleanup([{'OR', []} | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged, L2, Condition);
+preprocess_set_cleanup([{'OR', _} = Entry | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged, [Entry | L2], Condition);
+preprocess_set_cleanup([Entry | L0], Merged, L2, Condition) ->
+    preprocess_set_cleanup(L0, Merged, [Entry | L2], Condition).
+
+preprocess_set_cleanup(L, Condition) ->
+    preprocess_set_cleanup(L, [], [], Condition).
+
+preprocess_set_element_tags_value([]) ->
+    ok;
+preprocess_set_element_tags_value([[I | _] | Values])
+    when is_integer(I) ->
+    preprocess_set_element_tags_value(Values);
+preprocess_set_element_tags_value([Invalid | _]) ->
+    {error, {tag_value, Invalid}}.
+
+preprocess_set_element_tags_key([], _, Lookup) ->
+    {ok, Lookup};
+preprocess_set_element_tags_key([[I | _] = Key | Keys], Values, Lookup)
+    when is_integer(I) ->
+    preprocess_set_element_tags_key(Keys, Values,
+                                    orddict:store(Key, Values, Lookup));
+preprocess_set_element_tags_key([Invalid | _], _, _) ->
+    {error, {tag_key, Invalid}}.
+    
+preprocess_set_element_tags(Keys, Values)
+    when is_list(Keys), is_list(Values) ->
+    case preprocess_set_element_tags_value(Values) of
+        ok ->
+            preprocess_set_element_tags_key(lists:usort(Keys),
+                                            lists:usort(Values),
+                                            orddict:new());
+        {error, _} = Error ->
+            Error
+    end.
+
+preprocess_set_element([I | _] = Group, group)
+    when is_integer(I) ->
+    {ok, Group};
+preprocess_set_element([I | _] = Key, tag)
+    when is_integer(I) ->
+    preprocess_set_element_tags([Key], []);
+preprocess_set_element([[I | _] | _] = Keys, tag)
+    when is_integer(I) ->
+    preprocess_set_element_tags(Keys, []);
+preprocess_set_element({[I0 | _] = Key, [I1 | _] = Value}, tag)
+    when is_integer(I0), is_integer(I1) ->
+    preprocess_set_element_tags([Key], [Value]);
+preprocess_set_element({[[I0 | _] | _] = Keys, [I1 | _] = Value}, tag)
+    when is_integer(I0), is_integer(I1) ->
+    preprocess_set_element_tags(Keys, [Value]);
+preprocess_set_element({[I0 | _] = Key, [[I1 | _] | _] = Values}, tag)
+    when is_integer(I0), is_integer(I1) ->
+    preprocess_set_element_tags([Key], Values);
+preprocess_set_element({[[I0 | _] | _] = Keys, [[I1 | _] | _] = Values}, tag)
+    when is_integer(I0), is_integer(I1) ->
+    preprocess_set_element_tags(Keys, Values);
+preprocess_set_element(Entry, Type) ->
+    {error, {Type, Entry}}.
+
+preprocess_set([], L2, _Type) ->
+    {ok, lists:reverse(L2)};
+preprocess_set([{'AND', L1} | L0], L2, Type) ->
+    case preprocess_set(preprocess_set_cleanup(L1, 'AND'), Type) of
+        {ok, [{'AND', NewL1H} | NewL1T]} ->
+            % merge ANDs at the same level
+            preprocess_set(L0, [{'AND', NewL1H ++ NewL1T} | L2], Type);
+        {ok, NewL1} ->
+            preprocess_set(L0, [{'AND', NewL1} | L2], Type);
+        {error, _} = Error ->
+            Error
+    end;
+preprocess_set([{'OR', L1} | L0], L2, Type) ->
+    case preprocess_set(preprocess_set_cleanup(L1, 'OR'), Type) of
+        {ok, [{'OR', NewL1H} | NewL1T]} ->
+            % merge ORs at the same level
+            preprocess_set(L0, [{'OR', NewL1H ++ NewL1T} | L2], Type);
+        {ok, NewL1} ->
+            preprocess_set(L0, [{'OR', NewL1} | L2], Type);
+        {error, _} = Error ->
+            Error
+    end;
+preprocess_set([Entry | L0], L2, Type) ->
+    case preprocess_set_element(Entry, Type) of
+        {ok, NewEntry} ->
+            preprocess_set(L0, [NewEntry | L2], Type);
+        {error, _} = Error ->
+            Error
+    end.
+preprocess_set(L, Type) ->
+    preprocess_set(L, [], Type).
+
+preprocess([{'OR', ORs}] = L, Type)
+    when is_list(ORs) ->
+    preprocess_set(L, Type);
+preprocess(L, Type) ->
+    preprocess_set([{'OR', L}], Type).
+
+tags_merge_f(_, [], _) ->
+    [];
+tags_merge_f(_, _, []) ->
+    [];
+tags_merge_f(_, Value1, Value2) ->
+    lists:umerge(Value1, Value2).
+
+tags_merge([], Lookup) ->
+    Lookup;
+tags_merge([{'AND', L1} | L0], Lookup) ->
+    tags_merge(L0, tags_merge(L1, Lookup));
+tags_merge([{'OR', L1} | L0], Lookup) ->
+    tags_merge(L0, tags_merge(L1, Lookup));
+tags_merge([Tags | L0], Lookup) ->
+    tags_merge(L0, orddict:merge(fun tags_merge_f/3, Tags, Lookup)).
+
+tags_merge(L) ->
+    tags_merge(L, orddict:new()).
+
+tags_filter(Merged) ->
+    {Keys, Values} = lists:foldl(fun({K0, V0}, {K1, V1}) ->
+        {lists:umerge(K1, [K0]), lists:umerge(V1, V0)}
+    end, {[], []}, Merged),
+    if
+        Values == [] ->
+            [{key, Keys}];
+        true ->
+            [{key, Keys}, {value, Values}]
+    end.
+
+process_filter(Group, EC2Instances, group) ->
+    lists:filter(fun(Reservation) ->
+        {_, GroupSet} = lists:keyfind(group_set, 1, Reservation),
+        lists:member(Group, GroupSet)
+    end, EC2Instances);
+process_filter(Tags, EC2Tags, tag) ->
+    lists:filter(fun(#ec2_tag{key = Key, value = Value}) ->
+        case orddict:find(Key, Tags) of
+            {ok, []} ->
+                true;
+            {ok, Values} ->
+                lists:member(Value, Values);
+            error ->
+                false
+        end
+    end, EC2Tags).
+
+process_and([], EC2Data, _Type) ->
+    EC2Data;
+process_and([{'AND', L1} | L0], EC2Data, Type) ->
+    process_and(L0, process_and(L1, EC2Data, Type), Type);
+process_and([{'OR', L1} | L0], EC2Data, Type) ->
+    process_and(L0, process_or(L1, EC2Data, Type), Type);
+process_and([Data | L0], EC2Data, Type) ->
+    process_and(L0, process_filter(Data, EC2Data, Type), Type).
+
+process_or([], EC2DataOut, _EC2DataIn, _Type) ->
+    EC2DataOut;
+process_or([{'AND', L1} | L0], EC2DataOut, EC2DataIn, Type) ->
+    NewEC2DataOut = lists:umerge(process_and(L1, EC2DataIn, Type),
+                                 EC2DataOut),
+    process_or(L0, NewEC2DataOut, EC2DataIn, Type);
+process_or([{'OR', L1} | L0], EC2DataOut, EC2DataIn, Type) ->
+    NewEC2DataOut = lists:umerge(process_or(L1, EC2DataIn, Type),
+                                 EC2DataOut),
+    process_or(L0, NewEC2DataOut, EC2DataIn, Type);
+process_or([Data | L0], EC2DataOut, EC2DataIn, Type) ->
+    NewEC2DataOut = lists:umerge(process_filter(Data, EC2DataIn, Type),
+                                 EC2DataOut),
+    process_or(L0, NewEC2DataOut, EC2DataIn, Type).
+
+process_or(L, EC2Data, Type) ->
+    process_or(L, [], EC2Data, Type).
+
+process([{'OR', L}], EC2Instances, group) ->
+    % output list of private dns names
+    lists:foldl(fun(Reservation, Hosts) ->
+        {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
+        update_from_instances_set(InstancesSet, Hosts)
+    end, [], process_or(L, lists:usort(EC2Instances), group));
+process([{'OR', L}], EC2Tags, tag) ->
+    % output list of instance ids
+    [Id ||
+     #ec2_tag{resource_id = Id} <- process_or(L, lists:usort(EC2Tags), tag)].
+
 node_names(Hosts, #state{} = State) ->
     Name = string:sub_word(erlang:atom_to_list(node()), 1, $@),
     Nodes = lists:foldl(fun(Host, L) ->
@@ -122,9 +347,6 @@ node_names(Hosts, #state{} = State) ->
     end, [], Hosts),
     {ok, Nodes, State}.
 
-ec2_instances_get(#state{groups = [],
-                         tags = []} = State) ->
-    {ok, false, State};
 ec2_instances_get(#state{ec2_config = Config,
                          ec2_instances = OldResult} = State) ->
     case erlcloud_ec2:describe_instances(Config) of
@@ -136,46 +358,22 @@ ec2_instances_get(#state{ec2_config = Config,
             Error
     end.
 
-ec2_tagged_instances_get_entries([], Results, _) ->
-    {ok, Results};
-ec2_tagged_instances_get_entries([Entry | Tags], Results, Config) ->
-    Filters = case Entry of
-        {Keys, Values} ->
-            KeyCheck = case Keys of
-                [[I0 | _] | _] when is_integer(I0) ->
-                    Keys;
-                [I0 | _] when is_integer(I0) ->
-                    [Keys]
-            end,
-            ValueCheck = case Values of
-                [[I1 | _] | _] when is_integer(I1) ->
-                    Values;
-                [I1 | _] when is_integer(I1) ->
-                    [Values]
-            end,
-            [{key, KeyCheck}, {value, ValueCheck}];
-        [[I | _] | _] when is_integer(I) ->
-            [{key, Entry}];
-        [I | _] when is_integer(I) ->
-            [{key, [Entry]}]
-    end,
+ec2_tagged_instances_get_entries(Tags, Filter, Config) ->
     case erlcloud_ec2:describe_tags([{resource_type, ["instance"]} |
-                                     Filters], Config) of
-        {ok, EntryResults} ->
-            NewResults = lists:foldl(fun(#ec2_tag{resource_id = Id}, L) ->
-                lists:umerge(L, [Id])
-            end, Results, EntryResults),
-            ec2_tagged_instances_get_entries(Tags, NewResults, Config);
+                                     Filter], Config) of
+        {ok, EC2Tags} ->
+            process(Tags, EC2Tags, tag);
         {error, _} = Error ->
             Error
     end.
 
-ec2_tagged_instances_get(#state{tags = []} = State) ->
+ec2_tagged_instances_get(#state{tags = ?NULL_EXPRESSION} = State) ->
     {ok, false, State};
 ec2_tagged_instances_get(#state{ec2_config = Config,
                                 ec2_tagged_instances = OldResult,
-                                tags = Tags} = State) ->
-    case ec2_tagged_instances_get_entries(Tags, [], Config) of
+                                tags = Tags,
+                                tags_filter = Filter} = State) ->
+    case ec2_tagged_instances_get_entries(Tags, Filter, Config) of
         {ok, OldResult} ->
             {ok, false, State};
         {ok, NewResult} ->
@@ -205,37 +403,24 @@ update_from_instances_set([Instance | InstancesSet], Hosts, F) ->
     end,
     update_from_instances_set(InstancesSet, NextHosts, F).
 
-update_from_groups(#state{ec2_instances = Instances,
+update_from_groups(#state{ec2_instances = EC2Instances,
                           groups = Groups} = State) ->
-    HostsFound = lists:foldl(fun(Reservation, Hosts) ->
-        {_, GroupSet} = lists:keyfind(group_set, 1, Reservation),
-        Found = lists:any(fun(Group) ->
-            lists:member(Group, GroupSet)
-        end, Groups),
-        if
-            Found =:= true ->
-                {_, InstancesSet} = lists:keyfind(instances_set, 1,
-                                                  Reservation),
-                update_from_instances_set(InstancesSet, Hosts);
-            Found =:= false ->
-                Hosts
-        end
-    end, [], Instances),
+    HostsFound = process(Groups, EC2Instances, group),
     node_names(HostsFound, State).
 
 update_from_tags(#state{ec2_instances = Instances,
                         ec2_tagged_instances = TaggedInstances} = State) ->
     HostsFound = lists:foldl(fun(InstanceId, Hosts) ->
+        Check = fun(Instance) ->
+            case lists:keyfind(instance_id, 1, Instance) of
+                {_, InstanceId} ->
+                    true;
+                {_, _} ->
+                    false
+            end
+        end,
         lists:foldl(fun(Reservation, NextHosts) ->
             {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
-            Check = fun(Instance) ->
-                case lists:keyfind(instance_id, 1, Instance) of
-                    {_, InstanceId} ->
-                        true;
-                    {_, _} ->
-                        false
-                end
-            end,
             update_from_instances_set(InstancesSet, NextHosts, Check)
         end, Hosts, Instances)
     end, [], TaggedInstances),
@@ -303,3 +488,213 @@ pforeach(_, []) ->
 pforeach(F, L) ->
     [erlang:spawn_link(fun() -> F(E) end) || E <- L],
     ok.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+logic_case1_tags() ->
+    [#ec2_tag{resource_id = "A1",
+              key = "A",
+              value = "A"},
+     #ec2_tag{resource_id = "A2",
+              key = "A",
+              value = "B"},
+     #ec2_tag{resource_id = "B1",
+              key = "B",
+              value = "A"},
+     #ec2_tag{resource_id = "C1",
+              key = "C",
+              value = "A"},
+     #ec2_tag{resource_id = "C2",
+              key = "C",
+              value = "B"},
+     #ec2_tag{resource_id = "C3",
+              key = "C",
+              value = "C"},
+     #ec2_tag{resource_id = "C4",
+              key = "C",
+              value = "C"},
+     #ec2_tag{resource_id = "C5",
+              key = "C",
+              value = "C"}].
+
+logic_case1_tags_preprocess(TagsInput) ->
+    true = is_list(TagsInput),
+    {ok, TagsOutput} = preprocess(TagsInput, tag),
+    TagsOutput.
+
+logic_case1_tags_process(TagsInput) ->
+    process(logic_case1_tags_preprocess(TagsInput),
+            logic_case1_tags(), tag).
+
+logic_case2_groups() ->
+    [[{group_set,
+       ["A", "A/A"]},
+      {instances_set,
+       [[{private_dns_name, "A1"}]]}],
+     [{group_set,
+       ["A", "A/B"]},
+      {instances_set,
+       [[{private_dns_name, "A2"}]]}],
+     [{group_set,
+       ["B", "B/A"]},
+      {instances_set,
+       [[{private_dns_name, "B1"}]]}],
+     [{group_set,
+       ["C", "C/A"]},
+      {instances_set,
+       [[{private_dns_name, "C1"}]]}],
+     [{group_set,
+       ["C", "C/B"]},
+      {instances_set,
+       [[{private_dns_name, "C2"}]]}],
+     [{group_set,
+       ["C", "C/C"]},
+      {instances_set,
+       [[{private_dns_name, "C3"}]]}],
+     [{group_set,
+       ["C", "C/C"]},
+      {instances_set,
+       [[{private_dns_name, "C4"}]]}],
+     [{group_set,
+       ["C", "C/C"]},
+      {instances_set,
+       [[{private_dns_name, "C5"}]]}]].
+
+logic_case2_groups_preprocess(GroupsInput) ->
+    true = is_list(GroupsInput),
+    {ok, GroupsOutput} = preprocess(GroupsInput, group),
+    GroupsOutput.
+
+logic_case2_groups_process(GroupsInput) ->
+    process(logic_case2_groups_preprocess(GroupsInput),
+            logic_case2_groups(), group).
+
+logic1_case1_test() ->
+    TagsInput1 = ["C"],
+    TagsInput2 = [["C"]],
+    TagsInput3 = [{'OR', ["C"]}],
+    TagsInput4 = [{'OR', [["C"]]}],
+    [{'OR',[[{"C",[]}]]}] = logic_case1_tags_preprocess(TagsInput1),
+    [{'OR',[[{"C",[]}]]}] = logic_case1_tags_preprocess(TagsInput2),
+    [{'OR',[[{"C",[]}]]}] = logic_case1_tags_preprocess(TagsInput3),
+    [{'OR',[[{"C",[]}]]}] = logic_case1_tags_preprocess(TagsInput4),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case1_tags_process(TagsInput1),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case1_tags_process(TagsInput2),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case1_tags_process(TagsInput3),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case1_tags_process(TagsInput4),
+    ok.
+
+logic2_case1_test() ->
+    TagsInput1 = [{'AND', [{"C", "B"}, "C"]}],
+    TagsInput2 = [{'AND', ["C", {"C", "B"}]}],
+    TagsInput3 = [{'AND', ["B", {"C", "B"}]}],
+    [{'OR',[{'AND',[[{"C",["B"]}],[{"C",[]}]]}]}
+     ] = logic_case1_tags_preprocess(TagsInput1),
+    [{'OR',[{'AND',[[{"C",[]}],[{"C",["B"]}]]}]}
+     ] = logic_case1_tags_preprocess(TagsInput2),
+    [{'OR',[{'AND',[[{"B",[]}],[{"C",["B"]}]]}]}
+     ] = logic_case1_tags_preprocess(TagsInput3),
+    ["C2"] = logic_case1_tags_process(TagsInput1),
+    ["C2"] = logic_case1_tags_process(TagsInput2),
+    [] = logic_case1_tags_process(TagsInput3),
+    ok.
+
+logic3_case1_test() ->
+    TagsInput1 = [{'OR', [{'AND', [{"C", "B"}, "C"]},
+                          {'AND', ["A", {"A", "B"}]}]}],
+    [{'OR',[{'AND',[[{"C",["B"]}],[{"C",[]}]]},
+            {'AND',[[{"A",[]}],[{"A",["B"]}]]}]}
+     ] = logic_case1_tags_preprocess(TagsInput1),
+    ["A2", "C2"] = logic_case1_tags_process(TagsInput1),
+    ok.
+
+logic4_case1_test() ->
+    TagsInput1 = [{'AND', [{"C", ["C"]}, "C"]},
+                  {'AND', [{'OR', ["C", "C", "C", "C"]}, {"C", ["B"]}]},
+                  {'AND', ["A", {["A", "B", "C"], ["A", "B"]}, {"A", "B"}]}],
+    [{'OR',[{'AND',[[{"C",["C"]}],[{"C",[]}]]},
+            {'AND',[{'OR',[[{"C",[]}],[{"C",[]}],[{"C",[]}],[{"C",[]}]]},
+                    [{"C",["B"]}]]},
+            {'AND',[[{"A",[]}],
+                    [{"A",["A","B"]},
+                     {"B",["A","B"]},
+                     {"C",["A","B"]}],
+                    [{"A",["B"]}]]}]}
+     ] = logic_case1_tags_preprocess(TagsInput1),
+    ["A2", "C2", "C3", "C4", "C5"] = logic_case1_tags_process(TagsInput1),
+    ok.
+
+logic5_case1_test() ->
+    TagsInput1 = [{'OR', [{"C", ["C"]}, "C"]},
+                  {'OR', [{'OR', ["C", "C", "C", "C"]}, {"C", ["B"]}]},
+                  {'OR', ["A", {["A", "B", "C"], ["A", "B"]}, {"A", "B"}]}],
+    [{'OR',[[{"C",[]}],
+            [{"C",[]}],
+            [{"C",[]}],
+            [{"C",[]}],
+            [{"C",["C"]}],
+            [{"C",[]}],
+            [{"C",["B"]}],
+            [{"A",[]}],
+            [{"A",["A","B"]},{"B",["A","B"]},{"C",["A","B"]}],
+            [{"A",["B"]}]]}
+     ] = logic_case1_tags_preprocess(TagsInput1),
+    ["A1","A2","B1","C1","C2","C3","C4","C5"
+     ] = logic_case1_tags_process(TagsInput1),
+    ok.
+
+logic1_case2_test() ->
+    GroupsInput1 = ["C"],
+    GroupsInput2 = [{'OR', ["C"]}],
+    [{'OR',["C"]}] = logic_case2_groups_preprocess(GroupsInput1),
+    [{'OR',["C"]}] = logic_case2_groups_preprocess(GroupsInput2),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case2_groups_process(GroupsInput1),
+    ["C1", "C2", "C3", "C4", "C5"] = logic_case2_groups_process(GroupsInput2),
+    ok.
+
+logic2_case2_test() ->
+    GroupsInput1 = [{'AND', ["C/B", "C"]}],
+    GroupsInput2 = [{'AND', ["C", "C/B"]}],
+    GroupsInput3 = [{'AND', ["B", "C/B"]}],
+    [{'OR',[{'AND',["C/B","C"]}]}
+     ] = logic_case2_groups_preprocess(GroupsInput1),
+    [{'OR',[{'AND',["C","C/B"]}]}
+     ] = logic_case2_groups_preprocess(GroupsInput2),
+    [{'OR',[{'AND',["B","C/B"]}]}
+     ] = logic_case2_groups_preprocess(GroupsInput3),
+    ["C2"] = logic_case2_groups_process(GroupsInput1),
+    ["C2"] = logic_case2_groups_process(GroupsInput2),
+    [] = logic_case2_groups_process(GroupsInput3),
+    ok.
+
+logic3_case2_test() ->
+    GroupsInput1 = [{'OR', [{'AND', ["C/B", "C"]},
+                            {'AND', ["A", "A/B"]}]}],
+    [{'OR',[{'AND',["C/B","C"]},
+            {'AND',["A","A/B"]}]}
+     ] = logic_case2_groups_preprocess(GroupsInput1),
+    ["A2", "C2"] = logic_case2_groups_process(GroupsInput1),
+    ok.
+
+logic4_case2_test() ->
+    GroupsInput1 = [{'AND', ["C/C", "C"]},
+                    {'AND', [{'OR', ["C", "C", "C", "C"]}, "C/B"]},
+                    {'AND', ["A",
+                             {'OR', ["A/A", "A/B",
+                                     "B/A", "B/B",
+                                     "C/A", "C/B"]},
+                             "A/B"]}],
+    [{'OR',[{'AND',["C/C","C"]},
+            {'AND',[{'OR',["C","C","C","C"]},
+                    "C/B"]},
+            {'AND',["A",
+                    {'OR', ["A/A", "A/B",
+                            "B/A", "B/B",
+                            "C/A", "C/B"]},
+                    "A/B"]}]}
+     ] = logic_case2_groups_preprocess(GroupsInput1),
+    ["A2", "C2", "C3", "C4", "C5"] = logic_case2_groups_process(GroupsInput1),
+    ok.
+
+-endif.
