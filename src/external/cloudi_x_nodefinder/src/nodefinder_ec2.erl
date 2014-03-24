@@ -286,9 +286,9 @@ preprocess(L, Type) ->
     preprocess_set([{'OR', L}], Type).
 
 tags_merge_f(_, [], _) ->
-    [];
+    [" "];
 tags_merge_f(_, _, []) ->
-    [];
+    [" "];
 tags_merge_f(_, Value1, Value2) ->
     lists:umerge(Value1, Value2).
 
@@ -302,7 +302,7 @@ tags_merge([Tags | L0], Lookup) ->
     tags_merge(L0, orddict:merge(fun tags_merge_f/3, Tags, Lookup)).
 
 tags_merge(L) ->
-    tags_merge(L, orddict:new()).
+    orddict:to_list(tags_merge(L, orddict:new())).
 
 tags_filter(Merged) ->
     {Keys, Values} = lists:foldl(fun({K0, V0}, {K1, V1}) ->
