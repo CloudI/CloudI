@@ -9,7 +9,9 @@
 
 %% external interface
 -export([start_link/5,
-         discover/1]).
+         discover/1,
+         validate_groups/1,
+         validate_tags/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -80,6 +82,34 @@ discover(Timeout) ->
         exit:{Reason, _} ->
             {error, Reason}
     end.
+
+-spec validate_groups(Groups :: list(group())) ->
+    ok |
+    {error, any()}.
+
+validate_groups(Groups) when is_list(Groups) ->
+    case preprocess(Groups, group) of
+        {ok, _} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end;
+validate_groups(_) ->
+    {error, invalid_type}.
+
+-spec validate_tags(Tags :: list(tag())) ->
+    ok |
+    {error, any()}.
+
+validate_tags(Tags) when is_list(Tags) ->
+    case preprocess(Tags, tag) of
+        {ok, _} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end;
+validate_tags(_) ->
+    {error, invalid_type}.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

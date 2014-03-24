@@ -671,6 +671,7 @@ dialyze: all \
               external/cloudi_x_ecouchdb/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_jsx/ebin \
+              external/cloudi_x_nodefinder/ebin \
               external/syslog/ebin
 
 dialyzer: dialyze

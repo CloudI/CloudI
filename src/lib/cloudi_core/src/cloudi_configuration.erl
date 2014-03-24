@@ -2005,26 +2005,16 @@ nodes_elements_remove([A | _], _) ->
     {error, {node_invalid, A}}.
 
 nodes_discovery_ec2_validate(Groups, Tags) ->
-    case lists:all(fun(Group) -> is_integer(hd(Group)) end, Groups) of
-        true ->
-            TagsValid = lists:all(fun(Tag) ->
-                case Tag of
-                    {K, V} when is_integer(hd(K)), is_integer(hd(V)) ->
-                        true;
-                    [I | _] when is_integer(I) ->
-                        true;
-                    _ ->
-                        false
-                end
-            end, Tags),
-            if
-                TagsValid =:= true ->
+    case cloudi_x_nodefinder_ec2:validate_groups(Groups) of
+        ok ->
+            case cloudi_x_nodefinder_ec2:validate_tags(Tags) of
+                ok ->
                     ok;
-                TagsValid =:= false ->
-                    {error, {nodes_discovery_ec2_tags_invalid, Tags}}
+                {error, Reason} ->
+                    {error, {nodes_discovery_ec2_invalid, Reason}}
             end;
-        false ->
-            {error, {nodes_discovery_ec2_groups_invalid, Groups}}
+        {error, Reason} ->
+            {error, {nodes_discovery_ec2_invalid, Reason}}
     end.
 
 nodes_discovery_ec2_options(Value, NodesConfig) ->
