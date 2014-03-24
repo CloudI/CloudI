@@ -392,7 +392,7 @@ ec2_tagged_instances_get_entries(Tags, Filter, Config) ->
     case erlcloud_ec2:describe_tags([{resource_type, ["instance"]} |
                                      Filter], Config) of
         {ok, EC2Tags} ->
-            process(Tags, EC2Tags, tag);
+            {ok, process(Tags, EC2Tags, tag)};
         {error, _} = Error ->
             Error
     end.
