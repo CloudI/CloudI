@@ -50,6 +50,7 @@
         connect :: visible | hidden
     }).
 
+-define(ERLCLOUD_TAG_VALUE_NULL, " ").
 -define(NULL_EXPRESSION, [{'OR', []}]).
 
 %%%------------------------------------------------------------------------
@@ -285,12 +286,22 @@ preprocess([{'OR', ORs}] = L, Type)
 preprocess(L, Type) ->
     preprocess_set([{'OR', L}], Type).
 
-tags_merge_f(_, [], _) ->
-    [" "];
-tags_merge_f(_, _, []) ->
-    [" "];
-tags_merge_f(_, Value1, Value2) ->
+tags_merge_f_values(_, [], _) ->
+    [?ERLCLOUD_TAG_VALUE_NULL];
+tags_merge_f_values(_, _, []) ->
+    [?ERLCLOUD_TAG_VALUE_NULL];
+tags_merge_f_values(_, Value1, Value2) ->
     lists:umerge(Value1, Value2).
+
+tags_merge_f_value1(K, [], D2) ->
+    tags_merge_f_value1(K, [?ERLCLOUD_TAG_VALUE_NULL], D2);
+tags_merge_f_value1(K, V1, D2) ->
+    orddict:update(K, fun(V2) ->
+                       tags_merge_f_values(K, V1, V2)
+                   end, V1, D2).
+
+tags_merge_f(D1, D2) ->
+    orddict:fold(fun tags_merge_f_value1/3, D2, D1).
 
 tags_merge([], Lookup) ->
     Lookup;
@@ -299,7 +310,7 @@ tags_merge([{'AND', L1} | L0], Lookup) ->
 tags_merge([{'OR', L1} | L0], Lookup) ->
     tags_merge(L0, tags_merge(L1, Lookup));
 tags_merge([Tags | L0], Lookup) ->
-    tags_merge(L0, orddict:merge(fun tags_merge_f/3, Tags, Lookup)).
+    tags_merge(L0, tags_merge_f(Tags, Lookup)).
 
 tags_merge(L) ->
     orddict:to_list(tags_merge(L, orddict:new())).
@@ -725,6 +736,14 @@ logic4_case2_test() ->
                     "A/B"]}]}
      ] = logic_case2_groups_preprocess(GroupsInput1),
     ["A2", "C2", "C3", "C4", "C5"] = logic_case2_groups_process(GroupsInput1),
+    ok.
+
+merge1_test() ->
+    TagsInput = [{'AND', [{"foobear", "1"}, "foobarish"]}],
+    {ok, TagsExpressionTree} = preprocess(TagsInput, tag),
+    TagsMerged = tags_merge(TagsExpressionTree),
+    [{key, ["foobarish", "foobear"]},
+     {value, [" ", "1"]}] = tags_filter(TagsMerged),
     ok.
 
 -endif.
