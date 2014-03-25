@@ -248,6 +248,7 @@ preprocess_set_element({[[I0 | _] | _] = Keys, [[I1 | _] | _] = Values}, tag)
 preprocess_set_element(Entry, Type) ->
     {error, {Type, Entry}}.
 
+% set the hierarchy of the boolean expression (structure)
 preprocess_set([], L2, _Type) ->
     {ok, lists:reverse(L2)};
 preprocess_set([{'AND', L1} | L0], L2, Type) ->
@@ -286,12 +287,10 @@ preprocess([{'OR', ORs}] = L, Type)
 preprocess(L, Type) ->
     preprocess_set([{'OR', L}], Type).
 
-tags_merge_f_values(_, [], _) ->
-    [?ERLCLOUD_TAG_VALUE_NULL];
 tags_merge_f_values(_, _, []) ->
     [?ERLCLOUD_TAG_VALUE_NULL];
-tags_merge_f_values(_, Value1, Value2) ->
-    lists:umerge(Value1, Value2).
+tags_merge_f_values(_, V1, V2) ->
+    lists:umerge(V1, V2).
 
 tags_merge_f_value1(K, [], D2) ->
     tags_merge_f_value1(K, [?ERLCLOUD_TAG_VALUE_NULL], D2);
@@ -332,15 +331,18 @@ process_filter(Group, EC2Instances, group) ->
         lists:member(Group, GroupSet)
     end, EC2Instances);
 process_filter(Tags, EC2Tags, tag) ->
-    lists:filter(fun(#ec2_tag{key = Key, value = Value}) ->
-        case orddict:find(Key, Tags) of
-            {ok, []} ->
-                true;
-            {ok, Values} ->
-                lists:member(Value, Values);
-            error ->
-                false
-        end
+    orddict:filter(fun(_, TagL) ->
+        % do any of the tags for an instance match a single requirement
+        lists:any(fun(#ec2_tag{key = Key, value = Value}) ->
+            case orddict:find(Key, Tags) of
+                {ok, []} ->
+                    true;
+                {ok, Values} ->
+                    lists:member(Value, Values);
+                error ->
+                    false
+            end
+        end, TagL)
     end, EC2Tags).
 
 process_and([], EC2Data, _Type) ->
@@ -378,8 +380,13 @@ process([{'OR', L}], EC2Instances, group) ->
     end, [], process_or(L, lists:usort(EC2Instances), group));
 process([{'OR', L}], EC2Tags, tag) ->
     % output list of instance ids
-    [Id ||
-     #ec2_tag{resource_id = Id} <- process_or(L, lists:usort(EC2Tags), tag)].
+    NewEC2Tags = lists:foldl(fun(#ec2_tag{resource_id = Id} = Tag, D) ->
+        InitialValue = [Tag],
+        orddict:update(Id, fun(OldTagL) ->
+                           lists:umerge(OldTagL, InitialValue)
+                       end, InitialValue, D)
+    end, orddict:new(), EC2Tags),
+    [Id || {Id, _} <- orddict:to_list(process_or(L, NewEC2Tags, tag))].
 
 node_names(Hosts, #state{} = State) ->
     Name = string:sub_word(erlang:atom_to_list(node()), 1, $@),
@@ -744,6 +751,12 @@ merge1_test() ->
     TagsMerged = tags_merge(TagsExpressionTree),
     [{key, ["foobarish", "foobear"]},
      {value, [" ", "1"]}] = tags_filter(TagsMerged),
+    Tags = TagsExpressionTree,
+    {ok, EC2Tags} = {ok,[{ec2_tag,"instanceB","instance","foobarish",[]},
+                         {ec2_tag,"instanceA","instance","foobear","1"},
+                         {ec2_tag,"instanceA","instance","foobarish",[]}]},
+    TaggedInstances = process(Tags, EC2Tags, tag),
+    ["instanceA"] = TaggedInstances,
     ok.
 
 -endif.
