@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add process_index, process_count, process_count_max, and
+      process_count_min to all CloudI API implementations
+
 2014-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix ec2 discovery groups/tags validation for syntax additions

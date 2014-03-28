@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/12]).
+         create_external/14]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,10 +76,13 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_external(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout, Prefix,
+create_external(Protocol, SocketPath,
+                ThreadIndex, ProcessIndex, ProcessCount,
+                BufferSize, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, DestRefresh,
                 DestDeny, DestAllow, ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
+         is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (Protocol == tcp) orelse
@@ -101,11 +104,11 @@ create_external(Protocol, SocketPath, ThreadIndex, BufferSize, Timeout, Prefix,
            (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
     case supervisor:start_child(?MODULE,
-                                [Protocol, SocketPath, ThreadIndex,
+                                [Protocol, SocketPath,
+                                 ThreadIndex, ProcessIndex, ProcessCount,
                                  BufferSize, Timeout, Prefix,
-                                 TimeoutSync, TimeoutAsync,
-                                 DestRefresh, DestDeny, DestAllow,
-                                 ConfigOptions]) of
+                                 TimeoutSync, TimeoutAsync, DestRefresh,
+                                 DestDeny, DestAllow, ConfigOptions]) of
         {ok, Pid} ->
             {ok, Pid, cloudi_services_external:port(Pid)};
         {ok, Pid, _} ->

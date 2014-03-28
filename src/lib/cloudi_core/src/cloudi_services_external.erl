@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_external).
@@ -55,7 +55,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/12, port/1]).
+-export([start_link/14, port/1]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -98,6 +98,8 @@
         socket_path,                   % local socket filesystem path
         socket_options,                % common socket options
         socket,                        % data socket
+        process_index,                 % 0-based index of the Erlang process
+        process_count,                 % initial count of Erlang processes
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
@@ -126,12 +128,14 @@
 %%%------------------------------------------------------------------------
 
 start_link(Protocol, SocketPath,
-           ThreadIndex, BufferSize, Timeout, Prefix,
+           ThreadIndex, ProcessIndex, ProcessCount,
+           BufferSize, Timeout, Prefix,
            TimeoutAsync, TimeoutSync, DestRefresh,
            DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
+         is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (Protocol =:= tcp) orelse
@@ -156,7 +160,8 @@ start_link(Protocol, SocketPath,
         ok ->
             gen_fsm:start_link(?MODULE,
                                [Protocol, SocketPath,
-                                ThreadIndex, BufferSize, Timeout, Prefix,
+                                ThreadIndex, ProcessIndex, ProcessCount,
+                                BufferSize, Timeout, Prefix,
                                 TimeoutAsync, TimeoutSync, DestRefresh,
                                 DestDeny, DestAllow, ConfigOptions], []);
         {error, Reason} ->
@@ -171,7 +176,8 @@ port(Process) when is_pid(Process) ->
 %%%------------------------------------------------------------------------
 
 init([Protocol, SocketPath,
-      ThreadIndex, BufferSize, Timeout, Prefix,
+      ThreadIndex, ProcessIndex, ProcessCount,
+      BufferSize, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, DestRefresh,
       DestDeny, DestAllow, ConfigOptions])
     when Protocol =:= tcp;
@@ -195,6 +201,8 @@ init([Protocol, SocketPath,
             process_flag(trap_exit, true),
             {ok, 'CONNECT',
              State#state{dispatcher = Dispatcher,
+                         process_index = ProcessIndex,
+                         process_count = ProcessCount,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
                          timeout_sync = TimeoutSync,
@@ -220,6 +228,8 @@ init([Protocol, SocketPath,
 'CONNECT'('init',
           #state{dispatcher = Dispatcher,
                  protocol = Protocol,
+                 process_index = ProcessIndex,
+                 process_count = ProcessCount,
                  prefix = Prefix,
                  timeout_async = TimeoutAsync,
                  timeout_sync = TimeoutSync,
@@ -227,10 +237,25 @@ init([Protocol, SocketPath,
                      priority_default =
                          PriorityDefault,
                      request_timeout_adjustment =
-                         RequestTimeoutAdjustment}} = State) ->
+                         RequestTimeoutAdjustment,
+                     count_process_dynamic =
+                         CountProcessDynamic}} = State) ->
+    CountProcessDynamicFormat =
+        cloudi_rate_based_configuration:
+        count_process_dynamic_format(CountProcessDynamic),
+    {ProcessCountMax, ProcessCountMin} = if
+        CountProcessDynamicFormat =:= false ->
+            {ProcessCount, ProcessCount};
+        true ->
+            {_, Max} = lists:keyfind(count_max, 1, CountProcessDynamicFormat),
+            {_, Min} = lists:keyfind(count_min, 1, CountProcessDynamicFormat),
+            {Max, Min}
+    end,
     % first message within the CloudI API received during
     % the object construction or init API function
-    send('init_out'(Prefix, TimeoutAsync, TimeoutSync,
+    send('init_out'(ProcessIndex, ProcessCount,
+                    ProcessCountMax, ProcessCountMin,
+                    Prefix, TimeoutAsync, TimeoutSync,
                     PriorityDefault, RequestTimeoutAdjustment),
          State),
     if
@@ -1097,9 +1122,13 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                                      [], PidList, State)}
     end.
 
-'init_out'(Prefix, TimeoutAsync, TimeoutSync,
+'init_out'(ProcessIndex, ProcessCount,
+           ProcessCountMax, ProcessCountMin,
+           Prefix, TimeoutAsync, TimeoutSync,
            PriorityDefault, RequestTimeoutAdjustment)
-    when is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync),
+    when is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_integer(ProcessCountMax), is_integer(ProcessCountMin),
+         is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(PriorityDefault),
          PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
          is_boolean(RequestTimeoutAdjustment) ->
@@ -1112,6 +1141,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
             0
     end,
     <<?MESSAGE_INIT:32/unsigned-integer-native,
+      ProcessIndex:32/unsigned-integer-native,
+      ProcessCount:32/unsigned-integer-native,
+      ProcessCountMax:32/unsigned-integer-native,
+      ProcessCountMin:32/unsigned-integer-native,
       PrefixSize:32/unsigned-integer-native,
       PrefixBin/binary, 0:8,
       TimeoutAsync:32/unsigned-integer-native,

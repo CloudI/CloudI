@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -1202,6 +1202,14 @@ class API
                               trans_id.c_str(),
                               consume);
         }
+
+        uint32_t process_index() const;
+
+        uint32_t process_count() const;
+
+        uint32_t process_count_max() const;
+
+        uint32_t process_count_min() const;
 
         char const * prefix() const;
 

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -107,6 +107,10 @@ public class API
     private final int buffer_size;
     private long request_timer;
     private Integer request_timeout;
+    private int process_index;
+    private int process_count;
+    private int process_count_max;
+    private int process_count_min;
     private String prefix;
     private int timeout_async;
     private int timeout_sync;
@@ -158,6 +162,10 @@ public class API
                                                            byte[],
                                                            OtpErlangPid> > >();
         this.buffer_size = Integer.parseInt(buffer_size_str);
+        this.process_index = 0;
+        this.process_count = 0;
+        this.process_count_max = 0;
+        this.process_count_min = 0;
         this.timeout_async = 5000;
         this.timeout_sync = 5000;
         this.priority_default = 0;
@@ -647,6 +655,26 @@ public class API
         }
     }
 
+    public int process_index()
+    {
+        return this.process_index;
+    }
+
+    public int process_count()
+    {
+        return this.process_count;
+    }
+
+    public int process_count_max()
+    {
+        return this.process_count_max;
+    }
+
+    public int process_count_min()
+    {
+        return this.process_count_min;
+    }
+
     public String prefix()
     {
         return this.prefix;
@@ -841,6 +869,10 @@ public class API
                 {
                     case MESSAGE_INIT:
                     {
+                        this.process_index = buffer.getInt();
+                        this.process_count = buffer.getInt();
+                        this.process_count_max = buffer.getInt();
+                        this.process_count_min = buffer.getInt();
                         int prefixSize = buffer.getInt();
                         this.prefix = API.getString(buffer, prefixSize);
                         this.timeout_async = buffer.getInt();

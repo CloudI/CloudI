@@ -92,7 +92,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -100,6 +100,9 @@
 
 %% behavior interface
 -export([process_index/1,
+         process_count/1,
+         process_count_max/1,
+         process_count_min/1,
          self/1,
          dispatcher/1,
          subscribe/2,
@@ -273,7 +276,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return the index of this instance of the service.===
+%% ===Return the 0-based index of this instance of the service.===
 %% The configuration of the service defined how many instances should exist.
 %% @end
 %%-------------------------------------------------------------------------
@@ -283,6 +286,47 @@
 
 process_index(Dispatcher) ->
     gen_server:call(Dispatcher, process_index, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the initial process count of this instance of the service.===
+%% The configuration of the service defined how many instances should exist.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec process_count(Dispatcher :: dispatcher()) ->
+    ProcessCount :: pos_integer().
+
+process_count(Dispatcher) ->
+    gen_server:call(Dispatcher, process_count, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the process count maximum of this instance of the service.===
+%% This will be the same as the process_count, unless count_process_dynamic
+%% configuration provides a maximum that is greater than the process_count.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec process_count_max(Dispatcher :: dispatcher()) ->
+    ProcessCountMax :: pos_integer().
+
+process_count_max(Dispatcher) ->
+    gen_server:call(Dispatcher, process_count_max, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the process count minimum of this instance of the service.===
+%% This will be the same as the process_count, unless count_process_dynamic
+%% configuration provides a minimum that is less than the process_count.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec process_count_min(Dispatcher :: dispatcher()) ->
+    ProcessCountMin :: pos_integer().
+
+process_count_min(Dispatcher) ->
+    gen_server:call(Dispatcher, process_count_min, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -164,6 +164,18 @@ class API(object):
         if consume is not None:
             kwargs['consume'] = consume
         return self.__api.recv_async(**kwargs)
+
+    def process_index(self):
+        return self.__api.process_index()
+
+    def process_count(self):
+        return self.__api.process_count()
+
+    def process_count_max(self):
+        return self.__api.process_count_max()
+
+    def process_count_min(self):
+        return self.__api.process_count_min()
 
     def prefix(self):
         return self.__api.prefix()

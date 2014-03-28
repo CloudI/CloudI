@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -306,6 +306,14 @@ python_cloudi_return_sync(PyObject * self, PyObject * args);
 static PyObject *
 python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs);
 static PyObject *
+python_cloudi_process_index(PyObject * self, PyObject *);
+static PyObject *
+python_cloudi_process_count(PyObject * self, PyObject *);
+static PyObject *
+python_cloudi_process_count_max(PyObject * self, PyObject *);
+static PyObject *
+python_cloudi_process_count_min(PyObject * self, PyObject *);
+static PyObject *
 python_cloudi_prefix(PyObject * self, PyObject *);
 static PyObject *
 python_cloudi_timeout_async(PyObject * self, PyObject *);
@@ -345,6 +353,18 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"recv_async",
      (PyCFunction) python_cloudi_recv_async, METH_VARARGS | METH_KEYWORDS,
      "Receive an asynchronous response synchronously."},
+    {"process_index",
+     python_cloudi_process_index, METH_VARARGS,
+     "Provide the service instance process index."},
+    {"process_count",
+     python_cloudi_process_count, METH_VARARGS,
+     "Provide the service instance process count."},
+    {"process_count_max",
+     python_cloudi_process_count_max, METH_VARARGS,
+     "Provide the service instance maximum process count."},
+    {"process_count_min",
+     python_cloudi_process_count_min, METH_VARARGS,
+     "Provide the service instance minimum process count."},
     {"prefix",
      python_cloudi_prefix, METH_VARARGS,
      "Provide the service name prefix."},
@@ -1068,6 +1088,38 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
                          object->api->get_response(),
                          object->api->get_response_size(),
                          object->api->get_trans_id(0), 16);
+}
+
+static PyObject *
+python_cloudi_process_index(PyObject * self, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    return Py_BuildValue("I", object->api->process_index());
+}
+
+static PyObject *
+python_cloudi_process_count(PyObject * self, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    return Py_BuildValue("I", object->api->process_count());
+}
+
+static PyObject *
+python_cloudi_process_count_max(PyObject * self, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    return Py_BuildValue("I", object->api->process_count_max());
+}
+
+static PyObject *
+python_cloudi_process_count_min(PyObject * self, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    return Py_BuildValue("I", object->api->process_count_min());
 }
 
 static PyObject *

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -284,6 +284,22 @@ module CloudI
             return poll_request(false)
         end
 
+        def process_index
+            return @processIndex
+        end
+
+        def process_count
+            return @processCount
+        end
+
+        def process_count_max
+            return @processCountMax
+        end
+
+        def process_count_min
+            return @processCountMin
+        end
+
         def prefix
             return @prefix
         end
@@ -426,8 +442,13 @@ module CloudI
                 command = data[i, j].unpack('L')[0]
                 case command
                 when MESSAGE_INIT
-                    i += j; j = 4
-                    prefixSize = data[i, j].unpack('L')[0]
+                    i += j; j = 4 + 4 + 4 + 4 + 4
+                    tmp = data[i, j].unpack('LLLLL')
+                    @processIndex = tmp[0]
+                    @processCount = tmp[1]
+                    @processCountMax = tmp[2]
+                    @processCountMin = tmp[3]
+                    prefixSize = tmp[4]
                     i += j; j = prefixSize + 4 + 4 + 1 + 1
                     tmp = data[i, j].unpack("Z#{prefixSize}LLcC")
                     @prefix = tmp[0]

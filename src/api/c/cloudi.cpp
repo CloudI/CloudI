@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -1443,6 +1443,10 @@ static int poll_request(cloudi_instance_t * p,
         {
             case MESSAGE_INIT:
             {
+                store_incoming_uint32(buffer_recv, index, p->process_index);
+                store_incoming_uint32(buffer_recv, index, p->process_count);
+                store_incoming_uint32(buffer_recv, index, p->process_count_max);
+                store_incoming_uint32(buffer_recv, index, p->process_count_min);
                 store_incoming_binary(buffer_recv, index, p->prefix);
                 store_incoming_uint32(buffer_recv, index, p->timeout_async);
                 store_incoming_uint32(buffer_recv, index, p->timeout_sync);
@@ -2030,6 +2034,26 @@ int API::recv_async(uint32_t timeout,
                              timeout,
                              trans_id,
                              static_cast<int>(consume));
+}
+
+uint32_t API::process_index() const
+{
+    return m_api->process_index;
+}
+
+uint32_t API::process_count() const
+{
+    return m_api->process_count;
+}
+
+uint32_t API::process_count_max() const
+{
+    return m_api->process_count_max;
+}
+
+uint32_t API::process_count_min() const
+{
+    return m_api->process_count_min;
 }
 
 char const * API::prefix() const

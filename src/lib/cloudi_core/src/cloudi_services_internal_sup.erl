@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/11]).
+         create_internal/12]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,11 +76,12 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync,
-                DestRefresh, DestDeny, DestAllow, ConfigOptions)
-    when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
-         is_integer(Timeout), is_list(Prefix),
+create_internal(ProcessIndex, ProcessCount,
+                Module, Args, Timeout, Prefix,
+                TimeoutSync, TimeoutAsync, DestRefresh,
+                DestDeny, DestAllow, ConfigOptions)
+    when is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
     true = (DestRefresh == immediate_closest) orelse
            (DestRefresh == lazy_closest) orelse
@@ -97,8 +98,8 @@ create_internal(ProcessIndex, Module, Args, Timeout, Prefix,
            (DestRefresh == immediate_oldest) orelse
            (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [ProcessIndex, Module, Args,
-                                          Timeout, Prefix,
+    case supervisor:start_child(?MODULE, [ProcessIndex, ProcessCount,
+                                          Module, Args, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions]) of

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,11 @@ class API(object):
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
         self.__send(term_to_binary(OtpErlangAtom('init')))
-        (self.__prefix,
+        (self.__process_index,
+         self.__process_count,
+         self.__process_count_max,
+         self.__process_count_min,
+         self.__prefix,
          self.__timeout_async, self.__timeout_sync,
          self.__priority_default,
          self.__request_timeout_adjustment) = self.__poll_request(False)
@@ -272,6 +276,18 @@ class API(object):
                                     OtpErlangBinary(trans_id), consume)))
         return self.__poll_request(False)
 
+    def process_index(self):
+        return self.__process_index
+
+    def process_count(self):
+        return self.__process_count
+
+    def process_count_max(self):
+        return self.__process_count_max
+
+    def process_count_min(self):
+        return self.__process_count_min
+
     def prefix(self):
         return self.__prefix
 
@@ -395,8 +411,10 @@ class API(object):
             i, j = 0, 4
             command = struct.unpack('=I', data[i:j])[0]
             if command == _MESSAGE_INIT:
-                i, j = j, j + 4
-                prefixSize = struct.unpack('=I', data[i:j])[0]
+                i, j = j, j + 4 + 4 + 4 + 4 + 4
+                (processIndex, processCount,
+                 processCountMax, processCountMin,
+                 prefixSize) = struct.unpack('=IIIII', data[i:j])
                 i, j = j, j + prefixSize + 4 + 4 + 1 + 1
                 (prefix, nullTerminator, timeoutAsync, timeoutSync,
                  priorityDefault,
@@ -405,7 +423,9 @@ class API(object):
                 )
                 if j != len(data):
                     raise message_decoding_exception()
-                return (prefix, timeoutSync, timeoutAsync,
+                return (processIndex, processCount,
+                        processCountMax, processCountMin,
+                        prefix, timeoutSync, timeoutAsync,
                         priorityDefault, bool(requestTimeoutAdjustment))
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):

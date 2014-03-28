@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -68,6 +68,10 @@ typedef struct cloudi_instance_t
     void * poll_timer;
     void * request_timer;
     uint32_t request_timeout;
+    uint32_t process_index;
+    uint32_t process_count;
+    uint32_t process_count_max;
+    uint32_t process_count_min;
     char * prefix;
     uint32_t timeout_async;
     uint32_t timeout_sync;
@@ -107,6 +111,14 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 #define cloudi_get_response_info_size(p)     (p->response_info_size)
 #define cloudi_get_trans_id_count(p)         (p->trans_id_count)
 #define cloudi_get_trans_id(p, i)            (&(p->trans_id[i * 16]))
+#define cloudi_get_process_index(p)          (p->process_index)
+#define cloudi_get_process_count(p)          (p->process_count)
+#define cloudi_get_process_count_max(p)      (p->process_count_max)
+#define cloudi_get_process_count_min(p)      (p->process_count_min)
+#define cloudi_get_prefix(p)                 (p->prefix)
+#define cloudi_get_timeout_async(p)          (p->timeout_async)
+#define cloudi_get_timeout_sync(p)           (p->timeout_sync)
+#define cloudi_get_priority_default(p)       (p->priority_default)
 
 int cloudi_initialize(cloudi_instance_t * p,
                       unsigned int const thread_index);

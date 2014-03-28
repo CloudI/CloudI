@@ -165,7 +165,7 @@ nodes_set(L, Timeout) ->
     end)).
 
 service_start(#config_service_internal{
-                  count_process = Count,
+                  count_process = CountProcess,
                   options = #config_service_options{
                       reload = Reload}} = Service,
               Timeout) ->
@@ -178,19 +178,20 @@ service_start(#config_service_internal{
                 Reload =:= false ->
                     ok
             end,
-            service_start_internal(concurrency(Count),
-                                   FoundService,
-                                   timeout_decr(Timeout));
+            NewCountProcess = concurrency(CountProcess),
+            service_start_internal(NewCountProcess, FoundService,
+                                   NewCountProcess, timeout_decr(Timeout));
         {error, _} = Error ->
             Error
     end;
 
-service_start(#config_service_external{count_process = Count,
+service_start(#config_service_external{count_process = CountProcess,
                                        count_thread = CountThread} = Service,
               Timeout) ->
+    NewCountProcess = concurrency(CountProcess),
     NewCountThread = concurrency(CountThread),
-    service_start_external(concurrency(Count), Service,
-                           NewCountThread, timeout_decr(Timeout)).
+    service_start_external(NewCountProcess, Service, NewCountThread,
+                           NewCountProcess, timeout_decr(Timeout)).
 
 service_stop(#config_service_internal{} = Service, Remove, Timeout)
     when is_boolean(Remove) ->
@@ -612,7 +613,7 @@ service_stop_remove_internal(#config_service_internal{
             Error
     end.
 
-service_start_internal(0, Service, _) ->
+service_start_internal(0, Service, _, _) ->
     {ok, Service};
 service_start_internal(Count0,
                        #config_service_internal{
@@ -628,10 +629,12 @@ service_start_internal(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = ID} = Service, Timeout) ->
+                           uuid = ID} = Service,
+                       CountProcess, Timeout) ->
     Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
-                                         [Module, Args, TimeoutInit,
+                                         [CountProcess,
+                                          Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
@@ -640,12 +643,13 @@ service_start_internal(Count0,
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_internal(Count1, Service, Timeout);
+            service_start_internal(Count1, Service,
+                                   CountProcess, Timeout);
         {error, _} = Error ->
             Error
     end.
 
-service_start_external(0, Service, _, _) ->
+service_start_external(0, Service, _, _, _) ->
     {ok, Service};
 service_start_external(Count0,
                        #config_service_external{
@@ -664,10 +668,11 @@ service_start_external(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = ID} = Service, CountThread, Timeout) ->
+                           uuid = ID} = Service,
+                       CountThread, CountProcess, Timeout) ->
     Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
-                                         [CountThread,
+                                         [CountProcess, CountThread,
                                           FilePath, Args, Env,
                                           Protocol, BufferSize, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
@@ -679,7 +684,8 @@ service_start_external(Count0,
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_external(Count1, Service, CountThread, Timeout);
+            service_start_external(Count1, Service,
+                                   CountThread, CountProcess, Timeout);
         {error, _} = Error ->
             Error
     end.

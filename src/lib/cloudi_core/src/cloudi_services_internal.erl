@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -55,7 +55,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/11]).
+-export([start_link/12]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -89,6 +89,7 @@
         module,                        % service module
         service_state,                 % service state
         process_index,                 % 0-based index of the Erlang process
+        process_count,                 % initial count of Erlang processes
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
@@ -132,13 +133,13 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(ProcessIndex, Module, Args, Timeout, Prefix,
+start_link(ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
            TimeoutAsync, TimeoutSync, DestRefresh,
            DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions)
-    when is_integer(ProcessIndex), is_atom(Module), is_list(Args),
-         is_integer(Timeout), is_list(Prefix),
+    when is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
@@ -158,7 +159,8 @@ start_link(ProcessIndex, Module, Args, Timeout, Prefix,
     case cloudi_x_cpg:scope_exists(Scope) of
         ok ->
             gen_server:start_link(?MODULE,
-                                  [ProcessIndex, Module, Args, Timeout, Prefix,
+                                  [ProcessIndex, ProcessCount,
+                                   Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, DestRefresh,
                                    DestDeny, DestAllow, ConfigOptions],
                                   [{timeout, Timeout + ?TIMEOUT_DELTA}]);
@@ -170,7 +172,7 @@ start_link(ProcessIndex, Module, Args, Timeout, Prefix,
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ProcessIndex, Module, Args, Timeout, Prefix,
+init([ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, DestRefresh,
       DestDeny, DestAllow,
       #config_service_options{
@@ -203,6 +205,7 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
     State = #state{dispatcher = Dispatcher,
                    module = Module,
                    process_index = ProcessIndex,
+                   process_count = ProcessCount,
                    prefix = Prefix,
                    timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,
@@ -222,6 +225,40 @@ init([ProcessIndex, Module, Args, Timeout, Prefix,
 handle_call(process_index, _,
             #state{process_index = ProcessIndex} = State) ->
     hibernate_check({reply, ProcessIndex, State});
+
+handle_call(process_count, _,
+            #state{process_count = ProcessCount} = State) ->
+    hibernate_check({reply, ProcessCount, State});
+
+handle_call(process_count_max, _,
+            #state{process_count = ProcessCount,
+                   options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic}} = State) ->
+    if
+        CountProcessDynamic =:= false ->
+            hibernate_check({reply, ProcessCount, State});
+        true ->
+            Format = cloudi_rate_based_configuration:
+                     count_process_dynamic_format(CountProcessDynamic),
+            {_, ProcessCountMax} = lists:keyfind(count_max, 1, Format),
+            hibernate_check({reply, ProcessCountMax, State})
+    end;
+
+handle_call(process_count_min, _,
+            #state{process_count = ProcessCount,
+                   options = #config_service_options{
+                       count_process_dynamic = CountProcessDynamic}} = State) ->
+    if
+        CountProcessDynamic =:= false ->
+            hibernate_check({reply, ProcessCount, State});
+        true ->
+            CountProcessDynamicFormat =
+                cloudi_rate_based_configuration:
+                count_process_dynamic_format(CountProcessDynamic),
+            {_, ProcessCountMin} = lists:keyfind(count_min, 1,
+                                                 CountProcessDynamicFormat),
+            hibernate_check({reply, ProcessCountMin, State})
+    end;
 
 handle_call(self, _,
             #state{receiver_pid = ReceiverPid} = State) ->
