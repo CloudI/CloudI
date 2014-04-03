@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update syslog dependency source
+
 2014-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add process_index, process_count, process_count_max, and

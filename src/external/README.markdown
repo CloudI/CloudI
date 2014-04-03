@@ -263,9 +263,9 @@ exceptions due to their C integration).
 --------
 `Erlang syslog port driver`
 
-- `https://github.com/okeuday/erlang-syslog`
-- `commit bce08564f78c997f25f47a0e1426c9c6d990e434`
-- `Wed Feb  5 18:44:11 PST 2014`
+- `https://github.com/Vagabond/erlang-syslog`
+- `commit 91c892fea2836f8c504b6126dd8da7f7da99a61b`
+- `Thu Apr  3 10:47:55 PDT 2014`
 - `BSD`
 
 `thrift`
