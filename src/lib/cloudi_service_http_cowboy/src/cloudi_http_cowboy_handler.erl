@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -318,7 +318,8 @@ websocket_init(_Transport, Req0,
     HeadersIncoming2 = [{<<"peer">>, PeerShort},
                         {<<"peer-port">>, PeerPort},
                         {<<"source-address">>, PeerLong},
-                        {<<"source-port">>, PeerPort} | HeadersIncoming1],
+                        {<<"source-port">>, PeerPort},
+                        {<<"url-path">>, PathRaw} | HeadersIncoming1],
     HeadersIncomingN = if
         SetXForwardedFor =:= true ->
             case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
