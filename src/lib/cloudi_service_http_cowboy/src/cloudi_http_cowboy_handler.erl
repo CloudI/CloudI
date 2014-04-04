@@ -179,7 +179,8 @@ handle(Req0,
             HeadersIncoming1 = [{<<"peer">>, PeerShort},
                                 {<<"peer-port">>, PeerPort},
                                 {<<"source-address">>, PeerLong},
-                                {<<"source-port">>, PeerPort} |
+                                {<<"source-port">>, PeerPort},
+                                {<<"url-path">>, PathRaw} |
                                 HeadersIncoming0],
             HeadersIncomingN = if
                 SetXForwardedFor =:= true ->

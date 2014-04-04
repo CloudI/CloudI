@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add url-path RequestInfo parameter so that
+      service name parsing isn't necessary
+
 2014-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update syslog dependency source
