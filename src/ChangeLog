@@ -5,6 +5,9 @@
 
     * Add url-path RequestInfo parameter so that
       service name parsing isn't necessary
+    * Add cloudi_service_filesystem interface functions
+      notify_all, notify_one, notify_clear to receive
+      file update notifications
 
 2014-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 

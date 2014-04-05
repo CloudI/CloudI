@@ -54,6 +54,13 @@
 -behaviour(cloudi_service).
 
 %% external interface
+-export([notify_all/3,
+         notify_all/4,
+         notify_all/5,
+         notify_one/3,
+         notify_one/4,
+         notify_one/5,
+         notify_clear/2]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -79,17 +86,155 @@
         files :: cloudi_x_trie:cloudi_x_trie()
     }).
 
+-record(file_notify,
+    {
+        send :: mcast_async | send_async,
+        service_name :: cloudi_service:service_name(),
+        timeout :: cloudi_service:timeout_milliseconds(),
+        priority :: cloudi_service:priority()
+    }).
+
 -record(file,
     {
         contents :: binary(),
         path :: string(),
         mtime :: calendar:datetime(),
-        toggle :: boolean()
+        toggle :: boolean(),
+        notify = [] :: list(#file_notify{})
     }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe all service processes to be notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_all(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_all(Dispatcher, Name, NotifyName) ->
+    notify_all(Dispatcher, Name,
+               NotifyName, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe all service processes to be notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_all(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name(),
+                 NotifyTimeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_all(Dispatcher, Name, NotifyName, NotifyTimeout) ->
+    notify_all(Dispatcher, Name,
+               NotifyName, NotifyTimeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe all service processes to be notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_all(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name(),
+                 NotifyTimeout :: cloudi_service:timeout_milliseconds(),
+                 NotifyPriority :: cloudi_service:priority()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_all(Dispatcher, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
+    notify(Dispatcher, Name,
+           NotifyName, NotifyTimeout, NotifyPriority, mcast_async).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to have a service process notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_one(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_one(Dispatcher, Name, NotifyName) ->
+    notify_one(Dispatcher, Name,
+               NotifyName, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to have a service process notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_one(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name(),
+                 NotifyTimeout :: cloudi_service:timeout_milliseconds()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_one(Dispatcher, Name, NotifyName, NotifyTimeout) ->
+    notify_one(Dispatcher, Name,
+               NotifyName, NotifyTimeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to have a service process notified of file updates.===
+%% The current file contents is returned, if the file is found.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_one(Dispatcher :: cloudi_service:dispatcher() |
+                               cloudi:context(),
+                 Name :: cloudi_service:service_name(),
+                 NotifyName :: cloudi_service:service_name(),
+                 NotifyTimeout :: cloudi_service:timeout_milliseconds(),
+                 NotifyPriority :: cloudi_service:priority()) ->
+    {ok, binary()} | {error, any()}.
+
+notify_one(Dispatcher, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
+    notify(Dispatcher, Name,
+           NotifyName, NotifyTimeout, NotifyPriority, send_async).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Clear all notification subscriptions for a file.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec notify_clear(Dispatcher :: cloudi_service:dispatcher() |
+                                 cloudi:context(),
+                   Name :: cloudi_service:service_name()) ->
+    ok | {error, any()}.
+
+notify_clear(Dispatcher, Name) ->
+    case cloudi:send_sync(Dispatcher, Name, notify_clear) of
+        {error, _} = Error ->
+            Error;
+        {ok, {error, _} = Error} ->
+            Error;
+        {ok, ok} ->
+            ok
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -143,6 +288,60 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 files = Files1,
                 use_http_get_suffix = UseHttpGetSuffix}}.
 
+cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
+                              #file_notify{timeout = NotifyTimeout,
+                                           priority = NotifyPriority} = Notify,
+                              Timeout, Priority, _TransId, _Pid,
+                              #state{prefix = Prefix,
+                                     directory = Directory,
+                                     files = Files,
+                                     use_http_get_suffix = UseHttpGetSuffix
+                                     } = State, _Dispatcher) ->
+    case cloudi_x_trie:find(Pattern, Files) of
+        {ok, #file{contents = Contents,
+                   path = FilePath,
+                   notify = NotifyL} = File} ->
+            NewNotifyTimeout = if
+                is_integer(NotifyTimeout) ->
+                    NotifyTimeout;
+                true ->
+                    Timeout
+            end,
+            NewNotifyPriority = if
+                is_integer(NotifyPriority) ->
+                    NotifyPriority;
+                true ->
+                    Priority
+            end,
+            NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
+                                           priority = NewNotifyPriority},
+            DirectoryLength = erlang:length(Directory),
+            {_, FileName} = lists:split(DirectoryLength, FilePath),
+            NewFiles = file_refresh(FileName,
+                                    File#file{notify = [NewNotify | NotifyL]},
+                                    Files, UseHttpGetSuffix, Prefix),
+            {reply, Contents, State#state{files = NewFiles}};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
+cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
+                              notify_clear,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{prefix = Prefix,
+                                     directory = Directory,
+                                     files = Files,
+                                     use_http_get_suffix = UseHttpGetSuffix
+                                     } = State, _Dispatcher) ->
+    case cloudi_x_trie:find(Pattern, Files) of
+        {ok, #file{path = FilePath} = File} ->
+            DirectoryLength = erlang:length(Directory),
+            {_, FileName} = lists:split(DirectoryLength, FilePath),
+            NewFiles = file_refresh(FileName, File#file{notify = []},
+                                    Files, UseHttpGetSuffix, Prefix),
+            {reply, ok, State#state{files = NewFiles}};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
 cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{cache = Cache,
@@ -199,6 +398,27 @@ cloudi_service_terminate(_, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+notify(Dispatcher, Name, [I | _] = NotifyName,
+       NotifyTimeout, NotifyPriority, Send)
+    when is_list(NotifyName), is_integer(I),
+         ((is_integer(NotifyTimeout) andalso NotifyTimeout >= 0 andalso
+           NotifyTimeout =< 4294967295) orelse
+          (NotifyTimeout =:= undefined) orelse (NotifyTimeout =:= immediate)),
+         ((is_integer(NotifyPriority) andalso NotifyPriority >= -128 andalso
+           NotifyPriority =< 127) orelse (NotifyPriority =:= undefined)) ->
+    case cloudi:send_sync(Dispatcher, Name,
+                          #file_notify{send = Send,
+                                       service_name = NotifyName,
+                                       timeout = NotifyTimeout,
+                                       priority = NotifyPriority}) of
+        {error, _} = Error ->
+            Error;
+        {ok, {error, _} = Error} ->
+            Error;
+        {ok, Contents} = Success when is_binary(Contents) ->
+            Success
+    end.
 
 service_name_suffix_root(true) ->
     "/get";
@@ -284,6 +504,16 @@ file_read_data(#file_info{access = Access}, FilePath)
 file_read_data(_, _) ->
     {error, enoent}.
 
+file_notify_send([], _, _) ->
+    ok;
+file_notify_send([#file_notify{send = Send,
+                               service_name = Name,
+                               timeout = Timeout,
+                               priority = Priority} | NotifyL],
+                 Contents, Dispatcher) ->
+    cloudi_service:Send(Dispatcher, Name, <<>>, Contents, Timeout, Priority),
+    file_notify_send(NotifyL, Contents, Dispatcher).
+
 files_refresh(Directory, Toggle,
               Files, UseHttpGetSuffix, Prefix, Dispatcher) ->
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
@@ -293,9 +523,10 @@ files_refresh(Directory, Toggle,
                 File1 = File0#file{toggle = Toggle},
                 file_refresh(FileName, File1, Files0,
                              UseHttpGetSuffix, Prefix);
-            {ok, File0} ->
+            {ok, #file{notify = NotifyL} = File0} ->
                 case file_read_data(FileInfo, FilePath) of
                     {ok, Contents} ->
+                        file_notify_send(NotifyL, Contents, Dispatcher),
                         File1 = File0#file{contents = Contents,
                                            toggle = Toggle,
                                            mtime = MTime},
