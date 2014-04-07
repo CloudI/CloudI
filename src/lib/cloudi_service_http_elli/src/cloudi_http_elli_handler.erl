@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -82,10 +82,10 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
                         content_type_lookup = ContentTypeLookup}) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     Method = cloudi_x_elli_request:method(Req),
-    HeadersIncoming = cloudi_x_elli_request:headers(Req),
+    HeadersIncoming0 = cloudi_x_elli_request:headers(Req),
     [PathRaw | _] = binary:split(cloudi_x_elli_request:raw_path(Req),
                                  [<<"?">>]),
-    HostRaw = case lists:keyfind(<<"Host">>, 1, HeadersIncoming) of
+    HostRaw = case lists:keyfind(<<"Host">>, 1, HeadersIncoming0) of
         {<<"Host">>, H} ->
             H;
         false ->
@@ -99,6 +99,8 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
         true ->
             erlang:binary_to_list(<<HostRaw/binary, PathRaw/binary>>)
     end,
+    HeadersIncomingN = [{<<"url-path">>, PathRaw} |
+                        HeadersIncoming0],
     NameOutgoing = if
         UseMethodSuffix =:= false ->
             NameIncoming;
@@ -141,7 +143,7 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
             % do not pass type information along with the request!
             % make sure to encourage good design that provides
             % one type per name (path)
-            case header_content_type(HeadersIncoming) of
+            case header_content_type(HeadersIncomingN) of
                 <<"application/zip">> ->
                     zlib:unzip(Body);
                 _ ->
@@ -159,9 +161,9 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
     end,
     RequestInfo = if
         OutputType =:= internal; OutputType =:= list ->
-            HeadersIncoming;
+            HeadersIncomingN;
         OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(HeadersIncoming)
+            headers_external_incoming(HeadersIncomingN)
     end,
     case send_sync_minimal(Dispatcher, Context,
                            NameOutgoing, RequestInfo, Request, self()) of

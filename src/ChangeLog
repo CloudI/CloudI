@@ -1,10 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-04-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add url-path RequestInfo parameter to cloudi_service_http_elli
+    * Add cloudi_service_filesystem initialization configuration for
+      notify_one and notify_all (these should be preferred to avoid
+      problems after service crashes)
+
 2014-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add url-path RequestInfo parameter so that
       service name parsing isn't necessary
+      (to cloudi_service_http_cowboy)
     * Add cloudi_service_filesystem interface functions
       notify_all, notify_one, notify_clear to receive
       file update notifications

@@ -71,9 +71,11 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("kernel/include/file.hrl").
 
--define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % get as a name suffix
 -define(DEFAULT_REFRESH,             undefined). % seconds
 -define(DEFAULT_CACHE,               undefined). % seconds
+-define(DEFAULT_NOTIFY_ONE,                 []). % {Name, NotifyName}
+-define(DEFAULT_NOTIFY_ALL,                 []). % {Name, NotifyName}
+-define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % get as a name suffix
 
 -record(state,
     {
@@ -245,8 +247,11 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {directory,              undefined},
         {refresh,                ?DEFAULT_REFRESH},
         {cache,                  ?DEFAULT_CACHE},
+        {notify_one,             ?DEFAULT_NOTIFY_ONE},
+        {notify_all,             ?DEFAULT_NOTIFY_ALL},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [DirectoryRaw, Refresh, Cache, UseHttpGetSuffix] =
+    [DirectoryRaw, Refresh, Cache, NotifyOneL, NotifyAllL,
+     UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
     true = ((Refresh =:= undefined) orelse
@@ -256,6 +261,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             ((Refresh /= undefined) andalso
              is_integer(Cache) andalso
              (Cache > 0) andalso (Cache =< 31536000))),
+    true = is_list(NotifyOneL),
+    true = is_list(NotifyAllL),
     Directory = cloudi_service:environment_transform(DirectoryRaw),
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
@@ -273,6 +280,32 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 Files0
         end
     end, cloudi_x_trie:new()),
+    Timeout = cloudi_service:timeout_async(Dispatcher),
+    Priority = cloudi_service:priority_default(Dispatcher),
+    Files4 = lists:foldl(fun({NameOne, NotifyNameOne}, Files2) ->
+        case files_notify(#file_notify{send = send_async,
+                                       service_name = NotifyNameOne},
+                          NameOne, Files2, Timeout, Priority,
+                          Prefix, Directory, UseHttpGetSuffix) of
+            {ok, _, Files3} ->
+                Files3;
+            {error, Reason} ->
+                ?LOG_ERROR("~p: ~p", [Reason, NameOne]),
+                Files2
+        end
+    end, Files1, NotifyOneL),
+    Files7 = lists:foldl(fun({NameAll, NotifyNameAll}, Files5) ->
+        case files_notify(#file_notify{send = mcast_async,
+                                       service_name = NotifyNameAll},
+                          NameAll, Files5, Timeout, Priority,
+                          Prefix, Directory, UseHttpGetSuffix) of
+            {ok, _, Files6} ->
+                Files6;
+            {error, Reason} ->
+                ?LOG_ERROR("~p: ~p", [Reason, NameAll]),
+                Files5
+        end
+    end, Files4, NotifyAllL),
     if
         is_integer(Refresh) ->
             erlang:send_after(Refresh * 1000,
@@ -285,44 +318,23 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 refresh = Refresh,
                 cache = Cache,
                 toggle = Toggle,
-                files = Files1,
+                files = Files7,
                 use_http_get_suffix = UseHttpGetSuffix}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
-                              #file_notify{timeout = NotifyTimeout,
-                                           priority = NotifyPriority} = Notify,
+                              #file_notify{} = Notify,
                               Timeout, Priority, _TransId, _Pid,
                               #state{prefix = Prefix,
                                      directory = Directory,
                                      files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, _Dispatcher) ->
-    case cloudi_x_trie:find(Pattern, Files) of
-        {ok, #file{contents = Contents,
-                   path = FilePath,
-                   notify = NotifyL} = File} ->
-            NewNotifyTimeout = if
-                is_integer(NotifyTimeout) ->
-                    NotifyTimeout;
-                true ->
-                    Timeout
-            end,
-            NewNotifyPriority = if
-                is_integer(NotifyPriority) ->
-                    NotifyPriority;
-                true ->
-                    Priority
-            end,
-            NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
-                                           priority = NewNotifyPriority},
-            DirectoryLength = erlang:length(Directory),
-            {_, FileName} = lists:split(DirectoryLength, FilePath),
-            NewFiles = file_refresh(FileName,
-                                    File#file{notify = [NewNotify | NotifyL]},
-                                    Files, UseHttpGetSuffix, Prefix),
+    case files_notify(Notify, Pattern, Files, Timeout, Priority,
+                      Prefix, Directory, UseHttpGetSuffix) of
+        {ok, Contents, NewFiles} ->
             {reply, Contents, State#state{files = NewFiles}};
-        error ->
-            {reply, {error, not_found}, State}
+        {error, _} = Error ->
+            {reply, Error, State}
     end;
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
                               notify_clear,
@@ -418,6 +430,38 @@ notify(Dispatcher, Name, [I | _] = NotifyName,
             Error;
         {ok, Contents} = Success when is_binary(Contents) ->
             Success
+    end.
+
+files_notify(#file_notify{timeout = NotifyTimeout,
+                          priority = NotifyPriority} = Notify,
+             Name, Files, Timeout, Priority,
+             Prefix, Directory, UseHttpGetSuffix) ->
+    case cloudi_x_trie:find(Name, Files) of
+        {ok, #file{contents = Contents,
+                   path = FilePath,
+                   notify = NotifyL} = File} ->
+            NewNotifyTimeout = if
+                is_integer(NotifyTimeout) ->
+                    NotifyTimeout;
+                true ->
+                    Timeout
+            end,
+            NewNotifyPriority = if
+                is_integer(NotifyPriority) ->
+                    NotifyPriority;
+                true ->
+                    Priority
+            end,
+            NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
+                                           priority = NewNotifyPriority},
+            DirectoryLength = erlang:length(Directory),
+            {_, FileName} = lists:split(DirectoryLength, FilePath),
+            NewFiles = file_refresh(FileName,
+                                    File#file{notify = [NewNotify | NotifyL]},
+                                    Files, UseHttpGetSuffix, Prefix),
+            {ok, Contents, NewFiles};
+        error ->
+            {error, not_found}
     end.
 
 service_name_suffix_root(true) ->
