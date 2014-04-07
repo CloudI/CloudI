@@ -387,16 +387,6 @@
                "ruby.xml/get"]}]}]}],
         immediate_closest,
         5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
-    {internal,
-        "/tests/http_req/",
-        cloudi_service_filesystem,
-        [{directory, "tests/http_req/public_html/"},
-         {refresh, 5}, % seconds
-         {cache, 300}, % seconds
-         {notify_one, [{"/tests/http_req/index.html/get", "/tests/echo/put"}]}
-         ],
-        immediate_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     % normal echo in python
     {external,
         "/tests/",
@@ -415,6 +405,16 @@
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         % give this service instance a 50% of failure on a service request
         [{monkey_chaos, [{probability_request, 0.5}]}]},
+    {internal,
+        "/tests/http_req/",
+        cloudi_service_filesystem,
+        [{directory, "tests/http_req/public_html/"},
+         {refresh, 5}, % seconds
+         {cache, 300}, % seconds
+         {notify_one, [{"/tests/http_req/index.html/get", "/tests/echo/put"}]}
+         ],
+        immediate_closest,
+        5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     {external,
         "/tests/websockets/",
         "@PYTHON@",

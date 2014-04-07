@@ -75,6 +75,7 @@
 -define(DEFAULT_CACHE,               undefined). % seconds
 -define(DEFAULT_NOTIFY_ONE,                 []). % {Name, NotifyName}
 -define(DEFAULT_NOTIFY_ALL,                 []). % {Name, NotifyName}
+-define(DEFAULT_NOTIFY_ON_START,          true). % send notify in init
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % get as a name suffix
 
 -record(state,
@@ -249,8 +250,9 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {cache,                  ?DEFAULT_CACHE},
         {notify_one,             ?DEFAULT_NOTIFY_ONE},
         {notify_all,             ?DEFAULT_NOTIFY_ALL},
+        {notify_on_start,        ?DEFAULT_NOTIFY_ON_START},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [DirectoryRaw, Refresh, Cache, NotifyOneL, NotifyAllL,
+    [DirectoryRaw, Refresh, Cache, NotifyOneL, NotifyAllL, NotifyOnStart,
      UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
@@ -263,6 +265,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
              (Cache > 0) andalso (Cache =< 31536000))),
     true = is_list(NotifyOneL),
     true = is_list(NotifyAllL),
+    true = is_boolean(NotifyOnStart),
+    true = is_boolean(UseHttpGetSuffix),
     Directory = cloudi_service:environment_transform(DirectoryRaw),
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
@@ -306,6 +310,23 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 Files5
         end
     end, Files4, NotifyAllL),
+    if
+        NotifyOnStart =:= true ->
+            DirectoryLength = erlang:length(Directory),
+            cloudi_x_trie:foreach(fun(Name, #file{contents = Contents,
+                                                  path = FilePath,
+                                                  notify = NotifyL}) ->
+                {_, FileName} = lists:split(DirectoryLength, FilePath),
+                case lists:prefix(Prefix ++ FileName, Name) of
+                    true ->
+                        file_notify_send(NotifyL, Contents, Dispatcher);
+                    false ->
+                        ok
+                end
+            end, Files7);
+        true ->
+            ok
+    end,
     if
         is_integer(Refresh) ->
             erlang:send_after(Refresh * 1000,
@@ -474,16 +495,20 @@ service_name_suffix_root_join([], Suffix) ->
 service_name_suffix_root_join(PathParts, Suffix) ->
     filename:join(lists:reverse(PathParts)) ++ [$/ | Suffix].
 
+file_name_suffix_root("index.htm") ->
+    true;
+file_name_suffix_root("index.html") ->
+    true;
+file_name_suffix_root(_) ->
+    false.
+
 service_name_suffix_root(FileName, UseHttpGetSuffix) ->
     [File | PathParts] = lists:reverse(filename:split(FileName)),
-    case File of
-        "index.htm" ->
+    case file_name_suffix_root(File) of
+        true ->
             service_name_suffix_root_join(PathParts,
                 service_name_suffix_root(UseHttpGetSuffix));
-        "index.html" ->
-            service_name_suffix_root_join(PathParts,
-                service_name_suffix_root(UseHttpGetSuffix));
-        _ ->
+        false ->
             undefined
     end.
 

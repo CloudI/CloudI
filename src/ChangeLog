@@ -7,6 +7,9 @@
     * Add cloudi_service_filesystem initialization configuration for
       notify_one and notify_all (these should be preferred to avoid
       problems after service crashes)
+    * Add cloudi_service_filesystem notify_on_start
+      initialization configuration to provide simpler
+      file-based initialization for dependent services
 
 2014-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
