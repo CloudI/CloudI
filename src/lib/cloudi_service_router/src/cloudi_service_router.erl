@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -63,14 +63,22 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_ADD_PREFIX,                  true).
+-define(DEFAULT_ADD_PREFIX,                  true). % to destinations
+-define(DEFAULT_MODE,                 round_robin).
+-define(DEFAULT_PARAMETERS_ALLOWED,          true).
+-define(DEFAULT_PARAMETERS_STRICT_MATCHING,  true).
 
 -record(destination,
     {
-        mode = round_robin :: random | round_robin,
+        mode = ?DEFAULT_MODE :: random | round_robin,
         service_names = [] :: list(string()),
         index = 1 :: pos_integer(),
-        length :: pos_integer()
+        parameters_allowed = ?DEFAULT_PARAMETERS_ALLOWED
+            :: boolean(),
+        parameters_strict_matching = ?DEFAULT_PARAMETERS_STRICT_MATCHING
+            :: boolean(),
+        parameters_selected = [] :: list(pos_integer()),
+        length = 1 :: pos_integer()
     }).
 
 -record(state,
@@ -88,15 +96,18 @@
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {destinations,             []},
-        {add_prefix,               ?DEFAULT_ADD_PREFIX}],
+        {destinations,               []},
+        {add_prefix,                 ?DEFAULT_ADD_PREFIX}],
     [DestinationsL, AddPrefix] = cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DestinationsL) andalso
            (erlang:length(DestinationsL) > 0),
     true = is_boolean(AddPrefix),
     ConfigDefaults = [
-        {mode,                     round_robin},
-        {service_names,            []}],
+        {mode,                       ?DEFAULT_MODE},
+        {parameters_allowed,         ?DEFAULT_PARAMETERS_ALLOWED},
+        {parameters_strict_matching, ?DEFAULT_PARAMETERS_STRICT_MATCHING},
+        {parameters_selected,        []},
+        {service_names,              []}],
     Destinations = lists:foldl(fun({PatternSuffix, L}, D) ->
         cloudi_service:subscribe(Dispatcher, PatternSuffix),
         case L of
@@ -111,41 +122,69 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                     #destination{service_names = Names}, D);
             [_ | _] ->
                 [Mode,
+                 ParametersAllowed,
+                 ParametersStrictMatching,
+                 ParametersSelected,
                  Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
                 true = is_atom(Mode) andalso
                        ((Mode =:= random) orelse
                         (Mode =:= round_robin)),
-                true = is_list(Names0) andalso
-                       (erlang:length(Names0) > 0),
-                true = lists:all(fun(Name) ->
-                    not cloudi_x_trie:is_pattern(Name)
-                end, Names0),
+                true = is_boolean(ParametersAllowed),
+                true = is_boolean(ParametersStrictMatching),
+                true = is_list(ParametersSelected),
+                true = ((ParametersSelected == []) orelse
+                        ((ParametersSelected /= []) andalso
+                         (ParametersAllowed =:= true))),
+                true = lists:all(fun(I) -> is_integer(I) andalso I > 0 end,
+                                 ParametersSelected),
+                true = is_list(Names0),
                 Length = erlang:length(Names0),
+                true = (Length > 0),
                 Names1 = if
                     AddPrefix =:= true ->
                         [Prefix ++ Suffix || Suffix <- Names0];
                     AddPrefix =:= false ->
                         Names0
                 end,
-                cloudi_x_trie:store(Prefix ++ PatternSuffix,
-                                    #destination{mode = Mode,
-                                                 service_names = Names1,
-                                                 length = Length}, D)
+                true = ((ParametersAllowed =:= true) orelse
+                        ((ParametersAllowed =:= false) andalso
+                         (lists:any(fun cloudi_x_trie:is_pattern/1,
+                                    Names1) =:= false))),
+                Destination = #destination{mode = Mode,
+                                           parameters_allowed =
+                                               ParametersAllowed,
+                                           parameters_strict_matching =
+                                               ParametersStrictMatching,
+                                           parameters_selected =
+                                               ParametersSelected,
+                                           service_names = Names1,
+                                           length = Length},
+                cloudi_x_trie:store(Prefix ++ PatternSuffix, Destination, D)
         end
     end, cloudi_x_trie:new(), DestinationsL),
     {ok, #state{destinations = Destinations}}.
 
-cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, _TransId, _Pid,
                               #state{destinations = Destinations} = State,
                               _Dispatcher) ->
     case cloudi_x_trie:find(Pattern, Destinations) of
         {ok, #destination{} = Destination} ->
-            {NextName, NextDestination} = destination_pick(Destination),
-            {forward, NextName, RequestInfo, Request, Timeout, Priority,
-             State#state{destinations = cloudi_x_trie:store(Pattern,
-                                                            NextDestination,
-                                                            Destinations)}};
+            {NextName, NewDestination} = destination_pick(Destination),
+            Parameters = cloudi_service:service_name_parse(Name, Pattern),
+            case name_parameters(NextName, Parameters, NewDestination) of
+                {ok, NewName} ->
+                    NewDestinations = cloudi_x_trie:store(Pattern,
+                                                          NewDestination,
+                                                          Destinations),
+                    {forward, NewName, RequestInfo, Request,
+                     Timeout, Priority,
+                     State#state{destinations = NewDestinations}};
+                {error, Reason} ->
+                    ?LOG_ERROR("(~p -> ~p) error: ~p",
+                               [Name, NextName, Reason]),
+                    {noreply, State}
+            end;
         error ->
             {noreply, State}
     end.
@@ -181,4 +220,103 @@ destination_pick(#destination{mode = random,
     Index = cloudi_x_quickrand:uniform(Length),
     Name = lists:nth(Index, Names),
     {Name, Destination#destination{index = Index}}.
+
+name_parameters_strip([], NewName) ->
+    {ok, lists:reverse(NewName)};
+name_parameters_strip([$* | Name], NewName) ->
+    name_parameters_strip(Name, NewName);
+name_parameters_strip([C | Name], NewName) ->
+    name_parameters_strip(Name, [C | NewName]).
+
+name_parameters_insert([], NewName, [], _) ->
+    {ok, lists:reverse(NewName)};
+name_parameters_insert([], NewName, [_ | _], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_ignored};
+        true ->
+            {ok, lists:reverse(NewName)}
+    end;
+name_parameters_insert([$* | Name], NewName,
+                       [], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameter_missing};
+        true ->
+            name_parameters_strip(Name, NewName)
+    end;
+name_parameters_insert([$* | Name], NewName,
+                       [Parameter | Parameters], ParametersStrictMatching) ->
+    name_parameters_insert(Name, lists:reverse(Parameter) ++ NewName,
+                           Parameters, ParametersStrictMatching);
+name_parameters_insert([C | Name], NewName,
+                       Parameters, ParametersStrictMatching) ->
+    name_parameters_insert(Name, [C | NewName],
+                           Parameters, ParametersStrictMatching).
+
+name_parameters_insert(Name, Parameters,
+                       ParametersStrictMatching) ->
+    name_parameters_insert(Name, [], Parameters,
+                           ParametersStrictMatching).
+
+name_parameters_select([], NewName, _,
+                       ParametersSelected, ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
+            {error, {parameters_selected_ignored, ParametersSelected}};
+        true ->
+            {ok, lists:reverse(NewName)}
+    end;
+name_parameters_select([$* | Name], NewName, _,
+                       [], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_selected_empty};
+        true ->
+            name_parameters_strip(Name, NewName)
+    end;
+name_parameters_select([$* | Name], NewName, Parameters,
+                       [I | ParametersSelected], ParametersStrictMatching) ->
+    try lists:nth(I, Parameters) of
+        Parameter ->
+            name_parameters_select(Name, lists:reverse(Parameter) ++ NewName,
+                                   Parameters, ParametersSelected,
+                                   ParametersStrictMatching)
+    catch
+        error:_ ->
+            if
+                ParametersStrictMatching =:= true ->
+                    {error, {parameters_selected_missing, I}};
+                true ->
+                    name_parameters_strip(Name, NewName)
+            end
+    end;
+name_parameters_select([C | Name], NewName, Parameters,
+                       ParametersSelected, ParametersStrictMatching) ->
+    name_parameters_select(Name, [C | NewName], Parameters,
+                           ParametersSelected, ParametersStrictMatching).
+
+name_parameters_select(Name, Parameters,
+                       ParametersSelected, ParametersStrictMatching) ->
+    name_parameters_select(Name, [], Parameters,
+                           ParametersSelected, ParametersStrictMatching).
+
+name_parameters(Name, [], #destination{}) ->
+    {ok, Name};
+name_parameters(_, [_ | _],
+                #destination{parameters_allowed = false}) ->
+    {error, parameters_not_allowed};
+name_parameters(Name, Parameters,
+                #destination{parameters_strict_matching =
+                                 ParametersStrictMatching,
+                             parameters_selected =
+                                 ParametersSelected}) ->
+    if
+        ParametersSelected == [] ->
+            name_parameters_insert(Name, Parameters,
+                                   ParametersStrictMatching);
+        true ->
+            name_parameters_select(Name, Parameters, ParametersSelected,
+                                   ParametersStrictMatching)
+    end.
 

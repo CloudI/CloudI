@@ -71,7 +71,7 @@ class Task(threading.Thread):
         if request == '':
             return 'echo'
         else:
-            print >> sys.stderr, 'echo: %s' % request
+            print 'echo: %s' % request
             return request
 
 if __name__ == '__main__':
