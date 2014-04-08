@@ -53,25 +53,6 @@ else
     fi
 fi
 
-# Default CloudI run_erl logging settings
-if [ -z "$RUN_ERL_LOG_ALIVE_MINUTES" -a \
-     -z "$RUN_ERL_LOG_ACTIVITY_MINUTES" -a \
-     -z "$RUN_ERL_LOG_ALIVE_IN_UTC" ]; then
-    RUN_ERL_LOG_ALIVE_MINUTES="1440"    # 1 day
-    RUN_ERL_LOG_ACTIVITY_MINUTES="60"   # 1 hour
-    RUN_ERL_LOG_ALIVE_IN_UTC="1"
-    export RUN_ERL_LOG_ALIVE_MINUTES
-    export RUN_ERL_LOG_ACTIVITY_MINUTES
-    export RUN_ERL_LOG_ALIVE_IN_UTC
-fi
-if [ -z "$RUN_ERL_LOG_GENERATIONS" -a \
-     -z "$RUN_ERL_LOG_MAXSIZE" ]; then
-    RUN_ERL_LOG_GENERATIONS="128"       # from app.config sasl env
-    RUN_ERL_LOG_MAXSIZE="536870912"     # from app.config sasl env
-    export RUN_ERL_LOG_GENERATIONS
-    export RUN_ERL_LOG_MAXSIZE
-fi
-
 # Extract the target node name from node.args
 NAME_ARG=`egrep '^-s?name' $VMARGS_PATH`
 if [ -z "$NAME_ARG" ]; then
@@ -127,6 +108,25 @@ case "$1" in
                 HEART_OPTION="start_boot"
                 ;;
         esac
+        # Default CloudI run_erl logging settings
+        if [ -z "$RUN_ERL_LOG_ALIVE_MINUTES" -a \
+             -z "$RUN_ERL_LOG_ACTIVITY_MINUTES" -a \
+             -z "$RUN_ERL_LOG_ALIVE_IN_UTC" ]; then
+            RUN_ERL_LOG_ALIVE_MINUTES="1440"    # 1 day
+            RUN_ERL_LOG_ACTIVITY_MINUTES="60"   # 1 hour
+            RUN_ERL_LOG_ALIVE_IN_UTC="1"
+            export RUN_ERL_LOG_ALIVE_MINUTES
+            export RUN_ERL_LOG_ACTIVITY_MINUTES
+            export RUN_ERL_LOG_ALIVE_IN_UTC
+        fi
+        if [ -z "$RUN_ERL_LOG_GENERATIONS" -a \
+             -z "$RUN_ERL_LOG_MAXSIZE" ]; then
+            RUN_ERL_LOG_GENERATIONS="128"       # from app.config sasl env
+            RUN_ERL_LOG_MAXSIZE="536870912"     # from app.config sasl env
+            export RUN_ERL_LOG_GENERATIONS
+            export RUN_ERL_LOG_MAXSIZE
+        fi
+
         RUN_PARAM=$(printf "\'%s\' " "$@")
         HEART_COMMAND="$RUNNER_BASE_DIR/bin/$SCRIPT $HEART_OPTION $RUN_PARAM"
         export HEART_COMMAND
