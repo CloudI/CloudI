@@ -11,10 +11,11 @@
 
 -define(TIMEOUT, 5000).
 
+-compile(nowarn_deprecated_type).
 -record(state, {
     supervisor :: pid(),
-    workers, % queue(),
-    waiting, % queue(),
+    workers :: queue(),
+    waiting :: queue(),
     monitors :: ets:tid(),
     size = 5 :: non_neg_integer(),
     overflow = 0 :: non_neg_integer(),

@@ -76,11 +76,16 @@
 -define(TERMINATE_DELAY_MIN,  1000). % milliseconds
 -define(TERMINATE_DELAY_MAX, 60000). % milliseconds
 
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy() :: dict().
+-else.
+-type dict_proxy() :: dict:dict().
+-endif.
 -record(state,
     {
         services = cloudi_x_key2value:new(dict), % {cloudi_x_uuid, pid} ->
                                                  %     configuration
-        changes = dict:new() % dict() % cloudi_x_uuid -> list()
+        changes = dict:new() :: dict_proxy() % cloudi_x_uuid -> list()
     }).
 
 -record(service,

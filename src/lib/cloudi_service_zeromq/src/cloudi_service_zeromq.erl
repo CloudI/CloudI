@@ -70,23 +70,30 @@
                                                     % meta-data through ZeroMQ
                                                     % w/4-byte big endian header
 
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy() :: dict().
+-else.
+-type dict_proxy() :: dict:dict().
+-endif.
 -record(state,
     {
         context :: erlzmq:erlzmq_context(),
         endian :: big | little | native,
         process_metadata :: boolean(),
+        % NameInternal -> [{NameExternal, Socket} | _]
         publish :: cloudi_x_trie:cloudi_x_trie(),
-                % NameInternal -> [{NameExternal, Socket} | _]
+        % Name -> Socket
         request :: cloudi_x_trie:cloudi_x_trie(),
-                % Name -> Socket
+        % Name -> Socket
         push :: cloudi_x_trie:cloudi_x_trie(),
-             % Name -> Socket
-        receives, % dict(), % Socket -> {reply, Name}
-                            % Socket -> [{subscribe,
-                            %             {BinaryMax, BinaryPattern,
-                            %              NameExternal -> NameInternal}} | _]
-                            % Socket -> {request, F(Response)}
-        reply_replies = dict:new() % dict()    % TransId -> Socket
+        % Socket -> {reply, Name}
+        % Socket -> [{subscribe,
+        %             {BinaryMax, BinaryPattern,
+        %              NameExternal -> NameInternal}} | _]
+        % Socket -> {request, F(Response)}
+        receives :: dict_proxy(),
+        % TransId -> Socket
+        reply_replies = dict:new() :: dict_proxy()
     }).
 
 %%%------------------------------------------------------------------------

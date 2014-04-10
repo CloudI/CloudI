@@ -24,6 +24,12 @@
 #     ERLANG_OTP_VER_MINOR (e.g., "01")
 #     ERLANG_OTP_VER_RELEASE_CANDIDATE (e.g., "")
 #
+#   WARNING: After the 17.0 Erlang/OTP release, both
+#            ERLANG_OTP_VER_MINOR and ERLANG_OTP_VER_RELEASE_CANDIDATE will be
+#            no longer correct due to the Erlang/OTP team not wanting to
+#            provide detailed version information.  For autoconf, you should
+#            instead prefer AC_ERLANG_CHECK_LIB and AC_ERLANG_SUBST_ERTS_VER
+#            to check the version of individual OTP applications.
 #
 
 AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],

@@ -93,13 +93,18 @@
                                 pos_integer()}) % response -> count
     }).
 
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy() :: dict().
+-else.
+-type dict_proxy() :: dict:dict().
+-endif.
 -record(state,
     {
         prefix :: string(),
         quorum :: byzantine | number(),
         use_response_info :: boolean(),
-        requests = dict:new(), % dict(), % Original TransId -> #request{}
-        pending = dict:new() % dict() % TransId -> Original TransId
+        requests = dict:new() :: dict_proxy(), % Original TransId -> #request{}
+        pending = dict:new() :: dict_proxy()   % TransId -> Original TransId
     }).
 
 %%%------------------------------------------------------------------------

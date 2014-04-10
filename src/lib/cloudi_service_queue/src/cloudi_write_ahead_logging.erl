@@ -79,11 +79,16 @@
         retries = 0 :: non_neg_integer()
     }).
 
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy() :: dict().
+-else.
+-type dict_proxy() :: dict:dict().
+-endif.
 -record(state,
     {
         file :: binary() | string(),
         position :: non_neg_integer(),
-        chunks = dict:new() ,% dict()        % chunk_id -> #chunk{}
+        chunks = dict:new() :: dict_proxy(), % chunk_id -> #chunk{}
         chunks_free = [] :: list(#chunk{})   % ordered
     }).
 
