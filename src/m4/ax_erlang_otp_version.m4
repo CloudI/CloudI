@@ -153,10 +153,10 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                     end,
                     [[_, Minor | RCString]] = string:tokens(Package, ".-"),
                     case RCString of
-                        "" ->
+                        [[]] ->
                             list_to_integer(Major) * 1000 +
                             list_to_integer(Minor) * 10 + 9;
-                        "rc" ++ RC ->
+                        [["rc" ++ RC]] ->
                             list_to_integer(Major) * 1000 +
                             list_to_integer(Minor) * 10 + list_to_integer(RC)
                     end
