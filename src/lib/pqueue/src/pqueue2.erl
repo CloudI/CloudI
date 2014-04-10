@@ -70,10 +70,17 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -type pqueue2() ::
     empty |
     {integer(), pqueue2(), pqueue2(), element, term()} |
     {integer(), pqueue2(), pqueue2(), queue, queue()}.
+-else.
+-type pqueue2() ::
+    empty |
+    {integer(), pqueue2(), pqueue2(), element, term()} |
+    {integer(), pqueue2(), pqueue2(), queue, queue:queue()}.
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

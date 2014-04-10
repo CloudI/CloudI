@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-04-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for Erlang/OTP 17.0 compilation
+
 2014-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add service name pattern support to cloudi_service_router

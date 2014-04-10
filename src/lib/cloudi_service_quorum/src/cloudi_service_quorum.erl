@@ -98,8 +98,8 @@
         prefix :: string(),
         quorum :: byzantine | number(),
         use_response_info :: boolean(),
-        requests = dict:new() :: dict(), % Original TransId -> #request{}
-        pending = dict:new() :: dict() % TransId -> Original TransId
+        requests = dict:new(), % dict(), % Original TransId -> #request{}
+        pending = dict:new() % dict() % TransId -> Original TransId
     }).
 
 %%%------------------------------------------------------------------------

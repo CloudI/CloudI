@@ -1881,8 +1881,13 @@ service_name_parse_with_suffix(Name, Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec request_http_qs_parse(Request :: binary()) ->
     Result :: dict().
+-else.
+-spec request_http_qs_parse(Request :: binary()) ->
+    Result :: dict:dict().
+-endif.
 
 request_http_qs_parse(Request) ->
     cloudi_service:request_http_qs_parse(Request).
@@ -1910,8 +1915,13 @@ request_info_key_value_new(RequestInfo) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
     Result :: dict().
+-else.
+-spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
+    Result :: dict:dict().
+-endif.
 
 request_info_key_value_parse(RequestInfo) ->
     cloudi_service:request_info_key_value_parse(RequestInfo).

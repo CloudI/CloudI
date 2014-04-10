@@ -83,7 +83,7 @@
     {
         file :: binary() | string(),
         position :: non_neg_integer(),
-        chunks = dict:new() :: dict(),       % chunk_id -> #chunk{}
+        chunks = dict:new() ,% dict()        % chunk_id -> #chunk{}
         chunks_free = [] :: list(#chunk{})   % ordered
     }).
 

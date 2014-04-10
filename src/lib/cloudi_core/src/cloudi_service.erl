@@ -217,9 +217,15 @@
               source/0]).
 
 % used for accessing RequestInfo data
+-ifdef(ERLANG_OTP_VER_16).
 -type key_values() :: list({binary() | string() | atom(),
                             binary() | string() | any()}) |
                       dict().
+-else.
+-type key_values() :: list({binary() | string() | atom(),
+                            binary() | string() | any()}) |
+                      dict:dict().
+-endif.
 -export_type([key_values/0]).
 
 -define(CATCH_TIMEOUT(F),
@@ -2309,8 +2315,13 @@ service_name_parse_with_suffix(Name, Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec request_http_qs_parse(Request :: binary()) ->
     Result :: dict().
+-else.
+-spec request_http_qs_parse(Request :: binary()) ->
+    Result :: dict:dict().
+-endif.
 
 request_http_qs_parse(Request)
     when is_binary(Request) ->
@@ -2342,9 +2353,15 @@ request_info_key_value_new(RequestInfo) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec request_info_key_value_parse(RequestInfo :: binary() |
                                                   list({any(), any()})) ->
     Result :: dict().
+-else.
+-spec request_info_key_value_parse(RequestInfo :: binary() |
+                                                  list({any(), any()})) ->
+    Result :: dict:dict().
+-endif.
 
 request_info_key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->

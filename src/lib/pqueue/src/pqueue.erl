@@ -73,6 +73,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -type pqueue() ::
     {integer(),
      {queue(), queue(), queue(), queue(), queue(), queue(), queue()},
@@ -90,6 +91,37 @@
      {queue(), queue(), queue(), queue(), queue(), queue()},
      {queue(), queue(), queue(), queue(), queue(), queue(), queue()},
      {queue(), queue(), queue(), queue(), queue(), queue(), queue()}}.
+-else.
+-type pqueue() ::
+    {integer(),
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue()},
+     queue:queue(),
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()}} |
+    {'empty',
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue()},
+     queue:queue(),
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()},
+     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
+      queue:queue(), queue:queue(), queue:queue()}}.
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

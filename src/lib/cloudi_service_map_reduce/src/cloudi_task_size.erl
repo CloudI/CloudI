@@ -67,7 +67,11 @@
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec new() -> dict().
+-else.
+-spec new() -> dict:dict().
+-endif.
 
 new() ->
     dict:new().
@@ -78,9 +82,15 @@ new() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec get(TaskSize :: float(),
           Pid :: pid(),
           State :: dict()) -> float().
+-else.
+-spec get(TaskSize :: float(),
+          Pid :: pid(),
+          State :: dict:dict()) -> float().
+-endif.
 
 get(TaskSize, Pid, State)
     when is_pid(Pid) ->
@@ -98,11 +108,19 @@ get(TaskSize, Pid, State)
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec put(TaskSize :: float(),
           TargetTime :: float(),
           ElapsedTime :: float(),
           Pid :: pid(),
           State :: dict()) -> dict().
+-else.
+-spec put(TaskSize :: float(),
+          TargetTime :: float(),
+          ElapsedTime :: float(),
+          Pid :: pid(),
+          State :: dict:dict()) -> dict:dict().
+-endif.
 
 put(TaskSize, TargetTime, ElapsedTime, Pid, State)
     when is_float(TaskSize), is_float(TargetTime), is_float(ElapsedTime),

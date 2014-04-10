@@ -81,12 +81,12 @@
                 % Name -> Socket
         push :: cloudi_x_trie:cloudi_x_trie(),
              % Name -> Socket
-        receives :: dict(), % Socket -> {reply, Name}
+        receives, % dict(), % Socket -> {reply, Name}
                             % Socket -> [{subscribe,
                             %             {BinaryMax, BinaryPattern,
                             %              NameExternal -> NameInternal}} | _]
                             % Socket -> {request, F(Response)}
-        reply_replies = dict:new() :: dict()    % TransId -> Socket
+        reply_replies = dict:new() % dict()    % TransId -> Socket
     }).
 
 %%%------------------------------------------------------------------------

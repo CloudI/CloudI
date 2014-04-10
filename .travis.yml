@@ -1,5 +1,7 @@
 language: erlang
 otp_release:
+  - 17.0-rc1
+  - R16B03-1
   - R16B
 python:
   - "2.7"

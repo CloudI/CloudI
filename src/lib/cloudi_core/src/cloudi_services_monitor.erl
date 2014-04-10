@@ -80,7 +80,7 @@
     {
         services = cloudi_x_key2value:new(dict), % {cloudi_x_uuid, pid} ->
                                                  %     configuration
-        changes = dict:new() :: dict() % cloudi_x_uuid -> list()
+        changes = dict:new() % dict() % cloudi_x_uuid -> list()
     }).
 
 -record(service,
