@@ -1,9 +1,11 @@
 ErlasticSearch
 =========
+
 A thrift based erlang client for [ElasticSearch](http://www.elasticsearch.org/).
 
 It incorporates a connection-pool based on [poolboy](https://github.com/devinus/poolboy) - if/when you get down to productizing, you might want to take a look at the pool's `size` and `max_overflow` options
 
+**NOTE** : 1.5.0 for ES 0.9.x;  1.6.0 and higher for ES 1.x
 
 
 Installation
@@ -30,7 +32,10 @@ Add this as a rebar dependency to your project.
    * ```pools```
       * If you are using the default pools, be sure to use the (uncommented) pool settings from ```app.config``` ( ***If you use the default pools, then you will have to start up elasticsearch before the application, otherwise Bad Things™ will happen*** )
 1. Start a pool
-	* ```erlasticsearch:start_pool(<<"some_unique_name_here">>).```
+	* ```erlasticsearch:start_pool(<<"some_unique_name_here">>).```, or
+	* ```erlasticsearch:start_pool({"localhost", 9500, <<"some_unique_name_here">>).```
+	    * of course, _"localhost"_ and _9500_ should be replaced with your actual *thrift_host* and *thrift_port*
+	    * these values for *thrift_host* and *thrift_port* will override any values that you provide in *connection_options*
 1. Profit
 
 

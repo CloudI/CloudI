@@ -96,8 +96,8 @@ exceptions due to their C integration).
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
-- `tag v1.4.4`
-- `Sat Oct 26 09:57:55 2013 -0400`
+- `commit d7aaed637294db5d9874828ffc7394df9189b146`
+- `Fri Apr 11 08:47:29 PDT 2014`
 - `BSD`
 
 `erlang_cassandra`

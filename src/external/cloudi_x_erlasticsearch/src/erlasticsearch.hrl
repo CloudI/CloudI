@@ -50,17 +50,18 @@
                                      {binary_response, true}
                                     ]).
 -define(REGISTERED_NAME_PREFIX, "erlasticsearch_").
+-define(MAX_RECONNECT_INTERVAL, 30000).
 
 %% Errors
 -define(NO_SUCH_SEQUENCE, no_such_sequence).
--define(CONNECTION_REFUSED, {error, econnrefused}).
 
 %% Methods
 -define(STATE, <<"_cluster/state">>).
 -define(HEALTH, <<"_cluster/health">>).
--define(NODES, <<"_cluster/nodes">>).
--define(STATS, <<"stats">>).
+-define(NODES, <<"_nodes">>).
 -define(STATUS, <<"_status">>).
+-define(STATS, <<"stats">>).
+-define(INDICES_STATS, <<"_stats">>).
 -define(SEARCH, <<"_search">>).
 -define(REFRESH, <<"_refresh">>).
 -define(FLUSH, <<"_flush">>).

@@ -34,6 +34,7 @@
 
 % Cluster helpers
 -export([health/1]).
+-export([cluster_state/1, cluster_state/2]).
 -export([state/1, state/2]).
 -export([nodes_info/1, nodes_info/2, nodes_info/3]).
 -export([nodes_stats/1, nodes_stats/2, nodes_stats/3]).
@@ -56,6 +57,7 @@
 
 %% Index helpers
 -export([status/2]).
+-export([indices_stats/2]).
 -export([refresh/1, refresh/2]).
 -export([flush/1, flush/2]).
 -export([optimize/1, optimize/2]).
@@ -82,10 +84,14 @@
 -define(APP, ?MODULE).
 
 -record(state, {
-        pool_name                           :: pool_name(),
         binary_response = false             :: boolean(),
+        connection                          :: connection(),
         connection_options = []             :: params(),
-        connection                          :: connection()}).
+        pool_name                           :: pool_name(),
+        retries_left = 1                    :: non_neg_integer(),
+        retry_interval = 0                  :: non_neg_integer()}).
+
+-type state() :: #state{}.
 
 %% ------------------------------------------------------------------
 %% API
@@ -155,6 +161,17 @@ stop_pool(PoolName) ->
 health(Destination) ->
     route_call(Destination, {health}, infinity).
 
+%% @equiv cluster_state(Destination, []).
+-spec cluster_state(destination()) -> response().
+cluster_state(Destination) ->
+    cluster_state(Destination, []).
+
+%% @doc Get the state of the  ElasticSearch cluster
+-spec cluster_state(destination(), params()) -> response().
+%% @equiv state(Destination, Params).
+cluster_state(Destination, Params) when is_list(Params) ->
+    cluster_state(Destination, Params).
+
 %% @equiv state(Destination, []).
 -spec state(destination()) -> response().
 state(Destination) ->
@@ -207,6 +224,13 @@ status(Destination, Index) when is_binary(Index) ->
     status(Destination, [Index]);
 status(Destination, Indexes) when is_list(Indexes)->
     route_call(Destination, {status, Indexes}, infinity).
+
+%% @doc Get the stats of an index/indices in the  ElasticSearch cluster
+-spec indices_stats(destination(), index() | [index()]) -> response().
+indices_stats(Destination, Index) when is_binary(Index) ->
+    indices_stats(Destination, [Index]);
+indices_stats(Destination, Indexes) when is_list(Indexes)->
+    route_call(Destination, {indices_stats, Indexes}, infinity).
 
 %% @equiv create_index(Destination, Index, <<>>)
 -spec create_index(destination(), index()) -> response().
@@ -546,15 +570,30 @@ join(List, Sep) when is_list(List) ->
 %% ------------------------------------------------------------------
 
 init([PoolName, Options0]) ->
-    {DecodeResponse, ConnectionOptions} = case lists:keytake(binary_response, 1, Options0) of
-        {value, {binary_response, Decode}, Options1} -> {Decode, Options1};
-        false -> {true, Options0}
-    end,
-    Connection = connection(ConnectionOptions),
+    {DecodeResponse, ConnectionOptions} =
+        case lists:keytake(binary_response, 1, Options0) of
+            {value, {binary_response, Decode}, Options1} -> {Decode, Options1};
+            false -> {true, Options0}
+        end,
+    {RetryInterval, ConnectionOptions1} =
+        case lists:keytake(retry_interval, 1, ConnectionOptions) of
+            {value, {retry_interval, Interval}, Options2} ->
+                {Interval, Options2};
+            false -> {0, ConnectionOptions}
+        end,
+    {RetryAmount, ConnectionOptions2} =
+        case lists:keytake(retry_amount, 1, ConnectionOptions1) of
+            {value, {retry_amount, Amount}, Options3} ->
+                {Amount, Options3};
+            false -> {1, ConnectionOptions1}
+        end,
+    Connection = connection(ConnectionOptions2),
     {ok, #state{pool_name = PoolName, 
                 binary_response = DecodeResponse,
                 connection_options = ConnectionOptions,
-                connection = Connection}}.
+                connection = Connection,
+                retries_left = RetryAmount,
+                retry_interval = RetryInterval}}.
 
 handle_call({stop}, _From, State) ->
     thrift_client:close(State#state.connection),
@@ -582,6 +621,11 @@ handle_call({_Request = nodes_stats, NodeNames, Params}, _From, State = #state{c
 
 handle_call({_Request = status, Index}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_status(Index),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = indices_stats, Index}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_indices_stats(Index),
     {Connection1, Response} = process_request(Connection0, RestRequest, State),
     {reply, Response, State#state{connection = Connection1}};
 
@@ -780,31 +824,56 @@ set_env(Key, Value) ->
 %%      this will retry the request (w/ a new thrift connection)
 %%      before choking
 -spec process_request(connection(), rest_request(), #state{}) -> {connection(), response()}.
-process_request(Connection, Request, State) ->
-    try process_request_1(_Retry = true, Connection, Request, State)
-    catch
-        Exception:Reason ->
-            case {Exception, Reason} of
-                {throw, {retry_request, true}} ->
-                    process_request_1(false, undefined, Request, State);
-                _ ->
-                    {undefined, ?CONNECTION_REFUSED}
-            end
+process_request(undefined, Request, State = #state{connection_options = ConnectionOptions}) ->
+    Connection = connection(ConnectionOptions),
+    process_request(Connection, Request, State);
+process_request(Connection, Request, State = #state{binary_response = BinaryResponse}) ->
+    case do_request(Connection, {'execute', [Request]}, State) of
+        {error, closed, NewState} ->
+            error_or_retry({error, closed}, Connection, Request, NewState);
+        {error, econnrefused, NewState} ->
+            error_or_retry({error, econnrefused}, Connection, Request, NewState);
+        {Connection1, RestResponse} ->
+            {Connection1, process_response(BinaryResponse, RestResponse)}
     end.
 
-%% @doc Actually perform the request
--spec process_request_1(boolean(), connection(), rest_request(), #state{}) -> {connection(), response()}.
-process_request_1(Retry, undefined, Request, State = #state{connection_options = ConnectionOptions,
-                                                   binary_response = BinaryResponse}) ->
-    Connection = connection(ConnectionOptions),
-    {Connection1, RestResponse} = do_request(Retry, Connection, {'execute', [Request]}, State),
-    {Connection1, process_response(BinaryResponse, RestResponse)};
-process_request_1(Retry, Connection, Request, State = #state{binary_response = BinaryResponse}) ->
-    {Connection1, RestResponse} = do_request(Retry, Connection, {'execute', [Request]}, State),
-    {Connection1, process_response(BinaryResponse, RestResponse)}.
+-spec increase_reconnect_interval(state()) -> state().
+increase_reconnect_interval(#state{retry_interval = Interval} = State) ->
+    if Interval < ?MAX_RECONNECT_INTERVAL ->
+            NewInterval = min(Interval + Interval, ?MAX_RECONNECT_INTERVAL),
+            State#state{retry_interval = NewInterval};
+       true ->
+            State
+    end.
 
--spec do_request(boolean(), connection(), {'execute', [rest_request()]}, #state{}) -> {connection(),  {ok, rest_response()} | error() | exception()}.
-do_request(Retry, Connection, {Function, Args}, _State) ->
+-spec update_reconnect_state(state()) -> state().
+update_reconnect_state(State) ->
+    State1 = increase_reconnect_interval(State),
+    State2 = decrease_retries_left(State1),
+    State2.
+
+-spec decrease_retries_left(state()) -> state().
+decrease_retries_left(#state{retries_left = N} = State) ->
+    State#state{retries_left = N - 1}.
+
+-spec error_or_retry({error, atom()}, connection(), rest_request(), state()) ->
+                            {error, atom()} | {connection(), response()}.
+error_or_retry({error, Reason}, Connection,
+               Request, #state{retries_left = N, retry_interval = W} = State)
+  when N > 0 andalso W >= 0
+       andalso (Reason =:= closed orelse Reason =:= econnrefused) ->
+    timer:sleep(W),
+    ShorterRetryState = update_reconnect_state(State),
+    thrift_client:close(Connection),
+    process_request(undefined, Request, ShorterRetryState);
+error_or_retry(Error, _Connection, _Request, _State) ->
+    Error.
+    
+-spec do_request(connection(), {'execute', [rest_request()]}, #state{}) ->
+                        {connection(),  {ok, rest_response()} | error()}
+                            | {error, closed, state()}
+                            | {error, econnrefused, state()}.
+do_request(Connection, {Function, Args}, State) ->
     Args2 =
         case Args of
             [#restRequest{body=Body}] when is_binary(Body) ->
@@ -818,25 +887,15 @@ do_request(Retry, Connection, {Function, Args}, _State) ->
         {Connection1, Response = {error, _}} ->
             {Connection1, Response}
     catch
-        Exception:Reason ->
-            case {Exception, Reason} of
-                {throw, {Connection1, Response = {exception, _}}} ->
-                    {Connection1, Response};
-                % Thrift client closes the connection
-                {error, {case_clause, {error, closed}}} ->
-                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
-                        true -> throw({retry_request, Retry})
-                    end;
-                {error, {case_clause,{error, econnrefused}}} ->
-                    if Retry =:= false -> {undefined, ?CONNECTION_REFUSED};
-                        true -> throw({retry_request, Retry})
-                    end;
-                {error, badarg} ->
-                    {Connection, {error, badarg}}
-
-            end
+        throw:{Connection1, Response = {exception, _}} ->
+            {Connection1, Response};
+        error:badarg ->
+            {Connection, {error, badarg}};
+        error:{case_clause, {error, closed}} ->
+            {error, closed, State};
+        error:{case_clause, {error, econnrefused}} ->
+            {error, econnrefused, State}
     end.
-
 
 -spec process_response(boolean(), {ok, rest_response()} | error() | exception()) -> response().
 process_response(_, {error, _} = Response) ->
@@ -848,8 +907,13 @@ process_response(false, {ok, #restResponse{status = Status, body = undefined}}) 
 process_response(true, {ok, #restResponse{status = Status, body = Body}}) ->
     [{status, erlang:integer_to_binary(Status)}, {body, Body}];
 process_response(false, {ok, #restResponse{status = Status, body = Body}}) ->
-    [{status, Status}, {body, jsx:decode(Body)}].
-
+    try
+        [{status, Status}, {body, jsx:decode(Body)}]
+    catch
+        error:badarg ->
+            %% Body was not JSON, decoding failed
+            [{status, Status}, {body, Body}]
+    end.
 
 %% @doc Build a new rest request
 rest_request_health() ->
@@ -878,6 +942,12 @@ rest_request_nodes_stats(NodeNames, Params) when is_list(NodeNames),
 rest_request_status(Index) when is_list(Index) ->
     IndexList = join(Index, <<",">>),
     Uri = join([IndexList, ?STATUS], <<"/">>),
+    #restRequest{method = ?elasticsearch_Method_GET,
+                 uri = Uri}.
+
+rest_request_indices_stats(Index) when is_list(Index) ->
+    IndexList = join(Index, <<",">>),
+    Uri = join([IndexList, ?INDICES_STATS], <<"/">>),
     #restRequest{method = ?elasticsearch_Method_GET,
                  uri = Uri}.
 
@@ -1040,7 +1110,7 @@ rest_request_put_mapping(Index, Type, Doc) when is_list(Index),
                                                 is_binary(Type),
                                                 (is_binary(Doc) orelse is_list(Doc)) ->
     IndexList = join(Index, <<",">>),
-    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    Uri = join([IndexList, ?MAPPING, Type], <<"/">>),
     #restRequest{method = ?elasticsearch_Method_PUT,
                  uri = Uri,
                  body = Doc}.
@@ -1048,14 +1118,14 @@ rest_request_put_mapping(Index, Type, Doc) when is_list(Index),
 rest_request_get_mapping(Index, Type) when is_list(Index),
                                            is_binary(Type) ->
     IndexList = join(Index, <<",">>),
-    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    Uri = join([IndexList, ?MAPPING, Type], <<"/">>),
     #restRequest{method = ?elasticsearch_Method_GET,
                  uri = Uri}.
 
 rest_request_delete_mapping(Index, Type) when is_list(Index),
                                               is_binary(Type) ->
     IndexList = join(Index, <<",">>),
-    Uri = join([IndexList, Type, ?MAPPING], <<"/">>),
+    Uri = join([IndexList, ?MAPPING, Type], <<"/">>),
     #restRequest{method = ?elasticsearch_Method_DELETE,
                  uri = Uri}.
 
@@ -1163,9 +1233,9 @@ intersperse(Sep, [X | Xs]) ->
   [X, Sep | intersperse(Sep, Xs)].
 
 uri_encode(Term) when is_binary(Term) ->
-    binary_to_list(Term);
+    uri_encode(binary_to_list(Term));
 uri_encode(Term) when is_integer(Term) ->
-  integer_to_list(Term);
+    uri_encode(integer_to_list(Term));
 uri_encode(Term) when is_atom(Term) ->
   uri_encode(atom_to_list(Term));
 uri_encode(Term) when is_list(Term) ->

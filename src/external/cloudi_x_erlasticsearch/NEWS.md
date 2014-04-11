@@ -1,6 +1,12 @@
 NEWS
 =========
 
+1.4.6
+----
+
+* The version numbers in the tag have changed. There is no __'v'__ as a prefix,
+i.e. it is _1.4.6_, not __v__*1.4.6*
+
 1.4
 ---
 
