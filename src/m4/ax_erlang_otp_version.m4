@@ -52,7 +52,7 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
          AC_LANG_POP([Erlang])
     ])
     ax_erlang_otp_ver_major=`expr $ax_cv_erlang_otp_ver : 'R\?\([[0-9]]\+\)'`
-    if test $ax_erlang_otp_ver_major -ge 17; then
+    if test "$ax_erlang_otp_ver_major" -ge 17; then
         AC_CACHE_CHECK([for the Erlang OTP version],
             [ax_cv_erlang_otp_package_ver],
             [AC_LANG_PUSH([Erlang])
@@ -99,7 +99,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
 [
     erlang_otp_version_req=ifelse([$1], ,R10B01,$1)
     erlang_otp_version_req_major=`expr $erlang_otp_version_req : 'R\?\([[0-9]]\+\)'`
-    if test $erlang_otp_version_req_major -ge 17; then
+    if test "$erlang_otp_version_req_major" -ge 17; then
        erlang_otp_version_req_minor=`expr $erlang_otp_version_req : '[[0-9]]\+\\.\([[0-9]]\+\)'`
        erlang_otp_version_req_release_candidate=`expr $erlang_otp_version_req : '.*-rc\([[0-8]]\)'`
        if test "x$erlang_otp_version_req_minor" = "x"; then
@@ -177,7 +177,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
     ])
     AC_LANG_POP([Erlang])
 
-    if test $ax_erlang_otp_ver -ge $erlang_otp_version_req_int; then
+    if test "$ax_erlang_otp_ver" -ge "$erlang_otp_version_req_int"; then
         AC_MSG_RESULT(yes)
         # execute ACTION-IF-FOUND (if present):
         ifelse([$2], , :, [$2])
