@@ -51,7 +51,7 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
              AC_MSG_FAILURE([test Erlang program execution failed])])
          AC_LANG_POP([Erlang])
     ])
-    ax_erlang_otp_ver_major=`expr $ax_cv_erlang_otp_ver : 'R\?\([[0-9]]\+\)'`
+    ax_erlang_otp_ver_major=`expr $ax_cv_erlang_otp_ver : 'R*\([[0-9]]*\)'`
     if test "$ax_erlang_otp_ver_major" -ge 17; then
         AC_CACHE_CHECK([for the Erlang OTP version],
             [ax_cv_erlang_otp_package_ver],
@@ -72,13 +72,13 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
                  AC_MSG_FAILURE([test Erlang program execution failed])])
              AC_LANG_POP([Erlang])
         ])
-        ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]\+\\.\([[0-9]]\+\)'`
+        ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]*\.\([[0-9]]*\)'`
         ax_erlang_otp_ver_release_candidate=`expr $ax_cv_erlang_otp_package_ver : '.*-rc\([[0-8]]\)'`
         AC_SUBST([ERLANG_OTP_VER],
                  ["${ax_erlang_otp_ver_major}_${ax_erlang_otp_ver_minor}"])
     else
-        ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]\+[[A-Z]]\([[0-9]]\+\)'`
-        ax_erlang_otp_ver_type=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]\+\([[A-Z]]\)'`
+        ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
+        ax_erlang_otp_ver_type=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*\([[AB]]\)'`
         if test "$ax_erlang_otp_ver_type" = "A"; then
             ax_erlang_otp_ver_release_candidate="0"
         elif test "$ax_erlang_otp_ver_type" = "B"; then
@@ -98,9 +98,9 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
 AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
 [
     erlang_otp_version_req=ifelse([$1], ,R10B01,$1)
-    erlang_otp_version_req_major=`expr $erlang_otp_version_req : 'R\?\([[0-9]]\+\)'`
+    erlang_otp_version_req_major=`expr $erlang_otp_version_req : 'R*\([[0-9]]*\)'`
     if test "$erlang_otp_version_req_major" -ge 17; then
-       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : '[[0-9]]\+\\.\([[0-9]]\+\)'`
+       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : '[[0-9]]*\.\([[0-9]]*\)'`
        erlang_otp_version_req_release_candidate=`expr $erlang_otp_version_req : '.*-rc\([[0-8]]\)'`
        if test "x$erlang_otp_version_req_minor" = "x"; then
          erlang_otp_version_req_minor="0"
@@ -111,8 +111,8 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
           erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10 \+ $erlang_otp_version_req_release_candidate`
        fi
     else
-       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : 'R[[0-9]]\+[[A-Z]]\([[0-9]]\+\)'`
-       erlang_otp_version_req_type=`expr $erlang_otp_version_req : 'R[[0-9]]\+\([[A-Z]]\?\)'`
+       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
+       erlang_otp_version_req_type=`expr $erlang_otp_version_req : 'R[[0-9]]*\([[AB]]*\)'`
        if test "$erlang_otp_version_req_type" = "B"; then
            erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10 \+ 9`
        elif test "$erlang_otp_version_req_type" = "A"; then
@@ -155,7 +155,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                     Package = try erlang:system_info(otp_correction_package)
                     catch
                         error:badarg ->
-                            erlang:system_info(otp_release) ++ ".0"
+                            Major ++ ".0"
                     end,
                     [[_, Minor | RCString]] = string:tokens(Package, ".-"),
                     case RCString of
