@@ -94,17 +94,19 @@
     }).
 
 -ifdef(ERLANG_OTP_VER_16).
--type dict_proxy() :: dict().
+-type dict_proxy(Key, Value) :: dict() | {Key, Value}.
 -else.
--type dict_proxy() :: dict:dict().
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
 -record(state,
     {
         prefix :: string(),
         quorum :: byzantine | number(),
         use_response_info :: boolean(),
-        requests = dict:new() :: dict_proxy(), % Original TransId -> #request{}
-        pending = dict:new() :: dict_proxy()   % TransId -> Original TransId
+        requests = dict:new() :: dict_proxy(cloudi_service:trans_id(), % orig
+                                            #request{}),
+        pending = dict:new() :: dict_proxy(cloudi_service:trans_id(), % new
+                                           cloudi_service:trans_id()) % orig
     }).
 
 %%%------------------------------------------------------------------------

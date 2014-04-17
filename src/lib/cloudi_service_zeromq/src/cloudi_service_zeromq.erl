@@ -69,11 +69,11 @@
                                                     % tunneling service request
                                                     % meta-data through ZeroMQ
                                                     % w/4-byte big endian header
-
+-type socket() :: {pos_integer(), any()}.
 -ifdef(ERLANG_OTP_VER_16).
--type dict_proxy() :: dict().
+-type dict_proxy(Key, Value) :: dict() | {Key, Value}.
 -else.
--type dict_proxy() :: dict:dict().
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
 -record(state,
     {
@@ -86,14 +86,14 @@
         request :: cloudi_x_trie:cloudi_x_trie(),
         % Name -> Socket
         push :: cloudi_x_trie:cloudi_x_trie(),
-        % Socket -> {reply, Name}
-        % Socket -> [{subscribe,
-        %             {BinaryMax, BinaryPattern,
-        %              NameExternal -> NameInternal}} | _]
-        % Socket -> {request, F(Response)}
-        receives :: dict_proxy(),
-        % TransId -> Socket
-        reply_replies = dict:new() :: dict_proxy()
+        receives :: dict_proxy(socket(),
+                               {reply, string()} |
+                               {subscribe,
+                                {non_neg_integer(), tuple(),
+                                 dict_proxy(binary(), string())}} |
+                               {request, fun((binary(), binary()) -> ok)}),
+        reply_replies = dict:new() :: dict_proxy(cloudi_service:trans_id(),
+                                                 socket())
     }).
 
 %%%------------------------------------------------------------------------

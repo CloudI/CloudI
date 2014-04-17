@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2012 Michael Truog
-%%% @version 1.1.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_task_size).
@@ -57,6 +57,12 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifdef(ERLANG_OTP_VER_16).
+-type state() :: dict().
+-else.
+-type state() :: dict:dict(node(), float()).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -67,11 +73,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
--spec new() -> dict().
--else.
--spec new() -> dict:dict().
--endif.
+-spec new() -> state().
 
 new() ->
     dict:new().
@@ -82,15 +84,9 @@ new() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -spec get(TaskSize :: float(),
           Pid :: pid(),
-          State :: dict()) -> float().
--else.
--spec get(TaskSize :: float(),
-          Pid :: pid(),
-          State :: dict:dict()) -> float().
--endif.
+          State :: state()) -> float().
 
 get(TaskSize, Pid, State)
     when is_pid(Pid) ->
@@ -108,19 +104,11 @@ get(TaskSize, Pid, State)
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -spec put(TaskSize :: float(),
           TargetTime :: float(),
           ElapsedTime :: float(),
           Pid :: pid(),
-          State :: dict()) -> dict().
--else.
--spec put(TaskSize :: float(),
-          TargetTime :: float(),
-          ElapsedTime :: float(),
-          Pid :: pid(),
-          State :: dict:dict()) -> dict:dict().
--endif.
+          State :: state()) -> state().
 
 put(TaskSize, TargetTime, ElapsedTime, Pid, State)
     when is_float(TaskSize), is_float(TargetTime), is_float(ElapsedTime),

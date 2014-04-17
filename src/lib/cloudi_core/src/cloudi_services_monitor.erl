@@ -77,16 +77,10 @@
 -define(TERMINATE_DELAY_MAX, 60000). % milliseconds
 
 -ifdef(ERLANG_OTP_VER_16).
--type dict_proxy() :: dict().
+-type dict_proxy(Key, Value) :: dict() | {Key, Value}.
 -else.
--type dict_proxy() :: dict:dict().
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
--record(state,
-    {
-        services = cloudi_x_key2value:new(dict), % {cloudi_x_uuid, pid} ->
-                                                 %     configuration
-        changes = dict:new() :: dict_proxy() % cloudi_x_uuid -> list()
-    }).
 
 -record(service,
     {
@@ -118,6 +112,16 @@
         rate = 0.0 :: float()
     }).
 
+-record(state,
+    {
+        services = cloudi_x_key2value:new(dict) ::
+            cloudi_x_key2value:cloudi_x_key2value(<<_:128>>, pid(),
+                                                  #service{}),
+        changes = dict:new() ::
+            dict_proxy(<<_:128>>,
+                       list({increase | decrease,
+                             number(), number(), number()}))
+    }).
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------

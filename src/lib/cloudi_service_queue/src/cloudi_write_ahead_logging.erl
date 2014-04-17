@@ -80,16 +80,16 @@
     }).
 
 -ifdef(ERLANG_OTP_VER_16).
--type dict_proxy() :: dict().
+-type dict_proxy(Key, Value) :: dict() | {Key, Value}.
 -else.
--type dict_proxy() :: dict:dict().
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
 -record(state,
     {
         file :: binary() | string(),
         position :: non_neg_integer(),
-        chunks = dict:new() :: dict_proxy(), % chunk_id -> #chunk{}
-        chunks_free = [] :: list(#chunk{})   % ordered
+        chunks = dict:new() :: dict_proxy(cloudi_service:trans_id(), #chunk{}),
+        chunks_free = [] :: list(#chunk{}) % ordered
     }).
 
 %%%------------------------------------------------------------------------

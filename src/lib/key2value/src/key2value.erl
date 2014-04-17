@@ -12,7 +12,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011 Michael Truog
-%%% @version 0.1.8 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -67,14 +67,24 @@
          new/1,
          store/4]).
 
+% jazz - "If you can't make it, fake it":
+-type dict_interface(Key, Value) :: any() | {Key, Value}.
+-type key2value(Key1, Key2, Value) :: {module(),
+                                       dict_interface(Key1,
+                                                      {list(Key2), Value}),
+                                       dict_interface(Key2,
+                                                      {list(Key1), Value})}.
+-export_type([key2value/3]).
+-type key2value() :: key2value(any(), any(), any()).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
 -spec erase(K1 :: any(),
             K2 :: any(),
-            State :: {atom(), any(), any()}) ->
-    {atom(), any(), any()}.
+            State :: key2value()) ->
+    key2value().
 
 erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
     case Module:find(K1, Lookup1) of
@@ -109,8 +119,8 @@ erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
     end.
 
 -spec erase1(K :: any(),
-             State :: {atom(), any(), any()}) ->
-    {atom(), any(), any()}.
+             State :: key2value()) ->
+    key2value().
 
 erase1(K, {Module, Lookup1, _} = State) ->
     case Module:find(K, Lookup1) of
@@ -123,8 +133,8 @@ erase1(K, {Module, Lookup1, _} = State) ->
     end.
 
 -spec erase2(K :: any(),
-             State :: {atom(), any(), any()}) ->
-    {atom(), any(), any()}.
+             State :: key2value()) ->
+    key2value().
 
 erase2(K, {Module, _, Lookup2} = State) ->
     case Module:find(K, Lookup2) of
@@ -137,21 +147,21 @@ erase2(K, {Module, _, Lookup2} = State) ->
     end.
 
 -spec fetch1(K :: any(),
-            {atom(), any(), any()}) ->
+             key2value()) ->
     {list(), any()}.
 
 fetch1(K, {Module, Lookup1, _}) ->
     Module:fetch(K, Lookup1).
 
 -spec fetch2(K :: any(),
-            {atom(), any(), any()}) ->
+             key2value()) ->
     {list(), any()}.
 
 fetch2(K, {Module, _, Lookup2}) ->
     Module:fetch(K, Lookup2).
 
 -spec find1(K :: any(),
-            State :: {atom(), any(), any()}) ->
+            State :: key2value()) ->
     {ok, {list(), any()}} |
     error.
 
@@ -159,7 +169,7 @@ find1(K, {Module, Lookup1, _}) ->
     Module:find(K, Lookup1).
 
 -spec find2(K :: any(),
-            State :: {atom(), any(), any()}) ->
+            State :: key2value()) ->
     {ok, {list(), any()}} |
     error.
 
@@ -167,14 +177,14 @@ find2(K, {Module, _, Lookup2}) ->
     Module:find(K, Lookup2).
 
 -spec is_key1(K :: any(),
-              {atom(), any(), any()}) ->
+              key2value()) ->
     boolean().
 
 is_key1(K, {Module, Lookup1, _}) ->
     Module:is_key(K, Lookup1).
 
 -spec is_key2(K :: any(),
-            {atom(), any(), any()}) ->
+              key2value()) ->
     boolean().
 
 is_key2(K, {Module, _, Lookup2}) ->
@@ -187,8 +197,11 @@ new(Module)
     when is_atom(Module) ->
     {Module, Module:new(), Module:new()}.
 
--spec store(K1 :: any(), K2 :: any(), V :: any(), {atom(), any(), any()}) ->
-    {atom(), any(), any()}.
+-spec store(K1 :: any(),
+            K2 :: any(),
+            V :: any(),
+            key2value()) ->
+    key2value().
 
 store(K1, K2, V, {Module, Lookup1, Lookup2}) ->
     K1L = [K1],

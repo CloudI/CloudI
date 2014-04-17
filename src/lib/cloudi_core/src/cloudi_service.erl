@@ -224,7 +224,8 @@
 -else.
 -type key_values() :: list({binary() | string() | atom(),
                             binary() | string() | any()}) |
-                      dict:dict().
+                      dict:dict(binary() | string() | atom(),
+                                binary() | string() | any()).
 -endif.
 -export_type([key_values/0]).
 
@@ -2320,7 +2321,7 @@ service_name_parse_with_suffix(Name, Pattern) ->
     Result :: dict().
 -else.
 -spec request_http_qs_parse(Request :: binary()) ->
-    Result :: dict:dict().
+    Result :: dict:dict(binary(), binary()).
 -endif.
 
 request_http_qs_parse(Request)
@@ -2360,7 +2361,7 @@ request_info_key_value_new(RequestInfo) ->
 -else.
 -spec request_info_key_value_parse(RequestInfo :: binary() |
                                                   list({any(), any()})) ->
-    Result :: dict:dict().
+    Result :: dict:dict(any(), any()).
 -endif.
 
 request_info_key_value_parse(RequestInfo)

@@ -628,7 +628,7 @@ erlang-applications-scope-remove:
 
 dialyze: all \
          dialyzer.plt
-	$(DIALYZER) --plt dialyzer.plt \
+	$(DIALYZER) --verbose --plt dialyzer.plt \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \

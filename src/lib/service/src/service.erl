@@ -1886,7 +1886,7 @@ service_name_parse_with_suffix(Name, Pattern) ->
     Result :: dict().
 -else.
 -spec request_http_qs_parse(Request :: binary()) ->
-    Result :: dict:dict().
+    Result :: dict:dict(binary(), binary()).
 -endif.
 
 request_http_qs_parse(Request) ->
@@ -1916,11 +1916,13 @@ request_info_key_value_new(RequestInfo) ->
 %%-------------------------------------------------------------------------
 
 -ifdef(ERLANG_OTP_VER_16).
--spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
+-spec request_info_key_value_parse(RequestInfo :: binary() |
+                                                  list({any(), any()})) ->
     Result :: dict().
 -else.
--spec request_info_key_value_parse(RequestInfo :: binary() | list()) ->
-    Result :: dict:dict().
+-spec request_info_key_value_parse(RequestInfo :: binary() |
+                                                  list({any(), any()})) ->
+    Result :: dict:dict(any(), any()).
 -endif.
 
 request_info_key_value_parse(RequestInfo) ->
