@@ -88,6 +88,7 @@ cloudi_service_init(_Args, Prefix, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "sequence1"),
     case cloudi_service:process_index(Dispatcher) of
         0 ->
+            ?LOG_TRACE("~p is sending", [?FUNCTION]),
             cloudi_service:send_async(Dispatcher,
                                       Prefix ++ "sequence1", "start");
         _ ->

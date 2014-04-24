@@ -97,6 +97,8 @@
 
 -ifndef(FUNCTION).
 -define(FUNCTION,
-    cloudi_logger:current_function()).
+    erlang:element(2,
+        erlang:element(2,
+            erlang:process_info(self(), current_function)))).
 -endif.
 

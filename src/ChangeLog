@@ -4,6 +4,7 @@
 2014-04-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update cpg
+    * Simplify FUNCTION macro
 
 2014-04-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
