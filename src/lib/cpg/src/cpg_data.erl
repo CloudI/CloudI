@@ -5,9 +5,7 @@
 %%% @doc
 %%% ==CPG Groups Handling.==
 %%% Method of using cpg instead of pg2.  The resulting process group
-%%% handling is more scalable and more efficient.  However, usage is limited
-%%% to string (list of integers) group names (unless the GROUP_STORAGE macro
-%%% is changed and pattern matching is disabled).  The groups state is
+%%% handling is more scalable and more efficient.  The groups state is
 %%% obtained from the cpg process for a specific scope and is then used with
 %%% the functions provided here, so that contention for the cpg process
 %%% can be avoided.
@@ -15,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -50,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -145,7 +143,8 @@ get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
 %%-------------------------------------------------------------------------
 
 get_empty_groups() ->
-    ?GROUP_STORAGE:new().
+    DictI = cpg_app:group_storage(),
+    {DictI, DictI:new()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -313,8 +312,8 @@ get_remote_members(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
-which_groups(Groups) ->
-    ?GROUP_STORAGE:fetch_keys(Groups).
+which_groups({DictI, GroupsData}) ->
+    DictI:fetch_keys(GroupsData).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -803,23 +802,20 @@ get_remote_newest_pid(GroupName, Exclude, Groups)
 % should names be matched with "*" interpreted as a wildcard within the
 % trie holding the groups of processes
 
--ifdef(GROUP_NAME_PATTERN_MATCHING).
 % matching with patterns
-group_find(GroupName, Groups) ->
-    try ?GROUP_STORAGE:find_match(GroupName, Groups) catch
+group_find(GroupName, {trie, GroupsData}) ->
+    try trie:find_match(GroupName, GroupsData) catch
         exit:badarg ->
             error
-    end.
--else.
+    end;
 % matching without patterns
-group_find(GroupName, Groups) ->
-    case ?GROUP_STORAGE:find(GroupName, Groups) of
+group_find(GroupName, {DictI, GroupsData}) ->
+    case DictI:find(GroupName, GroupsData) of
         {ok, Value} ->
             {ok, GroupName, Value};
         error ->
             error
     end.
--endif.
 
 pick(1, [#cpg_data_pid{pid = Pid}], Pattern) ->
     {ok, Pattern, Pid};

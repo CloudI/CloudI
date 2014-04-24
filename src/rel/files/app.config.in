@@ -5,17 +5,20 @@
     %{inet_dist_use_interface,"127.0.0.1"},
     %{net_setuptime, 7000}, % milliseconds
     {net_ticktime, 60}
-]},
-{sasl, [
+  ]},
+ {sasl, [
     {sasl_error_logger, {file, "logs/sasl.log"}},
     {error_logger_mf_dir, "logs"},
     {error_logger_mf_maxbytes, 536870912}, % 512 MB
     {error_logger_mf_maxfiles, 128},
     {utc_log, true}
-]},
-{cloudi_core, [
+  ]},
+ {cloudi_core, [
     {monkey_latency, false},
     {monkey_chaos, false},
     {configuration, "@cloudi_confdir@/cloudi.conf"}
-]}].
+  ]},
+ {cloudi_x_cpg, [
+    {group_storage, cloudi_x_trie}
+  ]}].
 

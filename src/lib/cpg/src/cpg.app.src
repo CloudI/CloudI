@@ -7,6 +7,7 @@
    {modules, [
         cpg,
         cpg_app,
+        cpg_callbacks,
         cpg_data,
         cpg_sup,
         supervisor_cpg,
@@ -29,6 +30,7 @@
    {mod, {cpg_app, []}},
    {env, [
         {node_type, visible}, % visible | all
+        {group_storage, trie}, % trie | dict | orddict | ...
         {scope, [
             % automatically created scopes to keep process groups separate
             % (each becomes a locally registered name)

@@ -21,9 +21,8 @@ cpg utilizes Erlang strings for group names (list of integers) and provides
 the ability to set a pattern string as a group name.  A pattern string
 is a string that includes the`"*"`wildcard character (equivalent to ".+"
 regex while`"**"`is forbidden).  When a group name is a pattern string,
-a process can be retrieved by matching the pattern.  This behavior can
-be changed with the macros set in `src/cpg_constants.hrl`, if a user would
-prefer to limit the functionality to what pg2 provides.
+a process can be retrieved by matching the pattern.  To change the behavior
+to be compatible with pg2 usage (or gproc), see the **Usage** section below.
 
 The cpg interface provides more error checking than the pg2 module, and it
 allows the user to obtain the groups state so that group name lookups do not
@@ -52,13 +51,21 @@ Build
     rebar get-deps
     rebar compile
 
+Usage
+-----
+
+If you need non-string (not a list of integers) group names
+(e.g., when replacing gproc), you can change the cpg application
+`group_storage` env setting by providing a module name that provides a
+dict module interface (or just set to `dict`).
+
 Example
 -------
 
     $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
-    Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
-
-    Eshell V5.10.1  (abort with ^G)
+    Erlang R16B03-1 (erts-5.10.4) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
+    
+    Eshell V5.10.4  (abort with ^G)
     (cpg@localhost)1> reltool_util:application_start(cpg).
     ok
     (cpg@localhost)2> cpg:join(groups_scope1, "Hello", self()).
@@ -66,9 +73,9 @@ Example
     (cpg@localhost)3> cpg:join(groups_scope1, "World!", self()).
     ok
     (cpg@localhost)4> cpg:get_local_members(groups_scope1, "Hello").
-    {ok,"Hello",[<0.33.0>]}
+    {ok,"Hello",[<0.39.0>]}
     (cpg@localhost)5> cpg:get_local_members(groups_scope1, "World!").
-    {ok,"World!",[<0.33.0>]}
+    {ok,"World!",[<0.39.0>]}
     (cpg@localhost)6> cpg:which_groups(groups_scope1).
     ["Hello","World!"]
     (cpg@localhost)7> cpg:which_groups(groups_scope2).
@@ -78,9 +85,10 @@ What does this example mean?  The cpg interface allows you to define groups of
 Erlang processes and each group exists within a scope.  A scope is represented
 as an atom which is used to locally register a cpg Erlang process using
 `start_link/1`.  For a given cpg scope, any Erlang process can join or leave
-a group.  The group name is a string (list of integers) due to usage of the trie
-data structure, but that can be changed within the `cpg_constants.hrl` file.
-If the scope is not specified, the default scope is used: `cpg_default_scope`.
+a group.  The group name is a string (list of integers) due to the default
+usage of the trie data structure, but that can be changed
+(see the **Usage** section above).  If the scope is not specified, the default
+scope is used: `cpg_default_scope`.
 
 In the example, both the process group "Hello" and the process group "World!"
 are created within the `groups_scope1` scope.  Within both progress groups,
@@ -94,6 +102,13 @@ to change the probability of returning a particular Erlang process, when
 only a single process is requested from the cpg interface (e.g., from
 the `get_closest_pid` function).
     
+Tests
+-----
+
+    rebar get-deps
+    rebar compile
+    ERL_LIBS="/path/to/proper" rebar eunit
+
 Author
 ------
 

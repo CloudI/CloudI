@@ -113,7 +113,8 @@ start_link(#config{logging = LoggingConfig}) ->
     atom().
 
 current_function() ->
-    catch throw(x), [_, {_, F, _, _} | _] = erlang:get_stacktrace(),
+    {current_function,
+     {_, F, _}} = erlang:process_info(self(), current_function),
     F.
 
 %%-------------------------------------------------------------------------

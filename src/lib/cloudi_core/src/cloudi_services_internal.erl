@@ -106,7 +106,7 @@
                                        % immediate_newest | lazy_newest |
                                        % immediate_oldest | lazy_oldest ,
                                        % destination pid refresh
-        cpg_data = cloudi_x_cpg_data:get_empty_groups(), % dest_refresh lazy
+        cpg_data,                      % dest_refresh lazy
         dest_deny,                     % denied from sending to a destination
         dest_allow,                    % allowed to send to a destination
         options                        % #config_service_options{}
@@ -213,6 +213,7 @@ init([ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
                    duo_mode_pid = DuoModePid,
                    uuid_generator = UUID,
                    dest_refresh = DestRefresh,
+                   cpg_data = cloudi_x_cpg_data:get_empty_groups(),
                    dest_deny = DestDeny,
                    dest_allow = DestAllow,
                    options = NewConfigOptions},

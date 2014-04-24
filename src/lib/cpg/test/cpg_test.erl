@@ -211,6 +211,96 @@ pid_age_test() ->
     erlang:exit(Pid3, kill),
     ok.
 
+callbacks_test() ->
+    F = fun(F1, L) ->
+        receive
+            {put, E} ->
+                F1(F1, [E | L]);
+            {get, Pid} ->
+                Pid ! lists:reverse(L),
+                F1(F1, [])
+        end
+    end,
+    Pid = erlang:spawn(fun() -> F(F, []) end),
+    Callback1 = fun(GroupName1, Pid1) ->
+        Pid ! {put, {callback1_join, GroupName1, Pid1}}
+    end,
+    Callback2 = fun(GroupName2, Pid2) ->
+        Pid ! {put, {callback2_join, GroupName2, Pid2}}
+    end,
+    Callback3 = fun(GroupName3, Pid3) ->
+        Pid ! {put, {callback3_join, GroupName3, Pid3}}
+    end,
+    Callback4 = fun(GroupName4, Pid4) ->
+        Pid ! {put, {callback4_leave, GroupName4, Pid4}}
+    end,
+    Callback5 = fun(GroupName5, Pid5) ->
+        Pid ! {put, {callback5_leave, GroupName5, Pid5}}
+    end,
+    Callback6 = fun(GroupName6, Pid6) ->
+        Pid ! {put, {callback6_leave, GroupName6, Pid6}}
+    end,
+    ok = cpg:add_join_callback("GroupA", Callback1),
+    ok = cpg:add_join_callback("GroupB", Callback2),
+    ok = cpg:add_join_callback("GroupC", Callback3),
+    ok = cpg:add_leave_callback("GroupA", Callback4),
+    ok = cpg:add_leave_callback("GroupB", Callback5),
+    ok = cpg:add_leave_callback("GroupC", Callback6),
+    GroupPid1 = erlang:spawn(fun busy_pid/0),
+    GroupPid2 = erlang:spawn(fun busy_pid/0),
+    GroupPid3 = erlang:spawn(fun busy_pid/0),
+    ok = cpg:join("GroupA", GroupPid1),
+    ok = cpg:join("GroupB", GroupPid2),
+    ok = cpg:join("GroupA", GroupPid2),
+    ok = cpg:join("GroupC", GroupPid3),
+    ok = cpg:join("GroupA", GroupPid3),
+    ok = cpg:join("GroupB", GroupPid3),
+    erlang:exit(GroupPid2, kill),
+    receive after 100 -> ok end,
+    Pid ! {get, self()},
+    Sequence1 = receive
+        GroupSequence1 ->
+            GroupSequence1
+    end,
+    erlang:exit(GroupPid1, kill),
+    receive after 100 -> ok end,
+    Pid ! {get, self()},
+    Sequence2 = receive
+        GroupSequence2 ->
+            GroupSequence2
+    end,
+    erlang:exit(GroupPid3, kill),
+    receive after 100 -> ok end,
+    Pid ! {get, self()},
+    Sequence3 = receive
+        GroupSequence3 ->
+            GroupSequence3
+    end,
+    [{callback1_join, "GroupA", GroupPid1},
+     {callback2_join, "GroupB", GroupPid2},
+     {callback1_join, "GroupA", GroupPid2},
+     {callback3_join, "GroupC", GroupPid3},
+     {callback1_join, "GroupA", GroupPid3},
+     {callback2_join, "GroupB", GroupPid3},
+     {callback4_leave, "GroupA", GroupPid2},
+     {callback5_leave, "GroupB", GroupPid2}] = Sequence1,
+    [{callback4_leave, "GroupA", GroupPid1}] = Sequence2,
+    % lists:foldl on lists:umerge list of groups means that
+    % leave callbacks fire in GroupName order (upon a pid death)
+    % (although the pid deaths are not delivered in-order,
+    %  which is why order is imposed in the code above)
+    [{callback4_leave, "GroupA", GroupPid3},
+     {callback5_leave, "GroupB", GroupPid3},
+     {callback6_leave, "GroupC", GroupPid3}] = Sequence3,
+    erlang:exit(Pid, kill),
+    ok = cpg:remove_join_callback("GroupA", Callback1),
+    ok = cpg:remove_join_callback("GroupB", Callback2),
+    ok = cpg:remove_join_callback("GroupC", Callback3),
+    ok = cpg:remove_leave_callback("GroupA", Callback4),
+    ok = cpg:remove_leave_callback("GroupB", Callback5),
+    ok = cpg:remove_leave_callback("GroupC", Callback6),
+    ok.
+
 cpg_stop_test() ->
     ok = reltool_util:application_stop(cpg).
 

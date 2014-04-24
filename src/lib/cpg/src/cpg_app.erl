@@ -53,7 +53,8 @@
 -behaviour(application).
 
 %% external interface
--export([listen_type/0]).
+-export([listen_type/0,
+         group_storage/0]).
 
 %% application callbacks
 -export([start/2,
@@ -65,13 +66,34 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine how CPG will monitor node connections.===
+%% @end
+%%-------------------------------------------------------------------------
+
 listen_type() ->
-    % must be called within internal Erlang processes
-    case application:get_env(node_type) of
+    case application:get_env(cpg, node_type) of
         {ok, V} when (V =:= visible) orelse (V =:= all) ->
             V;
         undefined ->
             visible
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the CPG group_storage configuration.===
+%% Must be a module that provides a dict interface
+%% (an interface based on the dict module).
+%% @end
+%%-------------------------------------------------------------------------
+
+group_storage() ->
+    case application:get_env(cpg, group_storage) of
+        {ok, V} when is_atom(V) ->
+            V;
+        undefined ->
+            trie
     end.
 
 %%%------------------------------------------------------------------------
@@ -83,6 +105,7 @@ listen_type() ->
 %% ===Start the CPG application.===
 %% @end
 %%-------------------------------------------------------------------------
+
 start(_, _) ->
     {ok, L} = application:get_env(scope),
     ScopeList = if
@@ -103,6 +126,7 @@ start(_, _) ->
 %% ===Stop the CPG application.===
 %% @end
 %%-------------------------------------------------------------------------
+
 stop(_) ->
     ok.
 
