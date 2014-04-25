@@ -4,6 +4,7 @@
 2014-04-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update cpg
+    * Fix error on CLOUDI_CORE_STANDALONE external service configuration
 
 2014-04-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 

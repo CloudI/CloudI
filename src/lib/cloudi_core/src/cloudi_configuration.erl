@@ -1037,7 +1037,14 @@ services_validate([#internal{
         {error, _} = Error ->
             Error
     end).
+-ifdef(CLOUDI_CORE_STANDALONE).
+-compile({nowarn_unused_function,
+          [{services_validate_options_external, 2}]}).
 -define(CLOUDI_CORE_SUPPORT_EXTERNAL,
+    ;).
+-else.
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL,
+    ;
 services_validate([#external{prefix = Prefix} | _], _, _, _)
     when not (is_list(Prefix) andalso
               (length(Prefix) > 0) andalso
@@ -1190,7 +1197,8 @@ services_validate([#external{
             end;
         {error, _} = Error ->
             Error
-    end).
+    end;).
+-endif.
 
 services_validate([], Output, IDs, _) ->
     {ok, lists:reverse(Output), lists:reverse(IDs)};
@@ -1283,8 +1291,8 @@ services_validate([[_| _] = ServicePropList | L], Output, IDs, UUID) ->
                                 options = ConfigurationOptions},
             services_validate([Service | L], Output, IDs, UUID)
     end;
-?CLOUDI_CORE_SUPPORT_INTERNAL;
-?CLOUDI_CORE_SUPPORT_EXTERNAL;
+?CLOUDI_CORE_SUPPORT_INTERNAL
+?CLOUDI_CORE_SUPPORT_EXTERNAL
 services_validate([Service | _], _, _, _) ->
     {error, {service_invalid, Service}}.
 
