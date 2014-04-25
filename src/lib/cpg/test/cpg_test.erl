@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_test).
@@ -222,23 +222,23 @@ callbacks_test() ->
         end
     end,
     Pid = erlang:spawn(fun() -> F(F, []) end),
-    Callback1 = fun(GroupName1, Pid1) ->
-        Pid ! {put, {callback1_join, GroupName1, Pid1}}
+    Callback1 = fun(GroupName1, Pid1, Reason1) ->
+        Pid ! {put, {callback1_join, GroupName1, Pid1, Reason1}}
     end,
-    Callback2 = fun(GroupName2, Pid2) ->
-        Pid ! {put, {callback2_join, GroupName2, Pid2}}
+    Callback2 = fun(GroupName2, Pid2, Reason2) ->
+        Pid ! {put, {callback2_join, GroupName2, Pid2, Reason2}}
     end,
-    Callback3 = fun(GroupName3, Pid3) ->
-        Pid ! {put, {callback3_join, GroupName3, Pid3}}
+    Callback3 = fun(GroupName3, Pid3, Reason3) ->
+        Pid ! {put, {callback3_join, GroupName3, Pid3, Reason3}}
     end,
-    Callback4 = fun(GroupName4, Pid4) ->
-        Pid ! {put, {callback4_leave, GroupName4, Pid4}}
+    Callback4 = fun(GroupName4, Pid4, Reason4) ->
+        Pid ! {put, {callback4_leave, GroupName4, Pid4, Reason4}}
     end,
-    Callback5 = fun(GroupName5, Pid5) ->
-        Pid ! {put, {callback5_leave, GroupName5, Pid5}}
+    Callback5 = fun(GroupName5, Pid5, Reason5) ->
+        Pid ! {put, {callback5_leave, GroupName5, Pid5, Reason5}}
     end,
-    Callback6 = fun(GroupName6, Pid6) ->
-        Pid ! {put, {callback6_leave, GroupName6, Pid6}}
+    Callback6 = fun(GroupName6, Pid6, Reason6) ->
+        Pid ! {put, {callback6_leave, GroupName6, Pid6, Reason6}}
     end,
     ok = cpg:add_join_callback("GroupA", Callback1),
     ok = cpg:add_join_callback("GroupB", Callback2),
@@ -276,22 +276,22 @@ callbacks_test() ->
         GroupSequence3 ->
             GroupSequence3
     end,
-    [{callback1_join, "GroupA", GroupPid1},
-     {callback2_join, "GroupB", GroupPid2},
-     {callback1_join, "GroupA", GroupPid2},
-     {callback3_join, "GroupC", GroupPid3},
-     {callback1_join, "GroupA", GroupPid3},
-     {callback2_join, "GroupB", GroupPid3},
-     {callback4_leave, "GroupA", GroupPid2},
-     {callback5_leave, "GroupB", GroupPid2}] = Sequence1,
-    [{callback4_leave, "GroupA", GroupPid1}] = Sequence2,
+    [{callback1_join, "GroupA", GroupPid1, join_local},
+     {callback2_join, "GroupB", GroupPid2, join_local},
+     {callback1_join, "GroupA", GroupPid2, join_local},
+     {callback3_join, "GroupC", GroupPid3, join_local},
+     {callback1_join, "GroupA", GroupPid3, join_local},
+     {callback2_join, "GroupB", GroupPid3, join_local},
+     {callback4_leave, "GroupA", GroupPid2, {exit, killed}},
+     {callback5_leave, "GroupB", GroupPid2, {exit, killed}}] = Sequence1,
+    [{callback4_leave, "GroupA", GroupPid1, {exit, killed}}] = Sequence2,
     % lists:foldl on lists:umerge list of groups means that
     % leave callbacks fire in GroupName order (upon a pid death)
     % (although the pid deaths are not delivered in-order,
     %  which is why order is imposed in the code above)
-    [{callback4_leave, "GroupA", GroupPid3},
-     {callback5_leave, "GroupB", GroupPid3},
-     {callback6_leave, "GroupC", GroupPid3}] = Sequence3,
+    [{callback4_leave, "GroupA", GroupPid3, {exit, killed}},
+     {callback5_leave, "GroupB", GroupPid3, {exit, killed}},
+     {callback6_leave, "GroupC", GroupPid3, {exit, killed}}] = Sequence3,
     erlang:exit(Pid, kill),
     ok = cpg:remove_join_callback("GroupA", Callback1),
     ok = cpg:remove_join_callback("GroupB", Callback2),

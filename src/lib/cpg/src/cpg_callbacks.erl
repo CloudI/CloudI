@@ -55,10 +55,10 @@
          add_leave/3,
          remove_join/3,
          remove_leave/3,
-         notify_join/3,
          notify_join/4,
-         notify_leave/3,
-         notify_leave/4]).
+         notify_join/5,
+         notify_leave/4,
+         notify_leave/5]).
 
 -record(state,
     {
@@ -83,64 +83,64 @@ stop_link(Pid, Reason)
 add_join(undefined, GroupName, F) ->
     add_join(start_link(), GroupName, F);
 add_join(Pid, GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     Pid ! {add_join, GroupName, F},
     Pid.
 
 add_leave(undefined, GroupName, F) ->
     add_leave(start_link(), GroupName, F);
 add_leave(Pid, GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     Pid ! {add_leave, GroupName, F},
     Pid.
 
 remove_join(undefined, _, _) ->
     undefined;
 remove_join(Pid, GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     Pid ! {remove_join, GroupName, F},
     Pid.
 
 remove_leave(undefined, _, _) ->
     undefined;
 remove_leave(Pid, GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     Pid ! {remove_leave, GroupName, F},
     Pid.
 
-notify_join(undefined, _, _) ->
-    ok;
-notify_join(Pid, GroupName, GroupPid)
-    when is_pid(Pid), is_pid(GroupPid) ->
-    Pid ! {notify_join, GroupName, GroupPid},
-    ok.
-
 notify_join(undefined, _, _, _) ->
     ok;
-notify_join(Pid, _, _, 0)
+notify_join(Pid, GroupName, GroupPid, Reason)
+    when is_pid(Pid), is_pid(GroupPid) ->
+    Pid ! {notify_join, GroupName, GroupPid, Reason},
+    ok.
+
+notify_join(undefined, _, _, _, _) ->
+    ok;
+notify_join(Pid, _, _, _, 0)
     when is_pid(Pid) ->
     ok;
-notify_join(Pid, GroupName, GroupPid, I)
+notify_join(Pid, GroupName, GroupPid, Reason, I)
     when is_pid(Pid), is_pid(GroupPid) ->
-    Pid ! {notify_join, GroupName, GroupPid},
-    notify_join(Pid, GroupName, GroupPid, I - 1).
-
-notify_leave(undefined, _, _) ->
-    ok;
-notify_leave(Pid, GroupName, GroupPid)
-    when is_pid(Pid), is_pid(GroupPid) ->
-    Pid ! {notify_leave, GroupName, GroupPid},
-    ok.
+    Pid ! {notify_join, GroupName, GroupPid, Reason},
+    notify_join(Pid, GroupName, GroupPid, Reason, I - 1).
 
 notify_leave(undefined, _, _, _) ->
     ok;
-notify_leave(Pid, _, _, 0)
+notify_leave(Pid, GroupName, GroupPid, Reason)
+    when is_pid(Pid), is_pid(GroupPid) ->
+    Pid ! {notify_leave, GroupName, GroupPid, Reason},
+    ok.
+
+notify_leave(undefined, _, _, _, _) ->
+    ok;
+notify_leave(Pid, _, _, _, 0)
     when is_pid(Pid) ->
     ok;
-notify_leave(Pid, GroupName, GroupPid, I)
+notify_leave(Pid, GroupName, GroupPid, Reason, I)
     when is_pid(Pid), is_pid(GroupPid) ->
-    Pid ! {notify_leave, GroupName, GroupPid},
-    notify_leave(Pid, GroupName, GroupPid, I - 1).
+    Pid ! {notify_leave, GroupName, GroupPid, Reason},
+    notify_leave(Pid, GroupName, GroupPid, Reason, I - 1).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -164,11 +164,11 @@ loop(#state{f_join = FJoin,
             loop(State#state{f_join = remove(GroupName, F, FJoin)});
         {remove_leave, GroupName, F} ->
             loop(State#state{f_leave = remove(GroupName, F, FLeave)});
-        {notify_join, GroupName, GroupPid} ->
-            notify(GroupName, GroupPid, FJoin),
+        {notify_join, GroupName, GroupPid, Reason} ->
+            notify(GroupName, GroupPid, Reason, FJoin),
             loop(State);
-        {notify_leave, GroupName, GroupPid} ->
-            notify(GroupName, GroupPid, FLeave),
+        {notify_leave, GroupName, GroupPid, Reason} ->
+            notify(GroupName, GroupPid, Reason, FLeave),
             loop(State)
     end.
 
@@ -182,11 +182,18 @@ remove(GroupName, F, {DictI, FsData}) ->
                              lists:delete(F, V)
                          end, [], FsData)}.
 
-notify(GroupName, GroupPid, {DictI, FsData}) ->
+notify_f(F, GroupName, GroupPid, _)
+    when is_function(F, 2) ->
+    F(GroupName, GroupPid);
+notify_f(F, GroupName, GroupPid, Reason)
+    when is_function(F, 3) ->
+    F(GroupName, GroupPid, Reason).
+
+notify(GroupName, GroupPid, Reason, {DictI, FsData}) ->
     case DictI:find(GroupName, FsData) of
         {ok, L} ->
             lists:foreach(fun(F) ->
-                try F(GroupName, GroupPid)
+                try notify_f(F, GroupName, GroupPid, Reason)
                 catch
                     Type:Error ->
                         ?LOG_ERROR("callback ~p: ~p~n~p",

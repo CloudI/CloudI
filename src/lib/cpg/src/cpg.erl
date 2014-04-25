@@ -144,15 +144,6 @@
 -include("cpg_data.hrl").
 -include("cpg_logging.hrl").
 
--record(state,
-    {
-        scope = undefined, % locally registered process name
-        groups,            % GroupName -> #cpg_data{}
-        pids = dict:new(), % pid() -> list(GroupName)
-        callbacks = undefined,
-        listen :: visible | all
-    }).
-
 -type scope() :: atom().
 -type name() :: any().
 -type via_name() :: {global, scope(), name(), random} |
@@ -170,8 +161,33 @@
                     {scope(), name()} |
                     {name(), pos_integer()} |
                     name(). % for OTP behaviors
--type callback() :: fun((any(), pid()) -> any()).
--export_type([scope/0, name/0, via_name/0, callback/0]).
+-type reason_join() :: join_local |
+                       join_remote |
+                       {exit, any()}.
+-type reason_leave() :: leave_local |
+                        leave_remote |
+                        {exit, any()}.
+-type callback_join() :: fun((any(), pid()) -> any()) |
+                         fun((any(), pid(), reason_join()) -> any()).
+-type callback_leave() :: fun((any(), pid()) -> any()) |
+                          fun((any(), pid(), reason_leave()) -> any()).
+-type callback() :: callback_join() |
+                    callback_leave().
+-export_type([scope/0,
+              name/0,
+              via_name/0,
+              callback_join/0,
+              callback_leave/0,
+              callback/0]).
+
+-record(state,
+    {
+        scope :: scope(),  % locally registered process name
+        groups,            % GroupName -> #cpg_data{}
+        pids = dict:new(), % pid() -> list(GroupName)
+        callbacks = undefined :: undefined | pid(),
+        listen :: visible | all
+    }).
 
 -compile({inline, [{join_impl, 4},
                    {leave_impl, 4}]}).
@@ -2538,11 +2554,11 @@ reset(Scope)
 %%-------------------------------------------------------------------------
 
 -spec add_join_callback(name(),
-                        callback()) ->
+                        callback_join()) ->
     ok.
 
 add_join_callback(GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(?DEFAULT_SCOPE, {add_join_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2553,11 +2569,11 @@ add_join_callback(GroupName, F)
 
 -spec add_join_callback(scope(),
                         name(),
-                        callback()) ->
+                        callback_join()) ->
     ok.
 
 add_join_callback(Scope, GroupName, F)
-    when is_atom(Scope), is_function(F, 2) ->
+    when is_atom(Scope), (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(Scope, {add_join_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2567,11 +2583,11 @@ add_join_callback(Scope, GroupName, F)
 %%-------------------------------------------------------------------------
 
 -spec add_leave_callback(name(),
-                         callback()) ->
+                         callback_leave()) ->
     ok.
 
 add_leave_callback(GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(?DEFAULT_SCOPE, {add_leave_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2582,11 +2598,11 @@ add_leave_callback(GroupName, F)
 
 -spec add_leave_callback(scope(),
                          name(),
-                         callback()) ->
+                         callback_leave()) ->
     ok.
 
 add_leave_callback(Scope, GroupName, F)
-    when is_atom(Scope), is_function(F, 2) ->
+    when is_atom(Scope), (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(Scope, {add_leave_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2596,11 +2612,11 @@ add_leave_callback(Scope, GroupName, F)
 %%-------------------------------------------------------------------------
 
 -spec remove_join_callback(name(),
-                           callback()) ->
+                           callback_join()) ->
     ok.
 
 remove_join_callback(GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(?DEFAULT_SCOPE, {remove_join_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2611,11 +2627,11 @@ remove_join_callback(GroupName, F)
 
 -spec remove_join_callback(scope(),
                            name(),
-                           callback()) ->
+                           callback_join()) ->
     ok.
 
 remove_join_callback(Scope, GroupName, F)
-    when is_atom(Scope), is_function(F, 2) ->
+    when is_atom(Scope), (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(Scope, {remove_join_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2625,11 +2641,11 @@ remove_join_callback(Scope, GroupName, F)
 %%-------------------------------------------------------------------------
 
 -spec remove_leave_callback(name(),
-                            callback()) ->
+                            callback_leave()) ->
     ok.
 
 remove_leave_callback(GroupName, F)
-    when is_function(F, 2) ->
+    when (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(?DEFAULT_SCOPE, {remove_leave_callback, GroupName, F}).
 
 %%-------------------------------------------------------------------------
@@ -2640,11 +2656,11 @@ remove_leave_callback(GroupName, F)
 
 -spec remove_leave_callback(scope(),
                             name(),
-                            callback()) ->
+                            callback_leave()) ->
     ok.
 
 remove_leave_callback(Scope, GroupName, F)
-    when is_atom(Scope), is_function(F, 2) ->
+    when is_atom(Scope), (is_function(F, 2) orelse is_function(F, 3)) ->
     gen_server:cast(Scope, {remove_leave_callback, GroupName, F}).
 
 %%%------------------------------------------------------------------------
@@ -2654,8 +2670,6 @@ remove_leave_callback(Scope, GroupName, F)
 %% @private
 %% @doc
 %% @end
-
--spec init([scope()]) -> {ok, #state{}}.
 
 init([Scope]) ->
     Ns = nodes(),
@@ -2677,13 +2691,6 @@ init([Scope]) ->
 %% @doc
 %% @end
 
--type call() :: {create, name()}
-              | {delete, name()}
-              | {join, name(), pid()}
-              | {leave, name(), pid()}.
-
--spec handle_call(call(), _, #state{}) -> {reply, ok, #state{}}.
-
 handle_call({create, GroupName}, _, State) ->
     {reply, ok, create_group(GroupName, State)};
 
@@ -2691,14 +2698,14 @@ handle_call({delete, GroupName}, _, State) ->
     {reply, ok, delete_group(GroupName, State)};
 
 handle_call({join, GroupName, Pid}, _, State) ->
-    {reply, ok, join_group(GroupName, Pid, State)};
+    {reply, ok, join_group(GroupName, Pid, join_local, State)};
 
 handle_call({leave, Pid}, _,
             #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of
         {ok, GroupNameList} ->
             NewState = lists:foldl(fun(GroupName, S) ->
-                leave_group(GroupName, Pid, S)
+                leave_group(GroupName, Pid, leave_local, S)
             end, State, GroupNameList),
             {reply, ok, NewState};
         error ->
@@ -2715,7 +2722,7 @@ handle_call({leave, GroupName, Pid}, _,
     end,
     if
         Found ->
-            {reply, ok, leave_group(GroupName, Pid, State)};
+            {reply, ok, leave_group(GroupName, Pid, leave_local, State)};
         true ->
             {reply, error, State}
     end;
@@ -2850,7 +2857,6 @@ handle_call({get_remote_newest_pid, GroupName, Exclude}, _,
     {reply, cpg_data:get_remote_newest_pid(GroupName, Exclude, Groups), State};
 
 handle_call(Request, _, State) ->
-    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
      error, State}.
 
@@ -2858,16 +2864,25 @@ handle_call(Request, _, State) ->
 %% @doc
 %% @end
 
--type cast() :: {exchange, node(), #state{}}.
-
--spec handle_cast(cast(), #state{}) -> {noreply, #state{}}.
-
-handle_cast({exchange, Node, ExternalState}, State) ->
-    ?LOG_INFO("received state from ~p", [Node]),
+handle_cast({exchange, Node, ExternalState},
+            #state{scope = Scope} = State) ->
+    ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
     {noreply, store(ExternalState, State)};
 
 handle_cast({join, GroupName, Pid}, State) ->
-    {noreply, join_group(GroupName, Pid, State)};
+    {noreply, join_group(GroupName, Pid, join_remote, State)};
+
+handle_cast({leave, Pid},
+            #state{pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, GroupNameList} ->
+            NewState = lists:foldl(fun(GroupName, S) ->
+                leave_group(GroupName, Pid, leave_remote, S)
+            end, State, GroupNameList),
+            {noreply, NewState};
+        error ->
+            {noreply, State}
+    end;
 
 handle_cast({leave, GroupName, Pid},
             #state{pids = Pids} = State) ->
@@ -2879,7 +2894,7 @@ handle_cast({leave, GroupName, Pid},
     end,
     if
         Found ->
-            {noreply, leave_group(GroupName, Pid, State)};
+            {noreply, leave_group(GroupName, Pid, leave_remote, State)};
         true ->
             {noreply, State}
     end;
@@ -2916,21 +2931,24 @@ handle_cast({remove_leave_callback, GroupName, F},
     NewCallbacks = cpg_callbacks:remove_leave(Callbacks, GroupName, F),
     {noreply, State#state{callbacks = NewCallbacks}};
 
-handle_cast(_, State) ->
-    {noreply, State}.
+handle_cast(Request, State) ->
+    {stop, lists:flatten(io_lib:format("Unknown cast \"~p\"", [Request])),
+     State}.
 
 %% @private
 %% @doc
 %% @end
 
--spec handle_info(tuple(), #state{}) -> {noreply, #state{}}.
+handle_info({'DOWN', _MonitorRef, process, Pid, Info}, State) ->
+    {noreply, member_died(Pid, {exit, Info}, State)};
 
-handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, State) ->
-    {noreply, member_died(Pid, State)};
-
-handle_info({nodeup, Node},
+handle_info({nodeup, Node, _},
             #state{scope = Scope} = State) ->
     gen_server:cast({Scope, Node}, {exchange, node(), State}),
+    {noreply, State};
+
+handle_info({nodedown, _, _}, State) ->
+    % rely on pid monitors for internal group changes
     {noreply, State};
 
 handle_info({new, Node},
@@ -2943,14 +2961,13 @@ handle_info({cpg_data, From},
     From ! {cloudi_cpg_data, Groups},
     {noreply, State};
 
-handle_info(_, State) ->
-    {noreply, State}.
+handle_info(Request, State) ->
+    {stop, lists:flatten(io_lib:format("Unknown info \"~p\"", [Request])),
+     State}.
 
 %% @private
 %% @doc
 %% @end
-
--spec terminate(term(), #state{}) -> ok.
 
 terminate(Reason,
           #state{callbacks = Callbacks}) ->
@@ -2971,14 +2988,16 @@ code_change(_, State, _) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}]).
 
-create_group(GroupName, #state{groups = {DictI, GroupsData}} = State) ->
+create_group(GroupName,
+             #state{groups = {DictI, GroupsData}} = State) ->
     NewGroupsData = DictI:update(GroupName,
         fun(OldValue) -> OldValue end, #cpg_data{}, GroupsData),
     State#state{groups = {DictI, NewGroupsData}}.
 
-delete_group(GroupName, #state{groups = {DictI, GroupsData},
-                               pids = Pids,
-                               callbacks = Callbacks} = State) ->
+delete_group(GroupName,
+             #state{groups = {DictI, GroupsData},
+                    pids = Pids,
+                    callbacks = Callbacks} = State) ->
     case DictI:find(GroupName, GroupsData) of
         error ->
             State;
@@ -2991,7 +3010,8 @@ delete_group(GroupName, #state{groups = {DictI, GroupsData},
             NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
                                                     monitor = Ref}, P) ->
                 true = erlang:demonitor(Ref, [flush]),
-                cpg_callbacks:notify_leave(Callbacks, GroupName, Pid),
+                cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
+                                           leave_local),
                 dict:update(Pid,
                             fun(OldValue) ->
                                 lists:delete(GroupName, OldValue)
@@ -3002,9 +3022,10 @@ delete_group(GroupName, #state{groups = {DictI, GroupsData},
                         pids = NewPids}
     end.
 
-join_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
-                                  pids = Pids,
-                                  callbacks = Callbacks} = State) ->
+join_group(GroupName, Pid, Reason,
+           #state{groups = {DictI, GroupsData},
+                  pids = Pids,
+                  callbacks = Callbacks} = State) ->
     Entry = #cpg_data_pid{pid = Pid,
                           monitor = erlang:monitor(process, Pid)},
     NewGroupsData = if
@@ -3041,13 +3062,14 @@ join_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                               lists:umerge(OldValue, GroupNameList)
                           end,
                           GroupNameList, Pids),
-    cpg_callbacks:notify_join(Callbacks, GroupName, Pid),
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
-leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
-                                   pids = Pids,
-                                   callbacks = Callbacks} = State) ->
+leave_group(GroupName, Pid, Reason,
+            #state{groups = {DictI, GroupsData},
+                   pids = Pids,
+                   callbacks = Callbacks} = State) ->
     Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
         if 
             P == Pid ->
@@ -3066,7 +3088,8 @@ leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                     {OldLocal,
                      NewLocal} = lists:partition(Fpartition, Local),
                     I = erlang:length(OldLocal),
-                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, I),
+                    cpg_callbacks:notify_leave(Callbacks,
+                                               GroupName, Pid, Reason, I),
                     OldValue#cpg_data{local_count = LocalI - I,
                                       local = NewLocal,
                                       history = delete_all(Pid, History)}
@@ -3079,7 +3102,8 @@ leave_group(GroupName, Pid, #state{groups = {DictI, GroupsData},
                     {OldRemote,
                      NewRemote} = lists:partition(Fpartition, Remote),
                     I = erlang:length(OldRemote),
-                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, I),
+                    cpg_callbacks:notify_leave(Callbacks,
+                                               GroupName, Pid, Reason, I),
                     OldValue#cpg_data{remote_count = RemoteI - I,
                                       remote = NewRemote,
                                       history = delete_all(Pid, History)}
@@ -3164,8 +3188,8 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
-                    cpg_callbacks:notify_join(Callbacks,
-                                              GroupName, Pid, I),
+                    cpg_callbacks:notify_join(Callbacks, GroupName, Pid,
+                                              join_remote, I),
                     NewLocal = store_conflict_add_entries(I, Local, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3175,8 +3199,8 @@ store_conflict_f([Pid | V1AllPids],
                                      V1All, GroupName, State);
                 I < 0 ->
                     % remove
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, I * -1),
+                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
+                                               leave_remote, I * -1),
                     NewV2Pids = store_conflict_remove_entries(I, V2Pids),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3197,8 +3221,8 @@ store_conflict_f([Pid | V1AllPids],
             if
                 I > 0 ->
                     % add
-                    cpg_callbacks:notify_join(Callbacks,
-                                              GroupName, Pid, I),
+                    cpg_callbacks:notify_join(Callbacks, GroupName, Pid,
+                                              join_remote, I),
                     NewRemote = store_conflict_add_entries(I, Remote, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3208,8 +3232,8 @@ store_conflict_f([Pid | V1AllPids],
                                      V1All, GroupName, State);
                 I < 0 ->
                     % remove
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, I * -1),
+                    cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
+                                               leave_remote, I * -1),
                     NewV2Pids = store_conflict_remove_entries(I, V2Pids),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
                     store_conflict_f(V1AllPids,
@@ -3244,7 +3268,7 @@ store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
                 GroupName,
                 #state{callbacks = Callbacks} = State) ->
     NewE = E#cpg_data_pid{monitor = erlang:monitor(process, Pid)},
-    cpg_callbacks:notify_join(Callbacks, GroupName, Pid),
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid, join_remote),
     if
         node() =:= node(Pid) ->
             store_new_group(OldEntries,
@@ -3289,14 +3313,14 @@ store(#state{groups = {DictI, ExternalGroupsData},
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
-member_died(Pid, #state{pids = Pids} = State) ->
+member_died(Pid, Reason, #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of
         error ->
             % monitor message latency
             State;
         {ok, GroupNames} ->
             lists:foldl(fun(GroupName, S) ->
-                leave_group(GroupName, Pid, S)
+                leave_group(GroupName, Pid, Reason, S)
             end, State, GroupNames)
     end.
 

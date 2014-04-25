@@ -220,7 +220,6 @@ handle_call(nodes, _,
     {reply, {ok, Nodes}, State};
 
 handle_call(Request, _, State) ->
-    ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
@@ -262,10 +261,9 @@ handle_cast({logger_redirect, NodeLogger},
     end;
 
 handle_cast(Request, State) ->
-    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown cast \"~p\"", [Request]), State}.
 
-handle_info({'nodeup', Node, InfoList},
+handle_info({nodeup, Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
                    nodes = Nodes,
@@ -282,7 +280,7 @@ handle_info({'nodeup', Node, InfoList},
                  nodes_dead = lists:delete(Node, NodesDead),
                  nodes = lists:umerge(Nodes, [Node])}};
 
-handle_info({'nodedown', Node, InfoList},
+handle_info({nodedown, Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
                    logger_redirect = NodeLogger} = State) ->
@@ -316,8 +314,7 @@ handle_info(reconnect,
     {noreply, State#state{reconnect_timer = ReconnectTimer}};
 
 handle_info(Request, State) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {stop, cloudi_string:format("Unknown cast \"~p\"", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~p\"", [Request]), State}.
 
 terminate(_, #state{discovery = Discovery}) ->
     discovery_stop(Discovery),
