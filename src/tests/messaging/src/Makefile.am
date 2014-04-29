@@ -11,9 +11,9 @@ CLEANFILES = $(beam_DATA) \
              $(beamdir)/cloudi_service_messaging_sequence3.beam \
              $(beamdir)/cloudi_service_messaging_sequence4.beam
 
-all-local: $(beam_DATA) $(APPLICATION)
+all-local: $(beam_DATA) $(srcdir)/$(APPLICATION)
 	$(MKDIR_P) $(beamdir) || exit 0
-	cp -f $(APPLICATION) $(beamdir)
+	cp -f $(srcdir)/$(APPLICATION) $(beamdir)
 	cp -f $(beam_DATA) $(beamdir)
 
 .erl.beam:

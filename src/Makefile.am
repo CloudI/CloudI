@@ -257,12 +257,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/service/src && \
         test ! -e service.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/service/src/service.app.src || exit 0)
-	(cd $(top_srcdir)/tests/hexpi/src && \
-        test ! -e cloudi_service_hexpi.app && \
-        $(LN_S) $(abs_top_builddir)/tests/hexpi/src/cloudi_service_hexpi.app || exit 0)
-	(cd $(top_srcdir)/tests/messaging/src && \
-        test ! -e cloudi_service_messaging_sequence.app && \
-        $(LN_S) $(abs_top_builddir)/tests/messaging/src/cloudi_service_messaging_sequence.app || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/ebin || exit 0)
