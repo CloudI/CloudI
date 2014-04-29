@@ -1,8 +1,8 @@
 beamdir = ../ebin
 APPLICATION = cloudi_service_hexpi.app
 beam_DATA = cloudi_service_hexpi.beam
-
 CLEANFILES = $(beam_DATA) \
+             $(beamdir)/$(APPLICATION) \
              $(beamdir)/cloudi_service_hexpi.beam
 
 all-local: $(beam_DATA) $(APPLICATION)

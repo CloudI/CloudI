@@ -5,6 +5,7 @@ beam_DATA = cloudi_service_messaging_sequence1.beam \
             cloudi_service_messaging_sequence3.beam \
             cloudi_service_messaging_sequence4.beam
 CLEANFILES = $(beam_DATA) \
+             $(beamdir)/$(APPLICATION) \
              $(beamdir)/cloudi_service_messaging_sequence1.beam \
              $(beamdir)/cloudi_service_messaging_sequence2.beam \
              $(beamdir)/cloudi_service_messaging_sequence3.beam \
