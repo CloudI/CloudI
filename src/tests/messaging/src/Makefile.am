@@ -1,4 +1,5 @@
 beamdir = ../ebin
+APPLICATION = cloudi_service_messaging_sequence.app
 beam_DATA = cloudi_service_messaging_sequence1.beam \
             cloudi_service_messaging_sequence2.beam \
             cloudi_service_messaging_sequence3.beam \
@@ -9,8 +10,9 @@ CLEANFILES = $(beam_DATA) \
              $(beamdir)/cloudi_service_messaging_sequence3.beam \
              $(beamdir)/cloudi_service_messaging_sequence4.beam
 
-all-local: $(beam_DATA)
+all-local: $(beam_DATA) $(APPLICATION)
 	$(MKDIR_P) $(beamdir) || exit 0
+	cp -f $(APPLICATION) $(beamdir)
 	cp -f $(beam_DATA) $(beamdir)
 
 .erl.beam:

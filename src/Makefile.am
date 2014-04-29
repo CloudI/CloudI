@@ -818,10 +818,13 @@ tests-flood-install: $(top_builddir)/tests/flood/service/flood \
 	$(INSTALL_DATA) "$(top_srcdir)/tests/flood/service/flood.rb" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
 
-tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam \
+tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.app \
+                     $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam \
                      $(top_builddir)/tests/hexpi/cxx_src/hexpi
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv"
+	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.app" \
+                    "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
 	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam" \
                     "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
 	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
@@ -899,7 +902,7 @@ tests-service_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
 
 tests-messaging-install: \
-        $(top_builddir)/tests/messaging/src/cloudi_service_messaging_sequence.app \
+        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence.app \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam \
@@ -911,7 +914,7 @@ tests-messaging-install: \
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
 	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/src/cloudi_service_messaging_sequence.app" \
+        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence.app" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) \
         "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam" \
