@@ -235,7 +235,7 @@ handle_call({shutdown, ServiceId}, _,
                                   {kill, Shutdown, P, ServiceId, Service}),
                 cloudi_x_key2value:erase(ServiceId, P, D)
             end, Services, Pids),
-            {reply, ok, State#state{services = NewServices}};
+            {reply, {ok, Pids}, State#state{services = NewServices}};
         error ->
             {reply, {error, not_found}, State}
     end;

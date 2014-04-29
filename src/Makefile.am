@@ -899,15 +899,20 @@ tests-service_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
 
 tests-messaging-install: \
+        $(top_builddir)/tests/messaging/src/cloudi_service_messaging_sequence.app \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam \
         $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam \
+        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence4.beam \
         $(top_builddir)/tests/messaging/jar/cloudi.jar \
         $(top_builddir)/tests/messaging/jar/messaging.jar \
         $(top_builddir)/tests/messaging/cxx_src/messaging
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/messaging/src/cloudi_service_messaging_sequence.app" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
 	$(INSTALL_DATA) \
         "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam" \
         "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"

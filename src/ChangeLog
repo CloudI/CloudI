@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-04-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix automatic stopping of an internal service's application when
+      the application_name service configuration option is used
+    * Add more logging output when a service is stopped
+
 2014-04-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update cpg

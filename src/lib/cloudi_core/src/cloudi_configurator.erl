@@ -581,7 +581,7 @@ service_stop_remove_internal(#config_service_internal{
                                 options = #config_service_options{
                                     automatic_loading = false}},
                              _Timeout) ->
-    ok;
+    ignore;
 service_stop_remove_internal(#config_service_internal{
                                  module = Module,
                                  file_path = FilePath},
@@ -589,26 +589,71 @@ service_stop_remove_internal(#config_service_internal{
     when is_atom(Module), is_list(FilePath) ->
     case filename:extension(FilePath) of
         ".erl" ->
-            cloudi_x_reltool_util:module_purged(Module, Timeout);
+            case cloudi_x_reltool_util:module_purged(Module, Timeout) of
+                ok ->
+                    {ok, module};
+                {error, _} = Error ->
+                    Error
+            end;
         ".beam" ->
-            cloudi_x_reltool_util:module_purged(Module, Timeout);
+            case cloudi_x_reltool_util:module_purged(Module, Timeout) of
+                ok ->
+                    {ok, module};
+                {error, _} = Error ->
+                    Error
+            end;
         ".app" ->
-            cloudi_x_reltool_util:application_remove(Module, Timeout,
-                                                     [cloudi_core]);
+            case cloudi_x_reltool_util:application_remove(Module, Timeout,
+                                                          [cloudi_core]) of
+                ok ->
+                    {ok, application};
+                {error, _} = Error ->
+                    Error
+            end;
         ".script" ->
-            cloudi_x_reltool_util:script_remove(FilePath, Timeout,
-                                                [cloudi_core])
+            case cloudi_x_reltool_util:script_remove(FilePath, Timeout,
+                                                     [cloudi_core]) of
+                ok ->
+                    {ok, release};
+                {error, _} = Error ->
+                    Error
+            end
     end;
 service_stop_remove_internal(#config_service_internal{
-                                 module = Module},
+                                 module = Module,
+                                 options = #config_service_options{
+                                     application_name = undefined}},
                              Timeout)
     when is_atom(Module) ->
     case cloudi_x_reltool_util:application_running(Module, Timeout) of
         {ok, _} ->
-            cloudi_x_reltool_util:application_remove(Module, Timeout,
-                                                     [cloudi_core]);
+            case cloudi_x_reltool_util:application_remove(Module, Timeout,
+                                                          [cloudi_core]) of
+                ok ->
+                    {ok, application};
+                {error, _} = Error ->
+                    Error
+            end;
         {error, {not_found, Module}} ->
-            cloudi_x_reltool_util:module_purged(Module, Timeout);
+            case cloudi_x_reltool_util:module_purged(Module, Timeout) of
+                ok ->
+                    {ok, module};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+service_stop_remove_internal(#config_service_internal{
+                                 module = Module,
+                                 options = #config_service_options{
+                                     application_name = Application}},
+                             Timeout)
+    when is_atom(Module) ->
+    case cloudi_x_reltool_util:application_remove(Application, Timeout,
+                                                  [cloudi_core]) of
+        ok ->
+            {ok, application};
         {error, _} = Error ->
             Error
     end.
@@ -696,7 +741,7 @@ service_stop_internal(#config_service_internal{
                               reload = Reload},
                           uuid = ID} = Service, Remove, Timeout) ->
     case cloudi_services_monitor:shutdown(ID, Timeout) of
-        ok ->
+        {ok, Pids} ->
             if
                 Reload =:= true ->
                     ok = cloudi_services_internal_reload:service_remove(Module);
@@ -709,8 +754,22 @@ service_stop_internal(#config_service_internal{
                     % so it is safe to remove the service module
                     % dependencies (applications, if they were used, or
                     % unload the service module)
-                    service_stop_remove_internal(Service, Timeout);
+                    case service_stop_remove_internal(Service, Timeout) of
+                        ignore ->
+                            ?LOG_INFO("Service pids ~p stopped~n ~p",
+                                      [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+                            ok;
+                        {ok, RemoveType} ->
+                            ?LOG_INFO("Service pids ~p stopped ~p~n ~p",
+                                      [Pids, RemoveType,
+                                       cloudi_x_uuid:uuid_to_string(ID)]),
+                            ok;
+                        {error, _} = Error ->
+                            Error
+                    end;
                 Remove =:= false ->
+                    ?LOG_INFO("Service pids ~p stopped~n ~p",
+                              [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
                     ok
             end;
         {error, _} = Error ->
@@ -720,7 +779,9 @@ service_stop_internal(#config_service_internal{
 service_stop_external(#config_service_external{
                           uuid = ID}, Timeout) ->
     case cloudi_services_monitor:shutdown(ID, Timeout) of
-        ok ->
+        {ok, Pids} ->
+            ?LOG_INFO("Service pids ~p stopped~n ~p",
+                      [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
             ok;
         {error, _} = Error ->
             Error

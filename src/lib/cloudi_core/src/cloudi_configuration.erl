@@ -1895,19 +1895,31 @@ services_remove_uuid([ID | IDs], RemoveServices, Services, Timeout)
 services_remove_uuid([ID | _], _, _, _) ->
     {error, {service_invalid, ID}}.
 
+services_remove_all_internal(_, #config_service_external{}) ->
+    false;
+services_remove_all_internal([], #config_service_internal{}) ->
+    true;
+services_remove_all_internal([#config_service_internal{
+                                  module = Module} | _],
+                             #config_service_internal{
+                                  module = Module}) ->
+    false;
+services_remove_all_internal([#config_service_internal{
+                                  options = #config_service_options{
+                                      application_name = Application}} | _],
+                             #config_service_internal{
+                                  options = #config_service_options{
+                                      application_name = Application}})
+    when Application =/= undefined ->
+    false;
+services_remove_all_internal([_ | Services],
+                             #config_service_internal{} = RemoveService) ->
+    services_remove_all_internal(Services, RemoveService).
+
 services_remove_all([], Services, _) ->
     {ok, Services};
 services_remove_all([Service | RemoveServices], Services, Timeout) ->
-    Remove = if
-        is_record(Service, config_service_internal) ->
-            not lists:any(fun(S) ->
-                is_record(S, config_service_internal) andalso
-                (S#config_service_internal.module == 
-                 Service#config_service_internal.module)
-            end, Services);
-        true ->
-            false
-    end,
+    Remove = services_remove_all_internal(Services, Service),
     case cloudi_configurator:service_stop(Service, Remove, Timeout) of
         ok ->
             services_remove_all(RemoveServices, Services, Timeout);

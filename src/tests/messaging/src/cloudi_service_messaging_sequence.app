@@ -1,0 +1,12 @@
+{application, cloudi_service_messaging_sequence,
+  [{description, "CloudI Test Messaging Erlang Application"},
+   {vsn, "1.3.2"},
+   {modules,
+    [cloudi_service_messaging_sequence1,
+     cloudi_service_messaging_sequence2,
+     cloudi_service_messaging_sequence3,
+     cloudi_service_messaging_sequence4]},
+   {applications,
+    [cloudi_core,
+     stdlib,
+     kernel]}]}.
