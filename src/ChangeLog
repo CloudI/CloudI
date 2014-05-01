@@ -5,6 +5,7 @@
 
     * Add application dependencies to the release manually which
       reltool fails to find (syntax_tools, cloudi_x_lager, cloudi_x_goldrush)
+    * Update the Erlang Binary Term Format for the new types in 17.0
 
 2014-04-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 

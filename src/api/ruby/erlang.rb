@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,13 @@ module Erlang
                 return "#{TAG_LIST_EXT.chr}#{arity_packed}#{list_packed}#{TAG_NIL_EXT.chr}"
             end
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
 
     class OtpErlangAtom
@@ -66,17 +73,33 @@ module Erlang
             if @value.kind_of?(Integer)
                 return "#{TAG_ATOM_CACHE_REF.chr}#{@value.chr}"
             elsif @value.kind_of?(String)
-                size = @value.length
-                if size < 256
-                    return "#{TAG_SMALL_ATOM_EXT.chr}#{size.chr}#{@value}"
+                size = @value.bytesize
+                if @value.encoding.name == 'UTF-8'
+                    if size < 256
+                        return "#{TAG_SMALL_ATOM_UTF8_EXT.chr}#{size.chr}#{@value}"
+                    else
+                        size_packed = [size].pack('n')
+                        return "#{TAG_ATOM_UTF8_EXT.chr}#{size_packed}#{@value}"
+                    end
                 else
-                    size_packed = [size].pack('n')
-                    return "#{TAG_ATOM_EXT.chr}#{size_packed}#{@value}"
+                    if size < 256
+                        return "#{TAG_SMALL_ATOM_EXT.chr}#{size.chr}#{@value}"
+                    else
+                        size_packed = [size].pack('n')
+                        return "#{TAG_ATOM_EXT.chr}#{size_packed}#{@value}"
+                    end
                 end
             else
                 raise OutputException, 'unknown atom type', caller
             end
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     class OtpErlangBinary
@@ -85,7 +108,7 @@ module Erlang
             @bits = bits # bits in last byte
         end
         def to_s
-            size = @value.length
+            size = @value.bytesize
             size_packed = [size].pack('N')
             if @bits != 8
                 return "#{TAG_BIT_BINARY_EXT.chr}#{size_packed}#{@bits.chr}#{@value}"
@@ -93,6 +116,13 @@ module Erlang
                 return "#{TAG_BINARY_EXT.chr}#{size_packed}#{@value}"
             end
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     class OtpErlangFunction
@@ -103,6 +133,13 @@ module Erlang
         def to_s
             return "#{@tag.chr}#{@value}"
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     class OtpErlangReference
@@ -112,7 +149,7 @@ module Erlang
             @creation = creation
         end
         def to_s
-            size = @id.length / 4
+            size = @id.bytesize / 4
             if size > 1
                 size_packed = [size].pack('n')
                 return "#{TAG_NEW_REFERENCE_EXT.chr}#{size_packed}#{@node.to_s}#{@creation}#{@id}"
@@ -120,6 +157,13 @@ module Erlang
                 return "#{TAG_REFERENCE_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
             end
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     class OtpErlangPort
@@ -131,6 +175,13 @@ module Erlang
         def to_s
             return "#{TAG_PORT_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     class OtpErlangPid
@@ -143,6 +194,13 @@ module Erlang
         def to_s
             return "#{TAG_PID_EXT.chr}#{@node.to_s}#{@id}#{@serial}#{@creation}"
         end
+        def hash
+            return to_s.hash
+        end
+        def ==(other)
+            return to_s == other.to_s
+        end
+        alias eql? ==
     end
     
     def binary_to_term(data)
@@ -150,7 +208,7 @@ module Erlang
             raise ParseException, 'invalid version', caller
         end
         result = binary_to_term_(1, data)
-        if result[0] != data.length
+        if result[0] != data.bytesize
             raise ParseException, 'unparsed data', caller
         end
         return result[1]
@@ -192,7 +250,12 @@ module Erlang
         elsif tag == TAG_ATOM_EXT
             j = data[i,2].unpack('n')[0]
             i += 2
-            return [i + j, OtpErlangAtom.new(data[i,j])]
+            atom_name = data[i,j].force_encoding('ISO-8859-1')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name latin1', caller
+            end
         elsif tag == TAG_REFERENCE_EXT or tag == TAG_PORT_EXT
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
@@ -294,7 +357,24 @@ module Erlang
         elsif tag == TAG_SMALL_ATOM_EXT
             j = data[i,1].ord
             i += 1
-            return [i + j, OtpErlangAtom.new(data[i,j])]
+            atom_name = data[i,j].force_encoding('ISO-8859-1')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name latin1', caller
+            end
+        elsif tag == TAG_MAP_EXT
+            arity = data[i,4].unpack('N')[0]
+            i += 4
+            pairs = Hash.new
+            (0...arity).each do |arity_index|
+                result = binary_to_term_(i, data)
+                i = result[0]; key = result[1]
+                result = binary_to_term_(i, data)
+                i = result[0]; value = result[1]
+                pairs[key] = value
+            end
+            return [i, pairs]
         elsif tag == TAG_FUN_EXT
             old_i = i
             numfree = data[i,4].unpack('N')[0]
@@ -310,6 +390,24 @@ module Erlang
             result = binary_to_term_sequence(i, numfree, data)
             i = result[0]; free = result[1]
             return [i, OtpErlangFunction.new(tag, data[old_i,i])]
+        elsif tag == TAG_ATOM_UTF8_EXT
+            j = data[i,2].unpack('n')[0]
+            i += 2
+            atom_name = data[i,j].force_encoding('UTF-8')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name unicode', caller
+            end
+        elsif tag == TAG_SMALL_ATOM_UTF8_EXT
+            j = data[i,1].ord
+            i += 1
+            atom_name = data[i,j].force_encoding('UTF-8')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name unicode', caller
+            end
         else
             raise ParseException, 'invalid tag', caller
         end
@@ -372,6 +470,24 @@ module Erlang
             j = data[i,1].ord
             i += 1
             return [i + j, OtpErlangAtom.new(data[i,j])]
+        elsif tag == TAG_ATOM_UTF8_EXT
+            j = data[i,2].unpack('n')[0]
+            i += 2
+            atom_name = data[i,j].force_encoding('UTF-8')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name unicode', caller
+            end
+        elsif tag == TAG_SMALL_ATOM_UTF8_EXT
+            j = data[i,1].ord
+            i += 1
+            atom_name = data[i,j].force_encoding('UTF-8')
+            if atom_name.valid_encoding?
+                return [i + j, OtpErlangAtom.new(atom_name)]
+            else
+                raise ParseException, 'invalid atom_name unicode', caller
+            end
         else
             raise ParseException, 'invalid atom tag', caller
         end
@@ -390,6 +506,8 @@ module Erlang
             return float_to_binary(term)
         elsif term.kind_of?(Integer)
             return integer_to_binary(term)
+        elsif term.kind_of?(Hash)
+            return hash_to_binary(term)
         elsif term.kind_of?(Symbol)
             return OtpErlangAtom.new(term.to_s).to_s
         elsif term.kind_of?(TrueClass)
@@ -414,7 +532,7 @@ module Erlang
     end
     
     def string_to_binary(term)
-        arity = term.length
+        arity = term.bytesize
         if arity == 0
             return TAG_NIL_EXT.chr
         elsif arity < 65536
@@ -422,7 +540,7 @@ module Erlang
             return "#{TAG_STRING_EXT.chr}#{arity_packed}#{term}"
         else
             arity_packed = [arity].pack('N')
-            term_packed = term.unpack("C#{term.length}").map{ |c|
+            term_packed = term.unpack("C#{arity}").map{ |c|
                 "#{TAG_SMALL_INTEGER_EXT.chr}#{c}"
             }.join
             return "#{TAG_LIST_EXT.chr}#{arity_packed}#{term_packed}#{TAG_NIL_EXT.chr}"
@@ -479,6 +597,17 @@ module Erlang
         return "#{TAG_NEW_FLOAT_EXT.chr}#{term_packed}"
     end
 
+    def hash_to_binary(term)
+        arity = term.length
+        term_packed = term.to_a.map{ |element|
+            key_packed = term_to_binary_(element[0])
+            value_packed = term_to_binary_(element[1])
+            "#{key_packed}#{value_packed}"
+        }.join
+        arity_packed = [arity].pack('N')
+        return "#{TAG_MAP_EXT.chr}#{arity_packed}#{term_packed}"
+    end
+
     # exceptions
     
     class ParseException < SyntaxError
@@ -511,7 +640,10 @@ module Erlang
     TAG_EXPORT_EXT = 113
     TAG_NEW_REFERENCE_EXT = 114
     TAG_SMALL_ATOM_EXT = 115
+    TAG_MAP_EXT = 116
     TAG_FUN_EXT = 117
+    TAG_ATOM_UTF8_EXT = 118
+    TAG_SMALL_ATOM_UTF8_EXT = 119
 
 end
 

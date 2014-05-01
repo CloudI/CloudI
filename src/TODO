@@ -11,10 +11,6 @@ Add https://github.com/Amadiro/erlang-statistics integration
 EC2 automatic node configuration
     * working with external/nodefinder/ec2nodefinder/
       but with sane ec2 integration
-ATOM_CACHE_REF change
-    * binary erlang term format, effects python/ruby CloudI API serialization
-      (the ATOM_CACHE_REF will/is not be used by the CloudI API, the change
-       is just for completeness)
 Add better database integration
     * add native Riak support
     * add native CouchDB support
