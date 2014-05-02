@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve the error return types for the modules:
+      cloudi, cloudi_service and cloudi_service_api
+    * Fix a cloudi_service_init error for recv_asyncs function calls
+
 2014-05-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add application dependencies to the release manually which

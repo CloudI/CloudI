@@ -278,7 +278,9 @@
 -spec acl_add(L :: list({atom(), acl()}), 
               Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_acl_add()}.
 
 acl_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -299,7 +301,9 @@ acl_add([_ | _] = L, Timeout)
 -spec acl_remove(L :: list(atom()),
                  Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_acl_remove()}.
 
 acl_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -319,7 +323,7 @@ acl_remove([_ | _] = L, Timeout)
 -spec service_subscriptions(ServiceId :: service_id(),
                             Timeout :: api_timeout_milliseconds()) ->
     {ok, list(cloudi_service:service_name_pattern())} |
-    {error, any()}.
+    {error, timeout | noproc | not_found}.
 
 service_subscriptions(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16,
@@ -340,7 +344,9 @@ service_subscriptions(ServiceId, Timeout)
 -spec services_add(L :: list(#internal{} | #external{} | service_proplist()),
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, list(service_id())} |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_services_add()}.
 
 services_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -363,7 +369,9 @@ services_add([_ | _] = L, Timeout)
 -spec services_remove(L :: list(service_id()),
                       Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_services_remove()}.
 
 services_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -388,7 +396,9 @@ services_remove([_ | _] = L, Timeout)
 -spec services_restart(L :: list(service_id()), 
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_services_restart()}.
 
 services_restart([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -409,7 +419,7 @@ services_restart([_ | _] = L, Timeout)
                       Timeout :: api_timeout_milliseconds()) ->
     {ok, list({service_id(), #internal{}} |
               {service_id(), #external{}})} |
-    {error, any()}.
+    {error, timeout | noproc | service_name_invalid}.
 
 services_search([_ | _] = ServiceName, Timeout)
     when ((is_integer(Timeout) andalso
@@ -435,7 +445,7 @@ services_search([_ | _] = ServiceName, Timeout)
 -spec services(Timeout :: api_timeout_milliseconds()) ->
     {ok, list({service_id(), #internal{}} |
               {service_id(), #external{}})} |
-    {error, any()}.
+    {error, timeout | noproc}.
 
 services(Timeout)
     when ((is_integer(Timeout) andalso
@@ -455,7 +465,9 @@ services(Timeout)
 -spec nodes_add(L :: list(node()),
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_nodes_add()}.
 
 nodes_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -474,7 +486,9 @@ nodes_add([_ | _] = L, Timeout)
 -spec nodes_remove(L :: list(node()),
                    Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_nodes_remove()}.
 
 nodes_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -492,7 +506,9 @@ nodes_remove([_ | _] = L, Timeout)
 -spec nodes_set(L :: nodes_proplist(),
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error,
+     timeout | noproc |
+     cloudi_configuration:error_reason_nodes_set()}.
 
 nodes_set([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -509,7 +525,7 @@ nodes_set([_ | _] = L, Timeout)
 
 -spec nodes_alive(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, any()}.
+    {error, timeout | noproc}.
 
 nodes_alive(Timeout)
     when ((is_integer(Timeout) andalso
@@ -526,7 +542,7 @@ nodes_alive(Timeout)
 
 -spec nodes_dead(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, any()}.
+    {error, timeout | noproc}.
 
 nodes_dead(Timeout)
     when ((is_integer(Timeout) andalso
@@ -543,7 +559,7 @@ nodes_dead(Timeout)
 
 -spec nodes(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, any()}.
+    {error, timeout | noproc}.
 
 nodes(Timeout)
     when ((is_integer(Timeout) andalso
@@ -603,7 +619,7 @@ log_redirect(Node, Timeout)
 -spec code_path_add(Dir :: file:filename(),
                     Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error, bad_directory}.
 
 code_path_add(Dir, Timeout)
     when ((is_integer(Timeout) andalso
@@ -628,7 +644,7 @@ code_path_add(Dir, Timeout)
 -spec code_path_remove(Dir :: file:filename(),
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, any()}.
+    {error, does_not_exist | bad_name}.
 
 code_path_remove(Dir, Timeout)
     when ((is_integer(Timeout) andalso

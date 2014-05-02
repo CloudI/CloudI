@@ -120,7 +120,8 @@ handle_call(stop, {Pid, _}, #state{service_state = InternalState,
     {stop, normal, Result, NewState};
 
 handle_call(Request, _, State)
-    when is_tuple(Request), element(1, Request) =:= 'send_sync' ->
+    when is_tuple(Request),
+         element(1, Request) =:= 'send_sync' ->
     % synchronous requests should not be allowed because the service request
     % source pid should also be the receiver pid and doing a 
     % synchronous request during service initialization would attempt to use
@@ -130,7 +131,9 @@ handle_call(Request, _, State)
     {reply, {error, invalid_state}, State};
 
 handle_call(Request, _, State)
-    when is_tuple(Request), element(1, Request) =:= 'recv_async' ->
+    when is_tuple(Request),
+         (element(1, Request) =:= 'recv_async' orelse
+          element(1, Request) =:= 'recv_asyncs') ->
     % internal service requests are always received after initialization
     {reply, {error, invalid_state}, State};
 

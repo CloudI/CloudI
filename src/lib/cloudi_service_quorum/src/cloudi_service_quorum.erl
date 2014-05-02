@@ -187,9 +187,6 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
             {noreply, State#state{requests = NewRequests,
                                   pending = NewPending}};
         {error, timeout} ->
-            {reply, <<>>, State};
-        {error, Reason} ->
-            ?LOG_ERROR("request to ~p failed: ~p", [QuorumName, Reason]),
             {reply, <<>>, State}
     end.
 

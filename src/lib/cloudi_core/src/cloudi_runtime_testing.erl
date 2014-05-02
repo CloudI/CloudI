@@ -111,7 +111,7 @@ monkey_latency_format(#monkey_latency{method = time_absolute,
 
 -spec monkey_latency_validate(list({atom(), any()}) | system | false) ->
     {ok, #monkey_latency{} | system | false} |
-    {error, any()}.
+    {error, {service_options_monkey_latency_invalid, any()}}.
 
 monkey_latency_validate(false) ->
     {ok, false};
@@ -183,7 +183,7 @@ monkey_chaos_format(#monkey_chaos{method = probability_day,
 
 -spec monkey_chaos_validate(list({atom(), any()}) | system | false) ->
     {ok, #monkey_chaos{} | system | false} |
-    {error, any()}.
+    {error, {service_options_monkey_chaos_invalid, any()}}.
 
 monkey_chaos_validate(false) ->
     {ok, false};

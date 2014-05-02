@@ -123,7 +123,7 @@ hibernate_format(#hibernate{method = rate_request,
 
 -spec hibernate_validate(list({atom(), any()}) | true | false) ->
     {ok, #hibernate{} | true | false} |
-    {error, any()}.
+    {error, {service_options_hibernate_invalid, any()}}.
 
 hibernate_validate(true) ->
     {ok, true};
@@ -222,7 +222,7 @@ count_process_dynamic_format(#count_process_dynamic{
 -spec count_process_dynamic_validate(Options :: list({atom(), any()}) | false,
                                      CountProcess :: number()) ->
     {ok, #count_process_dynamic{} | false} |
-    {error, any()}.
+    {error, {service_options_count_process_dynamic_invalid, any()}}.
 
 count_process_dynamic_validate(false, _) ->
     {ok, false};

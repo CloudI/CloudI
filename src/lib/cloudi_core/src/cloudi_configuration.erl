@@ -69,6 +69,146 @@
 -include("cloudi_service_api.hrl").
 -include("cloudi_constants.hrl").
 
+-type error_reason_acl_add_configuration() ::
+    {acl_invalid |
+     acl_cyclic |
+     acl_not_found, any()}.
+-type error_reason_acl_remove_configuration() ::
+    {acl_invalid, any()}.
+-type error_reason_services_add_configuration() ::
+    {acl_invalid |
+     acl_not_found |
+     service_invalid |
+     service_internal_invalid |
+     service_internal_prefix_invalid |
+     service_internal_module_invalid |
+     service_internal_args_invalid |
+     service_internal_dest_refresh_invalid |
+     service_internal_timeout_init_invalid |
+     service_internal_timeout_async_invalid |
+     service_internal_timeout_sync_invalid |
+     service_internal_dest_list_deny_invalid |
+     service_internal_dest_list_allow_invalid |
+     service_internal_count_process_invalid |
+     service_internal_max_r_invalid |
+     service_internal_max_t_invalid |
+     service_internal_options_invalid |
+     service_external_invalid |
+     service_external_prefix_invalid |
+     service_external_file_path_invalid |
+     service_external_args_invalid |
+     service_external_env_invalid |
+     service_external_dest_refresh_invalid |
+     service_external_protocol_invalid |
+     service_external_buffer_size_invalid |
+     service_external_timeout_init_invalid |
+     service_external_timeout_async_invalid |
+     service_external_timeout_sync_invalid |
+     service_external_dest_list_deny_invalid |
+     service_external_dest_list_allow_invalid |
+     service_external_count_process_invalid |
+     service_external_count_thread_invalid |
+     service_external_max_r_invalid |
+     service_external_max_t_invalid |
+     service_external_options_invalid |
+     service_options_priority_default_invalid |
+     service_options_queue_limit_invalid |
+     service_options_dest_refresh_start_invalid |
+     service_options_dest_refresh_delay_invalid |
+     service_options_request_timeout_adjustment_invalid |
+     service_options_request_timeout_immediate_max_invalid |
+     service_options_response_timeout_adjustment_invalid |
+     service_options_response_timeout_immediate_max_invalid |
+     service_options_count_process_dynamic_invalid |
+     service_options_scope_invalid |
+     service_options_monkey_latency_invalid |
+     service_options_monkey_chaos_invalid |
+     service_options_application_name_invalid |
+     service_options_request_pid_uses_invalid |
+     service_options_request_pid_options_invalid |
+     service_options_info_pid_uses_invalid |
+     service_options_info_pid_options_invalid |
+     service_options_duo_mode_invalid |
+     service_options_hibernate_invalid |
+     service_options_reload_invalid |
+     service_options_automatic_loading_invalid |
+     service_options_invalid, any()}.
+-type error_reason_services_remove_configuration() ::
+    {service_invalid |
+     service_not_found, any()}.
+-type error_reason_services_restart_configuration() ::
+    {service_invalid |
+     service_not_found, any()}.
+-type error_reason_nodes_add_configuration() ::
+    {node_invalid, any()}.
+-type error_reason_nodes_remove_configuration() ::
+    {node_invalid |
+     node_not_found, any()}.
+-type error_reason_nodes_set_configuration() ::
+    {node_invalid |
+     node_reconnect_start_invalid |
+     node_reconnect_start_min |
+     node_reconnect_delay_invalid |
+     node_reconnect_delay_min |
+     node_listen_invalid |
+     node_connect_invalid |
+     node_timestamp_type_invalid |
+     node_discovery_invalid |
+     node_discovery_ambiguous |
+     node_discovery_multicast_invalid |
+     node_discovery_multicast_address_invalid |
+     node_discovery_multicast_port_invalid |
+     node_discovery_multicast_ttl_invalid |
+     node_discovery_ec2_invalid |
+     node_discovery_ec2_access_key_id_invalid |
+     node_discovery_ec2_secret_access_key_invalid |
+     node_discovery_ec2_host_invalid |
+     node_discovery_ec2_tags_selection_null |
+     node_discovery_ec2_groups_invalid |
+     node_discovery_ec2_tags_invalid, any()}.
+-type error_reason_acl_add() ::
+    error_reason_acl_add_configuration().
+-type error_reason_acl_remove() ::
+    error_reason_acl_remove_configuration().
+-type error_reason_services_add() ::
+    error_reason_services_add_configuration() |
+    cloudi_configurator:error_reason_service_start().
+-type error_reason_services_remove() ::
+    error_reason_services_remove_configuration() |
+    cloudi_configurator:error_reason_service_stop().
+-type error_reason_services_restart() ::
+    error_reason_services_restart_configuration() |
+    cloudi_configurator:error_reason_service_restart().
+-type error_reason_nodes_add() ::
+    error_reason_nodes_add_configuration().
+-type error_reason_nodes_remove() ::
+    error_reason_nodes_remove_configuration().
+-type error_reason_nodes_set() ::
+    error_reason_nodes_set_configuration().
+-export_type([error_reason_acl_add/0,
+              error_reason_acl_remove/0,
+              error_reason_services_add/0,
+              error_reason_services_remove/0,
+              error_reason_services_restart/0,
+              error_reason_nodes_add/0,
+              error_reason_nodes_remove/0,
+              error_reason_nodes_set/0]).
+-type error_reason_new() ::
+    error_reason_acl_add_configuration() |
+    error_reason_services_add_configuration() |
+    error_reason_nodes_set_configuration() |
+    {invalid |
+     node_invalid |
+     logging_invalid |
+     logging_redirect_invalid |
+     logging_file_invalid |
+     logging_level_invalid |
+     logging_syslog_invalid |
+     logging_syslog_identity_invalid |
+     logging_syslog_facility_invalid |
+     logging_syslog_level_invalid |
+     logging_syslog_facility_invalid, any()}.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -175,7 +315,14 @@
 
 -spec load(Path :: string() | list(tuple())) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error,
+     file:posix() |
+     badarg |
+     terminated |
+     system_limit |
+     {configuration_invalid |
+      parse_error, any()} |
+     error_reason_new()}.
 
 load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
@@ -189,6 +336,12 @@ load([I | _] = Path) when is_integer(I) ->
             error_logger:error_msg("configuration file \"~s\" not accessible",
                                    [Path]),
             Error;
+        {error, {Line, Module, Term} = Reason}
+            when is_integer(Line), is_atom(Module) ->
+            error_logger:error_msg("configuration file \"~s\" parse error "
+                                   "at line ~w: ~w ~p",
+                                   [Path, Line, Module, Term]),
+            {error, {parse_error, Reason}};
         {error, Reason} = Error ->
             error_logger:error_msg("configuration file \"~s\" invalid: ~p",
                                    [Path, Reason]),
@@ -208,7 +361,7 @@ load(Data) ->
 -spec acl_add(Value :: list({atom(), cloudi_service_api:acl()}),
               Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_acl_add()}.
 
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
@@ -230,14 +383,14 @@ acl_add(Value, _) ->
 -spec acl_remove(Value :: list(atom()),
                  Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_acl_remove()}.
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
     NewACL = lists:foldl(fun(E, D) -> dict:erase(E, D) end, ACL, Value),
     {ok, Config#config{acl = NewACL}};
 acl_remove(Value, _) ->
-    {error, {acls_invalid, Value}}.
+    {error, {acl_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -251,7 +404,7 @@ acl_remove(Value, _) ->
                    Timeout :: cloudi_service_api:timeout_milliseconds() |
                               infinity) ->
     {ok, list(cloudi_service_api:service_id()), #config{}} |
-    {error, any()}.
+    {error, error_reason_services_add()}.
 
 services_add([T | _] = Value,
              #config{uuid_generator = UUID,
@@ -277,7 +430,7 @@ services_add([T | _] = Value,
             Error
     end;
 services_add(Value, _, _) ->
-    {error, {services_invalid, Value}}.
+    {error, {service_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -290,7 +443,7 @@ services_add(Value, _, _) ->
                       Timeout :: cloudi_service_api:timeout_milliseconds() |
                                  infinity) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_services_remove()}.
 
 services_remove([ID | _] = Value,
                 #config{services = Services} = Config, Timeout)
@@ -302,7 +455,7 @@ services_remove([ID | _] = Value,
             Error
     end;
 services_remove(Value, _, _) ->
-    {error, {services_invalid, Value}}.
+    {error, {service_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -315,7 +468,7 @@ services_remove(Value, _, _) ->
                        Timeout :: cloudi_service_api:timeout_milliseconds() |
                                   infinity) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_services_restart()}.
 
 services_restart([ID | _] = Value,
                  #config{services = Services} = Config, Timeout)
@@ -327,7 +480,7 @@ services_restart([ID | _] = Value,
             Error
     end;
 services_restart(Value, _, _) ->
-    {error, {services_invalid, Value}}.
+    {error, {service_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -446,7 +599,7 @@ service_format(#config_service_external{prefix = Prefix,
 -spec nodes_add(Value :: list(node()),
                 Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_nodes_add()}.
 
 nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
@@ -457,7 +610,7 @@ nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
             Error
     end;
 nodes_add(Value, _) ->
-    {error, {nodes_invalid, Value}}.
+    {error, {node_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -468,7 +621,7 @@ nodes_add(Value, _) ->
 -spec nodes_remove(Value :: list(node()),
                    Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_nodes_remove()}.
 
 nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
@@ -479,7 +632,7 @@ nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
             Error
     end;
 nodes_remove(Value, _) ->
-    {error, {nodes_invalid, Value}}.
+    {error, {node_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -490,7 +643,7 @@ nodes_remove(Value, _) ->
 -spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
                 Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_nodes_set()}.
 
 nodes_set([_ | _] = Value, #config{} = Config) ->
     case nodes_proplist(Value) of
@@ -507,7 +660,7 @@ nodes_set([_ | _] = Value, #config{} = Config) ->
 -spec new(Terms :: list({atom(), any()}),
           Config :: #config{}) ->
     {ok, #config{}} |
-    {error, any()}.
+    {error, error_reason_new()}.
 
 new([], #config{services = Services, acl = ACL} = Config) ->
     case services_acl_update(Services, ACL) of
@@ -915,7 +1068,61 @@ services_format_options_external(Options) ->
     {ok,
      list(#config_service_internal{} | #config_service_external{}),
      list(cloudi_service_api:service_id())} |
-    {error, any()}.
+    {error,
+     {service_internal_invalid |
+      service_internal_prefix_invalid |
+      service_internal_module_invalid |
+      service_internal_args_invalid |
+      service_internal_dest_refresh_invalid |
+      service_internal_timeout_init_invalid |
+      service_internal_timeout_async_invalid |
+      service_internal_timeout_sync_invalid |
+      service_internal_dest_list_deny_invalid |
+      service_internal_dest_list_allow_invalid |
+      service_internal_count_process_invalid |
+      service_internal_max_r_invalid |
+      service_internal_max_t_invalid |
+      service_internal_options_invalid |
+      service_external_invalid |
+      service_external_prefix_invalid |
+      service_external_file_path_invalid |
+      service_external_args_invalid |
+      service_external_env_invalid |
+      service_external_dest_refresh_invalid |
+      service_external_protocol_invalid |
+      service_external_buffer_size_invalid |
+      service_external_timeout_init_invalid |
+      service_external_timeout_async_invalid |
+      service_external_timeout_sync_invalid |
+      service_external_dest_list_deny_invalid |
+      service_external_dest_list_allow_invalid |
+      service_external_count_process_invalid |
+      service_external_count_thread_invalid |
+      service_external_max_r_invalid |
+      service_external_max_t_invalid |
+      service_external_options_invalid |
+      service_options_priority_default_invalid |
+      service_options_queue_limit_invalid |
+      service_options_dest_refresh_start_invalid |
+      service_options_dest_refresh_delay_invalid |
+      service_options_request_timeout_adjustment_invalid |
+      service_options_request_timeout_immediate_max_invalid |
+      service_options_response_timeout_adjustment_invalid |
+      service_options_response_timeout_immediate_max_invalid |
+      service_options_count_process_dynamic_invalid |
+      service_options_scope_invalid |
+      service_options_monkey_latency_invalid |
+      service_options_monkey_chaos_invalid |
+      service_options_application_name_invalid |
+      service_options_request_pid_uses_invalid |
+      service_options_request_pid_options_invalid |
+      service_options_info_pid_uses_invalid |
+      service_options_info_pid_options_invalid |
+      service_options_duo_mode_invalid |
+      service_options_hibernate_invalid |
+      service_options_reload_invalid |
+      service_options_automatic_loading_invalid |
+      service_options_invalid, any()}}.
 
 services_validate([_ | _] = Services, UUID) ->
     services_validate(Services, [], [], UUID).
@@ -1301,7 +1508,29 @@ services_validate([Service | _], _, _, _) ->
                                              service_options_internal(),
                                          CountProcess :: pos_integer()) ->
     {ok, #config_service_options{}} |
-    {error, any()}.
+    {error,
+     {service_options_priority_default_invalid |
+      service_options_queue_limit_invalid |
+      service_options_dest_refresh_start_invalid |
+      service_options_dest_refresh_delay_invalid |
+      service_options_request_timeout_adjustment_invalid |
+      service_options_request_timeout_immediate_max_invalid |
+      service_options_response_timeout_adjustment_invalid |
+      service_options_response_timeout_immediate_max_invalid |
+      service_options_count_process_dynamic_invalid |
+      service_options_scope_invalid |
+      service_options_monkey_latency_invalid |
+      service_options_monkey_chaos_invalid |
+      service_options_application_name_invalid |
+      service_options_request_pid_uses_invalid |
+      service_options_request_pid_options_invalid |
+      service_options_info_pid_uses_invalid |
+      service_options_info_pid_options_invalid |
+      service_options_duo_mode_invalid |
+      service_options_hibernate_invalid |
+      service_options_reload_invalid |
+      service_options_automatic_loading_invalid |
+      service_options_invalid, any()}}.
 
 services_validate_options_internal(OptionsList, CountProcess) ->
     Options = #config_service_options{},
@@ -1600,7 +1829,21 @@ services_validate_options_internal_checks(CountProcessDynamic,
                                              service_options_external(),
                                          CountProcess :: pos_integer()) ->
     {ok, #config_service_options{}} |
-    {error, any()}.
+    {error,
+     {service_options_priority_default_invalid |
+      service_options_queue_limit_invalid |
+      service_options_dest_refresh_start_invalid |
+      service_options_dest_refresh_delay_invalid |
+      service_options_request_timeout_adjustment_invalid |
+      service_options_request_timeout_immediate_max_invalid |
+      service_options_response_timeout_adjustment_invalid |
+      service_options_response_timeout_immediate_max_invalid |
+      service_options_hibernate_invalid |
+      service_options_count_process_dynamic_invalid |
+      service_options_scope_invalid |
+      service_options_monkey_latency_invalid |
+      service_options_monkey_chaos_invalid |
+      service_options_invalid, any()}}.
 
 services_validate_options_external(OptionsList, CountProcess) ->
     Options = #config_service_options{},
@@ -1681,7 +1924,6 @@ services_validate_options_external(OptionsList, CountProcess) ->
                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
-
         [_, _, _, _, _, _, _, _, CountProcessDynamic, _,
          _, _]
         when not ((CountProcessDynamic =:= false) orelse
@@ -2031,10 +2273,10 @@ nodes_discovery_ec2_validate(Groups, Tags) ->
                 ok ->
                     ok;
                 {error, Reason} ->
-                    {error, {nodes_discovery_ec2_invalid, Reason}}
+                    {error, {node_discovery_ec2_invalid, Reason}}
             end;
         {error, Reason} ->
-            {error, {nodes_discovery_ec2_invalid, Reason}}
+            {error, {node_discovery_ec2_invalid, Reason}}
     end.
 
 nodes_discovery_ec2_options(Value, NodesConfig) ->
@@ -2049,25 +2291,25 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
         [AccessKeyId, _, _, _, _ | _]
             when not (is_list(AccessKeyId) orelse
                       is_integer(hd(AccessKeyId))) ->
-            {error, {nodes_discovery_ec2_access_key_id_invalid,
+            {error, {node_discovery_ec2_access_key_id_invalid,
                      AccessKeyId}};
         [_, SecretAccessKey, _, _, _ | _]
             when not (is_list(SecretAccessKey) orelse
                       is_integer(hd(SecretAccessKey))) ->
-            {error, {nodes_discovery_ec2_secret_access_key_invalid,
+            {error, {node_discovery_ec2_secret_access_key_invalid,
                      SecretAccessKey}};
         [_, _, Host, _, _ | _]
             when not (is_list(Host) orelse
                       is_integer(hd(Host))) ->
-            {error, {nodes_discovery_ec2_host_invalid, Host}};
+            {error, {node_discovery_ec2_host_invalid, Host}};
         [_, _, _, [], []] ->
-            {error, {nodes_discovery_ec2_tags_selection_null, []}};
+            {error, {node_discovery_ec2_tags_selection_null, []}};
         [_, _, _, Groups, _ | _]
             when not is_list(Groups) ->
-            {error, {nodes_discovery_ec2_groups_invalid, Groups}};
+            {error, {node_discovery_ec2_groups_invalid, Groups}};
         [_, _, _, _, Tags | _]
             when not is_list(Tags) ->
-            {error, {nodes_discovery_ec2_tags_invalid, Tags}};
+            {error, {node_discovery_ec2_tags_invalid, Tags}};
         [AccessKeyId, SecretAccessKey, Host, Groups, Tags] ->
             case nodes_discovery_ec2_validate(Groups, Tags) of
                 ok ->
@@ -2085,7 +2327,7 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
                     Error
             end;
         [_, _, _, _, _ | Extra] ->
-            {error, {nodes_discovery_ec2_invalid, Extra}}
+            {error, {node_discovery_ec2_invalid, Extra}}
     end.
 
 nodes_discovery_multicast_options(Value, NodesConfig) ->
@@ -2097,15 +2339,15 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [Address, _, _ | _]
             when not is_tuple(Address) ->
-            {error, {nodes_discovery_multicast_address_invalid, Address}};
+            {error, {node_discovery_multicast_address_invalid, Address}};
         [_, Port, _ | _]
             when not (is_integer(Port) andalso
                       (Port > 0)) ->
-            {error, {nodes_discovery_multicast_port_invalid, Port}};
+            {error, {node_discovery_multicast_port_invalid, Port}};
         [_, _, TTL | _]
             when not (is_integer(TTL) andalso
                       (TTL >= 0)) ->
-            {error, {nodes_discovery_multicast_ttl_invalid, TTL}};
+            {error, {node_discovery_multicast_ttl_invalid, TTL}};
         [Address, Port, TTL] ->
             Discovery = #config_nodes_discovery{
                 module = cloudi_x_nodefinder,
@@ -2117,7 +2359,7 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
                 stop_a = []},
             {ok, NodesConfig#config_nodes{discovery = Discovery}};
         [_, _, _ | Extra] ->
-            {error, {nodes_discovery_multicast_invalid, Extra}}
+            {error, {node_discovery_multicast_invalid, Extra}}
     end.
 
 nodes_discovery_options(undefined, NodesConfig) ->
@@ -2129,18 +2371,18 @@ nodes_discovery_options(Value, NodesConfig) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [MulticastOptions, _ | _]
             when not is_list(MulticastOptions) ->
-            {error, {nodes_discovery_multicast_invalid, MulticastOptions}};
+            {error, {node_discovery_multicast_invalid, MulticastOptions}};
         [_, EC2Options | _]
             when not is_list(EC2Options) ->
-            {error, {nodes_discovery_ec2_invalid, EC2Options}};
+            {error, {node_discovery_ec2_invalid, EC2Options}};
         [[_ | _], [_ | _]] ->
-            {error, {nodes_discovery_ambiguous, Value}};
+            {error, {node_discovery_ambiguous, Value}};
         [MulticastOptions, []] ->
             nodes_discovery_multicast_options(MulticastOptions, NodesConfig);
         [[], EC2Options] ->
             nodes_discovery_ec2_options(EC2Options, NodesConfig);
         [_, _ | Extra] ->
-            {error, {nodes_discovery_invalid, Extra}}
+            {error, {node_discovery_invalid, Extra}}
     end.
 
 nodes_options(Nodes0, Value) ->
@@ -2157,37 +2399,37 @@ nodes_options(Nodes0, Value) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [Nodes1, _, _, _, _, _, _ | _]
             when not is_list(Nodes1) ->
-            {error, {nodes_nodes_invalid, Nodes1}};
+            {error, {node_invalid, Nodes1}};
         [_, ReconnectStart, _, _, _, _, _ | _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0)) ->
-            {error, {nodes_reconnect_start_invalid, ReconnectStart}};
+            {error, {node_reconnect_start_invalid, ReconnectStart}};
         [_, ReconnectStart, _, _, _, _, _ | _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
-            {error, {nodes_reconnect_start_min, ConnectTimeSeconds}};
+            {error, {node_reconnect_start_min, ConnectTimeSeconds}};
         [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0)) ->
-            {error, {nodes_reconnect_delay_invalid, ReconnectDelay}};
+            {error, {node_reconnect_delay_invalid, ReconnectDelay}};
         [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
-            {error, {nodes_reconnect_delay_min, ConnectTimeSeconds}};
+            {error, {node_reconnect_delay_min, ConnectTimeSeconds}};
         [_, _, _, Listen, _, _, _ | _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->
-            {error, {nodes_listen_invalid, Listen}};
+            {error, {node_listen_invalid, Listen}};
         [_, _, _, _, Connect, _, _ | _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
-            {error, {nodes_connect_invalid, Connect}};
+            {error, {node_connect_invalid, Connect}};
         [_, _, _, _, _, TimestampType, _ | _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os)) ->
-            {error, {nodes_timestamp_type_invalid, TimestampType}};
+            {error, {node_timestamp_type_invalid, TimestampType}};
         [_, _, _, _, _, _, Discovery | _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
-            {error, {nodes_discovery_invalid, Discovery}};
+            {error, {node_discovery_invalid, Discovery}};
         [Nodes1, ReconnectStart, ReconnectDelay,
          Listen, Connect, TimestampType, Discovery] ->
             case nodes_elements_add(lists:delete(node(), Nodes1),
@@ -2209,7 +2451,7 @@ nodes_options(Nodes0, Value) ->
                     Error
             end;
         [_, _, _, _, _, _, _ | Extra] ->
-            {error, {nodes_invalid, Extra}}
+            {error, {node_invalid, Extra}}
     end.
 
 nodes_proplist(Value) ->

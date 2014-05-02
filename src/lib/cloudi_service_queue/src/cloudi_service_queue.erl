@@ -213,12 +213,6 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
         {error, timeout} ->
             NewLogging = cloudi_write_ahead_logging:
                          store_fail(Chunk, NextLogging),
-            {reply, <<>>, State#state{logging = NewLogging}};
-        {error, Reason} ->
-            NewLogging = cloudi_write_ahead_logging:
-                         store_fail(Chunk, NextLogging),
-            ?LOG_ERROR("request to ~p failed: ~p",
-                       [QueueName, Reason]),
             {reply, <<>>, State#state{logging = NewLogging}}
     end;
 cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
@@ -260,12 +254,6 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                 {error, timeout} ->
                     NewLogging = cloudi_write_ahead_logging:
                                  store_fail(Chunk, NextLogging),
-                    {reply, <<>>, State#state{logging = NewLogging}};
-                {error, Reason} ->
-                    NewLogging = cloudi_write_ahead_logging:
-                                 store_fail(Chunk, NextLogging),
-                    ?LOG_ERROR("request to ~p failed: ~p",
-                               [QueueName, Reason]),
                     {reply, <<>>, State#state{logging = NewLogging}}
             end;
         error ->

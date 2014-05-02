@@ -82,6 +82,32 @@
 -include("cloudi_constants.hrl").
 -include("cloudi_logger.hrl").
 
+-type error_reason_service_start() ::
+    {service_internal_module_invalid |
+     service_internal_module_not_loaded |
+     service_internal_module_not_found |
+     service_internal_module_compile |
+     service_internal_application_invalid |
+     service_internal_release_not_found |
+     service_internal_release_invalid |
+     service_internal_file_extension_invalid |
+     service_internal_file_path_invalid |
+     service_internal_start_failed |
+     service_external_start_failed |
+     service_options_application_name_not_found, any()}.
+-type error_reason_service_stop() ::
+    {service_internal_module_not_found |
+     service_internal_application_not_found |
+     service_internal_release_not_found |
+     service_internal_stop_failed |
+     service_external_stop_failed, any()}.
+-type error_reason_service_restart() ::
+    {service_internal_restart_failed |
+     service_external_restart_failed, any()}.
+-export_type([error_reason_service_start/0,
+              error_reason_service_stop/0,
+              error_reason_service_restart/0]).
+
 -record(state,
     {
         configuration
@@ -164,6 +190,13 @@ nodes_set(L, Timeout) ->
                                timeout_decr(Timeout)}, Timeout)
     end)).
 
+-spec service_start(#config_service_internal{} |
+                    #config_service_external{},
+                    Timeout :: pos_integer() | infinity) ->
+    {ok, #config_service_internal{} |
+         #config_service_external{}} |
+    {error, error_reason_service_start()}.
+
 service_start(#config_service_internal{
                   count_process = CountProcess,
                   options = #config_service_options{
@@ -193,12 +226,25 @@ service_start(#config_service_external{count_process = CountProcess,
     service_start_external(NewCountProcess, Service, NewCountThread,
                            NewCountProcess, timeout_decr(Timeout)).
 
+-spec service_stop(#config_service_internal{} |
+                   #config_service_external{},
+                   Remove :: boolean(),
+                   Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, error_reason_service_stop()}.
+
 service_stop(#config_service_internal{} = Service, Remove, Timeout)
     when is_boolean(Remove) ->
     service_stop_internal(Service, Remove, timeout_decr(Timeout));
 
 service_stop(#config_service_external{} = Service, false, Timeout) ->
     service_stop_external(Service, timeout_decr(Timeout)).
+
+-spec service_restart(#config_service_internal{} |
+                      #config_service_external{},
+                      Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, error_reason_service_restart()}.
 
 service_restart(#config_service_internal{} = Service, Timeout) ->
     service_restart_internal(Service, timeout_decr(Timeout));
@@ -430,12 +476,12 @@ service_start_find_internal(#config_service_internal{
         is_atom(Module) ->
             case code:is_loaded(Module) of
                 false ->
-                    {error, {not_loaded, Module}};
+                    {error, {service_internal_module_not_loaded, Module}};
                 _ ->
                     {ok, Service}
             end;
         true ->
-            {error, {invalid_loaded_module, Module}}
+            {error, {service_internal_module_invalid, Module}}
     end;
 service_start_find_internal(#config_service_internal{
                                 module = FilePath} = Service, Timeout)
@@ -451,9 +497,11 @@ service_start_find_internal(#config_service_internal{
                         {ok, Module} ->
                             service_start_find_internal_module(Module, Service);
                         error ->
-                            {error, compile};
+                            {error, {service_internal_module_compile, error}};
                         {error, Errors, Warnings} ->
-                            {error, {compile, Errors, Warnings}}
+                            {error,
+                             {service_internal_module_compile,
+                              {Errors, Warnings}}}
                     end;
                 {error, _} = Error ->
                     Error
@@ -483,7 +531,8 @@ service_start_find_internal(#config_service_internal{
                 "." ->
                     case code:where_is_file(FilePath) of
                         non_existing ->
-                            {error, {non_existing, FilePath}};
+                            {error,
+                             {service_internal_release_not_found, FilePath}};
                         FullFilePath ->
                             service_start_find_internal_script(FullFilePath,
                                                                Service)
@@ -492,7 +541,7 @@ service_start_find_internal(#config_service_internal{
                     service_start_find_internal_script(FilePath, Service)
             end;
         Extension ->
-            {error, {internal_service_module_extension_invalid, Extension}}
+            {error, {service_internal_file_extension_invalid, Extension}}
     end;
 service_start_find_internal(#config_service_internal{
                                 module = Module,
@@ -516,7 +565,7 @@ service_start_find_internal(#config_service_internal{
             service_start_find_internal_application(Application,
                                                     Module, Service, Timeout);
         {error, _} when ApplicationNameForced =/= undefined ->
-            {error, {service_options_application_name_notfound,
+            {error, {service_options_application_name_not_found,
                      ApplicationNameForced}};
         {error, _} ->
             % if no application file can be loaded, load it as a simple module
@@ -532,7 +581,8 @@ service_start_find_internal_add_pathz(Path) ->
         CodePath == "." ->
             case code:where_is_file(Path) of
                 non_existing ->
-                    {error, {non_existing, Path}};
+                    {error,
+                     {service_internal_file_path_invalid, Path}};
                 FullPath ->
                     {ok, FullPath}
             end;
@@ -541,7 +591,9 @@ service_start_find_internal_add_pathz(Path) ->
                 true ->
                     {ok, Path};
                 {error, Reason} ->
-                    {error, {Reason, CodePath}}
+                    {error,
+                     {service_internal_file_path_invalid,
+                      {Reason, CodePath}}}
             end
     end.
 
@@ -553,7 +605,9 @@ service_start_find_internal_module(Module, Service)
                 {module, Module} ->
                     {ok, Service#config_service_internal{module = Module}};
                 {error, Reason} ->
-                    {error, {Reason, Module}}
+                    {error,
+                     {service_internal_module_not_found,
+                      {Reason, Module}}}
             end;
         _ ->
             {ok, Service#config_service_internal{module = Module}}
@@ -564,8 +618,8 @@ service_start_find_internal_application(Application, Module, Service, Timeout)
     case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
             {ok, Service#config_service_internal{module = Module}};
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_application_invalid, Reason}}
     end.
 
 service_start_find_internal_script(ScriptPath, Service)
@@ -573,8 +627,8 @@ service_start_find_internal_script(ScriptPath, Service)
     case cloudi_x_reltool_util:script_start(ScriptPath) of
         {ok, [Application | _]} ->
             {ok, Service#config_service_internal{module = Application}};
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_release_invalid, Reason}}
     end.
 
 service_stop_remove_internal(#config_service_internal{
@@ -592,31 +646,31 @@ service_stop_remove_internal(#config_service_internal{
             case cloudi_x_reltool_util:module_purged(Module, Timeout) of
                 ok ->
                     {ok, module};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_module_not_found, Reason}}
             end;
         ".beam" ->
             case cloudi_x_reltool_util:module_purged(Module, Timeout) of
                 ok ->
                     {ok, module};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_module_not_found, Reason}}
             end;
         ".app" ->
             case cloudi_x_reltool_util:application_remove(Module, Timeout,
                                                           [cloudi_core]) of
                 ok ->
                     {ok, application};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_application_not_found, Reason}}
             end;
         ".script" ->
             case cloudi_x_reltool_util:script_remove(FilePath, Timeout,
                                                      [cloudi_core]) of
                 ok ->
                     {ok, release};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_release_not_found, Reason}}
             end
     end;
 service_stop_remove_internal(#config_service_internal{
@@ -631,18 +685,18 @@ service_stop_remove_internal(#config_service_internal{
                                                           [cloudi_core]) of
                 ok ->
                     {ok, application};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_application_not_found, Reason}}
             end;
         {error, {not_found, Module}} ->
             case cloudi_x_reltool_util:module_purged(Module, Timeout) of
                 ok ->
                     {ok, module};
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, {service_internal_module_not_found, Reason}}
             end;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_application_not_found, Reason}}
     end;
 service_stop_remove_internal(#config_service_internal{
                                  module = Module,
@@ -654,8 +708,8 @@ service_stop_remove_internal(#config_service_internal{
                                                   [cloudi_core]) of
         ok ->
             {ok, application};
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_application_not_found, Reason}}
     end.
 
 service_start_internal(0, Service, _, _) ->
@@ -690,8 +744,8 @@ service_start_internal(Count0,
                                     ServiceConfig}, P]),
             service_start_internal(Count1, Service,
                                    CountProcess, Timeout);
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_start_failed, Reason}}
     end.
 
 service_start_external(0, Service, _, _, _) ->
@@ -731,8 +785,8 @@ service_start_external(Count0,
                                     ServiceConfig}, P]),
             service_start_external(Count1, Service,
                                    CountThread, CountProcess, Timeout);
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_external_start_failed, Reason}}
     end.
 
 service_stop_internal(#config_service_internal{
@@ -772,8 +826,8 @@ service_stop_internal(#config_service_internal{
                               [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
                     ok
             end;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_stop_failed, Reason}}
     end.
 
 service_stop_external(#config_service_external{
@@ -783,8 +837,8 @@ service_stop_external(#config_service_external{
             ?LOG_INFO("Service pids ~p stopped~n ~p",
                       [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
             ok;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_external_stop_failed, Reason}}
     end.
 
 service_restart_internal(#config_service_internal{
@@ -792,8 +846,8 @@ service_restart_internal(#config_service_internal{
     case cloudi_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_internal_restart_failed, Reason}}
     end.
 
 service_restart_external(#config_service_external{
@@ -801,8 +855,8 @@ service_restart_external(#config_service_external{
     case cloudi_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, {service_external_restart_failed, Reason}}
     end.
 
 check_multi_call({Replies, _BadNodes}) ->
@@ -818,6 +872,7 @@ check_multi_call_replies([{_, Result} | _]) ->
 
 timeout_decr(infinity) ->
     infinity;
-timeout_decr(Timeout) when is_integer(Timeout) ->
+timeout_decr(Timeout)
+    when is_integer(Timeout), Timeout >= ?TIMEOUT_DELTA ->
     Timeout - ?TIMEOUT_DELTA.
 
