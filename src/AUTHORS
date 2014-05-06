@@ -14,7 +14,7 @@ ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
 elli             Knut Nesheim <knutin@gmail.com>
 ememcached       Nick Gerakines <nick@gerakines.net>
 emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
-epgsql           Will Glozer
+epgsql_wg        Will Glozer
 erlang_cassandra Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlasticsearch   Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlcloud         Brian Buchanan <bwb@holo.org>
@@ -26,6 +26,7 @@ jinterface       Ericsson's OTP Team
 jsonlib          Josh Marshall
 jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
 nodefinder       Paul Mineiro <paul@n54.com>
+pgsql            Paul Guyot
 poolboy          Devin Torres (devinus) devin@devintorres.com,
                  Andrew Thompson (Vagabond) andrew@hijacked.us,
                  Kurt Williams (onkel-dirtus) kurt.r.williams@gmail.com

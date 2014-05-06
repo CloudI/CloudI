@@ -15,7 +15,9 @@
          end_per_testcase/2]).
 
 %% test cases
--export([t_create_table_1/1]).
+-export([t_table_create_1/1,
+         t_table_create_2/1,
+         t_table_query_1/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -23,18 +25,23 @@
 -define(DEFAULT_PGSQL_HOST, "127.0.0.1").
 -define(DEFAULT_PGSQL_PORT, 5432).
 
--define(DB, "/db/pgsql/cloudi_tests"). % service name
+-define(DB_WG, "/db/pgsql/wg/cloudi_tests"). % service name
+-define(DB_SEMIOCAST, "/db/pgsql/semiocast/cloudi_tests"). % service name
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
 %%%------------------------------------------------------------------------
 
 all() ->
-    test_condition([{group, create_table_1}]).
+    test_condition([{group, table_create},
+                    {group, table_query}]).
 
 groups() ->
-    [{create_table_1, [],
-      [t_create_table_1]}].
+    [{table_create, [],
+      [t_table_create_1,
+       t_table_create_2]},
+     {table_query, [],
+      [t_table_query_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -73,17 +80,144 @@ end_per_testcase(_TestCase, Config) ->
 %%% test cases
 %%%------------------------------------------------------------------------
 
-t_create_table_1(_Config) ->
+t_table_create_1(_Config) ->
     Context = cloudi:new(),
-    {ok, _Response} = cloudi:send_sync(Context, ?DB,
-        % from hexpi test
+    % (last SQL command result is returned with the common interface,
+    %  not the whole list)
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG,
         <<"DROP TABLE IF EXISTS incoming_results; "
           "CREATE TABLE incoming_results ("
           "digit_index   NUMERIC(30) PRIMARY KEY,"
           "data          TEXT"
           ");">>),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST,
+        <<"DROP TABLE IF EXISTS incoming_results; "
+          "CREATE TABLE incoming_results ("
+          "digit_index   NUMERIC(30) PRIMARY KEY,"
+          "data          TEXT"
+          ");">>),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG,
+        "DROP TABLE IF EXISTS incoming_results; "
+        "CREATE TABLE incoming_results ("
+        "digit_index   NUMERIC(30) PRIMARY KEY,"
+        "data          TEXT"
+        ");"),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST,
+        "DROP TABLE IF EXISTS incoming_results; "
+        "CREATE TABLE incoming_results ("
+        "digit_index   NUMERIC(30) PRIMARY KEY,"
+        "data          TEXT"
+        ");"),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_WG,
+        [<<"DROP TABLE IF EXISTS incoming_results">>,
+         <<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ")">>]),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_SEMIOCAST,
+        [<<"DROP TABLE IF EXISTS incoming_results">>,
+         <<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ")">>]),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_WG,
+        [<<"INSERT INTO incoming_results (digit_index, data) "
+           "values (1, 'one')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (2, 'two')">>]),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_SEMIOCAST,
+        [<<"INSERT INTO incoming_results (digit_index, data) "
+           "values (3, 'three')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (4, 'four')">>]),
+    {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, "SELECT * FROM incoming_results"),
+    % wg driver returns row data as binaries
+    [{<<"1">>,<<"one">>},
+     {<<"2">>,<<"two">>},
+     {<<"3">>,<<"three">>},
+     {<<"4">>,<<"four">>}] = RowsWG,
+    {ok, {selected, RowsSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"SELECT * FROM incoming_results">>),
+    % semiocast driver returns row data as erlang types
+    [{1,<<"one">>},
+     {2,<<"two">>},
+     {3,<<"three">>},
+     {4,<<"four">>}] = RowsSEMIOCAST,
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, "DROP TABLE incoming_results"),
     ok.
-    
+
+t_table_create_2(_Config) ->
+    Context = cloudi:new(),
+    % XXX DB_SEMIOCAST can't handle this yet, it crashes the driver
+    {ok, {error, MessageWG}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_WG,
+        [<<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ")">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (1, 'one')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (invalid, 'two')">>]),
+    true = is_binary(MessageWG),
+    % XXX same problem is here
+    %{ok, {error, MessageWG}} = cloudi_service_db_pgsql:squery(Context,
+    %    ?DB_SEMIOCAST,
+    %    <<"BEGIN;"
+    %      "CREATE TABLE incoming_results ("
+    %      "digit_index   NUMERIC(30) PRIMARY KEY,"
+    %      "data          TEXT"
+    %      ");"
+    %      "INSERT INTO incoming_results (digit_index, data) "
+    %      "values (1, 'one');"
+    %      "INSERT INTO incoming_results (digit_index, data) "
+    %      "values (invalid, 'two');"
+    %      "COMMIT;">>),
+    {ok, {error, MessageSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
+    true = is_binary(MessageSEMIOCAST),
+    {ok, {error, MessageSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, <<"DROP TABLE incoming_results">>),
+    ok.
+
+t_table_query_1(_Config) ->
+    Context = cloudi:new(),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:transaction(Context,
+        ?DB_WG,
+        [<<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ")">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (1, 'one')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (2, 'two')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (3, 'three')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (4, 'four')">>]),
+    {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_WG, <<"SELECT * FROM incoming_results "
+                  "WHERE digit_index = $1">>, [2]),
+    [{<<"2">>,<<"two">>}] = RowsWG,
+    {ok, {selected, RowsSEMIOCAST}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_SEMIOCAST, <<"SELECT * FROM incoming_results "
+                         "WHERE digit_index = $1">>, [2]),
+    [{2,<<"two">>}] = RowsSEMIOCAST,
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
+    ok.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------

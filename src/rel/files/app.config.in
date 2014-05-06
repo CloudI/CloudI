@@ -17,8 +17,5 @@
     {monkey_latency, false},
     {monkey_chaos, false},
     {configuration, "@cloudi_confdir@/cloudi.conf"}
-  ]},
- {cloudi_x_cpg, [
-    {group_storage, cloudi_x_trie}
   ]}].
 

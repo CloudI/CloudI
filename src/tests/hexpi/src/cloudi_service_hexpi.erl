@@ -224,35 +224,40 @@ cloudi_service_map_reduce_info(Request, _, _) ->
 setup(State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
     PidPgsql = case cloudi_service:get_pid(Dispatcher,
-                                           ?NAME_PGSQL, 200) of
+                                           ?NAME_PGSQL,
+                                           immediate) of
         {ok, Pid1} ->
             Pid1;
         {error, _} ->
             undefined
     end,
     PidMysql = case cloudi_service:get_pid(Dispatcher,
-                                           ?NAME_MYSQL, 200) of
+                                           ?NAME_MYSQL,
+                                           immediate) of
         {ok, Pid2} ->
             Pid2;
         {error, _} ->
             undefined
     end,
     PidMemcached = case cloudi_service:get_pid(Dispatcher,
-                                               ?NAME_MEMCACHED, 200) of
+                                               ?NAME_MEMCACHED,
+                                               immediate) of
         {ok, Pid3} ->
             Pid3;
         {error, _} ->
             undefined
     end,
     PidTokyotyrant = case cloudi_service:get_pid(Dispatcher,
-                                                 ?NAME_TOKYOTYRANT, 200) of
+                                                 ?NAME_TOKYOTYRANT,
+                                                 immediate) of
         {ok, Pid4} ->
             Pid4;
         {error, _} ->
             undefined
     end,
     PidCouchdb = case cloudi_service:get_pid(Dispatcher,
-                                             ?NAME_COUCHDB, 200) of
+                                             ?NAME_COUCHDB,
+                                             immediate) of
         {ok, Pid5} ->
             Pid5;
         {error, _} ->
@@ -280,11 +285,11 @@ setup(State, Dispatcher) ->
             ok
     end,
     State#state{timeout_async = TimeoutAsync,
-                use_pgsql = is_pid(PidPgsql),
-                use_mysql = is_pid(PidMysql),
-                use_memcached = is_pid(PidMemcached),
-                use_tokyotyrant = is_pid(PidTokyotyrant),
-                use_couchdb = is_pid(PidCouchdb)}.
+                use_pgsql = is_tuple(PidPgsql),
+                use_mysql = is_tuple(PidMysql),
+                use_memcached = is_tuple(PidMemcached),
+                use_tokyotyrant = is_tuple(PidTokyotyrant),
+                use_couchdb = is_tuple(PidCouchdb)}.
 
 send_results(DigitIndexStr, PiResult, Pid,
              #state{use_pgsql = UsePgsql,

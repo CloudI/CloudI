@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Cleanup cloudi_service_db_pgsql
+        * Move the old epgsql wg driver modules/application/header
+          so that its prefix is epgsql_wg
+        * Add the semiocast pgsql driver
+        * Add a common internal output format for both drivers
+          (default to off, see internal_interface configuration,
+           based on the semiocast attempt at supporting odbc)
+        * Add more tests which use both drivers with the common internal
+          output format
+
 2014-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve the error return types for the modules:

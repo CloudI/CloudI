@@ -1,6 +1,6 @@
 %%% Copyright (C) 2008 - Will Glozer.  All rights reserved.
 
--module(pgsql).
+-module(epgsql_wg).
 
 -export([connect/2, connect/3, connect/4, close/1]).
 -export([get_parameter/2, squery/2, equery/2, equery/3]).
@@ -9,7 +9,7 @@
 -export([close/2, close/3, sync/1]).
 -export([with_transaction/2]).
 
--include("pgsql.hrl").
+-include("epgsql_wg.hrl").
 
 %% -- client interface --
 
@@ -20,18 +20,18 @@ connect(Host, Username, Opts) ->
     connect(Host, Username, "", Opts).
 
 connect(Host, Username, Password, Opts) ->
-    {ok, C} = pgsql_connection:start_link(),
-    pgsql_connection:connect(C, Host, Username, Password, Opts).
+    {ok, C} = epgsql_wg_connection:start_link(),
+    epgsql_wg_connection:connect(C, Host, Username, Password, Opts).
 
 close(C) when is_pid(C) ->
-    catch pgsql_connection:stop(C),
+    catch epgsql_wg_connection:stop(C),
     ok.
 
 get_parameter(C, Name) ->
-    pgsql_connection:get_parameter(C, Name).
+    epgsql_wg_connection:get_parameter(C, Name).
 
 squery(C, Sql) ->
-    ok = pgsql_connection:squery(C, Sql),
+    ok = epgsql_wg_connection:squery(C, Sql),
     case receive_results(C, []) of
         [Result] -> Result;
         Results  -> Results
@@ -41,10 +41,10 @@ equery(C, Sql) ->
     equery(C, Sql, []).
 
 equery(C, Sql, Parameters) ->
-    case pgsql_connection:parse(C, "", Sql, []) of
-        {ok, #statement{types = Types} = S} ->
+    case epgsql_wg_connection:parse(C, "", Sql, []) of
+        {ok, #epgsql_wg_statement{types = Types} = S} ->
             Typed_Parameters = lists:zip(Types, Parameters),
-            ok = pgsql_connection:equery(C, S, Typed_Parameters),
+            ok = epgsql_wg_connection:equery(C, S, Typed_Parameters),
             receive_result(C, undefined);
         Error ->
             Error
@@ -59,7 +59,7 @@ parse(C, Sql, Types) ->
     parse(C, "", Sql, Types).
 
 parse(C, Name, Sql, Types) ->
-    pgsql_connection:parse(C, Name, Sql, Types).
+    epgsql_wg_connection:parse(C, Name, Sql, Types).
 
 %% bind
 
@@ -67,7 +67,7 @@ bind(C, Statement, Parameters) ->
     bind(C, Statement, "", Parameters).
 
 bind(C, Statement, PortalName, Parameters) ->
-    pgsql_connection:bind(C, Statement, PortalName, Parameters).
+    epgsql_wg_connection:bind(C, Statement, PortalName, Parameters).
 
 %% execute
 
@@ -78,25 +78,25 @@ execute(C, S, N) ->
     execute(C, S, "", N).
 
 execute(C, S, PortalName, N) ->
-    pgsql_connection:execute(C, S, PortalName, N),
+    epgsql_wg_connection:execute(C, S, PortalName, N),
     receive_extended_result(C).
 
 %% statement/portal functions
 
-describe(C, #statement{name = Name}) ->
-    pgsql_connection:describe(C, statement, Name).
+describe(C, #epgsql_wg_statement{name = Name}) ->
+    epgsql_wg_connection:describe(C, statement, Name).
 
 describe(C, Type, Name) ->
-    pgsql_connection:describe(C, Type, Name).
+    epgsql_wg_connection:describe(C, Type, Name).
 
-close(C, #statement{name = Name}) ->
-    pgsql_connection:close(C, statement, Name).
+close(C, #epgsql_wg_statement{name = Name}) ->
+    epgsql_wg_connection:close(C, statement, Name).
 
 close(C, Type, Name) ->
-    pgsql_connection:close(C, Type, Name).
+    epgsql_wg_connection:close(C, Type, Name).
 
 sync(C) ->
-    pgsql_connection:sync(C).
+    epgsql_wg_connection:sync(C).
 
 %% misc helper functions
 with_transaction(C, F) ->

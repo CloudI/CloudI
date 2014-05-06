@@ -1,0 +1,17 @@
+{application, pgsql,
+    [
+        {description,   "pgsql driver"},
+        {id,            "pgsql"},
+        {vsn,           "21"},
+        {modules,       [
+            pgsql_app,
+            pgsql_connection,
+            pgsql_connection_sup,
+            pgsql_error,
+            pgsql_protocol,
+            pgsql_sup
+            ]},
+        {registered,    [pgsql_sup, pgsql_connection_sup]},
+        {applications,  [kernel, stdlib, crypto]},
+        {mod,           {pgsql_app, []}}
+    ]}.

@@ -1,6 +1,6 @@
 %%% Copyright (C) 2009 - Will Glozer.  All rights reserved.
 
--module(pgsql_sock).
+-module(epgsql_wg_sock).
 
 -behavior(gen_server).
 
@@ -10,7 +10,7 @@
 -export([handle_call/3, handle_cast/2, handle_info/2]).
 -export([init/1, code_change/3, terminate/2]).
 
--include("pgsql.hrl").
+-include("epgsql_wg.hrl").
 
 -record(state, {c, mod, sock, tail}).
 
@@ -197,7 +197,7 @@ decode_fields(<<Type:8, Rest/binary>>, Acc) ->
 %% decode ErrorResponse
 decode_error(Bin) ->
     Fields = decode_fields(Bin),
-    Error = #error{
+    Error = #epgsql_wg_error{
       severity = lower_atom(proplists:get_value($S, Fields)),
       code     = proplists:get_value($C, Fields),
       message  = proplists:get_value($M, Fields),

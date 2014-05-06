@@ -1,0 +1,1288 @@
+%% @doc PostgreSQL connection (high level functions).
+-module(pgsql_connection).
+-vsn("9").
+-behaviour(gen_server).
+-include("pgsql_internal.hrl").
+
+-export([
+    % API
+    open/1,
+    open/2,
+    open/3,
+    open/4,
+    open/5,
+
+    close/1,
+
+    % Native API
+    simple_query/2,
+    simple_query/3,
+    simple_query/4,
+
+    extended_query/3,
+    extended_query/4,
+    extended_query/5,
+
+    batch_query/3,
+    batch_query/4,
+    batch_query/5,
+
+    fold/4,
+    fold/5,
+    fold/6,
+    fold/7,
+
+    map/3,
+    map/4,
+    map/5,
+    map/6,
+
+    foreach/3,
+    foreach/4,
+    foreach/5,
+    foreach/6,
+    
+    % Cancel current query
+    cancel/1,
+
+    % Subscribe to notifications.
+    subscribe/2,
+    unsubscribe/2,
+
+    % Compatibility (deprecated) API
+    sql_query/2,
+    sql_query/3,
+    sql_query/4,
+
+    param_query/3,
+    param_query/4,
+    param_query/5,
+    
+    convert_statement/1,
+
+    % supervisor API
+    start_link/1,
+
+    % gen_server API
+    init/1,
+    handle_call/3,
+    handle_cast/2,
+    code_change/3,
+    handle_info/2,
+    terminate/2
+    ]).
+
+-export_type([
+    row/0,
+    rows/0,
+    result_tuple/0,
+    pgsql_connection/0]).
+
+%%--------------------------------------------------------------------
+%% Default settings
+%%--------------------------------------------------------------------
+
+-define(REQUEST_TIMEOUT, infinity). 
+-define(DEFAULT_HOST, "127.0.0.1").
+-define(DEFAULT_PORT, 5432).
+-define(DEFAULT_USER, "storage").
+-define(DEFAULT_PASSWORD, "").
+-define(DEFAULT_MAX_ROWS_STEP, 1000).
+
+-define(TIMEOUT_GEN_SERVER_CALL_DELTA, 5000).
+
+%% ========================================================================= %%
+%% Types
+%% ========================================================================= %%
+
+-type pgsql_connection() :: {pgsql_connection, pid()}.
+
+-type n_rows() :: integer().
+-type row() :: tuple().
+-type rows() :: [row()].
+-type odbc_result_tuple() :: {updated, n_rows()} | {updated, n_rows(), rows()} | {selected, rows()}.
+
+-type result_tuple() ::
+    {'begin' | commit | 'do' | listen | notify | rollback | set | {declare, cursor} | {lock, table}, []}
+    | {{insert, integer(), integer()}, rows()}
+    | {{copy | delete | fetch | move | select | update, integer()}, rows()}
+    | {{alter | create | drop, atom()} | {start, transaction}, []}.
+
+% A gen_tcp or SSL socket.
+-type prim_socket() :: port() | tuple().
+-type socket_module() :: gen_tcp | ssl.
+-type socket() :: {socket_module(), prim_socket()}.
+
+% driver options.
+-type open_option() ::
+        {host, inet:ip_address() | inet:hostname()} % default: ?DEFAULT_HOST
+    |   {port, integer()}                       % default: ?DEFAULT_PORT
+    |   {database, iodata()}                    % default: user
+    |   {user, iodata()}                        % default: ?DEFAULT_USER
+    |   {password, iodata()}                    % default: none
+    |   {fetch_oid_map, boolean()}              % default: true
+    |   {ssl, boolean()}                        % default: false
+    |   {reconnect, boolean()}                  % default: true
+    |   {application_name, atom() | iodata()}   % default: node()
+    |   {timezone, iodata() | undefined}        % default: undefined (not set)
+    |   {async, pid()}                          % subscribe to notifications (default: no)
+    |   proplists:property().                   % undocumented !
+-type open_options() :: [open_option()].
+-type query_option() ::
+        {max_rows_step, non_neg_integer()}      % default: ?DEFAULT_MAX_ROWS_STEP
+    |   {retry, boolean()}                      % default: false
+    |   proplists:property().                   % undocumented.
+-type query_options() :: [query_option()].
+
+% gen_server:call From tag.
+-type from() :: {pid(), term()}.
+
+-record(state, {
+      options           :: open_options(),
+      socket            :: socket() | closed,   %% gen_tcp or ssl socket
+      subscribers       :: [{pid(), reference()}],
+      backend_procid    :: integer(),
+      backend_secret    :: integer(),
+      integer_datetimes :: boolean(),
+      oidmap            :: gb_trees:tree(pos_integer(), atom()),
+      current           :: {tuple(), reference(), from()} | undefined | {tuple(), from()},
+      pending           :: [{tuple(), reference(), from()}] | [{tuple(), from()}],
+      statement_timeout :: non_neg_integer()
+     }).
+
+-define(MESSAGE_HEADER_SIZE, 5).
+
+%%--------------------------------------------------------------------
+%% @doc Open a connection to a database, throws an error if it failed.
+%% 
+-spec open(iodata() | open_options()) -> pgsql_connection().
+open([Option | _OptionsT] = Options) when is_tuple(Option) orelse is_atom(Option) ->
+    open0(Options);
+open(Database) ->
+    open(Database, ?DEFAULT_USER).
+
+%%--------------------------------------------------------------------
+%% @doc Open a connection to a database, throws an error if it failed.
+%% 
+-spec open(iodata(), iodata()) -> pgsql_connection().
+open(Database, User) ->
+    open(Database, User, ?DEFAULT_PASSWORD).
+
+%%--------------------------------------------------------------------
+%% @doc Open a connection to a database, throws an error if it failed.
+%% 
+-spec open(iodata(), iodata(), iodata()) -> pgsql_connection().
+open(Database, User, Password) ->
+    open(?DEFAULT_HOST, Database, User, Password).
+
+%%--------------------------------------------------------------------
+%% @doc Open a connection to a database, throws an error if it failed.
+%% 
+-spec open(string(), string(), string(), string()) -> pgsql_connection().
+open(Host, Database, User, Password) ->
+    open(Host, Database, User, Password, []).
+
+%%--------------------------------------------------------------------
+%% @doc Open a connection to a database, throws an error if it failed.
+%% 
+-spec open(string(), string(), string(), string(), open_options()) -> pgsql_connection().
+open(Host, Database, User, Password, Options0) ->
+    Options = [{host, Host}, {database, Database}, {user, User}, {password, Password} | Options0],
+    open0(Options).
+
+open0(Options) ->
+    case pgsql_connection_sup:start_child(Options) of
+        {ok, Pid} ->
+            {pgsql_connection, Pid};
+        {error, Error} -> throw(Error)
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Close a connection.
+%% 
+-spec close(pgsql_connection()) -> ok.
+close({pgsql_connection, Pid}) ->
+    MonitorRef = erlang:monitor(process, Pid),
+    exit(Pid, shutdown),
+    receive {'DOWN', MonitorRef, process, Pid, _Info} -> ok end.
+
+%%--------------------------------------------------------------------
+%% @doc Perform a query.
+%% This function creates a statement and runs step as many times as
+%% required. The result is:
+%% <ul>
+%% <li>``{selected, Rows}'' if the query was a SELECT query.</li>
+%% <li>``{updated, NbRows}'' if the query was not a SELECT query.</li>
+%% </ul>
+%% (the return types are compatible with ODBC's sql_query function).
+%% 
+-spec sql_query(iodata(), pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+sql_query(Query, Connection) ->
+    sql_query(Query, [], Connection).
+
+-spec sql_query(iodata(), query_options(), pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+sql_query(Query, QueryOptions, Connection) ->
+    sql_query(Query, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec sql_query(iodata(), query_options(), timeout(), pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+sql_query(Query, QueryOptions, Timeout, Connection) ->
+    Result = simple_query(Query, QueryOptions, Timeout, Connection),
+    native_to_odbc(Result).
+
+%%--------------------------------------------------------------------
+%% @doc Perform a query with parameters.
+%%
+-spec param_query(iodata(), [any()], pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+param_query(Query, Parameters, Connection) ->
+    param_query(Query, Parameters, [], Connection).
+
+-spec param_query(iodata(), [any()], query_options(), pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+param_query(Query, Parameters, QueryOptions, Connection) ->
+    param_query(Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec param_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> odbc_result_tuple() | {error, any()}.
+param_query(Query, Parameters, QueryOptions, Timeout, Connection) ->
+    ConvertedQuery = convert_statement(Query),
+    Result = extended_query(ConvertedQuery, Parameters, QueryOptions, Timeout, Connection),
+    native_to_odbc(Result).
+
+%%--------------------------------------------------------------------
+%% @doc Perform a simple query.
+%% 
+-spec simple_query(iodata(), pgsql_connection()) -> result_tuple() | {error, any()}.
+simple_query(Query, Connection) ->
+    simple_query(Query, [], Connection).
+
+-spec simple_query(iodata(), query_options(), pgsql_connection()) -> result_tuple() | {error, any()}.
+simple_query(Query, QueryOptions, Connection) ->
+    simple_query(Query, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec simple_query(iodata(), query_options(), timeout(), pgsql_connection()) -> result_tuple() | {error, any()}.
+simple_query(Query, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {simple_query, Query, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Perform a query with parameters.
+%%
+-spec extended_query(iodata(), [any()], pgsql_connection()) -> result_tuple() | {error, any()}.
+extended_query(Query, Parameters, Connection) ->
+    extended_query(Query, Parameters, [], Connection).
+
+-spec extended_query(iodata(), [any()], query_options(), pgsql_connection()) -> result_tuple() | {error, any()}.
+extended_query(Query, Parameters, QueryOptions, Connection) ->
+    extended_query(Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec extended_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> result_tuple() | {error, any()}.
+extended_query(Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {extended_query, Query, Parameters, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Perform a query several times with parameters.
+%%
+-spec batch_query(iodata(), [any()], pgsql_connection()) -> [result_tuple()] | {error, any()}.
+batch_query(Query, Parameters, Connection) ->
+    batch_query(Query, Parameters, [], Connection).
+
+-spec batch_query(iodata(), [any()], query_options(), pgsql_connection()) -> [result_tuple()] | {error, any()}.
+batch_query(Query, Parameters, QueryOptions, Connection) ->
+    batch_query(Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec batch_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> [result_tuple()] | {error, any()}.
+batch_query(Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {batch_query, Query, Parameters, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Fold over results of a given query.
+%% The function is evaluated within the connection's process.
+%%
+-spec fold(fun((tuple(), Acc) -> Acc), Acc, iodata(), pgsql_connection()) -> {ok, Acc} | {error, any()}.
+fold(Function, Acc0, Query, Connection) ->
+    fold(Function, Acc0, Query, [], Connection).
+
+-spec fold(fun((tuple(), Acc) -> Acc), Acc, iodata(), [any()], pgsql_connection()) -> {ok, Acc} | {error, any()}.
+fold(Function, Acc0, Query, Parameters, Connection) ->
+    fold(Function, Acc0, Query, Parameters, [], Connection).
+
+-spec fold(fun((tuple(), Acc) -> Acc), Acc, iodata(), [any()], query_options(), pgsql_connection()) -> {ok, Acc} | {error, any()}.
+fold(Function, Acc0, Query, Parameters, QueryOptions, Connection) ->
+    fold(Function, Acc0, Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec fold(fun((tuple(), Acc) -> Acc), Acc, iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> {ok, Acc} | {error, any()}.
+fold(Function, Acc0, Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {fold, Query, Parameters, Function, Acc0, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Map results of a given query.
+%% The function is evaluated within the connection's process.
+%%
+-spec map(fun((tuple()) -> Any), iodata(), pgsql_connection()) -> {ok, [Any]} | {error, any()}.
+map(Function, Query, Connection) ->
+    map(Function, Query, [], Connection).
+
+-spec map(fun((tuple()) -> Any), iodata(), [any()], pgsql_connection()) -> {ok, [Any]} | {error, any()}.
+map(Function, Query, Parameters, Connection) ->
+    map(Function, Query, Parameters, [], Connection).
+
+-spec map(fun((tuple()) -> Any), iodata(), [any()], query_options(), pgsql_connection()) -> {ok, [Any]} | {error, any()}.
+map(Function, Query, Parameters, QueryOptions, Connection) ->
+    map(Function, Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec map(fun((tuple()) -> Any), iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> {ok, [Any]} | {error, any()}.
+map(Function, Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {map, Query, Parameters, Function, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Iterate on results of a given query.
+%% The function is evaluated within the connection's process.
+%%
+-spec foreach(fun((tuple()) -> any()), iodata(), pgsql_connection()) -> ok | {error, any()}.
+foreach(Function, Query, Connection) ->
+    foreach(Function, Query, [], Connection).
+
+-spec foreach(fun((tuple()) -> any()), iodata(), [any()], pgsql_connection()) -> ok | {error, any()}.
+foreach(Function, Query, Parameters, Connection) ->
+    foreach(Function, Query, Parameters, [], Connection).
+
+-spec foreach(fun((tuple()) -> any()), iodata(), [any()], query_options(), pgsql_connection()) -> ok | {error, any()}.
+foreach(Function, Query, Parameters, QueryOptions, Connection) ->
+    foreach(Function, Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
+
+-spec foreach(fun((tuple()) -> any()), iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> ok | {error, any()}.
+foreach(Function, Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {foreach, Query, Parameters, Function, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Cancel the current query.
+%%
+-spec cancel(pgsql_connection()) -> ok | {error, any()}.
+cancel({pgsql_connection, ConnectionPid}) ->
+    gen_server:call(ConnectionPid, cancel, ?REQUEST_TIMEOUT).
+
+%%--------------------------------------------------------------------
+%% @doc Subscribe to notifications. Subscribers get notifications as
+%% <code>{pgsql, Connection, {notification, ProcID, Channel, Payload}}</code>
+%%
+-spec subscribe(pid(), pgsql_connection()) -> ok | {error, any()}.
+subscribe(Pid, {pgsql_connection, ConnectionPid}) ->
+    gen_server:cast(ConnectionPid, {subscribe, Pid}).
+
+%%--------------------------------------------------------------------
+%% @doc Unsubscribe to notifications.
+%%
+-spec unsubscribe(pid(), pgsql_connection()) -> ok | {error, any()}.
+unsubscribe(Pid, {pgsql_connection, ConnectionPid}) ->
+    gen_server:cast(ConnectionPid, {unsubscribe, Pid}).
+
+%%====================================================================
+%% Supervisor API
+%%====================================================================
+
+%%--------------------------------------------------------------------
+%% Starts a pgsql_connection process.
+%%
+-spec start_link(open_options()) -> {ok, pid()} | {error, any()}.
+start_link(Options) ->
+    gen_server:start_link(?MODULE, Options, []).
+
+%% ========================================================================= %%
+%% gen_server API
+%% ========================================================================= %%
+
+%%--------------------------------------------------------------------
+%% @doc gen_server's init callback.
+%%
+-spec init(open_options()) -> {ok, #state{}} | {stop, any()}.
+init(Options) ->
+    process_flag(trap_exit, true),
+    Subscribers = case lists:keyfind(async, 1, Options) of
+        false -> [];
+        {async, SubscriberPid} -> do_subscribe(SubscriberPid, [])
+    end,
+    State0 = #state{
+        options = Options,
+        socket = closed,
+        subscribers = Subscribers,
+        oidmap = gb_trees:from_orddict(orddict:from_list(?PG_TYPE_H_TYPES_DICT)),
+        pending = []
+    },
+    case pgsql_open(State0) of
+        {ok, State1} ->
+            set_active_once(State1),
+            {ok, State1};
+        {error, OpenErrorReason} -> {stop, OpenErrorReason}
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Handle a synchronous message.
+%%
+-spec handle_call(any(), from(), #state{}) -> {noreply, #state{}} | {reply, any(), #state{}}.
+handle_call({do_query, Command}, From, #state{} = State0) ->
+    State1 = do_query(Command, From, State0),
+    {noreply, State1};
+handle_call(cancel, _From, #state{socket = closed} = State0) ->
+    {reply, {error, closed}, State0};
+handle_call(cancel, _From, #state{} = State0) ->
+    Result = oob_cancel(State0),
+    {reply, Result, State0}.
+
+%%--------------------------------------------------------------------
+%% @doc Handle an asynchronous message.
+%%
+-spec handle_cast(any(), #state{}) -> {noreply, #state{}}.
+handle_cast({set_parameter, Key, Value}, State0) ->
+    State1 = handle_parameter(Key, Value, sync, State0),
+    {noreply, State1};
+handle_cast({socket_closed, Socket}, #state{socket = Socket} = State) ->
+    {noreply, State#state{socket = closed}};
+handle_cast({socket_closed, _ClosedSocket}, #state{socket = _OtherSocket} = State) ->
+    {noreply, State};
+handle_cast({command_completed, CurrentCommand}, #state{} = State0) ->
+    State1 = command_completed(CurrentCommand, State0),
+    {noreply, State1};
+handle_cast({subscribe, Pid}, #state{subscribers = Subscribers0} = State0) ->
+    Subscribers1 = do_subscribe(Pid, Subscribers0),
+    State1 = State0#state{subscribers = Subscribers1},
+    {noreply, State1};
+handle_cast({unsubscribe, Pid}, #state{subscribers = Subscribers0} = State0) ->
+    Subscribers1 = do_unsubscribe(Pid, Subscribers0),
+    State1 = State0#state{subscribers = Subscribers1},
+    {noreply, State1}.
+
+%%--------------------------------------------------------------------
+%% @doc handle system messages.
+%%
+-spec handle_info(any(), #state{}) -> {noreply, #state{}} | {stop, any(), #state{}}.
+handle_info({'EXIT', _From, normal}, State) ->
+    {noreply, State};
+handle_info({'EXIT', _From, Reason}, State) ->
+    {stop, Reason, State};
+handle_info({'DOWN', MonitorRef, process, _Pid, _Info}, #state{subscribers = Subscribers0} = State0) ->
+    Subscribers1 = lists:keydelete(MonitorRef, 2, Subscribers0),
+    State1 = State0#state{subscribers = Subscribers1},
+    {noreply, State1};
+handle_info({_Tag, Socket, Data}, #state{socket = {_SocketModule, Socket}} = State0) ->
+    State1 = process_active_data(Data, State0),
+    set_active_once(State1),
+    {noreply, State1};
+handle_info({ClosedTag, Socket}, #state{socket = {_SocketModule, Socket}} = State0) when ClosedTag =:= tcp_closed orelse ClosedTag =:= ssl_closed ->
+    State1 = State0#state{socket = closed},
+    {noreply, State1};
+handle_info({ErrorTag, Socket, _SocketError}, #state{socket = {SocketModule, Socket}} = State0) when ErrorTag =:= tcp_error orelse ErrorTag =:= ssl_error ->
+    _ = SocketModule:close(Socket),
+    State1 = State0#state{socket = closed},
+    {noreply, State1};
+handle_info({Tag, _OtherSocket, _Data}, State0) when Tag =:= tcp orelse Tag =:= ssl ->
+    {noreply, State0};
+handle_info({ClosedTag, _OtherSocket}, State0) when ClosedTag =:= tcp_closed orelse ClosedTag =:= ssl_closed ->
+    {noreply, State0};
+handle_info({ErrorTag, _OtherSocket, _SocketError}, State0) when ErrorTag =:= tcp_error orelse ErrorTag =:= ssl_error ->
+    {noreply, State0}.
+
+%%--------------------------------------------------------------------
+%% @doc handle code change.
+%%
+-spec code_change(string() | {down, string()}, any(), any()) -> {ok, #state{}}.
+code_change("8", State8, _Extra) ->
+    {state, Options, Socket, BackendProcId, BackendSecret, IntegerDateTimes, OidMap, Current, Pending, StatementTimeout} = State8,
+    State9 = #state{
+        options = Options,
+        socket = Socket,
+        subscribers = [],
+        backend_procid = BackendProcId,
+        backend_secret = BackendSecret,
+        integer_datetimes = IntegerDateTimes,
+        oidmap = OidMap,
+        current = Current,
+        pending = Pending,
+        statement_timeout = StatementTimeout
+    },
+    {ok, State9};
+code_change(Vsn, State, Extra) ->
+    error_logger:info_msg("~p: unknown code_change (~p, ~p, ~p)~n", [?MODULE, Vsn, State, Extra]),
+    {ok, State}.
+
+%%--------------------------------------------------------------------
+%% @doc handle termination.
+%%
+-spec terminate(any(), #state{}) -> ok.
+terminate(_Reason, #state{socket = closed}) ->
+    ok;
+terminate(_Reason, #state{socket = {SocketModule, Socket}}) ->
+    SocketModule:close(Socket),
+    ok.
+
+%%====================================================================
+%% Private functions
+%%====================================================================
+
+%%--------------------------------------------------------------------
+%% @doc Actually open (or re-open) the connection.
+%%
+pgsql_open(#state{options = Options} = State0) ->
+    Host = proplists:get_value(host, Options, ?DEFAULT_HOST),
+    Port = proplists:get_value(port, Options, ?DEFAULT_PORT),
+    % First open a TCP connection
+    case gen_tcp:connect(Host, Port, [binary, {packet, raw}, {active, false}]) of
+        {ok, Sock} ->
+            case pgsql_setup(Sock, State0) of
+                {ok, State1} ->
+                    case proplists:get_value(fetch_oid_map, Options, true) of
+                        true ->
+                            State2 = update_oid_map(State1),
+                            {ok, State2};
+                        false ->
+                            {ok, State1}
+                    end;
+                {error, _} = SetupError -> SetupError
+            end;
+        {error, _} = ConnectError -> ConnectError
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Setup the connection, handling the authentication handshake.
+%%
+-spec pgsql_setup(port(), #state{}) -> {ok, #state{}} | {error, any()}.
+pgsql_setup(Sock, #state{options = Options} = State0) ->
+    case proplists:get_bool(ssl, Options) of
+        false ->
+            pgsql_setup_startup(State0#state{socket = {gen_tcp, Sock}});
+        true ->
+            pgsql_setup_ssl(Sock, State0)
+    end.
+
+pgsql_setup_ssl(Sock, #state{} = State0) ->
+    SSLRequestMessage = pgsql_protocol:encode_ssl_request_message(),
+    case gen_tcp:send(Sock, SSLRequestMessage) of
+        ok ->
+            case gen_tcp:recv(Sock, 1) of
+                {ok, <<$S>>} ->
+                    % upgrade socket.
+                    case ssl:connect(Sock, [binary, {packet, raw}, {active, false}]) of
+                        {ok, SSLSocket} ->
+                            pgsql_setup_startup(State0#state{socket = {ssl, SSLSocket}});
+                        {error, _} = SSLConnectErr -> SSLConnectErr
+                    end;
+                {ok, <<$N>>} ->
+                    % server is unwilling
+                    {error, ssl_refused}
+            end;
+        {error, _} = SendSSLRequestError -> SendSSLRequestError
+    end.
+
+pgsql_setup_startup(#state{socket = {SockModule, Sock} = Socket, options = Options, subscribers = Subscribers} = State0) ->
+    % Send startup packet connection packet.
+    User = proplists:get_value(user, Options, ?DEFAULT_USER),
+    Database = proplists:get_value(database, Options, User),
+    ApplicationName = case proplists:get_value(application_name, Options, node()) of
+        ApplicationNameAtom when is_atom(ApplicationNameAtom) -> atom_to_binary(ApplicationNameAtom, utf8);
+        ApplicationNameString -> ApplicationNameString
+    end,
+    TZOpt = case proplists:get_value(timezone, Options, undefined) of
+        undefined -> [];
+        Timezone -> [{<<"timezone">>, Timezone}]
+    end,
+    StartupMessage = pgsql_protocol:encode_startup_message([{<<"user">>, User}, {<<"database">>, Database}, {<<"application_name">>, ApplicationName} | TZOpt]),
+    case SockModule:send(Sock, StartupMessage) of
+        ok ->
+            case receive_message(Socket, sync, Subscribers) of
+                {ok, #error_response{fields = Fields}} ->
+                    {error, {pgsql_error, Fields}};
+                {ok, #authentication_ok{}} ->
+                    pgsql_setup_finish(Socket, State0);
+                {ok, #authentication_kerberos_v5{}} ->
+                    {error, {unimplemented, authentication_kerberos_v5}};
+                {ok, #authentication_cleartext_password{}} ->
+                    pgsql_setup_authenticate_cleartext_password(Socket, State0);
+                {ok, #authentication_md5_password{salt = Salt}} ->
+                    pgsql_setup_authenticate_md5_password(Socket, Salt, State0);
+                {ok, #authentication_scm_credential{}} ->
+                    {error, {unimplemented, authentication_scm}};
+                {ok, #authentication_gss{}} ->
+                    {error, {unimplemented, authentication_gss}};
+                {ok, #authentication_sspi{}} ->
+                    {error, {unimplemented, authentication_sspi}};
+                {ok, #authentication_gss_continue{}} ->
+                    {error, {unimplemented, authentication_sspi}};
+                {ok, Message} ->
+                    {error, {unexpected_message, Message}};
+                {error, _} = ReceiveError -> ReceiveError
+            end;
+        {error, _} = SendError -> SendError
+    end.
+
+pgsql_setup_authenticate_cleartext_password(Socket, #state{options = Options} = State0) ->
+    Password = proplists:get_value(password, Options, ?DEFAULT_PASSWORD),
+    pgsql_setup_authenticate_password(Socket, Password, State0).
+
+-ifndef(old_hash).
+pgsql_setup_authenticate_md5_password(Socket, Salt, #state{options = Options} = State0) ->
+    User = proplists:get_value(user, Options, ?DEFAULT_USER),
+    Password = proplists:get_value(password, Options, ?DEFAULT_PASSWORD),
+    % concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
+    <<MD51Int:128>> = crypto:hash(md5, [Password, User]),
+    MD51Hex = io_lib:format("~32.16.0b", [MD51Int]),
+    <<MD52Int:128>> = crypto:hash(md5, [MD51Hex, Salt]),
+    MD52Hex = io_lib:format("~32.16.0b", [MD52Int]),
+    MD5ChallengeResponse = ["md5", MD52Hex],
+    pgsql_setup_authenticate_password(Socket, MD5ChallengeResponse, State0).
+-else.
+pgsql_setup_authenticate_md5_password(Socket, Salt, #state{options = Options} = State0) ->
+    User = proplists:get_value(user, Options, ?DEFAULT_USER),
+    Password = proplists:get_value(password, Options, ?DEFAULT_PASSWORD),
+    % concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
+    <<MD51Int:128>> = crypto:md5([Password, User]),
+    MD51Hex = io_lib:format("~32.16.0b", [MD51Int]),
+    <<MD52Int:128>> = crypto:md5([MD51Hex, Salt]),
+    MD52Hex = io_lib:format("~32.16.0b", [MD52Int]),
+    MD5ChallengeResponse = ["md5", MD52Hex],
+    pgsql_setup_authenticate_password(Socket, MD5ChallengeResponse, State0).
+-endif.
+
+pgsql_setup_authenticate_password({SockModule, Sock} = Socket, Password, #state{subscribers = Subscribers} = State0) ->
+    Message = pgsql_protocol:encode_password_message(Password),
+    case SockModule:send(Sock, Message) of
+        ok ->
+            case receive_message(Socket, sync, Subscribers) of
+                {ok, #error_response{fields = Fields}} ->
+                    {error, {pgsql_error, Fields}};
+                {ok, #authentication_ok{}} ->
+                    pgsql_setup_finish(Socket, State0);
+                {ok, UnexpectedMessage} ->
+                    {error, {unexpected_message, UnexpectedMessage}};
+                {error, _} = ReceiveError -> ReceiveError
+            end;
+        {error, _} = SendError -> SendError
+    end.
+
+pgsql_setup_finish(Socket, #state{subscribers = Subscribers} = State0) ->
+    case receive_message(Socket, sync, Subscribers) of
+        {ok, #parameter_status{name = Name, value = Value}} ->
+            State1 = handle_parameter(Name, Value, sync, State0),
+            pgsql_setup_finish(Socket, State1);
+        {ok, #backend_key_data{procid = ProcID, secret = Secret}} ->
+            pgsql_setup_finish(Socket, State0#state{backend_procid = ProcID, backend_secret = Secret});
+        {ok, #ready_for_query{}} ->
+            {ok, State0};
+        {ok, #error_response{fields = Fields}} ->
+            {error, {pgsql_error, Fields}};
+        {ok, Message} ->
+            {error, {unexpected_message, Message}};
+        {error, _} = ReceiveError -> ReceiveError
+    end.
+
+pgsql_simple_query(Query, Timeout, From, #state{socket = {SockModule, Sock}} = State0) ->
+    % If timeout is not infinity, change the parameter before and after the
+    % query. While we could catenate the query, it seems easier to send
+    % separate query messages, as we don't have to deal with errors.
+    ConnPid = self(),
+    CurrentCommand = State0#state.current,
+    case Timeout of
+        infinity ->
+            spawn_link(fun() ->
+                pgsql_simple_query0(Query, {async, ConnPid, fun(Result) ->
+                    gen_server:reply(From, Result),
+                    gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                end}, State0)
+            end),
+            State0;
+        Value ->
+            Queries = [
+                io_lib:format("set statement_timeout = ~B", [Value]),
+                Query,
+                "set statement_timeout = 0"],
+            SinglePacket = [pgsql_protocol:encode_query_message(AQuery) || AQuery <- Queries],
+            case SockModule:send(Sock, SinglePacket) of
+                ok ->
+                    {{set, []}, State1} = pgsql_simple_query_loop([], [], sync, State0),
+                    spawn_link(fun() ->
+                        pgsql_simple_query_loop([], [], {async, ConnPid, fun(Result) ->
+                            pgsql_simple_query_loop([], [], {async, ConnPid, fun({set, []}) ->
+                                gen_server:reply(From, Result),
+                                gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                            end}, State1)
+                        end}, State1)
+                    end),
+                    State1;
+                {error, closed} = SendQueryError ->
+                    gen_server:reply(From, SendQueryError),
+                    State1 = State0#state{socket = closed},
+                    command_completed(CurrentCommand, State1);
+                {error, _} = SendQueryError ->
+                    gen_server:reply(From, SendQueryError),
+                    command_completed(CurrentCommand, State0)
+            end
+    end.
+
+-spec pgsql_simple_query0(iodata(), sync, #state{}) -> {tuple(), #state{}};
+                         (iodata(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
+pgsql_simple_query0(Query, AsyncT, #state{socket = {SockModule, Sock}} = State) ->
+    QueryMessage = pgsql_protocol:encode_query_message(Query),
+    case SockModule:send(Sock, QueryMessage) of
+        ok -> pgsql_simple_query_loop([], [], AsyncT, State);
+        {error, _} = SendQueryError ->
+            return_async(SendQueryError, AsyncT, State)
+    end.
+
+pgsql_simple_query_loop(Result0, Acc, AsyncT, #state{socket = Socket, subscribers = Subscribers} = State0) ->
+    case receive_message(Socket, AsyncT, Subscribers) of
+        {ok, #parameter_status{name = Name, value = Value}} ->
+            State1 = handle_parameter(Name, Value, AsyncT, State0),
+            pgsql_simple_query_loop(Result0, Acc, AsyncT, State1);
+        {ok, #row_description{fields = Fields}} when Result0 =:= [] ->
+            State1 = oob_update_oid_map_if_required(Fields, State0),
+            pgsql_simple_query_loop({rows, Fields, []}, Acc, AsyncT, State1);
+        {ok, #data_row{values = Values}} when is_tuple(Result0) andalso element(1, Result0) =:= rows ->
+            {rows, Fields, AccRows0} = Result0,
+            DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
+            AccRows1 = [DecodedRow | AccRows0],
+            pgsql_simple_query_loop({rows, Fields, AccRows1}, Acc, AsyncT, State0);
+        {ok, #command_complete{command_tag = Tag}} ->
+            ResultRows = case Result0 of
+                {rows, _Descs, AccRows} -> lists:reverse(AccRows);
+                [] -> []
+            end,
+            DecodedTag = decode_tag(Tag),
+            Result = {DecodedTag, ResultRows},
+            Acc1 = [Result | Acc],
+            pgsql_simple_query_loop([], Acc1, AsyncT, State0);
+        {ok, #empty_query_response{}} ->
+            pgsql_simple_query_loop(Result0, Acc, AsyncT, State0);
+        {ok, #error_response{fields = Fields}} ->
+            Error = {error, {pgsql_error, Fields}},
+            Acc1 = [Error | Acc],
+            pgsql_simple_query_loop([], Acc1, AsyncT, State0);
+        {ok, #ready_for_query{}} ->
+            Result = case Acc of
+                [SingleResult] -> SingleResult;
+                MultipleResults -> MultipleResults
+            end,
+            return_async(Result, AsyncT, State0);
+        {ok, Message} ->
+            Result = {error, {unexpected_message, Message}},
+            return_async(Result, AsyncT, State0);
+        {error, _} = ReceiveError ->
+            return_async(ReceiveError, AsyncT, State0)
+    end.
+
+pgsql_extended_query(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, Timeout, From, State0) ->
+    % If timeout is not infinity, change the parameter before and after the
+    % query. While we could catenate the query, it seems easier to send
+    % separate query messages, as we don't have to deal with errors.
+    ConnPid = self(),
+    CurrentCommand = State0#state.current,
+    case Timeout of
+        infinity ->
+            spawn_link(fun() ->
+                pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(Result) ->
+                    gen_server:reply(From, Result),
+                    gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                end}, State0)
+            end),
+            State0;
+        Value ->
+            {{set, []}, State1} = pgsql_simple_query0(io_lib:format("set statement_timeout = ~B", [Value]), sync, State0),
+            spawn_link(fun() ->
+                pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(Result) ->
+                    pgsql_simple_query0("set statement_timeout = 0", {async, ConnPid, fun({set, []}) ->
+                        gen_server:reply(From, Result),
+                        gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                    end}, State1)
+                end}, State1)
+            end),
+            State1
+    end.
+
+pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, AsyncT, #state{socket = {SockModule, Sock}, integer_datetimes = IntegerDateTimes} = State) ->
+    ParseMessage = pgsql_protocol:encode_parse_message("", Query, []),
+    DescribeMessage = pgsql_protocol:encode_describe_message(portal, ""),
+    MaxRowsStep = case Mode of
+        all -> 0;
+        batch -> 0;
+        {cursor, MaxRowsStep0} -> MaxRowsStep0
+    end,
+    ExecuteMessage = pgsql_protocol:encode_execute_message("", MaxRowsStep),
+    SyncOrFlushMessage = if
+        MaxRowsStep > 0 -> pgsql_protocol:encode_flush_message();
+        true -> pgsql_protocol:encode_sync_message()
+    end,
+    SinglePacket = try
+        case Mode of
+            batch ->
+                BatchMessages = [[pgsql_protocol:encode_bind_message("", "", ParametersBatch, IntegerDateTimes), DescribeMessage, ExecuteMessage, SyncOrFlushMessage] || ParametersBatch <- Parameters],
+                [ParseMessage, BatchMessages];
+            _ ->
+                BindMessage = pgsql_protocol:encode_bind_message("", "", Parameters, IntegerDateTimes),
+                [ParseMessage, BindMessage, DescribeMessage, ExecuteMessage, SyncOrFlushMessage]
+        end
+    catch throw:Exception ->
+        {error, Exception}
+    end,
+    if is_tuple(SinglePacket) ->
+            return_async(SinglePacket, AsyncT, State);
+        true ->
+            case SockModule:send(Sock, SinglePacket) of
+                ok ->
+                    if
+                        Mode =:= batch ->
+                            {_, ResultRL, FinalState} = lists:foldl(fun(_ParametersBatch, {LoopState, AccResults, AccState}) ->
+                                        {Result, AccState1} = pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, sync, AccState),
+                                        {bind_complete, [Result | AccResults], AccState1}
+                                end, {parse_complete, [], State}, Parameters),
+                            Result = lists:reverse(ResultRL),
+                            return_async(Result, AsyncT, FinalState);
+                        true ->
+                            pgsql_extended_query_receive_loop(parse_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State)
+                    end;
+                {error, _} = SendSinglePacketError ->
+                    return_async(SendSinglePacketError, AsyncT, State)
+            end
+    end.
+
+pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock} = Socket, subscribers = Subscribers} = State0) ->
+    case receive_message(Socket, AsyncT, Subscribers) of
+        {ok, #parameter_status{name = Name, value = Value}} ->
+            State1 = handle_parameter(Name, Value, AsyncT, State0),
+            pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
+        {ok, #parse_complete{}} when LoopState =:= parse_complete ->
+            pgsql_extended_query_receive_loop(bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {ok, #bind_complete{}} when LoopState =:= bind_complete ->
+            pgsql_extended_query_receive_loop(row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {ok, #no_data{}} when LoopState =:= row_description ->
+            pgsql_extended_query_receive_loop([], Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {ok, #row_description{fields = Fields}} when LoopState =:= row_description ->
+            State1 = oob_update_oid_map_if_required(Fields, State0),
+            pgsql_extended_query_receive_loop({rows, Fields}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
+        {ok, #data_row{values = Values}} when is_tuple(LoopState) andalso element(1, LoopState) =:= rows ->
+            {rows, Fields} = LoopState,
+            DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
+            Acc1 = Fun(DecodedRow, Acc0),
+            pgsql_extended_query_receive_loop(LoopState, Fun, Acc1, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {ok, #command_complete{command_tag = Tag}} ->
+            Result = FinalizeFun(Tag, Acc0),
+            if  MaxRowsStep > 0 ->
+                    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+                        ok -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+                        {error, _} = SendSinglePacketError -> return_async(SendSinglePacketError, AsyncT, State0)
+                    end;
+                true -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0)
+            end;
+        {ok, #portal_suspended{}} ->
+            ExecuteMessage = pgsql_protocol:encode_execute_message("", MaxRowsStep),
+            FlushMessage = pgsql_protocol:encode_flush_message(),
+            SinglePacket = [ExecuteMessage, FlushMessage],
+            case SockModule:send(Sock, SinglePacket) of
+                ok -> pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+                {error, _} = SendSinglePacketError ->
+                    return_async(SendSinglePacketError, AsyncT, State0)
+            end;
+        {ok, #ready_for_query{}} when is_tuple(LoopState) andalso element(1, LoopState) =:= result ->
+            Result = element(2, LoopState),
+            return_async(Result, AsyncT, State0);
+        {ok, #error_response{fields = Fields}} ->
+            Error = {error, {pgsql_error, Fields}},
+            if  MaxRowsStep > 0 ->
+                    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+                        ok -> flush_until_ready_for_query(Error, AsyncT, State0);
+                        {error, _} = SendSinglePacketError -> return_async(SendSinglePacketError, AsyncT, State0)
+                    end;
+                true -> flush_until_ready_for_query(Error, AsyncT, State0)
+            end;
+        {ok, #ready_for_query{} = Message} ->
+            Result = {error, {unexpected_message, Message}},
+            return_async(Result, AsyncT, State0);
+        {ok, Message} ->
+            Error = {error, {unexpected_message, Message}},
+            flush_until_ready_for_query(Error, AsyncT, State0);
+        {error, _} = ReceiveError ->
+            return_async(ReceiveError, AsyncT, State0)
+    end;
+pgsql_extended_query_receive_loop(_LoopState, _Fun, _Acc, _FinalizeFun, _MaxRowsStep, AsyncT, #state{socket = closed} = State0) ->
+    return_async({error, closed}, AsyncT, State0).
+
+flush_until_ready_for_query(Result, AsyncT, #state{socket = Socket, subscribers = Subscribers} = State0) ->
+    case receive_message(Socket, AsyncT, Subscribers) of
+        {ok, #parameter_status{name = Name, value = Value}} ->
+            State1 = handle_parameter(Name, Value, AsyncT, State0),
+            flush_until_ready_for_query(Result, AsyncT, State1);
+        {ok, #ready_for_query{}} ->
+            return_async(Result, AsyncT, State0);
+        {ok, _OtherMessage} ->
+            flush_until_ready_for_query(Result, AsyncT, State0);
+        {error, _} = ReceiveError ->
+            return_async(ReceiveError, AsyncT, State0)
+    end.
+
+-spec return_async(any(), sync, #state{}) -> {any(), #state{}};
+                  (any(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
+return_async({error, closed} = Error, sync, #state{} = State) ->
+    {Error, State#state{current = undefined, socket = closed}};
+return_async({error, closed} = Error, {async, ConnPid, Callback}, #state{socket = Socket}) ->
+    ok = Callback(Error),
+    gen_server:cast(ConnPid, {socket_closed, Socket});
+return_async(Result, sync, #state{} = State) ->
+    {Result, State};
+return_async(Result, {async, _ConnPid, Callback}, #state{}) ->
+    Callback(Result).
+
+extended_query_fn(Row, AccRows) -> [Row | AccRows].
+
+extended_query_finalize(Tag, AccRows) ->
+    Rows = lists:reverse(AccRows),
+    DecodedTag = decode_tag(Tag),
+    {DecodedTag, Rows}.
+
+fold_finalize(_Tag, Acc) ->
+    {ok, Acc}.
+
+map_fn(Row, {Function, Acc}) -> {Function, [Function(Row) | Acc]}.
+    
+map_finalize(_Tag, {_Function, Acc}) ->
+    {ok, lists:reverse(Acc)}.
+
+foreach_fn(Row, Function) ->
+    Function(Row),
+    Function.
+
+foreach_finalize(_Tag, _Function) ->
+    ok.
+
+%%--------------------------------------------------------------------
+%% @doc Handle parameter status messages. These can happen anytime.
+%% 
+handle_parameter(<<"integer_datetimes">> = Key, <<"on">> = Value, AsyncT, State0) ->
+    set_parameter_async(Key, Value, AsyncT),
+    State0#state{integer_datetimes = true};
+handle_parameter(<<"integer_datetimes">> = Key, <<"off">> = Value, AsyncT, State0) ->
+    set_parameter_async(Key, Value, AsyncT),
+    State0#state{integer_datetimes = false};
+handle_parameter(_Key, _Value, _AsyncT, State0) -> State0.
+
+set_parameter_async(_Key, _Value, sync) -> ok;
+set_parameter_async(Key, Value, {async, ConnPid, _}) ->
+    gen_server:cast(ConnPid, {set_parameter, Key, Value}).
+
+%%--------------------------------------------------------------------
+%% @doc Convert a statement from the ? placeholder syntax to the $x placeholder
+%% syntax.
+%%
+-spec convert_statement(binary() | string()) -> string().
+convert_statement(StatementStr) when is_list(StatementStr) ->
+    convert_statement_0(StatementStr, false, 1, []);
+convert_statement(StatementStr) when is_binary(StatementStr) ->
+    convert_statement(binary_to_list(StatementStr)).
+
+convert_statement_0([], _InString, _PlaceholderIndex, Acc) -> lists:reverse(Acc);
+convert_statement_0([$? | Tail], false, PlaceholderIndex, Acc) ->
+    convert_statement_0(Tail, false, PlaceholderIndex + 1, lists:reverse([$$ | integer_to_list(PlaceholderIndex)]) ++ Acc);
+convert_statement_0([$' | Tail], InString, PlaceholderIndex, Acc) ->
+    convert_statement_0(Tail, not InString, PlaceholderIndex, [$' | Acc]);
+convert_statement_0([H | Tail], InString, PlaceholderIndex, Acc) ->
+    convert_statement_0(Tail, InString, PlaceholderIndex, [H | Acc]).
+
+%%--------------------------------------------------------------------
+%% @doc Receive a single packet (in passive mode). Notifications and
+%% notices are broadcast to subscribers.
+%%
+-spec receive_message(socket(), sync | {async, pid(), fun((any()) -> ok)}, [{pid(), reference()}]) -> {ok, pgsql_backend_message()} | {error, any()}.
+receive_message({SockModule, Sock}, AsyncT, Subscribers) ->
+    Result0 = case SockModule:recv(Sock, ?MESSAGE_HEADER_SIZE) of
+        {ok, <<Code:8/integer, Size:32/integer>>} ->
+            Payload = Size - 4,
+            case Payload of
+                0 ->
+                    pgsql_protocol:decode_message(Code, <<>>);
+                _ ->
+                    case SockModule:recv(Sock, Payload) of
+                        {ok, Rest} ->
+                            pgsql_protocol:decode_message(Code, Rest);
+                        {error, _} = ErrorRecvPacket -> ErrorRecvPacket
+                    end
+            end;
+        {error, _} = ErrorRecvPacketHeader -> ErrorRecvPacketHeader
+    end,
+    case Result0 of
+        {ok, #notification_response{} = Notification} ->
+            broadcast_to_subscribers(Notification, AsyncT, Subscribers),
+            receive_message({SockModule, Sock}, AsyncT, Subscribers);
+        {ok, #notice_response{} = Notice} ->
+            broadcast_to_subscribers(Notice, AsyncT, Subscribers),
+            receive_message({SockModule, Sock}, AsyncT, Subscribers);
+        _ -> Result0
+    end.
+
+-spec broadcast_to_subscribers(
+            #notification_response{} | #notice_response{},
+            sync | {async, pid(), fun((any()) -> ok)},
+            [{pid(), reference()}]) -> ok.
+broadcast_to_subscribers(Packet, AsyncT, Subscribers) ->
+    ConnPid = case AsyncT of
+        sync -> self();
+        {async, Pid, _Fun} -> Pid
+    end,
+    Connection = {?MODULE, ConnPid},
+    What = case Packet of
+        #notification_response{procid = ProcID, channel = Channel, payload = Payload} -> {notification, ProcID, Channel, Payload};
+        #notice_response{fields = Fields} -> {notice, Fields}
+    end,
+    Message = {pgsql, Connection, What},
+    lists:foreach(fun({Subscriber, _Ref}) ->
+        Subscriber ! Message
+    end, Subscribers).
+
+%%--------------------------------------------------------------------
+%% @doc Decode a command complete tag and result rows and form a result
+%% according to the current API.
+%%
+decode_tag(Tag) ->
+    case binary:split(Tag, <<" ">>) of
+        [Verb, Object] ->
+            VerbDecoded = decode_verb(Verb),
+            ObjectL = decode_object(Object),
+            list_to_tuple([VerbDecoded | ObjectL]);
+        [Verb] -> decode_verb(Verb)
+    end.
+
+decode_verb(Verb) ->
+    VerbStr = binary_to_list(Verb),
+    VerbLC = string:to_lower(VerbStr),
+    list_to_atom(VerbLC).
+
+decode_object(<<FirstByte, _/binary>> = Object) when FirstByte =< $9 andalso FirstByte >= $0 ->
+    Words = binary:split(Object, <<" ">>, [global]),
+    [list_to_integer(binary_to_list(Word)) || Word <- Words];
+decode_object(Object) ->
+    ObjectUStr = re:replace(Object, <<" ">>, <<"_">>, [global, {return, list}]),
+    ObjectULC = string:to_lower(ObjectUStr),
+    [list_to_atom(ObjectULC)].
+    
+%%--------------------------------------------------------------------
+%% @doc Convert a native result to an odbc result.
+%%
+-spec native_to_odbc(result_tuple()) -> odbc_result_tuple() | {error, any()}.
+native_to_odbc({error, _} = Error) -> Error;
+native_to_odbc({{insert, _TableOID, Count}, []}) -> {updated, Count};
+native_to_odbc({{delete, Count}, []}) -> {updated, Count};
+native_to_odbc({{update, Count}, []}) -> {updated, Count};
+native_to_odbc({{move, Count}, []}) -> {updated, Count};
+native_to_odbc({{fetch, _Count}, []}) -> {updated, 0};
+native_to_odbc({{copy, Count}, []}) -> {updated, Count};
+native_to_odbc({{insert, _TableOID, Count}, Rows}) -> {updated, Count, Rows};
+native_to_odbc({{delete, Count}, Rows}) -> {updated, Count, Rows};
+native_to_odbc({{update, Count}, Rows}) -> {updated, Count, Rows};
+native_to_odbc({{select, _Count}, Rows}) -> {selected, Rows};
+native_to_odbc({{create, _What}, []}) -> {updated, 1};
+native_to_odbc({{drop, _What}, []}) -> {updated, 1};
+native_to_odbc({{alter, _What}, []}) -> {updated, 1};
+native_to_odbc({'begin', []}) -> {updated, 0};
+native_to_odbc({commit, []}) -> {updated, 0};
+%native_to_odbc({rollback, []}) -> {updated, 0};    -- make sure rollback fails.
+native_to_odbc({set, []}) -> {updated, 0};
+native_to_odbc({listen, []}) -> {updated, 0};
+native_to_odbc({notify, []}) -> {updated, 0};
+native_to_odbc({'do', []}) -> {updated, 0};
+native_to_odbc({Other, []}) -> {error, {pgsql_error, {unknown_command, Other}}}.
+
+adjust_timeout(infinity) -> infinity;
+adjust_timeout(Timeout) -> Timeout + ?TIMEOUT_GEN_SERVER_CALL_DELTA.
+
+%%--------------------------------------------------------------------
+%% @doc Cancel using a new connection.
+%%
+oob_cancel(#state{options = Options, backend_procid = ProcID, backend_secret = Secret}) ->
+    Host = proplists:get_value(host, Options, ?DEFAULT_HOST),
+    Port = proplists:get_value(port, Options, ?DEFAULT_PORT),
+    % First open a TCP connection
+    case gen_tcp:connect(Host, Port, [binary, {packet, raw}, {active, false}]) of
+        {ok, Sock} ->
+            Message = pgsql_protocol:encode_cancel_message(ProcID, Secret),
+            case gen_tcp:send(Sock, Message) of
+                ok ->
+                    gen_tcp:close(Sock);
+                {error, _} = SendError -> SendError
+            end;
+        {error, _} = ConnectError -> ConnectError
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Update the OID Map out of band, opening a new connection.
+%%
+oob_update_oid_map_if_required(Fields, #state{oidmap = OIDMap} = State0) ->
+    Required = lists:any(fun(#row_description_field{data_type_oid = Oid}) ->
+        not gb_trees:is_defined(Oid, OIDMap)
+    end, Fields),
+    case Required of
+        true -> oob_update_oid_map(State0);
+        false -> State0
+    end.
+
+oob_update_oid_map(#state{options = Options0} = State0) ->
+    OOBOptions =  lists:keystore(fetch_oid_map, 1, Options0, {fetch_oid_map, false}),
+    {ok, Pid} = pgsql_connection_sup:start_child(OOBOptions),
+    SubConnection = {pgsql_connection, Pid},
+    {ok, NewOIDMap} = fold(fun({Oid, Typename}, AccTypes) ->
+        gb_trees:enter(Oid, binary_to_atom(Typename, utf8), AccTypes)
+    end, State0#state.oidmap, "SELECT oid, typname FROM pg_type", SubConnection),
+    close(SubConnection),
+    State0#state{oidmap = NewOIDMap}.
+
+%%--------------------------------------------------------------------
+%% @doc Update the OID Map inline (at setup).
+%%
+update_oid_map(#state{} = State0) ->
+    {{ok, NewOIDMap}, State1} = pgsql_extended_query0(<<"SELECT oid, typname FROM pg_type">>, [], fun({Oid, Typename}, AccTypes) ->
+        gb_trees:enter(Oid, binary_to_atom(Typename, utf8), AccTypes)
+    end, State0#state.oidmap, fun fold_finalize/2, all, sync, State0),
+    State1#state{oidmap = NewOIDMap}.
+
+%%--------------------------------------------------------------------
+%% @doc Prepare socket for sending query: set it in passive mode or
+%% reconnect if it was closed and options allow it.
+%%
+-spec set_passive_or_reconnect_if_required(#state{}) -> #state{}.
+set_passive_or_reconnect_if_required(#state{socket = closed, options = Options} = State0) ->
+    case proplists:get_value(reconnect, Options, true) of
+        true ->
+            case pgsql_open(State0) of
+                {ok, State1} -> State1;
+                {error, _} -> State0
+            end;
+        false -> State0
+    end;
+set_passive_or_reconnect_if_required(#state{socket = {gen_tcp, Socket}} = State0) ->
+    _ = inet:setopts(Socket, [{active, false}]),
+    State0;
+set_passive_or_reconnect_if_required(#state{socket = {ssl, Socket}} = State0) ->
+    _ = ssl:setopts(Socket, [{active, false}]),
+    State0.
+
+%%--------------------------------------------------------------------
+%% @doc Set the socket in active mode for a single packet (a notification).
+%%
+-spec set_active_once(#state{}) -> ok.
+set_active_once(#state{socket = closed}) -> ok;
+set_active_once(#state{socket = {gen_tcp, Socket}}) ->
+    _ = inet:setopts(Socket, [{active, once}]),
+    ok;
+set_active_once(#state{socket = {ssl, Socket}}) ->
+    _ = ssl:setopts(Socket, [{active, once}]),
+    ok.
+
+%%--------------------------------------------------------------------
+%% @doc Process some active data.
+%%
+-spec process_active_data(binary(), #state{}) -> #state{}.
+process_active_data(<<Code:8/integer, Size:32/integer, Tail/binary>>, #state{socket = {SockModule, Sock}, subscribers = Subscribers} = State0) ->
+    TailSize = byte_size(Tail),
+    Payload = Size - 4,
+    DecodeT = case Payload of
+        0 ->
+            {pgsql_protocol:decode_message(Code, <<>>), Tail};
+        _ when Payload =< TailSize ->
+            {PayloadBin, Rest0} = split_binary(Tail, Payload),
+            {pgsql_protocol:decode_message(Code, PayloadBin), Rest0};
+        _ when Payload > TailSize ->
+            case SockModule:recv(Sock, Payload - TailSize) of
+                {ok, Missing} ->
+                    {pgsql_protocol:decode_message(Code, list_to_binary([Tail, Missing])), <<>>};
+                {error, _} = ErrorRecvPacket ->
+                    {ErrorRecvPacket, <<>>}
+            end
+    end,
+    case DecodeT of
+        {{ok, #notification_response{} = Notification}, Rest} ->
+            broadcast_to_subscribers(Notification, sync, Subscribers),
+            process_active_data(Rest, State0);
+        {{ok, #notice_response{} = Notice}, Rest} ->
+            broadcast_to_subscribers(Notice, sync, Subscribers),
+            process_active_data(Rest, State0);
+        {{ok, #parameter_status{name = Name, value = Value}}, Rest} ->
+            State1 = handle_parameter(Name, Value, sync, State0),
+            process_active_data(Rest, State1);
+        {{ok, Message}, Rest} ->
+            error_logger:warning_msg("Unexpected asynchronous message\n~p\n", [Message]),
+            process_active_data(Rest, State0);
+        {{error, _} = Error, _Rest} ->
+            error_logger:error_msg("Unexpected asynchronous error\n~p\n", [Error]),
+            SockModule:close(Sock),
+            State0#state{socket = closed}
+    end;
+process_active_data(<<>>, State0) -> State0;
+process_active_data(PartialHeader, #state{socket = {SockModule, Sock}} = State0) ->
+    PartialHeaderSize = byte_size(PartialHeader),
+    case SockModule:recv(Sock, ?MESSAGE_HEADER_SIZE - PartialHeaderSize) of
+        {ok, Rest} ->
+            process_active_data(list_to_binary([PartialHeader, Rest]), State0);
+        {error, _} = Error ->
+            error_logger:error_msg("Unexpected asynchronous error\n~p\n", [Error]),
+            SockModule:close(Sock),
+            State0#state{socket = closed}
+    end.    
+
+%%--------------------------------------------------------------------
+%% @doc Subscribe to notifications. We setup a monitor to clean the list up.
+%%
+do_subscribe(Pid, List) ->
+    MonitorRef = erlang:monitor(process, Pid),
+    [{Pid, MonitorRef} | List].
+
+%%--------------------------------------------------------------------
+%% @doc Unsubscribe to notifications. Clear the monitor.
+%%
+do_unsubscribe(Pid, List) ->
+    case lists:keyfind(Pid, 1, List) of
+        {Pid, MonitorRef} ->
+            erlang:demonitor(MonitorRef),
+            lists:keydelete(Pid, 1, List);
+        false -> List
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Send a call message to the gen server, retrying if the result is
+%% {error, closed} and the option retry is set to true.
+%%
+call_and_retry(ConnPid, Command, Retry, Timeout) ->
+    case gen_server:call(ConnPid, {do_query, Command}, Timeout) of
+        {error, closed} when Retry -> 
+            call_and_retry(ConnPid, Command, Retry, Timeout);
+        Other -> 
+            Other
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Perform a query.
+%%
+do_query(Command, From, #state{current = undefined} = State0) ->
+    State1 = State0#state{current = {Command, From}},
+    State2 = set_passive_or_reconnect_if_required(State1),
+    case State2#state.socket of
+        closed ->
+            gen_server:reply(From, {error, closed}),
+            command_completed({Command, From}, State2);
+        _ ->
+            do_query0(Command, From, State2)
+    end;
+do_query(Command, From, #state{pending = Pending} = State0) ->
+    State0#state{pending = [{Command, From} | Pending]}.
+
+do_query0({simple_query, Query, _QueryOptions, Timeout}, From, State0) ->
+    pgsql_simple_query(Query, Timeout, From, State0);
+do_query0({extended_query, Query, Parameters, _QueryOptions, Timeout}, From, State0) ->
+    pgsql_extended_query(Query, Parameters, fun extended_query_fn/2, [], fun extended_query_finalize/2, all, Timeout, From, State0);
+do_query0({batch_query, Query, ParametersList, _QueryOptions, Timeout}, From, State0) ->
+    pgsql_extended_query(Query, ParametersList, fun extended_query_fn/2, [], fun extended_query_finalize/2, batch, Timeout, From, State0);
+do_query0({fold, Query, Parameters, Function, Acc0, QueryOptions, Timeout}, From, #state{} = State0) ->
+    MaxRowsStep = proplists:get_value(max_rows_step, QueryOptions, ?DEFAULT_MAX_ROWS_STEP),
+    pgsql_extended_query(Query, Parameters, Function, Acc0, fun fold_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0);
+do_query0({map, Query, Parameters, Function, QueryOptions, Timeout}, From, #state{} = State0) ->
+    MaxRowsStep = proplists:get_value(max_rows_step, QueryOptions, ?DEFAULT_MAX_ROWS_STEP),
+    pgsql_extended_query(Query, Parameters, fun map_fn/2, {Function, []}, fun map_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0);
+do_query0({foreach, Query, Parameters, Function, QueryOptions, Timeout}, From, #state{} = State0) ->
+    MaxRowsStep = proplists:get_value(max_rows_step, QueryOptions, ?DEFAULT_MAX_ROWS_STEP),
+    pgsql_extended_query(Query, Parameters, fun foreach_fn/2, Function, fun foreach_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0).
+
+command_completed(Command, #state{current = Command, pending = []} = State) ->
+    set_active_once(State),
+    State#state{current = undefined};
+command_completed(Command, #state{current = Command, pending = [{PendingCommand, PendingFrom} | PendingT]} = State0) ->
+    State1 = State0#state{current = undefined, pending = PendingT},
+    do_query(PendingCommand, PendingFrom, State1).

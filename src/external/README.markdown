@@ -82,13 +82,13 @@ exceptions due to their C integration).
 - `commit 13b3957b82f3647cb0255ac7eaeaba49e3ef9579`
 - `Tue Oct 22 11:58:41 PDT 2013`
 
-`epgsql`
---------
-`Erlang PostgreSQL (native) Driver`
+`epgsql_wg`
+-----------
+`Erlang PostgreSQL (native) Driver (Will Glozer (older) branch with additions)`
 
-- `https://github.com/okeuday/epgsql`
-- `commit b1118003b70c9c71ca8f24a246275b0ce9a9b0a0`
-- `Mon Jul  8 11:10:51 PDT 2013`
+- `https://github.com/okeuday/epgsql_wg`
+- `commit b74e913679a450ff754d8a3cb022948e308d0509 (1.5.0)`
+- `Mon May  5 12:36:52 PDT 2014`
 - `BSD`
 
 `erlasticsearch`
@@ -221,6 +221,15 @@ exceptions due to their C integration).
 - `https://github.com/okeuday/nodefinder`
 - `commit ac8d57aaef44b5a00592c096d3cd6cb54c930c41 (v1.3.1.5)`
 - `Mon Mar 24 21:12:55 PDT 2014`
+- `BSD`
+
+`pgsql`
+-------
+`Erlang PostgreSQL (native) driver (semiocast branch)`
+
+- `https://github.com/semiocast/pgsql`
+- `commit 21c7c3d4aba5303e6f31bebbe99eace6d7363a4b`
+- `Mon May  5 11:33:11 PDT 2014`
 - `BSD`
 
 `poolboy`

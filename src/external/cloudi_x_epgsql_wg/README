@@ -2,7 +2,7 @@ Erlang PostgreSQL Database Client
 
 * Connect
 
-  {ok, C} = pgsql:connect(Host, [Username], [Password], Opts).
+  {ok, C} = epgsql_wg:connect(Host, [Username], [Password], Opts).
 
   Host      - host to connect to.
   Username  - username to connect as, defaults to $USER.
@@ -16,8 +16,8 @@ Erlang PostgreSQL Database Client
     + {timeout,  Integer}    milliseconds, defaults to 5000
     + {async,    Pid}        see Asynchronous Messages section
 
-  {ok, C} = pgsql:connect("localhost", "username", [{database, "test_db"}]).
-  ok = pgsql:close(C).
+  {ok, C} = epgsql_wg:connect("localhost", "username", [{database, "test_db"}]).
+  ok = epgsql_wg:close(C).
 
   The timeout parameter will trigger an {error, timeout} result when the
   server fails to respond within Timeout milliseconds. This timeout applies
@@ -25,13 +25,13 @@ Erlang PostgreSQL Database Client
 
 * Simple Query
 
-  {ok, Columns, Rows}        = pgsql:squery(C, "select ...").
-  {ok, Count}                = pgsql:squery(C, "update ...").
-  {ok, Count, Columns, Rows} = pgsql:squery(C, "insert ... returning ...").
+  {ok, Columns, Rows}        = epgsql_wg:squery(C, "select ...").
+  {ok, Count}                = epgsql_wg:squery(C, "update ...").
+  {ok, Count, Columns, Rows} = epgsql_wg:squery(C, "insert ... returning ...").
 
-  {error, Error}             = pgsql:squery(C, "invalid SQL").
+  {error, Error}             = epgsql_wg:squery(C, "invalid SQL").
 
-  Columns       - list of column records, see pgsql.hrl for definition.
+  Columns       - list of column records, see epgsql_wg.hrl for definition.
   Rows          - list of tuples, one for each row.
   Count         - integer count of rows inserted/updated/etc
 
@@ -40,11 +40,11 @@ Erlang PostgreSQL Database Client
 
 * Extended Query
 
-  {ok, Columns, Rows}        = pgsql:equery(C, "select ...", [Parameters]).
-  {ok, Count}                = pgsql:equery(C, "update ...", [Parameters]).
-  {ok, Count, Columns, Rows} = pgsql:equery(C, "insert ... returning ...", [Parameters]).
+  {ok, Columns, Rows}        = epgsql_wg:equery(C, "select ...", [Parameters]).
+  {ok, Count}                = epgsql_wg:equery(C, "update ...", [Parameters]).
+  {ok, Count, Columns, Rows} = epgsql_wg:equery(C, "insert ... returning ...", [Parameters]).
 
-  {error, Error}             = pgsql:equery(C, "invalid SQL", [Parameters]).
+  {error, Error}             = epgsql_wg:equery(C, "invalid SQL", [Parameters]).
 
   Parameters    - optional list of values to be bound to $1, $2, $3, etc.
 
@@ -52,38 +52,38 @@ Erlang PostgreSQL Database Client
   the unnamed prepared statement and portal. A "select" statement returns
   {ok, Columns, Rows}, "insert/update/delete" returns {ok, Count} or
   {ok, Count, Columns, Rows} when a "returning" clause is present. When
-  an error occurs, all statements result in {error, #error{}}.
+  an error occurs, all statements result in {error, #epgsql_wg_error{}}.
 
   PostgreSQL's binary format is used to return integers as Erlang
   integers, floats as floats, bytea/text/varchar columns as binaries,
-  bools as true/false, etc. For details see pgsql_binary.erl and the
+  bools as true/false, etc. For details see epgsql_wg_binary.erl and the
   Data Representation section below.
 
 * Parse/Bind/Execute
 
-  {ok, Statement} = pgsql:parse(C, [StatementName], Sql, [ParameterTypes]).
+  {ok, Statement} = epgsql_wg:parse(C, [StatementName], Sql, [ParameterTypes]).
 
   StatementName   - optional, reusable, name for the prepared statement.
   ParameterTypes  - optional list of PostgreSQL types for each parameter.
 
-  For valid type names see pgsql_types.erl.
+  For valid type names see epgsql_wg_types.erl.
 
-  ok = pgsql:bind(C, Statement, [PortalName], ParameterValues).
+  ok = epgsql_wg:bind(C, Statement, [PortalName], ParameterValues).
 
   PortalName      - optional name for the result portal.
 
-  {ok | partial, Rows} = pgsql:execute(C, Statement, [PortalName], [MaxRows]).
-  {ok, Count}          = pgsql:execute(C, Statement, [PortalName]).
-  {ok, Count, Rows}    = pgsql:execute(C, Statement, [PortalName]).
+  {ok | partial, Rows} = epgsql_wg:execute(C, Statement, [PortalName], [MaxRows]).
+  {ok, Count}          = epgsql_wg:execute(C, Statement, [PortalName]).
+  {ok, Count, Rows}    = epgsql_wg:execute(C, Statement, [PortalName]).
 
   PortalName      - optional portal name used in bind/4.
   MaxRows         - maximum number of rows to return (0 for all rows).
 
   execute returns {partial, Rows} when more rows are available.
 
-  ok = pgsql:close(C, Statement).
-  ok = pgsql:close(C, statement | portal, Name).
-  ok = pgsql:sync(C).
+  ok = epgsql_wg:close(C, Statement).
+  ok = epgsql_wg:close(C, statement | portal, Name).
+  ok = epgsql_wg:sync(C).
 
   All functions return {error, Error} when an error occurs.
 
@@ -109,14 +109,14 @@ Erlang PostgreSQL Database Client
 
 * Errors
 
-  Errors originating from the PostgreSQL backend are returned as {error, #error{}},
-  see pgsql.hrl for the record definition. epgsql functions may also return
+  Errors originating from the PostgreSQL backend are returned as {error, #epgsql_wg_error{}},
+  see epgsql_wg.hrl for the record definition. epgsql_wg functions may also return
   {error, What} where What is one of the following:
 
   {unsupported_auth_method, Method}     - required auth method is unsupported
   timeout                               - request timed out
   closed                                - connection was closed
-  sync_required                         - error occured and pgsql:sync must be called
+  sync_required                         - error occured and epgsql_wg:sync must be called
 
 * Asynchronous Messages
 
@@ -124,7 +124,7 @@ Erlang PostgreSQL Database Client
   to notice and warning messages generated by the server, and "notifications" which
   are generated by the LISTEN/NOTIFY mechanism.
 
-  Passing the {async, Pid} option to pgsql:connect will result in these async
+  Passing the {async, Pid} option to epgsql_wg:connect will result in these async
   messages being sent to the specified process, otherwise they will be dropped.
 
   Message formats:
@@ -140,5 +140,5 @@ Erlang PostgreSQL Database Client
     {pgsql, Connection, {notice, Error}}
 
       Connection  - connection the notice occured on
-      Error       - an #error{} record, see pgsql.hrl
+      Error       - an #epgsql_wg_error{} record, see epgsql_wg.hrl
 

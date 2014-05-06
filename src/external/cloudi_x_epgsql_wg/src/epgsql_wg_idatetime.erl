@@ -1,6 +1,6 @@
 %%% Copyright (C) 2008 - Will Glozer.  All rights reserved.
 
--module(pgsql_idatetime).
+-module(epgsql_wg_idatetime).
 
 -export([decode/2, encode/2]).
 
