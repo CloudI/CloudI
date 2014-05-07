@@ -17,7 +17,8 @@
 %% test cases
 -export([t_table_create_1/1,
          t_table_create_2/1,
-         t_table_query_1/1]).
+         t_table_query_1/1,
+         t_table_query_2/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -41,7 +42,8 @@ groups() ->
       [t_table_create_1,
        t_table_create_2]},
      {table_query, [],
-      [t_table_query_1]}].
+      [t_table_query_1,
+       t_table_query_2]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -129,15 +131,15 @@ t_table_create_1(_Config) ->
     {ok, {updated, 1}} = cloudi_service_db_pgsql:transaction(Context,
         ?DB_WG,
         [<<"INSERT INTO incoming_results (digit_index, data) "
-           "values (1, 'one')">>,
+           "VALUES (1, 'one')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (2, 'two')">>]),
+           "VALUES (2, 'two')">>]),
     {ok, {updated, 1}} = cloudi_service_db_pgsql:transaction(Context,
         ?DB_SEMIOCAST,
         [<<"INSERT INTO incoming_results (digit_index, data) "
-           "values (3, 'three')">>,
+           "VALUES (3, 'three')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (4, 'four')">>]),
+           "VALUES (4, 'four')">>]),
     {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_WG, "SELECT * FROM incoming_results"),
     % wg driver returns row data as binaries
@@ -165,9 +167,9 @@ t_table_create_2(_Config) ->
            "data          TEXT"
            ")">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (1, 'one')">>,
+           "VALUES (1, 'one')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (invalid, 'two')">>]),
+           "VALUES (invalid, 'two')">>]),
     true = is_binary(Message1),
     {ok, {error, Message1}} = cloudi_service_db_pgsql:transaction(
         Context,
@@ -177,9 +179,9 @@ t_table_create_2(_Config) ->
            "data          TEXT"
            ")">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (1, 'one')">>,
+           "VALUES (1, 'one')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (invalid, 'two')">>]),
+           "VALUES (invalid, 'two')">>]),
     {ok, {error, Message2}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
     true = is_binary(Message2),
@@ -196,13 +198,13 @@ t_table_query_1(_Config) ->
            "data          TEXT"
            ")">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (1, 'one')">>,
+           "VALUES (1, 'one')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (2, 'two')">>,
+           "VALUES (2, 'two')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (3, 'three')">>,
+           "VALUES (3, 'three')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
-           "values (4, 'four')">>]),
+           "VALUES (4, 'four')">>]),
     {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:equery(Context,
         ?DB_WG, <<"SELECT * FROM incoming_results "
                   "WHERE digit_index = $1">>, [2]),
@@ -213,6 +215,45 @@ t_table_query_1(_Config) ->
     [{2,<<"two">>}] = RowsSEMIOCAST,
     {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
+    ok.
+
+t_table_query_2(_Config) ->
+    Context = cloudi:new(),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG,
+        <<"DROP TABLE IF EXISTS binary_results; "
+          "CREATE TABLE binary_results ("
+          "digit_index   NUMERIC(30) PRIMARY KEY,"
+          "data          BYTEA"
+          ");">>),
+    Binary = <<16#DE, 16#AD, 16#BE, 16#EF>>,
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_WG, <<"INSERT INTO binary_results (digit_index, data) "
+                  "VALUES (1, $1)">>, [Binary]),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_SEMIOCAST, <<"INSERT INTO binary_results (digit_index, data) "
+                         "VALUES (2, $1)">>, [Binary]),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, <<"INSERT INTO binary_results (digit_index, data) "
+                  "VALUES (3, E'\\\\xDEADBEEF')">>),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"INSERT INTO binary_results (digit_index, data) "
+                         "VALUES (4, E'\\\\xDEADBEEF')">>),
+    {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, <<"SELECT * FROM binary_results">>),
+    BinaryWG = <<"\\xdeadbeef">>, % wg doesn't really support BYTEA
+    [{<<"1">>,BinaryWG},
+     {<<"2">>,BinaryWG},
+     {<<"3">>,BinaryWG},
+     {<<"4">>,BinaryWG}] = RowsWG,
+    {ok, {selected, RowsSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"SELECT * FROM binary_results">>),
+    [{1,Binary},
+     {2,Binary},
+     {3,Binary},
+     {4,Binary}] = RowsSEMIOCAST,
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"DROP TABLE binary_results">>),
     ok.
 
 %%%------------------------------------------------------------------------

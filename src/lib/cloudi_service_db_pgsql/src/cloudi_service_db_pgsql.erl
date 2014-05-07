@@ -55,7 +55,8 @@
 %% external interface
 -export([equery/4, equery/5,
          squery/3, squery/4,
-         transaction/3, transaction/4]).
+         transaction/3, transaction/4,
+         binary_to_bytea/1]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -221,6 +222,19 @@ transaction(Dispatcher, Name, [Query | _] = QueryList, Timeout)
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
                      QueryList, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Postgres string encoding of binary data.===
+%% Better to use equery.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec binary_to_bytea(B :: binary()) ->
+    string().
+
+binary_to_bytea(B) when is_binary(B) ->
+    binary_to_bytea(B, []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -762,4 +776,16 @@ check_list([E | L], F) ->
             % ignore all but the last element, unless there is an error
             check_list(L, F)
     end.
+
+binary_to_bytea(<<>>, L) ->
+    "E'\\\\x" ++ lists:reverse([$' | L]);
+binary_to_bytea(<<N1:4, N2:4, Rest/binary>>, L) ->
+    binary_to_bytea(Rest, [int_to_hex(N2), int_to_hex(N1) | L]).
+
+-compile({inline, [{int_to_hex,1}]}).
+
+int_to_hex(I) when 16#0 =< I, I =< 16#9 ->
+    I + $0;
+int_to_hex(I) when 16#A =< I, I =< 16#F ->
+    (I - 16#A) + $A.
 
