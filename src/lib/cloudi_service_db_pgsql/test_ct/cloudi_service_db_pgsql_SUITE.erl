@@ -158,8 +158,7 @@ t_table_create_1(_Config) ->
 
 t_table_create_2(_Config) ->
     Context = cloudi:new(),
-    % XXX DB_SEMIOCAST can't handle this yet, it crashes the driver
-    {ok, {error, MessageWG}} = cloudi_service_db_pgsql:transaction(Context,
+    {ok, {error, Message1}} = cloudi_service_db_pgsql:transaction(Context,
         ?DB_WG,
         [<<"CREATE TABLE incoming_results ("
            "digit_index   NUMERIC(30) PRIMARY KEY,"
@@ -169,24 +168,22 @@ t_table_create_2(_Config) ->
            "values (1, 'one')">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
            "values (invalid, 'two')">>]),
-    true = is_binary(MessageWG),
-    % XXX same problem is here
-    %{ok, {error, MessageWG}} = cloudi_service_db_pgsql:squery(Context,
-    %    ?DB_SEMIOCAST,
-    %    <<"BEGIN;"
-    %      "CREATE TABLE incoming_results ("
-    %      "digit_index   NUMERIC(30) PRIMARY KEY,"
-    %      "data          TEXT"
-    %      ");"
-    %      "INSERT INTO incoming_results (digit_index, data) "
-    %      "values (1, 'one');"
-    %      "INSERT INTO incoming_results (digit_index, data) "
-    %      "values (invalid, 'two');"
-    %      "COMMIT;">>),
-    {ok, {error, MessageSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+    true = is_binary(Message1),
+    {ok, {error, Message1}} = cloudi_service_db_pgsql:transaction(
+        Context,
+        ?DB_SEMIOCAST,
+        [<<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ")">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (1, 'one')">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "values (invalid, 'two')">>]),
+    {ok, {error, Message2}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
-    true = is_binary(MessageSEMIOCAST),
-    {ok, {error, MessageSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+    true = is_binary(Message2),
+    {ok, {error, Message2}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_WG, <<"DROP TABLE incoming_results">>),
     ok.
 

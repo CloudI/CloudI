@@ -12,6 +12,7 @@
            based on the semiocast attempt at supporting odbc)
         * Add more tests which use both drivers with the common internal
           output format
+    * Update uuid
 
 2014-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 

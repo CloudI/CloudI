@@ -228,8 +228,8 @@ exceptions due to their C integration).
 `Erlang PostgreSQL (native) driver (semiocast branch)`
 
 - `https://github.com/semiocast/pgsql`
-- `commit 21c7c3d4aba5303e6f31bebbe99eace6d7363a4b`
-- `Mon May  5 11:33:11 PDT 2014`
+- `commit 693958e8899bcb301979de5a5ba4cf868d396677`
+- `Tue May  6 16:39:56 PDT 2014`
 - `BSD`
 
 `poolboy`

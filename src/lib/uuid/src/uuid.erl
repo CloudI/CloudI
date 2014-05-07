@@ -100,8 +100,10 @@
         timestamp_type :: 'os' | 'erlang'
     }).
 
+-type uuid() :: <<_:128>>.
 -type state() :: #uuid_state{}.
--export_type([state/0]).
+-export_type([uuid/0,
+              state/0]).
 
 -include("uuid.hrl").
 
@@ -216,7 +218,7 @@ new(Pid, Options)
 %%-------------------------------------------------------------------------
 
 -spec get_v1(#uuid_state{}) ->
-    <<_:128>>.
+    uuid().
 
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq = ClockSeq,
@@ -259,7 +261,7 @@ get_v1_time() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v1_time('os' | 'erlang' | #uuid_state{} | <<_:128>>) ->
+-spec get_v1_time('os' | 'erlang' | #uuid_state{} | uuid()) ->
     non_neg_integer().
 
 get_v1_time(erlang) ->
@@ -317,7 +319,7 @@ is_v1(_) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3(Data :: binary()) ->
-    <<_:128>>.
+    uuid().
 
 get_v3(Data) when is_binary(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:48>> =
@@ -338,7 +340,7 @@ get_v3(Data) when is_binary(Data) ->
 
 -spec get_v3(Namespace :: dns | url | oid | x500 | binary(),
              Data :: binary() | iolist()) ->
-    <<_:128>>.
+    uuid().
 
 get_v3(dns, Data) ->
     get_v3(?UUID_NAMESPACE_DNS, Data);
@@ -366,7 +368,7 @@ get_v3(Namespace, Data) when is_binary(Namespace) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3_compat(Data :: binary()) ->
-    <<_:128>>.
+    uuid().
 
 get_v3_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48>> =
@@ -388,7 +390,7 @@ get_v3_compat(Data) when is_binary(Data) ->
 
 -spec get_v3_compat(Namespace :: dns | url | oid | x500 | binary(),
                     Data :: binary() | iolist()) ->
-    <<_:128>>.
+    uuid().
 
 get_v3_compat(dns, Data) ->
     get_v3_compat(?UUID_NAMESPACE_DNS, Data);
@@ -443,13 +445,13 @@ is_v3(_) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v4() ->
-    <<_:128>>.
+    uuid().
 
 get_v4() ->
     get_v4(strong).
 
 -spec get_v4('strong' | 'weak') ->
-    <<_:128>>.
+    uuid().
 
 get_v4(strong) ->
     <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> = crypto:strong_rand_bytes(16),
@@ -480,7 +482,7 @@ get_v4(weak) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v4_urandom() ->
-    <<_:128>>.
+    uuid().
 
 get_v4_urandom() ->
     % random 122 bits
@@ -526,7 +528,7 @@ get_v4_urandom() ->
 %%-------------------------------------------------------------------------
 
 -spec get_v4_urandom_bigint() ->
-    <<_:128>>.
+    uuid().
 
 get_v4_urandom_bigint() ->
     Rand1 = random:uniform(2199023255552) - 1, % random 41 bits
@@ -548,7 +550,7 @@ get_v4_urandom_bigint() ->
 %%-------------------------------------------------------------------------
 
 -spec get_v4_urandom_native() ->
-    <<_:128>>.
+    uuid().
 
 get_v4_urandom_native() ->
     Rand1 = random:uniform(134217728) - 1, % random 27 bits
@@ -588,7 +590,7 @@ is_v4(_) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5(Data :: binary()) ->
-    <<_:128>>.
+    uuid().
 
 get_v5(Data) when is_binary(Data) ->
     <<B1:48, B4a:4, B2:12, B4b:2, B3:14, B4c:32, B4d:48>> =
@@ -609,7 +611,7 @@ get_v5(Data) when is_binary(Data) ->
 
 -spec get_v5(Namespace :: dns | url | oid | x500 | binary(),
              Data :: binary() | iolist()) ->
-    <<_:128>>.
+    uuid().
 
 get_v5(dns, Data) ->
     get_v5(?UUID_NAMESPACE_DNS, Data);
@@ -637,7 +639,7 @@ get_v5(Namespace, Data) when is_binary(Namespace) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5_compat(Data :: binary()) ->
-    <<_:128>>.
+    uuid().
 
 get_v5_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48, _:32>> =
@@ -659,7 +661,7 @@ get_v5_compat(Data) when is_binary(Data) ->
 
 -spec get_v5_compat(Namespace :: dns | url | oid | x500 | binary(),
                     Data :: binary() | iolist()) ->
-    <<_:128>>.
+    uuid().
 
 get_v5_compat(dns, Data) ->
     get_v5_compat(?UUID_NAMESPACE_DNS, Data);
@@ -702,7 +704,7 @@ is_v5(_) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uuid_to_list(Value :: <<_:128>>) ->
+-spec uuid_to_list(Value :: uuid()) ->
     iolist().
 
 uuid_to_list(Value)
@@ -720,7 +722,7 @@ uuid_to_list(Value)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uuid_to_string(Value :: <<_:128>>) ->
+-spec uuid_to_string(Value :: uuid()) ->
     string().
 
 uuid_to_string(Value) ->
@@ -732,7 +734,7 @@ uuid_to_string(Value) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uuid_to_string(Value :: <<_:128>>,
+-spec uuid_to_string(Value :: uuid(),
                      Option :: standard | nodash |
                                list_standard | list_nodash |
                                binary_standard | binary_nodash) ->
@@ -793,7 +795,7 @@ uuid_to_string(<<Value:128/unsigned-integer>>, binary_nodash) ->
 %%-------------------------------------------------------------------------
 
 -spec string_to_uuid(string() | binary()) ->
-    <<_:128>>.
+    uuid().
 
 string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08, $-,
                 N09, N10, N11, N12, $-,

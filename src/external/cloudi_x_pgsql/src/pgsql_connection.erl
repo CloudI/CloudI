@@ -693,12 +693,11 @@ pgsql_simple_query(Query, Timeout, From, #state{socket = {SockModule, Sock}} = S
             SinglePacket = [pgsql_protocol:encode_query_message(AQuery) || AQuery <- Queries],
             case SockModule:send(Sock, SinglePacket) of
                 ok ->
-                    {{set, []}, State1} = pgsql_simple_query_loop([], [], sync, State0),
+                    {SetResult1, State1} = pgsql_simple_query_loop([], [], sync, State0),
                     spawn_link(fun() ->
                         pgsql_simple_query_loop([], [], {async, ConnPid, fun(Result) ->
-                            pgsql_simple_query_loop([], [], {async, ConnPid, fun({set, []}) ->
-                                gen_server:reply(From, Result),
-                                gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                            pgsql_simple_query_loop([], [], {async, ConnPid, fun(SetResult2) ->
+                                process_set_timeout_result(From, Result, [SetResult1, SetResult2], ConnPid, CurrentCommand)
                             end}, State1)
                         end}, State1)
                     end),
@@ -712,6 +711,23 @@ pgsql_simple_query(Query, Timeout, From, #state{socket = {SockModule, Sock}} = S
                     command_completed(CurrentCommand, State0)
             end
     end.
+
+process_set_timeout_result(From, Result, SetResults, ConnPid, CurrentCommand) ->
+    % Make sure client knows about the error.
+    SetResult = case SetResults of
+        [SingleResult] -> SingleResult;
+        [{set, []}, SetResult2] -> SetResult2;
+        [{error, _} = SetResult1, _] -> SetResult1
+    end,
+    ReturnedResult = case SetResult of
+        {set, []} -> Result;
+        {error, _} -> case Result of
+            {error, _} -> Result;
+            _ -> SetResult
+        end
+    end,
+    gen_server:reply(From, ReturnedResult),
+    gen_server:cast(ConnPid, {command_completed, CurrentCommand}).
 
 -spec pgsql_simple_query0(iodata(), sync, #state{}) -> {tuple(), #state{}};
                          (iodata(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
@@ -780,15 +796,20 @@ pgsql_extended_query(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, Timeout, F
             end),
             State0;
         Value ->
-            {{set, []}, State1} = pgsql_simple_query0(io_lib:format("set statement_timeout = ~B", [Value]), sync, State0),
-            spawn_link(fun() ->
-                pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(Result) ->
-                    pgsql_simple_query0("set statement_timeout = 0", {async, ConnPid, fun({set, []}) ->
-                        gen_server:reply(From, Result),
-                        gen_server:cast(ConnPid, {command_completed, CurrentCommand})
-                    end}, State1)
-                end}, State1)
-            end),
+            {SetResult1, State1} = pgsql_simple_query0(io_lib:format("set statement_timeout = ~B", [Value]), sync, State0),
+            case SetResult1 of
+                {set, []} ->
+                    spawn_link(fun() ->
+                        pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(Result) ->
+                            pgsql_simple_query0("set statement_timeout = 0", {async, ConnPid, fun(SetResult2) ->
+                                process_set_timeout_result(From, Result, [SetResult2], ConnPid, CurrentCommand)
+                            end}, State1)
+                        end}, State1)
+                    end);
+                {error, _} ->
+                    gen_server:reply(From, SetResult1),
+                    gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+            end,
             State1
     end.
 

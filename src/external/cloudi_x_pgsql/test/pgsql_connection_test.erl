@@ -1058,6 +1058,35 @@ invalid_query_test_() ->
                                 % connection still usable
                                 R = pgsql_connection:extended_query("insert into tmp(id, other) values (1, $1)", ["toto"], Conn),
                                 ?assertEqual({{insert, 0, 1}, []}, R)
+                        end),
+                    ?_test(begin
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:simple_query("FOO", Conn)),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:simple_query("FOO", [], Conn)),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:simple_query("FOO", [], 5000, Conn)),
+                                % connection still usable
+                                R = pgsql_connection:extended_query("insert into tmp(id, other) values (2, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R)
+                        end),
+                    ?_test(begin
+                                {'begin',[]} = pgsql_connection:simple_query("BEGIN", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (3, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:simple_query("FOO", [], 5000, Conn)),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:simple_query("FOO", [], 5000, Conn)),
+                                {'rollback',[]} = pgsql_connection:simple_query("COMMIT", Conn),
+                                % row 3 was not inserted.
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (3, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1)
+                        end),
+                    ?_test(begin
+                                {'begin',[]} = pgsql_connection:simple_query("BEGIN", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (4, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [], [], 5000, Conn)),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [], [], 5000, Conn)),
+                                {'rollback',[]} = pgsql_connection:simple_query("COMMIT", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (4, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1)
                         end)
                 ]
         end
