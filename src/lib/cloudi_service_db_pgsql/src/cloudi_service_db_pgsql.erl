@@ -650,13 +650,13 @@ driver_equery(Query, Parameters,
                      connection = Connection,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_WG:equery(Connection, Query, Parameters),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query, Parameters)
+            driver_debug(DebugLevel, Query, Parameters, Native)
     end,
-    Native = ?MODULE_WG:equery(Connection, Query, Parameters),
     if
         Interface =:= common ->
             wg_to_common(Native);
@@ -669,14 +669,14 @@ driver_equery(Query, Parameters,
                      timeout = Timeout,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
+                                              Timeout, Connection),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query, Parameters)
+            driver_debug(DebugLevel, Query, Parameters, Native)
     end,
-    Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
-                                              Timeout, Connection),
     if
         Interface =:= common ->
             semiocast_to_common(Native);
@@ -690,13 +690,13 @@ driver_squery(internal, Query,
                      connection = Connection,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_WG:squery(Connection, Query),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query)
+            driver_debug(DebugLevel, Query, Native)
     end,
-    Native = ?MODULE_WG:squery(Connection, Query),
     if
         Interface =:= common ->
             wg_to_common(Native);
@@ -708,13 +708,13 @@ driver_squery(external, Query,
                      connection = Connection,
                      endian = Endian,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_WG:squery(Connection, Query),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query)
+            driver_debug(DebugLevel, Query, Native)
     end,
-    Native = ?MODULE_WG:squery(Connection, Query),
     response_external(wg_to_common(Native), Query, Endian);
 driver_squery(internal, Query,
               #state{module = ?MODULE_SEMIOCAST,
@@ -722,13 +722,13 @@ driver_squery(internal, Query,
                      timeout = Timeout,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query)
+            driver_debug(DebugLevel, Query, Native)
     end,
-    Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     if
         Interface =:= common ->
             semiocast_to_common(Native);
@@ -741,13 +741,13 @@ driver_squery(external, Query,
                      timeout = Timeout,
                      endian = Endian,
                      debug_level = DebugLevel}) ->
+    Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     if
         DebugLevel =:= off ->
             ok;
         true ->
-            driver_debug(DebugLevel, Query)
+            driver_debug(DebugLevel, Query, Native)
     end,
-    Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     response_external(semiocast_to_common(Native), Query, Endian).
 
 driver_debug_log(trace, Message, Args) ->
@@ -763,11 +763,13 @@ driver_debug_log(error, Message, Args) ->
 driver_debug_log(fatal, Message, Args) ->
     ?LOG_FATAL(Message, Args).
 
-driver_debug(Level, Query, Parameters) ->
-    driver_debug_log(Level, "SQL(equery): ~p ~p", [Query, Parameters]).
+driver_debug(Level, Query, Parameters, Result) ->
+    driver_debug_log(Level, "SQL(equery): ~p ~p = ~p",
+                     [Query, Parameters, Result]).
 
-driver_debug(Level, Query) ->
-    driver_debug_log(Level, "SQL(squery): ~p", [Query]).
+driver_debug(Level, Query, Result) ->
+    driver_debug_log(Level, "SQL(squery): ~p = ~p",
+                     [Query, Result]).
 
 % Rows in the wg format only use binary strings for data
 wg_to_common({ok, I}) ->
