@@ -764,11 +764,16 @@ driver_debug_log(fatal, Message, Args) ->
     ?LOG_FATAL(Message, Args).
 
 driver_debug(Level, Query, Parameters, Result) ->
-    driver_debug_log(Level, "SQL(equery): ~p ~p = ~p",
+    driver_debug_log(Level,
+                     "SQL(equery): ~p~n"
+                     "             ~p~n"
+                     "           = ~p",
                      [Query, Parameters, Result]).
 
 driver_debug(Level, Query, Result) ->
-    driver_debug_log(Level, "SQL(squery): ~p = ~p",
+    driver_debug_log(Level,
+                     "SQL(equery): ~p~n"
+                     "           = ~p",
                      [Query, Result]).
 
 % Rows in the wg format only use binary strings for data
