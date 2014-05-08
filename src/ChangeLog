@@ -4,6 +4,7 @@
 2014-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add another cloudi_service_db_pgsql test case to show driver differences
+    * Update reltool_util
 
 2014-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

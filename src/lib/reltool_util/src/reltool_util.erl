@@ -46,13 +46,14 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
 -author('mjtruog [at] gmail (dot) com').
 
--export([application_start/1,
+-export([application_env/1,
+         application_start/1,
          application_start/2,
          application_start/3,
          applications_start/1,
@@ -91,6 +92,38 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the application's env settings.===
+%% Only get the env settings from the application's .app file.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_env(Application :: atom()) ->
+    {ok, list({atom(), any()})} |
+    {error, any()}.
+
+application_env(Application)
+    when is_atom(Application) ->
+    case code:where_is_file(erlang:atom_to_list(Application) ++ ".app") of
+        non_existing ->
+            {error, not_found};
+        Path ->
+            case file:consult(Path) of
+                {ok, [{application, Application, L}]} ->
+                    case lists:keyfind(env, 1, L) of
+                        {env, Env} ->
+                            {ok, Env};
+                        false ->
+                            {ok, []}
+                    end;
+                {ok, _} ->
+                    {error, invalid_file};
+                {error, _} = Error ->
+                    Error
+            end
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
