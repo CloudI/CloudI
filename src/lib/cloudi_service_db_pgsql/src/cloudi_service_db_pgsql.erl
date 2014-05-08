@@ -80,6 +80,8 @@
 -define(DEFAULT_INTERNAL_INTERFACE,        native).
 % currently only handling equery "?" -> "$N" conversion
 -define(DEFAULT_MYSQL_COMPATIBILITY,        false).
+-define(DEFAULT_DEBUG,                      false). % log output for debugging
+-define(DEFAULT_DEBUG_LEVEL,                trace).
 
 % supported drivers
 -define(MODULE_WG, cloudi_x_epgsql_wg).
@@ -96,7 +98,8 @@
         endian :: endian(),
         output :: both | external | internal,
         interface :: native | common,
-        mysql :: boolean()
+        mysql :: boolean(),
+        debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
 %%%------------------------------------------------------------------------
@@ -254,9 +257,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {output,                   ?DEFAULT_OUTPUT},
         {internal_interface,       ?DEFAULT_INTERNAL_INTERFACE},
         {mysql_compatibility,      ?DEFAULT_MYSQL_COMPATIBILITY},
+        {debug,                    ?DEFAULT_DEBUG},
+        {debug_level,              ?DEFAULT_DEBUG_LEVEL},
         {database,                 undefined}],
     [Driver, HostName, UserName, Password, Port, SSL, Listen, Timeout, Endian,
-     Output, Interface, MysqlCompatibility, Database | NewArgs] =
+     Output, Interface, MysqlCompatibility, Debug, DebugLevel,
+     Database | NewArgs] =
         cloudi_proplists:take_values(Defaults, Args),
     Module = if
         Driver =:= wg; Driver =:= epgsql_wg; Driver =:= cloudi_x_epgsql_wg ->
@@ -289,6 +295,14 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             (Interface =:= common)),
     true = ((MysqlCompatibility =:= true) orelse
             (MysqlCompatibility =:= false)),
+    true = ((Debug =:= true) orelse
+            (Debug =:= false)),
+    true = ((DebugLevel =:= trace) orelse
+            (DebugLevel =:= debug) orelse
+            (DebugLevel =:= info) orelse
+            (DebugLevel =:= warn) orelse
+            (DebugLevel =:= error) orelse
+            (DebugLevel =:= fatal)),
     true = (is_list(Database) andalso is_integer(hd(Database))),
     FinalArgs = AsyncArg ++
                 [{port, Port},
@@ -298,6 +312,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     case driver_open(Module, HostName, UserName, Password, FinalArgs) of
         {ok, Connection} ->
             cloudi_service:subscribe(Dispatcher, Database),
+            DebugLogLevel = if
+                Debug =:= false ->
+                    off;
+                Debug =:= true ->
+                    DebugLevel
+            end,
             {ok, #state{module = Module,
                         connection = Connection,
                         listen = Listen,
@@ -305,7 +325,8 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
                         endian = Endian,
                         output = Output,
                         interface = Interface,
-                        mysql = MysqlCompatibility}};
+                        mysql = MysqlCompatibility,
+                        debug_level = DebugLogLevel}};
         {error, Reason} ->
             {stop, Reason, undefined}
     end.
@@ -609,8 +630,6 @@ with_transaction([Query | L], State) ->
     end.
 
 % only internal usage, due to relying on an erlang list
-% XXX the semiocast driver currently dies if a transaction contains
-%     invalid SQL
 driver_with_transaction(L, State) ->
     case driver_squery(internal, <<"BEGIN">>, State) of
         {updated, 0} ->
@@ -629,7 +648,14 @@ driver_with_transaction(L, State) ->
 driver_equery(Query, Parameters,
               #state{module = ?MODULE_WG,
                      connection = Connection,
-                     interface = Interface}) ->
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query, Parameters)
+    end,
     Native = ?MODULE_WG:equery(Connection, Query, Parameters),
     if
         Interface =:= common ->
@@ -641,7 +667,14 @@ driver_equery(Query, Parameters,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
                      timeout = Timeout,
-                     interface = Interface}) ->
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query, Parameters)
+    end,
     Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
                                               Timeout, Connection),
     if
@@ -655,7 +688,14 @@ driver_equery(Query, Parameters,
 driver_squery(internal, Query,
               #state{module = ?MODULE_WG,
                      connection = Connection,
-                     interface = Interface}) ->
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query)
+    end,
     Native = ?MODULE_WG:squery(Connection, Query),
     if
         Interface =:= common ->
@@ -666,14 +706,28 @@ driver_squery(internal, Query,
 driver_squery(external, Query,
               #state{module = ?MODULE_WG,
                      connection = Connection,
-                     endian = Endian}) ->
+                     endian = Endian,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query)
+    end,
     Native = ?MODULE_WG:squery(Connection, Query),
     response_external(wg_to_common(Native), Query, Endian);
 driver_squery(internal, Query,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
                      timeout = Timeout,
-                     interface = Interface}) ->
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query)
+    end,
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     if
         Interface =:= common ->
@@ -685,9 +739,35 @@ driver_squery(external, Query,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
                      timeout = Timeout,
-                     endian = Endian}) ->
+                     endian = Endian,
+                     debug_level = DebugLevel}) ->
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query)
+    end,
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
     response_external(semiocast_to_common(Native), Query, Endian).
+
+driver_debug_log(trace, Message, Args) ->
+    ?LOG_TRACE(Message, Args);
+driver_debug_log(debug, Message, Args) ->
+    ?LOG_DEBUG(Message, Args);
+driver_debug_log(info, Message, Args) ->
+    ?LOG_INFO(Message, Args);
+driver_debug_log(warn, Message, Args) ->
+    ?LOG_WARN(Message, Args);
+driver_debug_log(error, Message, Args) ->
+    ?LOG_ERROR(Message, Args);
+driver_debug_log(fatal, Message, Args) ->
+    ?LOG_FATAL(Message, Args).
+
+driver_debug(Level, Query, Parameters) ->
+    driver_debug_log(Level, "SQL(equery): ~p ~p", [Query, Parameters]).
+
+driver_debug(Level, Query) ->
+    driver_debug_log(Level, "SQL(squery): ~p", [Query]).
 
 % Rows in the wg format only use binary strings for data
 wg_to_common({ok, I}) ->
