@@ -830,7 +830,8 @@ semiocast_to_common({{lock, table}, []}) ->
 semiocast_to_common({Command, []}) ->
     {error, {invalid_command, Command}};
 semiocast_to_common([_ | _] = L) ->
-    check_list(L, fun semiocast_to_common/1).
+    % list is reversed, odd
+    check_list(lists:reverse(L), fun semiocast_to_common/1).
 
 check_list([E], F) ->
     F(E);
