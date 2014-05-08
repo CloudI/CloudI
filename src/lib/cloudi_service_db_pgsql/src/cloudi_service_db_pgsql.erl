@@ -199,7 +199,7 @@ squery(Dispatcher, Name, Query, Timeout)
 -spec transaction(Dispatcher :: dispatcher(),
                   Name :: cloudi_service:service_name(),
                   QueryList :: list(string() | binary())) ->
-    {ok, any()} |
+    {ok, ok} |
     {error, any()}.
 
 transaction(Dispatcher, Name, [Query | _] = QueryList)
@@ -217,7 +217,7 @@ transaction(Dispatcher, Name, [Query | _] = QueryList)
                   Name :: cloudi_service:service_name(),
                   QueryList :: list(string() | binary()),
                   Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, any()} |
+    {ok, ok} |
     {error, any()}.
 
 transaction(Dispatcher, Name, [Query | _] = QueryList, Timeout)
@@ -609,38 +609,15 @@ driver_close(?MODULE_WG, Connection) ->
 driver_close(?MODULE_SEMIOCAST, Connection) ->
     ?MODULE_SEMIOCAST:close(Connection).
 
-with_transaction([Query], State) ->
-    case driver_squery(internal, Query, State) of
-        {error, _} = Error ->
-            Error;
-        Last ->
-            case driver_squery(internal, <<"COMMIT">>, State) of
-                {updated, 0} ->
-                    Last;
-                {error, _} = Error ->
-                    Error
-            end
-    end;
-with_transaction([Query | L], State) ->
-    case driver_squery(internal, Query, State) of
-        {error, _} = Error ->
-            Error;
-        _ ->
-            with_transaction(L, State)
-    end.
-
 % only internal usage, due to relying on an erlang list
 driver_with_transaction(L, State) ->
-    case driver_squery(internal, <<"BEGIN">>, State) of
+    case driver_squery(internal,
+                       [<<"BEGIN;">> | L] ++ [<<"COMMIT;">>],
+                       State#state{interface = common}) of
         {updated, 0} ->
-            case with_transaction(L, State) of
-                {error, _} = Error ->
-                    driver_squery(internal, <<"ROLLBACK">>, State),
-                    Error;
-                Last ->
-                    Last
-            end;
+            ok;
         {error, _} = Error ->
+            driver_squery(internal, <<"ROLLBACK;">>, State),
             Error
     end.
 
@@ -765,15 +742,17 @@ driver_debug_log(fatal, Message, Args) ->
 
 driver_debug(Level, Query, Parameters, Result) ->
     driver_debug_log(Level,
-                     "SQL(equery): ~p~n"
-                     "             ~p~n"
-                     "           = ~p",
+                     "SQL(equery):~n"
+                     " ~p~n"
+                     " ~p~n"
+                     " = ~p",
                      [Query, Parameters, Result]).
 
 driver_debug(Level, Query, Result) ->
     driver_debug_log(Level,
-                     "SQL(equery): ~p~n"
-                     "           = ~p",
+                     "SQL(squery):~n"
+                     " ~p~n"
+                     " = ~p",
                      [Query, Result]).
 
 % Rows in the wg format only use binary strings for data

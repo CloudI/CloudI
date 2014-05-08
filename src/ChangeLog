@@ -4,6 +4,7 @@
 2014-05-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add debug output to cloudi_service_db_pgsql
+    * Simplify cloudi_service_db_pgsql
 
 2014-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
