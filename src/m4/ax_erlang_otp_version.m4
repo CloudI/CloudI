@@ -30,6 +30,7 @@
 #            provide detailed version information.  For autoconf, you should
 #            instead prefer AC_ERLANG_CHECK_LIB and AC_ERLANG_SUBST_ERTS_VER
 #            to check the version of individual OTP applications.
+#   (http://erlang.org/pipermail/erlang-questions/2014-April/078590.html)
 #
 
 AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
