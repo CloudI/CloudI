@@ -11,7 +11,8 @@
     encode_password_message/1,
     encode_query_message/1,
     encode_parse_message/3,
-    encode_bind_message/4,
+    encode_bind_message/4,  % deprecated
+    encode_bind_message/5,
     encode_describe_message/2,
     encode_execute_message/2,
     encode_sync_message/0,
@@ -19,7 +20,9 @@
     encode_cancel_message/2,
     
     decode_message/2,
-    decode_row/4
+    decode_row/4,
+    
+    bind_requires_statement_description/1
     ]).
 
 %%====================================================================
@@ -84,11 +87,19 @@ encode_parse_message(PreparedStatementName, Query, DataTypes) ->
 %%
 -spec encode_bind_message(iodata(), iodata(), [any()], boolean()) -> binary().
 encode_bind_message(PortalName, StatementName, Parameters, IntegerDateTimes) ->
+    encode_bind_message(PortalName, StatementName, Parameters, [], IntegerDateTimes).
+
+-spec encode_bind_message(iodata(), iodata(), [any()], [pgsql_oid()], boolean()) -> binary().
+encode_bind_message(PortalName, StatementName, Parameters, ParametersDataTypes, IntegerDateTimes) ->
     PortalNameBin = iolist_to_binary(PortalName),
     StatementNameBin = iolist_to_binary(StatementName),
     ParametersCount = length(Parameters),
     ParametersCountBin = <<ParametersCount:16/integer>>,
-    ParametersL = [encode_parameter(Parameter, IntegerDateTimes) || Parameter <- Parameters],
+    ParametersWithTypes = case ParametersDataTypes of
+        [] -> [{Parameter, undefined} || Parameter <- Parameters];
+        _ -> lists:zip(Parameters, ParametersDataTypes)
+    end,
+    ParametersL = [encode_parameter(Parameter, Type, IntegerDateTimes) || {Parameter, Type} <- ParametersWithTypes],
     {ParametersFormats, ParametersValues} = lists:unzip(ParametersL),
     ParametersFormatsAllText = lists:all(fun(Format) -> Format =:= text end, ParametersFormats),
     ParametersFormatsBin = if
@@ -104,40 +115,16 @@ encode_bind_message(PortalName, StatementName, Parameters, IntegerDateTimes) ->
 encode_format(text) -> <<0:16/integer>>;
 encode_format(binary) -> <<1:16/integer>>.
 
-encode_parameter_array_content({array, List}, IntegerDateTimes) ->
-    StrList = [ encode_parameter_array_content(C, IntegerDateTimes) || C <- List ],
-    JoinedStrings = case StrList of
-        [] -> [];
-        [StrListHead | StrListTail] -> [StrListHead, [[<<",">>, Str] || Str <- StrListTail]]
-    end,
-    Binary = list_to_binary([<<"{">>, JoinedStrings, <<"}">>]),
-    Binary;
-encode_parameter_array_content(String, _IntegerDateTimes) when is_list(String) ->
-    list_to_binary(String);
-encode_parameter_array_content(Binary, _IntegerDateTimes) when is_binary(Binary) ->
-    Binary;
-encode_parameter_array_content(Float, _IntegerDateTimes) when is_float(Float) ->
-    list_to_binary(float_to_list(Float));
-encode_parameter_array_content(Integer, _IntegerDateTimes) when is_integer(Integer) ->
-    list_to_binary(integer_to_list(Integer));
-encode_parameter_array_content(null, _IntegerDateTimes) ->
-    <<"null">>;
-encode_parameter_array_content(true, _IntegerDateTimes) ->
-    <<"t">>;
-encode_parameter_array_content(false, _IntegerDateTimes) ->
-    <<"f">>.
-
-
-
 %%--------------------------------------------------------------------
 %% @doc Encode a parameter.
+%% All parameters are currently encoded in text format except binaries that are
+%% encoded as binaries.
 %%
-encode_parameter({array, List}, IntegerDateTimes) ->
-    Binary = encode_parameter_array_content({array, List}, IntegerDateTimes),
-    Size = byte_size(Binary),
-    {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter(Binary, _IntegerDateTimes) when is_binary(Binary) ->
-    % Encode the binary as text it is a UUID.
+-spec encode_parameter(any(), pgsql_oid() | undefined, boolean()) -> {text | binary, binary()}.
+encode_parameter({array, List}, Type, IntegerDateTimes) ->
+    encode_array(List, Type, IntegerDateTimes);
+encode_parameter(Binary, _Type, _IntegerDateTimes) when is_binary(Binary) ->
+    % Encode the binary as text if it is a UUID.
     IsUUID = case Binary of
         <<_A:8/binary, $-, _B:4/binary, $-, _C:4/binary, $-, _D:4/binary, $-, _E:12/binary>> ->
             case io_lib:fread("~16u-~16u-~16u-~16u-~16u", binary_to_list(Binary)) of
@@ -152,60 +139,60 @@ encode_parameter(Binary, _IntegerDateTimes) when is_binary(Binary) ->
     end,
     Size = byte_size(Binary),
     {Type, <<Size:32/integer, Binary/binary>>};
-encode_parameter(String, _IntegerDateTimes) when is_list(String) ->
+encode_parameter(String, _Type, _IntegerDateTimes) when is_list(String) ->
     Binary = list_to_binary(String),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter(Float, _IntegerDateTimes) when is_float(Float) ->
+encode_parameter(Float, _Type, _IntegerDateTimes) when is_float(Float) ->
     FloatStrBin = list_to_binary(float_to_list(Float)),
     Size = byte_size(FloatStrBin),
     {text, <<Size:32/integer, FloatStrBin/binary>>};
-encode_parameter(Integer, _IntegerDateTimes) when is_integer(Integer) ->
+encode_parameter(Integer, _Type, _IntegerDateTimes) when is_integer(Integer) ->
     IntegerStr = integer_to_list(Integer),
     IntegerStrBin = list_to_binary(IntegerStr),
     IntegerStrLen = byte_size(IntegerStrBin),
     {text, <<IntegerStrLen:32/integer, IntegerStrBin/binary>>};
-encode_parameter(null, _IntegerDateTimes) ->
+encode_parameter(null, _Type, _IntegerDateTimes) ->
     {text, <<-1:32/integer>>};
-encode_parameter(true, _IntegerDateTimes) ->
+encode_parameter(true, _Type, _IntegerDateTimes) ->
     {text, <<1:32/integer, $t>>};
-encode_parameter(false, _IntegerDateTimes) ->
+encode_parameter(false, _Type, _IntegerDateTimes) ->
     {text, <<1:32/integer, $f>>};
-encode_parameter({{Year, Month, Day}, {Hour, Min, Sec}}, IntegerDateTimes) ->
-    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Min, Sec])), IntegerDateTimes);
-encode_parameter({Hour, Min, Sec}, IntegerDateTimes) when Hour >= 0 andalso Hour < 24 andalso Min >= 0 andalso Min < 60 andalso Sec > 0 andalso Sec =< 60 ->
-    encode_parameter(lists:flatten(io_lib:format("~2.10.0B:~2.10.0B:~2.10.0B", [Hour, Min, Sec])), IntegerDateTimes);
-encode_parameter({Year, Month, Day}, IntegerDateTimes) when Month > 0 andalso Month =< 12 andalso Day > 0 andalso Day =< 31 ->
-    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B", [Year, Month, Day])), IntegerDateTimes);
-encode_parameter({point, P}, _IntegerDateTimes) ->
+encode_parameter({{Year, Month, Day}, {Hour, Min, Sec}}, Type, IntegerDateTimes) ->
+    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Min, Sec])), Type, IntegerDateTimes);
+encode_parameter({Hour, Min, Sec}, Type, IntegerDateTimes) when Hour >= 0 andalso Hour < 24 andalso Min >= 0 andalso Min < 60 andalso Sec > 0 andalso Sec =< 60 ->
+    encode_parameter(lists:flatten(io_lib:format("~2.10.0B:~2.10.0B:~2.10.0B", [Hour, Min, Sec])), Type, IntegerDateTimes);
+encode_parameter({Year, Month, Day}, Type, IntegerDateTimes) when Month > 0 andalso Month =< 12 andalso Day > 0 andalso Day =< 31 ->
+    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B", [Year, Month, Day])), Type, IntegerDateTimes);
+encode_parameter({point, P}, _Type, _IntegerDateTimes) ->
     Binary = encode_point_text(P),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({lseg, P1, P2}, _IntegerDateTimes) ->
+encode_parameter({lseg, P1, P2}, _Type, _IntegerDateTimes) ->
     P1Bin = encode_point_text(P1),
     P2Bin = encode_point_text(P2),
     Binary = <<$[, P1Bin/binary, $,, P2Bin/binary, $]>>,
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({box, P1, P2}, _IntegerDateTimes) ->
+encode_parameter({box, P1, P2}, _Type, _IntegerDateTimes) ->
     P1Bin = encode_point_text(P1),
     P2Bin = encode_point_text(P2),
     Binary = <<$(, P1Bin/binary, $,, P2Bin/binary, $)>>,
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({path, open, [_|_]=PList}, _IntegerDateTimes) ->
+encode_parameter({path, open, [_|_]=PList}, _Type, _IntegerDateTimes) ->
     Binary = encode_points_text($[, $], PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({path, closed, [_|_]=PList}, _IntegerDateTimes) ->
+encode_parameter({path, closed, [_|_]=PList}, _Type, _IntegerDateTimes) ->
     Binary = encode_points_text($(, $), PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({polygon, [_|_]=PList}, _IntegerDateTimes) ->
+encode_parameter({polygon, [_|_]=PList}, _Type, _IntegerDateTimes) ->
     Binary = encode_points_text($(, $), PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter(Value, _IntegerDateTimes) ->
+encode_parameter(Value, _Type, _IntegerDateTimes) ->
     throw({badarg, Value}).
 
 encode_point_text({X, Y}) ->
@@ -218,6 +205,129 @@ encode_points_text(Prefix, Suffix, [PHead|PTail]) ->
     PTailBin = list_to_binary([begin PBin = encode_point_text(P), <<$,, PBin/binary>> end || P <- PTail]),
     <<Prefix, PHeadBin/binary, PTailBin/binary, Suffix>>.
 
+encode_array(Elements, ArrayType, IntegerDateTimes) ->
+    ElementType = array_type_to_element_type(ArrayType),
+    {EncodingType, ArrayElements} = encode_array_elements(Elements, ElementType, IntegerDateTimes, undefined, []),
+    case EncodingType of
+        binary ->
+            encode_array_binary(ArrayElements, ElementType);
+        undefined when ElementType =/= undefined ->
+            encode_array_binary(ArrayElements, ElementType);
+        _ ->
+            encode_array_text(ArrayElements, [])
+    end.
+
+array_type_to_element_type(undefined) -> undefined;
+array_type_to_element_type(?BYTEAARRAYOID) -> ?BYTEAOID;
+array_type_to_element_type(?TEXTARRAYOID) -> ?TEXTOID;
+array_type_to_element_type(_OtherType) -> undefined.
+
+encode_array_elements([{array, SubArray} | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
+    {NewEncodingType, SubArrayElements} = encode_array_elements(SubArray, ElementType, IntegerDateTimes, EncodingType, []),
+    encode_array_elements(Tail, ElementType, IntegerDateTimes, NewEncodingType, [{array, SubArrayElements} | Acc]);
+encode_array_elements([null | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
+    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [null | Acc]);
+encode_array_elements([Element | Tail], ElementType, IntegerDateTimes, undefined, Acc) ->
+    {EncodingType, Encoded} = encode_parameter(Element, ElementType, IntegerDateTimes),
+    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [Encoded | Acc]);
+encode_array_elements([Element | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
+    {EncodingType, Encoded} = encode_parameter(Element, ElementType, IntegerDateTimes),
+    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [Encoded | Acc]);
+encode_array_elements([], _ElementType, _IntegerDateTimes, EncodingType, Acc) ->
+    {EncodingType, lists:reverse(Acc)}.
+
+encode_array_text([null | Tail], Acc) ->
+    encode_array_text(Tail, [<<"NULL">> | Acc]);
+encode_array_text([<<_TextSize:32/integer, Text/binary>> | Tail], Acc) ->
+    Escaped = escape_array_text(Text),
+    encode_array_text(Tail, [Escaped | Acc]);
+encode_array_text([{array, SubArray} | Tail], Acc) when is_list(SubArray) ->
+    SubArrayEncoded = encode_array_text(SubArray, []),
+    encode_array_text(Tail, [SubArrayEncoded | Acc]);
+encode_array_text([], Acc) ->
+    StrList = lists:reverse(Acc),
+    JoinedStrings = case StrList of
+        [] -> [];
+        [StrListHead | StrListTail] -> [StrListHead, [[<<",">>, Str] || Str <- StrListTail]]
+    end,
+    Binary = list_to_binary([<<"{">>, JoinedStrings, <<"}">>]),
+    Size = byte_size(Binary),
+    {text, <<Size:32, Binary/binary>>}.
+    
+escape_array_text(Text) when byte_size(Text) =:= 4 ->
+    case string:to_lower(unicode:characters_to_list(Text)) of
+        "null" -> <<$", Text/binary, $">>;
+        _ -> escape_array_text0(Text, [])
+    end;
+escape_array_text(Text) -> escape_array_text0(Text, []).
+
+escape_array_text0(Text, Acc) ->
+    case binary:match(Text, [<<$">>, <<$,>>, <<$ >>, <<$\\>>]) of
+        nomatch when Acc =:= [] -> Text;
+        nomatch ->
+            list_to_binary([<<$">>, lists:reverse(Acc, [Text]), <<$">>]);
+        {Index, 1} ->
+            {Prefix, Rest1} = split_binary(Text, Index),
+            {ToEscape, Rest2} = split_binary(Rest1, 1),
+            NewAcc = [<<Prefix/binary, $\\, ToEscape/binary>> | Acc],
+            escape_array_text0(Rest2, NewAcc)
+    end.
+
+encode_array_binary(ArrayElements, ElementTypeOID) ->
+    {HasNulls, Rows} = encode_array_binary_row(ArrayElements, false, []),
+    Dims = get_array_dims(ArrayElements),
+    Header = encode_array_binary_header(Dims, HasNulls, ElementTypeOID),
+    Encoded = list_to_binary([Header, Rows]),
+    Size = byte_size(Encoded),
+    {binary, <<Size:32/integer, Encoded/binary>>}.
+
+encode_array_binary_row([null | Tail], _HasNull, Acc) ->
+    encode_array_binary_row(Tail, true, [<<-1:32/integer>> | Acc]);
+encode_array_binary_row([<<_BinarySize:32/integer, _BinaryVal/binary>> = Binary | Tail], HasNull, Acc) ->
+    encode_array_binary_row(Tail, HasNull, [Binary | Acc]);
+encode_array_binary_row([{array, Elements} | Tail], HasNull, Acc) ->
+    {NewHasNull, Row} = encode_array_binary_row(Elements, HasNull, []),
+    encode_array_binary_row(Tail, NewHasNull, [Row | Acc]);
+encode_array_binary_row([], HasNull, AccRow) ->
+    {HasNull, lists:reverse(AccRow)}.
+
+get_array_dims([{array, SubElements} | _] = Row) ->
+    Dims0 = get_array_dims(SubElements),
+    Dim = length(Row),
+    [Dim | Dims0];
+get_array_dims(Row) ->
+    Dim = length(Row),
+    [Dim].
+
+encode_array_binary_header(Dims, HasNulls, ElementTypeOID) ->
+    NDims = length(Dims),
+    Flags = if
+        HasNulls -> 1;
+        true -> 0
+    end,
+    EncodedDimensions = [<<Dim:32/integer, 1:32/integer>> || Dim <- Dims],
+    [<<
+        NDims:32/integer,
+        Flags:32/integer,
+        ElementTypeOID:32/integer
+    >>,
+    EncodedDimensions].
+
+%%--------------------------------------------------------------------
+%% @doc Determine if we need the statement description with these parameters.
+%% We currently only require statement descriptions if we have arrays of
+%% binaries.
+-spec bind_requires_statement_description([any()]) -> boolean().
+bind_requires_statement_description([]) -> false;
+bind_requires_statement_description([{array, [{array, SubArrayElems} | SubArrayT]} | Tail]) ->
+    bind_requires_statement_description([{array, SubArrayElems}, {array, SubArrayT} | Tail]);
+bind_requires_statement_description([{array, [ArrayElem | _]} | _]) when is_binary(ArrayElem) -> true;
+bind_requires_statement_description([{array, [null | ArrayElemsT]} | Tail]) ->
+    bind_requires_statement_description([{array, ArrayElemsT} | Tail]);
+bind_requires_statement_description([{array, []} | Tail]) ->
+    bind_requires_statement_description(Tail);
+bind_requires_statement_description([_OtherParam | Tail]) ->
+    bind_requires_statement_description(Tail).
 
 %%--------------------------------------------------------------------
 %% @doc Encode a describe message.
@@ -419,9 +529,14 @@ decode_notification_response_message(<<ProcID:32/integer, Rest0/binary>> = Paylo
 decode_notification_response_message(Payload) ->
     {error, {unknown_message, notification_response, Payload}}.
 
-decode_parameter_description_message(<<Count:16/integer, Rest:Count/binary-unit:4>>) ->
+decode_parameter_description_message(<<Count:16/integer, Rest/binary>> = Payload) ->
     ParameterDataTypes = decode_parameter_data_types(Rest),
-    {ok, #parameter_description{count = Count, data_types = ParameterDataTypes}};
+    if
+        Count =:= length(ParameterDataTypes) ->
+            {ok, #parameter_description{count = Count, data_types = ParameterDataTypes}};
+        true ->
+            {error, {unknown_message, parameter_description, Payload}}
+    end;
 decode_parameter_description_message(Payload) ->
     {error, {unknown_message, parameter_description, Payload}}.
 
@@ -437,7 +552,6 @@ decode_parameter_status_message(Payload) ->
 
 decode_parse_complete_message(<<>>) -> {ok, #parse_complete{}};
 decode_parse_complete_message(Payload) ->
-    error_logger:info_msg("Payload = ~1000p\n", [Payload]),
     {error, {unknown_message, parse_complete, Payload}}.
 
 decode_portal_suspended_message(<<>>) -> {ok, #portal_suspended{}};
@@ -512,7 +626,7 @@ decode_error_and_notice_message_fields0(<<FieldType, Rest0/binary>>, Acc) ->
     end;
 decode_error_and_notice_message_fields0(Bin, _Acc) -> {error, {badarg, Bin}}.
 
--spec decode_error_and_mention_field_type(byte()) -> pgsql_error_and_mention_field_type().
+-spec decode_error_and_mention_field_type(byte()) -> pgsql_error:pgsql_error_and_mention_field_type().
 decode_error_and_mention_field_type($S) -> severity;
 decode_error_and_mention_field_type($C) -> code;
 decode_error_and_mention_field_type($M) -> message;

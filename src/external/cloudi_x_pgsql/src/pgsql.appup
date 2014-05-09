@@ -1,18 +1,32 @@
-{"21",
+{"22",
+    [{"21", [
+        {load_module, pgsql_connection, soft_purge, soft_purge, []},
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
+    ]},
     [{"20", [
         {load_module, pgsql_connection, soft_purge, soft_purge, []},
-        {load_module, pgsql_protocol, soft_purge, soft_purge, []}
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
     ]},
     {"18", [
         {load_module, pgsql_connection, soft_purge, soft_purge, []},
-        {load_module, pgsql_protocol, soft_purge, soft_purge, []}
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
     ]}],
+    [{"21", [
+        {load_module, pgsql_connection, soft_purge, soft_purge, []},
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
+    ]},
     [{"20", [
         {load_module, pgsql_connection, soft_purge, soft_purge, []},
-        {load_module, pgsql_protocol, soft_purge, soft_purge, []}
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
     ]},
     {"18", [
         {load_module, pgsql_connection, soft_purge, soft_purge, []},
-        {load_module, pgsql_protocol, soft_purge, soft_purge, []}
+        {load_module, pgsql_protocol, soft_purge, soft_purge, []},
+        {load_module, pgsql_error, soft_purge, soft_purge, []}
     ]}]
 }.

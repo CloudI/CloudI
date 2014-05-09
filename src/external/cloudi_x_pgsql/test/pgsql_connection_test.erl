@@ -378,6 +378,13 @@ array_types_test_() ->
                     ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::text[]", ["{\"2\", \"3\"}"], Conn)),
                     ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, ["2", "3"]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2,3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2,3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2,,3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2,,3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2\"3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2\"3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2\",,\"3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2\",,\"3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2'3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2'3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2\\3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2\\3">>, <<"4">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::bytea[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[{array,[<<"2">>]},{array, [<<"3">>]}]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [{array, [<<"2">>]}, {array, [<<"3">>]}]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::text[]", [], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::int[]", [], Conn)),
@@ -385,14 +392,26 @@ array_types_test_() ->
                     
                     ?_assertEqual({{select,1},[{{array,[{array,[<<"2">>]},{array, [<<"3">>]}]}}]}, pgsql_connection:simple_query("select '{{\"2\"}, {\"3\"}}'::text[][]", Conn)),
                     ?_assertEqual({{select,1},[{{array,[{array,[1,2]}, {array, [3,4]}]}}]}, pgsql_connection:simple_query("select ARRAY[ARRAY[1,2], ARRAY[3,4]]", Conn)),
+                    ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select $1::bytea[]", [{array, []}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[]},{array,[<<"foo">>]}}]}, pgsql_connection:extended_query("select $1::bytea[], $2::bytea[]", [{array, []}, {array, [<<"foo">>]}], Conn)),
 
                     ?_assertEqual({{select,1},[{{array,[1,2]}}]}, pgsql_connection:simple_query("select ARRAY[1,2]::int[]", Conn)),
-                    ?_test(
+                    {timeout, 20, ?_test(
                         begin
-                                {updated, 1} = pgsql_connection:sql_query("create temporary table tmp (id integer primary key, ints integer[])", Conn),
+                                {{create, table}, []} = pgsql_connection:simple_query("create temporary table tmp (id integer primary key, ints integer[])", Conn),
                                 Array = lists:seq(1,1000000),
                                 R = pgsql_connection:extended_query("insert into tmp(id, ints) values($1, $2)", [1, {array, Array}], Conn),
                                 ?assertEqual({{insert, 0, 1}, []}, R)
+                        end)},
+                    ?_test(
+                        begin
+                                {{create, table}, []} = pgsql_connection:simple_query("create temporary table tmp2 (id integer primary key, bins bytea[])", Conn),
+                                R = pgsql_connection:extended_query("insert into tmp2(id, bins) values($1, $2)", [1, {array, [<<2>>, <<3>>]}], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R),
+                                R2 = pgsql_connection:extended_query("insert into tmp2(id, bins) values($1, $2)", [2, {array, [<<16#C2,1>>]}], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R2),
+                                R3 = pgsql_connection:extended_query("insert into tmp2(id, bins) values($1, $2)", [3, {array, [<<2,0,3>>, <<4>>]}], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R3)
                         end)
                 ]
         end
@@ -942,7 +961,29 @@ timeout_test_() ->
         ?_assertMatch({error, {pgsql_error, _}}, pgsql_connection:sql_query("select pg_sleep(2)", [], 1500, Conn)),
         ?_assertMatch({error, {pgsql_error, _}}, pgsql_connection:param_query("select pg_sleep(2)", [], [], 1500, Conn)),
         ?_assertEqual({selected, [{null}]}, pgsql_connection:sql_query("select pg_sleep(2)", Conn)),
-        ?_assertEqual({selected, [{null}]}, pgsql_connection:param_query("select pg_sleep(2)", [], Conn))
+        ?_assertEqual({selected, [{null}]}, pgsql_connection:param_query("select pg_sleep(2)", [], Conn)),
+        ?_test(begin
+            ShowResult1 = pgsql_connection:simple_query("show statement_timeout", Conn),
+            ?assertMatch({show, [{_}]}, ShowResult1),
+            {show, [{Value1}]} = ShowResult1,
+            ?assertEqual({{select, 1}, [{1}]}, pgsql_connection:simple_query("select 1", [], 2500, Conn)),
+            ?assertEqual({{select, 1}, [{1}]}, pgsql_connection:simple_query("select 1", [], Conn)),
+            ShowResult2 = pgsql_connection:simple_query("show statement_timeout", Conn),
+            ?assertMatch({show, [{_}]}, ShowResult2),
+            {show, [{Value2}]} = ShowResult2,
+            ?assertEqual({set, []}, pgsql_connection:simple_query("set statement_timeout to 2500", Conn)),
+            ?assertEqual({{select, 1}, [{1}]}, pgsql_connection:simple_query("select 1", [], 2500, Conn)),
+            ?assertEqual({{select, 1}, [{1}]}, pgsql_connection:simple_query("select 1", [], Conn)),
+            ShowResult3 = pgsql_connection:simple_query("show statement_timeout", Conn),
+            ?assertMatch({show, [{_}]}, ShowResult3),
+            
+            % Only guarantee is that if the default was 0 (infinity), it is maintained
+            % after a query with a default (infinity) timeout.
+            if
+                Value1 =:= <<"0">> -> ?assertEqual(Value1, Value2);
+                true -> ok
+            end
+        end)
     ]
     end}.
 
@@ -1087,10 +1128,29 @@ invalid_query_test_() ->
                                 {'rollback',[]} = pgsql_connection:simple_query("COMMIT", Conn),
                                 R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (4, $1)", ["toto"], Conn),
                                 ?assertEqual({{insert, 0, 1}, []}, R1)
+                        end),
+                    ?_test(begin
+                                {'begin',[]} = pgsql_connection:simple_query("BEGIN", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (5, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [], [], 5000, Conn)),
+                                {'rollback',[]} = pgsql_connection:simple_query("ROLLBACK", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (5, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1)
+                        end),
+                    ?_test(begin
+                                {'begin',[]} = pgsql_connection:simple_query("BEGIN", Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (6, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1),
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [], [], 5000, Conn)),
+                                {'rollback',[]} = pgsql_connection:simple_query("ROLLBACK", [], 5000, Conn),
+                                R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (6, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R1)
                         end)
                 ]
         end
     }.
+
 
 cancel_test_() ->
     {setup,

@@ -171,18 +171,17 @@ t_table_create_2(_Config) ->
          <<"INSERT INTO incoming_results (digit_index, data) "
            "VALUES (invalid, 'two');">>]),
     true = is_binary(Message1),
-    % XXX transactions with semiocast driver are broken
-    %{ok, {error, Message1}} = cloudi_service_db_pgsql:transaction(
-    %    Context,
-    %    ?DB_SEMIOCAST,
-    %    [<<"CREATE TABLE incoming_results ("
-    %       "digit_index   NUMERIC(30) PRIMARY KEY,"
-    %       "data          TEXT"
-    %       ");">>,
-    %     <<"INSERT INTO incoming_results (digit_index, data) "
-    %       "VALUES (1, 'one');">>,
-    %     <<"INSERT INTO incoming_results (digit_index, data) "
-    %       "VALUES (invalid, 'two');">>]),
+    {ok, {error, Message1}} = cloudi_service_db_pgsql:transaction(
+        Context,
+        ?DB_SEMIOCAST,
+        [<<"CREATE TABLE incoming_results ("
+           "digit_index   NUMERIC(30) PRIMARY KEY,"
+           "data          TEXT"
+           ");">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "VALUES (1, 'one');">>,
+         <<"INSERT INTO incoming_results (digit_index, data) "
+           "VALUES (invalid, 'two');">>]),
     {ok, {error, Message2}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
     true = is_binary(Message2),

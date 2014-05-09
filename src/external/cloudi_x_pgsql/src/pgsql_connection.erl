@@ -147,10 +147,31 @@
       oidmap            :: gb_trees:tree(pos_integer(), atom()),
       current           :: {tuple(), reference(), from()} | undefined | {tuple(), from()},
       pending           :: [{tuple(), reference(), from()}] | [{tuple(), from()}],
-      statement_timeout :: non_neg_integer()
+      statement_timeout :: non_neg_integer()    %% to pipeline statements with timeouts, currently unused
      }).
 
 -define(MESSAGE_HEADER_SIZE, 5).
+
+% pgsql extended query states.
+-type extended_query_mode() :: all | batch | {cursor, non_neg_integer()}.
+-type extended_query_loop_state() ::
+        % expect parse_complete message
+        parse_complete
+    |   {parse_complete_with_params, extended_query_mode(), [any()]}
+        % expect parameter_description
+    |   {parameter_description_with_params, extended_query_mode(), [any()]}
+        % expect row_description or no_data
+    |   pre_bind_row_description
+        % expect bind_complete
+    |   bind_complete
+        % expect row_description or no_data
+    |   row_description
+        % expect data_row or command_complete
+    |   {rows, [#row_description_field{}]}
+        % expect command_complete
+    |   no_data
+        % expect ready_for_query
+    |   {result, any()}.
 
 %%--------------------------------------------------------------------
 %% @doc Open a connection to a database, throws an error if it failed.
@@ -257,6 +278,11 @@ simple_query(Query, Connection) ->
 simple_query(Query, QueryOptions, Connection) ->
     simple_query(Query, QueryOptions, ?REQUEST_TIMEOUT, Connection).
 
+%% @doc Perform a simple query with query options and a timeout.
+%% Issuing SET statement_timeout or altering default in postgresql.conf
+%% will confuse timeout logic and such manual handling of statement_timeout
+%% should not be mixed with calls to simple_query/4.
+%%
 -spec simple_query(iodata(), query_options(), timeout(), pgsql_connection()) -> result_tuple() | {error, any()}.
 simple_query(Query, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
     call_and_retry(ConnectionPid, {simple_query, Query, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
@@ -272,6 +298,9 @@ extended_query(Query, Parameters, Connection) ->
 extended_query(Query, Parameters, QueryOptions, Connection) ->
     extended_query(Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
 
+%% @doc Perform an extended query with query options and a timeout.
+%% See discussion of simple_query/4 about timeout values.
+%%
 -spec extended_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> result_tuple() | {error, any()}.
 extended_query(Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
     call_and_retry(ConnectionPid, {extended_query, Query, Parameters, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
@@ -482,21 +511,6 @@ handle_info({ErrorTag, _OtherSocket, _SocketError}, State0) when ErrorTag =:= tc
 %% @doc handle code change.
 %%
 -spec code_change(string() | {down, string()}, any(), any()) -> {ok, #state{}}.
-code_change("8", State8, _Extra) ->
-    {state, Options, Socket, BackendProcId, BackendSecret, IntegerDateTimes, OidMap, Current, Pending, StatementTimeout} = State8,
-    State9 = #state{
-        options = Options,
-        socket = Socket,
-        subscribers = [],
-        backend_procid = BackendProcId,
-        backend_secret = BackendSecret,
-        integer_datetimes = IntegerDateTimes,
-        oidmap = OidMap,
-        current = Current,
-        pending = Pending,
-        statement_timeout = StatementTimeout
-    },
-    {ok, State9};
 code_change(Vsn, State, Extra) ->
     error_logger:info_msg("~p: unknown code_change (~p, ~p, ~p)~n", [?MODULE, Vsn, State, Extra]),
     {ok, State}.
@@ -689,15 +703,18 @@ pgsql_simple_query(Query, Timeout, From, #state{socket = {SockModule, Sock}} = S
             Queries = [
                 io_lib:format("set statement_timeout = ~B", [Value]),
                 Query,
-                "set statement_timeout = 0"],
+                "set statement_timeout to default"],
             SinglePacket = [pgsql_protocol:encode_query_message(AQuery) || AQuery <- Queries],
             case SockModule:send(Sock, SinglePacket) of
                 ok ->
-                    {SetResult1, State1} = pgsql_simple_query_loop([], [], sync, State0),
+                    {SetResult, State1} = pgsql_simple_query_loop([], [], sync, State0),
+                    true = set_succeeded_or_within_failed_transaction(SetResult),
                     spawn_link(fun() ->
-                        pgsql_simple_query_loop([], [], {async, ConnPid, fun(Result) ->
-                            pgsql_simple_query_loop([], [], {async, ConnPid, fun(SetResult2) ->
-                                process_set_timeout_result(From, Result, [SetResult1, SetResult2], ConnPid, CurrentCommand)
+                        pgsql_simple_query_loop([], [], {async, ConnPid, fun(QueryResult) ->
+                            pgsql_simple_query_loop([], [], {async, ConnPid, fun(ResetResult) ->
+                                true = set_succeeded_or_within_failed_transaction(ResetResult),
+                                gen_server:reply(From, QueryResult),
+                                gen_server:cast(ConnPid, {command_completed, CurrentCommand})
                             end}, State1)
                         end}, State1)
                     end),
@@ -712,22 +729,16 @@ pgsql_simple_query(Query, Timeout, From, #state{socket = {SockModule, Sock}} = S
             end
     end.
 
-process_set_timeout_result(From, Result, SetResults, ConnPid, CurrentCommand) ->
-    % Make sure client knows about the error.
-    SetResult = case SetResults of
-        [SingleResult] -> SingleResult;
-        [{set, []}, SetResult2] -> SetResult2;
-        [{error, _} = SetResult1, _] -> SetResult1
-    end,
-    ReturnedResult = case SetResult of
-        {set, []} -> Result;
-        {error, _} -> case Result of
-            {error, _} -> Result;
-            _ -> SetResult
-        end
-    end,
-    gen_server:reply(From, ReturnedResult),
-    gen_server:cast(ConnPid, {command_completed, CurrentCommand}).
+% This function should always return true as set or reset may only fail because
+% we are within a failed transaction.
+% If set failed because the transaction was aborted, the query will fail
+% (unless it is a rollback).
+% If set succeeded within a transaction, but the query failed, the reset may
+% fail but set only applies to the transaction anyway.
+-spec set_succeeded_or_within_failed_transaction({set, []} | {error, pgsql_error:pgsql_error()}) -> boolean().
+set_succeeded_or_within_failed_transaction({set, []}) -> true;
+set_succeeded_or_within_failed_transaction({error, {pgsql_error, _} = Error}) ->
+    pgsql_error:is_in_failed_sql_transaction(Error).
 
 -spec pgsql_simple_query0(iodata(), sync, #state{}) -> {tuple(), #state{}};
                          (iodata(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
@@ -796,25 +807,66 @@ pgsql_extended_query(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, Timeout, F
             end),
             State0;
         Value ->
-            {SetResult1, State1} = pgsql_simple_query0(io_lib:format("set statement_timeout = ~B", [Value]), sync, State0),
-            case SetResult1 of
-                {set, []} ->
-                    spawn_link(fun() ->
-                        pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(Result) ->
-                            pgsql_simple_query0("set statement_timeout = 0", {async, ConnPid, fun(SetResult2) ->
-                                process_set_timeout_result(From, Result, [SetResult2], ConnPid, CurrentCommand)
-                            end}, State1)
-                        end}, State1)
-                    end);
-                {error, _} ->
-                    gen_server:reply(From, SetResult1),
-                    gen_server:cast(ConnPid, {command_completed, CurrentCommand})
-            end,
+            {SetResult, State1} = pgsql_simple_query0(io_lib:format("set statement_timeout = ~B", [Value]), sync, State0),
+            true = set_succeeded_or_within_failed_transaction(SetResult),
+            spawn_link(fun() ->
+                pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, {async, ConnPid, fun(QueryResult) ->
+                    pgsql_simple_query0("set statement_timeout to default", {async, ConnPid, fun(ResetResult) ->
+                        true = set_succeeded_or_within_failed_transaction(ResetResult),
+                        gen_server:reply(From, QueryResult),
+                        gen_server:cast(ConnPid, {command_completed, CurrentCommand})
+                    end}, State1)
+                end}, State1)
+            end),
             State1
     end.
 
+-spec pgsql_extended_query0(iodata(), [any()], fun(), any(), fun(), all | batch | {cursor, non_neg_integer()}, sync, #state{}) -> {any(), #state{}};
+                           (iodata(), [any()], fun(), any(), fun(), all | batch | {cursor, non_neg_integer()}, {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
 pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, AsyncT, #state{socket = {SockModule, Sock}, integer_datetimes = IntegerDateTimes} = State) ->
     ParseMessage = pgsql_protocol:encode_parse_message("", Query, []),
+    % We ask for a description of parameters only if required.
+    NeedStatementDescription = requires_statement_description(Mode, Parameters),
+    PacketT = case NeedStatementDescription of
+        true ->
+            DescribeStatementMessage = pgsql_protocol:encode_describe_message(statement, ""),
+            FlushMessage = pgsql_protocol:encode_flush_message(),
+            LoopState0 = {parse_complete_with_params, Mode, Parameters},
+            {ok, [ParseMessage, DescribeStatementMessage, FlushMessage], LoopState0};
+        false ->
+            case encode_bind_describe_execute(Mode, Parameters, [], IntegerDateTimes) of
+                {ok, BindExecute} ->
+                    {ok, [ParseMessage, BindExecute], parse_complete};
+                {error, _} = Error -> Error
+            end
+    end,
+    case PacketT of
+        {ok, SinglePacket, LoopState} ->
+            case SockModule:send(Sock, SinglePacket) of
+                ok ->
+                    case Mode of
+                        batch ->
+                            {_, ResultRL, FinalState} = lists:foldl(fun(_ParametersBatch, {AccLoopState, AccResults, AccState}) ->
+                                        {Result, AccState1} = pgsql_extended_query_receive_loop(AccLoopState, Fun, Acc0, FinalizeFun, 0, sync, AccState),
+                                        {bind_complete, [Result | AccResults], AccState1}
+                                end, {LoopState, [], State}, Parameters),
+                            Result = lists:reverse(ResultRL),
+                            return_async(Result, AsyncT, FinalState);
+                        all ->
+                            pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, 0, AsyncT, State);
+                        {cursor, MaxRowsStep} ->
+                            pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State)
+                    end;
+                {error, _} = SendSinglePacketError ->
+                    return_async(SendSinglePacketError, AsyncT, State)
+            end;
+        {error, _} ->
+            return_async(PacketT, AsyncT, State)
+    end.
+
+-spec encode_bind_describe_execute(all | {cursor, non_neg_integer()}, [any()], [pgsql_oid()], boolean()) -> {ok, iodata()} | {error, any()};
+                                  (batch, [[any()]], [pgsql_oid()], boolean()) -> {ok, iodata()} | {error, any()}.
+encode_bind_describe_execute(Mode, Parameters, ParameterDataTypes, IntegerDateTimes) ->
     DescribeMessage = pgsql_protocol:encode_describe_message(portal, ""),
     MaxRowsStep = case Mode of
         all -> 0;
@@ -826,99 +878,118 @@ pgsql_extended_query0(Query, Parameters, Fun, Acc0, FinalizeFun, Mode, AsyncT, #
         MaxRowsStep > 0 -> pgsql_protocol:encode_flush_message();
         true -> pgsql_protocol:encode_sync_message()
     end,
-    SinglePacket = try
-        case Mode of
+    try
+        SinglePacket = case Mode of
             batch ->
-                BatchMessages = [[pgsql_protocol:encode_bind_message("", "", ParametersBatch, IntegerDateTimes), DescribeMessage, ExecuteMessage, SyncOrFlushMessage] || ParametersBatch <- Parameters],
-                [ParseMessage, BatchMessages];
+                [
+                    [pgsql_protocol:encode_bind_message("", "", ParametersBatch, ParameterDataTypes, IntegerDateTimes),
+                    DescribeMessage, ExecuteMessage, SyncOrFlushMessage] || ParametersBatch <- Parameters];
             _ ->
-                BindMessage = pgsql_protocol:encode_bind_message("", "", Parameters, IntegerDateTimes),
-                [ParseMessage, BindMessage, DescribeMessage, ExecuteMessage, SyncOrFlushMessage]
-        end
+                BindMessage = pgsql_protocol:encode_bind_message("", "", Parameters, ParameterDataTypes, IntegerDateTimes),
+                [BindMessage, DescribeMessage, ExecuteMessage, SyncOrFlushMessage]
+        end,
+        {ok, SinglePacket}
     catch throw:Exception ->
         {error, Exception}
-    end,
-    if is_tuple(SinglePacket) ->
-            return_async(SinglePacket, AsyncT, State);
-        true ->
-            case SockModule:send(Sock, SinglePacket) of
-                ok ->
-                    if
-                        Mode =:= batch ->
-                            {_, ResultRL, FinalState} = lists:foldl(fun(_ParametersBatch, {LoopState, AccResults, AccState}) ->
-                                        {Result, AccState1} = pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, sync, AccState),
-                                        {bind_complete, [Result | AccResults], AccState1}
-                                end, {parse_complete, [], State}, Parameters),
-                            Result = lists:reverse(ResultRL),
-                            return_async(Result, AsyncT, FinalState);
-                        true ->
-                            pgsql_extended_query_receive_loop(parse_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State)
-                    end;
-                {error, _} = SendSinglePacketError ->
-                    return_async(SendSinglePacketError, AsyncT, State)
-            end
     end.
 
-pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock} = Socket, subscribers = Subscribers} = State0) ->
+requires_statement_description(batch, ParametersL) ->
+    lists:any(fun pgsql_protocol:bind_requires_statement_description/1, ParametersL);
+requires_statement_description(_Mode, Parameters) ->
+    pgsql_protocol:bind_requires_statement_description(Parameters).
+
+-spec pgsql_extended_query_receive_loop(extended_query_loop_state(), fun(), any(), fun(), non_neg_integer(), sync, #state{}) -> {any(), #state{}};
+                                       (extended_query_loop_state(), fun(), any(), fun(), non_neg_integer(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
+pgsql_extended_query_receive_loop(_LoopState, _Fun, _Acc, _FinalizeFun, _MaxRowsStep, AsyncT, #state{socket = closed} = State0) ->
+    return_async({error, closed}, AsyncT, State0);
+pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = Socket, subscribers = Subscribers} = State0) ->
     case receive_message(Socket, AsyncT, Subscribers) of
-        {ok, #parameter_status{name = Name, value = Value}} ->
-            State1 = handle_parameter(Name, Value, AsyncT, State0),
-            pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
-        {ok, #parse_complete{}} when LoopState =:= parse_complete ->
-            pgsql_extended_query_receive_loop(bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
-        {ok, #bind_complete{}} when LoopState =:= bind_complete ->
-            pgsql_extended_query_receive_loop(row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
-        {ok, #no_data{}} when LoopState =:= row_description ->
-            pgsql_extended_query_receive_loop([], Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
-        {ok, #row_description{fields = Fields}} when LoopState =:= row_description ->
-            State1 = oob_update_oid_map_if_required(Fields, State0),
-            pgsql_extended_query_receive_loop({rows, Fields}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
-        {ok, #data_row{values = Values}} when is_tuple(LoopState) andalso element(1, LoopState) =:= rows ->
-            {rows, Fields} = LoopState,
-            DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
-            Acc1 = Fun(DecodedRow, Acc0),
-            pgsql_extended_query_receive_loop(LoopState, Fun, Acc1, FinalizeFun, MaxRowsStep, AsyncT, State0);
-        {ok, #command_complete{command_tag = Tag}} ->
-            Result = FinalizeFun(Tag, Acc0),
-            if  MaxRowsStep > 0 ->
-                    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
-                        ok -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
-                        {error, _} = SendSinglePacketError -> return_async(SendSinglePacketError, AsyncT, State0)
-                    end;
-                true -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0)
-            end;
-        {ok, #portal_suspended{}} ->
-            ExecuteMessage = pgsql_protocol:encode_execute_message("", MaxRowsStep),
-            FlushMessage = pgsql_protocol:encode_flush_message(),
-            SinglePacket = [ExecuteMessage, FlushMessage],
-            case SockModule:send(Sock, SinglePacket) of
-                ok -> pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
-                {error, _} = SendSinglePacketError ->
-                    return_async(SendSinglePacketError, AsyncT, State0)
-            end;
-        {ok, #ready_for_query{}} when is_tuple(LoopState) andalso element(1, LoopState) =:= result ->
-            Result = element(2, LoopState),
-            return_async(Result, AsyncT, State0);
-        {ok, #error_response{fields = Fields}} ->
-            Error = {error, {pgsql_error, Fields}},
-            if  MaxRowsStep > 0 ->
-                    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
-                        ok -> flush_until_ready_for_query(Error, AsyncT, State0);
-                        {error, _} = SendSinglePacketError -> return_async(SendSinglePacketError, AsyncT, State0)
-                    end;
-                true -> flush_until_ready_for_query(Error, AsyncT, State0)
-            end;
-        {ok, #ready_for_query{} = Message} ->
-            Result = {error, {unexpected_message, Message}},
-            return_async(Result, AsyncT, State0);
         {ok, Message} ->
-            Error = {error, {unexpected_message, Message}},
-            flush_until_ready_for_query(Error, AsyncT, State0);
+            pgsql_extended_query_receive_loop0(Message, LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
         {error, _} = ReceiveError ->
             return_async(ReceiveError, AsyncT, State0)
+    end.
+
+-spec pgsql_extended_query_receive_loop0(pgsql_backend_message(), extended_query_loop_state(), fun(), any(), fun(), non_neg_integer(), sync, #state{}) -> {any(), #state{}};
+                                        (pgsql_backend_message(), extended_query_loop_state(), fun(), any(), fun(), non_neg_integer(), {async, pid(), fun((any()) -> ok)}, #state{}) -> ok.
+pgsql_extended_query_receive_loop0(#parameter_status{name = Name, value = Value}, LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    State1 = handle_parameter(Name, Value, AsyncT, State0),
+    pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
+pgsql_extended_query_receive_loop0(#parse_complete{}, parse_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+
+% Path where we ask the backend about what it expects.
+% We ignore row descriptions sent before bind as the format codes are null.
+pgsql_extended_query_receive_loop0(#parse_complete{}, {parse_complete_with_params, Mode, Parameters}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop({parameter_description_with_params, Mode, Parameters}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#parameter_description{data_types = ParameterDataTypes}, {parameter_description_with_params, Mode, Parameters}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
+    PacketT = encode_bind_describe_execute(Mode, Parameters, ParameterDataTypes, State0#state.integer_datetimes),
+    case PacketT of
+        {ok, SinglePacket} ->
+            case SockModule:send(Sock, SinglePacket) of
+                ok ->
+                    pgsql_extended_query_receive_loop(pre_bind_row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+                {error, _} = SendError ->
+                    return_async(SendError, AsyncT, State0)
+            end;
+        {error, _} = Error ->
+            case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+                ok -> flush_until_ready_for_query(Error, AsyncT, State0);
+                {error, _} = SendSyncPacketError -> return_async(SendSyncPacketError, AsyncT, State0)
+            end
     end;
-pgsql_extended_query_receive_loop(_LoopState, _Fun, _Acc, _FinalizeFun, _MaxRowsStep, AsyncT, #state{socket = closed} = State0) ->
-    return_async({error, closed}, AsyncT, State0).
+pgsql_extended_query_receive_loop0(#row_description{}, pre_bind_row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#no_data{}, pre_bind_row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+
+% Common paths after bind.
+pgsql_extended_query_receive_loop0(#bind_complete{}, bind_complete, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#no_data{}, row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(no_data, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#row_description{fields = Fields}, row_description, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    State1 = oob_update_oid_map_if_required(Fields, State0),
+    pgsql_extended_query_receive_loop({rows, Fields}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State1);
+pgsql_extended_query_receive_loop0(#data_row{values = Values}, {rows, Fields} = LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
+    Acc1 = Fun(DecodedRow, Acc0),
+    pgsql_extended_query_receive_loop(LoopState, Fun, Acc1, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#command_complete{command_tag = Tag}, _LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
+    Result = FinalizeFun(Tag, Acc0),
+    if  MaxRowsStep > 0 ->
+            case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+                ok -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+                {error, _} = SendSyncPacketError -> return_async(SendSyncPacketError, AsyncT, State0)
+            end;
+        true -> pgsql_extended_query_receive_loop({result, Result}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0)
+    end;
+pgsql_extended_query_receive_loop0(#portal_suspended{}, LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
+    ExecuteMessage = pgsql_protocol:encode_execute_message("", MaxRowsStep),
+    FlushMessage = pgsql_protocol:encode_flush_message(),
+    SinglePacket = [ExecuteMessage, FlushMessage],
+    case SockModule:send(Sock, SinglePacket) of
+        ok -> pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {error, _} = SendSinglePacketError ->
+            return_async(SendSinglePacketError, AsyncT, State0)
+    end;
+pgsql_extended_query_receive_loop0(#ready_for_query{}, {result, Result}, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
+    return_async(Result, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#error_response{fields = Fields}, _LoopState, _Fun, _Acc0, _FinalizeFun, 0, AsyncT, State0) ->
+    Error = {error, {pgsql_error, Fields}},
+    flush_until_ready_for_query(Error, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#error_response{fields = Fields}, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
+    Error = {error, {pgsql_error, Fields}},
+    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+        ok -> flush_until_ready_for_query(Error, AsyncT, State0);
+        {error, _} = SendSyncPacketError -> return_async(SendSyncPacketError, AsyncT, State0)
+    end;
+pgsql_extended_query_receive_loop0(#ready_for_query{} = Message, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
+    Result = {error, {unexpected_message, Message}},
+    return_async(Result, AsyncT, State0);
+pgsql_extended_query_receive_loop0(Message, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
+    Error = {error, {unexpected_message, Message}},
+    flush_until_ready_for_query(Error, AsyncT, State0).
 
 flush_until_ready_for_query(Result, AsyncT, #state{socket = Socket, subscribers = Subscribers} = State0) ->
     case receive_message(Socket, AsyncT, Subscribers) of
