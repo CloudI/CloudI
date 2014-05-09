@@ -4,6 +4,7 @@
 2014-05-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update semiocast pgsql driver
+    * Make cloudi_service_db_pgsql crash on unsupported types
 
 2014-05-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

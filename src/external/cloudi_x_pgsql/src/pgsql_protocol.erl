@@ -12,7 +12,8 @@
     encode_query_message/1,
     encode_parse_message/3,
     encode_bind_message/4,  % deprecated
-    encode_bind_message/5,
+    encode_bind_message/5,  % deprecated
+    encode_bind_message/6,
     encode_describe_message/2,
     encode_execute_message/2,
     encode_sync_message/0,
@@ -91,6 +92,10 @@ encode_bind_message(PortalName, StatementName, Parameters, IntegerDateTimes) ->
 
 -spec encode_bind_message(iodata(), iodata(), [any()], [pgsql_oid()], boolean()) -> binary().
 encode_bind_message(PortalName, StatementName, Parameters, ParametersDataTypes, IntegerDateTimes) ->
+    encode_bind_message(PortalName, StatementName, Parameters, ParametersDataTypes, gb_trees:empty(), IntegerDateTimes).
+
+-spec encode_bind_message(iodata(), iodata(), [any()], [pgsql_oid()], pgsql_oid_map(), boolean()) -> binary().
+encode_bind_message(PortalName, StatementName, Parameters, ParametersDataTypes, OIDMap, IntegerDateTimes) ->
     PortalNameBin = iolist_to_binary(PortalName),
     StatementNameBin = iolist_to_binary(StatementName),
     ParametersCount = length(Parameters),
@@ -99,7 +104,7 @@ encode_bind_message(PortalName, StatementName, Parameters, ParametersDataTypes, 
         [] -> [{Parameter, undefined} || Parameter <- Parameters];
         _ -> lists:zip(Parameters, ParametersDataTypes)
     end,
-    ParametersL = [encode_parameter(Parameter, Type, IntegerDateTimes) || {Parameter, Type} <- ParametersWithTypes],
+    ParametersL = [encode_parameter(Parameter, Type, OIDMap, IntegerDateTimes) || {Parameter, Type} <- ParametersWithTypes],
     {ParametersFormats, ParametersValues} = lists:unzip(ParametersL),
     ParametersFormatsAllText = lists:all(fun(Format) -> Format =:= text end, ParametersFormats),
     ParametersFormatsBin = if
@@ -120,10 +125,10 @@ encode_format(binary) -> <<1:16/integer>>.
 %% All parameters are currently encoded in text format except binaries that are
 %% encoded as binaries.
 %%
--spec encode_parameter(any(), pgsql_oid() | undefined, boolean()) -> {text | binary, binary()}.
-encode_parameter({array, List}, Type, IntegerDateTimes) ->
-    encode_array(List, Type, IntegerDateTimes);
-encode_parameter(Binary, _Type, _IntegerDateTimes) when is_binary(Binary) ->
+-spec encode_parameter(any(), pgsql_oid() | undefined, pgsql_oid_map(), boolean()) -> {text | binary, binary()}.
+encode_parameter({array, List}, Type, OIDMap, IntegerDateTimes) ->
+    encode_array(List, Type, OIDMap, IntegerDateTimes);
+encode_parameter(Binary, _Type, _OIDMap, _IntegerDateTimes) when is_binary(Binary) ->
     % Encode the binary as text if it is a UUID.
     IsUUID = case Binary of
         <<_A:8/binary, $-, _B:4/binary, $-, _C:4/binary, $-, _D:4/binary, $-, _E:12/binary>> ->
@@ -139,60 +144,60 @@ encode_parameter(Binary, _Type, _IntegerDateTimes) when is_binary(Binary) ->
     end,
     Size = byte_size(Binary),
     {Type, <<Size:32/integer, Binary/binary>>};
-encode_parameter(String, _Type, _IntegerDateTimes) when is_list(String) ->
+encode_parameter(String, _Type, _OIDMap, _IntegerDateTimes) when is_list(String) ->
     Binary = list_to_binary(String),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter(Float, _Type, _IntegerDateTimes) when is_float(Float) ->
+encode_parameter(Float, _Type, _OIDMap, _IntegerDateTimes) when is_float(Float) ->
     FloatStrBin = list_to_binary(float_to_list(Float)),
     Size = byte_size(FloatStrBin),
     {text, <<Size:32/integer, FloatStrBin/binary>>};
-encode_parameter(Integer, _Type, _IntegerDateTimes) when is_integer(Integer) ->
+encode_parameter(Integer, _Type, _OIDMap, _IntegerDateTimes) when is_integer(Integer) ->
     IntegerStr = integer_to_list(Integer),
     IntegerStrBin = list_to_binary(IntegerStr),
     IntegerStrLen = byte_size(IntegerStrBin),
     {text, <<IntegerStrLen:32/integer, IntegerStrBin/binary>>};
-encode_parameter(null, _Type, _IntegerDateTimes) ->
+encode_parameter(null, _Type, _OIDMap, _IntegerDateTimes) ->
     {text, <<-1:32/integer>>};
-encode_parameter(true, _Type, _IntegerDateTimes) ->
+encode_parameter(true, _Type, _OIDMap, _IntegerDateTimes) ->
     {text, <<1:32/integer, $t>>};
-encode_parameter(false, _Type, _IntegerDateTimes) ->
+encode_parameter(false, _Type, _OIDMap, _IntegerDateTimes) ->
     {text, <<1:32/integer, $f>>};
-encode_parameter({{Year, Month, Day}, {Hour, Min, Sec}}, Type, IntegerDateTimes) ->
-    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Min, Sec])), Type, IntegerDateTimes);
-encode_parameter({Hour, Min, Sec}, Type, IntegerDateTimes) when Hour >= 0 andalso Hour < 24 andalso Min >= 0 andalso Min < 60 andalso Sec > 0 andalso Sec =< 60 ->
-    encode_parameter(lists:flatten(io_lib:format("~2.10.0B:~2.10.0B:~2.10.0B", [Hour, Min, Sec])), Type, IntegerDateTimes);
-encode_parameter({Year, Month, Day}, Type, IntegerDateTimes) when Month > 0 andalso Month =< 12 andalso Day > 0 andalso Day =< 31 ->
-    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B", [Year, Month, Day])), Type, IntegerDateTimes);
-encode_parameter({point, P}, _Type, _IntegerDateTimes) ->
+encode_parameter({{Year, Month, Day}, {Hour, Min, Sec}}, Type, OIDMap, IntegerDateTimes) ->
+    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Min, Sec])), Type, OIDMap, IntegerDateTimes);
+encode_parameter({Hour, Min, Sec}, Type, OIDMap, IntegerDateTimes) when Hour >= 0 andalso Hour < 24 andalso Min >= 0 andalso Min < 60 andalso Sec > 0 andalso Sec =< 60 ->
+    encode_parameter(lists:flatten(io_lib:format("~2.10.0B:~2.10.0B:~2.10.0B", [Hour, Min, Sec])), Type, OIDMap, IntegerDateTimes);
+encode_parameter({Year, Month, Day}, Type, OIDMap, IntegerDateTimes) when Month > 0 andalso Month =< 12 andalso Day > 0 andalso Day =< 31 ->
+    encode_parameter(lists:flatten(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B", [Year, Month, Day])), Type, OIDMap, IntegerDateTimes);
+encode_parameter({point, P}, _Type, _OIDMap, _IntegerDateTimes) ->
     Binary = encode_point_text(P),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({lseg, P1, P2}, _Type, _IntegerDateTimes) ->
+encode_parameter({lseg, P1, P2}, _Type, _OIDMap, _IntegerDateTimes) ->
     P1Bin = encode_point_text(P1),
     P2Bin = encode_point_text(P2),
     Binary = <<$[, P1Bin/binary, $,, P2Bin/binary, $]>>,
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({box, P1, P2}, _Type, _IntegerDateTimes) ->
+encode_parameter({box, P1, P2}, _Type, _OIDMap, _IntegerDateTimes) ->
     P1Bin = encode_point_text(P1),
     P2Bin = encode_point_text(P2),
     Binary = <<$(, P1Bin/binary, $,, P2Bin/binary, $)>>,
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({path, open, [_|_]=PList}, _Type, _IntegerDateTimes) ->
+encode_parameter({path, open, [_|_]=PList}, _Type, _OIDMap, _IntegerDateTimes) ->
     Binary = encode_points_text($[, $], PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({path, closed, [_|_]=PList}, _Type, _IntegerDateTimes) ->
+encode_parameter({path, closed, [_|_]=PList}, _Type, _OIDMap, _IntegerDateTimes) ->
     Binary = encode_points_text($(, $), PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter({polygon, [_|_]=PList}, _Type, _IntegerDateTimes) ->
+encode_parameter({polygon, [_|_]=PList}, _Type, _OIDMap, _IntegerDateTimes) ->
     Binary = encode_points_text($(, $), PList),
     Size = byte_size(Binary),
     {text, <<Size:32/integer, Binary/binary>>};
-encode_parameter(Value, _Type, _IntegerDateTimes) ->
+encode_parameter(Value, _Type, _OIDMap, _IntegerDateTimes) ->
     throw({badarg, Value}).
 
 encode_point_text({X, Y}) ->
@@ -205,11 +210,11 @@ encode_points_text(Prefix, Suffix, [PHead|PTail]) ->
     PTailBin = list_to_binary([begin PBin = encode_point_text(P), <<$,, PBin/binary>> end || P <- PTail]),
     <<Prefix, PHeadBin/binary, PTailBin/binary, Suffix>>.
 
-encode_array(Elements, ArrayType, IntegerDateTimes) ->
-    ElementType = array_type_to_element_type(ArrayType),
-    {EncodingType, ArrayElements} = encode_array_elements(Elements, ElementType, IntegerDateTimes, undefined, []),
+encode_array(Elements, ArrayType, OIDMap, IntegerDateTimes) ->
+    ElementType = array_type_to_element_type(ArrayType, OIDMap),
+    {EncodingType, ArrayElements} = encode_array_elements(Elements, ElementType, OIDMap, IntegerDateTimes, undefined, []),
     case EncodingType of
-        binary ->
+        binary when ElementType =/= undefined ->
             encode_array_binary(ArrayElements, ElementType);
         undefined when ElementType =/= undefined ->
             encode_array_binary(ArrayElements, ElementType);
@@ -217,23 +222,63 @@ encode_array(Elements, ArrayType, IntegerDateTimes) ->
             encode_array_text(ArrayElements, [])
     end.
 
-array_type_to_element_type(undefined) -> undefined;
-array_type_to_element_type(?BYTEAARRAYOID) -> ?BYTEAOID;
-array_type_to_element_type(?TEXTARRAYOID) -> ?TEXTOID;
-array_type_to_element_type(_OtherType) -> undefined.
+array_type_to_element_type(undefined, _OIDMap) -> undefined;
+array_type_to_element_type(?CIDRARRAYOID, _OIDMap) -> ?CIDROID;
+array_type_to_element_type(?BOOLARRAYOID, _OIDMap) -> ?BOOLOID;
+array_type_to_element_type(?BYTEAARRAYOID, _OIDMap) -> ?BYTEAOID;
+array_type_to_element_type(?CHARARRAYOID, _OIDMap) -> ?CHAROID;
+array_type_to_element_type(?NAMEARRAYOID, _OIDMap) -> ?NAMEOID;
+array_type_to_element_type(?INT2ARRAYOID, _OIDMap) -> ?INT2OID;
+array_type_to_element_type(?INT2VECTORARRAYOID, _OIDMap) -> ?INT2VECTOROID;
+array_type_to_element_type(?INT4ARRAYOID, _OIDMap) -> ?INT4OID;
+array_type_to_element_type(?REGPROCARRAYOID, _OIDMap) -> ?REGPROCOID;
+array_type_to_element_type(?TEXTARRAYOID, _OIDMap) -> ?TEXTOID;
+array_type_to_element_type(?TIDARRAYOID, _OIDMap) -> ?TIDOID;
+array_type_to_element_type(?XIDARRAYOID, _OIDMap) -> ?XIDOID;
+array_type_to_element_type(?CIDARRAYOID, _OIDMap) -> ?CIDOID;
+array_type_to_element_type(?OIDVECTORARRAYOID, _OIDMap) -> ?OIDVECTOROID;
+array_type_to_element_type(?BPCHARARRAYOID, _OIDMap) -> ?BPCHAROID;
+array_type_to_element_type(?VARCHARARRAYOID, _OIDMap) -> ?VARCHAROID;
+array_type_to_element_type(?INT8ARRAYOID, _OIDMap) -> ?INT8OID;
+array_type_to_element_type(?POINTARRAYOID, _OIDMap) -> ?POINTOID;
+array_type_to_element_type(?LSEGARRAYOID, _OIDMap) -> ?LSEGOID;
+array_type_to_element_type(?PATHARRAYOID, _OIDMap) -> ?PATHOID;
+array_type_to_element_type(?BOXARRAYOID, _OIDMap) -> ?BOXOID;
+array_type_to_element_type(?FLOAT4ARRAYOID, _OIDMap) -> ?FLOAT4OID;
+array_type_to_element_type(?FLOAT8ARRAYOID, _OIDMap) -> ?FLOAT8OID;
+array_type_to_element_type(?ABSTIMEARRAYOID, _OIDMap) -> ?ABSTIMEOID;
+array_type_to_element_type(?RELTIMEARRAYOID, _OIDMap) -> ?RELTIMEOID;
+array_type_to_element_type(?TINTERVALARRAYOID, _OIDMap) -> ?TINTERVALOID;
+array_type_to_element_type(?POLYGONARRAYOID, _OIDMap) -> ?POLYGONOID;
+array_type_to_element_type(?OIDARRAYOID, _OIDMap) -> ?OIDOID;
+array_type_to_element_type(?ACLITEMARRAYOID, _OIDMap) -> ?ACLITEMOID;
+array_type_to_element_type(?MACADDRARRAYOID, _OIDMap) -> ?MACADDROID;
+array_type_to_element_type(?INETARRAYOID, _OIDMap) -> ?INETOID;
+array_type_to_element_type(?CSTRINGARRAYOID, _OIDMap) -> ?CSTRINGOID;
+array_type_to_element_type(TypeOID, OIDMap) ->
+    Type = decode_oid(TypeOID, OIDMap),
+    if not is_atom(Type) -> undefined;
+        true ->
+            case atom_to_list(Type) of
+                [$_ | ContentType] -> % Array
+                    OIDContentType = type_to_oid(list_to_atom(ContentType), OIDMap),
+                    OIDContentType;
+                _ -> undefined
+            end
+    end.
 
-encode_array_elements([{array, SubArray} | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
-    {NewEncodingType, SubArrayElements} = encode_array_elements(SubArray, ElementType, IntegerDateTimes, EncodingType, []),
-    encode_array_elements(Tail, ElementType, IntegerDateTimes, NewEncodingType, [{array, SubArrayElements} | Acc]);
-encode_array_elements([null | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
-    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [null | Acc]);
-encode_array_elements([Element | Tail], ElementType, IntegerDateTimes, undefined, Acc) ->
-    {EncodingType, Encoded} = encode_parameter(Element, ElementType, IntegerDateTimes),
-    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [Encoded | Acc]);
-encode_array_elements([Element | Tail], ElementType, IntegerDateTimes, EncodingType, Acc) ->
-    {EncodingType, Encoded} = encode_parameter(Element, ElementType, IntegerDateTimes),
-    encode_array_elements(Tail, ElementType, IntegerDateTimes, EncodingType, [Encoded | Acc]);
-encode_array_elements([], _ElementType, _IntegerDateTimes, EncodingType, Acc) ->
+encode_array_elements([{array, SubArray} | Tail], ElementType, OIDMap, IntegerDateTimes, EncodingType, Acc) ->
+    {NewEncodingType, SubArrayElements} = encode_array_elements(SubArray, ElementType, OIDMap, IntegerDateTimes, EncodingType, []),
+    encode_array_elements(Tail, ElementType, OIDMap, IntegerDateTimes, NewEncodingType, [{array, SubArrayElements} | Acc]);
+encode_array_elements([null | Tail], ElementType, OIDMap, IntegerDateTimes, EncodingType, Acc) ->
+    encode_array_elements(Tail, ElementType, OIDMap, IntegerDateTimes, EncodingType, [null | Acc]);
+encode_array_elements([Element | Tail], ElementType, OIDMap, IntegerDateTimes, undefined, Acc) ->
+    {EncodingType, Encoded} = encode_parameter(Element, ElementType, OIDMap, IntegerDateTimes),
+    encode_array_elements(Tail, ElementType, OIDMap, IntegerDateTimes, EncodingType, [Encoded | Acc]);
+encode_array_elements([Element | Tail], ElementType, OIDMap, IntegerDateTimes, EncodingType, Acc) ->
+    {EncodingType, Encoded} = encode_parameter(Element, ElementType, OIDMap, IntegerDateTimes),
+    encode_array_elements(Tail, ElementType, OIDMap, IntegerDateTimes, EncodingType, [Encoded | Acc]);
+encode_array_elements([], _ElementType, _OIDMap, _IntegerDateTimes, EncodingType, Acc) ->
     {EncodingType, lists:reverse(Acc)}.
 
 encode_array_text([null | Tail], Acc) ->
@@ -677,7 +722,7 @@ decode_string(Binary) ->
 %%--------------------------------------------------------------------
 %% @doc Decode a row format.
 %%
--spec decode_row([#row_description_field{}], [binary()], gb_trees:tree(pos_integer(), atom()), boolean()) -> tuple().
+-spec decode_row([#row_description_field{}], [binary()], pgsql_oid_map(), boolean()) -> tuple().
 decode_row(Descs, Values, OIDMap, IntegerDateTimes) ->
     decode_row0(Descs, Values, OIDMap, IntegerDateTimes, []).
 
@@ -789,6 +834,7 @@ decode_value_text(?VOIDOID, _Value, _OIDMap) -> null;
 decode_value_text(TypeOID, Value, _OIDMap) when TypeOID =:= ?TEXTOID
             orelse TypeOID =:= ?UUIDOID
             orelse TypeOID =:= ?NAMEOID
+            orelse TypeOID =:= ?BPCHAROID
             orelse TypeOID =:= ?VARCHAROID
              -> Value;
 decode_value_text(TypeOID, Value, OIDMap) ->
@@ -869,6 +915,7 @@ decode_value_bin(?INT2OID, <<Value:16/signed-integer>>, _OIDMap, _IntegerDateTim
 decode_value_bin(?INT4OID, <<Value:32/signed-integer>>, _OIDMap, _IntegerDateTimes) -> Value;
 decode_value_bin(?OIDOID, <<Value:32/signed-integer>>, _OIDMap, _IntegerDateTimes) -> Value;
 decode_value_bin(?TEXTOID, Value, _OIDMap, _IntegerDateTimes) -> Value;
+decode_value_bin(?BPCHAROID, Value, _OIDMap, _IntegerDateTimes) -> Value;
 decode_value_bin(?VARCHAROID, Value, _OIDMap, _IntegerDateTimes) -> Value;
 decode_value_bin(?FLOAT4OID, <<Value:32/float>>, _OIDMap, _IntegerDateTimes) -> Value;
 decode_value_bin(?FLOAT4OID, <<127,192,0,0>>, _OIDMap, _IntegerDateTimes) -> 'NaN';

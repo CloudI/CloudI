@@ -357,6 +357,32 @@ types_test_() ->
         ]
     end}.
 
+text_types_test_() ->
+    {setup,
+        fun() ->
+                {ok, SupPid} = pgsql_connection_sup:start_link(),
+                Conn = pgsql_connection:open("test", "test"),
+                {SupPid, Conn}
+        end,
+        fun({SupPid, Conn}) ->
+                pgsql_connection:close(Conn),
+                kill_sup(SupPid)
+        end,
+        fun({_SupPid, Conn}) ->
+                [
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:simple_query("select 'foo'::text", Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:extended_query("select $1::text", [<<"foo">>], Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo         ">>}]}, pgsql_connection:simple_query("select 'foo'::char(12)", Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo         ">>}]}, pgsql_connection:extended_query("select $1::char(12)", [<<"foo">>], Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:simple_query("select 'foo'::varchar(12)", Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:extended_query("select $1::varchar(12)", [<<"foo">>], Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:simple_query("select 'foobar'::char(3)", Conn)),
+                    ?_assertEqual({{select,1},[{<<"foo">>}]}, pgsql_connection:extended_query("select $1::char(3)", [<<"foobar">>], Conn))
+                ]
+        end
+    }.
+
+
 array_types_test_() ->
     {setup,
         fun() ->
@@ -385,6 +411,8 @@ array_types_test_() ->
                     ?_assertEqual({{select,1},[{{array,[<<"2'3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2'3">>, <<"4">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[<<"2\\3">>,<<"4">>]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [<<"2\\3">>, <<"4">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::bytea[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2  ">>,<<"3  ">>]}}]}, pgsql_connection:extended_query("select $1::char(3)[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::varchar(3)[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[{array,[<<"2">>]},{array, [<<"3">>]}]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [{array, [<<"2">>]}, {array, [<<"3">>]}]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::text[]", [], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::int[]", [], Conn)),
@@ -1033,6 +1061,7 @@ custom_enum_test_() ->
     fun() ->
         {ok, SupPid} = pgsql_connection_sup:start_link(),
         Conn = pgsql_connection:open("test", "test"),
+        pgsql_connection:sql_query("DROP TYPE IF EXISTS mood;", Conn),
         {SupPid, Conn}
     end,
     fun({SupPid, Conn}) ->
@@ -1049,7 +1078,10 @@ custom_enum_test_() ->
             ?assertMatch({selected, [{{MoodOID, <<"sad">>}}]} when is_integer(MoodOID), pgsql_connection:param_query("select 'sad'::mood;", [], Conn)),
             {updated, 0} = pgsql_connection:sql_query("COMMIT", Conn),
             ?assertMatch({selected, [{{mood, <<"sad">>}}]}, pgsql_connection:sql_query("select 'sad'::mood;", Conn)),
-            ?assertMatch({selected, [{{mood, <<"sad">>}}]}, pgsql_connection:param_query("select 'sad'::mood;", [], Conn))
+            ?assertMatch({selected, [{{mood, <<"sad">>}}]}, pgsql_connection:param_query("select 'sad'::mood;", [], Conn)),
+            ?assertMatch({selected, [{{mood, <<"sad">>}}]}, pgsql_connection:param_query("select ?::mood;", [<<"sad">>], Conn)),
+            ?assertMatch({selected, [{{array, [{mood, <<"sad">>}]}}]}, pgsql_connection:sql_query("select '{sad}'::mood[];", Conn)),
+            ?assertMatch({selected, [{{array, [{mood, <<"sad">>}]}}]}, pgsql_connection:param_query("select ?::mood[];", [{array, [<<"sad">>]}], Conn))
         end)
     ]
     end}.
@@ -1059,6 +1091,7 @@ custom_enum_native_test_() ->
     fun() ->
         {ok, SupPid} = pgsql_connection_sup:start_link(),
         Conn = pgsql_connection:open("test", "test"),
+        pgsql_connection:simple_query("DROP TYPE IF EXISTS mood;", Conn),
         {SupPid, Conn}
     end,
     fun({SupPid, Conn}) ->
@@ -1075,7 +1108,10 @@ custom_enum_native_test_() ->
             ?assertMatch({{select, 1}, [{{MoodOID, <<"sad">>}}]} when is_integer(MoodOID), pgsql_connection:extended_query("select 'sad'::mood;", [], Conn)),
             {'commit', []} = pgsql_connection:simple_query("COMMIT", Conn),
             ?assertMatch({{select, 1}, [{{mood, <<"sad">>}}]}, pgsql_connection:simple_query("select 'sad'::mood;", Conn)),
-            ?assertMatch({{select, 1}, [{{mood, <<"sad">>}}]}, pgsql_connection:extended_query("select 'sad'::mood;", [], Conn))
+            ?assertMatch({{select, 1}, [{{mood, <<"sad">>}}]}, pgsql_connection:extended_query("select 'sad'::mood;", [], Conn)),
+            ?assertMatch({{select, 1}, [{{mood, <<"sad">>}}]}, pgsql_connection:extended_query("select $1::mood;", [<<"sad">>], Conn)),
+            ?assertMatch({{select, 1}, [{{array, [{mood, <<"sad">>}]}}]}, pgsql_connection:simple_query("select '{sad}'::mood[];", Conn)),
+            ?assertMatch({{select, 1}, [{{array, [{mood, <<"sad">>}]}}]}, pgsql_connection:extended_query("select $1::mood[];", [{array, [<<"sad">>]}], Conn))
         end)
     ]
     end}.
@@ -1168,7 +1204,7 @@ cancel_test_() ->
         ?_test(begin
             Self = self(),
             spawn_link(fun() ->
-                SleepResult = pgsql_connection:sql_query("select pg_sleep(1)", Conn),
+                SleepResult = pgsql_connection:sql_query("select pg_sleep(2)", Conn),
                 Self ! {async_result, SleepResult}
             end),
             ?assertEqual(ok, pgsql_connection:cancel(Conn)),

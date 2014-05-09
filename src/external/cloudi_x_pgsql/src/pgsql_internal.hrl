@@ -1,8 +1,9 @@
 
 % Backend messages
--type pgsql_oid() :: integer().
+-type pgsql_oid() :: pos_integer().
 -type pgsql_procid() :: integer().
 -type pgsql_format() :: text | binary.
+-type pgsql_oid_map() :: gb_trees:tree(pgsql_oid(), atom()).
 
 % from pg_type.h
 -define(BOOLOID, 16).
@@ -29,6 +30,7 @@
 -define(BOXOID, 603).
 -define(POLYGONOID, 604).
 -define(LINEOID, 628).
+-define(CIDRARRAYOID, 651).         % not #defined
 -define(FLOAT4OID, 700).
 -define(FLOAT8OID, 701).
 -define(ABSTIMEOID, 702).
@@ -40,12 +42,37 @@
 -define(MACADDROID, 829).
 -define(INETOID, 869).
 -define(CIDROID, 650).
--define(BYTEAARRAYOID, 1001). % not #defined
+-define(BOOLARRAYOID, 1000).        % not #defined
+-define(BYTEAARRAYOID, 1001).       % not #defined
+-define(CHARARRAYOID, 1002).        % not #defined
+-define(NAMEARRAYOID, 1003).        % not #defined
+-define(INT2ARRAYOID, 1005).        % not #defined
+-define(INT2VECTORARRAYOID, 1006).  % not #defined
 -define(INT4ARRAYOID, 1007).
+-define(REGPROCARRAYOID, 1008).     % not #defined
 -define(TEXTARRAYOID, 1009).
+-define(TIDARRAYOID, 1010).         % not #defined
+-define(XIDARRAYOID, 1011).         % not #defined
+-define(CIDARRAYOID, 1012).         % not #defined
+-define(OIDVECTORARRAYOID, 1013).   % not #defined
+-define(BPCHARARRAYOID, 1014).      % not #defined
+-define(VARCHARARRAYOID, 1015).     % not #defined
+-define(INT8ARRAYOID, 1016).        % not #defined
+-define(POINTARRAYOID, 1017).       % not #defined
+-define(LSEGARRAYOID, 1018).        % not #defined
+-define(PATHARRAYOID, 1019).        % not #defined
+-define(BOXARRAYOID, 1020).         % not #defined
 -define(FLOAT4ARRAYOID, 1021).
+-define(FLOAT8ARRAYOID, 1022).      % not #defined
+-define(ABSTIMEARRAYOID, 1023).     % not #defined
+-define(RELTIMEARRAYOID, 1024).     % not #defined
+-define(TINTERVALARRAYOID, 1025).   % not #defined
+-define(POLYGONARRAYOID, 1027).     % not #defined
+-define(OIDARRAYOID, 1028).         % not #defined
 -define(ACLITEMOID, 1033).
--define(CSTRINGARRAYOID, 1263).
+-define(ACLITEMARRAYOID, 1034).     % not #defined
+-define(MACADDRARRAYOID, 1040).     % not #defined
+-define(INETARRAYOID, 1041).        % not #defined
 -define(BPCHAROID, 1042).
 -define(VARCHAROID, 1043).
 -define(DATEOID, 1082).
@@ -53,6 +80,7 @@
 -define(TIMESTAMPOID, 1114).
 -define(TIMESTAMPTZOID, 1184).
 -define(INTERVALOID, 1186).
+-define(CSTRINGARRAYOID, 1263).
 -define(TIMETZOID, 1266).
 -define(BITOID, 1560).
 -define(VARBITOID, 1562).

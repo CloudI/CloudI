@@ -769,6 +769,17 @@ wg_to_common({error, #epgsql_wg_error{message = Message}}) ->
 wg_to_common([_ | _] = L) ->
     check_list(L, fun wg_to_common/1).
 
+semiocast_to_common_rows([] = Rows) ->
+    Rows;
+semiocast_to_common_rows([Row | _] = Rows) ->
+    case lists:any(fun erlang:is_tuple/1, erlang:tuple_to_list(Row)) of
+        true ->
+            % crash on any unsupported types
+            erlang:exit({unsupported_type, Row});
+        false ->
+            Rows
+    end.
+
 % based on the semiocast driver's attempt to fake odbc results
 % (doesn't match odbc)
 -spec semiocast_to_common(?MODULE_SEMIOCAST:result_tuple() |
@@ -784,23 +795,23 @@ semiocast_to_common({error, _} = Error) ->
 semiocast_to_common({{insert, _TableOID, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{insert, _TableOID, Count}, Rows}) ->
-    {updated, Count, Rows};
+    {updated, Count, semiocast_to_common_rows(Rows)};
 semiocast_to_common({{copy, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{delete, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{delete, Count}, Rows}) ->
-    {updated, Count, Rows};
+    {updated, Count, semiocast_to_common_rows(Rows)};
 semiocast_to_common({{fetch, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{move, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{select, _Count}, Rows}) ->
-    {selected, Rows}; % not odbc-like
+    {selected, semiocast_to_common_rows(Rows)}; % not odbc-like
 semiocast_to_common({{update, Count}, []}) ->
     {updated, Count};
 semiocast_to_common({{update, Count}, Rows}) ->
-    {updated, Count, Rows};
+    {updated, Count, semiocast_to_common_rows(Rows)};
 semiocast_to_common({{alter, _What}, []}) ->
     {updated, 0};
 semiocast_to_common({{create, _What}, []}) ->
