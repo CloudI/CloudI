@@ -199,7 +199,7 @@ squery(Dispatcher, Name, Query, Timeout)
 -spec transaction(Dispatcher :: dispatcher(),
                   Name :: cloudi_service:service_name(),
                   QueryList :: list(string() | binary())) ->
-    {ok, ok} |
+    {ok, ok | {error, any()}} |
     {error, any()}.
 
 transaction(Dispatcher, Name, [Query | _] = QueryList)
@@ -217,7 +217,7 @@ transaction(Dispatcher, Name, [Query | _] = QueryList)
                   Name :: cloudi_service:service_name(),
                   QueryList :: list(string() | binary()),
                   Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, ok} |
+    {ok, ok | {error, any()}} |
     {error, any()}.
 
 transaction(Dispatcher, Name, [Query | _] = QueryList, Timeout)

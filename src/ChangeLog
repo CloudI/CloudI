@@ -5,6 +5,7 @@
 
     * Add debug output to cloudi_service_db_pgsql
     * Simplify cloudi_service_db_pgsql
+    * Fix CLOUDI_CORE_STANDALONE cloudi_core dialyzer error
 
 2014-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

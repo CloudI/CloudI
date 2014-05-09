@@ -799,8 +799,7 @@ services_acl_update([], _) ->
 services_acl_update([_ | _] = Services, Lookup) ->
     services_acl_update(Services, [], Lookup).
 
-services_acl_update([], Output, _) ->
-    {ok, lists:reverse(Output)};
+-define(CLOUDI_CORE_SUPPORT_INTERNAL_ACL,
 services_acl_update([#config_service_internal{
                         dest_list_deny = Deny,
                         dest_list_allow = Allow} = Service | L],
@@ -818,6 +817,12 @@ services_acl_update([#config_service_internal{
             end;
         {error, _} = Error ->
             Error
+    ).
+-ifdef(CLOUDI_CORE_STANDALONE).
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
+    end).
+-else.
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
     end;
 services_acl_update([#config_service_external{
                         dest_list_deny = Deny,
@@ -836,7 +841,13 @@ services_acl_update([#config_service_external{
             end;
         {error, _} = Error ->
             Error
-    end.
+    end).
+-endif.
+services_acl_update([], Output, _) ->
+    {ok, lists:reverse(Output)};
+?CLOUDI_CORE_SUPPORT_INTERNAL_ACL
+?CLOUDI_CORE_SUPPORT_EXTERNAL_ACL
+    .
 
 services_acl_update_list(undefined, _, _) ->
     {ok, undefined};
