@@ -77,7 +77,7 @@
 -define(TERMINATE_DELAY_MAX, 60000). % milliseconds
 
 -ifdef(ERLANG_OTP_VER_16).
--type dict_proxy(Key, Value) :: dict() | {Key, Value}.
+-type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.

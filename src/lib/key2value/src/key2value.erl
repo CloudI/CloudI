@@ -67,13 +67,14 @@
          new/1,
          store/4]).
 
-% jazz - "If you can't make it, fake it":
--type dict_interface(Key, Value) :: any() | {Key, Value}.
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
 -type key2value(Key1, Key2, Value) :: {module(),
-                                       dict_interface(Key1,
-                                                      {list(Key2), Value}),
-                                       dict_interface(Key2,
-                                                      {list(Key1), Value})}.
+                                       dict_proxy(Key1, {list(Key2), Value}),
+                                       dict_proxy(Key2, {list(Key1), Value})}.
 -export_type([key2value/3]).
 -type key2value() :: key2value(any(), any(), any()).
 
