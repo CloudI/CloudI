@@ -637,6 +637,7 @@ dialyze: all \
          dialyzer.plt
 	$(DIALYZER) --verbose --plt dialyzer.plt \
               -I lib/cloudi_core/include/ \
+              -Wrace_conditions \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
               lib/cloudi_service_db/ebin/ \
@@ -681,6 +682,7 @@ dialyze: all \
               external/cloudi_x_jsx/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/syslog/ebin
+	@echo "No Errors or Warnings Found!"
 
 dialyzer: dialyze
 
