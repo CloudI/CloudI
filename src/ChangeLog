@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add use_websockets == exclusively for cloudi_service_http_cowboy to limit
+      usage of a port to websockets-only
+    * Add websocket_connect_async, websocket_connect_sync,
+      websocket_disconnect_async, and websocket_disconnect_sync to
+      cloudi_service_http_cowboy to handle (blocking) connection validation
+      (i.e., synchronous connect service requests with
+       websocket_connect_sync, websocket_connect remains the same as
+       websocket_disconnect_async)
+
 2014-05-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update semiocast pgsql driver

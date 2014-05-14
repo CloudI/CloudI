@@ -73,7 +73,7 @@ class Task(threading.Thread):
                   timeout, priority, trans_id, pid):
         assert request == 'CONNECT'
         print "connect:", self.__api.info_key_value_parse(request_info)
-        return ''
+        return 'got connect! yay!'
 
     def __disconnect(self, command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid):

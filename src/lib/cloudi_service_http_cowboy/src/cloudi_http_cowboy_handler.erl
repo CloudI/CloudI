@@ -78,14 +78,14 @@
 -record(websocket_state,
     {
         % for service requests entering CloudI
-        websocket_connect_trans_id,
-        name_incoming,
-        name_outgoing,
-        request_info,
+        websocket_connect_trans_id   :: undefined | cloudi_service:trans_id(),
+        name_incoming                :: string(),
+        name_outgoing                :: cloudi_service:service_name(),
+        request_info                 :: list({binary(), binary()}) | binary(),
         % for a service request exiting CloudI
-        response_pending = false,
-        response_timer,
-        request_pending,
+        response_pending = false     :: boolean(),
+        response_timer               :: reference(),
+        request_pending              :: tuple(),
         queued = cloudi_x_pqueue4:new(),
         recv_timeouts = dict:new()
     }).
@@ -94,12 +94,19 @@
 %%% Callback functions from cloudi_x_cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init(_Transport, Req0, #cowboy_state{use_websockets = true} = State) ->
+init(_Transport, Req0, #cowboy_state{use_websockets = UseWebSockets} = State)
+    when UseWebSockets =:= true; UseWebSockets =:= exclusively ->
     case upgrade_request(Req0) of
         {websocket, Req1} ->
-            {upgrade, protocol, cloudi_x_cowboy_websocket, Req1, State};
+            {upgrade, protocol, cloudi_x_cowboy_websocket, Req1,
+             State#cowboy_state{use_websockets = true}};
         {undefined, Req1} ->
-            {ok, Req1, State};
+            if
+                UseWebSockets =:= exclusively ->
+                    {shutdown, Req1, State};
+                true ->
+                    {ok, Req1, State}
+            end;
         {Upgrade, Req1} ->
             ?LOG_ERROR("Unknown protocol: ~p", [Upgrade]),
             {shutdown, Req1, State}
@@ -270,10 +277,7 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 websocket_init(_Transport, Req0,
-               #cowboy_state{dispatcher = Dispatcher,
-                             context = Context,
-                             prefix = Prefix,
-                             timeout_websocket = TimeoutWebSocket,
+               #cowboy_state{prefix = Prefix,
                              output_type = OutputType,
                              set_x_forwarded_for = SetXForwardedFor,
                              websocket_connect = WebSocketConnect,
@@ -346,31 +350,13 @@ websocket_init(_Transport, Req0,
                               {websocket_ping, WebSocketPing}),
             received
     end,
-    WebSocketConnectTransId = if
-        is_list(WebSocketConnect) ->
-            Request = if
-                (OutputType =:= external) orelse
-                (OutputType =:= internal) orelse
-                (OutputType =:= binary) ->
-                    <<"CONNECT">>;
-                (OutputType =:= list) ->
-                    "CONNECT"
-            end,
-            {ok, TransId} = send_async_minimal(Dispatcher, Context,
-                                               WebSocketConnect,
-                                               RequestInfo, Request, self()),
-            TransId;
-        true ->
-            undefined
-    end,
-    {ok, ReqN,
-     State#cowboy_state{
-         websocket_ping = WebSocketPingStatus,
-         websocket_state = #websocket_state{
-             websocket_connect_trans_id = WebSocketConnectTransId,
-             name_incoming = NameIncoming,
-             name_outgoing = NameOutgoing,
-             request_info = RequestInfo}}, TimeoutWebSocket}.
+    websocket_connect_check(WebSocketConnect, ReqN,
+        State#cowboy_state{
+            websocket_ping = WebSocketPingStatus,
+            websocket_state = #websocket_state{
+                name_incoming = NameIncoming,
+                name_outgoing = NameOutgoing,
+                request_info = RequestInfo}}).
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
@@ -662,45 +648,8 @@ websocket_info(Info, Req,
 
 websocket_terminate(Reason, _Req,
                     #cowboy_state{
-                        dispatcher = Dispatcher,
-                        context = Context,
-                        output_type = OutputType,
-                        websocket_disconnect = WebSocketDisconnect,
-                        websocket_state = #websocket_state{
-                            request_info = RequestInfo}}) ->
-    if
-        is_list(WebSocketDisconnect) ->
-            Disconnect = case Reason of
-                {remote, CloseCode, CloseBinary}
-                    when is_integer(CloseCode) ->
-                    [<<"remote,">>,
-                     erlang:integer_to_binary(CloseCode), <<",">>,
-                     CloseBinary];
-                {ReasonType, ReasonDescription} ->
-                    [erlang:atom_to_binary(ReasonType, utf8), <<",">>,
-                     erlang:atom_to_binary(ReasonDescription, utf8)]
-            end,
-            NewRequestInfo = if
-                (OutputType =:= external) orelse (OutputType =:= binary) ->
-                    erlang:iolist_to_binary([<<"disconnection">>, 0,
-                                             Disconnect, 0,
-                                             RequestInfo]);
-                (OutputType =:= internal) orelse (OutputType =:= list) ->
-                    [{<<"disconnection">>, Disconnect} | RequestInfo]
-            end,
-            Request = if
-                (OutputType =:= external) orelse
-                (OutputType =:= internal) orelse
-                (OutputType =:= binary) ->
-                    <<"DISCONNECT">>;
-                (OutputType =:= list) ->
-                    "DISCONNECT"
-            end,
-            send_async_minimal(Dispatcher, Context, WebSocketDisconnect,
-                               NewRequestInfo, Request, self());
-        true ->
-            ok
-    end,
+                        websocket_disconnect = WebSocketDisconnect} = State) ->
+    websocket_disconnect_check(WebSocketDisconnect, Reason, State),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -1077,6 +1026,137 @@ websocket_terminate_check(ResponseInfo) ->
         false ->
             false
     end.
+
+websocket_connect_request(OutputType)
+    when OutputType =:= external; OutputType =:= internal;
+         OutputType =:= binary ->
+    <<"CONNECT">>;
+websocket_connect_request(OutputType)
+    when OutputType =:= list ->
+    "CONNECT".
+
+websocket_connect_check(undefined, Req,
+                        #cowboy_state{
+                            timeout_websocket = TimeoutWebSocket} = State) ->
+    {ok, Req, State, TimeoutWebSocket};
+websocket_connect_check({async, WebSocketConnectName}, Req,
+                        #cowboy_state{
+                            dispatcher = Dispatcher,
+                            context = Context,
+                            timeout_websocket = TimeoutWebSocket,
+                            output_type = OutputType,
+                            websocket_state = #websocket_state{
+                                request_info = RequestInfo} = WebSocketState
+                            } = State) ->
+    Request = websocket_connect_request(OutputType),
+    {ok, TransId} = send_async_minimal(Dispatcher, Context,
+                                       WebSocketConnectName,
+                                       RequestInfo, Request, self()),
+    {ok, Req,
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             websocket_connect_trans_id = TransId}}, TimeoutWebSocket};
+websocket_connect_check({sync, WebSocketConnectName}, Req,
+                        #cowboy_state{
+                            dispatcher = Dispatcher,
+                            context = Context,
+                            timeout_websocket = TimeoutWebSocket,
+                            output_type = OutputType,
+                            websocket_state = #websocket_state{
+                                request_info = RequestInfo} = WebSocketState
+                            } = State) ->
+    Self = self(),
+    case send_sync_minimal(Dispatcher, Context,
+                           WebSocketConnectName,
+                           RequestInfo,
+                           websocket_connect_request(OutputType), Self) of
+        {ok, ResponseInfo, Response} ->
+            case websocket_terminate_check(ResponseInfo) of
+                true ->
+                    {shutdown, Req, State};
+                false ->
+                    NewState = if
+                        Response /= <<>> ->
+                            % make sure a response is given to the websocket
+                            Timeout = cloudi:timeout_sync(Context),
+                            TransId = cloudi:trans_id(Context),
+                            Self ! {'cloudi_service_return_async',
+                                    WebSocketConnectName,
+                                    WebSocketConnectName,
+                                    <<>>, Response,
+                                    Timeout, TransId, Self},
+                            State#cowboy_state{
+                                websocket_state =
+                                    WebSocketState#websocket_state{
+                                    websocket_connect_trans_id = TransId}};
+                        true ->
+                            State
+                    end,
+                    {ok, Req, NewState, TimeoutWebSocket}
+            end;
+        {error, timeout} ->
+            {shutdown, Req, State}
+    end.
+
+websocket_disconnect_request(OutputType)
+    when OutputType =:= external; OutputType =:= internal;
+         OutputType =:= binary ->
+    <<"DISCONNECT">>;
+websocket_disconnect_request(OutputType)
+    when OutputType =:= list ->
+    "DISCONNECT".
+
+websocket_disconnect_request_info_reason({remote, CloseCode, CloseBinary})
+    when is_integer(CloseCode) ->
+    [<<"remote,">>,
+     erlang:integer_to_binary(CloseCode), <<",">>,
+     CloseBinary];
+websocket_disconnect_request_info_reason({ReasonType, ReasonDescription}) ->
+    [erlang:atom_to_binary(ReasonType, utf8), <<",">>,
+     erlang:atom_to_binary(ReasonDescription, utf8)].
+
+websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
+    when OutputType =:= external; OutputType =:= binary ->
+    erlang:iolist_to_binary([<<"disconnection">>, 0,
+                             websocket_disconnect_request_info_reason(Reason),
+                             0, RequestInfo]);
+websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
+    when OutputType =:= internal; OutputType =:= list ->
+    [{<<"disconnection">>,
+      websocket_disconnect_request_info_reason(Reason)} | RequestInfo].
+
+websocket_disconnect_check(undefined, _, _) ->
+    ok;
+websocket_disconnect_check({async, WebSocketDisconnectName},
+                           Reason,
+                           #cowboy_state{
+                               dispatcher = Dispatcher,
+                               context = Context,
+                               output_type = OutputType,
+                               websocket_state = #websocket_state{
+                                   request_info = RequestInfo}}) ->
+    send_async_minimal(Dispatcher, Context,
+                       WebSocketDisconnectName,
+                       websocket_disconnect_request_info(Reason,
+                                                         RequestInfo,
+                                                         OutputType),
+                       websocket_disconnect_request(OutputType), self()),
+    ok;
+websocket_disconnect_check({sync, WebSocketDisconnectName},
+                           Reason,
+                           #cowboy_state{
+                               dispatcher = Dispatcher,
+                               context = Context,
+                               output_type = OutputType,
+                               websocket_state = #websocket_state{
+                                   request_info = RequestInfo}}) ->
+    send_sync_minimal(Dispatcher, Context,
+                      WebSocketDisconnectName,
+                      websocket_disconnect_request_info(Reason,
+                                                        RequestInfo,
+                                                        OutputType),
+                      websocket_disconnect_request(OutputType), self()),
+    ok.
 
 process_queue(Req,
               #cowboy_state{websocket_state =

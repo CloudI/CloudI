@@ -44,23 +44,27 @@
 %% cloudi_x_cowboy handler state
 -record(cowboy_state,
     {
-        dispatcher,
-        context,
-        prefix,
-        timeout_websocket,
-        output_type,
-        content_type_forced,
-        content_types_accepted,
-        set_x_forwarded_for,
-        status_code_timeout,
-        websocket_connect,
-        websocket_disconnect,
-        websocket_ping,
-        use_websockets,
-        use_host_prefix,
-        use_client_ip_prefix,
-        use_method_suffix,
-        content_type_lookup,
-        websocket_state
+        dispatcher              :: cloudi_service:dispatcher(),
+        context                 :: cloudi:context(),
+        prefix                  :: string(),
+        timeout_websocket       :: infinity | pos_integer(),
+        output_type             :: external | internal | list | binary,
+        content_type_forced     :: undefined | binary(),
+        content_types_accepted  :: undefined | binary:cp(),
+        set_x_forwarded_for     :: boolean(),
+        status_code_timeout     :: 100..599,
+        websocket_connect       :: undefined |
+                                   {async | sync,
+                                    cloudi_service:service_name()},
+        websocket_disconnect    :: undefined |
+                                   {async | sync,
+                                    cloudi_service:service_name()},
+        websocket_ping          :: undefined | received | pos_integer(),
+        use_websockets          :: boolean() | exclusively,
+        use_host_prefix         :: boolean(),
+        use_client_ip_prefix    :: boolean(),
+        use_method_suffix       :: boolean(),
+        content_type_lookup     :: cloudi_x_trie:cloudi_x_trie(),
+        websocket_state         :: tuple()
     }).
 

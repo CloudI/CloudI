@@ -229,9 +229,9 @@
         "/tests/websockets/",
         cloudi_service_http_cowboy,
         [{port, 6464}, {output, external}, {use_websockets, true},
-         {websocket_connect,
+         {websocket_connect_sync,
           "/tests/websockets/bounce/websocket/connect"},
-         {websocket_disconnect,
+         {websocket_disconnect_async,
           "/tests/websockets/bounce/websocket/disconnect"},
          {websocket_ping, 30000}], % milliseconds
         immediate_closest,
