@@ -453,7 +453,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
-            case websocket_terminate_check(ResponseInfo) of
+            case websocket_terminate_check(ResponseInfo, Req) of
                 true ->
                     {shutdown, Req, State};
                 false ->
@@ -606,7 +606,7 @@ websocket_info({'cloudi_service_return_async',
                                  websocket_connect_trans_id = TransId
                                  } = WebSocketState
                              } = State) ->
-    case websocket_terminate_check(ResponseInfo) of
+    case websocket_terminate_check(ResponseInfo, Req) of
         true ->
             {shutdown, Req, State};
         false ->
@@ -1014,12 +1014,19 @@ service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
     cloudi_ip_address:to_string(ClientIpAddr) ++
     erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
 
-websocket_terminate_check(<<>>) ->
+websocket_terminate_check(<<>>, _) ->
     false;
-websocket_terminate_check(ResponseInfo) ->
-    case lists:keyfind(<<"connection">>, 1,
-                       headers_external_outgoing(ResponseInfo)) of
+websocket_terminate_check(ResponseInfo, Req) ->
+    HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+    case lists:keyfind(<<"connection">>, 1, HeadersOutgoing) of
         {<<"connection">>, <<"close">>} ->
+            StatusCode = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
+                false ->
+                    400;
+                {_, Status} when is_binary(Status) ->
+                    erlang:binary_to_integer(hd(binary:split(Status, <<" ">>)))
+            end,
+            cloudi_x_cowboy_req:reply(StatusCode, HeadersOutgoing, [], Req),
             true;
         {<<"connection">>, _} ->
             false;
@@ -1071,7 +1078,7 @@ websocket_connect_check({sync, WebSocketConnectName}, Req,
                            RequestInfo,
                            websocket_connect_request(OutputType), Self) of
         {ok, ResponseInfo, Response} ->
-            case websocket_terminate_check(ResponseInfo) of
+            case websocket_terminate_check(ResponseInfo, Req) of
                 true ->
                     {shutdown, Req, State};
                 false ->
