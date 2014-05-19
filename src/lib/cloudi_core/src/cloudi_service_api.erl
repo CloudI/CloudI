@@ -235,23 +235,23 @@
     period_seconds().
 -export_type([node_reconnect_delay_seconds/0]).
 -type nodes_proplist() ::
-    list(node() |
-         {nodes, list(node())} |
-         {reconnect_start, node_reconnect_delay_seconds()} |
-         {reconnect_delay, node_reconnect_delay_seconds()} |
-         {listen, visible | all} |
-         {connect, visible | hidden} |
-         {timestamp_type, erlang | os} |
-         {discovery,
-          list({ec2, list({address, inet:ip_address()} |
-                          {port, inet:port_number()} |
-                          {ttl, non_neg_integer()})} |
-               {multicast, list({access_key_id, string()} |
-                                {secret_access_key, string()} |
-                                {ec2_host, string()} |
-                                {groups, list(string())} |
-                                {tags, list({string(), string()} |
-                                            string())})})}).
+    nonempty_list(node() |
+                  {nodes, list(node())} |
+                  {reconnect_start, node_reconnect_delay_seconds()} |
+                  {reconnect_delay, node_reconnect_delay_seconds()} |
+                  {listen, visible | all} |
+                  {connect, visible | hidden} |
+                  {timestamp_type, erlang | os} |
+                  {discovery,
+                   list({ec2, list({address, inet:ip_address()} |
+                                   {port, inet:port_number()} |
+                                   {ttl, non_neg_integer()})} |
+                        {multicast, list({access_key_id, string()} |
+                                         {secret_access_key, string()} |
+                                         {ec2_host, string()} |
+                                         {groups, list(string())} |
+                                         {tags, list({string(), string()} |
+                                                     string())})})}).
 -export_type([nodes_proplist/0]).
 
 %%%------------------------------------------------------------------------
@@ -275,7 +275,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec acl_add(L :: list({atom(), acl()}), 
+-spec acl_add(L :: nonempty_list({atom(), acl()}), 
               Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -298,7 +298,7 @@ acl_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec acl_remove(L :: list(atom()),
+-spec acl_remove(L :: nonempty_list(atom()),
                  Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -345,7 +345,7 @@ service_subscriptions(ServiceId, Timeout)
                                       #external{} |
                                       service_proplist()),
                    Timeout :: api_timeout_milliseconds()) ->
-    {ok, list(service_id())} |
+    {ok, nonempty_list(service_id())} |
     {error,
      timeout | noproc |
      cloudi_configuration:error_reason_services_add()}.
@@ -419,8 +419,8 @@ services_restart([_ | _] = L, Timeout)
 
 -spec services_search(ServiceName :: cloudi:service_name(),
                       Timeout :: api_timeout_milliseconds()) ->
-    {ok, nonempty_list({service_id(), #internal{}} |
-                       {service_id(), #external{}})} |
+    {ok, list({service_id(), #internal{}} |
+              {service_id(), #external{}})} |
     {error, timeout | noproc | service_name_invalid}.
 
 services_search([_ | _] = ServiceName, Timeout)
@@ -670,7 +670,7 @@ code_path_remove(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path(Timeout :: api_timeout_milliseconds()) ->
-    {ok, list(file:filename())}.
+    {ok, nonempty_list(file:filename())}.
 
 code_path(Timeout)
     when ((is_integer(Timeout) andalso

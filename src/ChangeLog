@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-19 Drew Varner     <drew.varner [at] ubnt (dot) com>
+
+    * Add nonempty_list to cloudi_service_api typespecs
+
 2014-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add use_websockets == exclusively for cloudi_service_http_cowboy to limit
