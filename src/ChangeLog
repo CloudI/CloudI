@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update documentation
+
 2014-05-19 Drew Varner     <drew.varner [at] ubnt (dot) com>
 
     * Add nonempty_list to cloudi_service_api typespecs

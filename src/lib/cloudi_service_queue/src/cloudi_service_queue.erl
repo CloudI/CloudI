@@ -30,9 +30,9 @@
 %%% (This assumes the source is also meant to receive the response, which
 %%%  doesn't need to be the case with 'both'.  Only a valid service name
 %%%  needs to be specified for the destination of the response
-%%%  (with a <<"service_name">> key/value entry in the RequestInfo of the
-%%%   initial service request) and it doesn't need to be the source
-%%%  of the request).
+%%%  (with a &lt;&lt;"service_name"&gt;&gt; key/value entry in the
+%%%   RequestInfo of the initial service request) and it doesn't need to be
+%%%  the source of the request).
 %%%
 %%% The retry service argument controls the number of retries during the
 %%% lifetime of this service's instance.  So, this means that after an

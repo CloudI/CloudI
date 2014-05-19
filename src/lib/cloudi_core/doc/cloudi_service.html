@@ -15,7 +15,7 @@
    The interface which all internal services must implement.
 <p>Copyright © 2011-2014 Michael Truog</p>
 
-<p><b>Version:</b> 1.3.1 Jan 29 2014 20:02:12
+<p><b>Version:</b> 1.3.2 May 19 2014 14:28:24
   ------------------------------------------------------------------------</p>
 <p><b>This module defines the <tt>cloudi_service</tt> behaviour.</b><br> Required callback functions: <tt>cloudi_service_init/3</tt>, <tt>cloudi_service_handle_request/11</tt>, <tt>cloudi_service_handle_info/3</tt>, <tt>cloudi_service_terminate/2</tt>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -73,8 +73,16 @@
 <p><tt>dispatcher() = pid()</tt></p>
 
 
+<h3 class="typedecl"><a name="type-error_reason">error_reason()</a></h3>
+<p><tt>error_reason() = timeout</tt></p>
+
+
+<h3 class="typedecl"><a name="type-error_reason_sync">error_reason_sync()</a></h3>
+<p><tt>error_reason_sync() = <a href="#type-error_reason">error_reason()</a> | invalid_state</tt></p>
+
+
 <h3 class="typedecl"><a name="type-key_values">key_values()</a></h3>
-<p><tt>key_values() = [{binary() | string() | atom(), binary() | string() | any()}] | dict()</tt></p>
+<p><tt>key_values() = [{binary() | string() | atom(), binary() | string() | any()}] | <a href="dict.html#type-dict">dict:dict</a>(binary() | string() | atom(), binary() | string() | any())</tt></p>
 
 
 <h3 class="typedecl"><a name="type-pattern_pid">pattern_pid()</a></h3>
@@ -234,8 +242,19 @@
   All subscribed/unsubscribed service names use this prefix.</td></tr>
 <tr><td valign="top"><a href="#priority_default-1">priority_default/1</a></td><td>
   <h4><a name="Configured_service_default_priority.">Configured service default priority.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#process_count-1">process_count/1</a></td><td>
+  <h4><a name="Return_the_initial_process_count_of_this_instance_of_the_service.">Return the initial process count of this instance of the service.</a></h4>
+  The configuration of the service defined how many instances should exist.</td></tr>
+<tr><td valign="top"><a href="#process_count_max-1">process_count_max/1</a></td><td>
+  <h4><a name="Return_the_process_count_maximum_of_this_instance_of_the_service.">Return the process count maximum of this instance of the service.</a></h4>
+  This will be the same as the process_count, unless count_process_dynamic
+  configuration provides a maximum that is greater than the process_count.</td></tr>
+<tr><td valign="top"><a href="#process_count_min-1">process_count_min/1</a></td><td>
+  <h4><a name="Return_the_process_count_minimum_of_this_instance_of_the_service.">Return the process count minimum of this instance of the service.</a></h4>
+  This will be the same as the process_count, unless count_process_dynamic
+  configuration provides a minimum that is less than the process_count.</td></tr>
 <tr><td valign="top"><a href="#process_index-1">process_index/1</a></td><td>
-  <h4><a name="Return_the_index_of_this_instance_of_the_service.">Return the index of this instance of the service.</a></h4>
+  <h4><a name="Return_the_0-based_index_of_this_instance_of_the_service.">Return the 0-based index of this instance of the service.</a></h4>
   The configuration of the service defined how many instances should exist.</td></tr>
 <tr><td valign="top"><a href="#recv_async-1">recv_async/1</a></td><td>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
@@ -331,6 +350,9 @@
   <code>{timeout_async_active, TransId}</code>
   use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
   <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></td></tr>
+<tr><td valign="top"><a href="#send_async_active-8">send_async_active/8</a></td><td>
+  <h4><a name="Send_an_asynchronous_service_request_with_a_previously_generated_transaction_id.">Send an asynchronous service request with a previously generated transaction id.</a></h4>
+  Only meant for special transaction handling.</td></tr>
 <tr><td valign="top"><a href="#send_async_passive-3">send_async_passive/3</a></td><td>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.</td></tr>
@@ -455,7 +477,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="environment_lookup-0">environment_lookup/0</a></h3>
 <div class="spec">
-<p><tt>environment_lookup() -&gt; any()</tt><br></p>
+<p><tt>environment_lookup() -&gt; <a href="cloudi_x_trie.html#type-cloudi_x_trie">cloudi_x_trie:cloudi_x_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_an_environment_variable_lookup_for_cloudi_service:environment_transform().">Get an environment variable lookup for cloudi_service:environment_transform().</a></h4>
 </p>
@@ -470,7 +492,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="environment_transform-2">environment_transform/2</a></h3>
 <div class="spec">
-<p><tt>environment_transform(String::string(), Lookup::any()) -&gt; string()</tt><br></p>
+<p><tt>environment_transform(String::string(), Lookup::<a href="cloudi_x_trie.html#type-cloudi_x_trie">cloudi_x_trie:cloudi_x_trie()</a>) -&gt; string()</tt><br></p>
 </div><p>
   <h4><a name="Transform_a_string,_substituting_environment_variable_values_from_the_lookup.">Transform a string, substituting environment variable values from the lookup.</a></h4>
   Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
@@ -499,28 +521,28 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="get_pid-2">get_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_pid-3">get_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>get_pid(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_pids-2">get_pids/2</a></h3>
 <div class="spec">
-<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_all_service_destinations_based_on_a_service_name.">Get all service destinations based on a service name.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_pids-3">get_pids/3</a></h3>
 <div class="spec">
-<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>get_pids(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, PatternPids::[<a href="#type-pattern_pid">pattern_pid()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_service_destination_based_on_a_service_name.">Get a service destination based on a service name.</a></h4>
 </p>
@@ -554,7 +576,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async-3">mcast_async/3</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -562,7 +584,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async-4">mcast_async/4</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -570,7 +592,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async-6">mcast_async/6</a></h3>
 <div class="spec">
-<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -578,7 +600,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_active-3">mcast_async_active/3</a></h3>
 <div class="spec">
-<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -592,7 +614,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_active-4">mcast_async_active/4</a></h3>
 <div class="spec">
-<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -606,7 +628,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_active-6">mcast_async_active/6</a></h3>
 <div class="spec">
-<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   Asynchronous service requests are sent to all services that have
@@ -620,7 +642,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_passive-3">mcast_async_passive/3</a></h3>
 <div class="spec">
-<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   An alias for mcast_async.  The asynchronous service requests are returned
@@ -628,7 +650,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_passive-4">mcast_async_passive/4</a></h3>
 <div class="spec">
-<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   An alias for mcast_async.  The asynchronous service requests are returned
@@ -636,7 +658,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="mcast_async_passive-6">mcast_async_passive/6</a></h3>
 <div class="spec">
-<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>mcast_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransIdList::[<a href="#type-trans_id">trans_id()</a>]} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_multicast_asynchronous_service_request.">Send a multicast asynchronous service request.</a></h4>
   An alias for mcast_async.  The asynchronous service requests are returned
@@ -657,23 +679,46 @@ The source pid can be found at:</p>
   <h4><a name="Configured_service_default_priority.">Configured service default priority.</a></h4>
 </p>
 
+<h3 class="function"><a name="process_count-1">process_count/1</a></h3>
+<div class="spec">
+<p><tt>process_count(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; ProcessCount::pos_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_initial_process_count_of_this_instance_of_the_service.">Return the initial process count of this instance of the service.</a></h4>
+  The configuration of the service defined how many instances should exist.</p>
+
+<h3 class="function"><a name="process_count_max-1">process_count_max/1</a></h3>
+<div class="spec">
+<p><tt>process_count_max(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; ProcessCountMax::pos_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_process_count_maximum_of_this_instance_of_the_service.">Return the process count maximum of this instance of the service.</a></h4>
+  This will be the same as the process_count, unless count_process_dynamic
+  configuration provides a maximum that is greater than the process_count.</p>
+
+<h3 class="function"><a name="process_count_min-1">process_count_min/1</a></h3>
+<div class="spec">
+<p><tt>process_count_min(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; ProcessCountMin::pos_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_process_count_minimum_of_this_instance_of_the_service.">Return the process count minimum of this instance of the service.</a></h4>
+  This will be the same as the process_count, unless count_process_dynamic
+  configuration provides a minimum that is less than the process_count.</p>
+
 <h3 class="function"><a name="process_index-1">process_index/1</a></h3>
 <div class="spec">
 <p><tt>process_index(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; ProcessIndex::non_neg_integer()</tt><br></p>
 </div><p>
-  <h4><a name="Return_the_index_of_this_instance_of_the_service.">Return the index of this instance of the service.</a></h4>
+  <h4><a name="Return_the_0-based_index_of_this_instance_of_the_service.">Return the 0-based index of this instance of the service.</a></h4>
   The configuration of the service defined how many instances should exist.</p>
 
 <h3 class="function"><a name="recv_async-1">recv_async/1</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Use a null TransId to receive the oldest service request.</p>
 
 <h3 class="function"><a name="recv_async-2">recv_async/2</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransId::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransId::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Either use the supplied TransId to receive the specific service request
@@ -681,7 +726,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="recv_async-3">recv_async/3</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>, TransId::<a href="#type-trans_id">trans_id()</a> | boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a> | <a href="#type-trans_id">trans_id()</a>, TransId::<a href="#type-trans_id">trans_id()</a> | boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
   Either use the supplied TransId to receive the specific service request
@@ -689,35 +734,35 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="recv_async-4">recv_async/4</a></h3>
 <div class="spec">
-<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Consume::boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, Consume::boolean()) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_an_asynchronous_service_request.">Receive an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="recv_asyncs-2">recv_asyncs/2</a></h3>
 <div class="spec">
-<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
 </p>
 
 <h3 class="function"><a name="recv_asyncs-3">recv_asyncs/3</a></h3>
 <div class="spec">
-<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>]) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
 </p>
 
 <h3 class="function"><a name="recv_asyncs-4">recv_asyncs/4</a></h3>
 <div class="spec">
-<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>], Consume::boolean()) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::atom()}</tt><br></p>
+<p><tt>recv_asyncs(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, TransIdList::[<a href="#type-trans_id">trans_id()</a>], Consume::boolean()) -&gt; {ok, [{ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>, TransId::<a href="#type-trans_id">trans_id()</a>}]} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Receive_asynchronous_service_requests.">Receive asynchronous service requests.</a></h4>
 </p>
 
 <h3 class="function"><a name="request_http_qs_parse-1">request_http_qs_parse/1</a></h3>
 <div class="spec">
-<p><tt>request_http_qs_parse(Request::binary()) -&gt; Result::dict()</tt><br></p>
+<p><tt>request_http_qs_parse(Request::binary()) -&gt; Result::<a href="dict.html#type-dict">dict:dict</a>(binary(), binary())</tt><br></p>
 </div><p>
   <h4><a name="Parse_HTTP_Request_query_string_data.">Parse HTTP Request query string data.</a></h4>
 </p>
@@ -733,7 +778,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="request_info_key_value_parse-1">request_info_key_value_parse/1</a></h3>
 <div class="spec">
-<p><tt>request_info_key_value_parse(RequestInfo::binary() | [{any(), any()}]) -&gt; Result::dict()</tt><br></p>
+<p><tt>request_info_key_value_parse(RequestInfo::binary() | [{any(), any()}]) -&gt; Result::<a href="dict.html#type-dict">dict:dict</a>(any(), any())</tt><br></p>
 </div><p>
   <h4><a name="Parse_RequestInfo_key/value_data.">Parse RequestInfo key/value data.</a></h4>
   RequestInfo is meant to contain key/value pairs that is request
@@ -794,42 +839,42 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async-3">send_async/3</a></h3>
 <div class="spec">
-<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-4">send_async/4</a></h3>
 <div class="spec">
-<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-5">send_async/5</a></h3>
 <div class="spec">
-<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-6">send_async/6</a></h3>
 <div class="spec">
-<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async-7">send_async/7</a></h3>
 <div class="spec">
-<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_async_active-3">send_async_active/3</a></h3>
 <div class="spec">
-<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   The response is sent to the service as an Erlang message which is either:
@@ -841,7 +886,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_active-4">send_async_active/4</a></h3>
 <div class="spec">
-<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   The response is sent to the service as an Erlang message which is either:
@@ -853,7 +898,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_active-5">send_async_active/5</a></h3>
 <div class="spec">
-<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   The response is sent to the service as an Erlang message which is either:
@@ -865,7 +910,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_active-6">send_async_active/6</a></h3>
 <div class="spec">
-<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   The response is sent to the service as an Erlang message which is either:
@@ -877,7 +922,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_active-7">send_async_active/7</a></h3>
 <div class="spec">
-<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   The response is sent to the service as an Erlang message which is either:
@@ -887,9 +932,22 @@ The source pid can be found at:</p>
   use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
   <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
 
+<h3 class="function"><a name="send_async_active-8">send_async_active/8</a></h3>
+<div class="spec">
+<p><tt>send_async_active(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, TransId::<a href="#type-trans_id">trans_id()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_an_asynchronous_service_request_with_a_previously_generated_transaction_id.">Send an asynchronous service request with a previously generated transaction id.</a></h4>
+  Only meant for special transaction handling.
+  The response is sent to the service as an Erlang message which is either:
+  <code>{return_async_active, Name, Pattern, ResponseInfo, Response, Timeout, TransId}</code>
+  (or)
+  <code>{timeout_async_active, TransId}</code>
+  use <code>-include_lib("cloudi_core/include/cloudi_service.hrl").</code> to have:
+  <code>#return_async_active{}</code> (or) <code>#timeout_async_active{}</code></p>
+
 <h3 class="function"><a name="send_async_passive-3">send_async_passive/3</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -897,7 +955,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_passive-4">send_async_passive/4</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -905,7 +963,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_passive-5">send_async_passive/5</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -913,7 +971,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_passive-6">send_async_passive/6</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -921,7 +979,7 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_async_passive-7">send_async_passive/7</a></h3>
 <div class="spec">
-<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_async_passive(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, TransId::<a href="#type-trans_id">trans_id()</a>} | {error, Reason::<a href="#type-error_reason">error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_an_asynchronous_service_request.">Send an asynchronous service request.</a></h4>
   An alias for send_async.  The asynchronous service request is returned
@@ -929,35 +987,35 @@ The source pid can be found at:</p>
 
 <h3 class="function"><a name="send_sync-3">send_sync/3</a></h3>
 <div class="spec">
-<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-4">send_sync/4</a></h3>
 <div class="spec">
-<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-5">send_sync/5</a></h3>
 <div class="spec">
-<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-6">send_sync/6</a></h3>
 <div class="spec">
-<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
 
 <h3 class="function"><a name="send_sync-7">send_sync/7</a></h3>
 <div class="spec">
-<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::atom()}</tt><br></p>
+<p><tt>send_sync(Dispatcher::<a href="#type-dispatcher">dispatcher()</a>, Name::<a href="#type-service_name">service_name()</a>, RequestInfo::<a href="#type-request_info">request_info()</a>, Request::<a href="#type-request">request()</a>, Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>, Priority::<a href="#type-priority">priority()</a>, PatternPid::<a href="#type-pattern_pid">pattern_pid()</a> | undefined) -&gt; {ok, ResponseInfo::<a href="#type-response_info">response_info()</a>, Response::<a href="#type-response">response()</a>} | {ok, Response::<a href="#type-response">response()</a>} | {error, Reason::<a href="#type-error_reason_sync">error_reason_sync()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Send_a_synchronous_service_request.">Send a synchronous service request.</a></h4>
 </p>
@@ -1029,6 +1087,6 @@ The source pid can be found at:</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jan 29 2014, 20:02:12.</i></p>
+<p><i>Generated by EDoc, May 19 2014, 14:28:24.</i></p>
 </body>
 </html>
