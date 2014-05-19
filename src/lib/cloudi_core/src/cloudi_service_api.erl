@@ -341,7 +341,9 @@ service_subscriptions(ServiceId, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_add(L :: list(#internal{} | #external{} | service_proplist()),
+-spec services_add(L :: nonempty_list(#internal{} |
+                                      #external{} |
+                                      service_proplist()),
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, list(service_id())} |
     {error,
@@ -366,7 +368,7 @@ services_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(L :: list(service_id()),
+-spec services_remove(L :: nonempty_list(service_id()),
                       Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -393,7 +395,7 @@ services_remove([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: list(service_id()), 
+-spec services_restart(L :: nonempty_list(service_id()), 
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -417,8 +419,8 @@ services_restart([_ | _] = L, Timeout)
 
 -spec services_search(ServiceName :: cloudi:service_name(),
                       Timeout :: api_timeout_milliseconds()) ->
-    {ok, list({service_id(), #internal{}} |
-              {service_id(), #external{}})} |
+    {ok, nonempty_list({service_id(), #internal{}} |
+                       {service_id(), #external{}})} |
     {error, timeout | noproc | service_name_invalid}.
 
 services_search([_ | _] = ServiceName, Timeout)
@@ -462,7 +464,7 @@ services(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_add(L :: list(node()),
+-spec nodes_add(L :: nonempty_list(node()),
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -483,7 +485,7 @@ nodes_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_remove(L :: list(node()),
+-spec nodes_remove(L :: nonempty_list(node()),
                    Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
