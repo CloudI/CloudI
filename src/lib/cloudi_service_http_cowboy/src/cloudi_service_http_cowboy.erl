@@ -77,6 +77,19 @@
 -define(DEFAULT_WEBSOCKET_DISCONNECT_ASYNC,   undefined).
 -define(DEFAULT_WEBSOCKET_DISCONNECT_SYNC,    undefined).
 -define(DEFAULT_WEBSOCKET_PING,               undefined). % milliseconds
+-define(DEFAULT_WEBSOCKET_PROTOCOL,           undefined). % see below:
+        % To avoid blocking on bidirectional communication requiring an
+        % outgoing service request response without a websocket data identifier,
+        % provide a function that provides the protocol's data identifier to be
+        % used as a one-to-one mapping with the service request transaction id.
+        % The incoming case does not need to produce an identifier, but is
+        % provided for completeness (all websocket data uses the function).
+        % The outgoing case needs to always return a iodata to be sent.
+        % (incoming/outgoing shows whether it is coming into or out-of CloudI)
+        % fun(incoming | outgoing, any()) ->
+        %     {ID :: any(), any()} |
+        %     {incoming, Request :: any()}.
+        % can be provided as {Module, FunctionName}
 -define(DEFAULT_SSL,                              false).
 -define(DEFAULT_COMPRESS,                         false).
 -define(DEFAULT_MAX_CONNECTIONS,                   4096).
@@ -148,6 +161,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {websocket_disconnect_async,     ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
         {websocket_disconnect_sync,      ?DEFAULT_WEBSOCKET_DISCONNECT_SYNC},
         {websocket_ping,                 ?DEFAULT_WEBSOCKET_PING},
+        {websocket_protocol,             ?DEFAULT_WEBSOCKET_PROTOCOL},
         {ssl,                            ?DEFAULT_SSL},
         {compress,                       ?DEFAULT_COMPRESS},
         {max_connections,                ?DEFAULT_MAX_CONNECTIONS},
@@ -167,11 +181,11 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {use_host_prefix,                ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,           ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_method_suffix,              ?DEFAULT_USE_METHOD_SUFFIX}],
-    [Interface, Port, Backlog, NoDelay, RecvTimeout, WebsocketTimeout,
-     WebsocketConnect0, WebsocketDisconnect0,
-     WebsocketConnectAsync0, WebsocketConnectSync,
-     WebsocketDisconnectAsync0, WebsocketDisconnectSync,
-     WebsocketPing, SSL, Compress,
+    [Interface, Port, Backlog, NoDelay, RecvTimeout, WebSocketTimeout,
+     WebSocketConnect0, WebSocketDisconnect0,
+     WebSocketConnectAsync0, WebSocketConnectSync,
+     WebSocketDisconnectAsync0, WebSocketDisconnectSync,
+     WebSocketPing, WebSocketProtocol0, SSL, Compress,
      MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
@@ -182,52 +196,68 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
     true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
-    true = (WebsocketTimeout =:= infinity) orelse
-           (is_integer(WebsocketTimeout) andalso (WebsocketTimeout > 0)),
-    WebsocketConnectAsync1 = if
-        WebsocketConnectAsync0 =:= undefined ->
-            true = (WebsocketConnect0 =:= undefined) orelse
-                   (is_list(WebsocketConnect0) andalso
-                    is_integer(hd(WebsocketConnect0))),
-            WebsocketConnect0;
-        is_list(WebsocketConnectAsync0),
-        is_integer(hd(WebsocketConnectAsync0)) ->
-            WebsocketConnectAsync0
+    true = (WebSocketTimeout =:= infinity) orelse
+           (is_integer(WebSocketTimeout) andalso (WebSocketTimeout > 0)),
+    WebSocketConnectAsync1 = if
+        WebSocketConnectAsync0 =:= undefined ->
+            true = (WebSocketConnect0 =:= undefined) orelse
+                   (is_list(WebSocketConnect0) andalso
+                    is_integer(hd(WebSocketConnect0))),
+            WebSocketConnect0;
+        is_list(WebSocketConnectAsync0),
+        is_integer(hd(WebSocketConnectAsync0)) ->
+            WebSocketConnectAsync0
     end,
-    true = (WebsocketConnectSync =:= undefined) orelse
-           (is_list(WebsocketConnectSync) andalso
-            is_integer(hd(WebsocketConnectSync))),
-    WebsocketConnect1 = if
-        WebsocketConnectAsync1 =/= undefined,
-        WebsocketConnectSync =:= undefined ->
-            {async, WebsocketConnectAsync1};
-        WebsocketConnectAsync1 =:= undefined,
-        WebsocketConnectSync =/= undefined ->
-            {sync, WebsocketConnectSync}
+    true = (WebSocketConnectSync =:= undefined) orelse
+           (is_list(WebSocketConnectSync) andalso
+            is_integer(hd(WebSocketConnectSync))),
+    WebSocketConnect1 = if
+        WebSocketConnectAsync1 =/= undefined,
+        WebSocketConnectSync =:= undefined ->
+            {async, WebSocketConnectAsync1};
+        WebSocketConnectAsync1 =:= undefined,
+        WebSocketConnectSync =/= undefined ->
+            {sync, WebSocketConnectSync}
     end,
-    WebsocketDisconnectAsync1 = if
-        WebsocketDisconnectAsync0 =:= undefined ->
-            true = (WebsocketDisconnect0 =:= undefined) orelse
-                   (is_list(WebsocketDisconnect0) andalso
-                    is_integer(hd(WebsocketDisconnect0))),
-            WebsocketDisconnect0;
-        is_list(WebsocketDisconnectAsync0),
-        is_integer(hd(WebsocketDisconnectAsync0)) ->
-            WebsocketDisconnectAsync0
+    WebSocketDisconnectAsync1 = if
+        WebSocketDisconnectAsync0 =:= undefined ->
+            true = (WebSocketDisconnect0 =:= undefined) orelse
+                   (is_list(WebSocketDisconnect0) andalso
+                    is_integer(hd(WebSocketDisconnect0))),
+            WebSocketDisconnect0;
+        is_list(WebSocketDisconnectAsync0),
+        is_integer(hd(WebSocketDisconnectAsync0)) ->
+            WebSocketDisconnectAsync0
     end,
-    true = (WebsocketDisconnectSync =:= undefined) orelse
-           (is_list(WebsocketDisconnectSync) andalso
-            is_integer(hd(WebsocketDisconnectSync))),
-    WebsocketDisconnect1 = if
-        WebsocketDisconnectAsync1 =/= undefined,
-        WebsocketDisconnectSync =:= undefined ->
-            {async, WebsocketDisconnectAsync1};
-        WebsocketDisconnectAsync1 =:= undefined,
-        WebsocketDisconnectSync =/= undefined ->
-            {sync, WebsocketDisconnectSync}
+    true = (WebSocketDisconnectSync =:= undefined) orelse
+           (is_list(WebSocketDisconnectSync) andalso
+            is_integer(hd(WebSocketDisconnectSync))),
+    WebSocketDisconnect1 = if
+        WebSocketDisconnectAsync1 =/= undefined,
+        WebSocketDisconnectSync =:= undefined ->
+            {async, WebSocketDisconnectAsync1};
+        WebSocketDisconnectAsync1 =:= undefined,
+        WebSocketDisconnectSync =/= undefined ->
+            {sync, WebSocketDisconnectSync}
     end,
-    true = (WebsocketPing =:= undefined) orelse
-           (is_integer(WebsocketPing) andalso (WebsocketPing > 0)),
+    true = (WebSocketPing =:= undefined) orelse
+           (is_integer(WebSocketPing) andalso (WebSocketPing > 0)),
+    WebSocketProtocol1 = case WebSocketProtocol0 of
+        undefined ->
+            undefined;
+        {WebSocketProtocolModule, WebSocketProtocolFunction}
+            when is_atom(WebSocketProtocolModule),
+                 is_atom(WebSocketProtocolFunction) ->
+            true = erlang:function_exported(WebSocketProtocolModule,
+                                            WebSocketProtocolFunction, 2),
+            fun(WebSocketProtocolArg1, WebSocketProtocolArg2) ->
+                WebSocketProtocolModule:
+                WebSocketProtocolFunction(WebSocketProtocolArg1,
+                                          WebSocketProtocolArg2)
+            end;
+        _ when is_function(WebSocketProtocol0, 2) ->
+            WebSocketProtocol0
+    end,
     true = is_boolean(Compress),
     true = is_integer(MaxConnections),
     true = is_integer(MaxEmptyLines),
@@ -269,15 +299,16 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                   cloudi_service:dispatcher(Dispatcher),
                               context = create_context(Dispatcher),
                               prefix = Prefix,
-                              timeout_websocket = WebsocketTimeout,
+                              timeout_websocket = WebSocketTimeout,
                               output_type = OutputType,
                               content_type_forced = ContentTypeForced1,
                               content_types_accepted = ContentTypesAccepted1,
                               set_x_forwarded_for = SetXForwardedFor,
                               status_code_timeout = StatusCodeTimeout,
-                              websocket_connect = WebsocketConnect1,
-                              websocket_disconnect = WebsocketDisconnect1,
-                              websocket_ping = WebsocketPing,
+                              websocket_connect = WebSocketConnect1,
+                              websocket_disconnect = WebSocketDisconnect1,
+                              websocket_ping = WebSocketPing,
+                              websocket_protocol = WebSocketProtocol1,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
                               use_client_ip_prefix = UseClientIpPrefix,

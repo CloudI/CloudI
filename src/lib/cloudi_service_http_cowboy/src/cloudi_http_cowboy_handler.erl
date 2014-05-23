@@ -86,15 +86,17 @@
         response_pending = false     :: boolean(),
         response_timer               :: reference(),
         request_pending              :: tuple(),
-        queued = cloudi_x_pqueue4:new(),
-        recv_timeouts = dict:new()
+        response_lookup,    % dict
+        recv_timeouts,      % dict
+        queued              % pqueue4
     }).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_x_cowboy_http_handler
 %%%------------------------------------------------------------------------
 
-init(_Transport, Req0, #cowboy_state{use_websockets = UseWebSockets} = State)
+init(_Transport, Req0,
+     #cowboy_state{use_websockets = UseWebSockets} = State)
     when UseWebSockets =:= true; UseWebSockets =:= exclusively ->
     case upgrade_request(Req0) of
         {websocket, Req1} ->
@@ -111,7 +113,8 @@ init(_Transport, Req0, #cowboy_state{use_websockets = UseWebSockets} = State)
             ?LOG_ERROR("Unknown protocol: ~p", [Upgrade]),
             {shutdown, Req1, State}
     end;
-init(_Transport, Req, #cowboy_state{use_websockets = false} = State) ->
+init(_Transport, Req,
+     #cowboy_state{use_websockets = false} = State) ->
     {ok, Req, State}.
 
 handle(Req0,
@@ -125,7 +128,8 @@ handle(Req0,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
                      use_method_suffix = UseMethodSuffix,
-                     content_type_lookup = ContentTypeLookup} = State) ->
+                     content_type_lookup = ContentTypeLookup
+                     } = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
@@ -282,10 +286,12 @@ websocket_init(_Transport, Req0,
                              set_x_forwarded_for = SetXForwardedFor,
                              websocket_connect = WebSocketConnect,
                              websocket_ping = WebSocketPing,
+                             websocket_protocol = WebSocketProtocol,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
                              use_client_ip_prefix = UseClientIpPrefix,
-                             use_method_suffix = UseMethodSuffix} = State) ->
+                             use_method_suffix = UseMethodSuffix
+                             } = State) ->
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
@@ -350,13 +356,34 @@ websocket_init(_Transport, Req0,
                               {websocket_ping, WebSocketPing}),
             received
     end,
+    ResponseLookup = if
+        WebSocketProtocol =:= undefined ->
+            undefined;
+        true ->
+            dict:new()
+    end,
+    RecvTimeouts = if
+        WebSocketProtocol =:= undefined ->
+            dict:new();
+        true ->
+            undefined
+    end,
+    Queued = if
+        WebSocketProtocol =:= undefined ->
+            cloudi_x_pqueue4:new();
+        true ->
+            undefined
+    end,
     websocket_connect_check(WebSocketConnect, ReqN,
         State#cowboy_state{
             websocket_ping = WebSocketPingStatus,
             websocket_state = #websocket_state{
                 name_incoming = NameIncoming,
                 name_outgoing = NameOutgoing,
-                request_info = RequestInfo}}).
+                request_info = RequestInfo,
+                response_lookup = ResponseLookup,
+                recv_timeouts = RecvTimeouts,
+                queued = Queued}}).
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
@@ -367,12 +394,14 @@ websocket_handle({pong, _Payload}, Req, State) ->
 
 websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
                  #cowboy_state{output_type = OutputType,
+                               websocket_protocol = undefined,
                                use_websockets = true,
                                websocket_state = #websocket_state{
                                    request_info = ResponseInfo,
                                    response_pending = true,
                                    response_timer = ResponseTimer,
-                                   request_pending = T} = WebSocketState
+                                   request_pending = T
+                                   } = WebSocketState
                                } = State)
     when WebSocketResponseType =:= text;
          WebSocketResponseType =:= binary ->
@@ -383,49 +412,30 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
         (OutputType =:= list) ->
             erlang:binary_to_list(ResponseBinary)
     end,
-    Timeout = case erlang:cancel_timer(ResponseTimer) of
-        false ->
-            0;
-        V ->
-            V
-    end,
-    case T of
-        {'cloudi_service_send_async',
-         Name, Pattern, _, _, OldTimeout, _, TransId, Source} ->
-            Source ! {'cloudi_service_return_async',
-                      Name, Pattern, ResponseInfo, Response,
-                      Timeout, TransId, Source},
-            ?LOG_TRACE_APPLY(fun websocket_request_end/3,
-                             [Name, Timeout, OldTimeout]);
-        {'cloudi_service_send_sync',
-         Name, Pattern, _, _, OldTimeout, _, TransId, Source} ->
-            Source ! {'cloudi_service_return_sync',
-                      Name, Pattern, ResponseInfo, Response,
-                      Timeout, TransId, Source},
-            ?LOG_TRACE_APPLY(fun websocket_request_end/3,
-                             [Name, Timeout, OldTimeout])
-    end,
-    process_queue(Req,
-                  State#cowboy_state{websocket_state =
-                      WebSocketState#websocket_state{
-                          response_pending = false,
-                          response_timer = undefined,
-                          request_pending = undefined}
-                      });
+    websocket_handle_outgoing_response(T, ResponseTimer,
+                                       ResponseInfo, Response),
+    websocket_process_queue(Req,
+                            State#cowboy_state{websocket_state =
+                                WebSocketState#websocket_state{
+                                    response_pending = false,
+                                    response_timer = undefined,
+                                    request_pending = undefined}
+                                });
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{dispatcher = Dispatcher,
                                context = Context,
                                output_type = OutputType,
+                               websocket_protocol = undefined,
                                use_websockets = true,
                                websocket_state = #websocket_state{
                                    name_incoming = NameIncoming,
                                    name_outgoing = NameOutgoing,
                                    request_info = RequestInfo,
-                                   response_pending = false}} = State)
+                                   response_pending = false}
+                               } = State)
     when WebSocketRequestType =:= text;
          WebSocketRequestType =:= binary ->
-    RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     Request = if
         (OutputType =:= external) orelse (OutputType =:= internal) orelse
         (OutputType =:= binary) ->
@@ -433,56 +443,88 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
         (OutputType =:= list) ->
             erlang:binary_to_list(RequestBinary)
     end,
-    ResponseBinaryF = fun(Data) ->
-        if
-            (((OutputType =:= external) orelse
-              (OutputType =:= internal)) andalso
-             (is_binary(Data) orelse
-              is_list(Data))) orelse % iolist
-            ((OutputType =:= binary) andalso
-             is_binary(Data)) ->
-                Data;
-            ((OutputType =:= list) andalso
-             is_list(Data)) ->
-                erlang:list_to_binary(Data)
-        end
+    websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
+                                      RequestInfo, Request,
+                                      WebSocketRequestType, Req,
+                                      OutputType, NameIncoming, State);
+
+websocket_handle({WebSocketRequestType, RequestBinary}, Req,
+                 #cowboy_state{dispatcher = Dispatcher,
+                               context = Context,
+                               output_type = OutputType,
+                               websocket_protocol = WebSocketProtocol,
+                               use_websockets = true,
+                               websocket_state = #websocket_state{
+                                   name_incoming = NameIncoming,
+                                   name_outgoing = NameOutgoing,
+                                   request_info = Info,
+                                   response_pending = false,
+                                   response_lookup = ResponseLookup
+                                   } = WebSocketState
+                                } = State)
+    when WebSocketRequestType =:= text;
+         WebSocketRequestType =:= binary ->
+    {LookupID,
+     LookupData, Value} = case WebSocketProtocol(incoming, RequestBinary) of
+        {incoming, Request} ->
+            {undefined, undefined, Request};
+        {ID, Response} ->
+            case dict:find(ID, ResponseLookup) of
+                {ok, Data} ->
+                    {ID, Data, Response};
+                error ->
+                    {undefined, undefined, Response} % actually a request
+            end
     end,
-    case send_sync_minimal(Dispatcher, Context,
-                           NameOutgoing, RequestInfo, Request, self()) of
-        {ok, ResponseInfo, Response} ->
-            ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
-                             [NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
-            case websocket_terminate_check(ResponseInfo, Req) of
-                true ->
-                    {shutdown, Req, State};
-                false ->
-                    {reply, {WebSocketRequestType,
-                             ResponseBinaryF(Response)}, Req, State}
-            end;
-        {error, timeout} ->
-            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
-                            [NameIncoming,
-                             RequestStartMicroSec, timeout]),
-            {reply, {WebSocketRequestType, <<>>}, Req, State}
+    case LookupData of
+        undefined ->
+            % an incoming service request
+            websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
+                                              Info, Value,
+                                              WebSocketRequestType, Req,
+                                              OutputType, NameIncoming, State);
+        {T, ResponseTimer} ->
+            % a response to an outgoing service request that has finished
+            websocket_handle_outgoing_response(T, ResponseTimer,
+                                               Info, Value),
+            {ok, Req,
+             State#cowboy_state{websocket_state =
+                 WebSocketState#websocket_state{
+                     response_lookup = dict:erase(LookupID, ResponseLookup)}
+                 }}
     end.
 
-websocket_info(response_timeout, Req,
+websocket_info({response_timeout, ID}, Req,
                #cowboy_state{use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = false,
+                                 response_lookup = ResponseLookup
+                                 } = WebSocketState
+                             } = State) ->
+    {ok, Req,
+     State#cowboy_state{websocket_state =
+         WebSocketState#websocket_state{
+             response_lookup = dict:erase(ID, ResponseLookup)}
+         }};
+
+websocket_info(response_timeout, Req,
+               #cowboy_state{websocket_protocol = undefined,
+                             use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = true} = WebSocketState
                              } = State) ->
-    process_queue(Req,
-                  State#cowboy_state{websocket_state =
-                      WebSocketState#websocket_state{
-                          response_pending = false,
-                          response_timer = undefined,
-                          request_pending = undefined}
-                      });
+    websocket_process_queue(Req,
+                            State#cowboy_state{websocket_state =
+                                WebSocketState#websocket_state{
+                                    response_pending = false,
+                                    response_timer = undefined,
+                                    request_pending = undefined}
+                                });
 
 websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
                #cowboy_state{output_type = OutputType,
+                             websocket_protocol = undefined,
                              use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
@@ -497,15 +539,17 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
     % RequestBinary may be an iolist
     {reply, {binary, RequestBinary}, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-                            response_pending = true,
-                            response_timer = ResponseTimer,
-                            request_pending = T}
-                        }};
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             response_pending = true,
+             response_timer = ResponseTimer,
+             request_pending = T}
+         }};
 
 websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
                 Timeout, _Priority, _TransId, _Source} = T, Req,
                #cowboy_state{output_type = OutputType,
+                             websocket_protocol = undefined,
                              use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = false} = WebSocketState
@@ -522,20 +566,52 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
     end,
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
     {reply, {text, RequestBinary}, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-                            response_pending = true,
-                            response_timer = ResponseTimer,
-                            request_pending = T}
-                        }};
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             response_pending = true,
+             response_timer = ResponseTimer,
+             request_pending = T}
+         }};
+
+websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
+                Timeout, _Priority, _TransId, _Source} = T, Req,
+               #cowboy_state{output_type = OutputType,
+                             websocket_protocol = WebSocketProtocol,
+                             use_websockets = true,
+                             websocket_state = #websocket_state{
+                                 response_pending = false,
+                                 response_lookup = ResponseLookup
+                                 } = WebSocketState
+                             } = State)
+    when (Type =:= 'cloudi_service_send_async' orelse
+          Type =:= 'cloudi_service_send_sync') ->
+    RequestType = if
+        OutputType =:= external; OutputType =:= internal;
+        OutputType =:= binary ->
+            binary;
+        OutputType =:= list ->
+            text
+    end,
+    {ID, RequestBinary} = WebSocketProtocol(outgoing, Request),
+    ResponseTimer = erlang:send_after(Timeout, self(),
+                                      {response_timeout, ID}),
+    NewResponseLookup = dict:store(ID, {T, ResponseTimer}, ResponseLookup),
+    {reply, {RequestType, RequestBinary}, Req,
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             response_lookup = NewResponseLookup}
+         }};
 
 websocket_info({Type, _, _, _, Request,
                 Timeout, Priority, TransId, _} = T, Req,
                #cowboy_state{output_type = OutputType,
+                             websocket_protocol = undefined,
                              use_websockets = true,
                              websocket_state = #websocket_state{
                                  response_pending = true,
-                                 queued = Queue,
-                                 recv_timeouts = RecvTimeouts} = WebSocketState
+                                 recv_timeouts = RecvTimeouts,
+                                 queued = Queue
+                                 } = WebSocketState
                              } = State)
     when ((((OutputType =:= external) orelse
             (OutputType =:= internal)) andalso
@@ -548,16 +624,19 @@ websocket_info({Type, _, _, _, Request,
           Type =:= 'cloudi_service_send_sync'),
          (Timeout > 0) ->
     {ok, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-         recv_timeouts = dict:store(TransId, erlang:send_after(Timeout, self(),
-                 {'cloudi_service_recv_timeout', Priority, TransId}),
-             RecvTimeouts),
-         queued = cloudi_x_pqueue4:in(T, Priority, Queue)}
-     }};
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             recv_timeouts = dict:store(TransId,
+                 erlang:send_after(Timeout, self(),
+                     {'cloudi_service_recv_timeout', Priority, TransId}),
+                 RecvTimeouts),
+             queued = cloudi_x_pqueue4:in(T, Priority, Queue)}
+         }};
 
 websocket_info({Type, Name, _, _, _,
                 Timeout, _, TransId, _}, Req,
                #cowboy_state{output_type = OutputType,
+                             websocket_protocol = undefined,
                              use_websockets = true} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
@@ -572,19 +651,22 @@ websocket_info({Type, Name, _, _, _,
     {ok, Req, State};
 
 websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
-               #cowboy_state{use_websockets = true,
+               #cowboy_state{websocket_protocol = undefined,
+                             use_websockets = true,
                              websocket_state = #websocket_state{
-                                 queued = Queue,
-                                 recv_timeouts = RecvTimeouts} = WebSocketState
+                                 recv_timeouts = RecvTimeouts,
+                                 queued = Queue
+                                 } = WebSocketState
                              } = State) ->
     NewQueue = cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
                    Id /= TransId
                end, Priority, Queue),
     {ok, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-         recv_timeouts = dict:erase(TransId, RecvTimeouts),
-         queued = NewQueue}
-     }};
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             recv_timeouts = dict:erase(TransId, RecvTimeouts),
+             queued = NewQueue}
+         }};
 
 websocket_info({'cloudi_service_return_async',
                 _, _, <<>>, <<>>, _, TransId, _}, Req,
@@ -594,9 +676,10 @@ websocket_info({'cloudi_service_return_async',
                                  } = WebSocketState
                              } = State) ->
     {ok, Req,
-     State#cowboy_state{websocket_state = WebSocketState#websocket_state{
-         websocket_connect_trans_id = undefined}
-     }};
+     State#cowboy_state{
+         websocket_state = WebSocketState#websocket_state{
+             websocket_connect_trans_id = undefined}
+         }};
 
 websocket_info({'cloudi_service_return_async',
                 _, _, ResponseInfo, Response, _, TransId, _}, Req,
@@ -626,7 +709,7 @@ websocket_info({'cloudi_service_return_async',
              State#cowboy_state{
                  websocket_state = WebSocketState#websocket_state{
                      websocket_connect_trans_id = undefined}
-             }}
+                 }}
     end;
 
 websocket_info({websocket_ping, WebSocketPing}, Req,
@@ -1165,12 +1248,74 @@ websocket_disconnect_check({sync, WebSocketDisconnectName},
                       websocket_disconnect_request(OutputType), self()),
     ok.
 
-process_queue(Req,
-              #cowboy_state{websocket_state =
-                  #websocket_state{
-                      response_pending = false,
-                      recv_timeouts = RecvTimeouts,
-                      queued = Queue} = WebSocketState} = State) ->
+websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
+                                  RequestInfo, Request,
+                                  WebSocketRequestType, Req,
+                                  OutputType, NameIncoming, State) ->
+    RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
+    ResponseBinaryF = fun(Data) ->
+        if
+            (((OutputType =:= external) orelse
+              (OutputType =:= internal)) andalso
+             (is_binary(Data) orelse
+              is_list(Data))) orelse % iolist
+            ((OutputType =:= binary) andalso
+             is_binary(Data)) ->
+                Data;
+            ((OutputType =:= list) andalso
+             is_list(Data)) ->
+                erlang:list_to_binary(Data)
+        end
+    end,
+    case send_sync_minimal(Dispatcher, Context,
+                           NameOutgoing, RequestInfo, Request, self()) of
+        {ok, ResponseInfo, Response} ->
+            ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
+                             [NameIncoming, NameOutgoing,
+                              RequestStartMicroSec]),
+            case websocket_terminate_check(ResponseInfo, Req) of
+                true ->
+                    {shutdown, Req, State};
+                false ->
+                    {reply, {WebSocketRequestType,
+                             ResponseBinaryF(Response)}, Req, State}
+            end;
+        {error, timeout} ->
+            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
+                            [NameIncoming,
+                             RequestStartMicroSec, timeout]),
+            {reply, {WebSocketRequestType, <<>>}, Req, State}
+    end.
+
+websocket_handle_outgoing_response({SendType,
+                                    Name, Pattern, _, _,
+                                    OldTimeout, _, TransId, Source},
+                                   ResponseTimer,
+                                   ResponseInfo, Response) ->
+    Timeout = case erlang:cancel_timer(ResponseTimer) of
+        false ->
+            0;
+        V ->
+            V
+    end,
+    ReturnType = if
+        SendType =:= 'cloudi_service_send_async' ->
+            'cloudi_service_return_async';
+        SendType =:= 'cloudi_service_send_sync' ->
+            'cloudi_service_return_sync'
+    end,
+    Source ! {ReturnType,
+              Name, Pattern, ResponseInfo, Response,
+              Timeout, TransId, Source},
+    ?LOG_TRACE_APPLY(fun websocket_request_end/3,
+                     [Name, Timeout, OldTimeout]).
+
+websocket_process_queue(Req,
+                        #cowboy_state{websocket_state =
+                            #websocket_state{
+                                response_pending = false,
+                                recv_timeouts = RecvTimeouts,
+                                queued = Queue} = WebSocketState} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
         {empty, NewQueue} ->
             {ok, Req,

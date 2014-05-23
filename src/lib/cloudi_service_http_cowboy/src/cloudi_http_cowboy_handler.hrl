@@ -60,6 +60,9 @@
                                    {async | sync,
                                     cloudi_service:service_name()},
         websocket_ping          :: undefined | received | pos_integer(),
+        websocket_protocol      :: undefined |
+                                   fun((incoming | outgoing, any()) ->
+                                       {incoming | any(), any()}),
         use_websockets          :: boolean() | exclusively,
         use_host_prefix         :: boolean(),
         use_client_ip_prefix    :: boolean(),
