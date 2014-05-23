@@ -86,10 +86,28 @@
         % provided for completeness (all websocket data uses the function).
         % The outgoing case needs to always return a iodata to be sent.
         % (incoming/outgoing shows whether it is coming into or out-of CloudI)
-        % fun(incoming | outgoing, any()) ->
+        % fun((incoming | outgoing, any()) ->
         %     {ID :: any(), any()} |
-        %     {incoming, Request :: any()}.
+        %     {incoming, Request :: any()})
         % can be provided as {Module, FunctionName}
+        % e.g.:
+        % fun
+        % (incoming, WebSocketBinary) ->
+        %     case protocol_rpc:decode(WebSocketBinary) of
+        %         #protocol_request{} = IncomingRequest ->
+        %             {incoming, IncomingRequest};
+        %         #protocol_response{id = ID} = IncomingResponse ->
+        %             {ID, IncomingResponse};
+        %         #protocol_error{id = ID} = IncomingResponse ->
+        %             {ID, IncomingResponse}
+        %     end;
+        % (outgoing, #protocol_request{id = ID} = OutgoingRequest) ->
+        %     {ID, protocol_rpc:encode(OutgoingRequest)};
+        % (outgoing, #protocol_response{id = ID} = OutgoingResponse) ->
+        %     {ID, protocol_rpc:encode(OutgoingResponse)};
+        % (outgoing, #protocol_error{id = ID} = OutgoingResponse) ->
+        %     {ID, protocol_rpc:encode(OutgoingResponse)}
+        % end.
 -define(DEFAULT_SSL,                              false).
 -define(DEFAULT_COMPRESS,                         false).
 -define(DEFAULT_MAX_CONNECTIONS,                   4096).

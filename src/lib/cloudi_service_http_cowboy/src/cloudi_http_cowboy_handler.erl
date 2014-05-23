@@ -443,15 +443,28 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
         (OutputType =:= list) ->
             erlang:binary_to_list(RequestBinary)
     end,
+    ResponseBinaryF = fun(Data) ->
+        if
+            (((OutputType =:= external) orelse
+              (OutputType =:= internal)) andalso
+             (is_binary(Data) orelse
+              is_list(Data))) orelse % iolist
+            ((OutputType =:= binary) andalso
+             is_binary(Data)) ->
+                Data;
+            ((OutputType =:= list) andalso
+             is_list(Data)) ->
+                erlang:list_to_binary(Data)
+        end
+    end,
     websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                      RequestInfo, Request,
+                                      RequestInfo, Request, ResponseBinaryF,
                                       WebSocketRequestType, Req,
-                                      OutputType, NameIncoming, State);
+                                      NameIncoming, State);
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{dispatcher = Dispatcher,
                                context = Context,
-                               output_type = OutputType,
                                websocket_protocol = WebSocketProtocol,
                                use_websockets = true,
                                websocket_state = #websocket_state{
@@ -470,8 +483,8 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
             {undefined, undefined, Request};
         {ID, Response} ->
             case dict:find(ID, ResponseLookup) of
-                {ok, Data} ->
-                    {ID, Data, Response};
+                {ok, ResponseData} ->
+                    {ID, ResponseData, Response};
                 error ->
                     {undefined, undefined, Response} % actually a request
             end
@@ -479,10 +492,14 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
     case LookupData of
         undefined ->
             % an incoming service request
+            ResponseF = fun(ProtocolData) ->
+                {_, Data} = WebSocketProtocol(outgoing, ProtocolData),
+                Data
+            end,
             websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                              Info, Value,
+                                              Info, Value, ResponseF,
                                               WebSocketRequestType, Req,
-                                              OutputType, NameIncoming, State);
+                                              NameIncoming, State);
         {T, ResponseTimer} ->
             % a response to an outgoing service request that has finished
             websocket_handle_outgoing_response(T, ResponseTimer,
@@ -573,8 +590,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
              request_pending = T}
          }};
 
-websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
-                Timeout, _Priority, _TransId, _Source} = T, Req,
+websocket_info({Type, Name, Pattern, _RequestInfo, Request,
+                Timeout, Priority, TransId, Source}, Req,
                #cowboy_state{output_type = OutputType,
                              websocket_protocol = WebSocketProtocol,
                              use_websockets = true,
@@ -593,6 +610,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
             text
     end,
     {ID, RequestBinary} = WebSocketProtocol(outgoing, Request),
+    T = {Type, Name, Pattern, undefined, undefined,
+         Timeout, Priority, TransId, Source},
     ResponseTimer = erlang:send_after(Timeout, self(),
                                       {response_timeout, ID}),
     NewResponseLookup = dict:store(ID, {T, ResponseTimer}, ResponseLookup),
@@ -1249,24 +1268,10 @@ websocket_disconnect_check({sync, WebSocketDisconnectName},
     ok.
 
 websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                  RequestInfo, Request,
+                                  RequestInfo, Request, ResponseF,
                                   WebSocketRequestType, Req,
-                                  OutputType, NameIncoming, State) ->
+                                  NameIncoming, State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
-    ResponseBinaryF = fun(Data) ->
-        if
-            (((OutputType =:= external) orelse
-              (OutputType =:= internal)) andalso
-             (is_binary(Data) orelse
-              is_list(Data))) orelse % iolist
-            ((OutputType =:= binary) andalso
-             is_binary(Data)) ->
-                Data;
-            ((OutputType =:= list) andalso
-             is_list(Data)) ->
-                erlang:list_to_binary(Data)
-        end
-    end,
     case send_sync_minimal(Dispatcher, Context,
                            NameOutgoing, RequestInfo, Request, self()) of
         {ok, ResponseInfo, Response} ->
@@ -1278,7 +1283,7 @@ websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
                     {shutdown, Req, State};
                 false ->
                     {reply, {WebSocketRequestType,
-                             ResponseBinaryF(Response)}, Req, State}
+                             ResponseF(Response)}, Req, State}
             end;
         {error, timeout} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
