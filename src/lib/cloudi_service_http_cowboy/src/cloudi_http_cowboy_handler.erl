@@ -538,8 +538,8 @@ websocket_info(response_timeout, Req,
                                     request_pending = undefined}
                                 });
 
-websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
-                Timeout, _Priority, _TransId, _Source} = T, Req,
+websocket_info({Type, Name, Pattern, _RequestInfo, RequestBinary,
+                Timeout, Priority, TransId, Source}, Req,
                #cowboy_state{output_type = OutputType,
                              websocket_protocol = undefined,
                              use_websockets = true,
@@ -554,6 +554,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
          (Type =:= 'cloudi_service_send_async' orelse
           Type =:= 'cloudi_service_send_sync') ->
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    T = {Type, Name, Pattern, undefined, undefined,
+         Timeout, Priority, TransId, Source},
     % RequestBinary may be an iolist
     {reply, {binary, RequestBinary}, Req,
      State#cowboy_state{
@@ -563,8 +565,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, RequestBinary,
              request_pending = T}
          }};
 
-websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
-                Timeout, _Priority, _TransId, _Source} = T, Req,
+websocket_info({Type, Name, Pattern, _RequestInfo, Request,
+                Timeout, Priority, TransId, Source}, Req,
                #cowboy_state{output_type = OutputType,
                              websocket_protocol = undefined,
                              use_websockets = true,
@@ -582,6 +584,8 @@ websocket_info({Type, _Name, _Pattern, _RequestInfo, Request,
             Request
     end,
     ResponseTimer = erlang:send_after(Timeout, self(), response_timeout),
+    T = {Type, Name, Pattern, undefined, undefined,
+         Timeout, Priority, TransId, Source},
     {reply, {text, RequestBinary}, Req,
      State#cowboy_state{
          websocket_state = WebSocketState#websocket_state{
@@ -703,6 +707,7 @@ websocket_info({'cloudi_service_return_async',
 websocket_info({'cloudi_service_return_async',
                 _, _, ResponseInfo, Response, _, TransId, _}, Req,
                #cowboy_state{output_type = OutputType,
+                             websocket_protocol = WebSocketProtocol,
                              use_websockets = true,
                              websocket_state = #websocket_state{
                                  websocket_connect_trans_id = TransId
@@ -711,7 +716,7 @@ websocket_info({'cloudi_service_return_async',
     case websocket_terminate_check(ResponseInfo, Req) of
         true ->
             {shutdown, Req, State};
-        false ->
+        false when WebSocketProtocol =:= undefined ->
             WebSocketResponse = if
                 ((((OutputType =:= external) orelse
                    (OutputType =:= internal)) andalso
@@ -725,6 +730,20 @@ websocket_info({'cloudi_service_return_async',
                     {text, erlang:list_to_binary(Response)}
             end,
             {reply, WebSocketResponse, Req,
+             State#cowboy_state{
+                 websocket_state = WebSocketState#websocket_state{
+                     websocket_connect_trans_id = undefined}
+                 }};
+        false ->
+            ResponseType = if
+                OutputType =:= external; OutputType =:= internal;
+                OutputType =:= binary ->
+                    binary;
+                OutputType =:= list ->
+                    text
+            end,
+            {_, ResponseBinary} = WebSocketProtocol(outgoing, Response),
+            {reply, {ResponseType, ResponseBinary}, Req,
              State#cowboy_state{
                  websocket_state = WebSocketState#websocket_state{
                      websocket_connect_trans_id = undefined}
