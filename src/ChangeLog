@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-28 Drew Varner     <drew.varner [at] ubnt (dot) com>
+
+    * Add javadocs comments to the Java CloudI API
+
 2014-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_api functions service_subscriptions/2 and

@@ -178,6 +178,9 @@ public class API
         poll_request(false);
     }
 
+    /**
+     * @return the number of threads to create per operating system process
+     */
     public static int thread_count() throws InvalidInputException
     {
         final String s = System.getenv("CLOUDI_API_INIT_THREAD_COUNT");
@@ -187,6 +190,13 @@ public class API
         return thread_count;
     }
 
+    /**
+     * Subscribes an object method to a service name pattern. 
+     *
+     * @param  pattern     the service name pattern
+     * @param  instance    the object instance
+     * @param  methodName  the object method to handle matching requests
+     */ 
     public void subscribe(final String pattern,
                           final Object instance,
                           final String methodName)
@@ -246,6 +256,11 @@ public class API
         send(subscribe);
     }
 
+    /**
+     * Unsubscribes from a service name pattern. 
+     *
+     * @param pattern  the service name pattern
+     */
     public void unsubscribe(final String pattern) throws InvalidInputException
     {
         final String s = this.prefix + pattern;
@@ -279,6 +294,14 @@ public class API
         send(unsubscribe);
     }
 
+    /**
+     * Asynchronous point-to-point communication to a service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name     the destination service name
+     * @param request  the request data
+     * @return         a transaction ID
+     */
     public TransId send_async(String name, byte[] request)
                               throws MessageDecodingException
     {
@@ -286,6 +309,17 @@ public class API
                           this.timeout_async, this.priority_default);
     }
 
+    /**
+     * Asynchronous point-to-point communication to a service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the request priority
+     * @return              a transaction ID
+     */
     public TransId send_async(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
                               throws MessageDecodingException
@@ -311,6 +345,14 @@ public class API
         }
     }
 
+    /**
+     * Synchronous point-to-point communication to a service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request       the request data
+     * @return              the response
+     */
     public Response send_sync(String name, byte[] request)
                               throws MessageDecodingException
     {
@@ -318,6 +360,17 @@ public class API
                          this.timeout_sync, this.priority_default);
     }
 
+    /**
+     * Synchronous point-to-point communication to a service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the request priority
+     * @return              the response
+     */
     public Response send_sync(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
                               throws MessageDecodingException
@@ -343,6 +396,14 @@ public class API
         }
     }
 
+    /**
+     * Asynchronous point-multicast communication to services
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request       the request data
+     * @return              transaction IDs
+     */
     public List<TransId> mcast_async(String name, byte[] request)
                                      throws MessageDecodingException
     {
@@ -350,6 +411,17 @@ public class API
                            this.timeout_async, this.priority_default);
     }
 
+    /**
+     * Asynchronous point-multicast communication to services
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the priority of this request
+     * @return              transaction IDs
+     */
     @SuppressWarnings("unchecked")
     public List<TransId> mcast_async(String name,
                                      byte[] request_info, byte[] request,
@@ -377,6 +449,19 @@ public class API
         }
     }
 
+    /**
+     * Forward a message to another service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param command       constant API.SYNC or API.ASYNC
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the priority of this request
+     * @param transId       the transaction ID
+     * @param pid           the request's source process ID
+     */
     public void forward_(Integer command,
                          String name, byte[] request_info, byte[] request,
                          Integer timeout, Byte priority,
@@ -395,6 +480,18 @@ public class API
             throw new InvalidInputException();
     }
 
+    /**
+     * Asynchronously forward a message to another service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the priority of this request
+     * @param transId       the transaction ID
+     * @param pid           the request's source process ID
+     */
     public void forward_async(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority,
                               byte[] transId, OtpErlangPid pid)
@@ -438,6 +535,18 @@ public class API
         throw new ForwardAsyncException();
     }
 
+    /**
+     * Synchronously forward a message to another service
+     * subscribed that matches the destination service <code>name</code>.
+     *
+     * @param name          the destination service name
+     * @param request_info  any request metadata
+     * @param request       the request data
+     * @param timeout       the request timeout in milliseconds
+     * @param priority      the priority of this request
+     * @param transId       the transaction ID
+     * @param pid           the request's source process ID
+     */
     public void forward_sync(String name, byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] transId, OtpErlangPid pid)
@@ -481,6 +590,18 @@ public class API
         throw new ForwardSyncException();
     }
 
+    /**
+     * Returns a response from a service request.
+     *
+     * @param command        constant API.SYNC or API.SYNC
+     * @param name           the service name
+     * @param pattern        the service name pattern
+     * @param response_info  any response metadata
+     * @param response       the response data
+     * @param timeout        the request timeout in milliseconds
+     * @param transId        the transaction ID
+     * @param pid            the request's source process ID
+     */
     public void return_(Integer command,
                         String name, String pattern,
                         byte[] response_info, byte[] response,
@@ -499,6 +620,17 @@ public class API
             throw new InvalidInputException();
     }
 
+    /**
+     * Asynchronously returns a response from a service request.
+     *
+     * @param name           the service name
+     * @param pattern        the service name pattern
+     * @param response_info  any response metadata
+     * @param response       the response data
+     * @param timeout        the request timeout in milliseconds
+     * @param transId        the transaction ID
+     * @param pid            the request's source process ID
+     */
     public void return_async(String name, String pattern,
                              byte[] response_info, byte[] response,
                              Integer timeout, byte[] transId, OtpErlangPid pid)
@@ -544,6 +676,17 @@ public class API
         throw new ReturnAsyncException();
     }
 
+    /**
+     * Synchronously returns a response from a service request.
+     *
+     * @param name           the service name
+     * @param pattern        the service name pattern
+     * @param response_info  any response metadata
+     * @param response       the response data
+     * @param timeout        the request timeout in milliseconds
+     * @param transId        the transaction ID
+     * @param pid            the request's source process ID
+     */
     public void return_sync(String name, String pattern,
                             byte[] response_info, byte[] response,
                             Integer timeout, byte[] transId, OtpErlangPid pid)
@@ -589,48 +732,108 @@ public class API
         throw new ReturnSyncException();
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @return the response
+     */
     public Response recv_async()
                                throws MessageDecodingException
     {
         return recv_async(this.timeout_sync, TransIdNull, true);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param timeout  the receive timeout in milliseconds
+     * @return         the response
+     */
     public Response recv_async(Integer timeout)
                                throws MessageDecodingException
     {
         return recv_async(timeout, TransIdNull, true);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param transId  the transaction ID to receive
+     * @return         the response
+     */
     public Response recv_async(byte[] transId)
                                throws MessageDecodingException
     {
         return recv_async(this.timeout_sync, transId, true);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param consume  if <code>true</code>, will consume the service request
+     *                 so it is not accessible with the same function call in
+     *                 the future
+     * @return         the response
+     */
     public Response recv_async(boolean consume)
                                throws MessageDecodingException
     {
         return recv_async(this.timeout_sync, TransIdNull, consume);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param timeout  the receive timeout in milliseconds
+     * @param transId  the transaction ID to receive
+     * @return         the response
+     */
     public Response recv_async(Integer timeout, byte[] transId)
                                throws MessageDecodingException
     {
         return recv_async(timeout, transId, true);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param timeout  the receive timeout in milliseconds
+     * @param consume  if <code>true</code>, will consume the service request
+     *                 so it is not accessible with the same function call in
+     *                 the future
+     * @return         the response
+     */
     public Response recv_async(Integer timeout, boolean consume)
                                throws MessageDecodingException
     {
         return recv_async(timeout, TransIdNull, consume);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param transId  the transaction ID to receive
+     * @param consume  if <code>true</code>, will consume the service request
+     *                 so it is not accessible with the same function call in
+     *                 the future
+     * @return         the response
+     */
     public Response recv_async(byte[] transId, boolean consume)
                                throws MessageDecodingException
     {
         return recv_async(this.timeout_sync, transId, consume);
     }
 
+    /**
+     * Asynchronously receive a response.
+     *
+     * @param timeout  the receive timeout in milliseconds
+     * @param transId  the transaction ID to receive
+     * @param consume  if <code>true</code>, will consume the service request
+     *                 so it is not accessible with the same function call in
+     *                 the future
+     * @return         the response
+     */
     public Response recv_async(Integer timeout, byte[] transId, boolean consume)
                                throws MessageDecodingException
     {
