@@ -754,10 +754,13 @@ handle_info({'cloudi_service_request_failure',
     Reason = if
         Type =:= stop ->
             true = Stack =:= undefined,
-            if
-                Error =:= shutdown ->
+            case Error of
+                shutdown ->
                     ?LOG_WARN("request stop shutdown", []);
-                true ->
+                {shutdown, ShutdownReason} ->
+                    ?LOG_WARN("request stop shutdown (~p)",
+                              [ShutdownReason]);
+                _ ->
                     ?LOG_ERROR("request stop ~p", [Error])
             end,
             Error;
@@ -772,10 +775,13 @@ handle_info({'cloudi_service_info_failure',
     Reason = if
         Type =:= stop ->
             true = Stack =:= undefined,
-            if
-                Error =:= shutdown ->
+            case Error of
+                shutdown ->
                     ?LOG_WARN("info stop shutdown", []);
-                true ->
+                {shutdown, ShutdownReason} ->
+                    ?LOG_WARN("info stop shutdown (~p)",
+                              [ShutdownReason]);
+                _ ->
                     ?LOG_ERROR("info stop ~p", [Error])
             end,
             Error;
@@ -795,6 +801,17 @@ handle_info({'EXIT', _, shutdown},
             ok
     end,
     {stop, shutdown, State};
+
+handle_info({'EXIT', _, {shutdown, _} = Shutdown},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service shutdown w/reason
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, shutdown);
+        true ->
+            ok
+    end,
+    {stop, Shutdown, State};
 
 handle_info({'EXIT', _, restart},
             #state{duo_mode_pid = DuoModePid} = State) ->
@@ -1414,9 +1431,11 @@ handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
     hibernate_check({noreply, State}).
 
 terminate(Reason,
-          #state{module = Module,
+          #state{dispatcher = Dispatcher,
+                 module = Module,
                  service_state = ServiceState,
                  duo_mode_pid = undefined}) ->
+    cloudi_services_monitor:terminate_kill(Dispatcher),
     Module:cloudi_service_terminate(Reason, ServiceState),
     ok;
 
@@ -2637,23 +2656,20 @@ duo_mode_loop_init(#state_duo{module = Module,
                                                     NewState)])
                     end;
                 {stop, Reason, ServiceState} ->
-                    Module:cloudi_service_terminate(Reason, ServiceState),
-                    erlang:exit(Dispatcher, Reason);
+                    duo_mode_loop_terminate(Reason, ServiceState, State);
                 {stop, Reason} ->
-                    Module:cloudi_service_terminate(Reason, undefined),
-                    erlang:exit(Dispatcher, Reason)
+                    duo_mode_loop_terminate(Reason, undefined, State)
             end
     end.
 
-duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
+duo_mode_loop(#state_duo{} = State) ->
     receive
         Request ->
             % mimic a gen_server:handle_info/2 for code reuse
             case duo_handle_info(Request, State) of
-                {stop, Reason, #state_duo{module = Module,
-                                          service_state = ServiceState}} ->
-                    Module:cloudi_service_terminate(Reason, ServiceState),
-                    erlang:exit(Dispatcher, Reason);
+                {stop, Reason,
+                 #state_duo{service_state = ServiceState} = NewState} ->
+                    duo_mode_loop_terminate(Reason, ServiceState, NewState);
                 {noreply, #state_duo{options = #config_service_options{
                                          hibernate = Hibernate}} = NewState} ->
                     case cloudi_rate_based_configuration:
@@ -2666,6 +2682,14 @@ duo_mode_loop(#state_duo{dispatcher = Dispatcher} = State) ->
                     end
             end
     end.
+
+duo_mode_loop_terminate(Reason, ServiceState,
+                        #state_duo{duo_mode_pid = DuoModePid,
+                                   module = Module}) ->
+    cloudi_services_monitor:terminate_kill(DuoModePid),
+    Module:cloudi_service_terminate(Reason, ServiceState),
+    erlang:process_flag(trap_exit, false),
+    erlang:exit(DuoModePid, Reason).
 
 duo_handle_info({'cloudi_service_return_async',
                  _, _, _, _, _, _, Source} = T,
@@ -2705,7 +2729,15 @@ duo_handle_info({'cloudi_service_request_failure',
     Reason = if
         Type =:= stop ->
             true = Stack =:= undefined,
-            ?LOG_ERROR("duo_mode request stop ~p", [Error]),
+            case Error of
+                shutdown ->
+                    ?LOG_WARN("duo_mode request stop shutdown", []);
+                {shutdown, ShutdownReason} ->
+                    ?LOG_WARN("duo_mode request stop shutdown (~p)",
+                              [ShutdownReason]);
+                _ ->
+                    ?LOG_ERROR("duo_mode request stop ~p", [Error])
+            end,
             Error;
         true ->
             ?LOG_ERROR("duo_mode request ~p ~p~n~p", [Type, Error, Stack]),
@@ -2731,6 +2763,10 @@ duo_handle_info({'EXIT', RequestPid, Reason},
     {stop, Reason, State};
 
 duo_handle_info({'EXIT', Dispatcher, shutdown},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    {stop, shutdown, State};
+
+duo_handle_info({'EXIT', Dispatcher, {shutdown, _}},
                 #state_duo{dispatcher = Dispatcher} = State) ->
     {stop, shutdown, State};
 

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_api functions service_subscriptions/2 and
+      services_search/2 for services that use duo_mode set to true
+    * Improve the internal service cloudi_service_terminate function
+      execution time limit enforcement
+    * Fix cloudi_service_http_cowboy bug during cloudi_service_init validation
+
 2014-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix for websocket_protocol in cloudi_service_http_cowboy

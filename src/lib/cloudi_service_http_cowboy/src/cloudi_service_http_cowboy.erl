@@ -235,7 +235,10 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             {async, WebSocketConnectAsync1};
         WebSocketConnectAsync1 =:= undefined,
         WebSocketConnectSync =/= undefined ->
-            {sync, WebSocketConnectSync}
+            {sync, WebSocketConnectSync};
+        WebSocketConnectAsync1 =:= undefined,
+        WebSocketConnectSync =:= undefined ->
+            undefined
     end,
     WebSocketDisconnectAsync1 = if
         WebSocketDisconnectAsync0 =:= undefined ->
@@ -256,7 +259,10 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             {async, WebSocketDisconnectAsync1};
         WebSocketDisconnectAsync1 =:= undefined,
         WebSocketDisconnectSync =/= undefined ->
-            {sync, WebSocketDisconnectSync}
+            {sync, WebSocketDisconnectSync};
+        WebSocketDisconnectAsync1 =:= undefined,
+        WebSocketDisconnectSync =:= undefined ->
+            undefined
     end,
     true = (WebSocketPing =:= undefined) orelse
            (is_integer(WebSocketPing) andalso (WebSocketPing > 0)),

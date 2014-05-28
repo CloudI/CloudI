@@ -413,7 +413,9 @@ services_restart([_ | _] = L, Timeout)
 %% @doc
 %% ===Search service instances for matches on the provided service name.===
 %% Multiple services may be returned for a single service name.  Only service
-%% instances on the local Erlang node are searched.
+%% instances on the local Erlang node are searched.  Service names that are
+%% subscriptions of non-service Erlang pids (e.g., cloudi_service_http_cowboy
+%% websocket connection pids) will not be searched by this function.
 %% @end
 %%-------------------------------------------------------------------------
 

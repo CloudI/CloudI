@@ -12,6 +12,11 @@
 % it has not yet been necessary to modify these settings during testing.     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% absolute bounds for the terminate function execution time
+% when a service stops or restarts
+-define(TERMINATE_DELAY_MIN,  1000). % milliseconds
+-define(TERMINATE_DELAY_MAX, 60000). % milliseconds
+
 % interval at which asynchronous messages are checked
 -define(RECV_ASYNC_INTERVAL, 500). % milliseconds
 

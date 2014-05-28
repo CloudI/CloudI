@@ -12,6 +12,8 @@
 %%%    ==> {ok, State}
 %%%        {stop, Reason}
 %%%        {stop, Reason, State}
+%%%               State = undefined, if not returned
+%%%               Reason = restart | shutdown | Term, terminate(State) is called
 %%%
 %%%   cloudi_service_handle_request(Type, Name, Pattern,
 %%%                                 RequestInfo, Request, Timeout, Priority,
@@ -23,13 +25,13 @@
 %%%         NextTimeout, NextPriority, NewState}
 %%%        {noreply, NewState}
 %%%        {stop, Reason, NewState}  
-%%%               Reason = normal | shutdown | Term terminate(State) is called
+%%%               Reason = restart | shutdown | Term, terminate(State) is called
 %%%
 %%%   cloudi_service_handle_info(Request, State, Dispatcher)
 %%%
 %%%    ==> {noreply, State}
 %%%        {stop, Reason, NewState} 
-%%%               Reason = normal | shutdown | Term, terminate(State) is called
+%%%               Reason = restart | shutdown | Term, terminate(State) is called
 %%%
 %%%   cloudi_service_terminate(Reason, State) Let the user module clean up
 %%%        always called when the service terminates

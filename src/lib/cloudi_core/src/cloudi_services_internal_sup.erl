@@ -103,10 +103,10 @@ create_internal(ProcessIndex, ProcessCount,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions]) of
-        {ok, Pid} ->
-            {ok, Pid};
-        {ok, Pid, _} ->
-            {ok, Pid};
+        {ok, Dispatcher} ->
+            {ok, cloudi_service:self(Dispatcher)};
+        {ok, Dispatcher, _} ->
+            {ok, cloudi_service:self(Dispatcher)};
         {error, _} = Error ->
             Error
     end.

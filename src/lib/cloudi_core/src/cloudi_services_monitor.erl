@@ -62,7 +62,8 @@
          search/2,
          pids/2,
          increase/5,
-         decrease/5]).
+         decrease/5,
+         terminate_kill/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -70,11 +71,10 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
+-include("cloudi_constants.hrl").
 
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
--define(TERMINATE_DELAY_MIN,  1000). % milliseconds
--define(TERMINATE_DELAY_MAX, 60000). % milliseconds
 
 -ifdef(ERLANG_OTP_VER_16).
 -type dict_proxy(_Key, _Value) :: dict().
@@ -180,6 +180,11 @@ decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
                                  Pid, Period, RateCurrent,
                                  RateMin, CountProcessMin})).
 
+terminate_kill(Pid)
+    when is_pid(Pid) ->
+    ?CATCH_EXIT(gen_server:cast(?MODULE,
+                                {terminate_kill, Pid})).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
@@ -225,16 +230,8 @@ handle_call({monitor, M, F, A, ProcessIndex, CountThread,
 handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {Pids, #service{max_r = MaxR,
-                             max_t = MaxT} = Service}} ->
-            Self = self(),
-            Shutdown = terminate_delay(MaxT, MaxR),
-            NewServices = lists:foldl(fun(P, D) ->
-                erlang:exit(P, shutdown),
-                erlang:send_after(Shutdown, Self,
-                                  {kill, Shutdown, P, ServiceId, Service}),
-                cloudi_x_key2value:erase(ServiceId, P, D)
-            end, Services, Pids),
+        {ok, {Pids, #service{} = Service}} ->
+            NewServices = terminate_service(ServiceId, Pids, Service, Services),
             {reply, {ok, Pids}, State#state{services = NewServices}};
         error ->
             {reply, {error, not_found}, State}
@@ -309,6 +306,16 @@ handle_cast({Direction,
             {noreply, State}
     end;
 
+handle_cast({terminate_kill, Pid},
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], #service{} = Service}} ->
+            terminate_kill_enforce(ServiceId, Pid, Service),
+            {noreply, State};
+        error ->
+            {noreply, State}
+    end;
+
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
@@ -348,13 +355,10 @@ handle_info({changes, ServiceId},
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], #service{pids = Pids}}} ->
+        {ok, {[ServiceId], #service{pids = Pids} = Service}} ->
             ?LOG_INFO("Service pid ~p shutdown~n ~p",
                       [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
-            NewServices = lists:foldl(fun(P, D) ->
-                erlang:exit(P, shutdown),
-                cloudi_x_key2value:erase(ServiceId, P, D)
-            end, Services, Pids),
+            NewServices = terminate_service(ServiceId, Pids, Service, Services),
             {noreply, State#state{services = NewServices}};
         error ->
             {noreply, State}
@@ -368,6 +372,19 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid,
             ?LOG_INFO("Service pid ~p terminated (count_process_dynamic)~n ~p",
                       [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
+            {noreply, State#state{services = NewServices}};
+        error ->
+            {noreply, State}
+    end;
+
+handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], #service{pids = Pids} = Service}} ->
+            ?LOG_INFO("Service pid ~p shutdown (~p)~n ~p",
+                      [Pid, Reason, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+            NewServices = terminate_service(ServiceId, Pids, Reason,
+                                            Service, Services),
             {noreply, State#state{services = NewServices}};
         error ->
             {noreply, State}
@@ -432,18 +449,9 @@ code_change(_, State, _) ->
 restart(Service, Services, State, ServiceId, OldPid) ->
     restart_stage1(Service, Services, State, ServiceId, OldPid).
 
-restart_stage1(#service{pids = Pids,
-                        max_r = MaxR,
-                        max_t = MaxT} = Service, Services,
+restart_stage1(#service{pids = Pids} = Service, Services,
                State, ServiceId, OldPid) ->
-    Self = self(),
-    Shutdown = terminate_delay(MaxT, MaxR),
-    NewServices = lists:foldl(fun(P, D) ->
-        erlang:exit(P, shutdown),
-        erlang:send_after(Shutdown, Self,
-                          {kill, Shutdown, P, ServiceId, Service}),
-        cloudi_x_key2value:erase(ServiceId, P, D)
-    end, Services, Pids),
+    NewServices = terminate_service(ServiceId, Pids, Service, Services),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
                    NewServices, State, ServiceId, OldPid).
@@ -734,7 +742,37 @@ terminate_delay(_, 0) ->
 terminate_delay(0, _) ->
     ?TERMINATE_DELAY_MIN;
 terminate_delay(MaxT, MaxR) ->
-    erlang:min(erlang:max(erlang:round((1000 * MaxT) / MaxR),
+    erlang:min(erlang:max(erlang:trunc((1000 * MaxT) / MaxR) - ?TIMEOUT_DELTA,
                           ?TERMINATE_DELAY_MIN),
                ?TERMINATE_DELAY_MAX).
+
+terminate_kill_enforce(ServiceId, Pid,
+                       #service{max_r = MaxR,
+                                max_t = MaxT} = Service) ->
+    Shutdown = terminate_delay(MaxT, MaxR),
+    erlang:send_after(Shutdown, self(),
+                      {kill, Shutdown, Pid, ServiceId, Service}),
+    ok.
+
+terminate_service(ServiceId, Pids, Service, Services) ->
+    terminate_service(ServiceId, Pids, undefined, Service, Services).
+
+terminate_service(ServiceId, Pids, Reason,
+                  #service{max_r = MaxR,
+                           max_t = MaxT} = Service, Services) ->
+    Self = self(),
+    Shutdown = terminate_delay(MaxT, MaxR),
+    ShutdownExit = if
+        Reason =:= undefined ->
+            shutdown;
+        true ->
+            {shutdown, Reason}
+    end,
+    NewServices = lists:foldl(fun(P, D) ->
+        erlang:exit(P, ShutdownExit),
+        erlang:send_after(Shutdown, Self,
+                          {kill, Shutdown, P, ServiceId, Service}),
+        cloudi_x_key2value:erase(ServiceId, P, D)
+    end, Services, Pids),
+    NewServices.
 
