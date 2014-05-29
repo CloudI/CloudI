@@ -240,7 +240,13 @@
             [{parameters_selected, [1, 2]},
              {service_name,
               % wildcards for substitution don't need to be in a valid pattern
-              "**/websocket"}]}]}],
+              "**/websocket"}]},
+           % second subscription, "notification"
+           {"b*u*ce",
+            [{parameters_selected, [2, 1]},
+             {service_name,
+              "**tification/websocket"}]}
+           ]}],
         immediate_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300,
         []},

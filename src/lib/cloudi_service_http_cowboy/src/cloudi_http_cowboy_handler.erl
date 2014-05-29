@@ -324,23 +324,18 @@ websocket_init(_Transport, Req0,
                     ok;
                 true ->
                     % match websocket_subscriptions to determine if a
-                    % secondary subscription should occur, possibly
-                    % using parameters in a resulting pattern
+                    % more subscriptions should occur, possibly
+                    % using parameters in a pattern template
                     % for the subscription
                     case cloudi_x_trie:find_match(PathRawStr,
                                                   WebSocketSubscriptions) of
                         error ->
                             ok;
-                        {ok, Pattern, TransformF} ->
-                            case TransformF(cloudi_service:
-                                            service_name_parse(PathRawStr,
-                                                               Pattern)) of
-                                {ok, SecondaryNameWebSocket} ->
-                                    ok = cloudi_x_cpg:
-                                         join(SecondaryNameWebSocket);
-                                {error, _} ->
-                                    ok
-                            end
+                        {ok, Pattern, Functions} ->
+                            Parameters = cloudi_service:
+                                         service_name_parse(PathRawStr,
+                                                            Pattern),
+                            websocket_subscriptions(Functions, Parameters)
                     end
             end,
             [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
@@ -1313,6 +1308,17 @@ websocket_disconnect_check({sync, WebSocketDisconnectName},
                                                         OutputType),
                       websocket_disconnect_request(OutputType), self()),
     ok.
+
+websocket_subscriptions([], _) ->
+    ok;
+websocket_subscriptions([F | Functions], Parameters) ->
+    case F(Parameters) of
+        {ok, NameWebSocket} ->
+            ok = cloudi_x_cpg:join(NameWebSocket);
+        {error, _} ->
+            ok
+    end,
+    websocket_subscriptions(Functions, Parameters).
 
 websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
                                   RequestInfo, Request, ResponseF,

@@ -119,9 +119,8 @@
         % Use this to create a mapping from the websocket connection URL path
         % and a separate service name used as a separate websocket
         % subscription for receiving service requests to forward through the
-        % websocket connection.  Currently, only a single subscription results
-        % from this configuration setting, if the websocket connection URL path
-        % matches the service configuration prefix.
+        % websocket connection.  If more than one subscription needs to occur,
+        % just list the same PatternSuffix for each subscription.
 -define(DEFAULT_SSL,                              false).
 -define(DEFAULT_COMPRESS,                         false).
 -define(DEFAULT_MAX_CONNECTIONS,                   4096).
@@ -457,8 +456,10 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
             F = fun(Parameters) ->
                 cloudi_service:service_name_new(Name, Parameters)
             end,
-            NewLookup = cloudi_x_trie:store(Prefix ++ PatternSuffix,
-                                            F, Lookup),
+            NewLookup = cloudi_x_trie:update(Prefix ++ PatternSuffix,
+                                             fun(Functions) ->
+                                                 [F | Functions]
+                                             end, [F], Lookup),
             websocket_subscriptions_lookup(WebSocketSubscriptions,
                                            NewLookup, Prefix);
         [_ | _] ->
@@ -499,8 +500,10 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
                         end
                     end
             end,
-            NewLookup = cloudi_x_trie:store(Prefix ++ PatternSuffix,
-                                            F, Lookup),
+            NewLookup = cloudi_x_trie:update(Prefix ++ PatternSuffix,
+                                             fun(Functions) ->
+                                                 [F | Functions]
+                                             end, [F], Lookup),
             websocket_subscriptions_lookup(WebSocketSubscriptions,
                                            NewLookup, Prefix)
     end.
