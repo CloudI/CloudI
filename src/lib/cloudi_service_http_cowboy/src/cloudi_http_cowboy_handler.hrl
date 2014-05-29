@@ -63,11 +63,12 @@
         websocket_protocol      :: undefined |
                                    fun((incoming | outgoing, any()) ->
                                        {incoming | any(), any()}),
+        websocket_subscriptions :: undefined | cloudi_x_trie:cloudi_x_trie(),
         use_websockets          :: boolean() | exclusively,
         use_host_prefix         :: boolean(),
         use_client_ip_prefix    :: boolean(),
         use_method_suffix       :: boolean(),
-        content_type_lookup     :: cloudi_x_trie:cloudi_x_trie(),
+        content_type_lookup     :: undefined | cloudi_x_trie:cloudi_x_trie(),
         websocket_state         :: tuple()
     }).
 

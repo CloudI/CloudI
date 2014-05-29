@@ -108,6 +108,20 @@
         % (outgoing, #protocol_error{id = ID} = OutgoingResponse) ->
         %     {ID, protocol_rpc:encode(OutgoingResponse)}
         % end.
+-define(DEFAULT_WEBSOCKET_SUBSCRIPTIONS,             []). % see below:
+        % Provide configuration similar to cloudi_service_router:
+        % list({PatternSuffix :: string(),
+        %       string() |
+        %       list({parameters_allowed, boolean()} |
+        %            {parameters_strict_matching, boolean()} |
+        %            {parameters_selected, list(pos_integer())} |
+        %            {service_name, PatternTemplate :: string()})})
+        % Use this to create a mapping from the websocket connection URL path
+        % and a separate service name used as a separate websocket
+        % subscription for receiving service requests to forward through the
+        % websocket connection.  Currently, only a single subscription results
+        % from this configuration setting, if the websocket connection URL path
+        % matches the service configuration prefix.
 -define(DEFAULT_SSL,                              false).
 -define(DEFAULT_COMPRESS,                         false).
 -define(DEFAULT_MAX_CONNECTIONS,                   4096).
@@ -180,6 +194,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {websocket_disconnect_sync,      ?DEFAULT_WEBSOCKET_DISCONNECT_SYNC},
         {websocket_ping,                 ?DEFAULT_WEBSOCKET_PING},
         {websocket_protocol,             ?DEFAULT_WEBSOCKET_PROTOCOL},
+        {websocket_subscriptions,        ?DEFAULT_WEBSOCKET_SUBSCRIPTIONS},
         {ssl,                            ?DEFAULT_SSL},
         {compress,                       ?DEFAULT_COMPRESS},
         {max_connections,                ?DEFAULT_MAX_CONNECTIONS},
@@ -203,7 +218,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      WebSocketConnect0, WebSocketDisconnect0,
      WebSocketConnectAsync0, WebSocketConnectSync,
      WebSocketDisconnectAsync0, WebSocketDisconnectSync,
-     WebSocketPing, WebSocketProtocol0, SSL, Compress,
+     WebSocketPing, WebSocketProtocol0, WebSocketSubscriptions0, SSL, Compress,
      MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
@@ -282,6 +297,12 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         _ when is_function(WebSocketProtocol0, 2) ->
             WebSocketProtocol0
     end,
+    WebSocketSubscriptions1 = if
+        WebSocketSubscriptions0 == [] ->
+            undefined;
+        is_list(WebSocketSubscriptions0) ->
+            websocket_subscriptions_lookup(WebSocketSubscriptions0, Prefix)
+    end,
     true = is_boolean(Compress),
     true = is_integer(MaxConnections),
     true = is_integer(MaxEmptyLines),
@@ -333,6 +354,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               websocket_disconnect = WebSocketDisconnect1,
                               websocket_ping = WebSocketPing,
                               websocket_protocol = WebSocketProtocol1,
+                              websocket_subscriptions = WebSocketSubscriptions1,
                               use_websockets = UseWebSockets,
                               use_host_prefix = UseHostPrefix,
                               use_client_ip_prefix = UseClientIpPrefix,
@@ -419,6 +441,73 @@ cloudi_service_terminate(_, #state{service = Service}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+websocket_subscriptions_lookup([], Lookup, _) ->
+    Lookup;
+websocket_subscriptions_lookup([{PatternSuffix, L} |
+                                WebSocketSubscriptions], Lookup, Prefix) ->
+    ConfigDefaults = [
+        {parameters_allowed,         true},
+        {parameters_strict_matching, true},
+        {parameters_selected,        []},
+        {service_name,               undefined}],
+    case L of
+        [I | _] when is_integer(I) ->
+            Name = Prefix ++ L,
+            F = fun(Parameters) ->
+                cloudi_service:service_name_new(Name, Parameters)
+            end,
+            NewLookup = cloudi_x_trie:store(Prefix ++ PatternSuffix,
+                                            F, Lookup),
+            websocket_subscriptions_lookup(WebSocketSubscriptions,
+                                           NewLookup, Prefix);
+        [_ | _] ->
+            [ParametersAllowed,
+             ParametersStrictMatching,
+             ParametersSelected,
+             Suffix] = cloudi_proplists:take_values(ConfigDefaults, L),
+            true = is_boolean(ParametersAllowed),
+            true = is_boolean(ParametersStrictMatching),
+            true = is_list(ParametersSelected),
+            true = ((ParametersSelected == []) orelse
+                    ((ParametersSelected /= []) andalso
+                     (ParametersAllowed =:= true))),
+            true = lists:all(fun(I) -> is_integer(I) andalso I > 0 end,
+                             ParametersSelected),
+            true = (is_list(Suffix) andalso
+                    is_integer(hd(Suffix))),
+            Name = Prefix ++ Suffix,
+            true = ((ParametersAllowed =:= true) orelse
+                    ((ParametersAllowed =:= false) andalso
+                     (cloudi_x_trie:is_pattern(Name) =:= false))),
+            F = if
+                ParametersAllowed =:= true ->
+                    fun(Parameters) ->
+                        cloudi_service:
+                        service_name_new(Name,
+                                         Parameters,
+                                         ParametersSelected,
+                                         ParametersStrictMatching)
+                    end;
+                ParametersAllowed =:= false ->
+                    fun(Parameters) ->
+                        if
+                            Parameters == [] ->
+                                {ok, Name};
+                            true ->
+                                {error, parameters_ignored}
+                        end
+                    end
+            end,
+            NewLookup = cloudi_x_trie:store(Prefix ++ PatternSuffix,
+                                            F, Lookup),
+            websocket_subscriptions_lookup(WebSocketSubscriptions,
+                                           NewLookup, Prefix)
+    end.
+
+websocket_subscriptions_lookup(WebSocketSubscriptions, Prefix) ->
+    websocket_subscriptions_lookup(WebSocketSubscriptions,
+                                   cloudi_x_trie:new(), Prefix).
 
 environment_transform_ssl_options(SSLOpts, Environment) ->
     environment_transform_ssl_options(SSLOpts, [], Environment).

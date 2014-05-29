@@ -233,7 +233,14 @@
           "/tests/websockets/bounce/websocket/connect"},
          {websocket_disconnect_async,
           "/tests/websockets/bounce/websocket/disconnect"},
-         {websocket_ping, 30000}], % milliseconds
+         {websocket_ping, 30000}, % milliseconds
+         {websocket_subscriptions,
+          [% also, subscribe to "on" a "bounce"
+           {"b*u*ce", % <-- valid pattern
+            [{parameters_selected, [1, 2]},
+             {service_name,
+              % wildcards for substitution don't need to be in a valid pattern
+              "**/websocket"}]}]}],
         immediate_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300,
         []},

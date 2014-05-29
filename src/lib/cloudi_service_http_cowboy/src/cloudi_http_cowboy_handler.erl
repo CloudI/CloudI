@@ -287,6 +287,7 @@ websocket_init(_Transport, Req0,
                              websocket_connect = WebSocketConnect,
                              websocket_ping = WebSocketPing,
                              websocket_protocol = WebSocketProtocol,
+                             websocket_subscriptions = WebSocketSubscriptions,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
                              use_client_ip_prefix = UseClientIpPrefix,
@@ -311,12 +312,37 @@ websocket_init(_Transport, Req0,
     % can not turn-off the /websocket suffix, since it would otherwise
     % cause a conflict with service requests coming from HTTP into CloudI
     % when UseMethodSuffix == false
-    NameWebSocket = erlang:binary_to_list(PathRaw) ++ "/websocket",
+    PathRawStr = erlang:binary_to_list(PathRaw),
+    NameWebSocket = PathRawStr ++ "/websocket",
     HeadersIncoming1 = case lists:prefix(Prefix, NameWebSocket) of
         true ->
             % service requests are only received if they relate to
             % the service's prefix
             ok = cloudi_x_cpg:join(NameWebSocket),
+            if
+                WebSocketSubscriptions =:= undefined ->
+                    ok;
+                true ->
+                    % match websocket_subscriptions to determine if a
+                    % secondary subscription should occur, possibly
+                    % using parameters in a resulting pattern
+                    % for the subscription
+                    case cloudi_x_trie:find_match(PathRawStr,
+                                                  WebSocketSubscriptions) of
+                        error ->
+                            ok;
+                        {ok, Pattern, TransformF} ->
+                            case TransformF(cloudi_service:
+                                            service_name_parse(PathRawStr,
+                                                               Pattern)) of
+                                {ok, SecondaryNameWebSocket} ->
+                                    ok = cloudi_x_cpg:
+                                         join(SecondaryNameWebSocket);
+                                {error, _} ->
+                                    ok
+                            end
+                    end
+            end,
             [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
              HeadersIncoming0];
         false ->
@@ -377,6 +403,8 @@ websocket_init(_Transport, Req0,
     websocket_connect_check(WebSocketConnect, ReqN,
         State#cowboy_state{
             websocket_ping = WebSocketPingStatus,
+            websocket_subscriptions = undefined,
+            content_type_lookup = undefined,
             websocket_state = #websocket_state{
                 name_incoming = NameIncoming,
                 name_outgoing = NameOutgoing,

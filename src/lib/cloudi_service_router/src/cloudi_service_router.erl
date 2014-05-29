@@ -221,102 +221,16 @@ destination_pick(#destination{mode = random,
     Name = lists:nth(Index, Names),
     {Name, Destination#destination{index = Index}}.
 
-name_parameters_strip([], NewName) ->
-    {ok, lists:reverse(NewName)};
-name_parameters_strip([$* | Name], NewName) ->
-    name_parameters_strip(Name, NewName);
-name_parameters_strip([C | Name], NewName) ->
-    name_parameters_strip(Name, [C | NewName]).
-
-name_parameters_insert([], NewName, [], _) ->
-    {ok, lists:reverse(NewName)};
-name_parameters_insert([], NewName, [_ | _], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_ignored};
-        true ->
-            {ok, lists:reverse(NewName)}
-    end;
-name_parameters_insert([$* | Name], NewName,
-                       [], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameter_missing};
-        true ->
-            name_parameters_strip(Name, NewName)
-    end;
-name_parameters_insert([$* | Name], NewName,
-                       [Parameter | Parameters], ParametersStrictMatching) ->
-    name_parameters_insert(Name, lists:reverse(Parameter) ++ NewName,
-                           Parameters, ParametersStrictMatching);
-name_parameters_insert([C | Name], NewName,
-                       Parameters, ParametersStrictMatching) ->
-    name_parameters_insert(Name, [C | NewName],
-                           Parameters, ParametersStrictMatching).
-
-name_parameters_insert(Name, Parameters,
-                       ParametersStrictMatching) ->
-    name_parameters_insert(Name, [], Parameters,
-                           ParametersStrictMatching).
-
-name_parameters_select([], NewName, _,
-                       ParametersSelected, ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
-            {error, {parameters_selected_ignored, ParametersSelected}};
-        true ->
-            {ok, lists:reverse(NewName)}
-    end;
-name_parameters_select([$* | Name], NewName, _,
-                       [], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_selected_empty};
-        true ->
-            name_parameters_strip(Name, NewName)
-    end;
-name_parameters_select([$* | Name], NewName, Parameters,
-                       [I | ParametersSelected], ParametersStrictMatching) ->
-    try lists:nth(I, Parameters) of
-        Parameter ->
-            name_parameters_select(Name, lists:reverse(Parameter) ++ NewName,
-                                   Parameters, ParametersSelected,
-                                   ParametersStrictMatching)
-    catch
-        error:_ ->
-            if
-                ParametersStrictMatching =:= true ->
-                    {error, {parameters_selected_missing, I}};
-                true ->
-                    name_parameters_strip(Name, NewName)
-            end
-    end;
-name_parameters_select([C | Name], NewName, Parameters,
-                       ParametersSelected, ParametersStrictMatching) ->
-    name_parameters_select(Name, [C | NewName], Parameters,
-                           ParametersSelected, ParametersStrictMatching).
-
-name_parameters_select(Name, Parameters,
-                       ParametersSelected, ParametersStrictMatching) ->
-    name_parameters_select(Name, [], Parameters,
-                           ParametersSelected, ParametersStrictMatching).
-
 name_parameters(Name, [], #destination{}) ->
     {ok, Name};
 name_parameters(_, [_ | _],
                 #destination{parameters_allowed = false}) ->
     {error, parameters_not_allowed};
-name_parameters(Name, Parameters,
+name_parameters(Pattern, Parameters,
                 #destination{parameters_strict_matching =
                                  ParametersStrictMatching,
                              parameters_selected =
                                  ParametersSelected}) ->
-    if
-        ParametersSelected == [] ->
-            name_parameters_insert(Name, Parameters,
-                                   ParametersStrictMatching);
-        true ->
-            name_parameters_select(Name, Parameters, ParametersSelected,
-                                   ParametersStrictMatching)
-    end.
+    cloudi_service:service_name_new(Pattern, Parameters, ParametersSelected,
+                                    ParametersStrictMatching).
 

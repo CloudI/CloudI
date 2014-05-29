@@ -173,6 +173,8 @@
          environment_transform/1,
          environment_transform/2,
          % service request parameter helpers
+         service_name_new/2,
+         service_name_new/4,
          service_name_parse/2,
          service_name_parse_with_suffix/2,
          request_http_qs_parse/1,
@@ -2294,7 +2296,50 @@ environment_transform(String, Lookup) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse a service name pattern.===
+%% ===Transform a service name pattern with parameters into an exact service name.===
+%% The pattern input can contain consecutive * wildcard characters because
+%% they are only used for a template.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_name_new(Pattern :: string(),
+                       Parameters :: list(string())) ->
+    {ok, string()} |
+    {error, parameters_ignored | parameter_missing}.
+
+service_name_new(Pattern, Parameters) ->
+    service_name_new_insert(Pattern, Parameters, true).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Transform a service name pattern with parameters into an exact service name.===
+%% The pattern input can contain consecutive * wildcard characters because
+%% they are only used for a template.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_name_new(Pattern :: string(),
+                       Parameters :: list(string()),
+                       ParametersSelected :: list(pos_integer()),
+                       ParametersStrictMatching :: boolean()) ->
+    {ok, string()} |
+    {error,
+     parameters_ignored | parameter_missing | parameters_selected_empty |
+     {parameters_selected_ignored, list(pos_integer())} | 
+     {parameters_selected_missing, pos_integer()}}.
+
+service_name_new(Pattern, Parameters, [],
+                 ParametersStrictMatching) ->
+    service_name_new_insert(Pattern, Parameters,
+                            ParametersStrictMatching);
+service_name_new(Pattern, Parameters, ParametersSelected,
+                 ParametersStrictMatching) ->
+    service_name_new_select(Pattern, Parameters, ParametersSelected,
+                            ParametersStrictMatching).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a service name pattern to return parameters.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2596,4 +2641,87 @@ binary_key_value_parse_list([K, V | L], Lookup) ->
         error ->
             binary_key_value_parse_list(L, dict:store(K, V, Lookup))
     end.
+
+service_name_new_strip([], NameOut) ->
+    {ok, lists:reverse(NameOut)};
+service_name_new_strip([$* | PatternIn], NameOut) ->
+    service_name_new_strip(PatternIn, NameOut);
+service_name_new_strip([C | PatternIn], NameOut) ->
+    service_name_new_strip(PatternIn, [C | NameOut]).
+
+service_name_new_insert([], NameOut, [], _) ->
+    {ok, lists:reverse(NameOut)};
+service_name_new_insert([], NameOut, [_ | _],
+                        ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_ignored};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+service_name_new_insert([$* | PatternIn], NameOut, [],
+                        ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameter_missing};
+        true ->
+            service_name_new_strip(PatternIn, NameOut)
+    end;
+service_name_new_insert([$* | PatternIn], NameOut, [Parameter | Parameters],
+                        ParametersStrictMatching) ->
+    service_name_new_insert(PatternIn, lists:reverse(Parameter) ++ NameOut,
+                            Parameters, ParametersStrictMatching);
+service_name_new_insert([C | PatternIn], NameOut, Parameters,
+                        ParametersStrictMatching) ->
+    service_name_new_insert(PatternIn, [C | NameOut], Parameters,
+                            ParametersStrictMatching).
+
+service_name_new_insert(PatternIn, Parameters, ParametersStrictMatching) ->
+    service_name_new_insert(PatternIn, [], Parameters,
+                            ParametersStrictMatching).
+
+service_name_new_select([], NameOut, _, ParametersSelected,
+                        ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
+            {error, {parameters_selected_ignored, ParametersSelected}};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+service_name_new_select([$* | PatternIn], NameOut, _, [],
+                        ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_selected_empty};
+        true ->
+            service_name_new_strip(PatternIn, NameOut)
+    end;
+service_name_new_select([$* | PatternIn], NameOut, Parameters,
+                        [I | ParametersSelected],
+                        ParametersStrictMatching) ->
+    try lists:nth(I, Parameters) of
+        Parameter ->
+            service_name_new_select(PatternIn,
+                                    lists:reverse(Parameter) ++ NameOut,
+                                    Parameters, ParametersSelected,
+                                    ParametersStrictMatching)
+    catch
+        error:_ ->
+            if
+                ParametersStrictMatching =:= true ->
+                    {error, {parameters_selected_missing, I}};
+                true ->
+                    service_name_new_strip(PatternIn, NameOut)
+            end
+    end;
+service_name_new_select([C | PatternIn], NameOut, Parameters,
+                        ParametersSelected, ParametersStrictMatching) ->
+    service_name_new_select(PatternIn, [C | NameOut], Parameters,
+                            ParametersSelected, ParametersStrictMatching).
+
+service_name_new_select(PatternIn, Parameters,
+                        ParametersSelected, ParametersStrictMatching) ->
+    service_name_new_select(PatternIn, [], Parameters,
+                            ParametersSelected, ParametersStrictMatching).
+
 
