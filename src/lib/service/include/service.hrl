@@ -75,7 +75,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                     Request ::
                                         cloudi_service:request(),
                                     Timeout ::
-                                        cloudi_service:timeout_milliseconds(),
+                                        cloudi_service:timeout_value_milliseconds(),
                                     Priority ::
                                         cloudi_service:priority(),
                                     TransId ::
@@ -94,7 +94,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     {'forward', NextName :: cloudi_service:service_name(),
      NextRequestInfo :: cloudi_service:request_info(),
      NextRequest :: cloudi_service:request(),
-     NextTimeout :: cloudi_service:timeout_milliseconds(),
+     NextTimeout :: cloudi_service:timeout_value_milliseconds(),
      NextPriority :: cloudi_service:priority(), NewState :: any()} |
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
