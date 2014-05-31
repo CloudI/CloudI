@@ -21,6 +21,8 @@ javascript CloudI API
 Lua CloudI API
     * can base this on the Python-C CloudI API integration
       (within api/python/cloudi_py.cpp)
+    * simpler to use https://github.com/vinniefalco/LuaBridge with the
+      C++ CloudI API
 Perl CloudI API
     * all-Perl implementation using updated code for the
       binary erlang binary term format, similar to

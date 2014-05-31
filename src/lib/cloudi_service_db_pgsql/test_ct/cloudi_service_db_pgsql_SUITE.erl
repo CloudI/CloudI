@@ -18,7 +18,8 @@
 -export([t_table_create_1/1,
          t_table_create_2/1,
          t_table_query_1/1,
-         t_table_query_2/1]).
+         t_table_query_2/1,
+         t_table_query_3/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -43,7 +44,8 @@ groups() ->
        t_table_create_2]},
      {table_query, [],
       [t_table_query_1,
-       t_table_query_2]}].
+       t_table_query_2,
+       t_table_query_3]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -252,6 +254,33 @@ t_table_query_2(_Config) ->
      {4,Binary}] = RowsSEMIOCAST,
     {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
         ?DB_SEMIOCAST, <<"DROP TABLE binary_results">>),
+    ok.
+
+t_table_query_3(_Config) ->
+    Context = cloudi:new(),
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG,
+        <<"DROP TABLE IF EXISTS incoming_results; "
+          "CREATE TABLE incoming_results ("
+          "digit_index   NUMERIC(30) PRIMARY KEY,"
+          "data          TEXT NULL"
+          ");">>),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_WG, <<"INSERT INTO incoming_results (digit_index, data) "
+                  "VALUES (1, $1)">>, [null]),
+    {ok, {updated, 1}} = cloudi_service_db_pgsql:equery(Context,
+        ?DB_SEMIOCAST, <<"INSERT INTO incoming_results (digit_index, data) "
+                         "VALUES (2, $1)">>, [null]),
+    {ok, {selected, RowsWG}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_WG, <<"SELECT * FROM incoming_results">>),
+    [{<<"1">>,null},
+     {<<"2">>,null}] = RowsWG,
+    {ok, {selected, RowsSEMIOCAST}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"SELECT * FROM incoming_results">>),
+    [{1,null},
+     {2,null}] = RowsSEMIOCAST,
+    {ok, {updated, 0}} = cloudi_service_db_pgsql:squery(Context,
+        ?DB_SEMIOCAST, <<"DROP TABLE incoming_results">>),
     ok.
 
 %%%------------------------------------------------------------------------
