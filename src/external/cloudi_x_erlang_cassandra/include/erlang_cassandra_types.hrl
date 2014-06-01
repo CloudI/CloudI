@@ -166,7 +166,7 @@
 
 %% struct authenticationRequest
 
--record(authenticationRequest, {credentials = dict:new()}).
+-record(authenticationRequest, {credentials = dict:new() :: dict()}).
 
 %% struct columnDef
 
@@ -174,7 +174,7 @@
                     validation_class :: string() | binary(),
                     index_type :: integer(),
                     index_name :: string() | binary(),
-                    index_options}).
+                    index_options :: dict()}).
 
 %% struct cfDef
 
@@ -195,8 +195,8 @@
                 key_validation_class :: string() | binary(),
                 key_alias :: string() | binary(),
                 compaction_strategy :: string() | binary(),
-                compaction_strategy_options,
-                compression_options,
+                compaction_strategy_options :: dict(),
+                compression_options :: dict(),
                 bloom_filter_fp_chance :: float(),
                 caching = "keys_only" :: string() | binary(),
                 dclocal_read_repair_chance = 0.0 :: float(),
@@ -216,7 +216,7 @@
 
 -record(ksDef, {name :: string() | binary(),
                 strategy_class :: string() | binary(),
-                strategy_options,
+                strategy_options :: dict(),
                 replication_factor :: integer(),
                 cf_defs = [] :: list(),
                 durable_writes = true :: boolean()}).
@@ -228,8 +228,8 @@
 
 %% struct cqlMetadata
 
--record(cqlMetadata, {name_types = dict:new(),
-                      value_types = dict:new(),
+-record(cqlMetadata, {name_types = dict:new() :: dict(),
+                      value_types = dict:new() :: dict(),
                       default_name_type :: string() | binary(),
                       default_value_type :: string() | binary()}).
 

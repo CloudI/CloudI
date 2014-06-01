@@ -1,4 +1,3 @@
-%% -*- coding: latin-1 -*-
 %% Copyright (c) 2011-2012 Basho Technologies, Inc.  All Rights Reserved.
 %%
 %% This file is provided to you under the Apache License,
@@ -190,19 +189,9 @@ write(#state{name=Name, fd=FD, inode=Inode, flap=Flap, size=RotSize,
             %% need to check for rotation
             case lager_util:ensure_logfile(Name, FD, Inode, {State#state.sync_size, State#state.sync_interval}) of
                 {ok, {_, _, Size}} when RotSize /= 0, Size > RotSize ->
-                    case lager_util:rotate_logfile(Name, Count) of
-                        ok ->
-                            %% go around the loop again, we'll do another rotation check and hit the next clause of ensure_logfile
-                            write(State, Timestamp, Level, Msg);
-                        {error, Reason} ->
-                            case Flap of
-                                true ->
-                                    State;
-                                _ ->
-                                    ?INT_LOG(error, "Failed to rotate log file ~s with error ~s", [Name, file:format_error(Reason)]),
-                                    State#state{flap=true}
-                            end
-                    end;
+                    lager_util:rotate_logfile(Name, Count),
+                    %% go around the loop again, we'll do another rotation check and hit the next clause here
+                    write(State, Timestamp, Level, Msg);
                 {ok, {NewFD, NewInode, _}} ->
                     %% update our last check and try again
                     do_write(State#state{last_check=Timestamp, fd=NewFD, inode=NewInode}, Level, Msg);
@@ -307,7 +296,7 @@ validate_logfile_proplist([{date, Date}|Tail], Acc) ->
             validate_logfile_proplist(Tail, [{date, Spec}|Acc]);
         {error, _} when Date == "" ->
             %% legacy config allowed blanks
-            validate_logfile_proplist(Tail, [{date, undefined}|Acc]);
+            validate_logfile_proplist(Tail, Acc);
         {error, _} ->
             throw({bad_config, "Invalid rotation date", Date})
     end;

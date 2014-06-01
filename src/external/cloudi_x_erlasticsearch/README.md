@@ -197,6 +197,9 @@ mget_doc/3 | ServerRef, IndexName, Doc  | Gets documents from the ElasticSearch 
 mget_doc/4 | ServerRef, IndexName, TypeName, Doc  | Gets documents from the ElasticSearch cluster index _IndexName_, with type _TypeName_, based on the Id(s) in _Doc_
 delete_doc/4 | ServerRef, IndexName, Type, Id  | Deleset the Doc under _IndexName_, with type _Type_, and id _Id_
 delete_doc/5 | ServerRef, IndexName, Type, Id, Params  | Deletes the Doc under _IndexName_, with type _Type_, and id _Id_, and passes the tuple-list _Params_ to ElasticSearch
+bulk/2 | ServerRef, Doc  | Bulk insert of all the data in _Doc_ (Index and Type defined in _Doc_)
+bulk/3 | ServerRef, IndexName, Doc  | Bulk insert of all the data in _Doc_, with the Index defaulting to _IndexName_ (Type defined in _Doc_)
+bulk/4 | ServerRef, IndexName, TypeName, Doc  | Bulk insert of all the data in _Doc_, with the Index defaulting to _IndexName_ and Type defaulting to _TypeName_
 count/2 | ServerRef, Doc | Counts the docs in the cluster based on the search in _Doc_. (note that if _Doc_ is empty, you get a count of all the docs in the cluster)
 count/3 | ServerRef, Doc, Params | Counts the docs in the cluster based on the search in _Doc_, using _Params_.  Note that either _Doc_ or _Params_ can be empty, but clearly not both :-)
 count/4 | ServerRef, IndexName, Doc, Params | Counts the docs in the cluster based on the search in _Doc_, associated with the index _IndexName_, using _Params_  (Note that a list of Indices can also be sent in (e.g., ```[<<"foo">>, <<"bar">>]```. This list can also be empty - ```[]```)

@@ -195,18 +195,16 @@ maybe_utc({Date, {H, M, S, Ms}}) ->
             {Date1, {H1, M1, S1, Ms}}
     end.
 
-%% renames failing are OK
+%% renames and deletes failing are OK
 rotate_logfile(File, 0) ->
-    file:delete(File);
+    _ = file:delete(File),
+    ok;
 rotate_logfile(File, 1) ->
-    case file:rename(File, File++".0") of
-        ok ->
-            ok;
-        _ ->
-            rotate_logfile(File, 0)
-    end;
+    _ = file:rename(File, File++".0"),
+    rotate_logfile(File, 0);
 rotate_logfile(File, Count) ->
-    _ = file:rename(File ++ "." ++ integer_to_list(Count - 2), File ++ "." ++ integer_to_list(Count - 1)),
+    _ =file:rename(File ++ "." ++ integer_to_list(Count - 2), File ++ "." ++
+        integer_to_list(Count - 1)),
     rotate_logfile(File, Count - 1).
 
 format_time() ->
@@ -564,25 +562,6 @@ rotate_file_test() ->
                 || M <- lists:seq(0, Count-1)],
                 rotate_logfile("rotation.log", 10)
     end || N <- lists:seq(0, 20)].
-
-rotate_file_fail_test() ->
-    %% make sure the directory exists
-    ?assertEqual(ok, filelib:ensure_dir("rotation/rotation.log")),
-    %% fix the permissions on it
-    os:cmd("chown -R u+rwx rotation"),
-    %% delete any old files
-    [ok = file:delete(F) || F <- filelib:wildcard("rotation/*")],
-    %% write a file
-    file:write_file("rotation/rotation.log", "hello"),
-    %% hose up the permissions
-    os:cmd("chown u-w rotation"),
-    ?assertMatch({error, _}, rotate_logfile("rotation.log", 10)),
-    ?assert(filelib:is_regular("rotation/rotation.log")),
-    os:cmd("chown u+w rotation"),
-    ?assertMatch(ok, rotate_logfile("rotation/rotation.log", 10)),
-    ?assert(filelib:is_regular("rotation/rotation.log.0")),
-    ?assertEqual(false, filelib:is_regular("rotation/rotation.log")),
-    ok.
 
 check_trace_test() ->
     trace_filter(none),

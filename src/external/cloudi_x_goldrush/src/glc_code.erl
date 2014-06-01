@@ -9,7 +9,7 @@
 
 -record(module, {
     'query' :: term(),
-    tables :: [{atom(), atom()}],
+    tables :: [{atom(), ets:tid()}],
     qtree :: term()
 }).
 
@@ -20,8 +20,7 @@
     fields = [] :: [{atom(), syntaxTree()}],
     fieldc = 0 :: non_neg_integer(),
     paramvars = [] :: [{term(), syntaxTree()}],
-    paramstab = undefined :: atom(),
-    countstab = undefined :: atom()
+    paramstab = undefined :: ets:tid()
 }).
 
 -type nextFun() :: fun((#state{}) -> [syntaxTree()]).
@@ -48,7 +47,6 @@ abstract_module(Module, Data) ->
 -spec abstract_module_(atom(), #module{}) -> [?erl:syntaxTree()].
 abstract_module_(Module, #module{tables=Tables, qtree=Tree}=Data) ->
     {_, ParamsTable} = lists:keyfind(params, 1, Tables),
-    {_, CountsTable} = lists:keyfind(counters, 1, Tables),
     AbstractMod = [
      %% -module(Module)
      ?erl:attribute(?erl:atom(module), [?erl:atom(Module)]),
@@ -59,10 +57,6 @@ abstract_module_(Module, #module{tables=Tables, qtree=Tree}=Data) ->
         %% info/1
         ?erl:arity_qualifier(
             ?erl:atom(info),
-            ?erl:integer(1)),
-        %% reset_counters/1
-        ?erl:arity_qualifier(
-            ?erl:atom(reset_counters),
             ?erl:integer(1)),
         %% table/1
         ?erl:arity_qualifier(
@@ -80,14 +74,7 @@ abstract_module_(Module, #module{tables=Tables, qtree=Tree}=Data) ->
         [?erl:clause(
             [?erl:underscore()], none,
                 [abstract_apply(erlang, error, [?erl:atom(badarg)])])]),
-     %% reset_counters(Name) -> boolean().
-     ?erl:function(
-        ?erl:atom(reset_counters),
-        abstract_reset() ++
-        [?erl:clause(
-            [?erl:underscore()], none,
-                [abstract_apply(erlang, error, [?erl:atom(badarg)])])]),
-     %% table(Name) -> atom().
+     %% table(Name) -> ets:tid().
      ?erl:function(
         ?erl:atom(table),
         abstract_tables(Tables) ++
@@ -107,11 +94,12 @@ abstract_module_(Module, #module{tables=Tables, qtree=Tree}=Data) ->
         [?erl:clause([?erl:variable("Event")], none,
          abstract_filter(Tree, #state{
             event=?erl:variable("Event"),
-            paramstab=ParamsTable,
-            countstab=CountsTable}))])
+            paramstab=ParamsTable}))])
     ],
     %% Transform Term -> Key to Key -> Term
-    gr_param:transform(ParamsTable),
+    ParamsList = [{K, V} || {V, K} <- ets:tab2list(ParamsTable)],
+    ets:delete_all_objects(ParamsTable),
+    ets:insert(ParamsTable, ParamsList),
     AbstractMod.
 
 %% @private Return the clauses of the table/1 function.
@@ -130,17 +118,6 @@ abstract_info(#module{'query'=Query}) ->
         {filter, abstract_getcount(filter)},
         {output, abstract_getcount(output)}
     ]].
-
-
-abstract_reset() ->
-    [?erl:clause([?erl:abstract(K)], none, V)
-        || {K, V} <- [
-        {all, abstract_resetcount([input, filter, output])},
-        {input, abstract_resetcount(input)},
-        {filter, abstract_resetcount(filter)},
-        {output, abstract_resetcount(output)}
-    ]].
-
 
 %% @private Return the original query as an expression.
 abstract_query({with, _, _}) ->
@@ -281,21 +258,22 @@ abstract_getparam(Term, OnBound, #state{paramvars=Params}=State) ->
 
 
 -spec abstract_getparam_(term(), nextFun(), #state{}) -> [syntaxTree()].
-abstract_getparam_(Term, OnBound, #state{paramstab=ParamsTable,
+abstract_getparam_(Term, OnBound, #state{paramstab=Table,
         paramvars=Params}=State) ->
-    Key = case gr_param:lookup(ParamsTable, Term) of
+    Key = case ets:lookup(Table, Term) of
         [{_, Key2}] ->
             Key2;
         [] ->
-            Key2 = gr_param:info_size(ParamsTable),
-            gr_param:insert(ParamsTable, {Term, Key2}),
+            Key2 = ets:info(Table, size),
+            ets:insert(Table, {Term, Key2}),
             Key2
     end,
     [?erl:match_expr(
         param_variable(Key),
-        abstract_apply(gr_param, lookup_element,
+        abstract_apply(ets, lookup_element,
             [abstract_apply(table, [?erl:atom(params)]),
-             ?erl:abstract(Key)]))
+             ?erl:abstract(Key),
+             ?erl:abstract(2)]))
     ] ++ OnBound(State#state{paramvars=[{Term, param_variable(Key)}|Params]}).
 
 %% @private Generate a variable name for the value of a field.
@@ -321,7 +299,7 @@ field_variable_([]) ->
 param_variable(Key) ->
     ?erl:variable("Param_" ++ integer_to_list(Key)).
 
-%% @ private Generate a list of field variable names.
+%% @private Generate a list of field variable names.
 %% Walk the query tree and generate a safe variable name string for each field
 %% that is accessed by the conditions in the query. Only allow alpha-numeric.
 %%-spec field_variables(glc_ops:op()) -> [{atom(), string()}].
@@ -338,7 +316,7 @@ param_variable(Key) ->
 %% @todo Pass state record. Only Generate code if `statistics' is enabled.
 -spec abstract_count(atom()) -> syntaxTree().
 abstract_count(Counter) ->
-    abstract_apply(gr_counter, update_counter,
+    abstract_apply(ets, update_counter,
         [abstract_apply(table, [?erl:atom(counters)]),
          ?erl:abstract(Counter),
          ?erl:abstract({2,1})]).
@@ -348,17 +326,10 @@ abstract_count(Counter) ->
 %% @todo Pass state record. Only Generate code if `statistics' is enabled.
 -spec abstract_getcount(atom()) -> [syntaxTree()].
 abstract_getcount(Counter) ->
-    [abstract_apply(gr_counter, lookup_element,
+    [abstract_apply(ets, lookup_element,
         [abstract_apply(table, [?erl:atom(counters)]),
-         ?erl:abstract(Counter)])].
-
-%% @private Return an expression to reset a counter.
--spec abstract_resetcount(atom()) -> [syntaxTree()].
-abstract_resetcount(Counter) ->
-    [abstract_apply(gr_counter, reset_counters,
-        [abstract_apply(table, [?erl:atom(counters)]),
-         ?erl:abstract(Counter)])].
-
+         ?erl:abstract(Counter),
+         ?erl:abstract(2)])].
 
 
 %% abstract code util functions

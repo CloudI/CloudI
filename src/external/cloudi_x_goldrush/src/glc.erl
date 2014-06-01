@@ -63,11 +63,8 @@
 
 -export([
     compile/2,
-    compile/3,
     handle/2,
-    delete/1,
-    reset_counters/1,
-    reset_counters/2
+    delete/1
 ]).
 
 -export([
@@ -90,7 +87,7 @@
 
 -record(module, {
     'query' :: term(),
-    tables :: [{atom(), atom()}],
+    tables :: [{atom(), ets:tid()}],
     qtree :: term()
 }).
 
@@ -168,22 +165,13 @@ union(Queries) ->
 %% On success the module representing the query is returned. The module and
 %% data associated with the query must be released using the {@link delete/1}
 %% function. The name of the query module is expected to be unique.
-%% The counters are reset by default, unless Reset is set to false 
 -spec compile(atom(), list()) -> {ok, atom()}.
 compile(Module, Query) ->
-    compile(Module, Query, true).
-
--spec compile(atom(), list(), boolean()) -> {ok, atom()}.
-compile(Module, Query, Reset) ->
-    {ok, ModuleData} = module_data(Module, Query),
+    {ok, ModuleData} = module_data(Query),
     case glc_code:compile(Module, ModuleData) of
-        {ok, Module} when Reset ->
-            reset_counters(Module),
-            {ok, Module};
         {ok, Module} ->
             {ok, Module}
     end.
-
 
 %% @doc Handle an event using a compiled query.
 %%
@@ -196,87 +184,30 @@ handle(Module, Event) ->
 %%
 %% This releases all resources allocated by a compiled query. The query name
 %% is expected to be associated with an existing query module. Calling this
-%% function will shutdown all relevant processes and purge/delete the module.
+%% function will result in a runtime error.
 -spec delete(atom()) -> ok.
-delete(Module) ->
-    Params = params_name(Module),
-    Counts = counts_name(Module),
-    ManageParams = manage_params_name(Module),
-    ManageCounts = manage_counts_name(Module),
-
-    [ begin 
-        supervisor:terminate_child(Sup, Name),
-        supervisor:delete_child(Sup, Name)
-      end || {Sup, Name} <- 
-        [{gr_manager_sup, ManageParams}, {gr_manager_sup, ManageCounts},
-         {gr_param_sup, Params}, {gr_counter_sup, Counts}]
-    ],
-
-    code:soft_purge(Module),
-    code:delete(Module),
+delete(_Module) ->
     ok.
 
-%% @doc Reset all counters
-%%
-%% This resets all the counters associated with a module
--spec reset_counters(atom()) -> ok.
-reset_counters(Module) ->
-    Module:reset_counters(all).
-
-%% @doc Reset a specific counter
-%%
-%% This resets a specific counter associated with a module
--spec reset_counters(atom(), atom()) -> ok.
-reset_counters(Module, Counter) ->
-    Module:reset_counters(Counter).
 
 %% @private Map a query to a module data term.
--spec module_data(atom(), term()) -> {ok, #module{}}.
-module_data(Module, Query) ->
+-spec module_data(term()) -> {ok, #module{}}.
+module_data(Query) ->
     %% terms in the query which are not valid arguments to the
     %% erl_syntax:abstract/1 functions are stored in ETS.
     %% the terms are only looked up once they are necessary to
     %% continue evaluation of the query.
-
+    Params = ets:new(params, [set,protected]),
     %% query counters are stored in a shared ETS table. this should
-    %% be an optional feature. enabled by defaults to simplify tests.
-    %% the abstract_tables/1 function expects a list of name-atom pairs.
+    %% be an optional feature. enable by defaults to simplify tests.
+    Counters = ets:new(counters, [set,public]),
+    ets:insert(Counters, [{input,0}, {filter,0}, {output,0}]),
+    %% the abstract_tables/1 function expects a list of name-tid pairs.
     %% tables are referred to by name in the generated code. the table/1
-    %% function maps names to registered processes response for those tables.
-    Tables = module_tables(Module),
+    %% function maps names to tids.
+    Tables = [{params,Params}, {counters,Counters}],
     Query2 = glc_lib:reduce(Query),
     {ok, #module{'query'=Query, tables=Tables, qtree=Query2}}.
-
-%% @private Create a data managed supervised process for params, counter tables
-module_tables(Module) ->
-    Params = params_name(Module),
-    Counts = counts_name(Module),
-    ManageParams = manage_params_name(Module),
-    ManageCounts = manage_counts_name(Module),
-    Counters = [{input,0}, {filter,0}, {output,0}],
-
-    supervisor:start_child(gr_param_sup, 
-        {Params, {gr_param, start_link, [Params]}, 
-        transient, brutal_kill, worker, [Params]}),
-    supervisor:start_child(gr_counter_sup, 
-        {Counts, {gr_counter, start_link, [Counts]}, 
-        transient, brutal_kill, worker, [Counts]}),
-    supervisor:start_child(gr_manager_sup, 
-        {ManageParams, {gr_manager, start_link, [ManageParams, Params, []]},
-        transient, brutal_kill, worker, [ManageParams]}),
-    supervisor:start_child(gr_manager_sup, {ManageCounts, 
-        {gr_manager, start_link, [ManageCounts, Counts, Counters]},
-        transient, brutal_kill, worker, [ManageCounts]}),
-    [{params,Params}, {counters, Counts}].
-
-reg_name(Module, Name) ->
-    list_to_atom("gr_" ++ atom_to_list(Module) ++ Name).
-
-params_name(Module) -> reg_name(Module, "_params").
-counts_name(Module) -> reg_name(Module, "_counters").
-manage_params_name(Module) -> reg_name(Module, "_params_mgr").
-manage_counts_name(Module) -> reg_name(Module, "_counters_mgr").
-
 
 
 %% @todo Move comment.
@@ -315,220 +246,117 @@ setup_query(Module, Query) ->
     ?assert(erlang:function_exported(Module, handle, 1)),
     {compiled, Module}.
 
-events_test_() ->
-    {foreach,
-        fun() ->
-                error_logger:tty(false),
-                application:start(syntax_tools),
-                application:start(compiler),
-                application:start(goldrush)
-        end,
-        fun(_) ->
-                application:stop(goldrush),
-                application:stop(compiler),
-                application:stop(syntax_tools),
-                error_logger:tty(true)
-        end,
-        [
-            {"null query compiles",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod1, glc:null(false)),
-                    ?assertError(badarg, Mod:table(noexists))
-                end
-            },
-            {"params table exists",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod2, glc:null(false)),
-                    ?assert(is_atom(Mod:table(params))),
-                    ?assertMatch([_|_], gr_param:info(Mod:table(params)))
-                end
-            },
-            {"null query exists",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod3, glc:null(false)),
-                    ?assert(erlang:function_exported(Mod, info, 1)),
-                    ?assertError(badarg, Mod:info(invalid)),
-                    ?assertEqual({null, false}, Mod:info('query'))
-                end
-            },
-            {"init counters test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod4, glc:null(false)),
-                    ?assertEqual(0, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    ?assertEqual(0, Mod:info(output))
-                end
-            },
-            {"filtered events test",
-                fun() ->
-                    %% If no selection condition is specified no inputs can match.
-                    {compiled, Mod} = setup_query(testmod5, glc:null(false)),
-                    glc:handle(Mod, gre:make([], [list])),
-                    ?assertEqual(1, Mod:info(input)),
-                    ?assertEqual(1, Mod:info(filter)),
-                    ?assertEqual(0, Mod:info(output))
-                end
-            },
-            {"nomatch event test",
-                fun() ->
-                    %% If a selection condition but no body is specified the event
-                    %% is expected to count as filtered out if the condition does
-                    %% not hold.
-                    {compiled, Mod} = setup_query(testmod6, glc:eq('$n', 'noexists@nohost')),
-                    glc:handle(Mod, gre:make([{'$n', 'noexists2@nohost'}], [list])),
-                    ?assertEqual(1, Mod:info(input)),
-                    ?assertEqual(1, Mod:info(filter)),
-                    ?assertEqual(0, Mod:info(output))
-                end
-            },
-            {"opfilter equal test",
-                fun() ->
-                    %% If a selection condition but no body is specified the event
-                    %% counts as input to the query, but not as filtered out.
-                    {compiled, Mod} = setup_query(testmod7, glc:eq('$n', 'noexists@nohost')),
-                    glc:handle(Mod, gre:make([{'$n', 'noexists@nohost'}], [list])),
-                    ?assertEqual(1, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    ?assertEqual(1, Mod:info(output))
-                end
-            },
-            {"opfilter greater than test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod8, glc:gt(a, 1)),
-                    glc:handle(Mod, gre:make([{'a', 2}], [list])),
-                    ?assertEqual(1, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    glc:handle(Mod, gre:make([{'a', 0}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(1, Mod:info(filter)),
-                    ?assertEqual(1, Mod:info(output))
-                end
-            },
-            {"opfilter less than test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod9, glc:lt(a, 1)),
-                    glc:handle(Mod, gre:make([{'a', 0}], [list])),
-                    ?assertEqual(1, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    ?assertEqual(1, Mod:info(output)),
-                    glc:handle(Mod, gre:make([{'a', 2}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(1, Mod:info(filter)),
-                    ?assertEqual(1, Mod:info(output))
-                end
-            },
-            {"allholds op test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod10,
-                        glc:all([glc:eq(a, 1), glc:eq(b, 2)])),
-                    glc:handle(Mod, gre:make([{'a', 1}], [list])),
-                    glc:handle(Mod, gre:make([{'a', 2}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter)),
-                    glc:handle(Mod, gre:make([{'b', 1}], [list])),
-                    glc:handle(Mod, gre:make([{'b', 2}], [list])),
-                    ?assertEqual(4, Mod:info(input)),
-                    ?assertEqual(4, Mod:info(filter)),
-                    glc:handle(Mod, gre:make([{'a', 1},{'b', 2}], [list])),
-                    ?assertEqual(5, Mod:info(input)),
-                    ?assertEqual(4, Mod:info(filter)),
-                    ?assertEqual(1, Mod:info(output))
-                end
-            },
-            {"anyholds op test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod11,
-                        glc:any([glc:eq(a, 1), glc:eq(b, 2)])),
-                    glc:handle(Mod, gre:make([{'a', 2}], [list])),
-                    glc:handle(Mod, gre:make([{'b', 1}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter)),
-                    glc:handle(Mod, gre:make([{'a', 1}], [list])),
-                    glc:handle(Mod, gre:make([{'b', 2}], [list])),
-                    ?assertEqual(4, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter))
-                end
-            },
-            {"with function test",
-                fun() ->
-                    Self = self(),
-                    {compiled, Mod} = setup_query(testmod12,
-                        glc:with(glc:eq(a, 1), fun(Event) -> Self ! gre:fetch(a, Event) end)),
-                    glc:handle(Mod, gre:make([{a,1}], [list])),
-                    ?assertEqual(1, Mod:info(output)),
-                    ?assertEqual(1, receive Msg -> Msg after 0 -> notcalled end)
-                end
-            },
-            {"delete test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod13, glc:null(false)),
-                    ?assert(is_atom(Mod:table(params))),
-                    ?assertMatch([_|_], gr_param:info(Mod:table(params))),
-                    ?assert(is_list(code:which(Mod))),
-                    ?assert(is_pid(whereis(params_name(Mod)))),
-                    ?assert(is_pid(whereis(counts_name(Mod)))),
-                    ?assert(is_pid(whereis(manage_params_name(Mod)))),
-                    ?assert(is_pid(whereis(manage_counts_name(Mod)))),
+nullquery_compiles_test() ->
+    {compiled, Mod} = setup_query(testmod1, glc:null(false)),
+    ?assertError(badarg, Mod:table(noexists)).
 
-                    glc:delete(Mod),
-                    
-                    ?assertEqual(non_existing, code:which(Mod)),
-                    ?assertEqual(undefined, whereis(params_name(Mod))),
-                    ?assertEqual(undefined, whereis(counts_name(Mod))),
-                    ?assertEqual(undefined, whereis(manage_params_name(Mod))),
-                    ?assertEqual(undefined, whereis(manage_counts_name(Mod)))
-                end
-            },
-            {"reset counters test",
-                fun() ->
-                    {compiled, Mod} = setup_query(testmod14,
-                        glc:any([glc:eq(a, 1), glc:eq(b, 2)])),
-                    glc:handle(Mod, gre:make([{'a', 2}], [list])),
-                    glc:handle(Mod, gre:make([{'b', 1}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter)),
-                    glc:handle(Mod, gre:make([{'a', 1}], [list])),
-                    glc:handle(Mod, gre:make([{'b', 2}], [list])),
-                    ?assertEqual(4, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter)),
-                    ?assertEqual(2, Mod:info(output)),
+params_table_exists_test() ->
+    {compiled, Mod} = setup_query(testmod2, glc:null(false)),
+    ?assert(is_integer(Mod:table(params))),
+    ?assertMatch([_|_], ets:info(Mod:table(params))).
 
-                    glc:reset_counters(Mod, input),
-                    ?assertEqual(0, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(filter)),
-                    ?assertEqual(2, Mod:info(output)),
-                    glc:reset_counters(Mod, filter),
-                    ?assertEqual(0, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    ?assertEqual(2, Mod:info(output)),
-                    glc:reset_counters(Mod),
-                    ?assertEqual(0, Mod:info(input)),
-                    ?assertEqual(0, Mod:info(filter)),
-                    ?assertEqual(0, Mod:info(output))
-                end
-            },
-            {"ets data recovery test",
-                fun() ->
-                    Self = self(),
-                    {compiled, Mod} = setup_query(testmod15,
-                        glc:with(glc:eq(a, 1), fun(Event) -> Self ! gre:fetch(a, Event) end)),
-                    glc:handle(Mod, gre:make([{a,1}], [list])),
-                    ?assertEqual(1, Mod:info(output)),
-                    ?assertEqual(1, receive Msg -> Msg after 0 -> notcalled end),
-                    ?assertEqual(1, length(gr_param:list(Mod:table(params)))),
-                    ?assertEqual(3, length(gr_param:list(Mod:table(counters)))),
-                    true = exit(whereis(Mod:table(params)), kill),
-                    true = exit(whereis(Mod:table(counters)), kill),
-                    ?assertEqual(1, Mod:info(input)),
-                    glc:handle(Mod, gre:make([{'a', 1}], [list])),
-                    ?assertEqual(2, Mod:info(input)),
-                    ?assertEqual(2, Mod:info(output)),
-                    ?assertEqual(1, length(gr_param:list(Mod:table(params)))),
-                    ?assertEqual(3, length(gr_counter:list(Mod:table(counters))))
-                end
-            }
-        ]
-    }.
+nullquery_exists_test() ->
+    {compiled, Mod} = setup_query(testmod3, glc:null(false)),
+    ?assert(erlang:function_exported(Mod, info, 1)),
+    ?assertError(badarg, Mod:info(invalid)),
+    ?assertEqual({null, false}, Mod:info('query')).
+
+init_counters_test() ->
+    {compiled, Mod} = setup_query(testmod4, glc:null(false)),
+    ?assertEqual(0, Mod:info(input)),
+    ?assertEqual(0, Mod:info(filter)),
+    ?assertEqual(0, Mod:info(output)).
+
+filtered_event_test() ->
+    %% If no selection condition is specified no inputs can match.
+    {compiled, Mod} = setup_query(testmod5, glc:null(false)),
+    glc:handle(Mod, gre:make([], [list])),
+    ?assertEqual(1, Mod:info(input)),
+    ?assertEqual(1, Mod:info(filter)),
+    ?assertEqual(0, Mod:info(output)).
+
+nomatch_event_test() ->
+    %% If a selection condition but no body is specified the event
+    %% is expected to count as filtered out if the condition does
+    %% not hold.
+    {compiled, Mod} = setup_query(testmod6, glc:eq('$n', 'noexists@nohost')),
+    glc:handle(Mod, gre:make([{'$n', 'noexists2@nohost'}], [list])),
+    ?assertEqual(1, Mod:info(input)),
+    ?assertEqual(1, Mod:info(filter)),
+    ?assertEqual(0, Mod:info(output)).
+
+opfilter_eq_test() ->
+    %% If a selection condition but no body is specified the event
+    %% counts as input to the query, but not as filtered out.
+    {compiled, Mod} = setup_query(testmod7, glc:eq('$n', 'noexists@nohost')),
+    glc:handle(Mod, gre:make([{'$n', 'noexists@nohost'}], [list])),
+    ?assertEqual(1, Mod:info(input)),
+    ?assertEqual(0, Mod:info(filter)),
+    ?assertEqual(1, Mod:info(output)),
+    done.
+
+
+opfilter_gt_test() ->
+    {compiled, Mod} = setup_query(testmod8, glc:gt(a, 1)),
+    glc:handle(Mod, gre:make([{'a', 2}], [list])),
+    ?assertEqual(1, Mod:info(input)),
+    ?assertEqual(0, Mod:info(filter)),
+    glc:handle(Mod, gre:make([{'a', 0}], [list])),
+    ?assertEqual(2, Mod:info(input)),
+    ?assertEqual(1, Mod:info(filter)),
+    ?assertEqual(1, Mod:info(output)),
+    done.
+
+opfilter_lt_test() ->
+    {compiled, Mod} = setup_query(testmod9, glc:lt(a, 1)),
+    glc:handle(Mod, gre:make([{'a', 0}], [list])),
+    ?assertEqual(1, Mod:info(input)),
+    ?assertEqual(0, Mod:info(filter)),
+    ?assertEqual(1, Mod:info(output)),
+    glc:handle(Mod, gre:make([{'a', 2}], [list])),
+    ?assertEqual(2, Mod:info(input)),
+    ?assertEqual(1, Mod:info(filter)),
+    ?assertEqual(1, Mod:info(output)),
+    done.
+
+allholds_op_test() ->
+    {compiled, Mod} = setup_query(testmod10,
+        glc:all([glc:eq(a, 1), glc:eq(b, 2)])),
+    glc:handle(Mod, gre:make([{'a', 1}], [list])),
+    glc:handle(Mod, gre:make([{'a', 2}], [list])),
+    ?assertEqual(2, Mod:info(input)),
+    ?assertEqual(2, Mod:info(filter)),
+    glc:handle(Mod, gre:make([{'b', 1}], [list])),
+    glc:handle(Mod, gre:make([{'b', 2}], [list])),
+    ?assertEqual(4, Mod:info(input)),
+    ?assertEqual(4, Mod:info(filter)),
+    glc:handle(Mod, gre:make([{'a', 1},{'b', 2}], [list])),
+    ?assertEqual(5, Mod:info(input)),
+    ?assertEqual(4, Mod:info(filter)),
+    ?assertEqual(1, Mod:info(output)),
+    done.
+
+anyholds_op_test() ->
+    {compiled, Mod} = setup_query(testmod11,
+        glc:any([glc:eq(a, 1), glc:eq(b, 2)])),
+    glc:handle(Mod, gre:make([{'a', 2}], [list])),
+    glc:handle(Mod, gre:make([{'b', 1}], [list])),
+    ?assertEqual(2, Mod:info(input)),
+    ?assertEqual(2, Mod:info(filter)),
+    glc:handle(Mod, gre:make([{'a', 1}], [list])),
+    glc:handle(Mod, gre:make([{'b', 2}], [list])),
+    ?assertEqual(4, Mod:info(input)),
+    ?assertEqual(2, Mod:info(filter)),
+    done.
+
+with_function_test() ->
+    Self = self(),
+    {compiled, Mod} = setup_query(testmod12,
+        glc:with(glc:eq(a, 1), fun(Event) -> Self ! gre:fetch(a, Event) end)),
+    glc:handle(Mod, gre:make([{a,1}], [list])),
+    ?assertEqual(1, Mod:info(output)),
+    ?assertEqual(1, receive Msg -> Msg after 0 -> notcalled end),
+    done.
 
 union_error_test() ->
     ?assertError(badarg, glc:union([glc:eq(a, 1)])),

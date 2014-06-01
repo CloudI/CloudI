@@ -3,14 +3,14 @@
 {application, lager,
  [
   {description, "Erlang logging framework"},
-  {vsn, "2.0.1"},
+  {vsn, "2.0.0"},
   {modules, []},
   {applications, [
                   kernel,
-                  stdlib,
-                  goldrush
+                  stdlib
                  ]},
   {registered, [lager_sup, lager_event, lager_crash_log, lager_handler_watcher_sup]},
+  {included_applications, [goldrush]},
   {mod, {lager_app, []}},
   {env, [
             %% What handlers to install with what arguments
@@ -53,9 +53,6 @@
             %% How many messages per second to allow from error_logger before we start dropping them
             {error_logger_hwm, 50},
             %% How big the gen_event mailbox can get before it is switched into sync mode
-            {async_threshold, 20},
-            %% Switch back to async mode, when gen_event mailbox size decrease from `async_threshold'
-            %% to async_threshold - async_threshold_window
-            {async_threshold_window, 5}
+            {async_threshold, 20}
         ]}
  ]}.

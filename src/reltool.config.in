@@ -81,7 +81,7 @@
   %                   cloudi_x_goldrush
   {app, syntax_tools,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  % cloudi_x_lager from cloudi_x_erlasticsearch and cloudi_x_erlang_cassandra
+  % cloudi_x_lager from cloudi_x_erlang_cassandra
   {app, cloudi_x_lager,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   % cloudi_x_goldrush from cloudi_x_lager

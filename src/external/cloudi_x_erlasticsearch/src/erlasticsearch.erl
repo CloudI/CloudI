@@ -54,6 +54,7 @@
 -export([search/4, search/5]).
 -export([count/2, count/3, count/4, count/5]).
 -export([delete_by_query/2, delete_by_query/3, delete_by_query/4, delete_by_query/5]).
+-export([bulk/2, bulk/3, bulk/4]).
 
 %% Index helpers
 -export([status/2]).
@@ -406,6 +407,24 @@ search(Destination, Index, Type, Doc) when is_binary(Index) andalso is_binary(Ty
 search(Destination, Index, Type, Doc, Params) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) andalso is_list(Params) ->
     route_call(Destination, {search, Index, Type, Doc, Params}, infinity).
 
+%% @doc Perform bulk operations on the ElasticSearch cluster
+-spec bulk(destination(), doc()) -> response().
+bulk(Destination, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    bulk(Destination, <<>>, <<>>, Doc).
+
+%% @doc Perform bulk operations on the ElasticSearch cluster 
+%% with a default index
+-spec bulk(destination(), index(), doc()) -> response().
+bulk(Destination, Index, Doc) when is_binary(Index) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    bulk(Destination, Index, <<>>, Doc).
+
+%% @doc Perform bulk operations on the ElasticSearch cluster 
+%% with a default index and a default type
+-spec bulk(destination(), index(), type(), doc()) -> response().
+bulk(Destination, Index, Type, Doc) when is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+    route_call(Destination, {bulk, Index, Type, Doc}, infinity).
+
+
 %% @equiv refresh(Destination, ?ALL).
 %% @doc Refresh all indices
 %-spec refresh(destination()) -> response().
@@ -705,6 +724,11 @@ handle_call({_Request = delete_doc, Index, Type, Id, Params}, _From, State = #st
 
 handle_call({_Request = search, Index, Type, Doc, Params}, _From, State = #state{connection = Connection0}) ->
     RestRequest = rest_request_search(Index, Type, Doc, Params),
+    {Connection1, Response} = process_request(Connection0, RestRequest, State),
+    {reply, Response, State#state{connection = Connection1}};
+
+handle_call({_Request = bulk, Index, Type, Doc}, _From, State = #state{connection = Connection0}) ->
+    RestRequest = rest_request_bulk(Index, Type, Doc),
     {Connection1, Response} = process_request(Connection0, RestRequest, State),
     {reply, Response, State#state{connection = Connection1}};
 
@@ -1073,6 +1097,27 @@ rest_request_search(Index, Type, Doc, Params) when is_binary(Index) andalso
                                                    is_list(Params) ->
     Uri = make_uri([Index, Type, ?SEARCH], Params),
     #restRequest{method = ?elasticsearch_Method_GET,
+                 uri = Uri,
+                 body = Doc}.
+
+rest_request_bulk(<<>>, <<>>, Doc) when (is_binary(Doc) orelse is_list(Doc)) ->
+    Uri = make_uri([?BULK], []),
+    #restRequest{method = ?elasticsearch_Method_POST,
+                 uri = Uri,
+                 body = Doc};
+
+rest_request_bulk(Index, <<>>, Doc) when is_binary(Index) andalso
+                                        (is_binary(Doc) orelse is_list(Doc)) ->
+    Uri = make_uri([Index, ?BULK], []),
+    #restRequest{method = ?elasticsearch_Method_POST,
+                 uri = Uri,
+                 body = Doc};
+
+rest_request_bulk(Index, Type, Doc) when is_binary(Index) andalso
+                                         is_binary(Type) andalso
+                                         (is_binary(Doc) orelse is_list(Doc)) ->
+    Uri = make_uri([Index, Type, ?BULK], []),
+    #restRequest{method = ?elasticsearch_Method_POST,
                  uri = Uri,
                  body = Doc}.
 

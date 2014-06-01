@@ -77,6 +77,7 @@
 -define(ALIASES, <<"_aliases">>).
 -define(ALIAS, <<"_alias">>).
 -define(UPDATE, <<"_update">>).
+-define(BULK, <<"_bulk">>).
 
 % Shortcuts
 -define(ALL, <<"_all">>).

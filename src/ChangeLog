@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update erlang_cassandra and erlasticsearch (ES >= 1.x)
+    * Update thrift
+    * Fix lager and goldrush dependencies
+
 2014-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add a test to the cloudi_service_db_pgsql ct test

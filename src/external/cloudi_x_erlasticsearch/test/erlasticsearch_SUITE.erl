@@ -203,7 +203,8 @@ groups() ->
       [ t_insert_doc, 
        t_get_doc, 
        t_update_doc, 
-       t_delete_doc
+       t_delete_doc,
+       t_bulk
       ]},
     {doc_helpers, [{repeat, 5}],
        [t_is_doc,
@@ -213,7 +214,7 @@ groups() ->
       ]},
      {test, [{repeat, 5}],
       [
-        t_indices_stats
+        t_delete_by_query_param
       ]},
      {cluster_helpers, [{repeat, 5}],
       [t_health,
@@ -903,6 +904,10 @@ count_from_result(Result) ->
         {_, Value} -> Value
     end.
 
+t_bulk(Config) ->
+    ServerRef = ?config(pool, Config),
+    process_t_bulk(ServerRef, Config).
+
 t_insert_doc(Config) ->
     ServerRef = ?config(pool, Config),
     process_t_insert_doc(ServerRef, Config),
@@ -970,6 +975,22 @@ process_t_insert_doc(ServerRef, Config) ->
                 Response = erlasticsearch:insert_doc(ServerRef, Index, 
                                                      Type, BX, json_document(X)),
                 true = erlasticsearch:is_200_or_201(Response)
+        end, lists:seq(1, ?DOCUMENT_DEPTH)),
+    erlasticsearch:flush(ServerRef, Index).
+
+process_t_bulk(ServerRef, Config) ->
+    Index = ?config(index, Config),
+    Type = ?config(type, Config),
+    lists:foreach(fun(X) ->
+                Response1 = erlasticsearch:bulk(ServerRef, <<>>, 
+                                                <<>>, bulk_document(<<>>, <<>>, X)),
+                true = erlasticsearch:is_200_or_201(Response1),
+                Response2 = erlasticsearch:bulk(ServerRef, Index, 
+                                                Type, bulk_document(Index, <<>>, X)),
+                true = erlasticsearch:is_200_or_201(Response2),
+                Response3 = erlasticsearch:bulk(ServerRef, Index, 
+                                               Type, bulk_document(Index, Type, X)),
+                true = erlasticsearch:is_200_or_201(Response3)
         end, lists:seq(1, ?DOCUMENT_DEPTH)),
     erlasticsearch:flush(ServerRef, Index).
 
@@ -1046,6 +1067,36 @@ document(N) ->
                Tuple ++ Acc
         end, [], lists:seq(1, N)).
 
+bulk_document(Index, Type, N) ->
+    case N of
+        1 -> bulk_line(Index, Type, 1);
+        X -> erlasticsearch:join([bulk_line(Index, Type, X), bulk_document(Index, Type, X-1)], <<>>)
+    end.
+
+bulk_line(<<>>, <<>>, N) ->
+    Index = index(N),
+    Type = type(N),
+    Id = id(N),
+    Key = key(N),
+    Value = value(N),
+    <<"{ \"index\" : { \"_index\" : \"", Index/binary, "\", \"_type\" : \"", Type/binary, "\", \"_id\" : \"", Id/binary, "\" } }\n{ \"", Key/binary, "\" : \"", Value/binary, "\" }\n">>;
+% Pre-existing Index
+bulk_line(_Index, <<>>, N) ->
+    Type = type(N),
+    Id = id(N),
+    Key = key(N),
+    Value = value(N),
+    <<"{ \"index\" : { \"_type\" : \"", Type/binary, "\", \"_id\" : \"", Id/binary, "\" } }\n{ \"", Key/binary, "\" : \"", Value/binary, "\" }\n">>;
+% Pre-existing Index and Type
+bulk_line(_Index, _Type, N) ->
+    Id = id(N),
+    Key = key(N),
+    Value = value(N),
+    <<"{ \"index\" : { \"_id\" : \"", Id/binary, "\" } }\n{ \"", Key/binary, "\" : \"", Value/binary, "\" }\n">>.
+
+index(N) -> data_index(index, N).
+type(N) -> data_index(type, N).
+id(N) -> data_index(id, N).
 key(N) -> data_index(key, N).
 value(N) -> data_index(value, N).
 sub(N) -> data_index(sub, N).

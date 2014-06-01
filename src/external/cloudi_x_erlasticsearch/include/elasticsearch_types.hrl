@@ -54,14 +54,14 @@
 
 -record(restRequest, {method                    :: integer(),
                       uri                       :: string() | binary(),
-                      parameters = dict:new(),
-                      headers = dict:new(),
+                      parameters = dict:new()   :: dict(),
+                      headers = dict:new()      :: dict(),
                       body = <<"">>             :: string() | binary()
                      }).
 
 %% struct restResponse
 
 -record(restResponse, {status :: integer(),
-                       headers,
+                       headers :: dict(),
                        body :: undefined | string() | binary()
                       }).

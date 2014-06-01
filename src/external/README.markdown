@@ -57,7 +57,7 @@ exceptions due to their C integration).
 - `BSD`
 
 `elli`
---------
+------
 `Erlang HTTP Server`
 - `https://github.com/knutin/elli/`
 - `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (0.4.1)`
@@ -96,17 +96,17 @@ exceptions due to their C integration).
 `Erlang ElasticSearch (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlasticsearch`
-- `commit d7aaed637294db5d9874828ffc7394df9189b146`
-- `Fri Apr 11 08:47:29 PDT 2014`
+- `commit e94b86a77f313757dc0778bc7af44c4c232ac3e9 (1.6.1)`
+- `Sat May 31 13:12:17 PDT 2014`
 - `BSD`
 
 `erlang_cassandra`
-----------------
+------------------
 `Erlang Cassandra (thrift) Driver`
 
 - `https://github.com/dieswaytoofast/erlang_cassandra`
 - `commit 6d026bfb06f8efd53e63a32f9b887a01bcc550ad`
-- `Tue Dec 17 09:29:27 PST 2013`
+- `Sat May 31 13:01:02 PDT 2014`
 - `BSD`
 
 `erlcloud`
@@ -132,8 +132,8 @@ exceptions due to their C integration).
 `Small, Fast Event Processing for Erlang`
 
 - `https://github.com/DeadZen/goldrush`
-- `commit 1d883423ac360b3536ca52dc733a0164bacf3109 (0.1.5)`
-- `Tue Nov 19 09:19:54 PST 2013`
+- `commit 879c69874a555b2c13498aa4a3da6f6bbbb6a031`
+- `Sat May 31 13:19:18 PDT 2014`
 - `MIT`
 
 `jinterface`
@@ -168,8 +168,8 @@ exceptions due to their C integration).
 `Erlang Logging`
 
 - `https://github.com/basho/lager`
-- `commit ad400896af5b1ad8b4f7a4d34e609b5a990640bb (2.0.1)`
-- `Tue Nov 19 09:19:54 PST 2013`
+- `commit 169cffd94759e99e2e8870b125861a91e3c1482a (2.0.0)`
+- `Sat May 31 13:14:26 PDT 2014`
 - `Apache License 2.0`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
@@ -282,8 +282,8 @@ exceptions due to their C integration).
 `Erlang Thrift software library`
 
 - `https://github.com/dieswaytoofast/thrift`
-- `commit 0b8efd728f2ff2106d5e15e3c65c8ef895451c0a`
-- `Thu Sep 26 16:19:26 2013 -0400`
+- `commit 1e04570a702b782df600c31537105f46ce0813f2 (0.9.3)`
+- `Sat May 31 13:06:15 PDT 2014`
 - `Apache License`
 
 `zeromq/v?/erlzmq`
