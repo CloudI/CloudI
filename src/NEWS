@@ -25,7 +25,8 @@ May 31, 2014
     (to map from a service name pattern to a new service name destination)
   * The cloudi_service_db_pgsql now provides either the
     https://github.com/semiocast/pgsql or https://github.com/wg/epgsql
-    driver along with a separate confguration option for providing common output
+    driver along with a separate configuration option
+    for providing common output
   * Log output now reflects the default (tuple) service configuration format
   * Various bugfixes, small additions, and documentation improvements
 
