@@ -1,4 +1,4 @@
-Items waiting for after the release of version 1.3.1
+Items waiting for after the release of version 1.3.2
 ----------------------------------------------------
 julia CloudI API
     * fdio([name::String], fd::Integer[, own::Bool]) -> IOStream

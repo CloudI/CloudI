@@ -5,7 +5,7 @@
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
-  <meta content="This document copyright 2009-2013 by Michael Truog" name="copyright" />
+  <meta content="This document copyright 2009-2014 by Michael Truog" name="copyright" />
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="stylesheet" type="text/css" title="print"
         href="print.css" />
@@ -36,6 +36,30 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     &nbsp;<a href="faq.html#1_WhatIs">A Cloud at the lowest level!</a>
   </div>
   <br />
+  <h2>Purpose</h2>
+  <p>
+  <a href="faq.html#1_WhatIs">
+  CloudI provides a Cloud for software developers without requiring
+  virtualization.
+  </a>
+  </p>
+  <h2>Usage</h2>
+  <p>
+  CloudI is for back-end server processing tasks that require soft-realtime
+  transaction processing external to database usage
+  (in C/C++, Erlang, Java, Python and Ruby).  Examples include:
+  <ul>
+    <li>REST API Implementation</li>
+    <li>Account Management</li>
+    <li>Authentication</li>
+    <li>Game Server Development</li>
+    <li>Data Mining</li>
+    <li>Iterative Algorithms</li>
+    <li>Protocol Implementation</li>
+    <li>Telecommunications</li>
+    <li><a href="faq.html#1_WhatIs">etc.</a></li>
+  </ul>
+  </p>
 
   <h2>Quick Start</h2>
   <p>
@@ -54,9 +78,9 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <h3>Get CloudI Running</h3>
 
 <pre>
-$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.1.tar.gz
-$ tar zxvf cloudi-1.3.1.tar.gz
-$ cd cloudi-1.3.1/src
+$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.2.tar.gz
+$ tar zxvf cloudi-1.3.2.tar.gz
+$ cd cloudi-1.3.2/src
 $ ./configure
 $ make
 $ sudo make install
@@ -110,7 +134,7 @@ cloudi_service_handle_info(Request, State, _) -&gt;
 cloudi_service_terminate(_, #state{}) -&gt;
     ok.
 EOF
-$ erlc -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1 -pz /usr/local/lib/cloudi-1.3.1/lib/cloudi_core-1.3.1/ebin hello_world.erl
+$ erlc -pz /usr/local/lib/cloudi-1.3.2/lib/cloudi_core-1.3.2 -pz /usr/local/lib/cloudi-1.3.2/lib/cloudi_core-1.3.2/ebin hello_world.erl
 </pre>
 
     <p>
@@ -167,7 +191,7 @@ Hello World!
 <pre>
 $ cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.3.1/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.3.2/api/python/')
 from cloudi_c import API
 
 class Task(object):

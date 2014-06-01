@@ -3,9 +3,11 @@
 
 2014-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 1.3.2 (beta) released
     * Update erlang_cassandra and erlasticsearch (ES >= 1.x)
     * Update thrift
     * Fix lager and goldrush dependencies
+    * Update documentation
 
 2014-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 

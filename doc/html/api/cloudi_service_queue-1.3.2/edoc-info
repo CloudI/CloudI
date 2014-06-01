@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,cloudi_service_queue}.
+{packages,[]}.
+{modules,[cloudi_service_queue,cloudi_write_ahead_logging]}.

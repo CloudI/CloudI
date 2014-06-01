@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,nodefinder}.
+{packages,[]}.
+{modules,[nodefinder,nodefinder_app,nodefinder_ec2,nodefinder_multicast,
+          nodefinder_sup]}.

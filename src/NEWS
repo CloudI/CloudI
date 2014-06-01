@@ -1,3 +1,34 @@
+May 31, 2014
+  Version 1.3.2 (beta) released.
+  * Fixes for Erlang/OTP 17.0 compilation
+  * Improved node auto-discovery functionality and configuration
+    * Add cloudi_service_api:nodes_set/2 for dynamically configuring
+      CloudI nodes configuration
+    * EC2 node discovery now works as expected, selecting based on
+      tags and/or security groups
+    * Allow node connections to be hidden for more complex network topologies
+    (see http://cloudi.org/api.html#2_nodes_set)
+  * Add cloudi_service_queue for persistent queuing of service requests
+    with CT tests
+  * Add cloudi_service_filesystem file update notification service requests
+    (see notify_one and notify_all configuration)
+  * The cloudi_service_http_cowboy service has many different additions:
+    * Added websocket_protocol for creating a mapping between a protocol id
+      and the TransId of websocket service requests to avoid contention
+    * Added websocket_subscriptions for adding additional websocket connection
+      subscriptions for receiving service requests, conditional on the
+      connection URL (to simplify messaging to groups of websockets)
+    * websocket_connect and websocket_disconnect can be set to be either
+      async or sync service requests
+    * use_websockets == exclusively for only using websockets
+  * Add service name pattern support to cloudi_service_router
+    (to map from a service name pattern to a new service name destination)
+  * The cloudi_service_db_pgsql now provides either the
+    https://github.com/semiocast/pgsql or https://github.com/wg/epgsql
+    driver along with a separate confguration option for providing common output
+  * Log output now reflects the default (tuple) service configuration format
+  * Various bugfixes, small additions, and documentation improvements
+
 February 1, 2014
   Version 1.3.1 (beta) released.
   * Added a demo of CloudI scaling a game server (a MUD) that is 20+ years old

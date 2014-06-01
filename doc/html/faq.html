@@ -5,7 +5,7 @@
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="faq, cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
-  <meta content="This document copyright 2009-2013 by Michael Truog" name="copyright" />
+  <meta content="This document copyright 2009-2014 by Michael Truog" name="copyright" />
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="stylesheet" type="text/css" title="print"
         href="print.css" />
@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.3.1b<br />
-              last updated on February 1<sup>st</sup> 2014</h3></center>
+  <center><h3>version 1.3.2b<br />
+              last updated on May 31<sup>st</sup> 2014</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -50,7 +50,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_OnlineService">1.10 - Can I use CloudI as an Online Service?</a></li>
     <li><a href="#1_CAP"          >1.11 - What CAP theorem guarantees does CloudI provide?</a></li>
     <li><a href="#1_REST"         >1.12 - Does CloudI support REST?</a></li>
-    <li><a href="#1_HowAbout"     >1.13 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_SOA"          >1.13 - Does CloudI provide a Service-Oriented Architecture (SOA)</a></li>
+    <li><a href="#1_Microservices">1.14 - Does CloudI provide a Microservice Architecture?</a></li>
+    <li><a href="#1_Reactive"     >1.15 - Is CloudI Reactive?</a></li>
+    <li><a href="#1_HowAbout"     >1.16 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -384,12 +387,95 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <h3>1.12 - Does CloudI support REST?</h3>
   <p class="paragraph">
     Yes!  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>.
+    A common misconception is that REST requires HTTP usage
+    (see <a href="http://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm" target="_blank">Roy Fielding's thesis to understand why this is not the case</a>, <a href="http://www.ics.uci.edu/~taylor/documents/2002-REST-TOIT.pdf" target="_blank">Fielding, Roy T.; Taylor, Richard N. (May 2002), "Principled Design of the Modern Web Architecture" (PDF), ACM Transactions on Internet Technology (TOIT) (New York: Association for Computing Machinery) 2 (2): 115–150, doi:10.1145/514183.514185, ISSN 1533-5399</a>).
+    In CloudI, service requests operate with <a href="http://en.wikipedia.org/wiki/Representational_state_transfer#Architectural_Constraints" target="_blank">REST architectual constraints</a> for better reliability and scalability than
+    an ad-hoc brittle server would provide.
+    For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_SOA"></a>
+  <h3>1.13 - Does CloudI provide a Service Oriented Architecture (SOA)?</h3>
+  <p class="paragraph">
+    Yes!  CloudI provides a <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a>
+    for flexible development, deployment, and maintenance of
+    <a href="http://en.wikipedia.org/wiki/Enterprise_software" target="_blank">Enterprise Software Applications (ESA)</a>.
+    CloudI provides an <a href="http://en.wikipedia.org/wiki/Enterprise_service_bus" target="_blank">Enterprise Service Bus (ESB)</a>
+    which avoids latency overhead by avoiding serialization and conversions
+    of protocols like
+    <a href="https://kentonv.github.io/capnproto/" target="_blank">Cap'n Proto</a>,
+    <a href="http://en.wikipedia.org/wiki/Protocol_Buffers" target="_blank">Google Protocol Buffers</a>
+    (<a href="http://en.wikipedia.org/wiki/Asn.1" target="_blank">ASN.1</a>
+     or <a href="http://en.wikipedia.org/wiki/DFDL" target="_blank">DFDL</a>),
+    <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer#Applied_to_Web_Services" target="_blank">HTTP REST</a>
+    (with <a href="http://json.org/" target="_blank">JSON</a>
+     or <a href="http://www.w3.org/TR/xml/" target="_blank">XML</a>),
+    <a href="http://msgpack.org/" target="_blank">MessagePack</a>,
+    <a href="http://bsonspec.org/" target="_blank">BSON</a>,
+    <a href="http://en.wikipedia.org/wiki/SOAP" target="_blank">SOAP</a>,
+    <a href="http://en.wikipedia.org/wiki/JSON_RPC" target="_blank">JSON-RPC</a>,
+    <a href="http://en.wikipedia.org/wiki/Xmlrpc" target="_blank">XML-RPC</a>,
+    <a href="http://en.wikipedia.org/wiki/Streaming_Text_Oriented_Messaging_Protocol" target="_blank">STOMP</a>,
+    <a href="http://en.wikipedia.org/wiki/Corba" target="_blank">CORBA</a>,
+    <a href="http://en.wikipedia.org/wiki/SunRPC" target="_blank">Sun RPC</a>,
+    etc. and instead relies on the exchange of binary data between
+    heterogeneous services with the CloudI API.
+  </p>
+  <p class="paragraph">
+    CloudI service requests provide
+    <a href="http://en.wikipedia.org/wiki/Request-response" target="_blank">Request/Reply</a>
+    (<a href="http://en.wikipedia.org/wiki/Remote_procedure_call" target="_blank">RPC</a>),
+    <a href="http://en.wikipedia.org/wiki/Publish/subscribe" target="_blank">Publish/Subscribe</a> and
+    <a href="http://en.wikipedia.org/wiki/Flow-based_programming" target="_blank">Pipeline messaging (i.e., Flow-Based Programming (FBP))</a>.
+    CloudI supports both <a href="http://zeromq.org/whitepapers:brokerless" target="_blank">broker and broker-less</a>
+    service requests with a distributed fault-tolerant service directory
+    (using "service names" and "service patterns")
+    that can be locally cached (when using a "lazy" destination refresh method,
+    instead of "immediate").
+    For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_Microservices"></a>
+  <h3>1.14 - Does CloudI provide a Microservice Architecture?</h3>
+  <p class="paragraph">
+    Yes!  CloudI provides <a href="http://martinfowler.com/articles/microservices.html" target="_blank">Microservices</a>
+    using light-weight messaging to facilitate CloudI
+    <a href="#1_SOA">service requests</a> with the CloudI API.
+    HTTP integration is provided by
+    <a href="#6_HTTP">cloudi_service_http_cowboy</a>
+    (with other protocol integration relying on other CloudI services).
+    The service memory footprint is kept small by relying on Erlang processes
+    for their light-weight messaging (utilizing the Erlang VM's
+    <a href="http://en.wikipedia.org/wiki/Actor_model" target="_blank">Actor Model</a> implementation).
+  </p>
+  <p class="paragraph">
+    Using Erlang processes to provide a service abstraction allows all
+    service requests to be exchanged in a common way with external programming
+    language integration requiring only a thin interface
+    (an implementation of the CloudI API).  The CloudI API imposes
+    <a href="#4_Erlang">no contention</a> on the extreme concurrency the
+    Erlang VM provides with CloudI's Erlang process integration.
+    For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
+  <a name="1_Reactive"></a>
+  <h3>1.15 - Is CloudI Reactive?</h3>
+  <p class="paragraph">
+    Yes!  CloudI is <a href="http://www.reactivemanifesto.org/" target="_blank">Reactive</a>
+    due to the scalability and fault-tolerance provided by Erlang combined
+    with the <a href="#1_REST">REST</a>
+    requirement of <a href="http://en.wikipedia.org/wiki/Representational_state_transfer#Stateless" target="_blank">being stateless</a>
+    for service requests to provide event-driven, scalable, resilient and
+    responsive CloudI services.
     For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_HowAbout"></a>
-  <h3>1.13 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.16 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -505,6 +591,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a href="http://www.toptal.com/erlang/a-cloud-at-the-lowest-level-built-in-erlang" target="_blank">Bringing Erlang's Fault-Tolerance to Polyglot Development</a>
   </td><td>
   @Toptal Engineering Blog
+  </td></tr><tr><td>
+  <a href="http://www.toptal.com/erlang/modernizing-legacy-software-an-example-using-erlang-and-cloudi" target="_blank">Modernizing Legacy Software: A Case Study Using Erlang and CloudI</a> (<a href="https://github.com/okeuday/sillymud#readme" target="_blank">integration source code</a>)
+  </td><td>
+  @Toptal Engineering Blog
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -548,7 +638,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     So, that means that the configuration will expect a C compiler,
     a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
     Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R16</a>).
-    CloudI is tested on each release of Erlang (currently R16B03).
+    CloudI is tested on each release of Erlang (currently 17.0).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>

@@ -836,6 +836,17 @@ pattern_parse(Pattern, L) ->
 %% ===Parse a string based on the supplied wildcard pattern.===
 %% "*" is the wildcard character (equivalent to the ".+" regex) and
 %% "**" is forbidden.
+%% This function assumes there is a direct match with the characters following
+%% the wildcard characters, so "*/" will parse "//" but not "///".  That means
+%% it currently depends on the pattern delimiters being unique
+%% (not part of what is consumed by the wildcard).  So, it is possible to have
+%% a find_match/2 argument that doesn't parse with the pattern it matches
+%% (since it is matching the most exact pattern while not making any
+%%  decisions based on the delimiters following wildcard characters, i.e.,
+%%  it backtracks through the string to match when the current path through
+%%  the pattern doesn't match).  This function's current implementation
+%% is simple to keep the pattern parse efficient, without the need to
+%% consume extra memory.
 %% @end
 %%-------------------------------------------------------------------------
 

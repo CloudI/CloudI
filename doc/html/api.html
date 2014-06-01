@@ -5,7 +5,7 @@
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="api, cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
-  <meta content="This document copyright 2013 by Michael Truog" name="copyright" />
+  <meta content="This document copyright 2013-2014 by Michael Truog" name="copyright" />
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="stylesheet" type="text/css" title="print"
         href="print.css" />
@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.3.1b<br />
-              last updated on February 1<sup>st</sup> 2014</h3></center>
+  <center><h3>version 1.3.2b<br />
+              last updated on May 31<sup>st</sup> 2014</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -73,14 +73,15 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_services"              >2.8 - services</a></li>
     <li><a href="#2_nodes_add"             >2.9 - nodes_add</a></li>
     <li><a href="#2_nodes_remove"          >2.10 - nodes_remove</a></li>
-    <li><a href="#2_nodes_alive"           >2.11 - nodes_alive</a></li>
-    <li><a href="#2_nodes_dead"            >2.12 - nodes_dead</a></li>
-    <li><a href="#2_nodes"                 >2.13 - nodes</a></li>
-    <li><a href="#2_loglevel_set"          >2.14 - loglevel_set</a></li>
-    <li><a href="#2_log_redirect"          >2.15 - log_redirect</a></li>
-    <li><a href="#2_code_path_add"         >2.16 - code_path_add</a></li>
-    <li><a href="#2_code_path_remove"      >2.17 - code_path_remove</a></li>
-    <li><a href="#2_code_path"             >2.18 - code_path</a></li>
+    <li><a href="#2_nodes_set"             >2.11 - nodes_set</a></li>
+    <li><a href="#2_nodes_alive"           >2.12 - nodes_alive</a></li>
+    <li><a href="#2_nodes_dead"            >2.13 - nodes_dead</a></li>
+    <li><a href="#2_nodes"                 >2.14 - nodes</a></li>
+    <li><a href="#2_loglevel_set"          >2.15 - loglevel_set</a></li>
+    <li><a href="#2_log_redirect"          >2.16 - log_redirect</a></li>
+    <li><a href="#2_code_path_add"         >2.17 - code_path_add</a></li>
+    <li><a href="#2_code_path_remove"      >2.18 - code_path_remove</a></li>
+    <li><a href="#2_code_path"             >2.19 - code_path</a></li>
   </ul>
 
   <hr \>
@@ -291,13 +292,13 @@ CloudI::API.thread_count()
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.3.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.3.2/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.3.1/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.3.2/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -987,7 +988,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.3.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.3.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1205,7 +1206,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.3.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.3.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1475,7 +1476,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.3.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.3.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1578,7 +1579,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.3.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.3.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1609,7 +1610,7 @@ CloudI::API.forward_(command, name, request_info, request,
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.3.1/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.3.2/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -2152,12 +2153,219 @@ curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/
 curl -X POST -d "['cloud001@cluster1']" http://localhost:6467/cloudi/api/erlang/nodes_remove
 </p>
   <p class="paragraph">
-    Explicitly remove a CloudI node name.
+    Explicitly remove a CloudI node name.  The CloudI node must have
+    been added explicitly to be removed explicitly
+    (not added by an auto-discovery method).
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_nodes_set"></a>
+  <h3>2.11 - nodes_set</h3>
+<p class="code">
+curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6467/cloudi/api/erlang/nodes_set
+</p>
+  <p class="paragraph">
+    Set the distributed Erlang node configuration for a CloudI node
+    and any CloudI nodes it is currently connected to.
+  </p>
+  <a name="2_nodes_set_config"></a>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    nodes
+  </td><td>
+    []
+  </td><td>
+    Exact node names for distributed Erlang connections
+  </td></tr><tr><td>
+    reconnect_start
+  </td><td>
+    300
+  </td><td>
+    The delay (in seconds) before attempting to connect to any
+    distributed Erlang nodes, for the first time.
+  </td></tr><tr><td>
+    reconnect_delay
+  </td><td>
+    60
+  </td><td>
+    The delay (in seconds) before attempting to reconnect to any
+    distributed Erlang nodes.
+  </td></tr><tr><td>
+    listen
+  </td><td>
+    visible
+  </td><td>
+    What distributed Erlang node connections should be monitored:
+    'visible' or 'all' (to include hidden nodes).
+  </td></tr><tr><td>
+    connect
+  </td><td>
+    visible
+  </td><td>
+    What distributed Erlang node connections to create:
+    'visible' or 'hidden'
+    (single link, not part of a fully connected network topology)
+  </td></tr><tr><td>
+    timestamp_type
+  </td><td>
+    erlang
+  </td><td>
+    What timestamp to use for generating unique service request
+    transaction ids:
+    'erlang' or 'os' (weaker, discouraged)
+  </td></tr><tr><td>
+    <a href="#2_nodes_set_config_discovery">
+    discovery</a>
+  </td><td>
+    undefined
+  </td><td>
+    Distributed Erlang node auto-discovery mechanism configuration.
+  </td></tr></table>
+  <a name="2_nodes_set_config_discovery"></a>
+  <h4>discovery:</h4>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    <a href="#2_nodes_set_config_discovery_multicast">
+    multicast</a>
+  </td><td>
+    []
+  </td><td>
+    LAN multicast distributed Erlang node auto-discovery configuration.
+  </td></tr><tr><td>
+    <a href="#2_nodes_set_config_discovery_ec2">
+    ec2</a>
+  </td><td>
+    []
+  </td><td>
+    Amazon Web Services (AWS) EC2 distributed Erlang node auto-discovery
+    configuration (auto-discovery within a single region).
+    Requires custom configuration that provides
+    <a href="#2_nodes_set_config_discovery_ec2">EC2 access credentials</a>.
+  </td></tr></table>
+  <a name="2_nodes_set_config_discovery_multicast"></a>
+  <h4>multicast:</h4>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    address
+  </td><td>
+    {224,0,0,1}
+  </td><td>
+    The LAN multicast address (for UDP).
+  </td></tr><tr><td>
+    port
+  </td><td>
+    4475
+  </td><td>
+    The LAN multicast port (for UDP).
+  </td></tr><tr><td>
+    ttl
+  </td><td>
+    1
+  </td><td>
+    The LAN multicast TTL
+    (<a href="http://tools.ietf.org/rfc/rfc2730.txt" target="_blank">RFC</a>, <a href="http://www.tldp.org/HOWTO/Multicast-HOWTO-2.html#ss2.3" target="_blank">Linux</a>).
+  </td></tr></table>
+  <a name="2_nodes_set_config_discovery_ec2"></a>
+  <h4>ec2:</h4>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    access_key_id
+  </td><td>
+    undefined
+  </td><td>
+    AWS Access Key ID as a string (e.g. "ACCESS_KEY_ID").
+  </td></tr><tr><td>
+    secret_access_key
+  </td><td>
+    undefined
+  </td><td>
+    AWS Secret Access Key as a string (e.g. "SECRET_ACCESS_KEY").
+  </td></tr><tr><td>
+    host
+  </td><td>
+    "ec2.amazonaws.com"
+  </td><td>
+    AWS EC2 API <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region" target="_blank">endpoint</a>
+    (the default DNS string picks the closest endpoint for your AWS region).
+  </td></tr><tr><td>
+    groups
+  </td><td>
+    []
+  </td><td>
+    EC2 security groups selection to limit the instances selected
+    during EC2 distributed Erlang node auto-discovery.
+  </td></tr><tr><td>
+    tags
+  </td><td>
+    []
+  </td><td>
+    EC2 tags selection to limit the instances selected
+    during EC2 distributed Erlang node auto-discovery.
+  </td></tr></table>
+  <p class="paragraph">
+    EC2 auto-discovery configuration requires setting
+    'access_key_id' and 'secret_access_key' with either
+    'groups' and/or 'tags'.  Both 'groups' and 'tags' allow boolean expressions
+    with nesting (specified as a list), e.g.:
+  </p>
+<pre>
+[TAG | GROUP | OPERATOR]                 % implicitly an OR relationship
+{'OR', [TAG | GROUP | OPERATOR]}         % OR boolean OPERATOR
+{'AND', [TAG | GROUP | OPERATOR]}        % AND boolean OPERATOR
+
+"security-group-name"                    % GROUP
+
+"key1" | ["key3", "key4"]                % TAG (key names)
+
+{"key2", "value2"} |                     % TAG (key/value combinations)
+{["key5", "key6"], "value5"} |           %
+{"key5", ["value5", "value6"]} |         %
+{["key5", "key6"], ["value5", "value6"]} %
+
+% groups example #1 (implicit OR relationship):
+["security-group-a", "security-group-b"]
+
+% groups example #2 (explicit AND relationship):
+[{'AND', ["security-group-a", "security-group-b"]}]
+
+% groups example #3 (explicit OR relationship, same functionally as #1):
+[{'OR', ["security-group-a", "security-group-b"]}]
+
+% tags example
+[{'AND', [{"deployment", "development"}, {"cluster", "project42"}]}]
+</pre>
+  <p class="paragraph">
+    The EC2 auto-discovery requires that the security group(s) used
+    by the instances expose distributed Erlang ports (with TCP rules):
+    <ul>
+      <li>port 4369 (epmd) 10.0.0.0/8</li>
+      <li>ports 4374-4474 (inet_dist_listen) 10.0.0.0/8</li>
+    </ul>
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_alive"></a>
-  <h3>2.11 - nodes_alive</h3>
+  <h3>2.12 - nodes_alive</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes_alive
 </p>
@@ -2167,7 +2375,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes_alive
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_dead"></a>
-  <h3>2.12 - nodes_dead</h3>
+  <h3>2.13 - nodes_dead</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes_dead
 </p>
@@ -2178,7 +2386,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes_dead
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes"></a>
-  <h3>2.13 - nodes</h3>
+  <h3>2.14 - nodes</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/nodes
 </p>
@@ -2188,7 +2396,7 @@ curl http://localhost:6467/cloudi/api/erlang/nodes
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_loglevel_set"></a>
-  <h3>2.14 - loglevel_set</h3>
+  <h3>2.15 - loglevel_set</h3>
 <p class="code">
 curl -X POST -d 'warn' http://localhost:6467/cloudi/api/erlang/loglevel_set
 </p>
@@ -2200,7 +2408,7 @@ curl -X POST -d 'warn' http://localhost:6467/cloudi/api/erlang/loglevel_set
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_log_redirect"></a>
-  <h3>2.15 - log_redirect</h3>
+  <h3>2.16 - log_redirect</h3>
 <p class="code">
 curl -X POST -d 'cloudi@host' http://localhost:6467/cloudi/api/erlang/log_redirect
 </p>
@@ -2211,7 +2419,7 @@ curl -X POST -d 'cloudi@host' http://localhost:6467/cloudi/api/erlang/log_redire
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_add"></a>
-  <h3>2.16 - code_path_add</h3>
+  <h3>2.17 - code_path_add</h3>
 <p class="code">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_add
 </p>
@@ -2223,7 +2431,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/er
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_remove"></a>
-  <h3>2.17 - code_path_remove</h3>
+  <h3>2.18 - code_path_remove</h3>
 <p class="code">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/erlang/code_path_remove
 </p>
@@ -2235,7 +2443,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6467/cloudi/api/er
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path"></a>
-  <h3>2.18 - code_path</h3>
+  <h3>2.19 - code_path</h3>
 <p class="code">
 curl http://localhost:6467/cloudi/api/erlang/code_path
 </p>
