@@ -30,6 +30,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/erlang/services"`
   * `"/cloudi/api/erlang/nodes_add"`
   * `"/cloudi/api/erlang/nodes_remove"`
+  * `"/cloudi/api/erlang/nodes_set"`
   * `"/cloudi/api/erlang/nodes_alive"`
   * `"/cloudi/api/erlang/nodes_dead"`
   * `"/cloudi/api/erlang/nodes"`
