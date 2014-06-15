@@ -242,7 +242,7 @@
         try F catch exit:{timeout, _} -> {error, timeout} end).
 
 %%%------------------------------------------------------------------------
-%%% Callback functions from behavior
+%%% Callback functions for behavior
 %%%------------------------------------------------------------------------
 
 -callback cloudi_service_init(Args :: list(),
