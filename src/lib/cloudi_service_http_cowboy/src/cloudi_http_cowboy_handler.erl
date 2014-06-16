@@ -1227,7 +1227,7 @@ websocket_connect_check({sync, WebSocketConnectName}, Req,
         {ok, ResponseInfo, Response} ->
             case websocket_terminate_check(ResponseInfo, Response, Req) of
                 true ->
-                    {shutdown, Req, State};
+                    {shutdown, Req};
                 false ->
                     NewState = if
                         Response /= <<>> ->
@@ -1249,7 +1249,7 @@ websocket_connect_check({sync, WebSocketConnectName}, Req,
                     {ok, Req, NewState, TimeoutWebSocket}
             end;
         {error, timeout} ->
-            {shutdown, Req, State}
+            {shutdown, Req}
     end.
 
 websocket_disconnect_request(OutputType)
