@@ -104,7 +104,7 @@ class API(object):
             kwargs['priority'] = priority
         trans_ids = self.__api.mcast_async(name, request, **kwargs)
         if trans_ids is None:
-            return None
+            return tuple()
         return tuple([
             trans_ids[i:i + 16] for i in range(0, len(trans_ids), 16)
         ])

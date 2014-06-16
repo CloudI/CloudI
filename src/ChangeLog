@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-06-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for closing a connection in the response of a websocket_connect
+      in cloudi_service_http_cowboy
+
 2014-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the service request response to a websocket connection close

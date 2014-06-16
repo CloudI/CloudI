@@ -282,6 +282,7 @@ terminate(_Reason, _Req, _State) ->
 
 websocket_init(_Transport, Req0,
                #cowboy_state{prefix = Prefix,
+                             timeout_websocket = TimeoutWebSocket,
                              output_type = OutputType,
                              set_x_forwarded_for = SetXForwardedFor,
                              websocket_connect = WebSocketConnect,
@@ -314,33 +315,14 @@ websocket_init(_Transport, Req0,
     % when UseMethodSuffix == false
     PathRawStr = erlang:binary_to_list(PathRaw),
     NameWebSocket = PathRawStr ++ "/websocket",
-    HeadersIncoming1 = case lists:prefix(Prefix, NameWebSocket) of
-        true ->
-            % service requests are only received if they relate to
-            % the service's prefix
-            ok = cloudi_x_cpg:join(NameWebSocket),
-            if
-                WebSocketSubscriptions =:= undefined ->
-                    ok;
-                true ->
-                    % match websocket_subscriptions to determine if a
-                    % more subscriptions should occur, possibly
-                    % using parameters in a pattern template
-                    % for the subscription
-                    case cloudi_x_trie:find_match(PathRawStr,
-                                                  WebSocketSubscriptions) of
-                        error ->
-                            ok;
-                        {ok, Pattern, Functions} ->
-                            Parameters = cloudi_service:
-                                         service_name_parse(PathRawStr,
-                                                            Pattern),
-                            websocket_subscriptions(Functions, Parameters)
-                    end
-            end,
+    % service requests are only received if they relate to
+    % the service's prefix
+    SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
+    HeadersIncoming1 = if
+        SubscribeWebSocket =:= true ->
             [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
              HeadersIncoming0];
-        false ->
+        SubscribeWebSocket =:= false ->
             HeadersIncoming0
     end,
     PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
@@ -395,18 +377,45 @@ websocket_init(_Transport, Req0,
         true ->
             undefined
     end,
-    websocket_connect_check(WebSocketConnect, ReqN,
-        State#cowboy_state{
-            websocket_ping = WebSocketPingStatus,
-            websocket_subscriptions = undefined,
-            content_type_lookup = undefined,
-            websocket_state = #websocket_state{
-                name_incoming = NameIncoming,
-                name_outgoing = NameOutgoing,
-                request_info = RequestInfo,
-                response_lookup = ResponseLookup,
-                recv_timeouts = RecvTimeouts,
-                queued = Queued}}).
+    NewState = websocket_connect_check(WebSocketConnect,
+        State#cowboy_state{websocket_ping = WebSocketPingStatus,
+                           websocket_subscriptions = undefined,
+                           content_type_lookup = undefined,
+                           websocket_state = #websocket_state{
+                               name_incoming = NameIncoming,
+                               name_outgoing = NameOutgoing,
+                               request_info = RequestInfo,
+                               response_lookup = ResponseLookup,
+                               recv_timeouts = RecvTimeouts,
+                               queued = Queued}}),
+    if
+        SubscribeWebSocket =:= true ->
+            % service requests are only received if they relate to
+            % the service's prefix
+            ok = cloudi_x_cpg:join(NameWebSocket),
+            if
+                WebSocketSubscriptions =:= undefined ->
+                    ok;
+                true ->
+                    % match websocket_subscriptions to determine if a
+                    % more subscriptions should occur, possibly
+                    % using parameters in a pattern template
+                    % for the subscription
+                    case cloudi_x_trie:find_match(PathRawStr,
+                                                  WebSocketSubscriptions) of
+                        error ->
+                            ok;
+                        {ok, Pattern, Functions} ->
+                            Parameters = cloudi_service:
+                                         service_name_parse(PathRawStr,
+                                                            Pattern),
+                            websocket_subscriptions(Functions, Parameters)
+                    end
+            end;
+        SubscribeWebSocket =:= false ->
+            ok
+    end,
+    {ok, ReqN, NewState, TimeoutWebSocket}.
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
@@ -736,11 +745,9 @@ websocket_info({'cloudi_service_return_async',
                                  websocket_connect_trans_id = TransId
                                  } = WebSocketState
                              } = State) ->
-    case websocket_terminate_check(ResponseInfo, Response, Req) of
-        true ->
-            {shutdown, Req, State};
-        false when WebSocketProtocol =:= undefined ->
-            WebSocketResponse = if
+    WebSocketResponse = if
+        WebSocketProtocol =:= undefined ->
+            if
                 ((((OutputType =:= external) orelse
                    (OutputType =:= internal)) andalso
                   (is_binary(Response) orelse
@@ -751,13 +758,8 @@ websocket_info({'cloudi_service_return_async',
                 ((OutputType =:= list) andalso
                  (is_list(Response))) ->
                     {text, erlang:list_to_binary(Response)}
-            end,
-            {reply, WebSocketResponse, Req,
-             State#cowboy_state{
-                 websocket_state = WebSocketState#websocket_state{
-                     websocket_connect_trans_id = undefined}
-                 }};
-        false ->
+            end;
+        is_function(WebSocketProtocol) ->
             ResponseType = if
                 OutputType =:= external; OutputType =:= internal;
                 OutputType =:= binary ->
@@ -766,11 +768,16 @@ websocket_info({'cloudi_service_return_async',
                     text
             end,
             {_, ResponseBinary} = WebSocketProtocol(outgoing, Response),
-            {reply, {ResponseType, ResponseBinary}, Req,
-             State#cowboy_state{
-                 websocket_state = WebSocketState#websocket_state{
-                     websocket_connect_trans_id = undefined}
-                 }}
+            {ResponseType, ResponseBinary}
+    end,
+    NewState = State#cowboy_state{
+                   websocket_state = WebSocketState#websocket_state{
+                       websocket_connect_trans_id = undefined}},
+    case websocket_terminate_check(ResponseInfo) of
+        true ->
+            {reply, [WebSocketResponse, close], Req, NewState};
+        false ->
+            {reply, WebSocketResponse, Req, NewState}
     end;
 
 websocket_info({websocket_ping, WebSocketPing}, Req,
@@ -1158,22 +1165,14 @@ service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
     cloudi_ip_address:to_string(ClientIpAddr) ++
     erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
 
-websocket_terminate_check(<<>>, _, _) ->
+websocket_terminate_check(<<>>) ->
     false;
-websocket_terminate_check([], _, _) ->
+websocket_terminate_check([]) ->
     false;
-websocket_terminate_check(ResponseInfo, Response, Req) ->
+websocket_terminate_check(ResponseInfo) ->
     HeadersOutgoing = headers_external_outgoing(ResponseInfo),
     case lists:keyfind(<<"connection">>, 1, HeadersOutgoing) of
         {<<"connection">>, <<"close">>} ->
-            StatusCode = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
-                false ->
-                    400;
-                {_, Status} when is_binary(Status) ->
-                    erlang:binary_to_integer(hd(binary:split(Status, <<" ">>)))
-            end,
-            cloudi_x_cowboy_req:reply(StatusCode, HeadersOutgoing,
-                                      Response, Req),
             true;
         {<<"connection">>, _} ->
             false;
@@ -1189,15 +1188,12 @@ websocket_connect_request(OutputType)
     when OutputType =:= list ->
     "CONNECT".
 
-websocket_connect_check(undefined, Req,
-                        #cowboy_state{
-                            timeout_websocket = TimeoutWebSocket} = State) ->
-    {ok, Req, State, TimeoutWebSocket};
-websocket_connect_check({async, WebSocketConnectName}, Req,
+websocket_connect_check(undefined, State) ->
+    State;
+websocket_connect_check({async, WebSocketConnectName},
                         #cowboy_state{
                             dispatcher = Dispatcher,
                             context = Context,
-                            timeout_websocket = TimeoutWebSocket,
                             output_type = OutputType,
                             websocket_state = #websocket_state{
                                 request_info = RequestInfo} = WebSocketState
@@ -1206,50 +1202,36 @@ websocket_connect_check({async, WebSocketConnectName}, Req,
     {ok, TransId} = send_async_minimal(Dispatcher, Context,
                                        WebSocketConnectName,
                                        RequestInfo, Request, self()),
-    {ok, Req,
-     State#cowboy_state{
-         websocket_state = WebSocketState#websocket_state{
-             websocket_connect_trans_id = TransId}}, TimeoutWebSocket};
-websocket_connect_check({sync, WebSocketConnectName}, Req,
+    State#cowboy_state{
+        websocket_state = WebSocketState#websocket_state{
+            websocket_connect_trans_id = TransId}};
+websocket_connect_check({sync, WebSocketConnectName},
                         #cowboy_state{
                             dispatcher = Dispatcher,
                             context = Context,
-                            timeout_websocket = TimeoutWebSocket,
                             output_type = OutputType,
                             websocket_state = #websocket_state{
                                 request_info = RequestInfo} = WebSocketState
                             } = State) ->
     Self = self(),
+    Timeout = cloudi:timeout_sync(Context),
+    TransId = cloudi:trans_id(Context),
     case send_sync_minimal(Dispatcher, Context,
                            WebSocketConnectName,
                            RequestInfo,
                            websocket_connect_request(OutputType), Self) of
         {ok, ResponseInfo, Response} ->
-            case websocket_terminate_check(ResponseInfo, Response, Req) of
-                true ->
-                    {shutdown, Req};
-                false ->
-                    NewState = if
-                        Response /= <<>> ->
-                            % make sure a response is given to the websocket
-                            Timeout = cloudi:timeout_sync(Context),
-                            TransId = cloudi:trans_id(Context),
-                            Self ! {'cloudi_service_return_async',
-                                    WebSocketConnectName,
-                                    WebSocketConnectName,
-                                    <<>>, Response,
-                                    Timeout, TransId, Self},
-                            State#cowboy_state{
-                                websocket_state =
-                                    WebSocketState#websocket_state{
-                                    websocket_connect_trans_id = TransId}};
-                        true ->
-                            State
-                    end,
-                    {ok, Req, NewState, TimeoutWebSocket}
-            end;
+            % must provide the response after the websocket_init is done
+            Self ! {'cloudi_service_return_async',
+                    WebSocketConnectName,
+                    WebSocketConnectName,
+                    ResponseInfo, Response,
+                    Timeout, TransId, Self},
+            State#cowboy_state{
+                websocket_state = WebSocketState#websocket_state{
+                    websocket_connect_trans_id = TransId}};
         {error, timeout} ->
-            {shutdown, Req}
+            State
     end.
 
 websocket_disconnect_request(OutputType)
@@ -1334,9 +1316,10 @@ websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
-            case websocket_terminate_check(ResponseInfo, Response, Req) of
+            case websocket_terminate_check(ResponseInfo) of
                 true ->
-                    {shutdown, Req, State};
+                    {reply, [{WebSocketRequestType,
+                              ResponseF(Response)}, close], Req, State};
                 false ->
                     {reply, {WebSocketRequestType,
                              ResponseF(Response)}, Req, State}
