@@ -746,6 +746,12 @@ websocket_info({'cloudi_service_return_async',
                                  } = WebSocketState
                              } = State) ->
     WebSocketResponse = if
+        Response == <<>> ->
+            % websocket_connect is special because a
+            % <<>> response will not be sent back to the websocket
+            % since this is the response to an event rather than a
+            % request/response pair
+            undefined;
         WebSocketProtocol =:= undefined ->
             if
                 ((((OutputType =:= external) orelse
@@ -775,9 +781,19 @@ websocket_info({'cloudi_service_return_async',
                        websocket_connect_trans_id = undefined}},
     case websocket_terminate_check(ResponseInfo) of
         true ->
-            {reply, [WebSocketResponse, close], Req, NewState};
+            if
+                WebSocketResponse =:= undefined ->
+                    {reply, close, Req, NewState};
+                true ->
+                    {reply, [WebSocketResponse, close], Req, NewState}
+            end;
         false ->
-            {reply, WebSocketResponse, Req, NewState}
+            if
+                WebSocketResponse =:= undefined ->
+                    {ok, Req, NewState};
+                true ->
+                    {reply, WebSocketResponse, Req, NewState}
+            end
     end;
 
 websocket_info({websocket_ping, WebSocketPing}, Req,
