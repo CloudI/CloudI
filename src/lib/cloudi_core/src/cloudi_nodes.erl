@@ -168,7 +168,13 @@ handle_call({reconfigure,
                    listen = OldListen,
                    connect = OldConnect,
                    discovery = OldDiscovery} = State) ->
-    NewNodes = lists:usort(Nodes ++ nodes()),
+    ConnectedNodes = if
+        Connect =:= visible ->
+            erlang:nodes();
+        Connect =:= hidden ->
+            erlang:nodes(connected)
+    end,
+    NewNodes = lists:usort(Nodes ++ ConnectedNodes),
     NewNodesDead = lists:foldl(fun(N, L) ->
         case cloudi_lists:delete_checked(N, L) of
             false ->

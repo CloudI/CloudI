@@ -167,28 +167,18 @@ services(Timeout) ->
                                  timeout_decr(Timeout)}, Timeout)).
 
 nodes_add(L, Timeout) ->
-    Nodes = [node() | nodes()],
-    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
-        gen_server:multi_call(Nodes, ?MODULE,
-                              {nodes_add, L,
-                               timeout_decr(Timeout)}, Timeout)
-    end)).
-
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {nodes_add, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
 nodes_remove(L, Timeout) ->
-    Nodes = [node() | nodes()],
-    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
-        gen_server:multi_call(Nodes, ?MODULE,
-                              {nodes_remove, L,
-                               timeout_decr(Timeout)}, Timeout)
-    end)).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {nodes_remove, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
 
 nodes_set(L, Timeout) ->
-    Nodes = [node() | nodes()],
-    check_multi_call(global:trans({{?MODULE, L}, self()}, fun() ->
-        gen_server:multi_call(Nodes, ?MODULE,
-                              {nodes_set, L,
-                               timeout_decr(Timeout)}, Timeout)
-    end)).
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {nodes_set, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -360,47 +350,14 @@ handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_configuration:services(Config)}, State};
 
-handle_call({nodes_add, L, Timeout}, _,
-            #state{configuration = Config} = State) ->
-    case cloudi_configuration:nodes_add(L, Config) of
-        {ok, NewConfig} ->
-            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
-                ok ->
-                    {reply, ok, State#state{configuration = NewConfig}};
-                {error, _} = Error ->
-                    {reply, Error, State}
-            end;
-        {error, _} = Error ->
-            {reply, Error, State}
-    end;
+handle_call({nodes_add, _, _, _} = Request, _, State) ->
+    nodes_call(Request, State);
 
-handle_call({nodes_remove, L, Timeout}, _,
-            #state{configuration = Config} = State) ->
-    case cloudi_configuration:nodes_remove(L, Config) of
-        {ok, NewConfig} ->
-            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
-                ok ->
-                    {reply, ok, State#state{configuration = NewConfig}};
-                {error, _} = Error ->
-                    {reply, Error, State}
-            end;
-        {error, _} = Error ->
-            {reply, Error, State}
-    end;
+handle_call({nodes_remove, _, _, _} = Request, _, State) ->
+    nodes_call(Request, State);
 
-handle_call({nodes_set, L, Timeout}, _,
-            #state{configuration = Config} = State) ->
-    case cloudi_configuration:nodes_set(L, Config) of
-        {ok, NewConfig} ->
-            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
-                ok ->
-                    {reply, ok, State#state{configuration = NewConfig}};
-                {error, _} = Error ->
-                    {reply, Error, State}
-            end;
-        {error, _} = Error ->
-            {reply, Error, State}
-    end;
+handle_call({nodes_set, _, _, _} = Request, _, State) ->
+    nodes_call(Request, State);
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -859,16 +816,57 @@ service_restart_external(#config_service_external{
             {error, {service_external_restart_failed, Reason}}
     end.
 
-check_multi_call({Replies, _BadNodes}) ->
+nodes_call_remote_result(aborted) ->
+    {error, aborted};
+nodes_call_remote_result({Replies, BadNodes}) ->
     % ignore bad nodes
-    check_multi_call_replies(Replies).
+    Errors = nodes_call_remote_result_replies(Replies, []) ++
+             [{Node, bad_node} || Node <- BadNodes],
+    if
+        Errors == [] ->
+            ok;
+        true ->
+            {error, {remote, Errors}}
+    end.
     
-check_multi_call_replies([]) ->
+nodes_call_remote_result_replies([], Output) ->
+    lists:reverse(Output);
+nodes_call_remote_result_replies([{_, ok} | Replies], Output) ->
+    nodes_call_remote_result_replies(Replies, Output);
+nodes_call_remote_result_replies([{_, _} = Error | Replies], Output) ->
+    nodes_call_remote_result_replies(Replies, [Error | Output]).
+
+nodes_call_remote({_, _, remote, _}, _) ->
     ok;
-check_multi_call_replies([{_, ok} | Replies]) ->
-    check_multi_call_replies(Replies);
-check_multi_call_replies([{_, Result} | _]) ->
-    Result.
+nodes_call_remote({F, L, local, Timeout}, Connect) ->
+    Nodes = if
+        Connect =:= visible ->
+            nodes();
+        Connect =:= hidden ->
+            nodes(connected)
+    end,
+    nodes_call_remote_result(global:trans({{?MODULE, L}, self()}, fun() ->
+        gen_server:multi_call(Nodes, ?MODULE,
+                              {F, L, remote,
+                               timeout_decr(Timeout)}, Timeout)
+    end)).
+
+nodes_call({F, L, _, Timeout} = Request,
+           #state{configuration = Config} = State) ->
+    case cloudi_configuration:F(L, Config) of
+        {ok, Config} ->
+            {reply, ok, State};
+        {ok, #config{nodes = #config_nodes{connect = Connect}} = NewConfig} ->
+            Result = nodes_call_remote(Request, Connect),
+            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
+                ok ->
+                    {reply, Result, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} = Error ->
+            {reply, Error, State}
+    end.
 
 timeout_decr(infinity) ->
     infinity;

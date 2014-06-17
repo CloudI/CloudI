@@ -2672,9 +2672,14 @@ remove_leave_callback(Scope, GroupName, F)
 %% @end
 
 init([Scope]) ->
-    Ns = nodes(),
     Listen = cpg_app:listen_type(),
     monitor_nodes(true, Listen),
+    Ns = if
+        Listen =:= visible ->
+            nodes();
+        Listen =:= all ->
+            nodes(connected)
+    end,
     lists:foreach(fun(N) ->
                           {Scope, N} ! {new, node()}
                           % data is not persistent in ets, so trust the
@@ -2697,13 +2702,15 @@ handle_call({create, GroupName}, _, State) ->
 handle_call({delete, GroupName}, _, State) ->
     {reply, ok, delete_group(GroupName, State)};
 
-handle_call({join, GroupName, Pid}, _, State) ->
+handle_call({join, GroupName, Pid} = Request, _, State) ->
+    abcast_hidden_nodes(Request, State),
     {reply, ok, join_group(GroupName, Pid, join_local, State)};
 
-handle_call({leave, Pid}, _,
+handle_call({leave, Pid} = Request, _,
             #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of
         {ok, GroupNameList} ->
+            abcast_hidden_nodes(Request, State),
             NewState = lists:foldl(fun(GroupName, S) ->
                 leave_group(GroupName, Pid, leave_local, S)
             end, State, GroupNameList),
@@ -2712,7 +2719,7 @@ handle_call({leave, Pid}, _,
             {reply, error, State}
     end;
 
-handle_call({leave, GroupName, Pid}, _,
+handle_call({leave, GroupName, Pid} = Request, _,
             #state{pids = Pids} = State) ->
     Found = case dict:find(Pid, Pids) of
         error ->
@@ -2722,6 +2729,7 @@ handle_call({leave, GroupName, Pid}, _,
     end,
     if
         Found ->
+            abcast_hidden_nodes(Request, State),
             {reply, ok, leave_group(GroupName, Pid, leave_local, State)};
         true ->
             {reply, error, State}
@@ -2987,6 +2995,17 @@ code_change(_, State, _) ->
 
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}]).
+
+abcast_hidden_nodes(_, #state{listen = visible}) ->
+    ok;
+abcast_hidden_nodes(Request, #state{scope = Scope,
+                                    listen = all}) ->
+    case nodes(hidden) of
+        [] ->
+            ok;
+        [_ | _] = HiddenNodes ->
+            gen_server:abcast(HiddenNodes, Scope, Request)
+    end.
 
 create_group(GroupName,
              #state{groups = {DictI, GroupsData}} = State) ->

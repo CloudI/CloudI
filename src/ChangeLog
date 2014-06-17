@@ -5,6 +5,9 @@
 
     * Fixes for closing a connection in the response of a websocket_connect
       in cloudi_service_http_cowboy
+    * Fixes for using hidden nodes
+    * Fix the python CloudI API cloudi_c.mcast_async return for no destinations
+    * Update cpg
 
 2014-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 

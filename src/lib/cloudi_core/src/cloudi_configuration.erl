@@ -2250,6 +2250,9 @@ nodes_validate([A | _]) ->
 
 nodes_elements_add([], NodesConfig) ->
     {ok, NodesConfig};
+nodes_elements_add([A | As], NodesConfig)
+    when A =:= node() ->
+    nodes_elements_add(As, NodesConfig);
 nodes_elements_add([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     when is_atom(A) ->
     case node_validate(A) of
@@ -2265,6 +2268,9 @@ nodes_elements_add([A | _], _) ->
 
 nodes_elements_remove([], NodesConfig) ->
     {ok, NodesConfig};
+nodes_elements_remove([A | As], NodesConfig)
+    when A =:= node() ->
+    nodes_elements_remove(As, NodesConfig);
 nodes_elements_remove([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     when is_atom(A) ->
     case cloudi_lists:delete_checked(A, Nodes) of

@@ -8,5 +8,5 @@
 
 % group names will only be joined/left with local pids
 % so that global locking is unnecessary
--define(GROUP_NAME_WITH_LOCAL_PIDS_ONLY, undefined).
+-define(GROUP_NAME_WITH_LOCAL_PIDS_ONLY, true).
 
