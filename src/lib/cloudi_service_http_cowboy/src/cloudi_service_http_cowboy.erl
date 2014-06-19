@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -72,6 +72,7 @@
 -define(DEFAULT_NODELAY,                           true).
 -define(DEFAULT_RECV_TIMEOUT,                 30 * 1000). % milliseconds
 -define(DEFAULT_WEBSOCKET_TIMEOUT,             infinity). % milliseconds
+-define(DEFAULT_WEBSOCKET_OUTPUT,             undefined).
 -define(DEFAULT_WEBSOCKET_CONNECT_ASYNC,      undefined).
 -define(DEFAULT_WEBSOCKET_CONNECT_SYNC,       undefined).
 -define(DEFAULT_WEBSOCKET_DISCONNECT_ASYNC,   undefined).
@@ -185,6 +186,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {nodelay,                        ?DEFAULT_NODELAY},
         {recv_timeout,                   ?DEFAULT_RECV_TIMEOUT},
         {websocket_timeout,              ?DEFAULT_WEBSOCKET_TIMEOUT},
+        {websocket_output,               ?DEFAULT_WEBSOCKET_OUTPUT},
         {websocket_connect,              ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
         {websocket_disconnect,           ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
         {websocket_connect_async,        ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
@@ -213,7 +215,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {use_host_prefix,                ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,           ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_method_suffix,              ?DEFAULT_USE_METHOD_SUFFIX}],
-    [Interface, Port, Backlog, NoDelay, RecvTimeout, WebSocketTimeout,
+    [Interface, Port, Backlog, NoDelay, RecvTimeout,
+     WebSocketTimeout, WebSocketOutputType0,
      WebSocketConnect0, WebSocketDisconnect0,
      WebSocketConnectAsync0, WebSocketConnectSync,
      WebSocketDisconnectAsync0, WebSocketDisconnectSync,
@@ -230,6 +233,20 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
     true = (WebSocketTimeout =:= infinity) orelse
            (is_integer(WebSocketTimeout) andalso (WebSocketTimeout > 0)),
+    WebSocketOutputType1 = if
+        WebSocketOutputType0 =:= undefined ->
+            if
+                OutputType =:= external; OutputType =:= internal;
+                OutputType =:= binary ->
+                    binary;
+                OutputType =:= list ->
+                    text
+            end;
+        WebSocketOutputType0 =:= binary ->
+            binary;
+        WebSocketOutputType0 =:= text ->
+            text
+    end,
     WebSocketConnectAsync1 = if
         WebSocketConnectAsync0 =:= undefined ->
             true = (WebSocketConnect0 =:= undefined) orelse
@@ -349,6 +366,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                               content_types_accepted = ContentTypesAccepted1,
                               set_x_forwarded_for = SetXForwardedFor,
                               status_code_timeout = StatusCodeTimeout,
+                              websocket_output_type = WebSocketOutputType1,
                               websocket_connect = WebSocketConnect1,
                               websocket_disconnect = WebSocketDisconnect1,
                               websocket_ping = WebSocketPing,

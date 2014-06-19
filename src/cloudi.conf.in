@@ -1026,12 +1026,19 @@
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.
+% is equivalent to:
+%{nodes, [{discovery, [{multicast, []}]}]}.
 % manually specified node names
-%{nodes, [
-%    'cloudi@host1',
-%    'cloudi@host2'
-%]}.
+%{nodes, ['cloudi@host1', 'cloudi@host2']}.
+% is equivalent to:
+%{nodes, [{nodes, ['cloudi@host1', 'cloudi@host2']}]}.
+% (see http://cloudi.org/api.html#2_nodes_set for all the options)
 {logging, [
+    %{file, "path/to/logfile"},
+    %{syslog,
+    % [{identity, "CloudI"},
+    %  {facility, local0},
+    %  {level, trace}]}, % CloudI log levels are mapped to syslog levels
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     {redirect, undefined}
 ]}.

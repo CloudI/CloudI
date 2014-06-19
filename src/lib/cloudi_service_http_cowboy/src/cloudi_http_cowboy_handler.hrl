@@ -53,6 +53,7 @@
         content_types_accepted  :: undefined | binary:cp(),
         set_x_forwarded_for     :: boolean(),
         status_code_timeout     :: 100..599,
+        websocket_output_type   :: text | binary,
         websocket_connect       :: undefined |
                                    {async | sync,
                                     cloudi_service:service_name()},
