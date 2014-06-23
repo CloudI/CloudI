@@ -6,8 +6,10 @@ Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
 Juan Jose Comellas
 Lukas Larsson               <garazdawi [at] gmail (dot) com>
 Drew Varner                 <drew.varner [at] ninefx (dot) com>
+Irina Guberman
 
 CloudI Integration Dependencies (alphabetical project order):
+backoff          Fred Hebert <mononcqc@ferd.ca>
 backward-cpp     François-Xavier Bourlet <bombela@gmail.com>
 booster          Artyom Beilis (Tonkikh)
 cowboy           Loïc Hoguin <essen@ninenines.eu>
@@ -16,22 +18,29 @@ elli             Knut Nesheim <knutin@gmail.com>
 ememcached       Nick Gerakines <nick@gerakines.net>
 emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
 epgsql_wg        Will Glozer
+erlang-oauth     Tim Fletcher <mail@tfletcher.com>
 erlang_cassandra Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlasticsearch   Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlcloud         Brian Buchanan <bwb@holo.org>
                  Ransom Richardson <ransom@ransomr.net>
                  Gleb Peregud <gleber.p@gmail.com>
+erlcql           Krzysztof Rutka <krzysztof.rutka@gmail.com>
 erlzmq           Yurii Rashkovskii <yrashk@gmail.com>
 etokyotyrant     Jim McCoy <mccoy@mad-scientist.com>
 jinterface       Ericsson's OTP Team
 jsonlib          Josh Marshall
 jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+lz4              SUZUKI Tetsuya <tetsuya.suzuki@gmail.com>
 nodefinder       Paul Mineiro <paul@n54.com>
 pgsql            Paul Guyot
 poolboy          Devin Torres (devinus) devin@devintorres.com,
                  Andrew Thompson (Vagabond) andrew@hijacked.us,
                  Kurt Williams (onkel-dirtus) kurt.r.williams@gmail.com
-rebar            Dave Smith <dizzyd@dizzyd.com>
+protobuffs       Nick Gerakines <nick@gerakines.net>
+rebar            Basho Technologies
+riak_pb          Basho Technologies
+riakc            Basho Technologies
+snappy           Filipe David Manana <fdmanana@apache.org>
 thrift           https://github.com/apache/thrift/blob/0.1.x/CONTRIBUTORS
 zeromq           Martin Sustrik <sustrik@250bpm.com>
 

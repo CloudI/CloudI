@@ -1,0 +1,350 @@
+Riak Protocol Buffers Client Usage Introduction
+------
+
+This document assumes that you have already started your Riak cluster.
+For instructions on that prerequisite, refer to riak/doc/basic-setup.txt.
+
+Building
+---
+
+Assuming you have a working Erlang (R13B04 or later) installation, 
+building Riak Protocol Buffers Client should be as simple as:
+
+$ cd $PATH_TO_RIAKC
+$ make
+
+Starting
+---
+
+To talk to Riak, all you need is an Erlang node with the riak-erlang-client
+library (riakc) in its code path.  
+
+$ erl -pa $PATH_TO_RIAKC/ebin $PATH_TO_RIAKC/deps/*/ebin
+
+You'll know you've done this correctly if you can execute the
+following commands and get a path to a beam file, instead of the atom
+'non_existing':
+
+1> code:which(riakc_pb_socket).
+".../riak-erlang-client/ebin/riakc_pb_socket.beam"
+
+Optionally, you can install the library into your code path using rebar
+
+$ cd $PATH_TO_RIAKC
+$ ./rebar install
+
+Connecting
+---
+
+Once you have your node running, pass your Riak server's connection
+information to riakc_pb_socket:start_link/2. The arguments to this
+function correspond to 'pb_ip' and 'pb_port' from the 'app.config'
+file on your Riak server.
+
+1> {ok, Pid} = riakc_pb_socket:start_link("127.0.0.1", 8087).
+{ok,<0.56.0>}
+
+Verify connectivity with the server using ping/1.
+
+2> riakc_pb_socket:ping(Pid).
+pong
+
+Bucket Properties
+---
+
+At this time, the Protocol Buffers interface only supports two 
+bucket properties:
+  n_val
+  allow_mult
+
+The property 'last_write_wins' is not yet supported. A feature
+request has been filed:
+https://issues.basho.com/370
+
+Retrieving the properties of a bucket is as simple as:
+3> riakc_pb_socket:get_bucket(Pid, <<"groceries">>).
+{ok,[{n_val,3},{allow_mult,false}]}
+
+Setting bucket properties is also simple:
+4> riakc_pb_socket:set_bucket(Pid, <<"groceries">>, [{n_val, 2}]).
+
+Storing New Data
+---
+
+Each bit of data in Riak is stored in a "bucket" at a "key" that is
+unique to that bucket.  The bucket is intended as an organizational
+aid, for example to help segregate data by type, but Riak doesn't care
+what values it stores, so choose whatever scheme suits you.  Buckets, 
+keys and values are all binaries.
+
+Before storing your data, you must wrap it in a riakc_obj:
+
+3> Object = riakc_obj:new(<<"groceries">>, <<"mine">>, <<"eggs & bacon">>).
+{riakc_obj,<<"groceries">>,<<"mine">>,undefined,undefined,
+           {dict,0,16,16,8,80,48,
+                 {[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],...},
+                 {{[],[],[],[],[],[],[],[],[],[],[],[],[],...}}},
+           <<"eggs & bacon">>}
+
+The Object refers to a key <<"mine">> in a bucket named <<"groceries">> with
+the value <<"eggs & bacon">>. Using the client you opened earlier, store the
+object:
+
+5> riakc_pb_socket:put(Pid, Object).                            
+ok
+
+If the return value of the last command was anything but the atom
+'ok', then the store failed.  The return value may give you a clue as
+to why the store failed, but check the Troubleshooting section below if
+not.
+
+The object is now stored in Riak.  put/2 uses default parameters
+for storing the object.  There is also a put/3 call that takes
+a proplist of options.
+
+  {w, W}     - the minimum number of nodes that must respond
+               with success for the write to be considered successful.
+               The default is currently set on the server at 2
+  {dw, DW}   - the minimum number of nodes that must respond
+               with success *after durably storing* the object for the
+               write to be considered successful
+               The default is currently set on the server at 0.
+  return_body - immediately do a get after the put and return a
+               riakc_obj.
+
+6> riakc_pb_socket:put(Pid, AnotherObject, 
+                       [{w, 2}, {dw, 1}, return_body]).
+{ok,{riakc_obj,<<"my bucket">>,<<"my key">>,
+               <<107,206,97,96,96,96,206,96,202,5,82,44,140,62,169,115,
+                 50,152,18,25,243,88,25,...>>,
+               [{{dict,2,16,16,8,80,48,
+                       {[],[],[],[],[],[],[],[],[],[],[],[],...},
+                       {{[],[],[],[],[],[],[],[],[],[],...}}},
+                 <<"my binary data">>}],
+               {dict,0,16,16,8,80,48,
+                     {[],[],[],[],[],[],[],[],[],[],[],[],[],...},
+                     {{[],[],[],[],[],[],[],[],[],[],[],...}}},
+               undefined}}
+
+Would make sure at least two nodes responded successfully to the put
+and at least one node has durably stored the value and an updated object
+is returned.
+
+See riak/doc/architecture.txt for more information about W and DW
+values.
+
+Content-Type
+---
+
+If you will be fetching data created with the riak-erlang-client through
+the REST interface you must set a Content-Type. To set the Content-Type:
+
+7> riakc_obj:update_content_type(Object, "application/x-erlang-term").
+
+
+Fetching Data
+---
+
+At some point you'll want that data back.  Using the same bucket and
+key you used before:
+
+7> {ok, O} = riakc_pb_socket:get(Pid, <<"groceries">>, 
+                   <<"mine">>).
+{ok,{riakc_obj,<<"groceries">>,<<"mine">>,
+               <<107,206,97,96,96,96,204,96,202,5,82,44,12,143,167,115,
+                 103,48,37,50,230,177,50,...>>,
+               [{{dict,2,16,16,8,80,48,
+                       {[],[],[],[],[],[],[],[],[],[],[],[],...},
+                       {{[],[],[],[],[],[],[],[],[],[],...}}},
+                 <<"eggs & bacon">>}],
+               {dict,0,16,16,8,80,48,
+                     {[],[],[],[],[],[],[],[],[],[],[],[],[],...},
+                     {{[],[],[],[],[],[],[],[],[],[],[],...}}},
+               undefined}}
+
+Like 'put', there is a 'get' function that takes options, get/3.
+
+Options
+
+ {r, R} : the minimum number of nodes that must respond
+          with success for the read to be considered successful
+ 
+
+Modifying Data
+---
+
+Say you had the "grocery list" from the examples above, reminding you
+to get <<"eggs & bacon">>, and you want to add "milk" to it.  The
+easiest way is:
+
+8> {ok, Oa} = riakc_pb_socket:get(Pid, <<"groceries">>, <<"mine">>).
+...
+9> Ob = riakc_obj:update_value(Oa, <<"milk, ", (riakc_obj:get_value(O))/binary>>).  
+11> {ok, Oc} = riakc_pb_socket:put(Pid, Ob, [return_body]).
+{ok,{riakc_obj,<<"groceries">>,<<"mine">>,
+               <<107,206,97,96,96,96,206,96,202,5,82,44,12,143,167,115,
+                 103,48,37,50,230,177,50,...>>,
+               [{{dict,2,16,16,8,80,48,
+                       {[],[],[],[],[],[],[],[],[],[],[],[],...},
+                       {{[],[],[],[],[],[],[],[],[],[],...}}},
+                 <<"milk, eggs & bacon">>}],
+               {dict,0,16,16,8,80,48,
+                     {[],[],[],[],[],[],[],[],[],[],[],[],[],...},
+                     {{[],[],[],[],[],[],[],[],[],[],[],...}}},
+               undefined}}
+
+
+That is, fetch the object from Riak, modify its value with
+riakc_obj:update_value/2, then store the modified object back in
+Riak.  You can get your updated object to convince yourself that your
+list is updated:
+
+Deleting Data
+---
+
+Throwing away data is quick and simple: just use the delete/3 function.
+
+10> riakc_pb_socket:delete(Pid, <<"groceries">>, <<"mine">>).
+ok
+
+As with get and put, delete can also take options
+
+  {rw, RW}: the number of nodes to wait for responses from
+
+Issuing a delete for an object that does not exist returns ok.
+
+Encoding
+---
+
+The initial release of the erlang protocol buffers client treats
+all values as binaries.  The caller needs to make sure data is 
+serialized and deserialized correctly.  The content type stored
+along with the object may be used to store the encoding. For
+example
+
+decode_term(Object) ->
+    case riakc_obj:get_content_type(Object) of
+        "application/x-erlang-term" ->
+            try 
+                {ok, binary_to_term(riakc_obj:get_value(Object))}
+            catch
+                _:Reason ->
+                    {error, Reason}
+            end;
+        Ctype ->
+            {error, {unknown_ctype, Ctype}}
+    end.
+
+encode_term(Object, Term) ->
+    riakc_obj:update_value(Object, term_to_binary(Term, [compressed]), 
+                           "application/x-erlang-term").
+
+
+Siblings
+---
+
+If a bucket is configured to allow conflicts (allow_mult=true) then 
+the result object may contain more than one result.  The
+number of values can be returned with
+
+1> riakc_obj:value_count(Obj).
+2
+
+The values can be listed with
+
+2> riakc_obj:get_values(Obj).
+[<<"{\"k1\":\"v1\"}">>,<<"{\"k1\":\"v1\"}">>]
+
+And the content types as 
+
+3> riakc_obj:get_content_types(Obj). 
+["application/json","application/json"]
+
+Siblings are resolved by calling riakc_obj:update_value with
+the winning value on an object returned by get or put with 
+return_body.
+
+
+Listing Keys
+---
+
+Most uses of key-value stores are structured in such a way that
+requests know which keys they want in a bucket.  Sometimes, though,
+it's necessary to find out what keys are available (when debugging,
+for example).  For that, there is list_keys:
+
+1> riakc_pb_socket:list_keys(Pid, <<"groceries">>).
+{ok,[<<"mine">>]}
+
+Note that keylist updates are asynchronous to the object storage
+primitives, and may not be updated immediately after a put or delete.
+Also note that listing keys requires traversing the entire key space.
+This function should not be used in production and is primarily 
+intended as a development/debugging aid.
+
+list_keys/2 is just a convenience function around the streaming
+version of the call stream_list_keys(Pid, Bucket). 
+
+2> riakc_pb_socket:stream_list_keys(Pid, <<"groceries">>).
+{ok,87009603}
+3> receive Msg1 -> Msg1 end.                              
+{87009603,{keys,[<<"mine">>]}}
+4> receive Msg2 -> Msg2 end.
+{87009603,done}
+
+See riakc_pb_socket:wait_for_listkeys for an example of receiving.
+
+MapReduce
+---
+
+This section will only show an example of running a MapReduce query.
+Please refer to riak/doc/basic-mapreduce.txt for the specifics on 
+MapReduce in Riak.
+
+MapReduce queries can be run using the following functions in the
+riakc_pb_socket module:
+  mapred/3
+  mapred/4
+  mapred_stream/4
+  mapred_stream/5
+
+There are also functions for running MapReduce queries against an 
+entire bucket but these should only be used in development/debugging. 
+Running a MapReduce query against a bucket has the same performance 
+penalty as running list_keys/2. 
+
+Example query:
+3> riakc_pb_socket:mapred(Pid, [{<<"groceries">>, <<"mine">>}],
+                               [{map, {modfun, riak_kv_mapreduce, map_object_value}, none, true}]).
+{ok,[{0,[<<"eggs & bacon">>]}]}
+
+Link Walking
+---
+
+If you've setup links in your objects with the "Link" header you can
+walk these links using a link phase. The following example creates an 
+object with links and walks the links via a MapReduce query.
+
+4> riakc_pb_socket:put(Pid, riakc_obj:new(<<"items">>, <<"eggs">>, <<"stuff about eggs">>, "application/x-erlang-term")).
+ok
+5> riakc_pb_socket:put(Pid, riakc_obj:new(<<"items">>, <<"bacon">>, <<"stuff about bacon">>, "application/x-erlang-term")).
+ok
+6> List = riakc_obj:new(<<"lists">>, <<"mine">>, <<"">>, "application/x-erlang-term").
+...
+7> List1 = riakc_obj:update_metadata(List, dict:store(<<"Links">>, [{{<<"items">>, <<"eggs">>}, <<"tag">>}, {{<<"items">>, <<"bacon">>}, <<"tag">>}], dict:new())).
+...
+8> riakc_pb_socket:put(Pid, List1).
+ok
+9> riakc_pb_socket:mapred(Pid, [{<<"lists">>, <<"mine">>}],
+                               [{link, <<"items">>, '_', true}]).
+{ok,[{0,
+      [[<<"items">>,<<"bacon">>,<<"tag">>],
+       [<<"items">>,<<"eggs">>,<<"tag">>]]}]}
+
+
+Troubleshooting
+---
+
+If start/2 or start_link/2 return {error,econnrefused} the client could
+not connect to the server - make sure the protocol buffers interface is
+enabled on the server and the address/port is correct.

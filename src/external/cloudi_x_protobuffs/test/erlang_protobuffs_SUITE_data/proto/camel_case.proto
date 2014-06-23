@@ -1,0 +1,8 @@
+message Inner {
+    optional string camelCase = 1;
+}
+
+message Outer {
+    optional string camelCase = 1;
+    repeated Inner innerList = 2;
+}

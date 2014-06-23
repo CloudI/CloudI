@@ -10,16 +10,19 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_api_requests/src \
      -d $(top_srcdir)/lib/cloudi_service_db/src \
      -d $(top_srcdir)/lib/cloudi_service_db_cassandra/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_couchdb/src \
      -d $(top_srcdir)/lib/cloudi_service_db_elasticsearch/src \
      -d $(top_srcdir)/lib/cloudi_service_db_memcached/src \
      -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
+     -d $(top_srcdir)/lib/cloudi_service_db_riak/src \
      -d $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
+     -d $(top_srcdir)/lib/cloudi_service_oauth1/src \
      -d $(top_srcdir)/lib/cloudi_service_queue/src \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
      -d $(top_srcdir)/lib/cloudi_service_router/src \
@@ -37,33 +40,31 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/reltool_util/src \
      -d $(top_srcdir)/lib/trie/src \
      -d $(top_srcdir)/lib/uuid/src \
-     -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
-     -d $(top_srcdir)/external/cloudi_x_erlcloud/src \
+     -d $(top_srcdir)/external/cloudi_x_backoff/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
-     -d $(top_srcdir)/external/cloudi_x_cowboy/test \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
-     -d $(top_srcdir)/external/cloudi_x_cowlib/test \
-     -d $(top_srcdir)/external/cloudi_x_elli/src \
-     -d $(top_srcdir)/external/cloudi_x_elli/test \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
      -d $(top_srcdir)/external/cloudi_x_ecouchdb/src \
+     -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_ememcached/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql_wg/src \
      -d $(top_srcdir)/external/cloudi_x_erlang_cassandra/src \
      -d $(top_srcdir)/external/cloudi_x_erlasticsearch/src \
+     -d $(top_srcdir)/external/cloudi_x_erlcloud/src \
+     -d $(top_srcdir)/external/cloudi_x_erlcql/src \
      -d $(top_srcdir)/external/cloudi_x_etokyotyrant/src \
      -d $(top_srcdir)/external/cloudi_x_goldrush/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_lager/src \
-     -d $(top_srcdir)/external/cloudi_x_lager/test \
+     -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_poolboy/src \
-     -d $(top_srcdir)/external/cloudi_x_poolboy/test \
+     -d $(top_srcdir)/external/cloudi_x_protobuffs/src \
      -d $(top_srcdir)/external/cloudi_x_ranch/src \
-     -d $(top_srcdir)/external/cloudi_x_ranch/test \
-     -d $(top_srcdir)/external/cloudi_x_thrift/src \
-     -d $(top_srcdir)/external/cloudi_x_thrift/test
+     -d $(top_srcdir)/external/cloudi_x_riak_pb/src \
+     -d $(top_srcdir)/external/cloudi_x_riakc/src \
+     -d $(top_srcdir)/external/cloudi_x_thrift/src
 
 .PHONY: \
     rebar-directories-compile \
@@ -122,16 +123,19 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_api_requests/ebin
 	$(MKDIR_P) lib/cloudi_service_db/ebin
 	$(MKDIR_P) lib/cloudi_service_db_cassandra/ebin
+	$(MKDIR_P) lib/cloudi_service_db_cassandra_cql/ebin
 	$(MKDIR_P) lib/cloudi_service_db_couchdb/ebin
 	$(MKDIR_P) lib/cloudi_service_db_elasticsearch/ebin
 	$(MKDIR_P) lib/cloudi_service_db_memcached/ebin
 	$(MKDIR_P) lib/cloudi_service_db_mysql/ebin
 	$(MKDIR_P) lib/cloudi_service_db_pgsql/ebin
+	$(MKDIR_P) lib/cloudi_service_db_riak/ebin
 	$(MKDIR_P) lib/cloudi_service_db_tokyotyrant/ebin
 	$(MKDIR_P) lib/cloudi_service_filesystem/ebin
 	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
 	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
 	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
+	$(MKDIR_P) lib/cloudi_service_oauth1/ebin
 	$(MKDIR_P) lib/cloudi_service_queue/ebin
 	$(MKDIR_P) lib/cloudi_service_quorum/ebin
 	$(MKDIR_P) lib/cloudi_service_router/ebin
@@ -148,6 +152,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/reltool_util/ebin
 	$(MKDIR_P) lib/key2value/ebin
 	$(MKDIR_P) lib/service/ebin
+	$(MKDIR_P) external/rebar_modules/ebin
 	$(MKDIR_P) external/cloudi_x_nodefinder/ebin
 	$(MKDIR_P) external/cloudi_x_erlcloud/ebin
 	$(MKDIR_P) external/cloudi_x_lager/ebin
@@ -168,6 +173,13 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_ranch/ebin
 	$(MKDIR_P) external/cloudi_x_elli/ebin
 	$(MKDIR_P) external/cloudi_x_dynamic_compile/ebin
+	$(MKDIR_P) external/cloudi_x_backoff/ebin
+	$(MKDIR_P) external/cloudi_x_erlcql/ebin
+	$(MKDIR_P) external/cloudi_x_protobuffs/ebin
+	$(MKDIR_P) external/cloudi_x_riakc/ebin
+	$(MKDIR_P) external/cloudi_x_riak_pb/ebin
+	$(MKDIR_P) external/lz4/ebin
+	$(MKDIR_P) external/snappy/ebin
 	$(MKDIR_P) external/syslog/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
@@ -181,6 +193,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra/src && \
         test ! -e cloudi_service_db_cassandra.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/src && \
+        test ! -e cloudi_service_db_cassandra_cql.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra_cql/src/cloudi_service_db_cassandra_cql.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_db_couchdb/src && \
         test ! -e cloudi_service_db_couchdb.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src || exit 0)
@@ -196,6 +211,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_pgsql/src && \
         test ! -e cloudi_service_db_pgsql.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_riak/src && \
+        test ! -e cloudi_service_db_riak.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_riak/src/cloudi_service_db_riak.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src && \
         test ! -e cloudi_service_db_tokyotyrant.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src || exit 0)
@@ -211,6 +229,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce/src && \
         test ! -e cloudi_service_map_reduce.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_oauth1/src && \
+        test ! -e cloudi_service_oauth1.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_queue/src && \
         test ! -e cloudi_service_queue.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_queue/src/cloudi_service_queue.app.src || exit 0)
@@ -271,6 +292,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_cassandra_cql && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_cassandra_cql/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_db_couchdb && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_couchdb/ebin || exit 0)
@@ -286,6 +310,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_pgsql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_pgsql/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_db_riak && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_riak/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin || exit 0)
@@ -301,6 +328,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_oauth1 && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_oauth1/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_queue && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_queue/ebin || exit 0)
@@ -349,6 +379,10 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/service && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/service/ebin || exit 0)
+	(cd $(top_srcdir)/external/rebar_modules && \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/rebar_modules/ebin || \
+        exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_nodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/cloudi_x_nodefinder/ebin || \
@@ -387,6 +421,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_pgsql; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_pgsql/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_protobuffs; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_protobuffs/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_emysql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_emysql/ebin || exit 0)
@@ -405,12 +442,33 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_ranch && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_ranch/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_riak_pb && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_riak_pb/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_riakc && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_riakc/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_elli && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_elli/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_dynamic_compile && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_dynamic_compile/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_backoff && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_backoff/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_erlcql && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_erlcql/ebin || exit 0)
+	(cd $(top_srcdir)/external/syslog && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/syslog/ebin || exit 0)
+	(cd $(top_srcdir)/external/lz4 && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/lz4/ebin || exit 0)
+	(cd $(top_srcdir)/external/snappy && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/snappy/ebin || exit 0)
 	(cd $(top_builddir)/external/cloudi_x_epgsql_wg && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/cloudi_x_epgsql_wg/include || exit 0)
@@ -420,9 +478,15 @@ rebar-directories-compile:
 	(cd $(top_builddir)/external/cloudi_x_elli && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/cloudi_x_elli/include || exit 0)
-	(cd $(top_srcdir)/external/syslog && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/syslog/ebin || exit 0)
+	(cd $(top_builddir)/external/cloudi_x_riak_pb && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/cloudi_x_riak_pb/include || exit 0)
+	(cd $(top_builddir)/external/cloudi_x_riakc && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/cloudi_x_riakc/include || exit 0)
+	(cd $(top_builddir)/external/cloudi_x_erlcql && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/cloudi_x_erlcql/include || exit 0)
 	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
         $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
         cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
@@ -469,6 +533,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_db/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_cassandra/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_db_cassandra/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_db_cassandra_cql/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_couchdb/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_db_couchdb/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_elasticsearch/ebin || exit 0
@@ -479,6 +545,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_db_mysql/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_pgsql/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_db_pgsql/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_db_riak/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_db_riak/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0
@@ -489,6 +557,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_http_elli/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_map_reduce/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_oauth1/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_oauth1/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_queue/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_queue/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_quorum/ebin || exit 0
@@ -521,6 +591,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/key2value/ebin
 	rmdir $(top_builddir)/lib/service/ebin || exit 0
 	rm -f $(top_srcdir)/lib/service/ebin
+	rmdir $(top_builddir)/external/rebar_modules/ebin || exit 0
+	rm -f $(top_srcdir)/external/rebar_modules/ebin
 	rmdir $(top_builddir)/external/cloudi_x_nodefinder/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_nodefinder/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcloud/ebin || exit 0
@@ -561,8 +633,22 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_elli/ebin
 	rmdir $(top_builddir)/external/cloudi_x_dynamic_compile/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_dynamic_compile/ebin
+	rmdir $(top_builddir)/external/cloudi_x_riak_pb/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_riak_pb/ebin
+	rmdir $(top_builddir)/external/cloudi_x_riakc/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_riakc/ebin
+	rmdir $(top_builddir)/external/cloudi_x_protobuffs/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_protobuffs/ebin
+	rmdir $(top_builddir)/external/cloudi_x_backoff/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_backoff/ebin
+	rmdir $(top_builddir)/external/cloudi_x_erlcql/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_erlcql/ebin
 	rmdir $(top_builddir)/external/syslog/ebin || exit 0
 	rm -f $(top_srcdir)/external/syslog/ebin
+	rmdir $(top_builddir)/external/lz4/ebin || exit 0
+	rm -f $(top_srcdir)/external/lz4/ebin
+	rmdir $(top_builddir)/external/snappy/ebin || exit 0
+	rm -f $(top_srcdir)/external/snappy/ebin
 	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
        test -d external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
        rm -f $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq \
@@ -576,6 +662,15 @@ rebar-directories-clean: rebar-clean
 	 exit 0)
 	(test -L $(top_builddir)/external/cloudi_x_elli/include && \
 	 rm $(top_builddir)/external/cloudi_x_elli/include || \
+	 exit 0)
+	(test -L $(top_builddir)/external/cloudi_x_riak_pb/include && \
+	 rm $(top_builddir)/external/cloudi_x_riak_pb/include || \
+	 exit 0)
+	(test -L $(top_builddir)/external/cloudi_x_riakc/include && \
+	 rm $(top_builddir)/external/cloudi_x_riakc/include || \
+	 exit 0)
+	(test -L $(top_builddir)/external/cloudi_x_erlcql/include && \
+	 rm $(top_builddir)/external/cloudi_x_erlcql/include || \
 	 exit 0)
 	(test -L $(top_builddir)/lib/uuid/include && \
 	 rm $(top_builddir)/lib/uuid/include || \
@@ -612,10 +707,13 @@ distclean-local: rebar-directories-distclean \
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_db_riak/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_queue/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_quorum/test_ct/logs
+           $(top_srcdir)/lib/cloudi_service_quorum/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_oauth1/test_ct/logs
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
@@ -642,16 +740,19 @@ dialyze: all \
               lib/cloudi_service_api_requests/ebin/ \
               lib/cloudi_service_db/ebin/ \
               lib/cloudi_service_db_cassandra/ebin/ \
+              lib/cloudi_service_db_cassandra_cql/ebin/ \
               lib/cloudi_service_db_couchdb/ebin/ \
               lib/cloudi_service_db_elasticsearch/ebin/ \
               lib/cloudi_service_db_memcached/ebin/ \
               lib/cloudi_service_db_mysql/ebin/ \
               lib/cloudi_service_db_pgsql/ebin/ \
+              lib/cloudi_service_db_riak/ebin/ \
               lib/cloudi_service_db_tokyotyrant/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
               lib/cloudi_service_http_cowboy/ebin/ \
               lib/cloudi_service_http_elli/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
+              lib/cloudi_service_oauth1/ebin/ \
               lib/cloudi_service_queue/ebin/ \
               lib/cloudi_service_quorum/ebin/ \
               lib/cloudi_service_router/ebin/ \
@@ -667,19 +768,21 @@ dialyze: all \
               lib/trie/ebin/ \
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
+              external/cloudi_x_backoff/ebin \
               external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
-              external/cloudi_x_elli/ebin \
               external/cloudi_x_dynamic_compile/ebin \
-              external/cloudi_x_etokyotyrant/ebin \
+              external/cloudi_x_ecouchdb/ebin \
+              external/cloudi_x_elli/ebin \
+              external/cloudi_x_ememcached/ebin \
+              external/cloudi_x_emysql/ebin \
+              external/cloudi_x_epgsql_wg/ebin \
               external/cloudi_x_erlasticsearch/ebin \
               external/cloudi_x_erlang_cassandra/ebin \
-              external/cloudi_x_epgsql_wg/ebin \
-              external/cloudi_x_pgsql/ebin \
-              external/cloudi_x_ememcached/ebin \
-              external/cloudi_x_ecouchdb/ebin \
-              external/cloudi_x_emysql/ebin \
+              external/cloudi_x_erlcql/ebin \
+              external/cloudi_x_etokyotyrant/ebin \
               external/cloudi_x_jsx/ebin \
+              external/cloudi_x_pgsql/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/syslog/ebin
 	@echo "No Errors or Warnings Found!"

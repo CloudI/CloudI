@@ -1,0 +1,12 @@
+{application, cloudi_service_db_riak,
+  [{description, "Riak CloudI Service"},
+   {vsn, "1.3.3"},
+   {modules, [
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        cloudi_core,
+        cloudi_x_riakc,
+        stdlib,
+        kernel]}]}.

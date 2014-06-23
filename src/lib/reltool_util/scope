@@ -42,7 +42,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog [at] gmail (dot) com').
--vsn("1.3.2").
+-vsn("1.3.3").
 
 -mode(compile).
 
@@ -64,6 +64,7 @@
             files_source = [],
             files_include = [],
             files_applications = [],
+            files_protobuffs = [],
             include_directories = [],
             name_conversions = []
         }).
@@ -131,6 +132,7 @@ handle_operation(#config{directories_in = DirectoriesIn,
     #state{files_source = FilesSource,
            files_include = FilesInclude,
            files_applications = FilesApplications,
+           files_protobuffs = FilesProtobuffs,
            include_directories = IncludeDirectories1,
            name_conversions = NameConversions} = files_find(DirectoriesIn,
                                                             PrefixIgnore,
@@ -152,6 +154,8 @@ handle_operation(#config{directories_in = DirectoriesIn,
            NameConversions, NameLookup, DirectorySuffixOld),
     ok = files_rename_apps(FilesApplications, NameLookup),
     ok = files_move_old(FilesApplications, DirectorySuffixOld),
+    ok = files_rename_protobuffs(FilesProtobuffs, PrefixScope),
+    ok = files_move_old(FilesProtobuffs, DirectorySuffixOld),
     exit_code(0).
 
 undo_mv_old([], _) ->
@@ -254,11 +258,13 @@ files_find([], _, _, _,
            #state{files_source = FilesSource,
                   files_include = FilesInclude,
                   files_applications = FilesApplications,
+                  files_protobuffs = FilesProtobuffs,
                   include_directories = IncludeDirectories,
                   name_conversions = NameConversions} = State) ->
     State#state{files_source = lists:reverse(FilesSource),
                 files_include = lists:reverse(FilesInclude),
                 files_applications = lists:reverse(FilesApplications),
+                files_protobuffs = lists:reverse(FilesProtobuffs),
                 include_directories = lists:reverse(IncludeDirectories),
                 name_conversions = lists:reverse(NameConversions)};
            
@@ -355,6 +361,7 @@ files_find_dir_src([FilePath | FilePaths], Directory,
                    #state{files_source = FilesSource,
                           files_include = FilesInclude,
                           files_applications = FilesApplications,
+                          files_protobuffs = FilesProtobuffs,
                           name_conversions = NameConversions} = State) ->
     FileExtension = filename:extension(FilePath),
     FileName = filename:basename(FilePath, FileExtension),
@@ -465,6 +472,32 @@ files_find_dir_src([FilePath | FilePaths], Directory,
                             end,
                             State#state{
                                 files_include = NewFilesInclude,
+                                name_conversions =
+                                    lists:umerge(NameConversions, [Convert])}
+                    end
+            end;
+        FileExtension == ".proto" ->
+            case lists:prefix(PrefixIgnore, FileName) of
+                true ->
+                    State;
+                false ->
+                    case lists:prefix(PrefixScope, FileName) of
+                        true ->
+                            State;
+                        false ->
+                            OutputFileName = FileName ++ "_pb",
+                            Convert = {erlang:list_to_atom(OutputFileName),
+                                       erlang:list_to_atom(PrefixScope ++
+                                                           OutputFileName)},
+                            NewFilesProtobuffs = if
+                                ReplaceUsage ->
+                                    FilesProtobuffs;
+                                true ->
+                                    [filename:join(Directory, FilePath) |
+                                     FilesProtobuffs]
+                            end,
+                            State#state{
+                                files_protobuffs = NewFilesProtobuffs,
                                 name_conversions =
                                     lists:umerge(NameConversions, [Convert])}
                     end
@@ -613,6 +646,27 @@ files_update_apps([FilePath | FilesApplications], NameLookup) ->
                                          ApplicationName,
                                          ApplicationEnvN}])),
     files_update_apps(FilesApplications, NameLookup).
+
+files_rename_protobuffs([], _) ->
+    ok;
+files_rename_protobuffs(FilesProtobuffs, PrefixScope) ->
+    Regexes = lists:map(fun(FilePath) ->
+        FileName = filename:basename(FilePath),
+        {ok, R} = re:compile("import \"" ++ FileName ++ "\";"),
+        fun (S) ->
+            re:replace(S, R,
+                       "import \"" ++ PrefixScope ++ FileName ++ "\";",
+                       [global, {return, list}])
+        end
+    end, FilesProtobuffs),
+    pforeach(fun(FilePath) ->
+        {ok, FileContents} = file:read_file(FilePath),
+        NewFileContents = reduce(Regexes, erlang:binary_to_list(FileContents)),
+        FileName = filename:basename(FilePath),
+        NewFilePath = filename:join(filename:dirname(FilePath),
+                                    PrefixScope ++ FileName),
+        ok = file:write_file(NewFilePath, NewFileContents)
+    end, FilesProtobuffs).
 
 files_move_old([], _) ->
     ok;

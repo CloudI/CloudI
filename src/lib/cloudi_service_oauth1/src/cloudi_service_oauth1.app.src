@@ -1,0 +1,19 @@
+{application, cloudi_service_oauth1,
+  [{description, "CloudI OAuth v1.0 Service"},
+   {vsn, "1.3.3"},
+   {modules, [
+        ]},
+   {registered,[
+        ]},
+   {applications, [
+        cloudi_service_http_cowboy,
+        cloudi_service_db_pgsql,
+        cloudi_service_db_riak,
+        cloudi_core,
+        cloudi_x_cowlib,
+        crypto,
+        public_key,
+        inets,
+        stdlib,
+        kernel]}]}.
+

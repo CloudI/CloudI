@@ -6,6 +6,15 @@ prefix to avoid any conflicts when CloudI shares the Erlang VM with other
 applications that may share common dependencies (erlzmq2 and syslog are
 exceptions due to their C integration).
 
+`backoff`
+---------
+`Simple exponential backoffs in Erlang`
+
+- `https://github.com/ferd/backoff`
+- `commit ffb7fdeacf8e4514ce047ca91c178131f8845f3e`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `MIT`
+
 `backward-cpp`
 --------------
 `for creating a backtraces in C++`
@@ -45,7 +54,7 @@ exceptions due to their C integration).
 - `https://github.com/okeuday/dynamic_compile`
 - `commit 993bb0eba609fc80bd7481365febfc05f4eb51e0`
 - `Thu Jan  2 13:08:39 PST 2014`
-- `BSD`
+- `MIT`
 
 `ecouchdb (erlang_couchdb)`
 ---------------------------
@@ -54,7 +63,7 @@ exceptions due to their C integration).
 - `https://github.com/okeuday/ecouchdb`
 - `commit dd8bf6d694327feea202c6552cdb09c650831ba5`
 - `Tue Oct 22 11:58:41 PDT 2013`
-- `BSD`
+- `MIT`
 
 `elli`
 ------
@@ -71,7 +80,7 @@ exceptions due to their C integration).
 - `https://github.com/okeuday/ememcached`
 - `commit a44340caa9b14cefb590ba47c3baa2ac83270dcc`
 - `Tue Oct 22 11:58:41 PDT 2013`
-- `BSD`
+- `MIT`
 
 `emysql (erlang_mysql)`
 -----------------------
@@ -98,7 +107,7 @@ exceptions due to their C integration).
 - `https://github.com/dieswaytoofast/erlasticsearch`
 - `commit e94b86a77f313757dc0778bc7af44c4c232ac3e9 (1.6.1)`
 - `Sat May 31 13:12:17 PDT 2014`
-- `BSD`
+- `New BSD`
 
 `erlang_cassandra`
 ------------------
@@ -107,7 +116,7 @@ exceptions due to their C integration).
 - `https://github.com/dieswaytoofast/erlang_cassandra`
 - `commit 6d026bfb06f8efd53e63a32f9b887a01bcc550ad`
 - `Sat May 31 13:01:02 PDT 2014`
-- `BSD`
+- `New BSD`
 
 `erlcloud`
 ----------
@@ -116,6 +125,15 @@ exceptions due to their C integration).
 - `https://github.com/gleber/erlcloud`
 - `commit 2c47abb3ac8f03d8a3c65778e8957f677da82fd3`
 - `Fri Mar 14 09:50:36 PDT 2014`
+- `MIT`
+
+`erlcql`
+--------
+`Cassandra native protocol CQL client for Erlang`
+
+- `https://github.com/rpt/erlcql`
+- `commit aea3767d166efde2ccbf0cd5505c2fd19abb8213 (0.1.6)`
+- `Fri Jun 20 12:11:49 PDT 2014`
 - `MIT`
 
 `etokyotyrant (medici)`
@@ -152,7 +170,7 @@ exceptions due to their C integration).
 - `https://github.com/joshmarshall/jsonrpclib`
 - `commit efcf5eee0e12ef8a148c`
 - `Tue Apr 12 18:07:44 PDT 2011`
-- `Apache License`
+- `Apache License 2.0`
 
 `jsx`
 -----
@@ -172,6 +190,15 @@ exceptions due to their C integration).
 - `Sat May 31 13:14:26 PDT 2014`
 - `Apache License 2.0`
 
+`lz4`
+-----
+`LZ4 bindings for Erlang`
+
+- `https://github.com/szktty/erlang-lz4`
+- `commit 86361e5c95200fa3b4fcba3f9d6c871f8c48a7f1`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `New BSD`
+
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 -------------------------------------------------------------------
 `autoconf m4 macros for boost detection`
@@ -180,7 +207,7 @@ exceptions due to their C integration).
 - `http://www.gnu.org/software/autoconf-archive/ax_boost_thread.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_boost_system.html`
 - `Mon Oct 15 23:13:23 PDT 2012`
-- `BSD-like`
+- `MIT-like`
 
 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4`
 --------------------------------------------------------------------------------
@@ -203,7 +230,7 @@ exceptions due to their C integration).
 
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html`
 - `Sun Mar  6 13:31:11 PST 2011`
-- `BSD-like`
+- `MIT-like`
 
 `m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4`
 ------------------------------------------------------
@@ -212,7 +239,7 @@ exceptions due to their C integration).
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_compare_version.html`
 - `Fri Mar  4 00:19:03 PST 2011`
-- `BSD-like`
+- `MIT-like`
 
 `nodefinder`
 ------------
@@ -239,7 +266,7 @@ exceptions due to their C integration).
 - `https://github.com/devinus/poolboy`
 - `1.0.0`
 - `Tue Apr 16 13:47:17 EDT 2013`
-- `Apache License`
+- `Apache License 2.0`
 
 `proper`
 --------
@@ -249,6 +276,15 @@ exceptions due to their C integration).
 - `commit 87e4a56e8f97f1972cde44ed30500daa4641595f (v1.1)`
 - `Tue Jan 14 11:33:13 PST 2014`
 - `GPLv3` (build/test-time dependency only)
+
+`protobuffs`
+------------
+`Erlang Protocol Buffers`
+
+- `https://github.com/basho/erlang_protobuffs`
+- `commit ec7e99f57f5bbcd91c56242091485d41bc78c3d4 (0.8.1p1)`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `MIT`
 
 `ranch`
 -------
@@ -266,7 +302,34 @@ exceptions due to their C integration).
 - `https://github.com/rebar/rebar`
 - `commit ebb474b7593527969a8ce7d43b42f00e4498c391 (2.1.0-pre)`
 - `Tue Feb 12 12:32:53 PST 2013`
-- `Apache License`
+- `Apache License 2.0`
+
+`riak_pb`
+---------
+`Erlang Riak Protocol Buffers`
+
+- `https://github.com/basho/riak_pb`
+- `commit 0353be3e04b971ac802acbd6b78d74589db2f6df (1.4.4.0)`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `Apache License 2.0`
+
+`riakc`
+-------
+`Erlang Riak driver`
+
+- `https://github.com/basho/riak-erlang-client`
+- `commit 8d33c020f4ca392200b2d0d973c77dd48164b263 (1.4.2)`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `Apache License 2.0`
+
+`snappy`
+--------
+`An Erlang NIF wrapper for Google's snappy compressor/decompressor`
+
+- `https://github.com/rpt/snappy`
+- `commit 95ce8e8074ca4a514ba8396d7f14e5ec572a8e45`
+- `Fri Jun 20 12:11:49 PDT 2014`
+- `Apache License 2.0`
 
 `syslog`
 --------
@@ -284,7 +347,7 @@ exceptions due to their C integration).
 - `https://github.com/dieswaytoofast/thrift`
 - `commit 1e04570a702b782df600c31537105f46ce0813f2 (0.9.3)`
 - `Sat May 31 13:06:15 PDT 2014`
-- `Apache License`
+- `Apache License 2.0`
 
 `zeromq/v?/erlzmq`
 ------------------
