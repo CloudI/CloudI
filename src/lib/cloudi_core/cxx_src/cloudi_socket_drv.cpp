@@ -78,7 +78,7 @@ class local_t
 };
 
 static local_t local_queue[MAX_PENDING_SOCKETS];
-static int local_queue_size;
+static size_t local_queue_size;
 
 #if defined __cplusplus
 extern "C"
@@ -275,7 +275,7 @@ static void on_unload(ErlNifEnv * /*env*/,
     {
         ::erl_drv_thread_join(local_thread_id, 0);
     }
-    for (int i = 1; i < local_queue_size; ++i)
+    for (size_t i = 1; i < local_queue_size; ++i)
     {
         local_t & parameters = local_queue[i];
         ::close(parameters.fd_listener);
@@ -293,14 +293,14 @@ static void * local_thread(void * /*data*/)
     struct pollfd poll_fds[MAX_PENDING_SOCKETS];
     struct pollfd const event = {local_queue_event[0], POLLIN, 0};
     poll_fds[0] = event;
-    int poll_nfds = 1;
+    size_t poll_nfds = 1;
     local_queue_size = 1;
     while (local_thread_running)
     {
         ::enif_mutex_lock(local_mutex);
-        if (static_cast<size_t>(poll_nfds) < local_queue_size)
+        if (poll_nfds < local_queue_size)
         {
-            for (int i = poll_nfds; i < local_queue_size; ++i)
+            for (size_t i = poll_nfds; i < local_queue_size; ++i)
             {
                 struct pollfd & entry = poll_fds[i];
                 entry.fd = local_queue[i].fd_listener;
@@ -323,7 +323,7 @@ static void * local_thread(void * /*data*/)
             {
                 // clear all the existing entries
                 ::enif_mutex_lock(local_mutex);
-                for (int i = 1; i < local_queue_size; ++i)
+                for (size_t i = 1; i < local_queue_size; ++i)
                 {
                     local_t & parameters = local_queue[i];
                     ::close(parameters.fd_listener);

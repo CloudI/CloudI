@@ -250,11 +250,11 @@ uint16* WorkingMemory::GetHashTable(size_t input_size, int* table_size) {
   // many hash table entries anyway.
   assert(kMaxHashTableSize >= 256);
   size_t htsize = 256;
-  while (htsize < kMaxHashTableSize && htsize < input_size) {
+  while (htsize < static_cast<size_t>(kMaxHashTableSize) && htsize < input_size) {
     htsize <<= 1;
   }
   CHECK_EQ(0, htsize & (htsize - 1)) << ": must be power of two";
-  CHECK_LE(htsize, kMaxHashTableSize) << ": hash table too large";
+  CHECK_LE(htsize, static_cast<size_t>(kMaxHashTableSize)) << ": hash table too large";
 
   uint16* table;
   if (htsize <= ARRAYSIZE(small_table_)) {
@@ -503,6 +503,7 @@ static const uint16 char_table[256] = {
 DEFINE_bool(snappy_dump_decompression_table, false,
             "If true, we print the decompression table at startup.");
 
+#if REGISTER_MODULE_INITIALIZER(name, code) 0
 static uint16 MakeEntry(unsigned int extra,
                         unsigned int len,
                         unsigned int copy_offset) {
@@ -513,7 +514,6 @@ static uint16 MakeEntry(unsigned int extra,
   return len | (copy_offset << 8) | (extra << 11);
 }
 
-#if REGISTER_MODULE_INITIALIZER(name, code) 0
 static void ComputeTable() {
   uint16 dst[256];
 
