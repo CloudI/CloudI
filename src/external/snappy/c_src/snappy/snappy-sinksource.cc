@@ -36,7 +36,7 @@ Source::~Source() { }
 
 Sink::~Sink() { }
 
-char* Sink::GetAppendBuffer(size_t length, char* scratch) {
+char* Sink::GetAppendBuffer(size_t /* length */, char* scratch) {
   return scratch;
 }
 
@@ -64,7 +64,7 @@ void UncheckedByteArraySink::Append(const char* data, size_t n) {
   dest_ += n;
 }
 
-char* UncheckedByteArraySink::GetAppendBuffer(size_t len, char* scratch) {
+char* UncheckedByteArraySink::GetAppendBuffer(size_t /* len */, char* /* scratch */) {
   return dest_;
 }
 
