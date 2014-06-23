@@ -337,7 +337,7 @@ static void * local_thread(void * /*data*/)
         else
         {
             ::enif_mutex_lock(local_mutex);
-            for (int i = 0; event_count > 0; ++i)
+            for (size_t i = 0; event_count > 0; ++i)
             {
                 struct pollfd & entry = poll_fds[i];
                 if (i == 0)
