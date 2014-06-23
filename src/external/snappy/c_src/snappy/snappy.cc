@@ -304,7 +304,7 @@ char* CompressFragment(const char* const input,
   CHECK_LE(input_size, static_cast<size_t>(kBlockSize));
   CHECK_EQ(table_size & (table_size - 1), 0) << ": table must be power of two";
   const int shift = 32 - Bits::Log2Floor(table_size);
-  DCHECK_EQ(kuint32max >> shift, table_size - 1);
+  DCHECK_EQ(kuint32max >> shift, static_cast<size_t>(table_size - 1));
   const char* ip_end = input + input_size;
   const char* base_ip = ip;
   // Bytes in [next_emit, ip) will be emitted as literal bytes.  Or
