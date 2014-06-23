@@ -454,6 +454,11 @@ inline static int LZ4_encodeSequence(const BYTE** ip, BYTE** op, const BYTE** an
 //****************************
 
 int LZ4_compressHCCtx(LZ4HC_Data_Structure* ctx,
+                 const char* source,
+                 char* dest,
+                 int isize);
+
+int LZ4_compressHCCtx(LZ4HC_Data_Structure* ctx,
 				 const char* source, 
 				 char* dest,
 				 int isize)

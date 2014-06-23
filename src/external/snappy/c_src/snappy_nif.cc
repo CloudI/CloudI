@@ -77,7 +77,7 @@ SnappyNifSink::Append(const char *data, size_t n)
 }
 
 char*
-SnappyNifSink::GetAppendBuffer(size_t len, char* scratch)
+SnappyNifSink::GetAppendBuffer(size_t len, char* /* scratch */)
 {
     size_t sz;
     
@@ -135,7 +135,7 @@ BEGIN_C
 
 
 ERL_NIF_TERM
-snappy_compress(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+snappy_compress(ErlNifEnv* env, int /* argc */, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary input;
 
@@ -157,7 +157,7 @@ snappy_compress(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
 
 ERL_NIF_TERM
-snappy_decompress(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+snappy_decompress(ErlNifEnv* env, int /* argc */, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary bin;
     ErlNifBinary ret;
@@ -189,7 +189,7 @@ snappy_decompress(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
 
 ERL_NIF_TERM
-snappy_uncompressed_length(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+snappy_uncompressed_length(ErlNifEnv* env, int /* argc */, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary bin;
     size_t len;
@@ -210,7 +210,7 @@ snappy_uncompressed_length(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
 
 ERL_NIF_TERM
-snappy_is_valid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+snappy_is_valid(ErlNifEnv* env, int /* argc */, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary bin;
 
@@ -231,21 +231,21 @@ snappy_is_valid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
 
 int
-on_load(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
+on_load(ErlNifEnv* /* env */, void** /* priv */, ERL_NIF_TERM /* info */)
 {
     return 0;
 }
 
 
 int
-on_reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
+on_reload(ErlNifEnv* /* env */, void** /* priv */, ERL_NIF_TERM /* info */)
 {
     return 0;
 }
 
 
 int
-on_upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM info)
+on_upgrade(ErlNifEnv* /* env */, void** /* priv */, void** /* old_priv */, ERL_NIF_TERM /* info */)
 {
     return 0;
 }
