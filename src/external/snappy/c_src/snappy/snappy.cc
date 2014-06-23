@@ -249,7 +249,7 @@ uint16* WorkingMemory::GetHashTable(size_t input_size, int* table_size) {
   // compression, and if the input is short, we won't need that
   // many hash table entries anyway.
   assert(kMaxHashTableSize >= 256);
-  int htsize = 256;
+  size_t htsize = 256;
   while (htsize < kMaxHashTableSize && htsize < input_size) {
     htsize <<= 1;
   }
@@ -301,7 +301,7 @@ char* CompressFragment(const char* const input,
                        const int table_size) {
   // "ip" is the input pointer, and "op" is the output pointer.
   const char* ip = input;
-  CHECK_LE(input_size, kBlockSize);
+  CHECK_LE(input_size, static_cast<size_t>(kBlockSize));
   CHECK_EQ(table_size & (table_size - 1), 0) << ": table must be power of two";
   const int shift = 32 - Bits::Log2Floor(table_size);
   DCHECK_EQ(kuint32max >> shift, table_size - 1);
@@ -312,7 +312,7 @@ char* CompressFragment(const char* const input,
   const char* next_emit = ip;
 
   const int kInputMarginBytes = 15;
-  if (PREDICT_TRUE(input_size >= kInputMarginBytes)) {
+  if (PREDICT_TRUE(input_size >= static_cast<size_t>(kInputMarginBytes))) {
     const char* ip_limit = input + input_size - kInputMarginBytes;
 
     for (uint32 next_hash = Hash(++ip, shift); ; ) {
@@ -513,6 +513,7 @@ static uint16 MakeEntry(unsigned int extra,
   return len | (copy_offset << 8) | (extra << 11);
 }
 
+#if REGISTER_MODULE_INITIALIZER(name, code) 0
 static void ComputeTable() {
   uint16 dst[256];
 
@@ -588,6 +589,7 @@ static void ComputeTable() {
   }
 }
 REGISTER_MODULE_INITIALIZER(snappy, ComputeTable());
+#endif
 #endif /* !NDEBUG */
 
 // Helper class for decompression
@@ -806,7 +808,7 @@ size_t Compress(Source* reader, Sink* writer) {
     size_t bytes_read = fragment_size;
 
     int pending_advance = 0;
-    if (bytes_read >= num_to_read) {
+    if (static_cast<int>(bytes_read) >= num_to_read) {
       // Buffer returned by reader is large enough
       pending_advance = num_to_read;
       fragment_size = num_to_read;
@@ -821,18 +823,18 @@ size_t Compress(Source* reader, Sink* writer) {
       memcpy(scratch, fragment, bytes_read);
       reader->Skip(bytes_read);
 
-      while (bytes_read < num_to_read) {
+      while (static_cast<int>(bytes_read) < num_to_read) {
         fragment = reader->Peek(&fragment_size);
         size_t n = min<size_t>(fragment_size, num_to_read - bytes_read);
         memcpy(scratch + bytes_read, fragment, n);
         bytes_read += n;
         reader->Skip(n);
       }
-      DCHECK_EQ(bytes_read, num_to_read);
+      DCHECK_EQ(static_cast<int>(bytes_read), num_to_read);
       fragment = scratch;
       fragment_size = num_to_read;
     }
-    DCHECK_EQ(fragment_size, num_to_read);
+    DCHECK_EQ(static_cast<int>(fragment_size), num_to_read);
 
     // Get encoding table for compression
     int table_size;
@@ -901,7 +903,7 @@ class SnappyArrayWriter {
       UNALIGNED_STORE64(op, UNALIGNED_LOAD64(ip));
       UNALIGNED_STORE64(op + 8, UNALIGNED_LOAD64(ip + 8));
     } else {
-      if (space_left < len) {
+      if (space_left < static_cast<int>(len)) {
         return false;
       }
       memcpy(op, ip, len);
@@ -922,10 +924,10 @@ class SnappyArrayWriter {
       UNALIGNED_STORE64(op, UNALIGNED_LOAD64(op - offset));
       UNALIGNED_STORE64(op + 8, UNALIGNED_LOAD64(op - offset + 8));
     } else {
-      if (space_left >= len + kMaxIncrementCopyOverflow) {
+      if (space_left >= static_cast<int>(len + kMaxIncrementCopyOverflow)) {
         IncrementalCopyFastPath(op - offset, op, len);
       } else {
-        if (space_left < len) {
+        if (space_left < static_cast<int>(len)) {
           return false;
         }
         IncrementalCopy(op - offset, op, len);
@@ -976,7 +978,7 @@ class SnappyDecompressionValidator {
   inline bool CheckLength() const {
     return expected_ == produced_;
   }
-  inline bool Append(const char* ip, uint32 len, bool allow_fast_path) {
+  inline bool Append(const char* /* ip */, uint32 len, bool /* allow_fast_path */) {
     produced_ += len;
     return produced_ <= expected_;
   }
