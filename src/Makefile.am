@@ -735,7 +735,6 @@ dialyze: all \
          dialyzer.plt
 	$(DIALYZER) --verbose --plt dialyzer.plt \
               -I lib/cloudi_core/include/ \
-              -Wrace_conditions \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
               lib/cloudi_service_db/ebin/ \
