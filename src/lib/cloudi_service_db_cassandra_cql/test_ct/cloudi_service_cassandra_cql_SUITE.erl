@@ -100,7 +100,7 @@
     "CREATE TABLE IF NOT EXISTS test_keyspace.test_cql(id1 text, id2 int, payload blob, PRIMARY KEY(id1, id2));").
 
 
-all() -> [test_cloudi_service_cassandra_cql].
+all() -> test_condition([test_cloudi_service_cassandra_cql]).
 
 init_per_suite(Config) ->
     ok = create_test_schema(),
@@ -287,3 +287,20 @@ select_count_by_first_key_from_test_table() ->
 
 select_count_all_from_test_table() ->
     <<"select COUNT(*) from test_cql;">>.
+
+test_condition(L) ->
+    case gen_tcp:connect(?DEFAULT_CQL_HOST, ?DEFAULT_CQL_PORT, []) of
+        {ok, Socket} ->
+            catch gen_tcp:close(Socket),
+            L;
+        {error, econnrefused} ->
+            error_logger:error_msg("unable to test ~p",
+                                   [{?DEFAULT_CQL_HOST,
+                                     ?DEFAULT_CQL_PORT}]),
+            {skip, cassandra_dead};
+        {error, Reason} ->
+            error_logger:error_msg("unable to test ~p: ~p",
+                                   [{?DEFAULT_CQL_HOST,
+                                     ?DEFAULT_CQL_PORT}, Reason]),
+            {skip, cassandra_dead}
+    end.

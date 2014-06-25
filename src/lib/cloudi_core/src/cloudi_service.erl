@@ -227,16 +227,16 @@
 
 % used for accessing RequestInfo data
 -ifdef(ERLANG_OTP_VER_16).
--type key_values() :: list({binary() | string() | atom(),
-                            binary() | string() | any()}) |
-                      dict().
+-type key_values(Key, Value) :: list({Key, Value}) |
+                                dict().
 -else.
--type key_values() :: list({binary() | string() | atom(),
-                            binary() | string() | any()}) |
-                      dict:dict(binary() | string() | atom(),
-                                binary() | string() | any()).
+-type key_values(Key, Value) :: list({Key, Value}) |
+                                dict:dict(Key, Value).
 -endif.
--export_type([key_values/0]).
+-type key_values() :: key_values(binary() | string() | atom(),
+                                 binary() | string() | any()).
+-export_type([key_values/2,
+              key_values/0]).
 
 -define(CATCH_TIMEOUT(F),
         try F catch exit:{timeout, _} -> {error, timeout} end).

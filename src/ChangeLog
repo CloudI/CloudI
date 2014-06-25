@@ -3,6 +3,10 @@
 
 2014-06-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add request_start and request_end to cloudi_service_oauth1
+
+2014-06-25 Irina Guberman
+
     * Update cloudi_service_db_cassandra_cql
 
 2014-06-23 Michael Truog   <mjtruog [at] gmail (dot) com>
