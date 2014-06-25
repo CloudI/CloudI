@@ -50,7 +50,7 @@
 -type socket() :: inet:socket().
 -type ets() :: ets:tid().
 
--type request() :: {Opcode :: request_opcode(), Data :: iolist()}.
+-type request() :: {Opcode :: request_opcode(), Data :: iodata()}.
 -type request_opcode() :: startup
                         | credentials
                         | 'query'
@@ -83,7 +83,8 @@
 -type void() :: {ok, void}.
 -type rows() :: {ok, {Rows :: [[type()]], Cols :: column_specs()}}.
 -type set_keyspace() :: {ok, Keyspace :: bitstring()}.
--type prepared() :: {ok, PreparedQueryId :: binary()}.
+-type prepared() :: {ok, PreparedQueryId :: binary()}
+                  | {ok, PreparedQueryId :: binary(), Types :: [option()]}.
 -type schema_change() :: {ok, created | updated | dropped}.
 
 -type response_opcode() :: error
@@ -185,21 +186,21 @@
 -type type() :: native_type()
               | collection_type().
 
--type values() :: [binary() | {option(), type()}].
+-type values() :: [type() | {option(), type()}].
 
 %%-----------------------------------------------------------------------------
 %% Logging macros
 %%-----------------------------------------------------------------------------
 
 -ifdef(ERLCQL_NO_LOGS).
--define(ERROR(_Format, _Data), ok).
--define(EMERGENCY(_Format, _Data), ok).
--define(ALERT(_Format, _Data), ok).
--define(CRITICAL(_Format, _Data), ok).
--define(WARNING(_Format, _Data), ok).
--define(INFO(_Format, _Data), ok).
--define(NOTICE(_Format, _Data), ok).
--define(DEBUG(_Format, _Data), ok).
+-define(ERROR(Format, Data), begin Format, Data, ok end).
+-define(EMERGENCY(Format, Data), begin Format, Data, ok end).
+-define(ALERT(Format, Data), begin Format, Data, ok end).
+-define(CRITICAL(Format, Data), begin Format, Data, ok end).
+-define(WARNING(Format, Data), begin Format, Data, ok end).
+-define(INFO(Format, Data), begin Format, Data, ok end).
+-define(NOTICE(Format, Data), begin Format, Data, ok end).
+-define(DEBUG(Format, Data), begin Format, Data, ok end).
 -else.
 -ifdef(ERLCQL_LAGER).
 -compile({parse_transform, lager_transform}).

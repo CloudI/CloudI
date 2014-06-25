@@ -130,7 +130,7 @@ to_binary(Values) ->
 -spec to_binary(Type, Value) -> Binary when
       Type :: option(),
       Value :: type(),
-      Binary :: iodata().
+      Binary :: iodata() | null.
 to_binary(_, null) ->
     null;
 to_binary(_, undefined) ->

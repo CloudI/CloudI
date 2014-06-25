@@ -4,9 +4,9 @@
 {application, erlcql,
  [{description, "Cassandra native protocol CQL client"},
   {vsn, "0.1.6"},
+  {registered, []},
   {applications,
    [kernel,
     stdlib,
     snappy,
-    lz4,
-    backoff]}]}.
+    lz4]}]}.

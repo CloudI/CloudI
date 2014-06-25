@@ -183,20 +183,20 @@ test_cloudi_service_cassandra_cql(_Config) ->
 
     Name = ?TEST_PREFIX ++ ?TEST_SERVICE_NAME,
 
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test1">>, 1, <<"TEST BLOB1_1">>]),
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test1">>, 2, <<"TEST BLOB1_2">>], local_quorum),
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test1">>, 3, <<"TEST BLOB1_3">>]),
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test2">>, 1, <<"TEST BLOB2_1">>]),
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test2">>, 2, <<"TEST BLOB2_2">>], local_quorum),
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, insert_into_test_table, [<<"test2">>, 3, <<"TEST BLOB2_3">>]),
     timer:sleep(1000),
-    {ok, {ok, {[[<<"test2">>, 1, <<"TEST BLOB2_1">>],
+    {ok, {[[<<"test2">>, 1, <<"TEST BLOB2_1">>],
         [<<"test2">>, 2, <<"TEST BLOB2_2">>],
         [<<"test2">>, 3, <<"TEST BLOB2_3">>],
         [<<"test1">>, 1, <<"TEST BLOB1_1">>],
@@ -204,64 +204,61 @@ test_cloudi_service_cassandra_cql(_Config) ->
         [<<"test1">>, 3, <<"TEST BLOB1_3">>]],
         [{<<"id1">>, varchar},
             {<<"id2">>, int},
-            {<<"payload">>, blob}]}}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+            {<<"payload">>, blob}]}} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, select_all_from_test_table, []),
-    {ok, {ok,
+
+    {ok,
         {[[6]],
             [{<<"count">>,
-                bigint}]}}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+                bigint}]}} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, select_count_all_from_test_table, [], local_quorum),
 
 
-    {ok, {ok, {[
+    {ok, {[
         [<<"test1">>, 1, <<"TEST BLOB1_1">>],
         [<<"test1">>, 2, <<"TEST BLOB1_2">>],
         [<<"test1">>, 3, <<"TEST BLOB1_3">>]],
         [{<<"id1">>, varchar},
             {<<"id2">>, int},
-            {<<"payload">>, blob}]}}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+            {<<"payload">>, blob}]}} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, select_by_first_key_from_test_table, [<<"test1">>]),
 
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, delete_by_first_key_from_test_table, [<<"test1">>]),
     timer:sleep(200),
 
     %% prepared
-    {ok, {ok,
+    {ok,
         {[[3]],
             [{<<"count">>,
-                bigint}]}}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+                bigint}]}} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, select_count_all_from_test_table, []),
 
     %% test unprepared query sent as string()
-    {ok, {ok,
+    {ok,
         {[[3]],
             [{<<"count">>,
-                bigint}]}}} = cloudi_service_db_cassandra_cql:executeQuery(
+                bigint}]}} = cloudi_service_db_cassandra_cql:execute_query(
         Ctx, Name, "select COUNT(*) from test_cql;"),
 
-    {ok, {ok, Resp}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+    {ok, Resp} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, delete_by_first_key_from_test_table, [<<"test2">>], local_quorum),
 
     timer:sleep(200),
-    {ok, {ok,
+    {ok,
         {[[0]],
             [{<<"count">>,
-                bigint}]}}} = cloudi_service_db_cassandra_cql:executePreparedQuery(
+                bigint}]}} = cloudi_service_db_cassandra_cql:execute_prepared_query(
         Ctx, Name, select_count_all_from_test_table, []),
 
     %% test unprepared query sent as binary() and with request specific consistency
-    {ok, {ok,
+   {ok,
         {[[0]],
             [{<<"count">>,
-                bigint}]}}} = cloudi_service_db_cassandra_cql:executeQuery(
+                bigint}]}} = cloudi_service_db_cassandra_cql:execute_query(
         Ctx, Name, select_count_all_from_test_table(), all),
 
-
-    CleanupQuery  = "drop keyspace test_keyspace;",
-    {ok,{ok,dropped}} = cloudi_service_db_cassandra_cql:executeQuery(Ctx, Name, CleanupQuery).
-
-
+    {ok,dropped} = cloudi_service_db_cassandra_cql:execute_query(Ctx, Name, "drop keyspace test_keyspace;").
 
 
 test_queries() ->

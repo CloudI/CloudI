@@ -1,6 +1,0 @@
-{application, backoff,
- [{description, "Exponential backoffs library"},
-  {vsn, "0.1.0"},
-  {applications, [stdlib, kernel]},
-  {registered, []}
-]}.

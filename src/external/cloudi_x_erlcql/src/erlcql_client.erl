@@ -50,7 +50,7 @@
 -record(state, {
           async_ets :: ets(),
           auto_reconnect :: boolean(),
-          backoff :: backoff:backoff(),
+          backoff :: backoff(),
           cql_version :: bitstring(),
           credentials :: {bitstring(), bitstring()},
           database :: {Host :: string(), Port :: inet:port_number()},
@@ -77,6 +77,13 @@
 -define(PREPARED_ETS_OPTS, [set, private,
                             {read_concurrency, true}]).
 -define(TIMEOUT, timer:seconds(5)).
+
+-record(backoff, {
+          start :: pos_integer(),
+          max :: pos_integer() | infinity,
+          current :: pos_integer()
+         }).
+-type backoff() :: #backoff{}.
 
 %% Start API ------------------------------------------------------------------
 
@@ -121,7 +128,7 @@ register(Pid, Events) ->
 async_query(Pid, QueryString, Consistency) ->
     cast(Pid, {'query', QueryString, Consistency}).
 
--spec async_execute(pid(), binary(), values(), consistency()) ->
+-spec async_execute(pid(), erlcql:uuid() | atom(), values(), consistency()) ->
           {ok, QueryRef :: erlcql:query_ref()} | {error, Reason :: term()}.
 async_execute(Pid, QueryId, Values, Consistency) ->
     cast(Pid, {execute, QueryId, Values, Consistency}).
@@ -182,7 +189,7 @@ init_state(Opts) ->
     AutoReconnect = get_env_opt(auto_reconnect, Opts),
     ReconnectStart = get_env_opt(reconnect_start, Opts),
     ReconnectMax = get_env_opt(reconnect_max, Opts),
-    Backoff = backoff:init(ReconnectStart, ReconnectMax),
+    Backoff = backoff_init(ReconnectStart, ReconnectMax),
     CQLVersion = get_env_opt(cql_version, Opts),
     Username = get_env_opt(username, Opts),
     Password = get_env_opt(password, Opts),
@@ -226,7 +233,7 @@ startup(reconnect, #state{backoff = Backoff,
     case gen_tcp:connect(Host, Port, [{keepalive, Keepalive} | ?TCP_OPTS]) of
         {ok, Socket} ->
             ?INFO("Connected to ~p:~p", [Host, Port]),
-            {_, Backoff2} = backoff:succeed(Backoff),
+            Backoff2 = backoff_succeed(Backoff),
             State2 = State#state{socket = Socket,
                                  backoff = Backoff2},
             case init_connection(State2) of
@@ -282,14 +289,14 @@ ready({_Ref, _}, _From, #state{streams = []} = State) ->
 ready({Ref, {'query', QueryString, Consistency}}, {From, _}, State) ->
     Query = erlcql_encode:'query'(QueryString, Consistency),
     send(Query, {Ref, From}, State);
-ready({Ref, {prepare, QueryString}}, {From, _}, State) ->
-    Prepare = erlcql_encode:prepare(QueryString),
+ready({Ref, {prepare, Query}}, {From, _}, State) ->
+    Prepare = erlcql_encode:prepare(Query),
     send(Prepare, {Ref, From}, State);
-ready({Ref, {prepare, QueryString, Name}}, {From, _},
+ready({Ref, {prepare, Query, Name}}, {From, _},
       #state{prepared_ets = PreparedETS} = State) ->
-    Prepare = erlcql_encode:prepare(QueryString),
+    Prepare = erlcql_encode:prepare(Query),
     Fun = fun({ok, QueryId, Types}) ->
-                  true = ets:insert(PreparedETS, {Name, QueryId, Types}),
+                  true = ets:insert(PreparedETS, {Name, Query, QueryId, Types}),
                   {ok, QueryId};
              ({error, _} = Response) ->
                   Response
@@ -299,18 +306,20 @@ ready({Ref, {execute, QueryId, Values, Consistency}},
       {From, _}, State) when is_binary(QueryId) ->
     Execute = erlcql_encode:execute(QueryId, Values, Consistency),
     send(Execute, {Ref, From}, State);
-ready({Ref, {execute, QueryName, Values, Consistency}}, {From, _},
-      #state{prepared_ets = PreparedETS} = State) when is_atom(QueryName) ->
-    case ets:lookup(PreparedETS, QueryName) of
-        [{QueryName, QueryId, undefined}] ->
+ready({Ref, {execute, Name, Values, Consistency}}, {From, _},
+      #state{prepared_ets = PreparedETS} = State) when is_atom(Name) ->
+    case ets:lookup(PreparedETS, Name) of
+        [{Name, Query, QueryId, undefined}] ->
+            ?DEBUG("Executing ~s: ~s, ~p", [Name, Query, Values]),
             Execute = erlcql_encode:execute(QueryId, Values, Consistency),
             send(Execute, {Ref, From}, State);
-        [{QueryName, QueryId, Types}] ->
+        [{Name, Query, QueryId, Types}] ->
             TypedValues = lists:zip(Types, Values),
+            ?DEBUG("Executing ~s: ~s, ~p", [Name, Query, Values]),
             Execute = erlcql_encode:execute(QueryId, TypedValues, Consistency),
             send(Execute, {Ref, From}, State);
         [] ->
-            ?DEBUG("Execute failed, invalid query name: ~s", [QueryName]),
+            ?DEBUG("Execute failed, invalid query name: ~s", [Name]),
             {reply, {error, invalid_query_name}, ready, State}
     end;
 ready({Ref, options}, {From, _}, State) ->
@@ -403,6 +412,8 @@ apply_funs([Fun | Rest], State) ->
     case Fun(State) of
         {ok, State2} ->
             apply_funs(Rest, State2);
+        {error, {Reason, _, _}} ->
+            {error, Reason};
         {error, _Reason} = Error ->
             Error
     end.
@@ -416,8 +427,8 @@ send_options(#state{cql_version = undefined} = State) ->
             CQLVersion = hd(get_opt(<<"CQL_VERSION">>, Supported)),
             State2 = State#state{cql_version = CQLVersion},
             {ok, State2};
-        {error, {Reason, _, _}} ->
-            {error, Reason}
+        {error, _Reason} = Error ->
+            Error
     end;
 send_options(State) ->
     {ok, State}.
@@ -466,8 +477,8 @@ register_to_events(#state{events = Events} = State) ->
     case wait_for_response(State) of
         ready ->
             {ok, State};
-        {error, {Reason, _, _}} ->
-            {error, Reason}
+        {error, _Reason} = Error ->
+            Error
     end.
 
 -spec use_keyspace(state()) -> {ok, state()} | {error, Reason :: term()}.
@@ -479,8 +490,8 @@ use_keyspace(#state{keyspace = Keyspace} = State) ->
     case wait_for_response(State) of
         {ok, Keyspace} ->
             {ok, State};
-        {error, {Reason, _, _}} ->
-            {error, Reason}
+        {error, _Reason} = Error ->
+            Error
     end.
 
 -spec prepare_queries(state()) -> {ok, state()} | {error, Reason :: term()}.
@@ -499,13 +510,13 @@ prepare_queries([{Name, Query} | Rest],
     ok = send_request(Prepare, 0, State),
     case wait_for_response(State) of
         {ok, QueryId, Types} ->
-            true = ets:insert(PreparedETS, {Name, QueryId, Types}),
+            true = ets:insert(PreparedETS, {Name, Query, QueryId, Types}),
             prepare_queries(Rest, State);
-        {error, {Reason, _, _}} ->
-            {error, Reason}
+        {error, _Reason} = Error ->
+            Error
     end.
 
--spec send_request(iodata(), integer(), state()) -> ok.
+-spec send_request(request(), integer(), state()) -> ok.
 send_request(Body, Stream, #state{socket = Socket,
                                   flags = Flags}) ->
     Frame = erlcql_encode:frame(Body, Flags, Stream),
@@ -548,9 +559,8 @@ decode_response(Binary, #state{flags = {Compression, _}}) ->
 try_again(#state{socket = Socket,
                  backoff = Backoff} = State) ->
     ok = close_socket(Socket),
-    Timeout = backoff:get(Backoff),
+    {Timeout, Backoff2} = backoff_fail(Backoff),
     ?DEBUG("Backing off for ~pms", [Timeout]),
-    {_, Backoff2} = backoff:fail(Backoff),
     State2 = State#state{socket = undefined,
                          backoff = Backoff2},
     _Ref = gen_fsm:send_event_after(Timeout, reconnect),
@@ -643,7 +653,7 @@ send_response(Stream, Response, Pid, #state{async_ets = AsyncETS,
 
 %% Helper functions -----------------------------------------------------------
 
--spec get_env_opt(atom(), proplist()) -> Value :: term().
+-spec get_env_opt(term(), proplist()) -> Value :: term().
 get_env_opt(Opt, Opts) ->
     case lists:keyfind(Opt, 1, Opts) of
         {Opt, Value} ->
@@ -652,11 +662,11 @@ get_env_opt(Opt, Opts) ->
             get_env(Opt)
     end.
 
--spec get_opt(atom(), proplist()) -> Value :: term().
+-spec get_opt(term(), proplist()) -> Value :: term().
 get_opt(Opt, Opts) ->
     get_opt(Opt, Opts, undefined).
 
--spec get_opt(atom(), proplist(), term()) -> Value :: term().
+-spec get_opt(term(), proplist(), term()) -> Value :: term().
 get_opt(Opt, Opts, Default) ->
     case lists:keyfind(Opt, 1, Opts) of
         {Opt, Value} ->
@@ -665,7 +675,7 @@ get_opt(Opt, Opts, Default) ->
             Default
     end.
 
--spec get_env(atom()) -> Value :: term().
+-spec get_env(term()) -> Value :: term().
 get_env(Opt) ->
     case application:get_env(?APP, Opt) of
         {ok, Val} ->
@@ -673,3 +683,21 @@ get_env(Opt) ->
         undefined ->
             erlcql:default(Opt)
     end.
+
+-spec backoff_init(Start, Max) -> backoff() when
+    Start :: pos_integer(),
+    Max :: pos_integer() | infinity.
+backoff_init(Start, Max) ->
+    #backoff{start = Start,
+             max = Max,
+             current = Start}.
+
+-spec backoff_fail(backoff()) -> {pos_integer(), backoff()}.
+backoff_fail(#backoff{current = Current, max = infinity} = Backoff) ->
+    {Current, Backoff#backoff{current = Current bsl 1}};
+backoff_fail(#backoff{current = Current, max = Max} = Backoff) ->
+    {Current, Backoff#backoff{current = min(Current bsl 1, Max)}}.
+
+-spec backoff_succeed(backoff()) -> backoff().
+backoff_succeed(#backoff{start = Start} = Backoff) ->
+    Backoff#backoff{current = Start}.

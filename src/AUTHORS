@@ -9,7 +9,6 @@ Drew Varner                 <drew.varner [at] ninefx (dot) com>
 Irina Guberman
 
 CloudI Integration Dependencies (alphabetical project order):
-backoff          Fred Hebert <mononcqc@ferd.ca>
 backward-cpp     François-Xavier Bourlet <bombela@gmail.com>
 booster          Artyom Beilis (Tonkikh)
 cowboy           Loïc Hoguin <essen@ninenines.eu>

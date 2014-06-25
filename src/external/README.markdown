@@ -6,15 +6,6 @@ prefix to avoid any conflicts when CloudI shares the Erlang VM with other
 applications that may share common dependencies (erlzmq2 and syslog are
 exceptions due to their C integration).
 
-`backoff`
----------
-`Simple exponential backoffs in Erlang`
-
-- `https://github.com/ferd/backoff`
-- `commit ffb7fdeacf8e4514ce047ca91c178131f8845f3e`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `MIT`
-
 `backward-cpp`
 --------------
 `for creating a backtraces in C++`
@@ -132,8 +123,8 @@ exceptions due to their C integration).
 `Cassandra native protocol CQL client for Erlang`
 
 - `https://github.com/rpt/erlcql`
-- `commit aea3767d166efde2ccbf0cd5505c2fd19abb8213 (0.1.6)`
-- `Fri Jun 20 12:11:49 PDT 2014`
+- `commit 44ff63e3048140c7877faffda94a0b90ab19deb5 (branch develop)`
+- `Wed Jun 25 13:01:35 PDT 2014`
 - `MIT`
 
 `etokyotyrant (medici)`

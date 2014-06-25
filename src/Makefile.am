@@ -40,7 +40,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/reltool_util/src \
      -d $(top_srcdir)/lib/trie/src \
      -d $(top_srcdir)/lib/uuid/src \
-     -d $(top_srcdir)/external/cloudi_x_backoff/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
@@ -173,7 +172,6 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_ranch/ebin
 	$(MKDIR_P) external/cloudi_x_elli/ebin
 	$(MKDIR_P) external/cloudi_x_dynamic_compile/ebin
-	$(MKDIR_P) external/cloudi_x_backoff/ebin
 	$(MKDIR_P) external/cloudi_x_erlcql/ebin
 	$(MKDIR_P) external/cloudi_x_protobuffs/ebin
 	$(MKDIR_P) external/cloudi_x_riakc/ebin
@@ -454,9 +452,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_dynamic_compile && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_dynamic_compile/ebin || exit 0)
-	(cd $(top_srcdir)/external/cloudi_x_backoff && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/cloudi_x_backoff/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_erlcql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_erlcql/ebin || exit 0)
@@ -639,8 +634,6 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_riakc/ebin
 	rmdir $(top_builddir)/external/cloudi_x_protobuffs/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_protobuffs/ebin
-	rmdir $(top_builddir)/external/cloudi_x_backoff/ebin || exit 0
-	rm -f $(top_srcdir)/external/cloudi_x_backoff/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcql/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_erlcql/ebin
 	rmdir $(top_builddir)/external/syslog/ebin || exit 0
@@ -767,7 +760,6 @@ dialyze: all \
               lib/trie/ebin/ \
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
-              external/cloudi_x_backoff/ebin \
               external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_dynamic_compile/ebin \

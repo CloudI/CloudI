@@ -70,10 +70,10 @@
 -behaviour(cloudi_service).
 
 %% public API
--export([executeQuery/3,
-    executeQuery/4,
-    executePreparedQuery/4,
-    executePreparedQuery/5]).
+-export([execute_query/3,
+    execute_query/4,
+    execute_prepared_query/4,
+    execute_prepared_query/5]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -87,35 +87,30 @@
 -type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
 
 -record(state, {
-    client :: pid(),
-    consistency :: atom()
+    client = self() :: pid(),
+    consistency :: consistency()
 }).
 
-
 -type cql_name() :: atom().
--type cql_params() :: [binary() | integer() | none()].
 
+-type query() :: binary() | string().
 
--type preparedQueryRequest() :: {QueryName :: cql_name(),
-    Params :: cql_params(),
-    Consistency :: consistency() | none()}.
+-type query_definition() :: {QueryName :: cql_name(), Query :: query()}.
 
--type queryRequest() :: {QueryString :: string() | binary(),
-    Consistency :: consistency() | none()}.
-
-
--type service_request() :: preparedQueryRequest() | queryRequest().
-
--type query() :: {Name :: cql_name(), Query :: binary()}.
+-type args() :: [   {service_name, ServiceName :: service_name() } |
+                        {connection_options, ConnectionOptions :: connection_options() } |
+                        {consistency, Consistency :: consistency()}
+                ].
 
 -type service_name() :: {service_name, ServiceName :: string()}.
+
 -type connection_options() :: {connection_options,
     [{host, Host :: string()} |
     {port, Port :: integer()} |
     {username, Username :: binary()} |
     {password, Password :: binary()} |
     {use, Keyspace :: binary()} |
-    {prepare, [query()]} |
+    {prepare, [query_definition()]} |
     {keepalive, Value :: boolean()} |
     {auto_reconnect, Value :: boolean()} |
     {reconnect_start, Value :: integer()} |
@@ -128,13 +123,13 @@
     {parent, Parent :: pid()}
     ]}.
 
--type consistency_option() :: {consistency, Consistency :: consistency()}.
--type args() :: [service_name() | connection_options() | consistency_option()].
+-type cloudi_cql_response() :: response() | {error, Reason :: cloudi:error_reason_sync()}.
 
--type cloudi_send_sync_response() ::
-{ok, ResponseInfo :: cloudi:response_info(), Response :: response()} |
-{ok, Response :: response()} |
-{error, Reason :: cloudi:error_reason_sync()}.
+-type cql_request() ::  {cql_name(), values()} |
+                        {cql_name(), values(), consistency()} |
+                        {query()} |
+                        {query(), consistency()}.
+
 
 %%%------------------------------------------------------------------------
 %%% Public interface
@@ -143,28 +138,27 @@
 %%% Query: valid CQL query
 %%% QueryName: prepared query id
 
--spec executeQuery(dispatcher(), string(), string() | binary()) -> cloudi_send_sync_response().
-executeQuery(Dispatcher, Name, Query) ->
-    cloudi:send_sync(Dispatcher, Name, {as_binary(Query)}).
+-spec execute_query(dispatcher(), string(), query()) -> cloudi_cql_response().
+execute_query(Dispatcher, Name, Query) ->
+    clean_response(cloudi:send_sync(Dispatcher, Name, {as_binary(Query)})).
 
--spec executeQuery(dispatcher(), string(), string() | binary(), consistency()) -> cloudi_send_sync_response().
-executeQuery(Dispatcher, Name, Query, Consistency) ->
-    cloudi:send_sync(Dispatcher, Name, {as_binary(Query), Consistency}).
+-spec execute_query(dispatcher(), string(), query(), consistency()) -> cloudi_cql_response().
+execute_query(Dispatcher, Name, Query, Consistency) ->
+    clean_response(cloudi:send_sync(Dispatcher, Name, {as_binary(Query), Consistency})).
 
--spec executePreparedQuery(dispatcher(), string(), cql_name(), cql_params()) -> cloudi_send_sync_response().
-executePreparedQuery(Dispatcher, Name, QueryName, Values) ->
-    cloudi:send_sync(Dispatcher, Name, {QueryName, Values}).
+-spec execute_prepared_query(dispatcher(), string(), cql_name(), values()) -> cloudi_cql_response().
+execute_prepared_query(Dispatcher, Name, QueryName, Values) ->
+    clean_response(cloudi:send_sync(Dispatcher, Name, {QueryName, Values})).
 
--spec executePreparedQuery(dispatcher(), string(), cql_name(), cql_params(), consistency()) -> cloudi_send_sync_response().
-executePreparedQuery(Dispatcher, Name, QueryName, Values, Consistency) ->
-    cloudi:send_sync(Dispatcher, Name, {QueryName, Values, Consistency}).
-
+-spec execute_prepared_query(dispatcher(), string(), cql_name(), values(), consistency()) -> cloudi_cql_response().
+execute_prepared_query(Dispatcher, Name, QueryName, Values, Consistency) ->
+    clean_response(cloudi:send_sync(Dispatcher, Name, {QueryName, Values, Consistency})).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
--spec cloudi_service_init(args(), string(), dispatcher()) ->
-    response().
+
+-spec cloudi_service_init(args(), string(), dispatcher())-> {ok,#state{client::pid(),consistency::consistency()}}.
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
 
     [{service_name, ServiceName},
@@ -177,9 +171,6 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     {ok, #state{client = ClientPid, consistency = Consistency}}.
 
 
-
--spec cloudi_service_handle_request(atom(), string(), string(), any(), service_request(), int, int, int, pid(), tuple(), dispatcher()) ->
-    {reply, any()}.
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     _Timeout, _Priority, _TransId, _Pid,
     #state{client = ClientPid,
@@ -187,27 +178,12 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     } = State,
     _Dispatcher) ->
 
-    Res =
-        case Request of
-            {QueryName, Values} when (is_atom(QueryName) and is_list(Values)) ->
-                cloudi_x_erlcql_client:async_execute(ClientPid, QueryName, Values, Consistency);
-            {QueryName, Values, RequestConsistency}
-                when (is_atom(QueryName) and is_list(Values) and is_atom(RequestConsistency)) ->
-                cloudi_x_erlcql_client:async_execute(ClientPid, QueryName, Values, RequestConsistency);
+    Response = handle_request(ClientPid, Request, Consistency),
 
-            {Query} when is_binary(Query) ->
-                cloudi_x_erlcql_client:async_query(ClientPid, Query, Consistency);
-            {Query, RequestConsistency} when (is_binary(Query) and is_atom(RequestConsistency)) ->
-                cloudi_x_erlcql_client:async_query(ClientPid, Query, RequestConsistency);
-            _ -> {error, "Invalid Request"}
-        end,
+    ?DEBUG("Response ~p from erlcql_client for Request ~p", [Response, Request]),
 
-    case Res of
-        {ok, QueryRef} ->
-            {reply, cloudi_x_erlcql_client:await(QueryRef), State};
-        {error, _Reason} = Error ->
-            {reply, Error, State}
-    end.
+    {reply, Response, State}.
+
 
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_INFO("Unknown info ~p", [Request]),
@@ -220,6 +196,40 @@ cloudi_service_terminate(_, _State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+-spec handle_request(pid(), cql_request(), consistency()) -> response() | {error, Reason :: term()}.
+handle_request(ClientPid, Request, DefaultConsistency)->
+    Response =
+    case Request of
+
+            {QueryName, Values} when (is_atom(QueryName) and is_list(Values)) ->
+                cloudi_x_erlcql_client:async_execute(ClientPid, QueryName, Values, DefaultConsistency);
+            {QueryName, Values, RequestConsistency}
+                when (is_atom(QueryName) and is_list(Values) and is_atom(RequestConsistency)) ->
+                cloudi_x_erlcql_client:async_execute(ClientPid, QueryName, Values, RequestConsistency);
+
+            {Query} when is_binary(Query) ->
+                cloudi_x_erlcql_client:async_query(ClientPid, Query, DefaultConsistency);
+            {Query, RequestConsistency} when (is_binary(Query) and is_atom(RequestConsistency)) ->
+                cloudi_x_erlcql_client:async_query(ClientPid, Query, RequestConsistency);
+            _ -> {error, "Invalid Request"}
+    end,
+
+    case Response of
+        {ok, QueryRef} ->
+            cloudi_x_erlcql_client:await(QueryRef);
+        _-> Response
+    end.
+
+
+
+clean_response(CloudiResponse)->
+    ?DEBUG("Got response: ~p", [CloudiResponse]),
+    ?DEBUG("Got response: ~p", [CloudiResponse]),
+    case CloudiResponse of {ok, ErlcqlResp} -> ErlcqlResp;
+        _-> CloudiResponse
+    end.
+
 
 as_binary(Query) when is_binary(Query) -> Query;
 as_binary(Query) when is_list(Query) -> list_to_binary(Query).
