@@ -1359,6 +1359,11 @@ static void callback(cloudi_instance_t * p,
     {
         assert(false);
     }
+    // not executed, avoids warning
+    if (result == cloudi_success)
+    {
+        return;
+    }
 }
 
 static void store_incoming_binary(buffer_t const & buffer,
