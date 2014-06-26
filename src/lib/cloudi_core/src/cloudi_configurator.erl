@@ -193,8 +193,14 @@ service_start(#config_service_internal{
                       reload = Reload}} = Service,
               Timeout) ->
     case service_start_find_internal(Service, Timeout) of
-        {ok, #config_service_internal{
-                 module = Module} = FoundService} ->
+        {ok, ModuleType, #config_service_internal{
+                             module = Module} = FoundService} ->
+            GroupLeader = if
+                ModuleType =:= module ->
+                    undefined;
+                ModuleType =:= application ->
+                    application_controller:get_master(Module)
+            end,
             if
                 Reload =:= true ->
                     ok = cloudi_services_internal_reload:service_add(Module);
@@ -202,7 +208,7 @@ service_start(#config_service_internal{
                     ok
             end,
             NewCountProcess = concurrency(CountProcess),
-            service_start_internal(NewCountProcess, FoundService,
+            service_start_internal(NewCountProcess, FoundService, GroupLeader,
                                    NewCountProcess, timeout_decr(Timeout));
         {error, _} = Error ->
             Error
@@ -435,7 +441,12 @@ service_start_find_internal(#config_service_internal{
                 false ->
                     {error, {service_internal_module_not_loaded, Module}};
                 _ ->
-                    {ok, Service}
+                    case cloudi_x_reltool_util:application_loaded(Module) of
+                        {ok, _} ->
+                            {ok, application, Service};
+                        {error, _} ->
+                            {ok, module, Service}
+                    end
             end;
         true ->
             {error, {service_internal_module_invalid, Module}}
@@ -560,21 +571,24 @@ service_start_find_internal_module(Module, Service)
         false ->
             case code:load_file(Module) of
                 {module, Module} ->
-                    {ok, Service#config_service_internal{module = Module}};
+                    {ok, module,
+                     Service#config_service_internal{module = Module}};
                 {error, Reason} ->
                     {error,
                      {service_internal_module_not_found,
                       {Reason, Module}}}
             end;
         _ ->
-            {ok, Service#config_service_internal{module = Module}}
+            {ok, module,
+             Service#config_service_internal{module = Module}}
     end.
 
 service_start_find_internal_application(Application, Module, Service, Timeout)
     when is_atom(Application), is_atom(Module) ->
     case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
-            {ok, Service#config_service_internal{module = Module}};
+            {ok, application,
+             Service#config_service_internal{module = Module}};
         {error, Reason} ->
             {error, {service_internal_application_invalid, Reason}}
     end.
@@ -583,7 +597,8 @@ service_start_find_internal_script(ScriptPath, Service)
     when is_list(ScriptPath) ->
     case cloudi_x_reltool_util:script_start(ScriptPath) of
         {ok, [Application | _]} ->
-            {ok, Service#config_service_internal{module = Application}};
+            {ok, application,
+             Service#config_service_internal{module = Application}};
         {error, Reason} ->
             {error, {service_internal_release_invalid, Reason}}
     end.
@@ -669,7 +684,7 @@ service_stop_remove_internal(#config_service_internal{
             {error, {service_internal_application_not_found, Reason}}
     end.
 
-service_start_internal(0, Service, _, _) ->
+service_start_internal(0, Service, _, _, _) ->
     {ok, Service};
 service_start_internal(Count0,
                        #config_service_internal{
@@ -685,11 +700,11 @@ service_start_internal(Count0,
                            options = Options,
                            max_r = MaxR,
                            max_t = MaxT,
-                           uuid = ID} = Service,
+                           uuid = ID} = Service, GroupLeader,
                        CountProcess, Timeout) ->
     Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
-                                         [CountProcess,
+                                         [CountProcess, GroupLeader,
                                           Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
@@ -699,7 +714,7 @@ service_start_internal(Count0,
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_internal(Count1, Service,
+            service_start_internal(Count1, Service, GroupLeader,
                                    CountProcess, Timeout);
         {error, Reason} ->
             {error, {service_internal_start_failed, Reason}}

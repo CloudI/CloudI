@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix application membership of CloudI internal services by having
+      the group_leader set properly
+
 2014-06-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add request_start and request_end to cloudi_service_oauth1

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/12]).
+         create_internal/13]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -76,7 +76,7 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_internal(ProcessIndex, ProcessCount,
+create_internal(ProcessIndex, ProcessCount, GroupLeader,
                 Module, Args, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, DestRefresh,
                 DestDeny, DestAllow, ConfigOptions)
@@ -98,7 +98,8 @@ create_internal(ProcessIndex, ProcessCount,
            (DestRefresh == immediate_oldest) orelse
            (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [ProcessIndex, ProcessCount,
+    case supervisor:start_child(?MODULE, [ProcessIndex,
+                                          ProcessCount, GroupLeader,
                                           Module, Args, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,

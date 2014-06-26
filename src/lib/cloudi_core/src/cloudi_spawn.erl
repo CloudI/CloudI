@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_spawn).
@@ -54,7 +54,7 @@
 -export([environment_lookup/0,
          environment_transform/1,
          environment_transform/2,
-         start_internal/13,
+         start_internal/14,
          start_external/17]).
 
 -include("cloudi_configuration.hrl").
@@ -88,7 +88,7 @@ environment_transform(String) ->
 environment_transform(String, EnvironmentLookup) ->
     environment_transform(String, [], undefined, EnvironmentLookup).
 
-start_internal(ProcessIndex, ProcessCount,
+start_internal(ProcessIndex, ProcessCount, GroupLeader,
                Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, DestRefresh,
                DestDenyList, DestAllowList, ConfigOptions, UUID)
@@ -128,7 +128,7 @@ start_internal(ProcessIndex, ProcessCount,
         {ok, NewTimeout} ->
             % Erlang application startup is asynchronous, so wait for the
             % module to be loaded or timeout
-            ?CREATE_INTERNAL(ProcessIndex, ProcessCount,
+            ?CREATE_INTERNAL(ProcessIndex, ProcessCount, GroupLeader,
                              Module, Args, NewTimeout, Prefix,
                              TimeoutAsync, TimeoutSync, DestRefresh,
                              DestDeny, DestAllow, ConfigOptions);

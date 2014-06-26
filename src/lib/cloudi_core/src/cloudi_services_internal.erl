@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_services_internal).
@@ -55,7 +55,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/12]).
+-export([start_link/13]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -133,7 +133,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
+start_link(ProcessIndex, ProcessCount, GroupLeader,
+           Module, Args, Timeout, Prefix,
            TimeoutAsync, TimeoutSync, DestRefresh,
            DestDeny, DestAllow,
            #config_service_options{
@@ -159,7 +160,7 @@ start_link(ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
     case cloudi_x_cpg:scope_exists(Scope) of
         ok ->
             gen_server:start_link(?MODULE,
-                                  [ProcessIndex, ProcessCount,
+                                  [ProcessIndex, ProcessCount, GroupLeader,
                                    Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, DestRefresh,
                                    DestDeny, DestAllow, ConfigOptions],
@@ -172,13 +173,20 @@ start_link(ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ProcessIndex, ProcessCount, Module, Args, Timeout, Prefix,
+init([ProcessIndex, ProcessCount, GroupLeader,
+      Module, Args, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, DestRefresh,
       DestDeny, DestAllow,
       #config_service_options{
           duo_mode = DuoMode,
           info_pid_options = InfoPidOptions} = ConfigOptions]) ->
     Dispatcher = self(),
+    if
+        GroupLeader =:= undefined ->
+            ok;
+        is_pid(GroupLeader) ->
+            erlang:group_leader(GroupLeader, Dispatcher)
+    end,
     cloudi_x_quickrand:seed(),
     NewConfigOptions = check_init_send(ConfigOptions),
     DuoModePid = if

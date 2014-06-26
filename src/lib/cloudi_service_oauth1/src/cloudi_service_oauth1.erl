@@ -127,7 +127,8 @@
                                 binary()) -> any()) | undefined,
         request_end_f :: fun((cloudi_service:service_name(),
                               cloudi_service:service_name() | undefined,
-                              list({binary(), binary()}),
+                              list({binary(), binary()}) |
+                              cloudi_service:key_values(),
                               binary(),
                               any()) -> any()) | undefined,
         debug_db :: boolean(),
