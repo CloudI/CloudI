@@ -6,7 +6,6 @@
    {registered,[
         ]},
    {applications, [
-        cloudi_service_http_cowboy,
         cloudi_service_db_pgsql,
         cloudi_service_db_riak,
         cloudi_core,

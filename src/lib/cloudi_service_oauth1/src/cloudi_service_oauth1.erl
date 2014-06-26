@@ -97,7 +97,8 @@
         % for a 5 arity function equvalent to:
         % fun((cloudi_service:service_name() :: Name,
         %      cloudi_service:service_name() | undefined :: Pattern,
-        %      list({binary(), binary()}) :: ResponseHeaders,
+        %      list({binary(), binary()}) |
+        %      cloudi_service:key_values() :: ResponseHeaders,
         %      binary() :: Response,
         %      any() :: RequestStartState) -> any())
 -define(DEFAULT_DEBUG_DB,               false). % see below:
