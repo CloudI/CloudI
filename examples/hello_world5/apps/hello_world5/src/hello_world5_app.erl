@@ -10,7 +10,7 @@
 
 -record(state,
     {
-        service_ids = [] :: list(<<_:128>>)
+        service_ids = [] :: list(cloudi_service:trans_id())
     }).
 
 %%%------------------------------------------------------------------------
@@ -38,14 +38,7 @@ start(_StartType, _StartArgs) ->
             none,
             5000, 5000, 5000, undefined, undefined, 1, 5, 300,
             [{automatic_loading, false}]},
-        {internal,
-            "/tests/http/",
-            cloudi_service_http_cowboy,
-            [{port, 6467}, {output, internal}],
-            immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [{duo_mode, true},
-             {automatic_loading, false}]},
+
         % hello_world5 example
         {internal,
             "/examples/",
@@ -69,7 +62,19 @@ start(_StartType, _StartArgs) ->
          %{count_process, 1}, % default
          %{max_r, 5}, % default
          %{max_t, 300}, % default
-         {options, [{automatic_loading, false}]}]],
+         {options, [{automatic_loading, false}]}],
+
+        % cloudi_service_http_cowboy gets listed last so that
+        % if the destination refresh method changes to lazy,
+        % all service name pattern subscriptions are present at initialization
+        {internal,
+            "/tests/http/",
+            cloudi_service_http_cowboy,
+            [{port, 6467}, {output, internal}],
+            immediate_closest,
+            5000, 5000, 5000, undefined, undefined, 1, 5, 300,
+            [{duo_mode, true},
+             {automatic_loading, false}]}],
     case hello_world5_sup:start_link() of
         {ok, Pid} ->
             {ok, ServiceIds} = cloudi_service_api:services_add(Services,

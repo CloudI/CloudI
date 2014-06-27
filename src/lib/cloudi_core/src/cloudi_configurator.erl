@@ -193,13 +193,13 @@ service_start(#config_service_internal{
                       reload = Reload}} = Service,
               Timeout) ->
     case service_start_find_internal(Service, Timeout) of
-        {ok, ModuleType, #config_service_internal{
-                             module = Module} = FoundService} ->
+        {ok, Application, #config_service_internal{
+                              module = Module} = FoundService} ->
             GroupLeader = if
-                ModuleType =:= module ->
+                Application =:= undefined ->
                     undefined;
-                ModuleType =:= application ->
-                    application_controller:get_master(Module)
+                is_atom(Application) ->
+                    application_controller:get_master(Application)
             end,
             if
                 Reload =:= true ->
@@ -443,9 +443,9 @@ service_start_find_internal(#config_service_internal{
                 _ ->
                     case cloudi_x_reltool_util:application_loaded(Module) of
                         {ok, _} ->
-                            {ok, application, Service};
+                            {ok, Module, Service};
                         {error, _} ->
-                            {ok, module, Service}
+                            {ok, undefined, Service}
                     end
             end;
         true ->
@@ -571,7 +571,7 @@ service_start_find_internal_module(Module, Service)
         false ->
             case code:load_file(Module) of
                 {module, Module} ->
-                    {ok, module,
+                    {ok, undefined,
                      Service#config_service_internal{module = Module}};
                 {error, Reason} ->
                     {error,
@@ -579,7 +579,7 @@ service_start_find_internal_module(Module, Service)
                       {Reason, Module}}}
             end;
         _ ->
-            {ok, module,
+            {ok, undefined,
              Service#config_service_internal{module = Module}}
     end.
 
@@ -587,7 +587,7 @@ service_start_find_internal_application(Application, Module, Service, Timeout)
     when is_atom(Application), is_atom(Module) ->
     case cloudi_x_reltool_util:application_start(Application, [], Timeout) of
         ok ->
-            {ok, application,
+            {ok, Application,
              Service#config_service_internal{module = Module}};
         {error, Reason} ->
             {error, {service_internal_application_invalid, Reason}}
@@ -597,7 +597,7 @@ service_start_find_internal_script(ScriptPath, Service)
     when is_list(ScriptPath) ->
     case cloudi_x_reltool_util:script_start(ScriptPath) of
         {ok, [Application | _]} ->
-            {ok, application,
+            {ok, Application,
              Service#config_service_internal{module = Application}};
         {error, Reason} ->
             {error, {service_internal_release_invalid, Reason}}
