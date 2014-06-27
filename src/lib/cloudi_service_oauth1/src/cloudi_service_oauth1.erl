@@ -84,23 +84,27 @@
         % either an anonymous function or a {module(), atom()} tuple
         % (to reference a function), i.e.: fun((binary()) -> boolean())
         % can be provided as {Module, FunctionName}
+        % for verifying the verifier suffix
+        % (only the suffix on the verifier that was provided)
 -define(DEFAULT_REQUEST_START,          undefined). % see below:
         % either an anonymous function or a {module(), atom()} tuple
         % for a 4 arity function equvalent to:
-        % fun((cloudi_service:service_name() :: Name,
-        %      cloudi_service:service_name() :: Pattern,
-        %      cloudi_service:key_values() :: RequestHeaders,
-        %      binary() :: Request) ->
-        %     any() :: RequestStartState)
+        % fun((Name :: cloudi_service:service_name(),
+        %      Pattern :: cloudi_service:service_name(),
+        %      RequestHeaders :: cloudi_service:key_values(),
+        %      Request :: binary()) ->
+        %     RequestStartState :: any())
+        % for handling request metrics
 -define(DEFAULT_REQUEST_END,            undefined). % see below:
         % either an anonymous function or a {module(), atom()} tuple
         % for a 5 arity function equvalent to:
-        % fun((cloudi_service:service_name() :: Name,
-        %      cloudi_service:service_name() | undefined :: Pattern,
-        %      list({binary(), binary()}) |
-        %      cloudi_service:key_values() :: ResponseHeaders,
-        %      binary() :: Response,
-        %      any() :: RequestStartState) -> any())
+        % fun((Name :: cloudi_service:service_name(),
+        %      Pattern :: cloudi_service:service_name() | undefined,
+        %      ResponseHeaders :: list({binary(), binary()}) |
+        %                         cloudi_service:key_values(),
+        %      Response :: binary(),
+        %      RequestStartState :: any()) -> any())
+        % for handling request metrics
 -define(DEFAULT_DEBUG_DB,               false). % see below:
         % debug db data with consumer key from
         % http://tools.ietf.org/html/rfc5849#section-1.2
