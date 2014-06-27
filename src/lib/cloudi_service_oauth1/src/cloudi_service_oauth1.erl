@@ -810,7 +810,9 @@ request_authorize(RequestQS, TokenRequest, Timeout,
                                                      TokenRequest, Verifier,
                                                      Timeout) of
                 ok ->
-                    {reply, [],
+                    {reply,
+                     [{<<"content-type">>,
+                       <<"application/x-www-form-urlencoded">>}],
                      <<(<<"oauth_token=">>)/binary, TokenRequest/binary, $&,
                        (<<"oauth_verifier=">>)/binary, Verifier/binary>>,
                      State};

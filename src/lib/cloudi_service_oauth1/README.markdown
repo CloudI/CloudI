@@ -30,24 +30,3 @@ the authentication took place successfully, before the access token is granted.
 The boolean result of the verify function is whether the authentication was
 successful.
 
-Build
------
-
-    rebar get-deps
-    rebar compile
-
-Tests
------
-
-    rebar eunit skip_deps=true
-    rebar ct skip_deps=true
-
-Author
-------
-
-Michael Truog (mjtruog [at] gmail (dot) com)
-
-License
--------
-
-BSD
