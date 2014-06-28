@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -124,20 +124,11 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
     RequestBinary = if
         Method =:= 'GET' ->
             if
-                QsVals =:= <<>> ->
-                    <<>>;
-                true ->
-                    erlang:iolist_to_binary(lists:foldr(fun({K, V}, L) ->
-                        if
-                            V =:= true ->
-                                [K, 0, <<"true">>, 0 | L];
-                            V =:= false ->
-                                [K, 0, <<"false">>, 0 | L];
-                            is_binary(V) ->
-                                [K, 0, V, 0 | L]
-                        end
-                    end, [],
-                    cloudi_x_cow_qs:parse_qs(QsVals)))
+                (OutputType =:= external) orelse
+                (OutputType =:= binary) orelse (OutputType =:= list) ->
+                    get_query_string_external(cloudi_x_cow_qs:parse_qs(QsVals));
+                OutputType =:= internal ->
+                    cloudi_x_cow_qs:parse_qs(QsVals)
             end;
         Method =:= 'POST'; Method =:= 'PUT' ->
             % do not pass type information along with the request!
@@ -152,28 +143,23 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
         true ->
             <<>>
     end,
-    Request = if
-        OutputType =:= list ->
-            erlang:binary_to_list(RequestBinary);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary ->
-            RequestBinary
-    end,
     RequestInfo = if
-        OutputType =:= internal; OutputType =:= list ->
-            HeadersIncomingN;
-        OutputType =:= external; OutputType =:= binary ->
-            headers_external_incoming(HeadersIncomingN)
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
+            headers_external_incoming(HeadersIncomingN);
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
+            HeadersIncomingN
+    end,
+    Request = if
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
+        (OutputType =:= binary) ->
+            RequestBinary;
+        OutputType =:= list ->
+            erlang:binary_to_list(RequestBinary)
     end,
     case send_sync_minimal(Dispatcher, Context,
                            NameOutgoing, RequestInfo, Request, self()) of
         {ok, ResponseInfo, Response} ->
-            HeadersOutgoing = if
-                OutputType =:= internal; OutputType =:= list ->
-                    ResponseInfo;
-                OutputType =:= external; OutputType =:= binary ->
-                    headers_external_outgoing(ResponseInfo)
-            end,
+            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {HttpCode, _, _} = Result =
                 return_response(NameIncoming, HeadersOutgoing, Response,
                                 OutputType, DefaultContentType,
@@ -240,6 +226,20 @@ headers_external_outgoing([<<>>], Result) ->
 headers_external_outgoing([K, V | L], Result) ->
     headers_external_outgoing(L, [{K, V} | Result]).
 
+get_query_string_external([]) ->
+    <<>>;
+get_query_string_external(QsVals) ->
+    erlang:iolist_to_binary(lists:reverse(lists:foldr(fun({K, V}, L) ->
+        if
+            V =:= true ->
+                [[K, 0, <<"true">>, 0] | L];
+            V =:= false ->
+                [[K, 0, <<"false">>, 0] | L];
+            true ->
+                [[K, 0, V, 0] | L]
+        end
+    end, [], QsVals))).
+
 request_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
 
@@ -261,11 +261,14 @@ return_response(NameIncoming, HeadersOutgoing, Response,
                 OutputType, DefaultContentType,
                 ContentTypeLookup) ->
     ResponseBinary = if
-        OutputType =:= list, is_list(Response) ->
-            erlang:list_to_binary(Response);
-        OutputType =:= internal; OutputType =:= external;
-        OutputType =:= binary; is_binary(Response) ->
-            Response
+        (((OutputType =:= external) orelse
+          (OutputType =:= internal)) andalso
+         (is_binary(Response) orelse is_list(Response))) orelse
+        ((OutputType =:= binary) andalso
+         is_binary(Response)) ->
+            Response;
+        (OutputType =:= list) andalso is_list(Response) ->
+            erlang:list_to_binary(Response)
     end,
     FileName = cloudi_string:afterr($/, NameIncoming, input),
     ResponseHeadersOutgoing = if
@@ -282,16 +285,18 @@ return_response(NameIncoming, HeadersOutgoing, Response,
                     case cloudi_x_trie:find(Extension, ContentTypeLookup) of
                         error ->
                             [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
+                              erlang:iolist_to_binary([
+                                  "attachment; filename=\"",
+                                  filename:basename(NameIncoming), "\""])},
                              {<<"content-type">>,
                               <<"application/octet-stream">>}];
                         {ok, {request, ContentType}} ->
                             [{<<"content-type">>, ContentType}];
                         {ok, {attachment, ContentType}} ->
                             [{<<"content-disposition">>,
-                              erlang:list_to_binary("attachment; filename=\"" ++
-                                                    NameIncoming ++ "\"")},
+                              erlang:iolist_to_binary([
+                                  "attachment; filename=\"",
+                                  filename:basename(NameIncoming), "\""])},
                              {<<"content-type">>, ContentType}]
                     end
             end

@@ -236,7 +236,7 @@ t_example_without_db_1(_Config) ->
     RequestInfo2 = [
         {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy
         {<<"host">>, <<"photos.example.net">>}],
-    Request2 = <<"oauth_token=hh5s93j4hdidpola">>,
+    Request2 = [{<<"oauth_token">>, <<"hh5s93j4hdidpola">>}],
 
     % http://printer.example.com/ready?
     % oauth_token=hh5s93j4hdidpola&oauth_verifier=hfdp7dh39dks9884
@@ -315,7 +315,8 @@ t_example_without_db_2(_Config) ->
                "oauth_timestamp=\"137131202\","
                "oauth_nonce=\"chapoH\","
                "oauth_signature=\"MdpQcU8iPSUjWoN%2FUDMsK2sui9I%3D\"">>}],
-    Request4 = <<"file=vacation.jpg&size=original">>,
+    Request4 = [{<<"file">>, <<"vacation.jpg">>},
+                {<<"size">>, <<"original">>}],
     ResponseInfo4 = [
         {<<"content-type">>, <<"image/jpeg">>},
         {<<"content-disposition">>,
@@ -374,7 +375,7 @@ t_example_with_db_1(_Config) ->
     RequestInfo2 = [
         {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy
         {<<"host">>, <<"photos.example.net">>}],
-    Request2 = <<(<<"oauth_token=">>)/binary, TokenRequest/binary>>,
+    Request2 = [{<<"oauth_token">>, TokenRequest}],
 
     % http://printer.example.com/ready?
     % oauth_token=hh5s93j4hdidpola&oauth_verifier=hfdp7dh39dks9884
@@ -479,7 +480,8 @@ t_example_with_db_1(_Config) ->
                "oauth_nonce=\"chapoH\","
                "oauth_signature=\"">>)/binary, Signature4/binary, (<<"\""
               "">>)/binary>>}],
-    Request4 = <<"file=vacation.jpg&size=original">>,
+    Request4 = [{<<"file">>, <<"vacation.jpg">>},
+                {<<"size">>, <<"original">>}],
     ResponseInfo4 = [
         {<<"content-type">>, <<"image/jpeg">>},
         {<<"content-disposition">>,

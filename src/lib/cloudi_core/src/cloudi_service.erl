@@ -2370,17 +2370,17 @@ service_name_parse_with_suffix(Name, Pattern) ->
 %%-------------------------------------------------------------------------
 
 -ifdef(ERLANG_OTP_VER_16).
--spec request_http_qs_parse(Request :: binary()) ->
+-spec request_http_qs_parse(Request :: binary() |
+                                       list({any(), any()})) ->
     Result :: dict().
 -else.
--spec request_http_qs_parse(Request :: binary()) ->
+-spec request_http_qs_parse(Request :: binary() |
+                                       list({any(), any()})) ->
     Result :: dict:dict(binary(), binary()).
 -endif.
 
-request_http_qs_parse(Request)
-    when is_binary(Request) ->
-    binary_key_value_parse_list(binary:split(Request, <<0>>, [global]),
-                                dict:new()).
+request_http_qs_parse(Request) ->
+    request_info_key_value_parse(Request).
 
 %%-------------------------------------------------------------------------
 %% @doc

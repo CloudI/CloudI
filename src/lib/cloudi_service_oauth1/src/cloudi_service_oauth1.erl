@@ -379,13 +379,12 @@ request("initiate/post", _Name, _Pattern, RequestHeaders, Request, Timeout,
         {error, _} ->
             response_error_authorization_type(State)
     end;
-request("authorize/get", _Name, _Pattern, RequestHeaders, Request, Timeout,
+request("authorize/get", _Name, _Pattern, RequestHeaders, RequestQS, Timeout,
         #state{url_host = URLHost,
                host = Host} = State, Dispatcher) ->
     Method = "GET",
-    case url(Method, RequestHeaders, URLHost, Host, Request) of
+    case url(Method, RequestHeaders, URLHost, Host, RequestQS) of
         {ok, _} ->
-            RequestQS = cloudi_x_cow_qs:parse_qs(Request),
             case lists:keyfind(<<"oauth_token">>, 1, RequestQS) of
                 {_, TokenRequest} ->
                     request_authorize(RequestQS, TokenRequest,
@@ -453,7 +452,7 @@ url(Method, RequestHeaders, URLHost, Host, Request) ->
     case cloudi_service:key_value_find(<<"host">>, RequestHeaders) of
         {ok, Host} when Method == "GET" ->
             {ok, URLHost ++ erlang:binary_to_list(URLPath) ++ "?" ++
-                 erlang:binary_to_list(Request)};
+                 erlang:binary_to_list(cloudi_x_cow_qs:qs(Request))};
         {ok, Host} ->
             {ok, URLHost ++ erlang:binary_to_list(URLPath)};
         {ok, HostInvalid} ->
@@ -468,7 +467,7 @@ oauth_parameters(Method, RequestHeaders, Request) ->
     QS = if
         Method == "GET" ->
             [{erlang:binary_to_list(K), erlang:binary_to_list(V)} ||
-             {K, V} <- cloudi_x_cow_qs:parse_qs(Request)];
+             {K, V} <- Request];
         true ->
             []
     end,

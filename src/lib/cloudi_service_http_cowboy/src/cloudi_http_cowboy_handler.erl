@@ -209,7 +209,13 @@ handle(Req0,
             end,
             Body = if
                 Method =:= <<"GET">> ->
-                    get_query_string_format(QsVals);
+                    if
+                        (OutputType =:= external) orelse
+                        (OutputType =:= binary) orelse (OutputType =:= list) ->
+                            get_query_string_external(QsVals);
+                        OutputType =:= internal ->
+                            QsVals
+                    end;
                 (Method =:= <<"POST">>) orelse
                 (Method =:= <<"PUT">>) ->
                     case header_content_type(HeadersIncoming0) of
@@ -853,9 +859,9 @@ headers_external_outgoing([<<>>], Result) ->
 headers_external_outgoing([K, V | L], Result) ->
     headers_external_outgoing(L, [{K, V} | Result]).
 
-get_query_string_format([]) ->
+get_query_string_external([]) ->
     <<>>;
-get_query_string_format(QsVals) ->
+get_query_string_external(QsVals) ->
     erlang:iolist_to_binary(lists:reverse(lists:foldr(fun({K, V}, L) ->
         if
             V =:= true ->
@@ -1069,7 +1075,7 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
             Response;
         ((OutputType =:= list) andalso
          is_list(Response)) ->
-            erlang:list_to_binary(Response)
+            erlang:iolist_to_binary(Response)
     end,
     {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
                                                       HeadersOutgoing0) of

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for cloudi_service_oauth1 to match HTTP input
+    * Fixes to cloudi_service_http_cowboy and cloudi_service_http_elli to
+      keep their functionality similar and to use the output 'internal'
+      for GET query strings that are passed as a tuple list
+      (instead of the 'external' text encoding with \0 delimiters format)
+
 2014-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix application membership of CloudI internal services by having
