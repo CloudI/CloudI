@@ -105,9 +105,9 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions]) of
         {ok, Dispatcher} ->
-            {ok, cloudi_service:self(Dispatcher)};
+            result(Dispatcher);
         {ok, Dispatcher, _} ->
-            {ok, cloudi_service:self(Dispatcher)};
+            result(Dispatcher);
         {error, _} = Error ->
             Error
     end.
@@ -128,4 +128,13 @@ init([]) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+result(Dispatcher) ->
+    try cloudi_service:self(Dispatcher) of
+        Service ->
+            {ok, Service}
+    catch
+        _:Reason ->
+            {error, Reason}
+    end.
 

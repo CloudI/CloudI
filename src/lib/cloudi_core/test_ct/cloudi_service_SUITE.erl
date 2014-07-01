@@ -1,0 +1,296 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+%%%------------------------------------------------------------------------
+%%% @doc
+%%% ==CloudI Core Basic Tests==
+%%% @end
+%%%
+%%% BSD LICENSE
+%%% 
+%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% All rights reserved.
+%%% 
+%%% Redistribution and use in source and binary forms, with or without
+%%% modification, are permitted provided that the following conditions are met:
+%%% 
+%%%     * Redistributions of source code must retain the above copyright
+%%%       notice, this list of conditions and the following disclaimer.
+%%%     * Redistributions in binary form must reproduce the above copyright
+%%%       notice, this list of conditions and the following disclaimer in
+%%%       the documentation and/or other materials provided with the
+%%%       distribution.
+%%%     * All advertising materials mentioning features or use of this
+%%%       software must display the following acknowledgment:
+%%%         This product includes software developed by Michael Truog
+%%%     * The name of the author may not be used to endorse or promote
+%%%       products derived from this software without specific prior
+%%%       written permission
+%%% 
+%%% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+%%% CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+%%% INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+%%% OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+%%% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+%%% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+%%% SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+%%% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+%%% SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+%%% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+%%% WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+%%% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+%%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+%%% DAMAGE.
+%%%
+%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @copyright 2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
+%%%------------------------------------------------------------------------
+
+-module(cloudi_service_SUITE).
+-behaviour(cloudi_service).
+
+%% cloudi_service callbacks
+-export([cloudi_service_init/3,
+         cloudi_service_handle_request/11,
+         cloudi_service_handle_info/3,
+         cloudi_service_terminate/2]).
+
+%% CT callbacks
+-export([all/0,
+         groups/0,
+         suite/0,
+         init_per_suite/1,
+         end_per_suite/1,
+         group/1,
+         init_per_group/2,
+         end_per_group/2,
+         init_per_testcase/2,
+         end_per_testcase/2]).
+
+%% test callbacks
+-export([t_service_internal_sync_1/1,
+         t_service_internal_async_1/1]).
+
+-record(state,
+    {
+        mode :: atom(),
+        requests = [] :: list({cloudi_service:request_type(),
+                               cloudi_service:service_name(),
+                               cloudi_service:service_name_pattern(),
+                               cloudi_service:request_info(),
+                               cloudi_service:request(),
+                               cloudi_service:timeout_value_milliseconds(),
+                               cloudi_service:priority(),
+                               cloudi_service:trans_id(),
+                               cloudi_service:source()})
+    }).
+
+-include_lib("common_test/include/ct.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
+
+-define(SERVICE_PREFIX1, "/").
+-define(SERVICE_SUFFIX1, "service_name").
+-define(RESPONSE_INFO1, <<"response_info">>).
+-define(RESPONSE1, <<"response">>).
+-define(REQUEST_INFO1, <<"request_info">>).
+-define(REQUEST1, <<"request">>).
+-define(REQUEST_INFO2, <<>>).
+-define(REQUEST2, <<"requests">>).
+
+%%%------------------------------------------------------------------------
+%%% Callback functions from cloudi_service
+%%%------------------------------------------------------------------------
+
+cloudi_service_init(Args, ?SERVICE_PREFIX1, Dispatcher) ->
+    Defaults = [
+        {mode,                             undefined}],
+    [Mode] = cloudi_proplists:take_values(Defaults, Args),
+    if
+        Mode =:= reply ->
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1);
+        Mode =:= init_send_sync ->
+            {ok, _, _} = cloudi_service:send_sync(Dispatcher,
+                                                  ?SERVICE_PREFIX1 ++
+                                                  ?SERVICE_SUFFIX1,
+                                                  <<"request">>);
+        Mode =:= init_send_async_recv ->
+            {ok, TransId} = cloudi_service:send_async(Dispatcher,
+                                                      ?SERVICE_PREFIX1 ++
+                                                      ?SERVICE_SUFFIX1,
+                                                      <<"request">>),
+            {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId)
+    end,
+    {ok, #state{mode = Mode}}.
+
+cloudi_service_handle_request(Type, Name, Pattern,
+                              ?REQUEST_INFO1 = RequestInfo, ?REQUEST1 = Request,
+                              Timeout, Priority, TransId, Pid,
+                              #state{mode = reply,
+                                     requests = Requests} = State,
+                              _Dispatcher) ->
+    NewRequests = [{Type, Name, Pattern, RequestInfo, Request,
+                    Timeout, Priority, TransId, Pid} | Requests],
+    {reply, ?RESPONSE_INFO1, ?RESPONSE1,
+     State#state{requests = NewRequests}};
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              ?REQUEST_INFO2, ?REQUEST2,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{requests = Requests} = State,
+                              _Dispatcher) ->
+    {reply, <<>>, Requests, State#state{requests = []}}.
+
+cloudi_service_handle_info(Request, State, _) ->
+    {stop, {unexpected_info, Request}, State}.
+
+cloudi_service_terminate(_, _) ->
+    ok.
+
+%%%------------------------------------------------------------------------
+%%% Callback functions from CT
+%%%------------------------------------------------------------------------
+
+all() ->
+    [{group, service_internal}].
+
+groups() ->
+    [{service_internal, [],
+      [t_service_internal_sync_1,
+       t_service_internal_async_1]}].
+
+suite() ->
+    [{ct_hooks, [cth_surefire]},
+     {timetrap, 5100}].
+
+init_per_suite(Config) ->
+    ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
+    Config.
+
+end_per_suite(_Config) ->
+    ok = cloudi_x_reltool_util:application_stop(cloudi_core),
+    ok.
+
+group(_GroupName) ->
+    [].
+
+init_per_group(_GroupName, Config) ->
+    Config.
+
+end_per_group(_GroupName, Config) ->
+    Config.
+
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_sync_1) orelse
+         (TestCase =:= t_service_internal_async_1) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, reply}]},
+         {options,
+          [{request_timeout_adjustment, true},
+           {response_timeout_adjustment, true},
+           {automatic_loading, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config].
+
+end_per_testcase(_TestCase, Config) ->
+    {value, {_, ServiceIds}, NewConfig} = lists:keytake(service_ids, 1, Config),
+    ok = cloudi_service_api:services_remove(ServiceIds, infinity),
+    NewConfig.
+
+%%%------------------------------------------------------------------------
+%%% test cases
+%%%------------------------------------------------------------------------
+
+t_service_internal_sync_1(_Config) ->
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    Self = self(),
+    TimeoutMax = cloudi:timeout_sync(Context),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName,
+                                    ?REQUEST_INFO1, ?REQUEST1,
+                                    undefined, undefined),
+    {ok,
+     [{'send_sync', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout, 0, TransId1, Self}]} = cloudi:send_sync(Context,
+                                                        ServiceName,
+                                                        ?REQUEST2),
+    true = (Timeout == TimeoutMax),
+    true = cloudi_x_uuid:is_v1(TransId1),
+    {error,
+     {service_internal_start_failed,
+      {{{badmatch,{error,invalid_state}},
+        _},
+       _}}} = cloudi_service_api:services_add([
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, init_send_sync}]},
+         {options, [{automatic_loading, false}]}]
+        ], infinity),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName,
+                                    ?REQUEST_INFO1, ?REQUEST1,
+                                    undefined, undefined),
+    {ok,
+     [{'send_sync', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout, 0, TransId2, Self}]} = cloudi:send_sync(Context,
+                                                        ServiceName,
+                                                        ?REQUEST2),
+    true = cloudi_x_uuid:is_v1(TransId2),
+    true = (TransId2 > TransId1),
+    ok.
+
+t_service_internal_async_1(_Config) ->
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    Self = self(),
+    TimeoutMax = cloudi:timeout_async(Context),
+    {ok, TransId1} = cloudi:send_async(Context,
+                                       ServiceName,
+                                       ?REQUEST_INFO1, ?REQUEST1,
+                                       undefined, undefined),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId1} = cloudi:recv_async(Context, TransId1),
+    {ok,
+     [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout1, 0, TransId1, Self}]} = cloudi:send_sync(Context,
+                                                        ServiceName,
+                                                        ?REQUEST2),
+    true = (Timeout1 > (TimeoutMax - 1000)) andalso (Timeout1 =< TimeoutMax),
+    true = cloudi_x_uuid:is_v1(TransId1),
+    {error,
+     {service_internal_start_failed,
+      {{{badmatch,{error,invalid_state}},
+        _},
+       _}}} = cloudi_service_api:services_add([
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, init_send_async_recv}]},
+         {options, [{automatic_loading, false}]}]
+        ], infinity),
+    {ok, TransId2} = cloudi:send_async(Context,
+                                       ServiceName,
+                                       ?REQUEST_INFO1, ?REQUEST1,
+                                       undefined, undefined),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId2} = cloudi:recv_async(Context, TransId2),
+    {ok,
+     [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout2, 0, TransId2, Self}]} = cloudi:send_sync(Context,
+                                                         ServiceName,
+                                                         ?REQUEST2),
+    true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
+    true = cloudi_x_uuid:is_v1(TransId2),
+    true = (TransId2 > TransId1),
+    ok.
+

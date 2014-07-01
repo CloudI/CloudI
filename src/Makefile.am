@@ -699,6 +699,7 @@ distclean-local: rebar-directories-distclean \
 	rm -rf $(top_srcdir)/autom4te.cache
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
+           $(top_srcdir)/lib/cloudi_core/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
