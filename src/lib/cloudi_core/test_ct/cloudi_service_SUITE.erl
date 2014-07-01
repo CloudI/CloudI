@@ -69,7 +69,9 @@
 
 %% test callbacks
 -export([t_service_internal_sync_1/1,
-         t_service_internal_async_1/1]).
+         t_service_internal_async_1/1,
+         t_service_internal_async_2/1,
+         t_service_internal_async_3/1]).
 
 -record(state,
     {
@@ -96,6 +98,8 @@
 -define(REQUEST1, <<"request">>).
 -define(REQUEST_INFO2, <<>>).
 -define(REQUEST2, <<"requests">>).
+-define(REQUEST_INFO3, <<>>).
+-define(REQUEST3, <<"mcast">>).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -105,23 +109,36 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, Dispatcher) ->
     Defaults = [
         {mode,                             undefined}],
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
-    if
+    NewMode = if
         Mode =:= reply ->
             cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1);
+                                     ?SERVICE_SUFFIX1),
+            reply;
+        Mode =:= reply_x4 ->
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1),
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1),
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1),
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1),
+            reply;
         Mode =:= init_send_sync ->
             {ok, _, _} = cloudi_service:send_sync(Dispatcher,
                                                   ?SERVICE_PREFIX1 ++
                                                   ?SERVICE_SUFFIX1,
-                                                  <<"request">>);
+                                                  <<"request">>),
+            undefined;
         Mode =:= init_send_async_recv ->
             {ok, TransId} = cloudi_service:send_async(Dispatcher,
                                                       ?SERVICE_PREFIX1 ++
                                                       ?SERVICE_SUFFIX1,
                                                       <<"request">>),
-            {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId)
+            {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId),
+            undefined
     end,
-    {ok, #state{mode = Mode}}.
+    {ok, #state{mode = NewMode}}.
 
 cloudi_service_handle_request(Type, Name, Pattern,
                               ?REQUEST_INFO1 = RequestInfo, ?REQUEST1 = Request,
@@ -133,12 +150,22 @@ cloudi_service_handle_request(Type, Name, Pattern,
                     Timeout, Priority, TransId, Pid} | Requests],
     {reply, ?RESPONSE_INFO1, ?RESPONSE1,
      State#state{requests = NewRequests}};
+cloudi_service_handle_request(_Type, Name, _Pattern,
+                              ?REQUEST_INFO3, ?REQUEST3,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = reply} = State,
+                              Dispatcher) ->
+    {ok, TransIds} = cloudi_service:mcast_async(Dispatcher, Name,
+                                                ?REQUEST_INFO1, ?REQUEST1,
+                                                undefined, undefined),
+    {ok, Responses} = cloudi_service:recv_asyncs(Dispatcher, TransIds),
+    {reply, Responses, State};
 cloudi_service_handle_request(_Type, _Name, _Pattern,
                               ?REQUEST_INFO2, ?REQUEST2,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{requests = Requests} = State,
                               _Dispatcher) ->
-    {reply, <<>>, Requests, State#state{requests = []}}.
+    {reply, <<>>, lists:reverse(Requests), State#state{requests = []}}.
 
 cloudi_service_handle_info(Request, State, _) ->
     {stop, {unexpected_info, Request}, State}.
@@ -156,7 +183,9 @@ all() ->
 groups() ->
     [{service_internal, [],
       [t_service_internal_sync_1,
-       t_service_internal_async_1]}].
+       t_service_internal_async_1,
+       t_service_internal_async_2,
+       t_service_internal_async_3]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -192,6 +221,33 @@ init_per_testcase(TestCase, Config)
            {response_timeout_adjustment, true},
            {automatic_loading, false}]}]
         ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_async_2) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, reply_x4}]},
+         {options,
+          [{request_timeout_adjustment, true},
+           {response_timeout_adjustment, true},
+           {automatic_loading, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_async_3) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, reply_x4}]},
+         {count_process, 2},
+         {options,
+          [{request_timeout_adjustment, true},
+           {response_timeout_adjustment, true},
+           {automatic_loading, false}]}]
+        ], infinity),
     [{service_ids, ServiceIds} | Config].
 
 end_per_testcase(_TestCase, Config) ->
@@ -204,6 +260,10 @@ end_per_testcase(_TestCase, Config) ->
 %%%------------------------------------------------------------------------
 
 t_service_internal_sync_1(_Config) ->
+    % make sure synchronous sends work normally,
+    % fail within the cloudi_service_init/3 callback with invalid_state,
+    % and that an exception within cloudi_service_init/3 doesn't affect
+    % other services
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     Self = self(),
@@ -244,9 +304,23 @@ t_service_internal_sync_1(_Config) ->
                                                         ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
+    {error,
+     {service_internal_start_failed,
+      {{{badmatch,{error,invalid_state}},
+        _},
+       _}}} = cloudi_service_api:services_add([
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, init_send_sync}]},
+         {options, [{automatic_loading, false}]}]
+        ], infinity),
     ok.
 
 t_service_internal_async_1(_Config) ->
+    % make sure asynchronous sends work normally, that recv_async
+    % fails within the cloudi_service_init/3 callback with invalid_state,
+    % and that an exception within cloudi_service_init/3 doesn't affect
+    % other services
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     Self = self(),
@@ -262,8 +336,8 @@ t_service_internal_async_1(_Config) ->
     {ok,
      [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
        Timeout1, 0, TransId1, Self}]} = cloudi:send_sync(Context,
-                                                        ServiceName,
-                                                        ?REQUEST2),
+                                                         ServiceName,
+                                                         ?REQUEST2),
     true = (Timeout1 > (TimeoutMax - 1000)) andalso (Timeout1 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId1),
     {error,
@@ -292,5 +366,130 @@ t_service_internal_async_1(_Config) ->
     true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
+    {error,
+     {service_internal_start_failed,
+      {{{badmatch,{error,invalid_state}},
+        _},
+       _}}} = cloudi_service_api:services_add([
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, init_send_async_recv}]},
+         {options, [{automatic_loading, false}]}]
+        ], infinity),
     ok.
 
+t_service_internal_async_2(_Config) ->
+    % make sure mcast_async works normally and remains ordered when
+    % sending to a service that has a single process
+    % (including cloudi:recv_asyncs functionality)
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    Self = self(),
+    TimeoutMax = cloudi:timeout_async(Context),
+    {ok,
+     [TransId1,
+      TransId2,
+      TransId3,
+      TransId4]} = cloudi:mcast_async(Context,
+                                      ServiceName,
+                                      ?REQUEST_INFO1, ?REQUEST1,
+                                      undefined, undefined),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId1} = cloudi:recv_async(Context, <<0:128>>),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId2} = cloudi:recv_async(Context, <<0:128>>),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId3} = cloudi:recv_async(Context, <<0:128>>),
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1,
+     TransId4} = cloudi:recv_async(Context, <<0:128>>),
+    true = (TransId1 < TransId2) andalso
+           (TransId2 < TransId3) andalso
+           (TransId3 < TransId4),
+    {ok,
+     [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout1, 0, TransId1, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout2, 0, TransId2, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout3, 0, TransId3, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout4, 0, TransId4, Self}]} = cloudi:send_sync(Context,
+                                                         ServiceName,
+                                                         ?REQUEST2),
+    true = (Timeout1 > (TimeoutMax - 1000)) andalso (Timeout1 =< TimeoutMax),
+    true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
+    true = (Timeout3 > (TimeoutMax - 1000)) andalso (Timeout3 =< TimeoutMax),
+    true = (Timeout4 > (TimeoutMax - 1000)) andalso (Timeout4 =< TimeoutMax),
+    true = cloudi_x_uuid:is_v1(TransId1),
+    true = cloudi_x_uuid:is_v1(TransId2),
+    true = cloudi_x_uuid:is_v1(TransId3),
+    true = cloudi_x_uuid:is_v1(TransId4),
+
+    {ok,
+     [TransId5,
+      TransId6,
+      TransId7,
+      TransId8] = TransIds} = cloudi:mcast_async(Context,
+                                                 ServiceName,
+                                                 ?REQUEST_INFO1, ?REQUEST1,
+                                                 undefined, undefined),
+    {ok,
+     [{?RESPONSE_INFO1, ?RESPONSE1, TransId5},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId6},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId7},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId8}]
+     } = cloudi:recv_asyncs(Context, TransIds),
+    true = (TransId5 < TransId6) andalso
+           (TransId6 < TransId7) andalso
+           (TransId7 < TransId8),
+    {ok,
+     [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout5, 0, TransId5, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout6, 0, TransId6, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout7, 0, TransId7, Self},
+      {'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
+       Timeout8, 0, TransId8, Self}]} = cloudi:send_sync(Context,
+                                                         ServiceName,
+                                                         ?REQUEST2),
+    true = (Timeout5 > (TimeoutMax - 1000)) andalso (Timeout5 =< TimeoutMax),
+    true = (Timeout6 > (TimeoutMax - 1000)) andalso (Timeout6 =< TimeoutMax),
+    true = (Timeout7 > (TimeoutMax - 1000)) andalso (Timeout7 =< TimeoutMax),
+    true = (Timeout8 > (TimeoutMax - 1000)) andalso (Timeout8 =< TimeoutMax),
+    true = cloudi_x_uuid:is_v1(TransId5),
+    true = cloudi_x_uuid:is_v1(TransId6),
+    true = cloudi_x_uuid:is_v1(TransId7),
+    true = cloudi_x_uuid:is_v1(TransId8),
+    ok.
+
+t_service_internal_async_3(_Config) ->
+    % make sure mcast_async works normally and remains ordered when
+    % sending to a single service process (i.e., when only 2 service processes
+    % exist, a service mcast_async to the service name will only be able to
+    % send to a single service process)
+    % (including cloudi_service:recv_asyncs functionality)
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {ok,
+     [{?RESPONSE_INFO1, ?RESPONSE1, TransId1},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId2},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId3},
+      {?RESPONSE_INFO1, ?RESPONSE1, TransId4}]
+     } = cloudi:send_sync(Context, ServiceName, ?REQUEST3),
+    true = (TransId1 < TransId2) andalso
+           (TransId2 < TransId3) andalso
+           (TransId3 < TransId4),
+    true = cloudi_x_uuid:is_v1(TransId1),
+    true = cloudi_x_uuid:is_v1(TransId2),
+    true = cloudi_x_uuid:is_v1(TransId3),
+    true = cloudi_x_uuid:is_v1(TransId4),
+    ok.
