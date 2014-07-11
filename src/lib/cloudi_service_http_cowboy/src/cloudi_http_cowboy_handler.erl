@@ -599,6 +599,8 @@ websocket_info({Type, Name, Pattern, RequestInfo, Request,
             response_timer = ResponseTimer,
             request_pending = T}},
     case websocket_terminate_check(RequestInfo) of
+        true when Request == <<>> ->
+            {reply, close, Req, NewState};
         true ->
             {reply, [{WebSocketOutputType, Request}, close], Req, NewState};
         false ->
@@ -627,6 +629,8 @@ websocket_info({Type, Name, Pattern, RequestInfo, RequestProtocol,
         websocket_state = WebSocketState#websocket_state{
             response_lookup = NewResponseLookup}},
     case websocket_terminate_check(RequestInfo) of
+        true when Request == <<>> ->
+            {reply, close, Req, NewState};
         true ->
             {reply, [{WebSocketOutputType, Request}, close], Req, NewState};
         false ->
@@ -1298,6 +1302,8 @@ websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             case websocket_terminate_check(ResponseInfo) of
+                true when Response == <<>> ->
+                    {reply, close, Req, State};
                 true ->
                     {reply, [{WebSocketRequestType,
                               ResponseF(Response)}, close], Req, State};

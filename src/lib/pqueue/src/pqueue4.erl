@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.2 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
@@ -68,13 +68,13 @@
          out/2,        % O(1) amortized, O(N) worst case
          pout/1,       % O(1) amortized, O(N) worst case
          to_list/1,    % O(N)
+         to_plist/1,   % O(N)
          test/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -type pqueue4() ::
     {integer() | 'empty',
      integer(),
@@ -111,76 +111,6 @@
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()},
      {queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue(),
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()}}.
--else.
--type pqueue4() ::
-    {integer() | 'empty',
-     integer(),
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     queue:queue(),
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()}}.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -399,6 +329,28 @@ to_list(L, {{value, Value}, Q}) ->
     to_list([Value | L], out(Q)).
 
 %%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert the priority queue to a list with priorities.===
+%% O(N)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_plist(pqueue4()) -> list({integer(), term()}).
+
+to_plist(Q) ->
+    to_plist([], [], undefined, pout(Q)).
+to_plist(L, [], _, {empty, _}) ->
+    lists:reverse(L);
+to_plist(L, Lp, Pc, {empty, _}) ->
+    lists:reverse([{Pc, lists:reverse(Lp)} | L]);
+to_plist(L, Lp, Pc, {{value, Value, Pc}, Q}) ->
+    to_plist(L, [Value | Lp], Pc, pout(Q));
+to_plist(L, [], _, {{value, Value, Pc}, Q}) ->
+    to_plist(L, [Value], Pc, pout(Q));
+to_plist(L, Lp, P, {{value, Value, Pc}, Q}) ->
+    to_plist([{P, lists:reverse(Lp)} | L], [Value], Pc, pout(Q)).
+
+%%-------------------------------------------------------------------------
 %% @private
 %% @doc
 %% ===Regression test.===
@@ -497,6 +449,20 @@ test() ->
      -5, -5, -4, -4, -3, -3, -2, -2, -1, -1, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4,
      5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14,
      15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20] = pqueue4:to_list(Q82),
+    [{-20, [-20, -20]}, {-19, [-19, -19]}, {-18, [-18, -18]},
+     {-17, [-17, -17]}, {-16, [-16, -16]}, {-15, [-15, -15]},
+     {-14, [-14, -14]}, {-13, [-13, -13]}, {-12, [-12, -12]},
+     {-11, [-11, -11]}, {-10, [-10, -10]}, {-9, [-9, -9]},
+     {-8, [-8, -8]}, {-7, [-7, -7]}, {-6, [-6, -6]},
+     {-5, [-5, -5]}, {-4, [-4, -4]}, {-3, [-3, -3]},
+     {-2, [-2, -2]}, {-1, [-1, -1]}, {0, [0, 0]},
+     {1, [1, 1]}, {2, [2, 2]}, {3, [3, 3]},
+     {4, [4, 4]}, {5, [5, 5]}, {6, [6, 6]},
+     {7, [7, 7]}, {8, [8, 8]}, {9, [9, 9]},
+     {10, [10, 10]}, {11, [11, 11]}, {12, [12, 12]},
+     {13, [13, 13]}, {14, [14, 14]}, {15, [15, 15]},
+     {16, [16, 16]}, {17, [17, 17]}, {18, [18, 18]},
+     {19, [19, 19]}, {20, [20, 20]}] = pqueue4:to_plist(Q82),
     {{value, -20}, Q83} = pqueue4:out(Q82),
     {{value, -20}, Q84} = pqueue4:out(Q83),
     {{value, -19}, Q85} = pqueue4:out(Q84),
@@ -583,6 +549,18 @@ test() ->
     true = pqueue4:is_empty(Q164),
     {empty, Q165} = pqueue4:pout(Q164),
     true = pqueue4:is_empty(Q165),
+    Q166 = pqueue4:new(),
+    true = pqueue4:is_queue(Q166),
+    Q167 = pqueue4:in(6, 1, Q166),
+    Q168 = pqueue4:in(7, 1, Q167),
+    Q169 = pqueue4:in(8, 1, Q168),
+    Q170 = pqueue4:in(3, 0, Q169),
+    Q171 = pqueue4:in(4, 0, Q170),
+    Q172 = pqueue4:in(5, 0, Q171),
+    Q173 = pqueue4:in(0, -1, Q172),
+    Q174 = pqueue4:in(1, -1, Q173),
+    Q175 = pqueue4:in(2, -1, Q174),
+    [{-1, [0, 1, 2]}, {0, [3, 4, 5]}, {1, [6, 7, 8]}] = pqueue4:to_plist(Q175),
     ok.
 
 %%%------------------------------------------------------------------------
