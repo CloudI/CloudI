@@ -208,7 +208,7 @@ service_start(#config_service_internal{
                     ok
             end,
             NewCountProcess = concurrency(CountProcess),
-            service_start_internal(NewCountProcess, FoundService, GroupLeader,
+            service_start_internal(0, FoundService, GroupLeader,
                                    NewCountProcess, timeout_decr(Timeout));
         {error, _} = Error ->
             Error
@@ -219,7 +219,7 @@ service_start(#config_service_external{count_process = CountProcess,
               Timeout) ->
     NewCountProcess = concurrency(CountProcess),
     NewCountThread = concurrency(CountThread),
-    service_start_external(NewCountProcess, Service, NewCountThread,
+    service_start_external(0, Service, NewCountThread,
                            NewCountProcess, timeout_decr(Timeout)).
 
 -spec service_stop(#config_service_internal{} |
@@ -684,9 +684,9 @@ service_stop_remove_internal(#config_service_internal{
             {error, {service_internal_application_not_found, Reason}}
     end.
 
-service_start_internal(0, Service, _, _, _) ->
+service_start_internal(CountProcess, Service, _, CountProcess, _) ->
     {ok, Service};
-service_start_internal(Count0,
+service_start_internal(IndexProcess,
                        #config_service_internal{
                            module = Module,
                            args = Args,
@@ -702,27 +702,27 @@ service_start_internal(Count0,
                            max_t = MaxT,
                            uuid = ID} = Service, GroupLeader,
                        CountProcess, Timeout) ->
-    Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
                                          [CountProcess, GroupLeader,
                                           Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
-                                         Count1, 1, MaxR, MaxT, ID, Timeout) of
+                                         IndexProcess,
+                                         1, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_internal(Count1, Service, GroupLeader,
+            service_start_internal(IndexProcess + 1, Service, GroupLeader,
                                    CountProcess, Timeout);
         {error, Reason} ->
             {error, {service_internal_start_failed, Reason}}
     end.
 
-service_start_external(0, Service, _, _, _) ->
+service_start_external(CountProcess, Service, _, CountProcess, _) ->
     {ok, Service};
-service_start_external(Count0,
+service_start_external(IndexProcess,
                        #config_service_external{
                            file_path = FilePath,
                            args = Args,
@@ -741,7 +741,6 @@ service_start_external(Count0,
                            max_t = MaxT,
                            uuid = ID} = Service,
                        CountThread, CountProcess, Timeout) ->
-    Count1 = Count0 - 1,
     case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
                                          [CountProcess, CountThread,
                                           FilePath, Args, Env,
@@ -749,13 +748,13 @@ service_start_external(Count0,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
-                                         Count1, CountThread,
+                                         IndexProcess, CountThread,
                                          MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_external(Count1, Service,
+            service_start_external(IndexProcess + 1, Service,
                                    CountThread, CountProcess, Timeout);
         {error, Reason} ->
             {error, {service_external_start_failed, Reason}}

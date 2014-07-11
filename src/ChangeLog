@@ -6,6 +6,7 @@
     * Tweak cloudi_service_http_cowboy so websocket service requests that cause
       a connection close do not send data when the data is a null binary
     * Update pqueue
+    * Make service processes start in-order from 0 to N-1
 
 2014-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
