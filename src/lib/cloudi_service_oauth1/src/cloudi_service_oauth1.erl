@@ -72,6 +72,19 @@
         % - must be lowercase
         % - must include port number if not 80
         % - must match Host HTTP request header value
+-define(DEFAULT_AUTHENTICATION,   undefined). % see below:
+        % either an anonymous function or a {module(), atom()} tuple
+        % (to reference a function), i.e.:
+        % fun((RequestHeaders :: cloudi_service:key_values(),
+        %      Request :: binary(),
+        %      Timeout :: cloudi_service:timeout_value_milliseconds()) ->
+        %     Valid :: boolean())
+        % can be provided as {Module, FunctionName}
+        % for checking the user's current authentication status before
+        % using the OAuth authorize endpoint
+        % (if this value is set to undefined, no function checks the user's
+        %  authentication in this service, so that needs to have been done
+        %  by the service sending to the OAuth authorize endpoint)
 -define(DEFAULT_TOKENS_CLEAN,           300). % seconds (how often to delete)
 -define(DEFAULT_TOKEN_REQUEST_LENGTH,   12).      % characters minimum
 -define(DEFAULT_TOKEN_REQUEST_SECRET_LENGTH, 12). % characters minimum
@@ -80,12 +93,6 @@
 -define(DEFAULT_TOKEN_ACCESS_SECRET_LENGTH,  12). % characters minimum
 -define(DEFAULT_TOKEN_ACCESS_EXPIRATION,     300). % seconds
 -define(DEFAULT_VERIFIER_LENGTH,        12).      % characters minimum
--define(DEFAULT_VERIFY,                 undefined). % see below:
-        % either an anonymous function or a {module(), atom()} tuple
-        % (to reference a function), i.e.: fun((binary()) -> boolean())
-        % can be provided as {Module, FunctionName}
-        % for verifying the verifier suffix
-        % (only the suffix on the verifier that was provided)
 -define(DEFAULT_REQUEST_START,          undefined). % see below:
         % either an anonymous function or a {module(), atom()} tuple
         % for a 4 arity function equvalent to:
@@ -118,6 +125,10 @@
         database :: cloudi_service:service_name(),
         url_host :: string(),
         host :: binary(),
+        authentication_f :: fun((cloudi_service:key_values(),
+                                 binary(),
+                                 cloudi_service:timeout_value_milliseconds()) ->
+                                boolean()) | undefined,
         token_request_bytes :: pos_integer(),
         token_request_secret_bytes :: pos_integer(),
         token_request_expiration :: pos_integer(),
@@ -125,7 +136,6 @@
         token_access_secret_bytes :: pos_integer(),
         token_access_expiration :: pos_integer(),
         verifier_bytes :: pos_integer(),
-        verify_f :: fun((binary()) -> boolean()) | undefined,
         request_start_f :: fun((cloudi_service:service_name(),
                                 cloudi_service:service_name(),
                                 cloudi_service:key_values(),
@@ -154,6 +164,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {database_type,               ?DEFAULT_DATABASE_TYPE},
         {database,                    ?DEFAULT_DATABASE},
         {url_host,                    ?DEFAULT_URL_HOST},
+        {authentication,              ?DEFAULT_AUTHENTICATION},
         {tokens_clean,                ?DEFAULT_TOKENS_CLEAN},
         {token_request_length,        ?DEFAULT_TOKEN_REQUEST_LENGTH},
         {token_request_secret_length, ?DEFAULT_TOKEN_REQUEST_SECRET_LENGTH},
@@ -162,15 +173,14 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {token_access_secret_length,  ?DEFAULT_TOKEN_ACCESS_SECRET_LENGTH},
         {token_access_expiration,     ?DEFAULT_TOKEN_ACCESS_EXPIRATION},
         {verifier_length,             ?DEFAULT_VERIFIER_LENGTH},
-        {verify,                      ?DEFAULT_VERIFY},
         {request_start,               ?DEFAULT_REQUEST_START},
         {request_end,                 ?DEFAULT_REQUEST_END},
         {debug_db,                    ?DEFAULT_DEBUG_DB},
         {debug,                       ?DEFAULT_DEBUG}],
-    [DatabaseType, Database, URLHost, TokensClean,
+    [DatabaseType, Database, URLHost, Authentication0, TokensClean,
      TokenRequestLength, TokenRequestSecretLength, TokenRequestExpiration,
      TokenAccessLength, TokenAccessSecretLength, TokenAccessExpiration,
-     VerifierLength, Verify0, RequestStart0, RequestEnd0, DebugDB0, Debug
+     VerifierLength, RequestStart0, RequestEnd0, DebugDB0, Debug
      ] = cloudi_proplists:take_values(Defaults, Args),
     cloudi_service:self(Dispatcher) ! initialize, % db initialize
     DatabaseModule = if
@@ -186,6 +196,23 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             HostValue;
         "http://" ++ HostValue ->
             HostValue
+    end,
+    Authentication1 = case Authentication0 of
+        {AuthenticationModule, AuthenticationFunction}
+        when is_atom(AuthenticationModule), is_atom(AuthenticationFunction) ->
+            {file, _} = code:is_loaded(AuthenticationModule),
+            fun(AuthenticationRequestHeaders,
+                AuthenticationRequest,
+                AuthenticationTimeout) ->
+                AuthenticationModule:
+                AuthenticationFunction(AuthenticationRequestHeaders,
+                                       AuthenticationRequest,
+                                       AuthenticationTimeout)
+            end;
+        _ when is_function(Authentication0, 3) ->
+            Authentication0;
+        undefined ->
+            undefined
     end,
     if
         TokensClean =:= undefined ->
@@ -209,16 +236,6 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             (TokenAccessExpiration > 0)),
     true = (is_integer(VerifierLength) andalso
             (VerifierLength > 0)),
-    Verify1 = case Verify0 of
-        {VerifyModule, VerifyFunction}
-        when is_atom(VerifyModule), is_atom(VerifyFunction) ->
-            {file, _} = code:is_loaded(VerifyModule),
-            fun(VerifyBinary) -> VerifyModule:VerifyFunction(VerifyBinary) end;
-        _ when is_function(Verify0, 1) ->
-            Verify0;
-        undefined ->
-            undefined
-    end,
     RequestStart1 = case RequestStart0 of
         {RequestStartModule, RequestStartFunction}
         when is_atom(RequestStartModule), is_atom(RequestStartFunction) ->
@@ -279,6 +296,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 database = Database,
                 url_host = URLHost,
                 host = erlang:list_to_binary(Host),
+                authentication_f = Authentication1,
                 token_request_bytes =
                     token_length_to_bytes(TokenRequestLength),
                 token_request_secret_bytes =
@@ -291,7 +309,6 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 token_access_expiration = TokenAccessExpiration,
                 verifier_bytes =
                     token_length_to_bytes(VerifierLength),
-                verify_f = Verify1,
                 request_start_f = RequestStart1,
                 request_end_f = RequestEnd1,
                 debug_db = DebugDB1,
@@ -382,15 +399,27 @@ request("initiate/post", _Name, _Pattern, RequestHeaders, Request, Timeout,
     end;
 request("authorize/get", _Name, _Pattern, RequestHeaders, RequestQS, Timeout,
         #state{url_host = URLHost,
-               host = Host} = State, Dispatcher) ->
+               host = Host,
+               authentication_f = AuthenticationF} = State, Dispatcher) ->
     Method = "GET",
     case url(Method, RequestHeaders, URLHost, Host, RequestQS) of
         {ok, _} ->
-            case lists:keyfind(<<"oauth_token">>, 1, RequestQS) of
-                {_, TokenRequest} ->
-                    request_authorize(RequestQS, TokenRequest,
-                                      Timeout, State, Dispatcher);
-                false ->
+            Authenticated = if
+                AuthenticationF =:= undefined ->
+                    true;
+                is_function(AuthenticationF) ->
+                    AuthenticationF(RequestHeaders, RequestQS, Timeout)
+            end,
+            if
+                Authenticated =:= true ->
+                    case lists:keyfind(<<"oauth_token">>, 1, RequestQS) of
+                        {_, TokenRequest} ->
+                            request_authorize(RequestQS, TokenRequest,
+                                              Timeout, State, Dispatcher);
+                        false ->
+                            response_error_authorization_type(State)
+                    end;
+                Authenticated =:= false ->
                     response_error_authorization_type(State)
             end;
         {error, _} ->
@@ -854,38 +883,23 @@ token_input_verify(Realm, ConsumerKey, SignatureMethod,
                    Signature, Timestamp, NonceAccess,
                    TokenRequest, Verifier, Params, Timeout,
                    #state{database_module = DatabaseModule,
-                          database = Database,
-                          verify_f = VerifyF}, Dispatcher) ->
-    {VerifierPrefix, VerifierSuffix} = verifier_split(Verifier),
-    VerifyResult = if
-        VerifierSuffix =:= undefined ->
-            true;
-        VerifyF =:= undefined ->
-            false;
-        is_list(VerifierSuffix) ->
-            VerifyF(erlang:list_to_binary(VerifierSuffix))
-    end,
-    if
-        VerifyResult =:= true ->
-            case DatabaseModule:token_request_verify(Dispatcher, Database,
-                                                     Realm, ConsumerKey,
-                                                     SignatureMethod, Timestamp,
-                                                     NonceAccess, TokenRequest,
-                                                     VerifierPrefix, Timeout) of
-                {ok, ClientSharedSecret, NonceRequest, TokenRequestSecret} ->
-                    {ok, {Realm, ConsumerKey, SignatureMethod,
-                          erlang:binary_to_list(ClientSharedSecret),
-                          Signature, Timestamp,
-                          erlang:binary_to_list(NonceRequest),
-                          NonceAccess, TokenRequest,
-                          erlang:binary_to_list(TokenRequestSecret)}, Params};
-                {error, Reason} = Error ->
-                    ?LOG_ERROR("request token check error (~p, ~p): ~p",
-                               [Realm, ConsumerKey, Reason]),
-                    Error
-            end;
-        true ->
-            {error, verify_failed}
+                          database = Database}, Dispatcher) ->
+    case DatabaseModule:token_request_verify(Dispatcher, Database,
+                                             Realm, ConsumerKey,
+                                             SignatureMethod, Timestamp,
+                                             NonceAccess, TokenRequest,
+                                             Verifier, Timeout) of
+        {ok, ClientSharedSecret, NonceRequest, TokenRequestSecret} ->
+            {ok, {Realm, ConsumerKey, SignatureMethod,
+                  erlang:binary_to_list(ClientSharedSecret),
+                  Signature, Timestamp,
+                  erlang:binary_to_list(NonceRequest),
+                  NonceAccess, TokenRequest,
+                  erlang:binary_to_list(TokenRequestSecret)}, Params};
+        {error, Reason} = Error ->
+            ?LOG_ERROR("request token check error (~p, ~p): ~p",
+                       [Realm, ConsumerKey, Reason]),
+            Error
     end.
 
 token_input_check(Realm, ConsumerKey, "PLAINTEXT" = SignatureMethod,
@@ -1028,8 +1042,6 @@ request_token(Method, URL, Params, Timeout,
                     response_error_authorization_type(State)
             end;
         {error, not_found} ->
-            response_error_authorization_type(State);
-        {error, verify_failed} ->
             response_error_authorization_type(State);
         {error, _} ->
             % missing parameters
@@ -1274,14 +1286,4 @@ token_access_secret(#state{token_access_secret_bytes = N}) ->
 
 verifier(#state{verifier_bytes = N}) ->
     token(crypto:strong_rand_bytes(N)).
-
-verifier_split([], Prefix) ->
-    {lists:reverse(Prefix), undefined};
-verifier_split([$+ | L], Prefix) ->
-    {lists:reverse(Prefix), L};
-verifier_split([C | L], Prefix) ->
-    verifier_split(L, [C | Prefix]).
-
-verifier_split(L) ->
-    verifier_split(L, []).
 

@@ -18,15 +18,3 @@ refer to
 RFC 5849 is [illustrated here](http://hueniverse.com/oauth/guide/workflow/)
 (as part of the OAuth v1.0 [guide here](http://hueniverse.com/oauth/)).
 
-To verify the result of the callback URL, provide a function in the `verify`
-configuration argument for `cloudi_service_oauth1` that takes a single
-binary parameter and returns a boolean result.
-The binary data is provided as a suffix on the `oauth_verifier` result
-from the callback URL response.  Use a [percent encoded](http://en.wikipedia.org/wiki/Percent_encoding#Percent-encoding_reserved_characters)
-`+` character (`%2B`) as a delimiter for the provided `oauth_verifier`
-and a custom binary suffix, to create the `oauth_verifier` in the response
-of the callback URL.  The binary parameter can then be used to verify that
-the authentication took place successfully, before the access token is granted.
-The boolean result of the verify function is whether the authentication was
-successful.
-

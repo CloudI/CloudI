@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_core test after update problem
+    * Make sure all arguments for example services are present in the
+      list of macros which provide defaults
+    * Add example service checks to prevent patterns in prefixes for
+      services that would have problems with a pattern for a service prefix
+    * cloudi_service_oauth1 fixes
+
 2014-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Tweak cloudi_service_http_cowboy so websocket service requests that cause
