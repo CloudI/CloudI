@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -88,7 +88,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
@@ -118,6 +118,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     end,
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseMethodSuffix),
+    false = lists:member($*, Prefix),
     CallbackArgs = #elli_state{dispatcher =
                                    cloudi_service:dispatcher(Dispatcher),
                                context = create_context(Dispatcher),

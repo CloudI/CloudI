@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -71,6 +71,7 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("kernel/include/file.hrl").
 
+-define(DEFAULT_DIRECTORY,           undefined). % required argument, string
 -define(DEFAULT_REFRESH,             undefined). % seconds
 -define(DEFAULT_CACHE,               undefined). % seconds
 -define(DEFAULT_NOTIFY_ONE,                 []). % {Name, NotifyName}
@@ -245,7 +246,7 @@ notify_clear(Dispatcher, Name) ->
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {directory,              undefined},
+        {directory,              ?DEFAULT_DIRECTORY},
         {refresh,                ?DEFAULT_REFRESH},
         {cache,                  ?DEFAULT_CACHE},
         {notify_one,             ?DEFAULT_NOTIFY_ONE},

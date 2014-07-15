@@ -353,6 +353,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
     true = is_boolean(UseMethodSuffix),
+    false = lists:member($*, Prefix),
     Dispatch = cloudi_x_cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,

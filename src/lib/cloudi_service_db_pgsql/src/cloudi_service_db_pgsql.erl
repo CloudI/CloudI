@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -67,6 +67,7 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_x_epgsql_wg/include/cloudi_x_epgsql_wg.hrl").
 
+-define(DEFAULT_DATABASE,               undefined). % required argument, string
 -define(DEFAULT_DRIVER,                        wg).
 -define(DEFAULT_HOST_NAME,            "127.0.0.1").
 -define(DEFAULT_USER_NAME,               "cloudi").
@@ -245,6 +246,7 @@ binary_to_bytea(B) when is_binary(B) ->
 
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
+        {database,                 ?DEFAULT_DATABASE},
         {driver,                   ?DEFAULT_DRIVER},
         {hostname,                 ?DEFAULT_HOST_NAME},
         {username,                 ?DEFAULT_USER_NAME},
@@ -258,12 +260,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         {internal_interface,       ?DEFAULT_INTERNAL_INTERFACE},
         {mysql_compatibility,      ?DEFAULT_MYSQL_COMPATIBILITY},
         {debug,                    ?DEFAULT_DEBUG},
-        {debug_level,              ?DEFAULT_DEBUG_LEVEL},
-        {database,                 undefined}],
-    [Driver, HostName, UserName, Password, Port, SSL, Listen, Timeout, Endian,
-     Output, Interface, MysqlCompatibility, Debug, DebugLevel,
-     Database | NewArgs] =
+        {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
+    [Database, Driver, HostName, UserName, Password, Port, SSL, Listen,
+     Timeout, Endian, Output, Interface, MysqlCompatibility,
+     Debug, DebugLevel | NewArgs] =
         cloudi_proplists:take_values(Defaults, Args),
+    true = (is_list(Database) andalso is_integer(hd(Database))),
     Module = if
         Driver =:= wg; Driver =:= epgsql_wg; Driver =:= cloudi_x_epgsql_wg ->
             % NewArgs is passed to ssl application
@@ -303,7 +305,6 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             (DebugLevel =:= warn) orelse
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
-    true = (is_list(Database) andalso is_integer(hd(Database))),
     FinalArgs = AsyncArg ++
                 [{port, Port},
                  {timeout, Timeout},

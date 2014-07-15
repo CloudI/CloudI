@@ -100,6 +100,8 @@
 -define(REQUEST2, <<"requests">>).
 -define(REQUEST_INFO3, <<>>).
 -define(REQUEST3, <<"mcast">>).
+-define(REQUEST_INFO4, <<>>).
+-define(REQUEST4, <<"request_stateless">>).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -128,13 +130,15 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, Dispatcher) ->
             {ok, _, _} = cloudi_service:send_sync(Dispatcher,
                                                   ?SERVICE_PREFIX1 ++
                                                   ?SERVICE_SUFFIX1,
-                                                  <<"request">>),
+                                                  ?REQUEST_INFO4, ?REQUEST4,
+                                                  undefined, undefined),
             undefined;
         Mode =:= init_send_async_recv ->
             {ok, TransId} = cloudi_service:send_async(Dispatcher,
                                                       ?SERVICE_PREFIX1 ++
                                                       ?SERVICE_SUFFIX1,
-                                                      <<"request">>),
+                                                      ?REQUEST_INFO4, ?REQUEST4,
+                                                      undefined, undefined),
             {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId),
             undefined
     end,
@@ -150,6 +154,12 @@ cloudi_service_handle_request(Type, Name, Pattern,
                     Timeout, Priority, TransId, Pid} | Requests],
     {reply, ?RESPONSE_INFO1, ?RESPONSE1,
      State#state{requests = NewRequests}};
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              ?REQUEST_INFO2, ?REQUEST2,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{requests = Requests} = State,
+                              _Dispatcher) ->
+    {reply, <<>>, lists:reverse(Requests), State#state{requests = []}};
 cloudi_service_handle_request(_Type, Name, _Pattern,
                               ?REQUEST_INFO3, ?REQUEST3,
                               _Timeout, _Priority, _TransId, _Pid,
@@ -161,11 +171,11 @@ cloudi_service_handle_request(_Type, Name, _Pattern,
     {ok, Responses} = cloudi_service:recv_asyncs(Dispatcher, TransIds),
     {reply, Responses, State};
 cloudi_service_handle_request(_Type, _Name, _Pattern,
-                              ?REQUEST_INFO2, ?REQUEST2,
+                              ?REQUEST_INFO4, ?REQUEST4,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{requests = Requests} = State,
+                              #state{mode = reply} = State,
                               _Dispatcher) ->
-    {reply, <<>>, lists:reverse(Requests), State#state{requests = []}}.
+    {reply, ?RESPONSE_INFO1, ?RESPONSE1, State}.
 
 cloudi_service_handle_info(Request, State, _) ->
     {stop, {unexpected_info, Request}, State}.

@@ -78,7 +78,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -95,6 +95,10 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_FILE,                   undefined). % see below:
+        % required argument, string
+        % use "$I" or "${I}" for the process index within the string
+        % so unique files are created when the configuration count_process > 1
 -define(DEFAULT_RETRY,                          0).
 -define(DEFAULT_FAULT_ISOLATION,      destination). % | both
 
@@ -159,13 +163,13 @@
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
+        {file,                         ?DEFAULT_FILE},
         {retry,                       ?DEFAULT_RETRY},
-        {fault_isolation,   ?DEFAULT_FAULT_ISOLATION},
-        {file,                             undefined}],
-    [Retry, Mode, FilePath] = cloudi_proplists:take_values(Defaults, Args),
+        {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
+    [FilePath, Retry, Mode] = cloudi_proplists:take_values(Defaults, Args),
+    true = (is_list(FilePath) andalso is_integer(hd(FilePath))),
     true = (is_integer(Retry) andalso (Retry >= 0)),
     true = ((Mode =:= destination) orelse (Mode =:= both)),
-    true = (is_list(FilePath) andalso is_integer(hd(FilePath))),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
                                       cloudi_service:environment_lookup()),
@@ -175,7 +179,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                              fun(T) ->
                                                 retry(Mode, Dispatcher, T)
                                              end),
-    false = cloudi_x_trie:is_pattern(Prefix),
+    false = lists:member($*, Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     DispatcherPid = cloudi_service:dispatcher(Dispatcher),
     {ok, #state{logging = Logging,

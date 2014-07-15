@@ -266,6 +266,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             true = is_boolean(DebugDB0),
             DebugDB0
     end,
+    false = lists:member($*, Prefix),
     % endpoints based on http://tools.ietf.org/html/rfc5849#section-1.2
     ok = cloudi_service:subscribe(Dispatcher, "initiate/post"),
     ok = cloudi_service:subscribe(Dispatcher, "authorize/get"),

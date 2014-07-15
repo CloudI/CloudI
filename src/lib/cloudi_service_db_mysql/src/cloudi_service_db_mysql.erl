@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -63,6 +63,7 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(DEFAULT_DATABASE,          undefined). % required argument, string
 -define(DEFAULT_HOST_NAME,       "127.0.0.1").
 -define(DEFAULT_USER_NAME,          "cloudi").
 -define(DEFAULT_PASSWORD,                 "").
@@ -167,15 +168,15 @@ squery(Dispatcher, Name, String)
 
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
     Defaults = [
+        {database, ?DEFAULT_DATABASE},
         {hostname, ?DEFAULT_HOST_NAME},
         {username, ?DEFAULT_USER_NAME},
         {password, ?DEFAULT_PASSWORD},
         {port,     ?DEFAULT_PORT},
-        {encoding, ?DEFAULT_ENCODING},
-        {database, undefined}],
-    [HostName, UserName, Password, Port, Encoding, Database] =
+        {encoding, ?DEFAULT_ENCODING}],
+    [Database, HostName, UserName, Password, Port, Encoding] =
         cloudi_proplists:take_values(Defaults, Args),
-    true = is_list(Database),
+    true = (is_list(Database) andalso is_integer(hd(Database))),
     try cloudi_x_mysql_conn:start(HostName, Port, UserName, Password,
                          Database, Encoding, undefined) of
         {ok, Process} ->

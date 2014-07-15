@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db).
@@ -247,6 +247,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             Endian =:= little orelse
             Endian =:= native),
     true = is_boolean(UseKeyValue),
+    false = lists:member($*, Prefix),
     cloudi_service:subscribe(Dispatcher, "*"), % dynamic database name
     {ok, #state{prefix_length = erlang:length(Prefix),
                 table_module = TableModule,
