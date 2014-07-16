@@ -65,6 +65,7 @@
          cloudi_service_terminate/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_x_epgsql/include/cloudi_x_epgsql.hrl").
 -include_lib("cloudi_x_epgsql_wg/include/cloudi_x_epgsql_wg.hrl").
 
 -define(DEFAULT_DATABASE,               undefined). % required argument, string
@@ -85,14 +86,15 @@
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
 % supported drivers
--define(MODULE_WG, cloudi_x_epgsql_wg).
+-define(MODULE_EPGSQL, cloudi_x_epgsql).
+-define(MODULE_WG, cloudi_x_epgsql_wg). % default
 -define(MODULE_SEMIOCAST, cloudi_x_pgsql_connection).
 
 -type endian() :: big | little | native.
 
 -record(state,
     {
-        module :: ?MODULE_WG | ?MODULE_SEMIOCAST,
+        module :: ?MODULE_WG | ?MODULE_SEMIOCAST | ?MODULE_EPGSQL,
         connection :: any(),
         listen :: cloudi_service:service_name() | undefined,
         timeout :: pos_integer(),
@@ -267,7 +269,9 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
         cloudi_proplists:take_values(Defaults, Args),
     true = (is_list(Database) andalso is_integer(hd(Database))),
     Module = if
-        Driver =:= wg; Driver =:= epgsql_wg; Driver =:= cloudi_x_epgsql_wg ->
+        Driver =:= epgsql ->
+            ?MODULE_EPGSQL;
+        Driver =:= wg; Driver =:= epgsql_wg ->
             % NewArgs is passed to ssl application
             ?MODULE_WG;
         Driver =:= semiocast ->
@@ -590,6 +594,8 @@ mysql_query_transform_get(NewString, Index, Remaining) ->
 
 %% interface adapter
 
+driver_open(?MODULE_EPGSQL, HostName, UserName, Password, Args) ->
+    ?MODULE_EPGSQL:connect(HostName, UserName, Password, Args);
 driver_open(?MODULE_WG, HostName, UserName, Password, Args) ->
     ?MODULE_WG:connect(HostName, UserName, Password, Args);
 driver_open(?MODULE_SEMIOCAST, HostName, UserName, Password, Args0) ->
@@ -605,6 +611,8 @@ driver_open(?MODULE_SEMIOCAST, HostName, UserName, Password, Args0) ->
             {error, Reason}
     end.
 
+driver_close(?MODULE_EPGSQL, Connection) ->
+    ?MODULE_EPGSQL:close(Connection);
 driver_close(?MODULE_WG, Connection) ->
     ?MODULE_WG:close(Connection);
 driver_close(?MODULE_SEMIOCAST, Connection) ->
@@ -623,6 +631,24 @@ driver_with_transaction(L, State) ->
     end.
 
 % only internal usage, due to relying on an erlang list
+driver_equery(Query, Parameters,
+              #state{module = ?MODULE_EPGSQL,
+                     connection = Connection,
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    Native = ?MODULE_EPGSQL:equery(Connection, Query, Parameters),
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query, Parameters, Native)
+    end,
+    if
+        Interface =:= common ->
+            epgsql_to_common(Native);
+        Interface =:= native ->
+            Native
+    end;
 driver_equery(Query, Parameters,
               #state{module = ?MODULE_WG,
                      connection = Connection,
@@ -663,6 +689,37 @@ driver_equery(Query, Parameters,
     end.
 
 % internal or external
+driver_squery(internal, Query,
+              #state{module = ?MODULE_EPGSQL,
+                     connection = Connection,
+                     interface = Interface,
+                     debug_level = DebugLevel}) ->
+    Native = ?MODULE_EPGSQL:squery(Connection, Query),
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query, Native)
+    end,
+    if
+        Interface =:= common ->
+            epgsql_to_common(Native);
+        Interface =:= native ->
+            Native
+    end;
+driver_squery(external, Query,
+              #state{module = ?MODULE_EPGSQL,
+                     connection = Connection,
+                     endian = Endian,
+                     debug_level = DebugLevel}) ->
+    Native = ?MODULE_EPGSQL:squery(Connection, Query),
+    if
+        DebugLevel =:= off ->
+            ok;
+        true ->
+            driver_debug(DebugLevel, Query, Native)
+    end,
+    response_external(epgsql_to_common(Native), Query, Endian);
 driver_squery(internal, Query,
               #state{module = ?MODULE_WG,
                      connection = Connection,
@@ -755,6 +812,19 @@ driver_debug(Level, Query, Result) ->
                      " ~p~n"
                      " = ~p",
                      [Query, Result]).
+
+epgsql_to_common({ok, I}) ->
+    {updated, I};
+epgsql_to_common({ok, [], []}) ->
+    {updated, 0};
+epgsql_to_common({ok, _Columns, Rows}) ->
+    {selected, Rows};
+epgsql_to_common({ok, I, _Columns, Rows}) ->
+    {updated, I, Rows};
+epgsql_to_common({error, #error{message = Message}}) ->
+    {error, Message};
+epgsql_to_common([_ | _] = L) ->
+    check_list(L, fun epgsql_to_common/1).
 
 % Rows in the wg format only use binary strings for data
 wg_to_common({ok, I}) ->

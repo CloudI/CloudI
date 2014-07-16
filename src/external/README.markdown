@@ -82,9 +82,18 @@ exceptions due to their C integration).
 - `commit 13b3957b82f3647cb0255ac7eaeaba49e3ef9579`
 - `Tue Oct 22 11:58:41 PDT 2013`
 
+`epgsql`
+--------
+`Erlang PostgreSQL (native) Driver (community (newer) fork)`
+
+- `https://github.com/okeuday/epgsql_new`
+- `commit cebd2c88cf146b09553e6ec78ba4ede8309c52df (branch devel)`
+- `Wed Jul 16 11:33:44 PDT 2014`
+- `BSD`
+
 `epgsql_wg`
 -----------
-`Erlang PostgreSQL (native) Driver (Will Glozer (older) branch with additions)`
+`Erlang PostgreSQL (native) Driver (Will Glozer (older) fork with additions)`
 
 - `https://github.com/okeuday/epgsql_wg`
 - `commit b74e913679a450ff754d8a3cb022948e308d0509 (1.5.0)`

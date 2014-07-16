@@ -1,0 +1,10 @@
+{application, epgsql,
+ [{description, "PostgreSQL Client"},
+  {vsn, "2.0.0"},
+  {modules, []},
+  {registered, []},
+  {applications, [kernel,
+                  stdlib,
+                  ssl]},
+  {env, []},
+  {included_applications, []}]}.

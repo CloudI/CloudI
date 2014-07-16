@@ -47,6 +47,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_ememcached/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
+     -d $(top_srcdir)/external/cloudi_x_epgsql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql_wg/src \
      -d $(top_srcdir)/external/cloudi_x_erlang_cassandra/src \
      -d $(top_srcdir)/external/cloudi_x_erlasticsearch/src \
@@ -162,6 +163,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_thrift/ebin
 	$(MKDIR_P) external/cloudi_x_erlasticsearch/ebin
 	$(MKDIR_P) external/cloudi_x_erlang_cassandra/ebin
+	$(MKDIR_P) external/cloudi_x_epgsql/ebin
 	$(MKDIR_P) external/cloudi_x_epgsql_wg/ebin
 	$(MKDIR_P) external/cloudi_x_pgsql/ebin
 	$(MKDIR_P) external/cloudi_x_emysql/ebin
@@ -413,6 +415,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_erlang_cassandra; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_erlang_cassandra/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_epgsql; \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_epgsql/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_epgsql_wg; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_epgsql_wg/ebin || exit 0)
@@ -464,6 +469,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/snappy && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/snappy/ebin || exit 0)
+	(cd $(top_builddir)/external/cloudi_x_epgsql && \
+        test ! -e include && \
+        $(LN_S) $(abs_top_srcdir)/external/cloudi_x_epgsql/include || exit 0)
 	(cd $(top_builddir)/external/cloudi_x_epgsql_wg && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/cloudi_x_epgsql_wg/include || exit 0)
@@ -608,6 +616,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_erlasticsearch/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlang_cassandra/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_erlang_cassandra/ebin
+	rmdir $(top_builddir)/external/cloudi_x_epgsql/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_epgsql/ebin
 	rmdir $(top_builddir)/external/cloudi_x_epgsql_wg/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_epgsql_wg/ebin
 	rmdir $(top_builddir)/external/cloudi_x_pgsql/ebin || exit 0
@@ -768,6 +778,7 @@ dialyze: all \
               external/cloudi_x_elli/ebin \
               external/cloudi_x_ememcached/ebin \
               external/cloudi_x_emysql/ebin \
+              external/cloudi_x_epgsql/ebin \
               external/cloudi_x_epgsql_wg/ebin \
               external/cloudi_x_erlasticsearch/ebin \
               external/cloudi_x_erlang_cassandra/ebin \
