@@ -234,7 +234,21 @@
         % should the service be automatically loaded and unloaded at
         % service start and stop, respectively?
         automatic_loading = true
-            :: boolean()
+            :: boolean(),
+        % aspects are functions provided to be processed before or after
+        % the service callback is executed (Aspect-Oriented Programming (AOP))
+        aspects_init_after = []
+            :: list(cloudi_service_api:aspect_init()),
+        aspects_request_before = []
+            :: list(cloudi_service_api:aspect_request()),
+        aspects_request_after = []
+            :: list(cloudi_service_api:aspect_request()),
+        aspects_info_before = []
+            :: list(cloudi_service_api:aspect_info()),
+        aspects_info_after = []
+            :: list(cloudi_service_api:aspect_info()),
+        aspects_terminate_before = []
+            :: list(cloudi_service_api:aspect_terminate())
     }).
 
 % internal service parameters

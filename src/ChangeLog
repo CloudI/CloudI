@@ -4,6 +4,8 @@
 2014-07-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the epgsql driver to cloudi_service_db_pgsql
+    * Add AOP (Aspect-Oriented Programming) functionality as
+      service configuration options for internal services
 
 2014-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 

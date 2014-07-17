@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -126,6 +126,54 @@
     1..?TIMEOUT_MAX_ERLANG.
 -export_type([latency_time_milliseconds/0]).
 
+-type aspect_init_f() ::
+    fun((Args :: list(),
+         Prefix :: cloudi_service:service_name_pattern(),
+         State :: any(),
+         Dispatcher :: cloudi_service:dispatcher()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_init() ::
+    aspect_init_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_init_f/0,
+              aspect_init/0]).
+-type aspect_request_f() ::
+    fun((Type :: cloudi_service:request_type(),
+         Name :: cloudi_service:service_name(),
+         Pattern :: cloudi_service:service_name_pattern(),
+         RequestInfo :: cloudi_service:request_info(),
+         Request :: cloudi_service:request(),
+         Timeout :: cloudi_service:timeout_value_milliseconds(),
+         Priority :: cloudi_service:priority(),
+         TransId :: cloudi_service:trans_id(),
+         Pid :: cloudi_service:source(),
+         State :: any(),
+         Dispatcher :: cloudi_service:dispatcher()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_request() ::
+    aspect_request_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_request_f/0,
+              aspect_request/0]).
+-type aspect_info_f() ::
+    fun((Request :: any(),
+         State :: any(),
+         Dispatcher :: cloudi_service:dispatcher()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_info() ::
+    aspect_info_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_info_f/0,
+              aspect_info/0]).
+-type aspect_terminate_f() ::
+    fun((Reason :: any(),
+         State :: any()) ->
+        {ok, State :: any()}).
+-type aspect_terminate() ::
+    aspect_terminate_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_terminate_f/0,
+              aspect_terminate/0]).
+
 -type service_options_internal() ::
     list({priority_default, priority()} |
          {queue_limit, undefined | pos_integer()} |
@@ -167,7 +215,13 @@
          {duo_mode, boolean()} |
          {hibernate, boolean()} |
          {reload, boolean()} |
-         {automatic_loading, boolean()}).
+         {automatic_loading, boolean()} |
+         {aspects_init_after, list(aspect_init())} |
+         {aspects_request_before, list(aspect_request())} |
+         {aspects_request_after, list(aspect_request())} |
+         {aspects_info_before, list(aspect_info())} |
+         {aspects_info_after, list(aspect_info())} |
+         {aspects_terminate_before, list(aspect_terminate())}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | pos_integer()} |
