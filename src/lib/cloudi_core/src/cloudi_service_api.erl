@@ -126,18 +126,27 @@
     1..?TIMEOUT_MAX_ERLANG.
 -export_type([latency_time_milliseconds/0]).
 
--type aspect_init_f() ::
+-type aspect_init_internal_f() ::
     fun((Args :: list(),
          Prefix :: cloudi_service:service_name_pattern(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_init() ::
-    aspect_init_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_init_f/0,
-              aspect_init/0]).
--type aspect_request_f() ::
+-type aspect_init_external_f() ::
+    fun((Prefix :: cloudi:service_name_pattern(),
+         State :: any()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_init_internal() ::
+    aspect_init_internal_f() | {Module :: module(), Function :: atom()}.
+-type aspect_init_external() ::
+    aspect_init_external_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_init_internal_f/0,
+              aspect_init_external_f/0,
+              aspect_init_internal/0,
+              aspect_init_external/0]).
+-type aspect_request_internal_f() ::
     fun((Type :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
@@ -146,33 +155,56 @@
          Timeout :: cloudi_service:timeout_value_milliseconds(),
          Priority :: cloudi_service:priority(),
          TransId :: cloudi_service:trans_id(),
-         Pid :: cloudi_service:source(),
+         Source :: cloudi_service:source(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_request() ::
-    aspect_request_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_request_f/0,
-              aspect_request/0]).
--type aspect_info_f() ::
+-type aspect_request_external_f() ::
+    fun((Type :: cloudi_service:request_type(),
+         Name :: cloudi_service:service_name(),
+         Pattern :: cloudi_service:service_name_pattern(),
+         RequestInfo :: cloudi_service:request_info(),
+         Request :: cloudi_service:request(),
+         Timeout :: cloudi_service:timeout_value_milliseconds(),
+         Priority :: cloudi_service:priority(),
+         TransId :: cloudi_service:trans_id(),
+         Source :: cloudi_service:source(),
+         State :: any()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_request_internal() ::
+    aspect_request_internal_f() | {Module :: module(), Function :: atom()}.
+-type aspect_request_external() ::
+    aspect_request_external_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_request_internal_f/0,
+              aspect_request_external_f/0,
+              aspect_request_internal/0,
+              aspect_request_external/0]).
+-type aspect_info_internal_f() ::
     fun((Request :: any(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_info() ::
-    aspect_info_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_info_f/0,
-              aspect_info/0]).
+-type aspect_info_internal() ::
+    aspect_info_internal_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_info_internal_f/0,
+              aspect_info_internal/0]).
 -type aspect_terminate_f() ::
     fun((Reason :: any(),
          State :: any()) ->
         {ok, State :: any()}).
--type aspect_terminate() ::
-    aspect_terminate_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_terminate_f/0,
-              aspect_terminate/0]).
+-type aspect_terminate_internal_f() :: aspect_terminate_f().
+-type aspect_terminate_external_f() :: aspect_terminate_f().
+-type aspect_terminate_internal() ::
+    aspect_terminate_internal_f() | {Module :: module(), Function :: atom()}.
+-type aspect_terminate_external() ::
+    aspect_terminate_external_f() | {Module :: module(), Function :: atom()}.
+-export_type([aspect_terminate_internal_f/0,
+              aspect_terminate_external_f/0,
+              aspect_terminate_internal/0,
+              aspect_terminate_external/0]).
 
 -type service_options_internal() ::
     list({priority_default, priority()} |
@@ -216,12 +248,12 @@
          {hibernate, boolean()} |
          {reload, boolean()} |
          {automatic_loading, boolean()} |
-         {aspects_init_after, list(aspect_init())} |
-         {aspects_request_before, list(aspect_request())} |
-         {aspects_request_after, list(aspect_request())} |
-         {aspects_info_before, list(aspect_info())} |
-         {aspects_info_after, list(aspect_info())} |
-         {aspects_terminate_before, list(aspect_terminate())}).
+         {aspects_init_after, list(aspect_init_internal())} |
+         {aspects_request_before, list(aspect_request_internal())} |
+         {aspects_request_after, list(aspect_request_internal())} |
+         {aspects_info_before, list(aspect_info_internal())} |
+         {aspects_info_after, list(aspect_info_internal())} |
+         {aspects_terminate_before, list(aspect_terminate_internal())}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | pos_integer()} |
@@ -248,7 +280,11 @@
                {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
-               {probability_day, float()}) | system | false}).
+               {probability_day, float()}) | system | false} |
+         {aspects_init_after, list(aspect_init_external())} |
+         {aspects_request_before, list(aspect_request_external())} |
+         {aspects_request_after, list(aspect_request_external())} |
+         {aspects_terminate_before, list(aspect_terminate_external())}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 

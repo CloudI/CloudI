@@ -76,6 +76,8 @@
     {
         % DEFAULT VALUES ASSIGNED BELOW
 
+        % Relevant for both Internal and External Services in the same way:
+
         % -128 (high) <= priority_default <= 127 (low)
         priority_default = ?DEFAULT_PRIORITY
             :: cloudi_service:priority(),
@@ -179,7 +181,7 @@
                system | false |
                tuple(),
 
-        % Only Relevant For Internal Services:
+        % Only Relevant for Internal Services:
 
         % specify an Erlang application name, so it can be different from
         % the CloudI service module name
@@ -235,20 +237,27 @@
         % service start and stop, respectively?
         automatic_loading = true
             :: boolean(),
+
+        % Relevant for both Internal and External Services, different values:
+
         % aspects are functions provided to be processed before or after
         % the service callback is executed (Aspect-Oriented Programming (AOP))
         aspects_init_after = []
-            :: list(cloudi_service_api:aspect_init()),
+            :: list(cloudi_service_api:aspect_init_internal() |
+                    cloudi_service_api:aspect_init_external()),
         aspects_request_before = []
-            :: list(cloudi_service_api:aspect_request()),
+            :: list(cloudi_service_api:aspect_request_internal() |
+                    cloudi_service_api:aspect_request_external()),
         aspects_request_after = []
-            :: list(cloudi_service_api:aspect_request()),
+            :: list(cloudi_service_api:aspect_request_internal() |
+                    cloudi_service_api:aspect_request_external()),
         aspects_info_before = []
-            :: list(cloudi_service_api:aspect_info()),
+            :: list(cloudi_service_api:aspect_info_internal()),
         aspects_info_after = []
-            :: list(cloudi_service_api:aspect_info()),
+            :: list(cloudi_service_api:aspect_info_internal()),
         aspects_terminate_before = []
-            :: list(cloudi_service_api:aspect_terminate())
+            :: list(cloudi_service_api:aspect_terminate_internal() |
+                    cloudi_service_api:aspect_terminate_external())
     }).
 
 % internal service parameters

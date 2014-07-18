@@ -722,7 +722,7 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                 aspects_init_after = Aspects} = NewConfigOptions,
             NewState = NextState#state{options = NewConfigOptions},
             case aspects_init(Aspects, Args, Prefix,
-                                    ServiceState, Dispatcher) of
+                              ServiceState, Dispatcher) of
                 {ok, NewServiceState} ->
                     erlang:process_flag(trap_exit, true),
                     {noreply,
@@ -1788,8 +1788,8 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
         true ->
             fun(T) -> T end
     end,
-    try aspects_request(AspectsBefore,
-                        Type, Name, Pattern, RequestInfo, Request,
+    try aspects_request(AspectsBefore, Type,
+                        Name, Pattern, RequestInfo, Request,
                         Timeout, Priority, TransId, Source,
                         ServiceState, Dispatcher) of
         {ok, NextServiceState} ->
@@ -1805,9 +1805,8 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                  NewServiceState}
                 when ReturnType =:= 'cloudi_service_return_async';
                      ReturnType =:= 'cloudi_service_return_sync' ->
-                    try aspects_request(AspectsAfter,
-                                        Type, Name, Pattern,
-                                        RequestInfo, Request,
+                    try aspects_request(AspectsAfter, Type,
+                                        Name, Pattern, RequestInfo, Request,
                                         Timeout, Priority, TransId, Source,
                                         NewServiceState, Dispatcher) of
                         {ok, FinalServiceState} ->
@@ -1826,9 +1825,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        Type:Error ->
+                        ErrorType:Error ->
                             {'cloudi_service_request_failure',
-                             Type, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, erlang:get_stacktrace(),
                              NewServiceState}
                     end;
                 {'cloudi_service_request_success',
@@ -1838,9 +1837,8 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                  NewServiceState}
                 when ForwardType =:= 'cloudi_service_forward_async_retry';
                      ForwardType =:= 'cloudi_service_forward_sync_retry' ->
-                    try aspects_request(AspectsAfter,
-                                        Type, Name, Pattern,
-                                        RequestInfo, Request,
+                    try aspects_request(AspectsAfter, Type,
+                                        Name, Pattern, RequestInfo, Request,
                                         Timeout, Priority, TransId, Source,
                                         NewServiceState, Dispatcher) of
                         {ok, FinalServiceState} ->
@@ -1859,17 +1857,16 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        Type:Error ->
+                        ErrorType:Error ->
                             {'cloudi_service_request_failure',
-                             Type, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, erlang:get_stacktrace(),
                              NewServiceState}
                     end;
                 {'cloudi_service_request_success',
                  undefined,
                  NewServiceState} ->
-                    try aspects_request(AspectsAfter,
-                                        Type, Name, Pattern,
-                                        RequestInfo, Request,
+                    try aspects_request(AspectsAfter, Type,
+                                        Name, Pattern, RequestInfo, Request,
                                         Timeout, Priority, TransId, Source,
                                         NewServiceState, Dispatcher) of
                         {ok, FinalServiceState} ->
@@ -1880,9 +1877,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        Type:Error ->
+                        ErrorType:Error ->
                             {'cloudi_service_request_failure',
-                             Type, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, erlang:get_stacktrace(),
                              NewServiceState}
                     end;
                 {'cloudi_service_request_failure', _, _, _, _} = Error ->
@@ -1892,9 +1889,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NextServiceState}
     catch
-        Type:Error ->
+        ErrorType:Error ->
             {'cloudi_service_request_failure',
-             Type, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
     end.
 
 handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
@@ -2035,9 +2032,9 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
               NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
-        Type:Error ->
+        ErrorType:Error ->
             {'cloudi_service_request_failure',
-             Type, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
     end;
 
 handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
@@ -2178,9 +2175,9 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
               NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
-        Type:Error ->
+        ErrorType:Error ->
             {'cloudi_service_request_failure',
-             Type, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
     end.
 
 handle_module_info(Request, ServiceState, Dispatcher, Module,
@@ -2206,26 +2203,26 @@ handle_module_info(Request, ServiceState, Dispatcher, Module,
                              stop, Reason, undefined,
                              FinalServiceState}
                     catch
-                        Type:Error ->
+                        ErrorType:Error ->
                             {'cloudi_service_info_failure',
-                             Type, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, erlang:get_stacktrace(),
                              NewServiceState}
                     end;
                 {stop, Reason, NewServiceState} ->
                     {'cloudi_service_info_failure',
                      stop, Reason, undefined, NewServiceState}
             catch
-                Type:Error ->
+                ErrorType:Error ->
                     {'cloudi_service_info_failure',
-                     Type, Error, erlang:get_stacktrace(), ServiceState}
+                     ErrorType, Error, erlang:get_stacktrace(), ServiceState}
             end;
         {stop, Reason, NextServiceState} ->
             {'cloudi_service_info_failure',
              stop, Reason, undefined, NextServiceState}
     catch
-        Type:Error ->
+        ErrorType:Error ->
             {'cloudi_service_info_failure',
-             Type, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
     end.
 
 send_async_active_timeout_start(Timeout, TransId, Pid,
@@ -2714,7 +2711,7 @@ duo_mode_loop_init(#state_duo{module = Module,
                         queued_info = undefined,
                         options = NewConfigOptions},
                     case aspects_init(Aspects, Args, Prefix,
-                                            ServiceState, Dispatcher) of
+                                      ServiceState, Dispatcher) of
                         {ok, NewServiceState} ->
                             erlang:process_flag(trap_exit, true),
                             Dispatcher ! {'cloudi_service_init_state',
@@ -3209,9 +3206,9 @@ aspects_terminate([{M, F} = Aspect | L], Reason, ServiceState) ->
         {ok, NewServiceState} ->
             aspects_terminate(L, Reason, NewServiceState)
     catch
-        Type:Error ->
+        ErrorType:Error ->
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [Aspect, Type, Error, erlang:get_stacktrace()]),
+                       [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
             {ok, ServiceState}
     end;
 aspects_terminate([F | L], Reason, ServiceState) ->
@@ -3219,9 +3216,9 @@ aspects_terminate([F | L], Reason, ServiceState) ->
         {ok, NewServiceState} ->
             aspects_terminate(L, Reason, NewServiceState)
     catch
-        Type:Error ->
+        ErrorType:Error ->
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [F, Type, Error, erlang:get_stacktrace()]),
+                       [F, ErrorType, Error, erlang:get_stacktrace()]),
             {ok, ServiceState}
     end.
 

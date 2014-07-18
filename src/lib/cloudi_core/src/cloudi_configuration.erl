@@ -1129,7 +1129,43 @@ services_format_options_external(Options) ->
         true ->
             OptionsList11
     end,
-    lists:reverse(OptionsList12).
+    OptionsList13 = if
+        Options#config_service_options.aspects_init_after /=
+        Defaults#config_service_options.aspects_init_after ->
+            [{aspects_init_after,
+              Options#config_service_options.aspects_init_after} |
+             OptionsList12];
+        true ->
+            OptionsList12
+    end,
+    OptionsList14 = if
+        Options#config_service_options.aspects_request_before /=
+        Defaults#config_service_options.aspects_request_before ->
+            [{aspects_request_before,
+              Options#config_service_options.aspects_request_before} |
+             OptionsList13];
+        true ->
+            OptionsList13
+    end,
+    OptionsList15 = if
+        Options#config_service_options.aspects_request_after /=
+        Defaults#config_service_options.aspects_request_after ->
+            [{aspects_request_after,
+              Options#config_service_options.aspects_request_after} |
+             OptionsList14];
+        true ->
+            OptionsList14
+    end,
+    OptionsList16 = if
+        Options#config_service_options.aspects_terminate_before /=
+        Defaults#config_service_options.aspects_terminate_before ->
+            [{aspects_terminate_before,
+              Options#config_service_options.aspects_terminate_before} |
+             OptionsList15];
+        true ->
+            OptionsList15
+    end,
+    lists:reverse(OptionsList16).
 
 -spec services_validate(Services :: list(#internal{} | #external{} |
                                          cloudi_service_api:service_proplist()),
@@ -1949,7 +1985,7 @@ services_validate_options_internal_checks(CountProcessDynamic,
                             case cloudi_rate_based_configuration
                                 :hibernate_validate(Hibernate) of
                                 {ok, NewHibernate} ->
-                                    case services_validate_option_aspects(
+                                    case services_validate_option_aspects_internal(
                                         AspectsInitAfter,
                                         AspectsRequestBefore,
                                         AspectsRequestAfter,
@@ -2005,6 +2041,9 @@ services_validate_options_internal_checks(CountProcessDynamic,
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
+      service_options_aspects_init_invalid |
+      service_options_aspects_request_invalid |
+      service_options_aspects_terminate_invalid |
       service_options_invalid, any()}}.
 
 services_validate_options_external(OptionsList, CountProcess) ->
@@ -2033,79 +2072,99 @@ services_validate_options_external(OptionsList, CountProcess) ->
         {monkey_latency,
          Options#config_service_options.monkey_latency},
         {monkey_chaos,
-         Options#config_service_options.monkey_chaos}],
+         Options#config_service_options.monkey_chaos},
+        {aspects_init_after,
+         Options#config_service_options.aspects_init_after},
+        {aspects_request_before,
+         Options#config_service_options.aspects_request_before},
+        {aspects_request_after,
+         Options#config_service_options.aspects_request_after},
+        {aspects_terminate_before,
+         Options#config_service_options.aspects_terminate_before}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
         [PriorityDefault, _, _, _, _, _, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
         [_, QueueLimit, _, _, _, _, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
                    (QueueLimit >= 1))) ->
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
         [_, _, DestRefreshStart, _, _, _, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not (is_integer(DestRefreshStart) andalso
                   (DestRefreshStart > ?TIMEOUT_DELTA) andalso
                   (DestRefreshStart =< ?TIMEOUT_MAX_ERLANG)) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, DestRefreshDelay, _, _, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not (is_integer(DestRefreshDelay) andalso
                   (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
                   (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG)) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
         [_, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not (is_integer(RequestTimeoutImmediateMax) andalso
                   (RequestTimeoutImmediateMax >= 0) andalso
                   (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
         [_, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not (is_integer(ResponseTimeoutImmediateMax) andalso
                   (ResponseTimeoutImmediateMax >= 0) andalso
                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, CountProcessDynamic, _,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not ((CountProcessDynamic =:= false) orelse
                   is_list(CountProcessDynamic)) ->
             {error, {service_options_count_process_dynamic_invalid,
                      CountProcessDynamic}};
         [_, _, _, _, _, _, _, _, _, Scope,
-         _, _]
+         _, _,
+         _, _, _, _]
         when not is_atom(Scope) ->
             {error, {service_options_scope_invalid,
                      Scope}};
         [_, _, _, _, _, _, _, _, _, _,
-         MonkeyLatency, _]
+         MonkeyLatency, _,
+         _, _, _, _]
         when not ((MonkeyLatency =:= false) orelse
                   (MonkeyLatency =:= system) orelse
                   is_list(MonkeyLatency)) ->
             {error, {service_options_monkey_latency_invalid,
                      MonkeyLatency}};
         [_, _, _, _, _, _, _, _, _, _,
-         _, MonkeyChaos]
+         _, MonkeyChaos,
+         _, _, _, _]
         when not ((MonkeyChaos =:= false) orelse
                   (MonkeyChaos =:= system) orelse
                   is_list(MonkeyChaos)) ->
@@ -2114,7 +2173,9 @@ services_validate_options_external(OptionsList, CountProcess) ->
         [PriorityDefault, QueueLimit, DestRefreshStart, DestRefreshDelay,
          RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
          ResponseTimeoutAdjustment, ResponseTimeoutImmediateMax,
-         CountProcessDynamic, Scope, MonkeyLatency, MonkeyChaos] ->
+         CountProcessDynamic, Scope, MonkeyLatency, MonkeyChaos,
+         AspectsInitAfter, AspectsRequestBefore, AspectsRequestAfter,
+         AspectsTerminateBefore] ->
             case services_validate_options_external_checks(CountProcessDynamic,
                                                            MonkeyLatency,
                                                            MonkeyChaos,
@@ -2123,37 +2184,55 @@ services_validate_options_external(OptionsList, CountProcess) ->
                  NewCountProcessDynamic,
                  NewMonkeyLatency,
                  NewMonkeyChaos} ->
-                    {ok,
-                     Options#config_service_options{
-                         priority_default =
-                             PriorityDefault,
-                         queue_limit =
-                             QueueLimit,
-                         dest_refresh_start =
-                             DestRefreshStart,
-                         dest_refresh_delay =
-                             DestRefreshDelay,
-                         request_timeout_adjustment =
-                             RequestTimeoutAdjustment,
-                         request_timeout_immediate_max =
-                             RequestTimeoutImmediateMax,
-                         response_timeout_adjustment =
-                             ResponseTimeoutAdjustment,
-                         response_timeout_immediate_max =
-                             ResponseTimeoutImmediateMax,
-                         count_process_dynamic =
-                             NewCountProcessDynamic,
-                         scope =
-                             ?SCOPE_ASSIGN(Scope),
-                         monkey_latency =
-                             NewMonkeyLatency,
-                         monkey_chaos =
-                             NewMonkeyChaos}};
+                    case services_validate_option_aspects_external(
+                        AspectsInitAfter,
+                        AspectsRequestBefore,
+                        AspectsRequestAfter,
+                        AspectsTerminateBefore) of
+                        ok ->
+                            {ok,
+                             Options#config_service_options{
+                                 priority_default =
+                                     PriorityDefault,
+                                 queue_limit =
+                                     QueueLimit,
+                                 dest_refresh_start =
+                                     DestRefreshStart,
+                                 dest_refresh_delay =
+                                     DestRefreshDelay,
+                                 request_timeout_adjustment =
+                                     RequestTimeoutAdjustment,
+                                 request_timeout_immediate_max =
+                                     RequestTimeoutImmediateMax,
+                                 response_timeout_adjustment =
+                                     ResponseTimeoutAdjustment,
+                                 response_timeout_immediate_max =
+                                     ResponseTimeoutImmediateMax,
+                                 count_process_dynamic =
+                                     NewCountProcessDynamic,
+                                 scope =
+                                     ?SCOPE_ASSIGN(Scope),
+                                 monkey_latency =
+                                     NewMonkeyLatency,
+                                 monkey_chaos =
+                                     NewMonkeyChaos,
+                                 aspects_init_after =
+                                     AspectsInitAfter,
+                                 aspects_request_before =
+                                     AspectsRequestBefore,
+                                 aspects_request_after =
+                                     AspectsRequestAfter,
+                                 aspects_terminate_before =
+                                     AspectsTerminateBefore}};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
         [_, _, _, _, _, _, _, _, _, _,
-         _, _ | Extra] ->
+         _, _,
+         _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
 
@@ -2220,30 +2299,6 @@ services_validate_option_aspects_f([{M, F} = Entry | Aspects], Arity)
 services_validate_option_aspects_f([Entry | _], _) ->
     {error, Entry}.
 
-services_validate_option_aspects_init(AspectsInit) ->
-    case services_validate_option_aspects_f(AspectsInit, 4) of
-        ok ->
-            ok;
-        {error, Entry} ->
-            {error, {service_options_aspects_init_invalid, Entry}}
-    end.
-
-services_validate_option_aspects_request(AspectsRequest) ->
-    case services_validate_option_aspects_f(AspectsRequest, 11) of
-        ok ->
-            ok;
-        {error, Entry} ->
-            {error, {service_options_aspects_request_invalid, Entry}}
-    end.
-
-services_validate_option_aspects_info(AspectsInfo) ->
-    case services_validate_option_aspects_f(AspectsInfo, 3) of
-        ok ->
-            ok;
-        {error, Entry} ->
-            {error, {service_options_aspects_info_invalid, Entry}}
-    end.
-
 services_validate_option_aspects_terminate(AspectsTerminate) ->
     case services_validate_option_aspects_f(AspectsTerminate, 2) of
         ok ->
@@ -2252,24 +2307,48 @@ services_validate_option_aspects_terminate(AspectsTerminate) ->
             {error, {service_options_aspects_terminate_invalid, Entry}}
     end.
 
-services_validate_option_aspects(AspectsInitAfter,
-                                 AspectsRequestBefore,
-                                 AspectsRequestAfter,
-                                 AspectsInfoBefore,
-                                 AspectsInfoAfter,
-                                 AspectsTerminateBefore) ->
-    case services_validate_option_aspects_init(AspectsInitAfter) of
+services_validate_option_aspects_init_internal(AspectsInit) ->
+    case services_validate_option_aspects_f(AspectsInit, 4) of
         ok ->
-            case services_validate_option_aspects_request(
+            ok;
+        {error, Entry} ->
+            {error, {service_options_aspects_init_invalid, Entry}}
+    end.
+
+services_validate_option_aspects_request_internal(AspectsRequest) ->
+    case services_validate_option_aspects_f(AspectsRequest, 11) of
+        ok ->
+            ok;
+        {error, Entry} ->
+            {error, {service_options_aspects_request_invalid, Entry}}
+    end.
+
+services_validate_option_aspects_info_internal(AspectsInfo) ->
+    case services_validate_option_aspects_f(AspectsInfo, 3) of
+        ok ->
+            ok;
+        {error, Entry} ->
+            {error, {service_options_aspects_info_invalid, Entry}}
+    end.
+
+services_validate_option_aspects_internal(AspectsInitAfter,
+                                          AspectsRequestBefore,
+                                          AspectsRequestAfter,
+                                          AspectsInfoBefore,
+                                          AspectsInfoAfter,
+                                          AspectsTerminateBefore) ->
+    case services_validate_option_aspects_init_internal(AspectsInitAfter) of
+        ok ->
+            case services_validate_option_aspects_request_internal(
                 AspectsRequestBefore) of
                 ok ->
-                    case services_validate_option_aspects_request(
+                    case services_validate_option_aspects_request_internal(
                         AspectsRequestAfter) of
                         ok ->
-                            case services_validate_option_aspects_info(
+                            case services_validate_option_aspects_info_internal(
                                 AspectsInfoBefore) of
                                 ok ->
-                                    case services_validate_option_aspects_info(
+                                    case services_validate_option_aspects_info_internal(
                                         AspectsInfoAfter) of
                                         ok ->
                                             services_validate_option_aspects_terminate(
@@ -2280,6 +2359,46 @@ services_validate_option_aspects(AspectsInitAfter,
                                 {error, _} = Error ->
                                     Error
                             end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+services_validate_option_aspects_init_external(AspectsInit) ->
+    case services_validate_option_aspects_f(AspectsInit, 2) of
+        ok ->
+            ok;
+        {error, Entry} ->
+            {error, {service_options_aspects_init_invalid, Entry}}
+    end.
+
+services_validate_option_aspects_request_external(AspectsRequest) ->
+    case services_validate_option_aspects_f(AspectsRequest, 10) of
+        ok ->
+            ok;
+        {error, Entry} ->
+            {error, {service_options_aspects_request_invalid, Entry}}
+    end.
+
+services_validate_option_aspects_external(AspectsInitAfter,
+                                          AspectsRequestBefore,
+                                          AspectsRequestAfter,
+                                          AspectsTerminateBefore) ->
+    case services_validate_option_aspects_init_external(AspectsInitAfter) of
+        ok ->
+            case services_validate_option_aspects_request_external(
+                AspectsRequestBefore) of
+                ok ->
+                    case services_validate_option_aspects_request_external(
+                        AspectsRequestAfter) of
+                        ok ->
+                            services_validate_option_aspects_terminate(
+                                AspectsTerminateBefore);
                         {error, _} = Error ->
                             Error
                     end;
