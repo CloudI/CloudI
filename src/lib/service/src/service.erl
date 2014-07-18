@@ -88,7 +88,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(service).
@@ -200,20 +200,34 @@
 -export_type([service_req/0]).
 
 % cloudi_service module types
--type request_type() :: cloudi_service:request_type().
--type service_name() :: cloudi_service:service_name().
--type service_name_pattern() :: cloudi_service:service_name_pattern().
--type request_info() :: cloudi_service:request_info().
--type request() :: cloudi_service:request().
--type response_info() :: cloudi_service:response_info().
--type response() :: cloudi_service:response().
--type timeout_milliseconds() :: cloudi_service:timeout_milliseconds().
--type priority() :: cloudi_service:priority().
--type trans_id() :: cloudi_service:trans_id().
--type pattern_pid() :: cloudi_service:pattern_pid().
--type dispatcher() :: cloudi_service:dispatcher().
--type source() :: cloudi_service:source().
--type key_values() :: cloudi_service:key_values().
+-type request_type() ::
+    cloudi_service:request_type().
+-type service_name() ::
+    cloudi_service:service_name().
+-type service_name_pattern() ::
+    cloudi_service:service_name_pattern().
+-type request_info() ::
+    cloudi_service:request_info().
+-type request() ::
+    cloudi_service:request().
+-type response_info() ::
+    cloudi_service:response_info().
+-type response() ::
+    cloudi_service:response().
+-type timeout_milliseconds() ::
+    cloudi_service:timeout_milliseconds().
+-type priority() ::
+    cloudi_service:priority().
+-type trans_id() ::
+    cloudi_service:trans_id().
+-type pattern_pid() ::
+    cloudi_service:pattern_pid().
+-type dispatcher() ::
+    cloudi_service:dispatcher().
+-type source() ::
+    cloudi_service:source().
+-type key_values() ::
+    cloudi_service:key_values().
 -export_type([request_type/0,
               service_name/0,
               service_name_pattern/0,

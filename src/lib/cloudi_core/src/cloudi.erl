@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -106,7 +106,8 @@
 -type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX.
 -type timeout_milliseconds() :: timeout_value_milliseconds() |
                                 undefined | immediate.
--type priority() :: cloudi_service_api:priority() | undefined.
+-type priority_value() :: cloudi_service_api:priority().
+-type priority() :: priority_value() | undefined.
 -type trans_id() :: <<_:128>>. % version 1 UUID
 -type pattern_pid() :: {service_name_pattern(), pid()}.
 -export_type([service_name/0,
@@ -115,6 +116,7 @@
               response_info/0, response/0,
               timeout_value_milliseconds/0,
               timeout_milliseconds/0,
+              priority_value/0,
               priority/0,
               trans_id/0,
               pattern_pid/0]).

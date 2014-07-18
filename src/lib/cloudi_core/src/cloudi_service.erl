@@ -94,7 +94,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -201,6 +201,7 @@
 -type response() :: cloudi:response().
 -type timeout_value_milliseconds() :: cloudi:timeout_value_milliseconds().
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type priority_value() :: cloudi:priority_value().
 -type priority() :: cloudi:priority().
 -type trans_id() :: cloudi:trans_id(). % version 1 UUID
 -type pattern_pid() :: cloudi:pattern_pid().
@@ -211,6 +212,7 @@
               response_info/0, response/0,
               timeout_value_milliseconds/0,
               timeout_milliseconds/0,
+              priority_value/0,
               priority/0,
               trans_id/0,
               pattern_pid/0]).
@@ -258,7 +260,7 @@
                                         RequestInfo :: request_info(),
                                         Request :: request(),
                                         Timeout :: timeout_value_milliseconds(),
-                                        Priority :: priority(),
+                                        Priority :: priority_value(),
                                         TransId :: trans_id(),
                                         Source :: source(),
                                         State :: any(),
@@ -271,8 +273,8 @@
      NewState :: any()} |
     {forward, NextName :: service_name(),
      NextRequestInfo :: request_info(), NextRequest :: request(),
-     NextTimeout :: timeout_value_milliseconds(), NextPriority :: priority(),
-     NewState :: any()} |
+     NextTimeout :: timeout_value_milliseconds(),
+     NextPriority :: priority_value(), NewState :: any()} |
     {noreply, NewState :: any()} |
     {stop, Reason :: any(), NewState :: any()}.
 

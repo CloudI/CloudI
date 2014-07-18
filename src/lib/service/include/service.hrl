@@ -77,7 +77,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                     Timeout ::
                                         cloudi_service:timeout_value_milliseconds(),
                                     Priority ::
-                                        cloudi_service:priority(),
+                                        cloudi_service:priority_value(),
                                     TransId ::
                                         cloudi_service:trans_id(),
                                     Pid ::
@@ -95,12 +95,12 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      NextRequestInfo :: cloudi_service:request_info(),
      NextRequest :: cloudi_service:request(),
      NextTimeout :: cloudi_service:timeout_value_milliseconds(),
-     NextPriority :: cloudi_service:priority(), NewState :: any()} |
+     NextPriority :: cloudi_service:priority_value(), NewState :: any()} |
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Pid, State,
+                              Timeout, Priority, TransId, Source, State,
                               Dispatcher) ->
     case service_request(#service_req{type = Type,
                                       name = Name,
@@ -110,7 +110,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                       timeout = Timeout,
                                       priority = Priority,
                                       trans_id = TransId,
-                                      pid = Pid}, State, Dispatcher) of
+                                      pid = Source}, State, Dispatcher) of
         {reply, _, _} = Reply ->
             Reply;
         {reply, _, _, _} = Reply ->

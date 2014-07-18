@@ -71,7 +71,14 @@
 -export([t_service_internal_sync_1/1,
          t_service_internal_async_1/1,
          t_service_internal_async_2/1,
-         t_service_internal_async_3/1]).
+         t_service_internal_async_3/1,
+         t_service_internal_aspects_1/1]).
+
+%% test helpers
+-export([service_increment_aspect_init/4,
+         service_increment_aspect_request/11,
+         service_increment_aspect_info/3,
+         service_increment_aspect_terminate/2]).
 
 -record(state,
     {
@@ -84,7 +91,8 @@
                                cloudi_service:timeout_value_milliseconds(),
                                cloudi_service:priority(),
                                cloudi_service:trans_id(),
-                               cloudi_service:source()})
+                               cloudi_service:source()}),
+        count = 0 :: non_neg_integer()
     }).
 
 -include_lib("common_test/include/ct.hrl").
@@ -102,6 +110,10 @@
 -define(REQUEST3, <<"mcast">>).
 -define(REQUEST_INFO4, <<>>).
 -define(REQUEST4, <<"request_stateless">>).
+-define(REQUEST_INFO5, <<>>).
+-define(REQUEST5, <<"increment">>).
+-define(REQUEST_INFO6, <<>>).
+-define(REQUEST6, <<"count">>).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -175,12 +187,34 @@ cloudi_service_handle_request(_Type, _Name, _Pattern,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{mode = reply} = State,
                               _Dispatcher) ->
-    {reply, ?RESPONSE_INFO1, ?RESPONSE1, State}.
+    {reply, ?RESPONSE_INFO1, ?RESPONSE1, State};
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              ?REQUEST_INFO5, ?REQUEST5,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = reply,
+                                     count = Count} = State,
+                              _Dispatcher) ->
+    {reply, ?RESPONSE_INFO1, ?RESPONSE1,
+     State#state{count = Count + 1}};
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              ?REQUEST_INFO6, ?REQUEST6,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{count = Count} = State,
+                              _Dispatcher) ->
+    {reply, Count, State}.
 
+cloudi_service_handle_info(increment, #state{count = Count} = State, _) ->
+    {noreply, State#state{count = Count + 2}};
 cloudi_service_handle_info(Request, State, _) ->
     {stop, {unexpected_info, Request}, State}.
 
-cloudi_service_terminate(_, _) ->
+cloudi_service_terminate(_, undefined) ->
+    % cloudi_service_init/3 caused an exception
+    ok;
+cloudi_service_terminate(_, #state{count = 0}) ->
+    ok;
+cloudi_service_terminate(_, #state{count = 60}) ->
+    % t_service_internal_aspects_1/1 result
     ok.
 
 %%%------------------------------------------------------------------------
@@ -195,7 +229,8 @@ groups() ->
       [t_service_internal_sync_1,
        t_service_internal_async_1,
        t_service_internal_async_2,
-       t_service_internal_async_3]}].
+       t_service_internal_async_3,
+       t_service_internal_aspects_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -257,6 +292,34 @@ init_per_testcase(TestCase, Config)
           [{request_timeout_adjustment, true},
            {response_timeout_adjustment, true},
            {automatic_loading, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_aspects_1) ->
+    InitAfter1 = fun(_, _, #state{count = Count} = State, _) ->
+        {ok, State#state{count = Count + 3}}
+    end,
+    InitAfter2 = {?MODULE, service_increment_aspect_init},
+    RequestBefore = {?MODULE, service_increment_aspect_request},
+    RequestAfter = {?MODULE, service_increment_aspect_request},
+    InfoBefore = {?MODULE, service_increment_aspect_info},
+    InfoAfter = {?MODULE, service_increment_aspect_info},
+    TerminateBefore = {?MODULE, service_increment_aspect_terminate},
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, reply}]},
+         {options,
+          [{request_timeout_adjustment, true},
+           {response_timeout_adjustment, true},
+           {automatic_loading, false},
+           {aspects_init_after, [InitAfter1, InitAfter2]},
+           {aspects_request_before, [RequestBefore]},
+           {aspects_request_after, [RequestAfter]},
+           {aspects_info_before, [InfoBefore]},
+           {aspects_info_after, [InfoAfter]},
+           {aspects_terminate_before, [TerminateBefore]}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
@@ -503,3 +566,59 @@ t_service_internal_async_3(_Config) ->
     true = cloudi_x_uuid:is_v1(TransId3),
     true = cloudi_x_uuid:is_v1(TransId4),
     ok.
+
+t_service_internal_aspects_1(_Config) ->
+    % make sure aspects occur as expected
+
+    % count == 3 (0 + 3), InitAfter1
+    % count == 7 (3 + 4), InitAfter2
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    Self = self(),
+    % count == 12 (7 + 5), RequestBefore
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName, % count == 13 (12 + 1)
+                                    ?REQUEST_INFO5, ?REQUEST5,
+                                    undefined, undefined),
+    % count == 18 (13 + 5), RequestAfter
+    % count == 23 (18 + 5), RequestBefore
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName, % count == 24 (23 + 1)
+                                    ?REQUEST_INFO5, ?REQUEST5,
+                                    undefined, undefined),
+    % count == 29 (24 + 5), RequestAfter
+    {ok,
+     {_, Service}} = cloudi:get_pid(Context,
+                                    ServiceName,
+                                    immediate),
+    % count == 35 (29 + 6), InfoBefore
+    Service ! increment, % count == 37 (35 + 2)
+    % count == 43 (37 + 6), InfoAfter
+    % count == 48 (43 + 5), RequestBefore
+    {ok,
+     Count} = cloudi:send_sync(Context,
+                               ServiceName,
+                               ?REQUEST_INFO6, ?REQUEST6,
+                               undefined, undefined),
+    48 = Count,
+    % count == 53 (48 + 5), RequestAfter
+    % count == 60 (53 + 7), TerminateBefore
+    ok.
+
+service_increment_aspect_init(_, _, #state{count = Count} = State, _) ->
+    {ok, State#state{count = Count + 4}}.
+
+service_increment_aspect_request(_, _, _, _, _, _, _, _, _,
+                                 #state{count = Count} = State, _) ->
+    {ok, State#state{count = Count + 5}}.
+
+service_increment_aspect_info(_, #state{count = Count} = State, _) ->
+    {ok, State#state{count = Count + 6}}.
+
+service_increment_aspect_terminate(_, #state{count = Count} = State) ->
+    {ok, State#state{count = Count + 7}}.
+
