@@ -52,6 +52,12 @@
 
 -behaviour(cloudi_service).
 
+%% external interface
+-export([aspect_init/3,
+         aspect_request/10,
+         aspect_request/11,
+         aspect_terminate/2]).
+
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
          cloudi_service_handle_request/11,
@@ -61,6 +67,9 @@
 -include("cloudi_logger.hrl").
 
 -record(state, {
+        service,
+        request_count = 0 :: non_neg_integer(),
+        request_id :: cloudi_service:trans_id(),
         suffixes = ["cxx", "java", "python", "python_c", "ruby"]
     }).
 
@@ -68,6 +77,51 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+% for external services
+aspect_init(CommandLine, _, undefined) ->
+    {ok, #state{service = CommandLine}}.
+
+% for external services
+aspect_request(_, _, _, _, _, _, _, TransId, _,
+               #state{request_count = Count} = State) ->
+    {ok, State#state{request_count = Count + 1,
+                     request_id = TransId}}.
+ 
+% for internal services
+aspect_request(_, _, _, _, _, _, _, TransId, _,
+               #state{request_count = Count} = State, _) ->
+    {ok, State#state{request_count = Count + 1,
+                     request_id = TransId}}.
+ 
+% for internal and external services
+aspect_terminate(_, #state{service = Service,
+                           request_count = Count,
+                           request_id = TransId} = State) ->
+    % original timeout is defined in cxx service source code
+    % (600000 milliseconds timeout value with a
+    %  100 millisecond penalty for each forward along with
+    %  the added request_timeout_adjustment and any queuing delays)
+    ElapsedSeconds = (cloudi_x_uuid:get_v1_time(os) -
+                      cloudi_x_uuid:get_v1_time(TransId)) / 1000000.0,
+
+    % to trigger this:
+    % cloudi_service_api:services_remove([element(1, S) || S <- element(2, cloudi_service_api:services(infinity)), (element(2, element(2, S)) == "/tests/msg_size/")], infinity).
+    ?LOG_INFO("msg_size ~p requests/second "
+              "(during ~p seconds) forwarded for~n~p",
+              [erlang:round((Count / ElapsedSeconds) * 10.0) / 10.0,
+               erlang:round(ElapsedSeconds * 10.0) / 10.0,
+               Service]),
+
+    % Core i7 2670QM 2.2GHz 4 cores, 8 hyper-threads
+    % L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
+    % Sandy Bridge-HE-4 (Socket G2)
+    % Erlang R16B03-1, Ubuntu 12.04.3 LTS (GNU/Linux 3.2.0-29-generic x86_64)
+
+    % ~28 requests/second split between each non-Erlang suffix
+    % then split between each programming language count_process
+    % (cloudi_service_msg_size acts as a middleman, so it handles the total)
+
+    {ok, State}.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -75,7 +129,7 @@
 
 cloudi_service_init(_Args, _Prefix, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "erlang"),
-    {ok, #state{}}.
+    {ok, #state{service = ?MODULE}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,

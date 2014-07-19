@@ -2290,10 +2290,26 @@ services_validate_option_aspects_f([F | Aspects], Arity)
     services_validate_option_aspects_f(Aspects, Arity);
 services_validate_option_aspects_f([{M, F} = Entry | Aspects], Arity)
     when is_atom(M), is_atom(F) ->
-    case erlang:function_exported(M, F, Arity) of
-        true ->
-            services_validate_option_aspects_f(Aspects, Arity);
+    % check if a function is exported
+    % if the module is not currently loaded, only load the module for the check
+    Exported = case code:is_loaded(M) of
+        {file, _} ->
+            erlang:function_exported(M, F, Arity);
         false ->
+            case code:load_file(M) of
+                {module, _} ->
+                    V = erlang:function_exported(M, F, Arity),
+                    true = code:delete(M),
+                    false = code:purge(M),
+                    V;
+                {error, _} ->
+                    false
+            end
+    end,
+    if
+        Exported =:= true ->
+            services_validate_option_aspects_f(Aspects, Arity);
+        Exported =:= false ->
             {error, Entry}
     end;
 services_validate_option_aspects_f([Entry | _], _) ->
@@ -2370,7 +2386,7 @@ services_validate_option_aspects_internal(AspectsInitAfter,
     end.
 
 services_validate_option_aspects_init_external(AspectsInit) ->
-    case services_validate_option_aspects_f(AspectsInit, 2) of
+    case services_validate_option_aspects_f(AspectsInit, 3) of
         ok ->
             ok;
         {error, Entry} ->

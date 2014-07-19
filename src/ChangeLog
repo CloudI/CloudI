@@ -4,6 +4,9 @@
 2014-07-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_core aspects test
+    * Alter service configuration option aspects_init_after for
+      external services to provide the command line as a list of strings
+    * Add aspect testing to the msg_size tests
 
 2014-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -55,7 +55,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/14, port/1]).
+-export([start_link/15, port/1]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -102,6 +102,7 @@
         aspects_request_f = undefined, % pending aspects_request_after
         process_index,                 % 0-based index of the Erlang process
         process_count,                 % initial count of Erlang processes
+        command_line,                  % command line of OS execve
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
@@ -131,13 +132,14 @@
 
 start_link(Protocol, SocketPath,
            ThreadIndex, ProcessIndex, ProcessCount,
-           BufferSize, Timeout, Prefix,
+           CommandLine, BufferSize, Timeout, Prefix,
            TimeoutAsync, TimeoutSync, DestRefresh,
            DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_list(CommandLine),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
     true = (Protocol =:= tcp) orelse
@@ -163,7 +165,7 @@ start_link(Protocol, SocketPath,
             gen_fsm:start_link(?MODULE,
                                [Protocol, SocketPath,
                                 ThreadIndex, ProcessIndex, ProcessCount,
-                                BufferSize, Timeout, Prefix,
+                                CommandLine, BufferSize, Timeout, Prefix,
                                 TimeoutAsync, TimeoutSync, DestRefresh,
                                 DestDeny, DestAllow, ConfigOptions], []);
         {error, Reason} ->
@@ -179,7 +181,7 @@ port(Process) when is_pid(Process) ->
 
 init([Protocol, SocketPath,
       ThreadIndex, ProcessIndex, ProcessCount,
-      BufferSize, Timeout, Prefix,
+      CommandLine, BufferSize, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, DestRefresh,
       DestDeny, DestAllow, ConfigOptions])
     when Protocol =:= tcp;
@@ -205,6 +207,7 @@ init([Protocol, SocketPath,
              State#state{dispatcher = Dispatcher,
                          process_index = ProcessIndex,
                          process_count = ProcessCount,
+                         command_line = CommandLine,
                          prefix = Prefix,
                          timeout_async = TimeoutAsync,
                          timeout_sync = TimeoutSync,
@@ -274,6 +277,7 @@ init([Protocol, SocketPath,
     {stop, {'CONNECT', undefined_message, Request}, State}.
 
 'HANDLE'('polling', #state{service_state = ServiceState,
+                           command_line = CommandLine,
                            prefix = Prefix,
                            init_timeout = InitTimeout,
                            options = #config_service_options{
@@ -281,7 +285,7 @@ init([Protocol, SocketPath,
     % initialization is now complete because the CloudI API poll function
     % has been called for the first time (i.e., by the service code)
     erlang:cancel_timer(InitTimeout),
-    case aspects_init(Aspects, Prefix, ServiceState) of
+    case aspects_init(Aspects, CommandLine, Prefix, ServiceState) of
         {ok, NewServiceState} ->
             {next_state, 'HANDLE',
              process_queue(State#state{service_state = NewServiceState,
@@ -1593,19 +1597,19 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % do not close Socket!
     {ok, NewSocket}.
 
-aspects_init([], _, ServiceState) ->
+aspects_init([], _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_init([{M, F} | L], Prefix, ServiceState) ->
-    case M:F(Prefix, ServiceState) of
+aspects_init([{M, F} | L], CommandLine, Prefix, ServiceState) ->
+    case M:F(CommandLine, Prefix, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_init(L, Prefix, NewServiceState);
+            aspects_init(L, CommandLine, Prefix, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end;
-aspects_init([F | L], Prefix, ServiceState) ->
-    case F(Prefix, ServiceState) of
+aspects_init([F | L], CommandLine, Prefix, ServiceState) ->
+    case F(CommandLine, Prefix, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_init(L, Prefix, NewServiceState);
+            aspects_init(L, CommandLine, Prefix, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end.

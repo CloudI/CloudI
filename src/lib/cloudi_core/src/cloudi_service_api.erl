@@ -134,7 +134,8 @@
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_init_external_f() ::
-    fun((Prefix :: cloudi:service_name_pattern(),
+    fun((CommandLine :: list(string()),
+         Prefix :: cloudi:service_name_pattern(),
          State :: any()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
