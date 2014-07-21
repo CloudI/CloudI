@@ -180,6 +180,32 @@
                     {probability_day, float()}) |
                system | false |
                tuple(),
+        % should the service be automatically loaded and unloaded at
+        % service start and stop, respectively?
+        % (or the aspect module be automatically loaded)
+        automatic_loading = true
+            :: boolean(),
+
+        % Relevant for both Internal and External Services, different values:
+
+        % aspects are functions provided to be processed before or after
+        % the service callback is executed (Aspect-Oriented Programming (AOP))
+        aspects_init_after = []
+            :: list(cloudi_service_api:aspect_init_internal() |
+                    cloudi_service_api:aspect_init_external()),
+        aspects_request_before = []
+            :: list(cloudi_service_api:aspect_request_internal() |
+                    cloudi_service_api:aspect_request_external()),
+        aspects_request_after = []
+            :: list(cloudi_service_api:aspect_request_internal() |
+                    cloudi_service_api:aspect_request_external()),
+        aspects_info_before = []
+            :: list(cloudi_service_api:aspect_info_internal()),
+        aspects_info_after = []
+            :: list(cloudi_service_api:aspect_info_internal()),
+        aspects_terminate_before = []
+            :: list(cloudi_service_api:aspect_terminate_internal() |
+                    cloudi_service_api:aspect_terminate_external()),
 
         % Only Relevant for Internal Services:
 
@@ -232,32 +258,7 @@
         % should the service be reloaded automatically when an Erlang module
         % file changes?  should only be used during service development.
         reload = false
-            :: boolean(),
-        % should the service be automatically loaded and unloaded at
-        % service start and stop, respectively?
-        automatic_loading = true
-            :: boolean(),
-
-        % Relevant for both Internal and External Services, different values:
-
-        % aspects are functions provided to be processed before or after
-        % the service callback is executed (Aspect-Oriented Programming (AOP))
-        aspects_init_after = []
-            :: list(cloudi_service_api:aspect_init_internal() |
-                    cloudi_service_api:aspect_init_external()),
-        aspects_request_before = []
-            :: list(cloudi_service_api:aspect_request_internal() |
-                    cloudi_service_api:aspect_request_external()),
-        aspects_request_after = []
-            :: list(cloudi_service_api:aspect_request_internal() |
-                    cloudi_service_api:aspect_request_external()),
-        aspects_info_before = []
-            :: list(cloudi_service_api:aspect_info_internal()),
-        aspects_info_after = []
-            :: list(cloudi_service_api:aspect_info_internal()),
-        aspects_terminate_before = []
-            :: list(cloudi_service_api:aspect_terminate_internal() |
-                    cloudi_service_api:aspect_terminate_external())
+            :: boolean()
     }).
 
 % internal service parameters

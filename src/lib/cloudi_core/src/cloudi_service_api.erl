@@ -234,6 +234,13 @@
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
+         {automatic_loading, boolean()} |
+         {aspects_init_after, list(aspect_init_internal())} |
+         {aspects_request_before, list(aspect_request_internal())} |
+         {aspects_request_after, list(aspect_request_internal())} |
+         {aspects_info_before, list(aspect_info_internal())} |
+         {aspects_info_after, list(aspect_info_internal())} |
+         {aspects_terminate_before, list(aspect_terminate_internal())} |
          {application_name, undefined | atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
@@ -247,14 +254,7 @@
                {min_bin_vheap_size, non_neg_integer()})} |
          {duo_mode, boolean()} |
          {hibernate, boolean()} |
-         {reload, boolean()} |
-         {automatic_loading, boolean()} |
-         {aspects_init_after, list(aspect_init_internal())} |
-         {aspects_request_before, list(aspect_request_internal())} |
-         {aspects_request_after, list(aspect_request_internal())} |
-         {aspects_info_before, list(aspect_info_internal())} |
-         {aspects_info_after, list(aspect_info_internal())} |
-         {aspects_terminate_before, list(aspect_terminate_internal())}).
+         {reload, boolean()}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | pos_integer()} |
@@ -282,6 +282,7 @@
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
+         {automatic_loading, boolean()} |
          {aspects_init_after, list(aspect_init_external())} |
          {aspects_request_before, list(aspect_request_external())} |
          {aspects_request_after, list(aspect_request_external())} |
