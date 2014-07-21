@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -64,6 +64,7 @@
          find2/2,
          is_key1/2,
          is_key2/2,
+         new/0,
          new/1,
          store/4]).
 
@@ -72,20 +73,26 @@
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
--type key2value(Key1, Key2, Value) :: {module(),
-                                       dict_proxy(Key1, {list(Key2), Value}),
-                                       dict_proxy(Key2, {list(Key1), Value})}.
+-type key2value_dict(Key1, Key2, Value) ::
+    {dict,
+     dict_proxy(Key1, {list(Key2), Value}),
+     dict_proxy(Key2, {list(Key1), Value})}.
+-type key2value(Key1, Key2, Value) ::
+    key2value_dict(Key1, Key2, Value) |
+    {atom(), any(), any()}.
 -export_type([key2value/3]).
--type key2value() :: key2value(any(), any(), any()).
+-type key1() :: any().
+-type key2() :: any().
+-type value() :: any().
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec erase(K1 :: any(),
-            K2 :: any(),
-            State :: key2value()) ->
-    key2value().
+-spec erase(K1 :: key1(),
+            K2 :: key2(),
+            State :: key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
 
 erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
     case Module:find(K1, Lookup1) of
@@ -119,9 +126,9 @@ erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
             State
     end.
 
--spec erase1(K :: any(),
-             State :: key2value()) ->
-    key2value().
+-spec erase1(K :: key1(),
+             State :: key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
 
 erase1(K, {Module, Lookup1, _} = State) ->
     case Module:find(K, Lookup1) of
@@ -133,9 +140,9 @@ erase1(K, {Module, Lookup1, _} = State) ->
             State
     end.
 
--spec erase2(K :: any(),
-             State :: key2value()) ->
-    key2value().
+-spec erase2(K :: key2(),
+             State :: key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
 
 erase2(K, {Module, _, Lookup2} = State) ->
     case Module:find(K, Lookup2) of
@@ -147,62 +154,68 @@ erase2(K, {Module, _, Lookup2} = State) ->
             State
     end.
 
--spec fetch1(K :: any(),
-             key2value()) ->
+-spec fetch1(K :: key1(),
+             key2value(key1(), key2(), value())) ->
     {list(), any()}.
 
 fetch1(K, {Module, Lookup1, _}) ->
     Module:fetch(K, Lookup1).
 
--spec fetch2(K :: any(),
-             key2value()) ->
+-spec fetch2(K :: key2(),
+             key2value(key1(), key2(), value())) ->
     {list(), any()}.
 
 fetch2(K, {Module, _, Lookup2}) ->
     Module:fetch(K, Lookup2).
 
--spec find1(K :: any(),
-            State :: key2value()) ->
+-spec find1(K :: key1(),
+            State :: key2value(key1(), key2(), value())) ->
     {ok, {list(), any()}} |
     error.
 
 find1(K, {Module, Lookup1, _}) ->
     Module:find(K, Lookup1).
 
--spec find2(K :: any(),
-            State :: key2value()) ->
+-spec find2(K :: key2(),
+            State :: key2value(key1(), key2(), value())) ->
     {ok, {list(), any()}} |
     error.
 
 find2(K, {Module, _, Lookup2}) ->
     Module:find(K, Lookup2).
 
--spec is_key1(K :: any(),
-              key2value()) ->
+-spec is_key1(K :: key1(),
+              key2value(key1(), key2(), value())) ->
     boolean().
 
 is_key1(K, {Module, Lookup1, _}) ->
     Module:is_key(K, Lookup1).
 
--spec is_key2(K :: any(),
-              key2value()) ->
+-spec is_key2(K :: key2(),
+              key2value(key1(), key2(), value())) ->
     boolean().
 
 is_key2(K, {Module, _, Lookup2}) ->
     Module:is_key(K, Lookup2).
 
+-spec new() ->
+    key2value_dict(key1(), key2(), value()).
+
+new() ->
+    {dict, dict:new(), dict:new()}.
+
 -spec new(Module :: atom()) ->
-    {atom(), any(), any()}.
+    key2value(key1(), key2(), value()).
 
 new(Module)
     when is_atom(Module) ->
     {Module, Module:new(), Module:new()}.
 
--spec store(K1 :: any(),
-            K2 :: any(),
-            V :: any(),
-            key2value()) ->
-    key2value().
+-spec store(K1 :: key1(),
+            K2 :: key2(),
+            V :: value(),
+            key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
 
 store(K1, K2, V, {Module, Lookup1, Lookup2}) ->
     K1L = [K1],

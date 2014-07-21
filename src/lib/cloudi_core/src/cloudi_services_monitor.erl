@@ -114,11 +114,12 @@
 
 -record(state,
     {
-        services = cloudi_x_key2value:new(dict) ::
-            cloudi_x_key2value:cloudi_x_key2value(<<_:128>>, pid(),
-                                                  #service{}),
+        services = cloudi_x_key2value:new() ::
+            cloudi_x_key2value:
+            cloudi_x_key2value(cloudi_service_api:service_id(),
+                               pid(), #service{}),
         changes = dict:new() ::
-            dict_proxy(<<_:128>>,
+            dict_proxy(cloudi_service_api:service_id(),
                        list({increase | decrease,
                              number(), number(), number()}))
     }).
