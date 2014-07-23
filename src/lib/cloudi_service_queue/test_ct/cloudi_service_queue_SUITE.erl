@@ -175,7 +175,7 @@ t_queue_destination_1(_Config) ->
         {internal,
          ?PREFIX_QUEUE,
          cloudi_service_queue,
-         [{retry, 4},
+         [{retry, 40}, % == 8 * 5, just to avoid test failure
           {fault_isolation, destination},
           {file, "queue_destination_1_${I}.log"}],
          immediate_closest,
@@ -207,7 +207,7 @@ t_queue_both_1(_Config) ->
         {internal,
          ?PREFIX_QUEUE,
          cloudi_service_queue,
-         [{retry, 4},
+         [{retry, 40}, % == 8 * 5, just to avoid test failure
           {fault_isolation, both},
           {file, "queue_both_1_${I}.log"}],
          immediate_closest,

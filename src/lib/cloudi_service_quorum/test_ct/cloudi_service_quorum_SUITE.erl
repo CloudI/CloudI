@@ -36,7 +36,7 @@
 %-define(NUMTESTS, 10000).
 %-define(TIMEOUT_MAX, 3600000). % ms (1 hour)
 -define(NUMTESTS, 1).
--define(TIMEOUT_MAX, 10000). % ms (10 seconds)
+-define(TIMEOUT_MAX, 60000). % ms (1 minute)
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -150,6 +150,7 @@ prop_quorum_timeout(QuorumTypeProper, _Config) ->
 validate_quorum_timeout(QuorumType, UseResponseInfo,
                         CountProcess, Monkey, RequestInfo, Request) ->
     Context = cloudi:new(),
+    Timeout = 10000,
     CountTimeouts = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountTimeouts,
     ServiceIds0 = services_add(CountTimeouts,
@@ -160,7 +161,7 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
             immediate_closest,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0,
             [{monkey_latency,
-              [{time_absolute, cloudi:timeout_sync(Context) * 2}]}]}),
+              [{time_absolute, Timeout * 2}]}]}),
     ServiceIds1 = services_add(CountSuccesses, ServiceIds0,
         {internal,
             "/test/",
@@ -170,7 +171,7 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}),
     {ok, [E]} = cloudi_service_api:services_add([
         {internal,
-            "/byzantine",
+            "/quorum",
             cloudi_service_quorum,
             [{quorum, QuorumType},
              {use_response_info, UseResponseInfo}],
@@ -178,9 +179,9 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}],
         infinity),
     ServiceIdsN = [E | ServiceIds1],
-    Result = cloudi:send_sync(Context, "/byzantine/test/proper",
+    Result = cloudi:send_sync(Context, "/quorum/test/proper",
                               RequestInfo, Request,
-                              undefined, undefined),
+                              Timeout, undefined),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,
@@ -233,7 +234,9 @@ prop_quorum_crash(QuorumTypeProper, _Config) ->
 
 validate_quorum_crash(QuorumType, UseResponseInfo,
                       CountProcess, Monkey, RequestInfo, Request) ->
+
     Context = cloudi:new(),
+    Timeout = 10000,
     CountCrashes = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountCrashes,
     ServiceIds0 = services_add(CountCrashes,
@@ -254,7 +257,7 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}),
     {ok, [E]} = cloudi_service_api:services_add([
         {internal,
-            "/byzantine",
+            "/quorum",
             cloudi_service_quorum,
             [{quorum, QuorumType},
              {use_response_info, UseResponseInfo}],
@@ -262,9 +265,9 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}],
         infinity),
     ServiceIdsN = [E | ServiceIds1],
-    Result = cloudi:send_sync(Context, "/byzantine/test/proper",
+    Result = cloudi:send_sync(Context, "/quorum/test/proper",
                               RequestInfo, Request,
-                              undefined, undefined),
+                              Timeout, undefined),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,
@@ -321,7 +324,7 @@ result_expected(Quorum, CountProcess, Monkey, RequestInfo, Request)
     end.
 
 count_process_successes(CountProcess, Monkey) ->
-    erlang:min(erlang:round(CountProcess * (1.0 - Monkey)), CountProcess).
+    CountProcess - count_process_errors(CountProcess, Monkey).
 
 count_process_errors(CountProcess, Monkey) ->
     erlang:min(erlang:round(CountProcess * Monkey), CountProcess).
@@ -336,7 +339,7 @@ use_response_info() ->
     boolean().
 
 count_process() ->
-    integer(100, 200). % number of receiving service instances
+    integer(1000, 2000). % number of receiving service instances
 
 monkey() ->
     float(1.0e-100, 1.0). % percentage of service requests that will fail

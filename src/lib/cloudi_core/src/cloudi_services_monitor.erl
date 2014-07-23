@@ -739,10 +739,12 @@ pids_decrease(Count, OldPids, ServiceId, Services) ->
     pids_decrease_loop(Count, ServiceL),
     Services.
 
-terminate_delay(_, 0) ->
-    ?TERMINATE_DELAY_MIN;
 terminate_delay(0, _) ->
-    ?TERMINATE_DELAY_MIN;
+    ?TERMINATE_DELAY_DEFAULT;
+terminate_delay(MaxT, 0) ->
+    erlang:min(erlang:max((1000 * MaxT) - ?TIMEOUT_DELTA,
+                          ?TERMINATE_DELAY_MIN),
+               ?TERMINATE_DELAY_MAX);
 terminate_delay(MaxT, MaxR) ->
     erlang:min(erlang:max(erlang:trunc((1000 * MaxT) / MaxR) - ?TIMEOUT_DELTA,
                           ?TERMINATE_DELAY_MIN),

@@ -12,6 +12,9 @@
 % it has not yet been necessary to modify these settings during testing.     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% terminate delay when MaxT == 0
+% (if MaxR == 0, take MaxT as a terminate delay value, i.e., as if MaxR == 1)
+-define(TERMINATE_DELAY_DEFAULT,  2000). % milliseconds
 % absolute bounds for the terminate function execution time
 % when a service stops or restarts
 -define(TERMINATE_DELAY_MIN,  1000). % milliseconds
