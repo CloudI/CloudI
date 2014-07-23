@@ -59,7 +59,8 @@
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
-         handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+         handle_sync_event/4, handle_info/3,
+         terminate/3, code_change/4, format_status/2]).
 
 %% FSM States
 -export(['CONNECT'/2,
@@ -1123,6 +1124,63 @@ terminate(Reason, _,
 
 code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
+
+format_status(_Opt,
+              [PDict,
+               #state{send_timeouts = SendTimeouts,
+                      send_timeout_monitors = SendTimeoutMonitors,
+                      recv_timeouts = RecvTimeouts,
+                      async_responses = AsyncResponses,
+                      queued = Queue,
+                      cpg_data = Groups,
+                      dest_deny = DestDeny,
+                      dest_allow = DestAllow,
+                      options = ConfigOptions} = State]) ->
+
+    NewRecvTimeouts = if
+        RecvTimeouts =:= undefined ->
+            undefined;
+        true ->
+            dict:to_list(RecvTimeouts)
+    end,
+    NewQueue = if
+        Queue =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_pqueue4:to_plist(Queue)
+    end,
+    NewGroups = case Groups of
+        undefined ->
+            undefined;
+        {GroupsDictI, GroupsData} ->
+            GroupsDictI:to_list(GroupsData)
+    end,
+    NewDestDeny = if
+        DestDeny =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_trie:to_list(DestDeny)
+    end,
+    NewDestAllow = if
+        DestAllow =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_trie:to_list(DestAllow)
+    end,
+    NewConfigOptions = cloudi_configuration:
+                       services_format_options_internal(ConfigOptions),
+    [{data,
+      [{"State",
+        [PDict,
+         State#state{send_timeouts = dict:to_list(SendTimeouts),
+                     send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
+                     recv_timeouts = NewRecvTimeouts,
+                     async_responses = dict:to_list(AsyncResponses),
+                     queued = NewQueue,
+                     cpg_data = NewGroups,
+                     dest_deny = NewDestDeny,
+                     dest_allow = NewDestAllow,
+                     options = NewConfigOptions}]}]}].
 
 %%%------------------------------------------------------------------------
 %%% Private functions

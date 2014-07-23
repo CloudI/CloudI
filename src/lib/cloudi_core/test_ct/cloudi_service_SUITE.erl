@@ -69,6 +69,8 @@
 
 %% test callbacks
 -export([t_service_internal_sync_1/1,
+         t_service_internal_sync_2/1,
+         t_service_internal_sync_3/1,
          t_service_internal_async_1/1,
          t_service_internal_async_2/1,
          t_service_internal_async_3/1,
@@ -118,6 +120,8 @@
 -define(REQUEST5, <<"increment">>).
 -define(REQUEST_INFO6, <<>>).
 -define(REQUEST6, <<"count">>).
+-define(REQUEST_INFO7, <<>>).
+-define(REQUEST7, <<"crash">>).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -209,7 +213,14 @@ cloudi_service_handle_request(_Type, _Name, _Pattern,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{count = Count} = State,
                               _Dispatcher) ->
-    {reply, Count, State}.
+    {reply, Count, State};
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              ?REQUEST_INFO7, ?REQUEST7,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{} = State,
+                              _Dispatcher) ->
+    erlang:exit(crash),
+    {noreply, State}.
 
 cloudi_service_handle_info(increment, #state{count = Count} = State, _) ->
     {noreply, State#state{count = Count + 2}};
@@ -251,6 +262,8 @@ all() ->
 groups() ->
     [{service_internal_1, [],
       [t_service_internal_sync_1,
+       t_service_internal_sync_2,
+       t_service_internal_sync_3,
        t_service_internal_async_1,
        t_service_internal_async_2,
        t_service_internal_async_3,
@@ -283,6 +296,7 @@ end_per_group(_GroupName, Config) ->
 
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_sync_1) orelse
+         (TestCase =:= t_service_internal_sync_2) orelse
          (TestCase =:= t_service_internal_async_1) ->
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
@@ -292,7 +306,22 @@ init_per_testcase(TestCase, Config)
          {options,
           [{request_timeout_adjustment, true},
            {response_timeout_adjustment, true},
-           {automatic_loading, false}]}]
+           {automatic_loading, false},
+           {hibernate, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_sync_3) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, reply}]},
+         {options,
+          [{request_timeout_adjustment, true},
+           {response_timeout_adjustment, true},
+           {automatic_loading, false},
+           {hibernate, true}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -474,6 +503,33 @@ t_service_internal_sync_1(_Config) ->
          {options, [{automatic_loading, false}]}]
         ], infinity),
     ok.
+
+t_service_internal_sync_2(_Config) ->
+    % check sync service requests that cause exceptions
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName,
+                                    ?REQUEST_INFO4, ?REQUEST4,
+                                    undefined, undefined),
+    {ok,
+     {_, Service}} = cloudi:get_pid(Context,
+                                    ServiceName,
+                                    immediate),
+    true = erlang:is_process_alive(Service),
+    {error,
+     timeout} = cloudi:send_sync(Context,
+                                 ServiceName,
+                                 ?REQUEST_INFO7, ?REQUEST7,
+                                 immediate, undefined),
+    receive after 100 -> ok end,
+    false = erlang:is_process_alive(Service),
+    ok.
+
+t_service_internal_sync_3(Config) ->
+    t_service_internal_sync_2(Config).
 
 t_service_internal_async_1(_Config) ->
     % make sure asynchronous sends work normally, that recv_async
@@ -660,7 +716,6 @@ t_service_internal_aspects_1(_Config) ->
     % count == 7 (3 + 4), InitAfter2
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
-    Self = self(),
     % count == 12 (7 + 5), RequestBefore
     {ok,
      ?RESPONSE_INFO1,
@@ -709,6 +764,8 @@ service_increment_aspect_terminate(_, #state{count = Count} = State) ->
     {ok, State#state{count = Count + 7}}.
 
 t_service_internal_terminate_1(_Config) ->
+    % verify the cloudi_service_terminate/2 function execution
+    % limitation is enforced
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     {ok,
@@ -730,6 +787,8 @@ t_service_internal_terminate_2(Config) ->
     t_service_internal_terminate_1(Config).
 
 t_service_internal_terminate_3(_Config) ->
+    % verify the cloudi_service_terminate/2 function execution
+    % takes the appropriate amount of time
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     {ok,

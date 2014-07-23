@@ -3,8 +3,11 @@
 
 2014-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Make sure cloudi_service_terminate/2 execution is equal to
-      MaxT/MaxR (enforced by a brutal_kill from cloudi_services_monitor)
+    * Make sure the cloudi_service_terminate/2 execution limit is equal to
+      MaxT/MaxR - 100 (enforced by a brutal_kill from cloudi_services_monitor,
+      with a min value of 1 second and a max value of 60 seconds)
+    * Simplify the internal state shown for both internal and external
+      services with format_status/2
 
 2014-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

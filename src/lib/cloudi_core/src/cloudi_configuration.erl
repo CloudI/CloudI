@@ -60,6 +60,8 @@
          services_search/2,
          services/1,
          service_format/1,
+         services_format_options_internal/1,
+         services_format_options_external/1,
          nodes_add/2,
          nodes_remove/2,
          nodes_set/2]).

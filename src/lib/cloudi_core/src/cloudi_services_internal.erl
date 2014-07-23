@@ -60,7 +60,7 @@
 %% gen_server callbacks
 -export([init/1,
          handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+         terminate/2, code_change/3, format_status/2]).
 
 %% duo_mode callbacks
 -export([duo_mode_loop_init/1,
@@ -210,6 +210,24 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     {ok, TimestampType} = application:get_env(cloudi_core, timestamp_type),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, TimestampType},
                                           {mac_address, MacAddress}]),
+    Groups = if
+        DestRefresh =:= immediate_closest orelse
+        DestRefresh =:= immediate_furthest orelse
+        DestRefresh =:= immediate_random orelse
+        DestRefresh =:= immediate_local orelse
+        DestRefresh =:= immediate_remote orelse
+        DestRefresh =:= immediate_newest orelse
+        DestRefresh =:= immediate_oldest ->
+            undefined;
+        DestRefresh =:= lazy_closest orelse
+        DestRefresh =:= lazy_furthest orelse
+        DestRefresh =:= lazy_random orelse
+        DestRefresh =:= lazy_local orelse
+        DestRefresh =:= lazy_remote orelse
+        DestRefresh =:= lazy_newest orelse
+        DestRefresh =:= lazy_oldest ->
+            cloudi_x_cpg_data:get_empty_groups()
+    end,
     State = #state{dispatcher = Dispatcher,
                    module = Module,
                    process_index = ProcessIndex,
@@ -221,7 +239,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
                    duo_mode_pid = DuoModePid,
                    uuid_generator = UUID,
                    dest_refresh = DestRefresh,
-                   cpg_data = cloudi_x_cpg_data:get_empty_groups(),
+                   cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow,
                    options = NewConfigOptions},
@@ -1470,6 +1488,71 @@ terminate(_, _) ->
 
 code_change(_, State, _) ->
     {ok, State}.
+
+format_status(_Opt,
+              [PDict,
+               #state{send_timeouts = SendTimeouts,
+                      send_timeout_monitors = SendTimeoutMonitors,
+                      recv_timeouts = RecvTimeouts,
+                      async_responses = AsyncResponses,
+                      queued = Queue,
+                      queued_info = QueueInfo,
+                      cpg_data = Groups,
+                      dest_deny = DestDeny,
+                      dest_allow = DestAllow,
+                      options = ConfigOptions} = State]) ->
+
+    NewRecvTimeouts = if
+        RecvTimeouts =:= undefined ->
+            undefined;
+        true ->
+            dict:to_list(RecvTimeouts)
+    end,
+    NewQueue = if
+        Queue =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_pqueue4:to_plist(Queue)
+    end,
+    NewQueueInfo = if
+        QueueInfo =:= undefined ->
+            undefined;
+        true ->
+            queue:to_list(QueueInfo)
+    end,
+    NewGroups = case Groups of
+        undefined ->
+            undefined;
+        {GroupsDictI, GroupsData} ->
+            GroupsDictI:to_list(GroupsData)
+    end,
+    NewDestDeny = if
+        DestDeny =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_trie:to_list(DestDeny)
+    end,
+    NewDestAllow = if
+        DestAllow =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_trie:to_list(DestAllow)
+    end,
+    NewConfigOptions = cloudi_configuration:
+                       services_format_options_internal(ConfigOptions),
+    [{data,
+      [{"State",
+        [PDict,
+         State#state{send_timeouts = dict:to_list(SendTimeouts),
+                     send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
+                     recv_timeouts = NewRecvTimeouts,
+                     async_responses = dict:to_list(AsyncResponses),
+                     queued = NewQueue,
+                     queued_info = NewQueueInfo,
+                     cpg_data = NewGroups,
+                     dest_deny = NewDestDeny,
+                     dest_allow = NewDestAllow,
+                     options = NewConfigOptions}]}]}].
 
 %%%------------------------------------------------------------------------
 %%% Private functions
