@@ -72,7 +72,11 @@
          t_service_internal_async_1/1,
          t_service_internal_async_2/1,
          t_service_internal_async_3/1,
-         t_service_internal_aspects_1/1]).
+         t_service_internal_aspects_1/1,
+         t_service_internal_terminate_1/1,
+         t_service_internal_terminate_2/1,
+         t_service_internal_terminate_3/1,
+         t_service_internal_terminate_4/1]).
 
 %% test helpers
 -export([service_increment_aspect_init/4,
@@ -152,7 +156,11 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, Dispatcher) ->
                                                       ?REQUEST_INFO4, ?REQUEST4,
                                                       undefined, undefined),
             {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId),
-            undefined
+            undefined;
+        Mode =:= terminate_sleep ->
+            cloudi_service:subscribe(Dispatcher,
+                                     ?SERVICE_SUFFIX1),
+            terminate_sleep
     end,
     {ok, #state{mode = NewMode}}.
 
@@ -185,7 +193,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern,
 cloudi_service_handle_request(_Type, _Name, _Pattern,
                               ?REQUEST_INFO4, ?REQUEST4,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{mode = reply} = State,
+                              #state{} = State,
                               _Dispatcher) ->
     {reply, ?RESPONSE_INFO1, ?RESPONSE1, State};
 cloudi_service_handle_request(_Type, _Name, _Pattern,
@@ -211,6 +219,22 @@ cloudi_service_handle_info(Request, State, _) ->
 cloudi_service_terminate(_, undefined) ->
     % cloudi_service_init/3 caused an exception
     ok;
+cloudi_service_terminate(terminate_sleep_test_1,
+                         #state{mode = terminate_sleep}) ->
+    % t_service_internal_terminate_1/1 and
+    % t_service_internal_terminate_2/1 result
+    ?LOG_INFO("terminate_sleep_test_1 requires brutal_kill", []),
+    receive after 2000 -> ok end,
+    ?LOG_FATAL("execution should never get to this point", []),
+    ok;
+cloudi_service_terminate(terminate_sleep_test_2,
+                         #state{mode = terminate_sleep}) ->
+    % t_service_internal_terminate_3/1 and
+    % t_service_internal_terminate_4/1 result
+    ?LOG_INFO("terminate_sleep_test_2 does not requires brutal_kill", []),
+    receive after 3000 -> ok end,
+    ?LOG_INFO("terminate_sleep_test_2 finished the terminate function", []),
+    ok;
 cloudi_service_terminate(_, #state{count = 0}) ->
     ok;
 cloudi_service_terminate(_, #state{count = 60}) ->
@@ -222,15 +246,19 @@ cloudi_service_terminate(_, #state{count = 60}) ->
 %%%------------------------------------------------------------------------
 
 all() ->
-    [{group, service_internal}].
+    [{group, service_internal_1}].
 
 groups() ->
-    [{service_internal, [],
+    [{service_internal_1, [],
       [t_service_internal_sync_1,
        t_service_internal_async_1,
        t_service_internal_async_2,
        t_service_internal_async_3,
-       t_service_internal_aspects_1]}].
+       t_service_internal_aspects_1,
+       t_service_internal_terminate_1,
+       t_service_internal_terminate_2,
+       t_service_internal_terminate_3,
+       t_service_internal_terminate_4]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -320,6 +348,64 @@ init_per_testcase(TestCase, Config)
            {aspects_info_before, [InfoBefore]},
            {aspects_info_after, [InfoAfter]},
            {aspects_terminate_before, [TerminateBefore]}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_terminate_1) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, terminate_sleep}]},
+         % make max terminate execution time 1.5 second
+         {max_r, 200},
+         {max_t, 300},
+         {options,
+          [{automatic_loading, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_terminate_2) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, terminate_sleep}]},
+         % make max terminate execution time 1.5 second
+         {max_r, 200},
+         {max_t, 300},
+         {options,
+          [{automatic_loading, false},
+           {duo_mode, true}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_terminate_3) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, terminate_sleep}]},
+         % make max terminate execution time 3.191 seconds
+         {max_r, 94},
+         {max_t, 300},
+         {options,
+          [{automatic_loading, false}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_terminate_4) ->
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, terminate_sleep}]},
+         % make max terminate execution time 3.191 seconds
+         {max_r, 94},
+         {max_t, 300},
+         {options,
+          [{automatic_loading, false},
+           {duo_mode, true}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
@@ -621,4 +707,46 @@ service_increment_aspect_info(_, #state{count = Count} = State, _) ->
 
 service_increment_aspect_terminate(_, #state{count = Count} = State) ->
     {ok, State#state{count = Count + 7}}.
+
+t_service_internal_terminate_1(_Config) ->
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName,
+                                    ?REQUEST_INFO4, ?REQUEST4,
+                                    undefined, undefined),
+    {ok,
+     {_, Service}} = cloudi:get_pid(Context,
+                                    ServiceName,
+                                    immediate),
+    erlang:exit(Service, terminate_sleep_test_1),
+    % wait for termination
+    receive after 4000 -> ok end,
+    ok.
+
+t_service_internal_terminate_2(Config) ->
+    t_service_internal_terminate_1(Config).
+
+t_service_internal_terminate_3(_Config) ->
+    Context = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {ok,
+     ?RESPONSE_INFO1,
+     ?RESPONSE1} = cloudi:send_sync(Context,
+                                    ServiceName,
+                                    ?REQUEST_INFO4, ?REQUEST4,
+                                    undefined, undefined),
+    {ok,
+     {_, Service}} = cloudi:get_pid(Context,
+                                    ServiceName,
+                                    immediate),
+    erlang:exit(Service, terminate_sleep_test_2),
+    % wait for termination
+    receive after 4000 -> ok end,
+    ok.
+
+t_service_internal_terminate_4(Config) ->
+    t_service_internal_terminate_3(Config).
 

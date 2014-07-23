@@ -119,7 +119,7 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
 init([]) ->
     MaxRestarts = 0,
     MaxTime = 1,
-    Shutdown = 2000, % milliseconds (2 seconds)
+    Shutdown = infinity, % cloudi_services_monitor handles shutdown
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
             {cloudi_services_internal, start_link, []},

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_msg_size).

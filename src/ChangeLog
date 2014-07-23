@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make sure cloudi_service_terminate/2 execution is equal to
+      MaxT/MaxR (enforced by a brutal_kill from cloudi_services_monitor)
+
+2014-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make cloudi_service_queue and cloudi_service_quorum CT tests
+      consistently pass without the potential for random failures
+
 2014-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add automatic_loading to external service configuration options
