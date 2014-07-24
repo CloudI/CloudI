@@ -82,7 +82,8 @@
 
 %% test helpers
 -export([service_increment_aspect_init/4,
-         service_increment_aspect_request/11,
+         service_increment_aspect_request_before/11,
+         service_increment_aspect_request_after/12,
          service_increment_aspect_info/3,
          service_increment_aspect_terminate/2]).
 
@@ -357,8 +358,8 @@ init_per_testcase(TestCase, Config)
         {ok, State#state{count = Count + 3}}
     end,
     InitAfter2 = {?MODULE, service_increment_aspect_init},
-    RequestBefore = {?MODULE, service_increment_aspect_request},
-    RequestAfter = {?MODULE, service_increment_aspect_request},
+    RequestBefore = {?MODULE, service_increment_aspect_request_before},
+    RequestAfter = {?MODULE, service_increment_aspect_request_after},
     InfoBefore = {?MODULE, service_increment_aspect_info},
     InfoAfter = {?MODULE, service_increment_aspect_info},
     TerminateBefore = {?MODULE, service_increment_aspect_terminate},
@@ -753,8 +754,12 @@ t_service_internal_aspects_1(_Config) ->
 service_increment_aspect_init(_, _, #state{count = Count} = State, _) ->
     {ok, State#state{count = Count + 4}}.
 
-service_increment_aspect_request(_, _, _, _, _, _, _, _, _,
-                                 #state{count = Count} = State, _) ->
+service_increment_aspect_request_before(_, _, _, _, _, _, _, _, _,
+                                        #state{count = Count} = State, _) ->
+    {ok, State#state{count = Count + 5}}.
+
+service_increment_aspect_request_after(_, _, _, _, _, _, _, _, _, _,
+                                       #state{count = Count} = State, _) ->
     {ok, State#state{count = Count + 5}}.
 
 service_increment_aspect_info(_, #state{count = Count} = State, _) ->

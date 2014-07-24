@@ -8,6 +8,7 @@
       with a min value of 1 second and a max value of 60 seconds)
     * Simplify the internal state shown for both internal and external
       services with format_status/2
+    * Fixes for aspects
 
 2014-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

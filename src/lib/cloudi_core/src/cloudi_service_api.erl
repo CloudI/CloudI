@@ -126,28 +126,30 @@
     1..?TIMEOUT_MAX_ERLANG.
 -export_type([latency_time_milliseconds/0]).
 
--type aspect_init_internal_f() ::
+-type aspect_init_after_internal_f() ::
     fun((Args :: list(),
          Prefix :: cloudi_service:service_name_pattern(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_init_external_f() ::
+-type aspect_init_after_external_f() ::
     fun((CommandLine :: list(string()),
          Prefix :: cloudi:service_name_pattern(),
          State :: any()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_init_internal() ::
-    aspect_init_internal_f() | {Module :: module(), Function :: atom()}.
--type aspect_init_external() ::
-    aspect_init_external_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_init_internal_f/0,
-              aspect_init_external_f/0,
-              aspect_init_internal/0,
-              aspect_init_external/0]).
--type aspect_request_internal_f() ::
+-type aspect_init_after_internal() ::
+    aspect_init_after_internal_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_init_after_external() ::
+    aspect_init_after_external_f() |
+    {Module :: module(), Function :: atom()}.
+-export_type([aspect_init_after_internal_f/0,
+              aspect_init_after_external_f/0,
+              aspect_init_after_internal/0,
+              aspect_init_after_external/0]).
+-type aspect_request_before_internal_f() ::
     fun((Type :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
@@ -161,7 +163,7 @@
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_request_external_f() ::
+-type aspect_request_before_external_f() ::
     fun((Type :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
@@ -174,14 +176,55 @@
          State :: any()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
--type aspect_request_internal() ::
-    aspect_request_internal_f() | {Module :: module(), Function :: atom()}.
--type aspect_request_external() ::
-    aspect_request_external_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_request_internal_f/0,
-              aspect_request_external_f/0,
-              aspect_request_internal/0,
-              aspect_request_external/0]).
+-type aspect_request_after_internal_f() ::
+    fun((Type :: cloudi_service:request_type(),
+         Name :: cloudi_service:service_name(),
+         Pattern :: cloudi_service:service_name_pattern(),
+         RequestInfo :: cloudi_service:request_info(),
+         Request :: cloudi_service:request(),
+         Timeout :: cloudi_service:timeout_value_milliseconds(),
+         Priority :: cloudi_service:priority(),
+         TransId :: cloudi_service:trans_id(),
+         Source :: cloudi_service:source(),
+         Result :: cloudi_service:request_result(),
+         State :: any(),
+         Dispatcher :: cloudi_service:dispatcher()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_request_after_external_f() ::
+    fun((Type :: cloudi_service:request_type(),
+         Name :: cloudi_service:service_name(),
+         Pattern :: cloudi_service:service_name_pattern(),
+         RequestInfo :: cloudi_service:request_info(),
+         Request :: cloudi_service:request(),
+         Timeout :: cloudi_service:timeout_value_milliseconds(),
+         Priority :: cloudi_service:priority(),
+         TransId :: cloudi_service:trans_id(),
+         Source :: cloudi_service:source(),
+         Result :: cloudi_service:request_result(),
+         State :: any()) ->
+        {ok, NewState :: any()} |
+        {stop, Reason :: any(), NewState :: any()}).
+-type aspect_request_before_internal() ::
+    aspect_request_before_internal_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_request_before_external() ::
+    aspect_request_before_external_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_request_after_internal() ::
+    aspect_request_after_internal_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_request_after_external() ::
+    aspect_request_after_external_f() |
+    {Module :: module(), Function :: atom()}.
+-export_type([aspect_request_before_internal_f/0,
+              aspect_request_before_external_f/0,
+              aspect_request_after_internal_f/0,
+              aspect_request_after_external_f/0,
+              aspect_request_before_internal/0,
+              aspect_request_before_external/0,
+              aspect_request_after_internal/0,
+              aspect_request_after_external/0]).
 -type aspect_info_internal_f() ::
     fun((Request :: any(),
          State :: any(),
@@ -189,23 +232,38 @@
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_info_internal() ::
-    aspect_info_internal_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_info_internal_f/0,
-              aspect_info_internal/0]).
+    aspect_info_internal_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_info_before_internal_f() ::
+    aspect_info_internal_f().
+-type aspect_info_after_internal_f() ::
+    aspect_info_internal_f().
+-type aspect_info_before_internal() ::
+    aspect_info_internal().
+-type aspect_info_after_internal() ::
+    aspect_info_internal().
+-export_type([aspect_info_before_internal_f/0,
+              aspect_info_after_internal_f/0,
+              aspect_info_before_internal/0,
+              aspect_info_after_internal/0]).
 -type aspect_terminate_f() ::
     fun((Reason :: any(),
          State :: any()) ->
         {ok, State :: any()}).
--type aspect_terminate_internal_f() :: aspect_terminate_f().
--type aspect_terminate_external_f() :: aspect_terminate_f().
--type aspect_terminate_internal() ::
-    aspect_terminate_internal_f() | {Module :: module(), Function :: atom()}.
--type aspect_terminate_external() ::
-    aspect_terminate_external_f() | {Module :: module(), Function :: atom()}.
--export_type([aspect_terminate_internal_f/0,
-              aspect_terminate_external_f/0,
-              aspect_terminate_internal/0,
-              aspect_terminate_external/0]).
+-type aspect_terminate_before_internal_f() ::
+    aspect_terminate_f().
+-type aspect_terminate_before_external_f() ::
+    aspect_terminate_f().
+-type aspect_terminate_before_internal() ::
+    aspect_terminate_before_internal_f() |
+    {Module :: module(), Function :: atom()}.
+-type aspect_terminate_before_external() ::
+    aspect_terminate_before_external_f() |
+    {Module :: module(), Function :: atom()}.
+-export_type([aspect_terminate_before_internal_f/0,
+              aspect_terminate_before_external_f/0,
+              aspect_terminate_before_internal/0,
+              aspect_terminate_before_external/0]).
 
 -type service_options_internal() ::
     list({priority_default, priority()} |
@@ -235,12 +293,12 @@
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
          {automatic_loading, boolean()} |
-         {aspects_init_after, list(aspect_init_internal())} |
-         {aspects_request_before, list(aspect_request_internal())} |
-         {aspects_request_after, list(aspect_request_internal())} |
-         {aspects_info_before, list(aspect_info_internal())} |
-         {aspects_info_after, list(aspect_info_internal())} |
-         {aspects_terminate_before, list(aspect_terminate_internal())} |
+         {aspects_init_after, list(aspect_init_after_internal())} |
+         {aspects_request_before, list(aspect_request_before_internal())} |
+         {aspects_request_after, list(aspect_request_after_internal())} |
+         {aspects_info_before, list(aspect_info_before_internal())} |
+         {aspects_info_after, list(aspect_info_after_internal())} |
+         {aspects_terminate_before, list(aspect_terminate_before_internal())} |
          {application_name, undefined | atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
@@ -283,10 +341,10 @@
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
          {automatic_loading, boolean()} |
-         {aspects_init_after, list(aspect_init_external())} |
-         {aspects_request_before, list(aspect_request_external())} |
-         {aspects_request_after, list(aspect_request_external())} |
-         {aspects_terminate_before, list(aspect_terminate_external())}).
+         {aspects_init_after, list(aspect_init_after_external())} |
+         {aspects_request_before, list(aspect_request_before_external())} |
+         {aspects_request_after, list(aspect_request_after_external())} |
+         {aspects_terminate_before, list(aspect_terminate_before_external())}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 

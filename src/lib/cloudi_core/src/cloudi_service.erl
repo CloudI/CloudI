@@ -227,6 +227,17 @@
 -export_type([error_reason/0,
               error_reason_sync/0]).
 
+% for cloudi_service_api:aspect_request_after_internal() and
+% cloudi_service_api:aspect_request_after_external() and
+-type request_result() ::
+    {reply, ResponseInfo :: response_info(), Response :: response()} |
+    {forward, NextName :: service_name(),
+     NextRequestInfo :: request_info(), NextRequest :: request(),
+     NextTimeout :: timeout_value_milliseconds(),
+     NextPriority :: priority_value()} |
+    noreply.
+-export_type([request_result/0]).
+
 % used for accessing RequestInfo data
 -ifdef(ERLANG_OTP_VER_16).
 -type key_values(Key, Value) :: list({Key, Value}) |

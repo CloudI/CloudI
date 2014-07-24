@@ -191,21 +191,21 @@
         % aspects are functions provided to be processed before or after
         % the service callback is executed (Aspect-Oriented Programming (AOP))
         aspects_init_after = []
-            :: list(cloudi_service_api:aspect_init_internal() |
-                    cloudi_service_api:aspect_init_external()),
+            :: list(cloudi_service_api:aspect_init_after_internal() |
+                    cloudi_service_api:aspect_init_after_external()),
         aspects_request_before = []
-            :: list(cloudi_service_api:aspect_request_internal() |
-                    cloudi_service_api:aspect_request_external()),
+            :: list(cloudi_service_api:aspect_request_before_internal() |
+                    cloudi_service_api:aspect_request_before_external()),
         aspects_request_after = []
-            :: list(cloudi_service_api:aspect_request_internal() |
-                    cloudi_service_api:aspect_request_external()),
+            :: list(cloudi_service_api:aspect_request_after_internal() |
+                    cloudi_service_api:aspect_request_after_external()),
         aspects_info_before = []
-            :: list(cloudi_service_api:aspect_info_internal()),
+            :: list(cloudi_service_api:aspect_info_before_internal()),
         aspects_info_after = []
-            :: list(cloudi_service_api:aspect_info_internal()),
+            :: list(cloudi_service_api:aspect_info_after_internal()),
         aspects_terminate_before = []
-            :: list(cloudi_service_api:aspect_terminate_internal() |
-                    cloudi_service_api:aspect_terminate_external()),
+            :: list(cloudi_service_api:aspect_terminate_before_internal() |
+                    cloudi_service_api:aspect_terminate_before_external()),
 
         % Only Relevant for Internal Services:
 
