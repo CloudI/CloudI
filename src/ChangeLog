@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix service configuration option request_timeout_adjustment with
+      aspects_request_before or aspects_request_after in external services
+
 2014-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make sure the cloudi_service_terminate/2 execution limit is equal to
@@ -18,6 +23,8 @@
 2014-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add automatic_loading to external service configuration options
+      (now both internal and external services can use automatic_loading
+       as a service configuration option)
     * Make automatic_loading control the loading of modules that contain
       aspect functions (for checking that the aspect function exists)
 
