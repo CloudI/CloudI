@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow cloudi_service_api functions to take binary or string data
+      for uuids, to make the interface a bit simpler
+    * Make sure count_process_dynamic updates each service process with
+      the new count_process value after it is adjusted
+
 2014-07-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix service configuration option request_timeout_adjustment with

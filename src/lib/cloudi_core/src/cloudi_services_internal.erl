@@ -1406,6 +1406,9 @@ handle_info('cloudi_count_process_dynamic_rate',
                              count_process_dynamic =
                                  NewCountProcessDynamic}}});
 
+handle_info({'cloudi_count_process_dynamic_update', ProcessCount}, State) ->
+    hibernate_check({noreply, State#state{process_count = ProcessCount}});
+
 handle_info('cloudi_count_process_dynamic_terminate',
             #state{receiver_pid = ReceiverPid,
                    options = #config_service_options{
@@ -1429,7 +1432,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check',
         QueueRequests =:= false ->
             {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
-            erlang:send_after(500, Dispatcher,
+            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, Dispatcher,
                               'cloudi_count_process_dynamic_terminate_check'),
             hibernate_check({noreply, State})
     end;
@@ -1490,6 +1493,10 @@ terminate(_, _) ->
 code_change(_, State, _) ->
     {ok, State}.
 
+-ifdef(VERBOSE_STATE).
+format_status(_Opt, [PDict, State]) ->
+    [{data, [{"State", [PDict, State]}]}].
+-else.
 format_status(_Opt,
               [PDict,
                #state{send_timeouts = SendTimeouts,
@@ -1502,7 +1509,6 @@ format_status(_Opt,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
                       options = ConfigOptions} = State]) ->
-
     NewRecvTimeouts = if
         RecvTimeouts =:= undefined ->
             undefined;
@@ -1554,6 +1560,7 @@ format_status(_Opt,
                      dest_deny = NewDestDeny,
                      dest_allow = NewDestAllow,
                      options = NewConfigOptions}]}]}].
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -3081,6 +3088,11 @@ duo_handle_info('cloudi_count_process_dynamic_rate',
      State#state_duo{options = ConfigOptions#config_service_options{
                          count_process_dynamic = NewCountProcessDynamic}}};
 
+duo_handle_info({'cloudi_count_process_dynamic_update', _} = Update,
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    Dispatcher ! Update,
+    {noreply, State};
+
 duo_handle_info('cloudi_count_process_dynamic_terminate_check',
                 #state_duo{duo_mode_pid = DuoModePid,
                            queue_requests = QueueRequests} = State) ->
@@ -3090,7 +3102,7 @@ duo_handle_info('cloudi_count_process_dynamic_terminate_check',
         QueueRequests =:= false ->
             {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
-            erlang:send_after(500, DuoModePid,
+            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, DuoModePid,
                               'cloudi_count_process_dynamic_terminate_check'),
             {noreply, State}
     end;

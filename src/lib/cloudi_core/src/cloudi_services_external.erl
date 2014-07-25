@@ -79,6 +79,7 @@
 -define(MESSAGE_RETURN_SYNC,     6).
 -define(MESSAGE_RETURNS_ASYNC,   7).
 -define(MESSAGE_KEEPALIVE,       8).
+-define(MESSAGE_REINIT,          9).
 
 -record(state,
     {
@@ -1050,6 +1051,11 @@ handle_info('cloudi_count_process_dynamic_rate', StateName,
      State#state{options = ConfigOptions#config_service_options{
                      count_process_dynamic = NewCountProcessDynamic}}};
 
+handle_info({'cloudi_count_process_dynamic_update', ProcessCount}, StateName,
+            State) ->
+    send('reinit_out'(ProcessCount), State),
+    {next_state, StateName, State};
+
 handle_info('cloudi_count_process_dynamic_terminate', StateName,
             #state{dispatcher = Dispatcher,
                    options = #config_service_options{
@@ -1070,7 +1076,7 @@ handle_info('cloudi_count_process_dynamic_terminate_check', StateName,
         QueueRequests =:= false ->
             {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
         QueueRequests =:= true ->
-            erlang:send_after(500, Dispatcher,
+            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, Dispatcher,
                               'cloudi_count_process_dynamic_terminate_check'),
             {next_state, StateName, State}
     end;
@@ -1127,6 +1133,10 @@ terminate(Reason, _,
 code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
 
+-ifdef(VERBOSE_STATE).
+format_status(_Opt, [PDict, State]) ->
+    [{data, [{"State", [PDict, State]}]}].
+-else.
 format_status(_Opt,
               [PDict,
                #state{send_timeouts = SendTimeouts,
@@ -1138,7 +1148,6 @@ format_status(_Opt,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
                       options = ConfigOptions} = State]) ->
-
     NewRecvTimeouts = if
         RecvTimeouts =:= undefined ->
             undefined;
@@ -1183,6 +1192,7 @@ format_status(_Opt,
                      dest_deny = NewDestDeny,
                      dest_allow = NewDestAllow,
                      options = NewConfigOptions}]}]}].
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -1337,6 +1347,11 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
       TimeoutSync:32/unsigned-integer-native,
       PriorityDefault:8/signed-integer-native,
       RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
+
+'reinit_out'(ProcessCount)
+    when is_integer(ProcessCount) ->
+    <<?MESSAGE_REINIT:32/unsigned-integer-native,
+      ProcessCount:32/unsigned-integer-native>>.
 
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.

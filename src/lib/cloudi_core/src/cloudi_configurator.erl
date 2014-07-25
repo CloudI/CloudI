@@ -703,13 +703,13 @@ service_start_internal(IndexProcess,
                            uuid = ID} = Service, GroupLeader,
                        CountProcess, Timeout) ->
     case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
-                                         [CountProcess, GroupLeader,
+                                         [GroupLeader,
                                           Module, Args, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
-                                         IndexProcess,
-                                         1, MaxR, MaxT, ID, Timeout) of
+                                         IndexProcess, CountProcess, 1,
+                                         MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
@@ -742,13 +742,14 @@ service_start_external(IndexProcess,
                            uuid = ID} = Service,
                        CountThread, CountProcess, Timeout) ->
     case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
-                                         [CountProcess, CountThread,
+                                         [CountThread,
                                           FilePath, Args, Env,
                                           Protocol, BufferSize, TimeoutInit,
                                           Prefix, TimeoutAsync, TimeoutSync,
                                           DestRefresh, DestListDeny,
                                           DestListAllow, Options, ID],
-                                         IndexProcess, CountThread,
+                                         IndexProcess, CountProcess,
+                                         CountThread,
                                          MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_configuration:service_format(Service),

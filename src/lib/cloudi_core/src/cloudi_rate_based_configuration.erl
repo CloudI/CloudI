@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_rate_based_configuration).
@@ -63,6 +63,7 @@
          count_process_dynamic_init/1,
          count_process_dynamic_reinit/2,
          count_process_dynamic_request/1,
+         count_process_dynamic_update/2,
          count_process_dynamic_terminate/1,
          count_process_dynamic_terminate_set/2,
          count_process_dynamic_terminated/1]).
@@ -288,6 +289,17 @@ count_process_dynamic_request(#count_process_dynamic{
                                   method = rate_request,
                                   count = Count} = CountProcessDynamic) ->
     CountProcessDynamic#count_process_dynamic{count = Count + 1}.
+
+%% update the service pid's count_process
+
+-spec count_process_dynamic_update(Pid :: pid(),
+                                   CountProcess :: pos_integer()) ->
+    ok.
+
+count_process_dynamic_update(Pid, CountProcess)
+    when is_pid(Pid), is_integer(CountProcess) ->
+    Pid ! {'cloudi_count_process_dynamic_update', CountProcess},
+    ok.
 
 %% get a service pid termination started
 

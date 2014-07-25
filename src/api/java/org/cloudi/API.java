@@ -87,6 +87,7 @@ public class API
     private static final int MESSAGE_RETURN_SYNC     = 6;
     private static final int MESSAGE_RETURNS_ASYNC   = 7;
     private static final int MESSAGE_KEEPALIVE       = 8;
+    private static final int MESSAGE_REINIT          = 9;
 
     private FileDescriptor fd_in;
     private FileDescriptor fd_out;
@@ -1153,6 +1154,14 @@ public class API
                         keepalive.write(OtpExternal.versionTag);
                         keepalive.write_any(new OtpErlangAtom("keepalive"));
                         send(keepalive);
+                        if (buffer.hasRemaining() &&
+                            this.input.available() == 0)
+                            continue;
+                        break;
+                    }
+                    case MESSAGE_REINIT:
+                    {
+                        this.process_count = buffer.getInt();
                         if (buffer.hasRemaining() &&
                             this.input.available() == 0)
                             continue;

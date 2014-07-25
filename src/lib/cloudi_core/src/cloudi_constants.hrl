@@ -6,6 +6,10 @@
 -define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).
 %-define(RECV_ASYNC_STRATEGY, recv_async_select_random). % fastest
 
+% have errors report the service Erlang state as-is without simplification
+% (to aid with debugging, should not normally be necessary)
+%-define(VERBOSE_STATE, true).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Reasonable constants that are unlikely to need modification.               %
 % Possibly, in different environments, tuning may be beneficial, though      %
@@ -37,6 +41,11 @@
 
 % interval at which asynchronous forwarded messages are sent
 -define(FORWARD_ASYNC_INTERVAL, 500). % milliseconds
+
+% interval at which count_process_dynamic checks the service's incoming queue
+% before terminating a service process when reducing the number of service
+% processes due to an incoming service request rate lower than required
+-define(COUNT_PROCESS_DYNAMIC_INTERVAL, 500). % milliseconds
 
 % decrement the timeout of each successful forward, to prevent infinite messages
 % (i.e., this is the timeout penalty a request takes when forwarding a request)

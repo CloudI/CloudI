@@ -538,6 +538,19 @@ module CloudI
                             next
                         end
                     end
+                when MESSAGE_REINIT
+                    i += j; j = 4
+                    @processCount = data[i, j].unpack('L')[0]
+                    i += j
+                    if i < data.length
+                        raise MessageDecodingException
+                    end
+                    data.slice!(0, i)
+                    if data.length > 0
+                        if IO.select([@s], nil, nil, 0).nil?
+                            next
+                        end
+                    end
                 else
                     raise MessageDecodingException
                 end
@@ -639,6 +652,7 @@ module CloudI
         MESSAGE_RETURN_SYNC    = 6
         MESSAGE_RETURNS_ASYNC  = 7
         MESSAGE_KEEPALIVE      = 8
+        MESSAGE_REINIT         = 9
 
         NULL = 0
 

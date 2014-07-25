@@ -1234,6 +1234,7 @@ static int keepalive(cloudi_instance_t * p)
 #define MESSAGE_RETURN_SYNC    6
 #define MESSAGE_RETURNS_ASYNC  7
 #define MESSAGE_KEEPALIVE      8
+#define MESSAGE_REINIT         9
 
 static void callback(cloudi_instance_t * p,
                      int const command,
@@ -1548,6 +1549,30 @@ static int poll_request(cloudi_instance_t * p,
                 if (result)
                     ::exit(result);
                 if (index < p->buffer_recv_index)
+                {
+                    p->buffer_recv_index -= index;
+                    buffer_recv.move(index, p->buffer_recv_index, 0);
+                    assert(p->use_header == false);
+                    count = ::poll(fds, 1, 0);
+                    if (count < 0)
+                        return errno_poll();
+                    else if (count == 0)
+                        continue;
+                }
+                else
+                {
+                    p->buffer_recv_index = 0;
+                }
+                break;
+            }
+            case MESSAGE_REINIT:
+            {
+                store_incoming_uint32(buffer_recv, index, p->process_count);
+                if (index > p->buffer_recv_index)
+                {
+                    ::exit(cloudi_error_read_underflow);
+                }
+                else if (index < p->buffer_recv_index)
                 {
                     p->buffer_recv_index -= index;
                     buffer_recv.move(index, p->buffer_recv_index, 0);

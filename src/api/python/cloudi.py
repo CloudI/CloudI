@@ -61,6 +61,7 @@ _MESSAGE_RETURN_ASYNC   = 5
 _MESSAGE_RETURN_SYNC    = 6
 _MESSAGE_RETURNS_ASYNC  = 7
 _MESSAGE_KEEPALIVE      = 8
+_MESSAGE_REINIT         = 9
 
 class API(object):
     ASYNC  =  1
@@ -484,6 +485,16 @@ class API(object):
                 return struct.unpack('=' + '16s' * transIdCount, data[i:j])
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom('keepalive')))
+                if j < len(data):
+                    raise message_decoding_exception()
+                data = data[j:]
+                if len(data) > 0:
+                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
+                    if len(IN) == 0:
+                        continue
+            elif command == _MESSAGE_REINIT:
+                i, j = j, j + 4
+                self.__process_count = struct.unpack('=I', data[i:j])[0]
                 if j < len(data):
                     raise message_decoding_exception()
                 data = data[j:]

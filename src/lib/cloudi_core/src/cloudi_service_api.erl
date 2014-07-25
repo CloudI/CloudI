@@ -467,21 +467,30 @@ acl_remove([_ | _] = L, Timeout)
 %% ===Get a list of all service subscriptions.===
 %% When a subscription on the same service name pattern occurred
 %% multiple times, only a single entry is returned within the list.
+%% Service name patterns that are subscriptions of non-service Erlang pids
+%% (e.g., cloudi_service_http_cowboy websocket connection pids) will not
+%% be returned by this function.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec service_subscriptions(ServiceId :: service_id(),
+-spec service_subscriptions(ServiceId :: binary() | string(),
                             Timeout :: api_timeout_milliseconds()) ->
     {ok, list(cloudi_service:service_name_pattern())} |
-    {error, timeout | noproc | not_found}.
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} | not_found}.
 
 service_subscriptions(ServiceId, Timeout)
-    when is_binary(ServiceId), byte_size(ServiceId) == 16,
-         ((is_integer(Timeout) andalso
+    when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:service_subscriptions(ServiceId, Timeout).
+    case service_id_convert(ServiceId) of
+        {ok, ServiceIdValid} ->
+            cloudi_configurator:service_subscriptions(ServiceIdValid, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -518,11 +527,12 @@ services_add([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(L :: nonempty_list(service_id()),
+-spec services_remove(L :: nonempty_list(binary() | string()),
                       Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
      timeout | noproc |
+     {service_id_invalid, any()} |
      cloudi_configuration:error_reason_services_remove()}.
 
 services_remove([_ | _] = L, Timeout)
@@ -530,7 +540,12 @@ services_remove([_ | _] = L, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:services_remove(L, Timeout).
+    case service_ids_convert(L) of
+        {ok, ServiceIdsValid} ->
+            cloudi_configurator:services_remove(ServiceIdsValid, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -545,11 +560,12 @@ services_remove([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: nonempty_list(service_id()), 
+-spec services_restart(L :: nonempty_list(binary() | string()), 
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
      timeout | noproc |
+     {service_id_invalid, any()} |
      cloudi_configuration:error_reason_services_restart()}.
 
 services_restart([_ | _] = L, Timeout)
@@ -557,15 +573,21 @@ services_restart([_ | _] = L, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:services_restart(L, Timeout).
+    case service_ids_convert(L) of
+        {ok, ServiceIdsValid} ->
+            cloudi_configurator:services_restart(ServiceIdsValid, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Search service instances for matches on the provided service name.===
 %% Multiple services may be returned for a single service name.  Only service
-%% instances on the local Erlang node are searched.  Service names that are
-%% subscriptions of non-service Erlang pids (e.g., cloudi_service_http_cowboy
-%% websocket connection pids) will not be searched by this function.
+%% instances on the local Erlang node are searched.  Service names that match
+%% subscriptions of non-service Erlang pids only
+%% (e.g., cloudi_service_http_cowboy websocket connection pids) will not
+%% return the service's configuration with this function.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -573,7 +595,9 @@ services_restart([_ | _] = L, Timeout)
                       Timeout :: api_timeout_milliseconds()) ->
     {ok, list({service_id(), #internal{}} |
               {service_id(), #external{}})} |
-    {error, timeout | noproc | service_name_invalid}.
+    {error,
+     timeout | noproc |
+     service_name_invalid}.
 
 services_search([_ | _] = ServiceName, Timeout)
     when ((is_integer(Timeout) andalso
@@ -834,4 +858,29 @@ code_path(Timeout)
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+service_ids_convert(ServiceIds) ->
+    service_ids_convert(ServiceIds, []).
+
+service_ids_convert([], Output) ->
+    {ok, lists:reverse(Output)};
+service_ids_convert([ServiceId | ServiceIds], Output) ->
+    case service_id_convert(ServiceId) of
+        {ok, ServiceIdValid} ->
+            service_ids_convert(ServiceIds, [ServiceIdValid | Output]);
+        {error, _} = Error ->
+            Error
+    end.
+
+service_id_convert(ServiceId)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    {ok, ServiceId};
+service_id_convert(ServiceId) ->
+    try cloudi_x_uuid:string_to_uuid(ServiceId) of
+        ServiceIdValid ->
+            {ok, ServiceIdValid}
+    catch
+        exit:badarg ->
+            {error, {service_id_invalid, ServiceId}}
+    end.
 
