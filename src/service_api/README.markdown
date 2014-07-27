@@ -23,6 +23,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
 * `"/cloudi/api/erlang/*"` (see below)
   * `"/cloudi/api/erlang/acl_add"`
   * `"/cloudi/api/erlang/acl_remove"`
+  * `"/cloudi/api/erlang/service_subscriptions"`
   * `"/cloudi/api/erlang/services_add"`
   * `"/cloudi/api/erlang/services_remove"`
   * `"/cloudi/api/erlang/services_restart"`
