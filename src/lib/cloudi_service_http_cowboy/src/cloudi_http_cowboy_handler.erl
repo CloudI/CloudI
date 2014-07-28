@@ -933,8 +933,7 @@ handle_request(Dispatcher, Context, Name, Headers,
                              lists:keysort(1, Headers),
                              OutputType, MultipartId, PartFirst);
 handle_request(Dispatcher, Context, Name, Headers,
-               OutputType, Body, Req)
-    when is_binary(Body) ->
+               OutputType, Body, Req) ->
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
             headers_external_incoming(Headers);

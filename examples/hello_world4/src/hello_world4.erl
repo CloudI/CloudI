@@ -22,9 +22,9 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               #state{} = State, _Dispatcher) ->
     {reply, <<"Hello World!">>, State}.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) ->
+cloudi_service_terminate(_Reason, #state{}) ->
     ok.

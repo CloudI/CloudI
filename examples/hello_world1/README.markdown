@@ -1,4 +1,4 @@
-# Hello World 1 Example
+# Erlang Hello World 1 Example
 
 ## PURPOSE
 
@@ -9,7 +9,7 @@ CloudI service module, application, or release.
 
 ## DETAILS
 
-The approach with the Hello World 1 Example is for CloudI to load the
+The approach with the Erlang Hello World 1 Example is for CloudI to load the
 `hello_world1` application after CloudI has started.  The `hello_world1`
 application can be specified within the cloudi.conf or provided
 dynamically to the CloudI Service API.
