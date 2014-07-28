@@ -995,6 +995,28 @@ applications_dependencies(A) ->
                             [sasl | As]
                     end,
                     applications_dependencies(AsCT, AsCT);
+                {ok, As} when A =:= elixir ->
+                    % XXX avoid error in Elixir until its .app file gets fixed
+                    % (necessary for Elixir =< 0.14.3)
+                    AsElixir0 = case lists:member(crypto, As) of
+                        true ->
+                            As;
+                        false ->
+                            [crypto | As]
+                    end,
+                    AsElixir1 = case lists:member(compiler, As) of
+                        true ->
+                            AsElixir0;
+                        false ->
+                            [compiler | AsElixir0]
+                    end,
+                    AsElixirN = case lists:member(syntax_tools, As) of
+                        true ->
+                            AsElixir1;
+                        false ->
+                            [syntax_tools | AsElixir1]
+                    end,
+                    applications_dependencies(AsElixirN, AsElixirN);
                 {ok, As} ->
                     applications_dependencies(As, As)
             end;
