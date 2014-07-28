@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -1048,9 +1048,7 @@ applications_dependencies([A | Rest], As) ->
                         {ok, []} ->
                             applications_dependencies(Rest, As);
                         {ok, NextAs} ->
-                            OtherAs = lists:foldl(fun(NextA, L) ->
-                                lists:delete(NextA, L)
-                            end, As, NextAs),
+                            OtherAs = As -- NextAs,
                             case applications_dependencies(NextAs,
                                                            NextAs ++ OtherAs) of
                                 {ok, NewAs} ->
@@ -1071,9 +1069,7 @@ applications_top_level(Applications) ->
            erlang:length(Applications), % no duplicates
     case applications_top_level(Applications, sets:new()) of
         {ok, Dependencies} ->
-            TopLevelApplications = lists:foldl(fun(A, L) ->
-                lists:delete(A, L)
-            end, Applications, sets:to_list(Dependencies)),
+            TopLevelApplications = Applications -- sets:to_list(Dependencies),
             {ok, TopLevelApplications};
         {error, _} = Error ->
             Error
