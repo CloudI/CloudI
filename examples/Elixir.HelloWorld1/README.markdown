@@ -3,7 +3,7 @@
 ## PURPOSE
 
 Provide the simplest example of an Elixir application running within the same
-Erlang VM as CloudI, with a CloudI service (`Elixir.HelloWorld1.erl`).
+Erlang VM as CloudI, with a CloudI service (`HelloWorld1.ex`).
 The example uses separate OTP release generation for both CloudI and the
 internal CloudI service module, application, or release.
 
