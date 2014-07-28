@@ -17,8 +17,8 @@ ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
 elli             Knut Nesheim <knutin@gmail.com>
 ememcached       Nick Gerakines <nick@gerakines.net>
 emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
-epgsql_wg        Will Glozer
 epgsql           Anton Lebedevich
+epgsql_wg        Will Glozer
 erlang-oauth     Tim Fletcher <mail@tfletcher.com>
 erlang_cassandra Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 erlasticsearch   Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
