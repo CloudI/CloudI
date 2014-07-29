@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove configuration arguments request_start and request_end from
+      cloudi_service_oauth1 so that the service configuration options
+      aspects_request_before and aspects_request_after can be used instead
+
 2014-07-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add Elixir example

@@ -93,25 +93,6 @@
 -define(DEFAULT_TOKEN_ACCESS_SECRET_LENGTH,  12). % characters minimum
 -define(DEFAULT_TOKEN_ACCESS_EXPIRATION,     300). % seconds
 -define(DEFAULT_VERIFIER_LENGTH,        12).      % characters minimum
--define(DEFAULT_REQUEST_START,          undefined). % see below:
-        % either an anonymous function or a {module(), atom()} tuple
-        % for a 4 arity function equvalent to:
-        % fun((Name :: cloudi_service:service_name(),
-        %      Pattern :: cloudi_service:service_name(),
-        %      RequestHeaders :: cloudi_service:key_values(),
-        %      Request :: binary()) ->
-        %     RequestStartState :: any())
-        % for handling request metrics
--define(DEFAULT_REQUEST_END,            undefined). % see below:
-        % either an anonymous function or a {module(), atom()} tuple
-        % for a 5 arity function equvalent to:
-        % fun((Name :: cloudi_service:service_name(),
-        %      Pattern :: cloudi_service:service_name() | undefined,
-        %      ResponseHeaders :: list({binary(), binary()}) |
-        %                         cloudi_service:key_values(),
-        %      Response :: binary(),
-        %      RequestStartState :: any()) -> any())
-        % for handling request metrics
 -define(DEFAULT_DEBUG_DB,               false). % see below:
         % debug db data with consumer key from
         % http://tools.ietf.org/html/rfc5849#section-1.2
@@ -136,16 +117,6 @@
         token_access_secret_bytes :: pos_integer(),
         token_access_expiration :: pos_integer(),
         verifier_bytes :: pos_integer(),
-        request_start_f :: fun((cloudi_service:service_name(),
-                                cloudi_service:service_name(),
-                                cloudi_service:key_values(),
-                                binary()) -> any()) | undefined,
-        request_end_f :: fun((cloudi_service:service_name(),
-                              cloudi_service:service_name() | undefined,
-                              list({binary(), binary()}) |
-                              cloudi_service:key_values(),
-                              binary(),
-                              any()) -> any()) | undefined,
         debug_db :: boolean(),
         debug :: boolean(),
         prefix_length :: pos_integer()
@@ -173,14 +144,12 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {token_access_secret_length,  ?DEFAULT_TOKEN_ACCESS_SECRET_LENGTH},
         {token_access_expiration,     ?DEFAULT_TOKEN_ACCESS_EXPIRATION},
         {verifier_length,             ?DEFAULT_VERIFIER_LENGTH},
-        {request_start,               ?DEFAULT_REQUEST_START},
-        {request_end,                 ?DEFAULT_REQUEST_END},
         {debug_db,                    ?DEFAULT_DEBUG_DB},
         {debug,                       ?DEFAULT_DEBUG}],
     [DatabaseType, Database, URLHost, Authentication0, TokensClean,
      TokenRequestLength, TokenRequestSecretLength, TokenRequestExpiration,
      TokenAccessLength, TokenAccessSecretLength, TokenAccessExpiration,
-     VerifierLength, RequestStart0, RequestEnd0, DebugDB0, Debug
+     VerifierLength, DebugDB0, Debug
      ] = cloudi_proplists:take_values(Defaults, Args),
     cloudi_service:self(Dispatcher) ! initialize, % db initialize
     DatabaseModule = if
@@ -236,46 +205,6 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             (TokenAccessExpiration > 0)),
     true = (is_integer(VerifierLength) andalso
             (VerifierLength > 0)),
-    RequestStart1 = case RequestStart0 of
-        {RequestStartModule, RequestStartFunction}
-        when is_atom(RequestStartModule), is_atom(RequestStartFunction) ->
-            {file, _} = code:is_loaded(RequestStartModule),
-            fun(RequestStartName,
-                RequestStartPattern,
-                RequestStartRequestHeaders,
-                RequestStartRequest) ->
-                RequestStartModule:
-                RequestStartFunction(RequestStartName,
-                                     RequestStartPattern,
-                                     RequestStartRequestHeaders,
-                                     RequestStartRequest)
-            end;
-        _ when is_function(RequestStart0, 4) ->
-            RequestStart0;
-        undefined ->
-            undefined
-    end,
-    RequestEnd1 = case RequestEnd0 of
-        {RequestEndModule, RequestEndFunction}
-        when is_atom(RequestEndModule), is_atom(RequestEndFunction) ->
-            {file, _} = code:is_loaded(RequestEndModule),
-            fun(RequestEndName,
-                RequestEndPattern,
-                RequestEndResponseHeaders,
-                RequestEndResponse,
-                RequestStartState) ->
-                RequestEndModule:
-                RequestEndFunction(RequestEndName,
-                                   RequestEndPattern,
-                                   RequestEndResponseHeaders,
-                                   RequestEndResponse,
-                                   RequestStartState)
-            end;
-        _ when is_function(RequestEnd0, 5) ->
-            RequestEnd0;
-        undefined ->
-            undefined
-    end,
     DebugDB1 = if
         Debug =:= true ->
             true;
@@ -309,52 +238,18 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 token_access_expiration = TokenAccessExpiration,
                 verifier_bytes =
                     token_length_to_bytes(VerifierLength),
-                request_start_f = RequestStart1,
-                request_end_f = RequestEnd1,
                 debug_db = DebugDB1,
                 debug = Debug,
                 prefix_length = erlang:length(Prefix)}}.
 
 cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
-                              #state{request_start_f = RequestStart,
-                                     request_end_f = RequestEnd,
-                                     prefix_length = PrefixLength} = State,
+                              #state{prefix_length = PrefixLength} = State,
                               Dispatcher) ->
     Suffix = lists:nthtail(PrefixLength, Pattern),
     RequestHeaders = cloudi_service:request_info_key_value_parse(RequestInfo),
-    RequestStartState = if
-        RequestStart =:= undefined ->
-            undefined;
-        is_function(RequestStart) ->
-            RequestStart(Name, Pattern,
-                         RequestHeaders, Request)
-    end,
-    case request(Suffix, Name, Pattern, RequestHeaders, Request,
-                 Timeout, State, Dispatcher) of
-        {reply, ResponseHeaders, Response,
-         _NewState} = Reply ->
-            if
-                RequestEnd =:= undefined ->
-                    ok;
-                is_function(RequestEnd) ->
-                    RequestEnd(Name, Pattern,
-                               ResponseHeaders, Response,
-                               RequestStartState)
-            end,
-            Reply;
-        {forward, NextName, NextRequestHeaders, NextRequest,
-         _NewState} = Forward ->
-            if
-                RequestEnd =:= undefined ->
-                    ok;
-                is_function(RequestEnd) ->
-                    RequestEnd(NextName, undefined,
-                               NextRequestHeaders, NextRequest,
-                               RequestStartState)
-            end,
-            Forward
-    end.
+    request(Suffix, Name, Pattern, RequestHeaders, Request,
+            Timeout, State, Dispatcher).
 
 cloudi_service_handle_info(initialize,
                            #state{database_module = DatabaseModule,
