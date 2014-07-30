@@ -1,4 +1,12 @@
 defmodule HelloWorld1 do
+
+    defmacro log_warn(format, args) do
+        quote do
+            :cloudi_logger_interface.warn(__MODULE__, __ENV__.line,
+                                          unquote(format), unquote(args))
+        end
+    end
+
     def cloudi_service_init(_args, _prefix, dispatcher) do
         :cloudi_service.subscribe(dispatcher, 'hello_world1/get')
         {:ok, :undefined}
@@ -12,8 +20,7 @@ defmodule HelloWorld1 do
     end
 
     def cloudi_service_handle_info(request, state, _dispatcher) do
-        :cloudi_logger_interface.warn(__MODULE__, __ENV__.line,
-                                      'Unknown info \"~p\"', [request])
+        log_warn('Unknown info \"~p\"', [request])
         {:noreply, state}
     end
 
