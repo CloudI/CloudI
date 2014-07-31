@@ -3,13 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Request==
-%%% Request format transform.
+%%% ==CloudI Key/Value Data Access for RequestInfo==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,58 +43,96 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
+%%% @copyright 2014 Michael Truog
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_request).
+-module(cloudi_key_value).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/2,
-         http_qs_parse/1]).
+-export([erase/2,
+         find/2,
+         store/3]).
+
+% used for accessing RequestInfo data
+-ifdef(ERLANG_OTP_VER_16).
+-type key_values(Key, Value) :: list({Key, Value}) |
+                                dict().
+-else.
+-type key_values(Key, Value) :: list({Key, Value}) |
+                                dict:dict(Key, Value).
+-endif.
+-type key_values() :: key_values(binary() | string() | atom(),
+                                 binary() | string() | any()).
+-export_type([key_values/2,
+              key_values/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%% Attempt to handle request conversions automatically,
-%% when dealing between internal CloudI services that want Erlang terms
-%% while external CloudI services need binary data.
-%% Normally this is avoided and the output is set by service configuration,
-%% but some older services do attempt to do conversions.
-%% Need to remove, refactor, or improve.
-
-new(Input, OutputType)
-    when is_binary(Input) ->
-    if
-        OutputType =:= external ->
-            Input;
-        OutputType =:= internal ->
-            cloudi_string:binary_to_term(Input)
-    end;
-new([I | _] = Input, internal)
-    when is_integer(I) ->
-    cloudi_string:list_to_term(Input);
-new(Input, internal) ->
-    Input.
-
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse HTTP Request query string data.===
+%% ===Generic key/value erase.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to erase request meta-data while encapsulating
+%% the data structure used for the lookup.
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict().
--else.
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict:dict(binary(), binary()).
--endif.
+-spec erase(Key :: any(),
+            KeyValues :: key_values()) ->
+    NewKeyValues :: key_values().
 
-http_qs_parse(Request) ->
-    cloudi_request_info:key_value_parse(Request).
+erase(Key, KeyValues)
+    when is_list(KeyValues) ->
+    lists:keydelete(Key, 1, KeyValues);
+erase(Key, KeyValues) ->
+    dict:erase(Key, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value find.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to access the request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find(Key :: any(),
+           KeyValues :: key_values()) ->
+    {ok, Value :: any()} |
+    error.
+
+find(Key, KeyValues)
+    when is_list(KeyValues) ->
+    case lists:keyfind(Key, 1, KeyValues) of
+        {Key, Value} ->
+            {ok, Value};
+        false ->
+            error
+    end;
+find(Key, KeyValues) ->
+    dict:find(Key, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value store.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to store request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec store(Key :: any(),
+            Value :: any(),
+            KeyValues :: key_values()) ->
+    NewKeyValues :: key_values().
+
+store(Key, Value, KeyValues)
+    when is_list(KeyValues) ->
+    lists:keystore(Key, 1, KeyValues, {Key, Value});
+store(Key, Value, KeyValues) ->
+    dict:store(Key, Value, KeyValues).
 

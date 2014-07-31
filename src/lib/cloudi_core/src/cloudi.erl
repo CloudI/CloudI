@@ -1350,7 +1350,7 @@ destination_refresh_lazy(#cloudi_context{
 
 -spec trans_id(Context :: context() |
                           cloudi_service:dispatcher()) ->
-    <<_:128>>.
+    trans_id().
 
 trans_id(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -1366,7 +1366,7 @@ trans_id(#cloudi_context{uuid_generator = UUID}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trans_id_age(TransId :: <<_:128>>) ->
+-spec trans_id_age(TransId :: trans_id()) ->
     non_neg_integer().
 
 trans_id_age(TransId)

@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-07-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Split functionality not related to usage of the Dispatcher in
+      the cloudi_service module into separate modules to make it easier for
+      cloudi_core to expand
+      (deprecated functions near the bottom of the cloudi_service module
+       have been moved to the following modules:
+       cloudi_environment, cloudi_service_name, cloudi_request,
+       cloudi_request_info, cloudi_key_value)
+
 2014-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove configuration arguments request_start and request_end from

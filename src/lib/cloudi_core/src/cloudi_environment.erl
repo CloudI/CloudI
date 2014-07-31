@@ -3,13 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Request==
-%%% Request format transform.
+%%% ==CloudI Runtime Environment==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,58 +43,61 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
+%%% @copyright 2014 Michael Truog
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_request).
+-module(cloudi_environment).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/2,
-         http_qs_parse/1]).
+-export([lookup/0,
+         transform/1,
+         transform/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%% Attempt to handle request conversions automatically,
-%% when dealing between internal CloudI services that want Erlang terms
-%% while external CloudI services need binary data.
-%% Normally this is avoided and the output is set by service configuration,
-%% but some older services do attempt to do conversions.
-%% Need to remove, refactor, or improve.
-
-new(Input, OutputType)
-    when is_binary(Input) ->
-    if
-        OutputType =:= external ->
-            Input;
-        OutputType =:= internal ->
-            cloudi_string:binary_to_term(Input)
-    end;
-new([I | _] = Input, internal)
-    when is_integer(I) ->
-    cloudi_string:list_to_term(Input);
-new(Input, internal) ->
-    Input.
-
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse HTTP Request query string data.===
+%% ===Get an environment variable lookup for cloudi_service:environment_transform().===
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict().
--else.
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict:dict(binary(), binary()).
--endif.
+-spec lookup() ->
+    cloudi_x_trie:cloudi_x_trie().
 
-http_qs_parse(Request) ->
-    cloudi_request_info:key_value_parse(Request).
+lookup() ->
+    cloudi_spawn:environment_lookup().
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Transform a string, substituting environment variable values from the lookup.===
+%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+%% [a-zA-Z0-9_] ASCII characters.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec transform(String :: string()) ->
+    string().
+
+transform(String) ->
+    Lookup = lookup(),
+    cloudi_spawn:environment_transform(String, Lookup).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Transform a string, substituting environment variable values from the lookup.===
+%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
+%% [a-zA-Z0-9_] ASCII characters.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec transform(String :: string(),
+                Lookup :: cloudi_x_trie:cloudi_x_trie()) ->
+    string().
+
+transform(String, Lookup) ->
+    cloudi_spawn:environment_transform(String, Lookup).
 

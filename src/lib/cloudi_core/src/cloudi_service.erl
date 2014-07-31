@@ -169,21 +169,25 @@
          destination_refresh_lazy/1,
          source_subscriptions/2,
          context_options/1,
+         trans_id/1,
+         % deprecated, moved to the cloudi_environment module
          environment_lookup/0,
          environment_transform/1,
          environment_transform/2,
-         % service request parameter helpers
+         % deprecated, moved to the cloudi_service_name module
          service_name_new/2,
          service_name_new/4,
          service_name_parse/2,
          service_name_parse_with_suffix/2,
+         % deprecated, moved to the cloudi_request module
          request_http_qs_parse/1,
+         % deprecated, moved to the cloudi_request_info module
          request_info_key_value_new/1,
          request_info_key_value_parse/1,
+         % deprecated, moved to the cloudi_key_value module
          key_value_erase/2,
          key_value_find/2,
          key_value_store/3,
-         trans_id/1,
          % functions to trigger edoc, until -callback works with edoc
          'Module:cloudi_service_init'/3,
          'Module:cloudi_service_handle_request'/11,
@@ -239,15 +243,8 @@
 -export_type([request_result/0]).
 
 % used for accessing RequestInfo data
--ifdef(ERLANG_OTP_VER_16).
--type key_values(Key, Value) :: list({Key, Value}) |
-                                dict().
--else.
--type key_values(Key, Value) :: list({Key, Value}) |
-                                dict:dict(Key, Value).
--endif.
--type key_values() :: key_values(binary() | string() | atom(),
-                                 binary() | string() | any()).
+-type key_values(Key, Value) :: cloudi_key_value:key_values(Key, Value).
+-type key_values() :: cloudi_key_value:key_values().
 -export_type([key_values/2,
               key_values/0]).
 
@@ -2264,10 +2261,22 @@ source_subscriptions(Dispatcher, Pid)
 context_options(Dispatcher) ->
     gen_server:call(Dispatcher, context_options, infinity).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a new transaction id.===
+%% The same data as used when sending service requests is used.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id(Dispatcher :: dispatcher()) ->
+    trans_id().
+
+trans_id(Dispatcher) ->
+    gen_server:call(Dispatcher, trans_id, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get an environment variable lookup for cloudi_service:environment_transform().===
+%% @deprecated Use {@link cloudi_environment:lookup/0} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2275,13 +2284,11 @@ context_options(Dispatcher) ->
     cloudi_x_trie:cloudi_x_trie().
 
 environment_lookup() ->
-    cloudi_spawn:environment_lookup().
+    cloudi_environment:lookup().
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Transform a string, substituting environment variable values from the lookup.===
-%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
-%% [a-zA-Z0-9_] ASCII characters.
+%% @deprecated Use {@link cloudi_environment:transform/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2289,14 +2296,11 @@ environment_lookup() ->
     string().
 
 environment_transform(String) ->
-    Lookup = environment_lookup(),
-    cloudi_spawn:environment_transform(String, Lookup).
+    cloudi_environment:transform(String).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Transform a string, substituting environment variable values from the lookup.===
-%% Use ${VARIABLE} or $VARIABLE syntax, where VARIABLE is a name with
-%% [a-zA-Z0-9_] ASCII characters.
+%% @deprecated Use {@link cloudi_environment:transform/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2305,13 +2309,11 @@ environment_transform(String) ->
     string().
 
 environment_transform(String, Lookup) ->
-    cloudi_spawn:environment_transform(String, Lookup).
+    cloudi_environment:transform(String, Lookup).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Transform a service name pattern with parameters into an exact service name.===
-%% The pattern input can contain consecutive * wildcard characters because
-%% they are only used for a template.
+%% @deprecated Use {@link cloudi_service_name:new/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2321,13 +2323,11 @@ environment_transform(String, Lookup) ->
     {error, parameters_ignored | parameter_missing}.
 
 service_name_new(Pattern, Parameters) ->
-    service_name_new_insert(Pattern, Parameters, true).
+    cloudi_service_name:new(Pattern, Parameters).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Transform a service name pattern with parameters into an exact service name.===
-%% The pattern input can contain consecutive * wildcard characters because
-%% they are only used for a template.
+%% @deprecated Use {@link cloudi_service_name:new/4} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2341,18 +2341,14 @@ service_name_new(Pattern, Parameters) ->
      {parameters_selected_ignored, list(pos_integer())} | 
      {parameters_selected_missing, pos_integer()}}.
 
-service_name_new(Pattern, Parameters, [],
-                 ParametersStrictMatching) ->
-    service_name_new_insert(Pattern, Parameters,
-                            ParametersStrictMatching);
 service_name_new(Pattern, Parameters, ParametersSelected,
                  ParametersStrictMatching) ->
-    service_name_new_select(Pattern, Parameters, ParametersSelected,
+    cloudi_service_name:new(Pattern, Parameters, ParametersSelected,
                             ParametersStrictMatching).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse a service name pattern to return parameters.===
+%% @deprecated Use {@link cloudi_service_name:parse/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2361,11 +2357,11 @@ service_name_new(Pattern, Parameters, ParametersSelected,
     list(string()) | error.
 
 service_name_parse(Name, Pattern) ->
-    cloudi_x_trie:pattern_parse(Pattern, Name).
+    cloudi_service_name:parse(Name, Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse a service name pattern and return the common suffix.===
+%% @deprecated Use {@link cloudi_service_name:parse_with_suffix/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2374,11 +2370,11 @@ service_name_parse(Name, Pattern) ->
     {list(string()), string()} | error.
 
 service_name_parse_with_suffix(Name, Pattern) ->
-    cloudi_x_trie:pattern_parse(Pattern, Name, with_suffix).
+    cloudi_service_name:parse_with_suffix(Name, Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse HTTP Request query string data.===
+%% @deprecated Use {@link cloudi_request:http_qs_parse/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2393,30 +2389,24 @@ service_name_parse_with_suffix(Name, Pattern) ->
 -endif.
 
 request_http_qs_parse(Request) ->
-    request_info_key_value_parse(Request).
+    cloudi_request:http_qs_parse(Request).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===New RequestInfo key/value data.===
-%% RequestInfo is meant to contain key/value pairs that is request
-%% meta-data.  Create the binary RequestInfo data with a list of pairs or
-%% a dict data structure.
+%% @deprecated Use {@link cloudi_request_info:key_value_new/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
--spec request_info_key_value_new(RequestInfo :: key_values()) ->
+-spec request_info_key_value_new(RequestInfo ::
+                                     cloudi_key_value:key_values()) ->
     Result :: binary().
 
-request_info_key_value_new([{_, _} | _] = RequestInfo) ->
-    binary_key_value_new_list(RequestInfo, []);
 request_info_key_value_new(RequestInfo) ->
-    binary_key_value_new_list(dict:to_list(RequestInfo), []).
+    cloudi_request_info:key_value_new(RequestInfo).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse RequestInfo key/value data.===
-%% RequestInfo is meant to contain key/value pairs that is request
-%% meta-data.
+%% @deprecated Use {@link cloudi_request_info:key_value_parse/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2430,94 +2420,49 @@ request_info_key_value_new(RequestInfo) ->
     Result :: dict:dict(any(), any()).
 -endif.
 
-request_info_key_value_parse(RequestInfo)
-    when is_list(RequestInfo) ->
-    % any() -> any()
-    lists:foldl(fun({K, V}, D) ->
-        dict:store(K, V, D)
-    end, dict:new(), RequestInfo);
-request_info_key_value_parse(RequestInfo)
-    when is_binary(RequestInfo) ->
-    % binary() -> binary()
-    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
-                                dict:new()).
+request_info_key_value_parse(RequestInfo) ->
+    cloudi_request_info:key_value_parse(RequestInfo).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value erase.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to erase request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:erase/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec key_value_erase(Key :: any(),
-                      KeyValues :: key_values()) ->
-    NewKeyValues :: key_values().
+                      KeyValues :: cloudi_key_value:key_values()) ->
+    NewKeyValues :: cloudi_key_value:key_values().
 
-key_value_erase(Key, KeyValues)
-    when is_list(KeyValues) ->
-    lists:keydelete(Key, 1, KeyValues);
 key_value_erase(Key, KeyValues) ->
-    dict:erase(Key, KeyValues).
+    cloudi_key_value:erase(Key, KeyValues).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value find.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to access the request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:find/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec key_value_find(Key :: any(),
-                     KeyValues :: key_values()) ->
+                     KeyValues :: cloudi_key_value:key_values()) ->
     {ok, Value :: any()} |
     error.
 
-key_value_find(Key, KeyValues)
-    when is_list(KeyValues) ->
-    case lists:keyfind(Key, 1, KeyValues) of
-        {Key, Value} ->
-            {ok, Value};
-        false ->
-            error
-    end;
 key_value_find(Key, KeyValues) ->
-    dict:find(Key, KeyValues).
+    cloudi_key_value:find(Key, KeyValues).
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value store.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to store request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:store/3} instead
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec key_value_store(Key :: any(),
                       Value :: any(),
-                      KeyValues :: key_values()) ->
-    NewKeyValues :: key_values().
+                      KeyValues :: cloudi_key_value:key_values()) ->
+    NewKeyValues :: cloudi_key_value:key_values().
 
-key_value_store(Key, Value, KeyValues)
-    when is_list(KeyValues) ->
-    lists:keystore(Key, 1, KeyValues, {Key, Value});
 key_value_store(Key, Value, KeyValues) ->
-    dict:store(Key, Value, KeyValues).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Return a new transaction id.===
-%% The same data as used when sending service requests is used.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec trans_id(Dispatcher :: dispatcher()) ->
-    <<_:128>>.
-
-trans_id(Dispatcher) ->
-    gen_server:call(Dispatcher, trans_id, infinity).
+    cloudi_key_value:store(Key, Value, KeyValues).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions
@@ -2619,122 +2564,4 @@ trans_id(Dispatcher) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-binary_key_value_new_list([], Result) ->
-    erlang:iolist_to_binary(lists:reverse(Result));
-binary_key_value_new_list([{K, V} | L], Result) ->
-    NewK = if
-        is_binary(K) ->
-            K;
-        is_list(K), is_integer(hd(K)) ->
-            erlang:list_to_binary(K);
-        is_atom(K) ->
-            erlang:atom_to_binary(K, utf8)
-    end,
-    NewV = if
-        is_binary(V) ->
-            V;
-        is_list(V), is_integer(hd(V)) ->
-            erlang:list_to_binary(V);
-        is_atom(V) ->
-            erlang:atom_to_binary(V, utf8);
-        true ->
-            cloudi_string:term_to_binary(V)
-    end,
-    binary_key_value_new_list(L, [[NewK, 0, NewV, 0] | Result]).
-
-binary_key_value_parse_list([<<>>], Lookup) ->
-    Lookup;
-binary_key_value_parse_list([K, V | L], Lookup) ->
-    case dict:find(K, Lookup) of
-        {ok, [_ | _] = ListV} ->
-            binary_key_value_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
-        {ok, V0} ->
-            binary_key_value_parse_list(L, dict:store(K, [V0, V], Lookup));
-        error ->
-            binary_key_value_parse_list(L, dict:store(K, V, Lookup))
-    end.
-
-service_name_new_strip([], NameOut) ->
-    {ok, lists:reverse(NameOut)};
-service_name_new_strip([$* | PatternIn], NameOut) ->
-    service_name_new_strip(PatternIn, NameOut);
-service_name_new_strip([C | PatternIn], NameOut) ->
-    service_name_new_strip(PatternIn, [C | NameOut]).
-
-service_name_new_insert([], NameOut, [], _) ->
-    {ok, lists:reverse(NameOut)};
-service_name_new_insert([], NameOut, [_ | _],
-                        ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_ignored};
-        true ->
-            {ok, lists:reverse(NameOut)}
-    end;
-service_name_new_insert([$* | PatternIn], NameOut, [],
-                        ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameter_missing};
-        true ->
-            service_name_new_strip(PatternIn, NameOut)
-    end;
-service_name_new_insert([$* | PatternIn], NameOut, [Parameter | Parameters],
-                        ParametersStrictMatching) ->
-    service_name_new_insert(PatternIn, lists:reverse(Parameter) ++ NameOut,
-                            Parameters, ParametersStrictMatching);
-service_name_new_insert([C | PatternIn], NameOut, Parameters,
-                        ParametersStrictMatching) ->
-    service_name_new_insert(PatternIn, [C | NameOut], Parameters,
-                            ParametersStrictMatching).
-
-service_name_new_insert(PatternIn, Parameters, ParametersStrictMatching) ->
-    service_name_new_insert(PatternIn, [], Parameters,
-                            ParametersStrictMatching).
-
-service_name_new_select([], NameOut, _, ParametersSelected,
-                        ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
-            {error, {parameters_selected_ignored, ParametersSelected}};
-        true ->
-            {ok, lists:reverse(NameOut)}
-    end;
-service_name_new_select([$* | PatternIn], NameOut, _, [],
-                        ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_selected_empty};
-        true ->
-            service_name_new_strip(PatternIn, NameOut)
-    end;
-service_name_new_select([$* | PatternIn], NameOut, Parameters,
-                        [I | ParametersSelected],
-                        ParametersStrictMatching) ->
-    try lists:nth(I, Parameters) of
-        Parameter ->
-            service_name_new_select(PatternIn,
-                                    lists:reverse(Parameter) ++ NameOut,
-                                    Parameters, ParametersSelected,
-                                    ParametersStrictMatching)
-    catch
-        error:_ ->
-            if
-                ParametersStrictMatching =:= true ->
-                    {error, {parameters_selected_missing, I}};
-                true ->
-                    service_name_new_strip(PatternIn, NameOut)
-            end
-    end;
-service_name_new_select([C | PatternIn], NameOut, Parameters,
-                        ParametersSelected, ParametersStrictMatching) ->
-    service_name_new_select(PatternIn, [C | NameOut], Parameters,
-                            ParametersSelected, ParametersStrictMatching).
-
-service_name_new_select(PatternIn, Parameters,
-                        ParametersSelected, ParametersStrictMatching) ->
-    service_name_new_select(PatternIn, [], Parameters,
-                            ParametersSelected, ParametersStrictMatching).
-
 
