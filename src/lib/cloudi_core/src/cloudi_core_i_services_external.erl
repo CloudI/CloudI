@@ -49,7 +49,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_external).
+-module(cloudi_core_i_services_external).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_fsm).
@@ -66,9 +66,9 @@
 -export(['CONNECT'/2,
          'HANDLE'/2]).
 
--include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 % message type enumeration
 -define(MESSAGE_INIT,            1).
@@ -83,7 +83,7 @@
 
 -record(state,
     {
-        % common elements for cloudi_services_common.hrl
+        % common elements for cloudi_core_i_services_common.hrl
         dispatcher,                    % self()
         send_timeouts = dict:new(),    % tracking for send timeouts
         send_timeout_monitors = dict:new(),  % send timeouts destinations
@@ -126,7 +126,7 @@
         options                        % #config_service_options{}
     }).
 
--include("cloudi_services_common.hrl").
+-include("cloudi_core_i_services_common.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -268,7 +268,7 @@ init([Protocol, SocketPath,
                      count_process_dynamic =
                          CountProcessDynamic}} = State) ->
     CountProcessDynamicFormat =
-        cloudi_rate_based_configuration:
+        cloudi_core_i_rate_based_configuration:
         count_process_dynamic_format(CountProcessDynamic),
     {ProcessCountMax, ProcessCountMin} = if
         CountProcessDynamicFormat =:= false ->
@@ -323,7 +323,7 @@ init([Protocol, SocketPath,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
-    case cloudi_rate_based_configuration:
+    case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             ok = cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
@@ -339,7 +339,7 @@ init([Protocol, SocketPath,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
-    case cloudi_rate_based_configuration:
+    case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             case cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
@@ -713,8 +713,8 @@ handle_info({inet_async, undefined, undefined, {ok, FileDescriptor}}, StateName,
                    socket_options = SocketOptions} = State) ->
     {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
     {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
-    ok = cloudi_socket:setsockopts(FileDescriptor,
-                                   ReceiveBufferSize, SendBufferSize),
+    ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
+                                          ReceiveBufferSize, SendBufferSize),
     {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
     ok = inet:setopts(Socket, [{active, once}]),
     {next_state, StateName, State#state{socket = Socket}};
@@ -1044,7 +1044,7 @@ handle_info('cloudi_count_process_dynamic_rate', StateName,
                    options = #config_service_options{
                        count_process_dynamic =
                            CountProcessDynamic} = ConfigOptions} = State) ->
-    NewCountProcessDynamic = cloudi_rate_based_configuration:
+    NewCountProcessDynamic = cloudi_core_i_rate_based_configuration:
                              count_process_dynamic_reinit(Dispatcher,
                                                           CountProcessDynamic),
     {next_state, StateName,
@@ -1063,7 +1063,7 @@ handle_info('cloudi_count_process_dynamic_terminate', StateName,
                        scope = Scope} = ConfigOptions} = State) ->
     cloudi_x_cpg:leave(Scope, Dispatcher, infinity),
     NewCountProcessDynamic =
-        cloudi_rate_based_configuration:
+        cloudi_core_i_rate_based_configuration:
         count_process_dynamic_terminate_set(Dispatcher, CountProcessDynamic),
     {next_state, StateName,
      State#state{options = ConfigOptions#config_service_options{
@@ -1178,7 +1178,7 @@ format_status(_Opt,
         true ->
             cloudi_x_trie:to_list(DestAllow)
     end,
-    NewConfigOptions = cloudi_configuration:
+    NewConfigOptions = cloudi_core_i_configuration:
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"State",
@@ -1655,7 +1655,7 @@ socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
                      {nodelay, true}, {delay_send, false}, {keepalive, false},
                      {send_timeout, 5000}, {send_timeout_close, true}],
     ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
-    ok = cloudi_socket:local(ThreadSocketPath),
+    ok = cloudi_core_i_socket:local(ThreadSocketPath),
     {ok, #state{protocol = local,
                 port = ThreadIndex,
                 socket_path = ThreadSocketPath,
@@ -1680,7 +1680,7 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % NewSocket is internally marked as prebound (in ERTS) so that Erlang
     % will not attempt to reconnect or make other assumptions about the
     % socket file descriptor
-    ok = cloudi_socket:set(FileDescriptorInternal, FileDescriptor),
+    ok = cloudi_core_i_socket:set(FileDescriptorInternal, FileDescriptor),
     catch gen_tcp:close(Client),
     % do not close Socket!
     {ok, NewSocket}.

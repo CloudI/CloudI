@@ -47,7 +47,7 @@
 %%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_logger).
+-module(cloudi_core_i_logger).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -64,8 +64,8 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("cloudi_configuration.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 -include_lib("kernel/include/file.hrl").
 
 %% logging macros used only within this module
@@ -735,7 +735,7 @@ log_level_allowed(_, _) ->
 
 -define(INTERFACE_MODULE_HEADER,
     "
-    -module(cloudi_logger_interface).
+    -module(cloudi_core_i_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
     -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
              fatal_apply/2, error_apply/2, warn_apply/2,
@@ -769,7 +769,7 @@ interface(fatal, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(_, _, _, _) -> ok.
     warn(_, _, _, _) -> ok.
     info(_, _, _, _) -> ok.
@@ -795,9 +795,9 @@ interface(error, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(_, _, _, _) -> ok.
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
@@ -824,11 +824,11 @@ interface(warn, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
@@ -856,13 +856,13 @@ interface(info, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
@@ -892,15 +892,15 @@ interface(debug, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(Module, Line, Format, Arguments) ->
-        cloudi_logger:debug(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
@@ -931,17 +931,17 @@ interface(trace, Mode, Process) ->
     ?INTERFACE_MODULE_HEADER
     "
     fatal(Module, Line, Format, Arguments) ->
-        cloudi_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
     error(Module, Line, Format, Arguments) ->
-        cloudi_logger:error(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
     warn(Module, Line, Format, Arguments) ->
-        cloudi_logger:warn(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
     info(Module, Line, Format, Arguments) ->
-        cloudi_logger:info(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(Module, Line, Format, Arguments) ->
-        cloudi_logger:debug(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(Module, Line, Format, Arguments) ->
-        cloudi_logger:trace(~p, ~p, Module, Line, Format, Arguments).
+        cloudi_core_i_logger:trace(~p, ~p, Module, Line, Format, Arguments).
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -976,12 +976,14 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
                                                                       Mode,
                                                                       Process)),
     % make sure no old code exists
-    code:purge(cloudi_logger_interface),
+    code:purge(cloudi_core_i_logger_interface),
     % load the new current code
-    case code:load_binary(Module, "cloudi_logger_interface.erl", Binary) of
+    case code:load_binary(Module,
+                          "cloudi_core_i_logger_interface.erl",
+                          Binary) of
         {module, Module} ->
             % remove the old code
-            code:soft_purge(cloudi_logger_interface),
+            code:soft_purge(cloudi_core_i_logger_interface),
             {ok, Binary};
         {error, _} = Error ->
             Error

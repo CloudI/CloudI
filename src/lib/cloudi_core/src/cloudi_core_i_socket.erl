@@ -48,7 +48,7 @@
 %%% @version 1.2.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_socket).
+-module(cloudi_core_i_socket).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -56,7 +56,7 @@
          set/2,
          setsockopts/3]).
 
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -on_load(init/0).
 
@@ -69,7 +69,7 @@ init() ->
     ok.
 -else.
 init() ->
-    case cloudi_core_app:test() of
+    case cloudi_core_i_app:test() of
         true ->
             ok;
         false ->

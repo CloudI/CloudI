@@ -1,4 +1,4 @@
-INTERFACE_HEADER=$(srcdir)/../src/cloudi_os_spawn.hrl
+INTERFACE_HEADER=$(srcdir)/../src/cloudi_core_i_os_spawn.hrl
 CURRENT_VERSION=vsn_1
 
 instdir=$(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv

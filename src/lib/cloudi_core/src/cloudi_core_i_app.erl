@@ -47,7 +47,7 @@
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_app).
+-module(cloudi_core_i_app).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(application).
@@ -59,7 +59,7 @@
 -export([start/2,
          stop/1]).
 
--include("cloudi_configuration.hrl").
+-include("cloudi_core_i_configuration.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -112,9 +112,9 @@ start(_, _) ->
              {nodes, []},
              {logging, [{file, "cloudi.log"}]}]
     end,
-    case cloudi_configuration:load(PathOrData) of
+    case cloudi_core_i_configuration:load(PathOrData) of
         {ok, Config} ->
-            cloudi_core_sup:start_link(Config);
+            cloudi_core_i_sup:start_link(Config);
         {error, _} = Error ->
             Error
     end.

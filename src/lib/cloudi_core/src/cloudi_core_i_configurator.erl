@@ -48,7 +48,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_configurator).
+-module(cloudi_core_i_configurator).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -78,9 +78,9 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("cloudi_configuration.hrl").
--include("cloudi_constants.hrl").
 -include("cloudi_logger.hrl").
+-include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -type error_reason_service_start() ::
     {service_internal_module_invalid |
@@ -203,7 +203,8 @@ service_start(#config_service_internal{
             end,
             if
                 Reload =:= true ->
-                    ok = cloudi_services_internal_reload:service_add(Module);
+                    ok = cloudi_core_i_services_internal_reload:
+                         service_add(Module);
                 Reload =:= false ->
                     ok
             end,
@@ -281,7 +282,7 @@ handle_call(configure, _, State) ->
 
 handle_call({acl_add, L, _}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_configuration:acl_add(L, Config) of
+    case cloudi_core_i_configuration:acl_add(L, Config) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -290,7 +291,7 @@ handle_call({acl_add, L, _}, _,
 
 handle_call({acl_remove, L, _}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_configuration:acl_remove(L, Config) of
+    case cloudi_core_i_configuration:acl_remove(L, Config) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -298,7 +299,7 @@ handle_call({acl_remove, L, _}, _,
     end;
 
 handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
-    case cloudi_services_monitor:pids(ServiceId, Timeout) of
+    case cloudi_core_i_services_monitor:pids(ServiceId, Timeout) of
         {ok, PidList} ->
             L = [sets:from_list(cloudi_x_cpg:which_groups(Pid, Timeout))
                  || Pid <- PidList],
@@ -309,7 +310,7 @@ handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
 
 handle_call({services_add, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_configuration:services_add(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_add(L, Config, Timeout) of
         {ok, IDs, NewConfig} ->
             {reply, {ok, IDs}, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -318,7 +319,7 @@ handle_call({services_add, L, Timeout}, _,
 
 handle_call({services_remove, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_configuration:services_remove(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_remove(L, Config, Timeout) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -327,7 +328,7 @@ handle_call({services_remove, L, Timeout}, _,
 
 handle_call({services_restart, L, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_configuration:services_restart(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_restart(L, Config, Timeout) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -338,12 +339,13 @@ handle_call({services_search, ServiceName, Timeout}, _,
             #state{configuration = Config} = State) ->
     case cloudi_x_cpg:get_local_members(ServiceName, Timeout) of
         {ok, _, PidList} ->
-            case cloudi_services_monitor:search(PidList, Timeout) of
+            case cloudi_core_i_services_monitor:search(PidList, Timeout) of
                 {ok, []} ->
                     {reply, {ok, []}, State};
                 {ok, L} ->
                     {reply, 
-                     {ok, cloudi_configuration:services_search(L, Config)},
+                     {ok,
+                      cloudi_core_i_configuration:services_search(L, Config)},
                      State};
                 {error, _} = Error ->
                     {reply, Error, State}
@@ -354,7 +356,7 @@ handle_call({services_search, ServiceName, Timeout}, _,
 
 handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
-    {reply, {ok, cloudi_configuration:services(Config)}, State};
+    {reply, {ok, cloudi_core_i_configuration:services(Config)}, State};
 
 handle_call({nodes_add, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
@@ -702,16 +704,18 @@ service_start_internal(IndexProcess,
                            max_t = MaxT,
                            uuid = ID} = Service, GroupLeader,
                        CountProcess, Timeout) ->
-    case cloudi_services_monitor:monitor(cloudi_spawn, start_internal,
-                                         [GroupLeader,
-                                          Module, Args, TimeoutInit,
-                                          Prefix, TimeoutAsync, TimeoutSync,
-                                          DestRefresh, DestListDeny,
-                                          DestListAllow, Options, ID],
-                                         IndexProcess, CountProcess, 1,
-                                         MaxR, MaxT, ID, Timeout) of
+    case cloudi_core_i_services_monitor:
+         monitor(cloudi_core_i_spawn, start_internal,
+                 [GroupLeader,
+                  Module, Args, TimeoutInit,
+                  Prefix, TimeoutAsync, TimeoutSync,
+                  DestRefresh, DestListDeny,
+                  DestListAllow, Options, ID],
+                 IndexProcess, CountProcess, 1,
+                 MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
+            {ID, ServiceConfig} = cloudi_core_i_configuration:
+                                  service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
             service_start_internal(IndexProcess + 1, Service, GroupLeader,
@@ -741,18 +745,19 @@ service_start_external(IndexProcess,
                            max_t = MaxT,
                            uuid = ID} = Service,
                        CountThread, CountProcess, Timeout) ->
-    case cloudi_services_monitor:monitor(cloudi_spawn, start_external,
-                                         [CountThread,
-                                          FilePath, Args, Env,
-                                          Protocol, BufferSize, TimeoutInit,
-                                          Prefix, TimeoutAsync, TimeoutSync,
-                                          DestRefresh, DestListDeny,
-                                          DestListAllow, Options, ID],
-                                         IndexProcess, CountProcess,
-                                         CountThread,
-                                         MaxR, MaxT, ID, Timeout) of
+    case cloudi_core_i_services_monitor:
+         monitor(cloudi_core_i_spawn, start_external,
+                 [CountThread,
+                  FilePath, Args, Env,
+                  Protocol, BufferSize, TimeoutInit,
+                  Prefix, TimeoutAsync, TimeoutSync,
+                  DestRefresh, DestListDeny,
+                  DestListAllow, Options, ID],
+                 IndexProcess, CountProcess, CountThread,
+                 MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            {ID, ServiceConfig} = cloudi_configuration:service_format(Service),
+            {ID, ServiceConfig} = cloudi_core_i_configuration:
+                                  service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
             service_start_external(IndexProcess + 1, Service,
@@ -766,11 +771,12 @@ service_stop_internal(#config_service_internal{
                           options = #config_service_options{
                               reload = Reload},
                           uuid = ID} = Service, Remove, Timeout) ->
-    case cloudi_services_monitor:shutdown(ID, Timeout) of
+    case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
             if
                 Reload =:= true ->
-                    ok = cloudi_services_internal_reload:service_remove(Module);
+                    ok = cloudi_core_i_services_internal_reload:
+                         service_remove(Module);
                 Reload =:= false ->
                     ok
             end,
@@ -804,7 +810,7 @@ service_stop_internal(#config_service_internal{
 
 service_stop_external(#config_service_external{
                           uuid = ID}, Timeout) ->
-    case cloudi_services_monitor:shutdown(ID, Timeout) of
+    case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
             ?LOG_INFO("Service pids ~p stopped~n ~p",
                       [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
@@ -815,7 +821,7 @@ service_stop_external(#config_service_external{
 
 service_restart_internal(#config_service_internal{
                              uuid = ID}, Timeout) ->
-    case cloudi_services_monitor:restart(ID, Timeout) of
+    case cloudi_core_i_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -824,7 +830,7 @@ service_restart_internal(#config_service_internal{
 
 service_restart_external(#config_service_external{
                              uuid = ID}, Timeout) ->
-    case cloudi_services_monitor:restart(ID, Timeout) of
+    case cloudi_core_i_services_monitor:restart(ID, Timeout) of
         ok ->
             ok;
         {error, Reason} ->
@@ -868,12 +874,12 @@ nodes_call_remote({F, L, local, Timeout}, Connect) ->
 
 nodes_call({F, L, _, Timeout} = Request,
            #state{configuration = Config} = State) ->
-    case cloudi_configuration:F(L, Config) of
+    case cloudi_core_i_configuration:F(L, Config) of
         {ok, Config} ->
             {reply, ok, State};
         {ok, #config{nodes = #config_nodes{connect = Connect}} = NewConfig} ->
             Result = nodes_call_remote(Request, Connect),
-            case cloudi_nodes:reconfigure(NewConfig, Timeout) of
+            case cloudi_core_i_nodes:reconfigure(NewConfig, Timeout) of
                 ok ->
                     {reply, Result, State#state{configuration = NewConfig}};
                 {error, _} = Error ->

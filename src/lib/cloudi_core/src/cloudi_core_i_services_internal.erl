@@ -49,7 +49,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_internal).
+-module(cloudi_core_i_services_internal).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -66,17 +66,17 @@
 -export([duo_mode_loop_init/1,
          duo_mode_loop/1]).
 
-%% cloudi_services_internal callbacks
+%% cloudi_core_i_services_internal callbacks
 -export([handle_module_request_loop_hibernate/2,
          handle_module_info_loop_hibernate/2]).
 
--include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -record(state,
     {
-        % common elements for cloudi_services_common.hrl
+        % common elements for cloudi_core_i_services_common.hrl
         dispatcher,                    % self()
         send_timeouts = dict:new(),    % tracking for send timeouts
         send_timeout_monitors = dict:new(),  % send timeouts destinations
@@ -127,7 +127,7 @@
         options                        % #config_service_options{}
     }).
 
--include("cloudi_services_common.hrl").
+-include("cloudi_core_i_services_common.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -245,7 +245,8 @@ init([ProcessIndex, ProcessCount, GroupLeader,
                    dest_allow = DestAllow,
                    options = NewConfigOptions},
     ReceiverPid ! {'cloudi_service_init_execute', Args, Timeout,
-                   cloudi_services_internal_init:process_dictionary_get(),
+                   cloudi_core_i_services_internal_init:
+                   process_dictionary_get(),
                    State}, % no process dictionary or state modifications below
     destination_refresh_first(DestRefresh, NewConfigOptions),
     {ok, State}.
@@ -266,7 +267,7 @@ handle_call(process_count_max, _,
         CountProcessDynamic =:= false ->
             hibernate_check({reply, ProcessCount, State});
         true ->
-            Format = cloudi_rate_based_configuration:
+            Format = cloudi_core_i_rate_based_configuration:
                      count_process_dynamic_format(CountProcessDynamic),
             {_, ProcessCountMax} = lists:keyfind(count_max, 1, Format),
             hibernate_check({reply, ProcessCountMax, State})
@@ -281,7 +282,7 @@ handle_call(process_count_min, _,
             hibernate_check({reply, ProcessCount, State});
         true ->
             CountProcessDynamicFormat =
-                cloudi_rate_based_configuration:
+                cloudi_core_i_rate_based_configuration:
                 count_process_dynamic_format(CountProcessDynamic),
             {_, ProcessCountMin} = lists:keyfind(count_min, 1,
                                                  CountProcessDynamicFormat),
@@ -302,7 +303,7 @@ handle_call({'subscribe', Pattern}, _,
                    options = #config_service_options{
                        count_process_dynamic = CountProcessDynamic,
                        scope = Scope}} = State) ->
-    Result = case cloudi_rate_based_configuration:
+    Result = case cloudi_core_i_rate_based_configuration:
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
@@ -318,7 +319,7 @@ handle_call({'unsubscribe', Pattern}, _,
                    options = #config_service_options{
                        count_process_dynamic = CountProcessDynamic,
                        scope = Scope}} = State) ->
-    Result = case cloudi_rate_based_configuration:
+    Result = case cloudi_core_i_rate_based_configuration:
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
@@ -726,14 +727,15 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                    module = Module,
                    prefix = Prefix,
                    duo_mode_pid = undefined} = State) ->
-    {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(
-        Timeout, ProcessDictionary, State),
+    {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
+                            start_link(Timeout, ProcessDictionary, State),
     Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
     {NewProcessDictionary,
      #state{options = ConfigOptions} = NextState} =
-        cloudi_services_internal_init:stop_link(DispatcherProxy),
-    ok = cloudi_services_internal_init:process_dictionary_set(
-        NewProcessDictionary),
+        cloudi_core_i_services_internal_init:
+        stop_link(DispatcherProxy),
+    ok = cloudi_core_i_services_internal_init:
+         process_dictionary_set(NewProcessDictionary),
     hibernate_check(case Result of
         {ok, ServiceState} ->
             NewConfigOptions = check_init_receive(ConfigOptions),
@@ -761,8 +763,8 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
 handle_info({'cloudi_service_init_state', NewProcessDictionary, NewState},
             #state{duo_mode_pid = DuoModePid}) ->
     true = is_pid(DuoModePid),
-    ok = cloudi_services_internal_init:process_dictionary_set(
-        NewProcessDictionary),
+    ok = cloudi_core_i_services_internal_init:
+         process_dictionary_set(NewProcessDictionary),
     erlang:process_flag(trap_exit, true),
     hibernate_check({noreply, NewState});
 
@@ -1362,7 +1364,7 @@ handle_info('cloudi_hibernate_rate',
                    info_pid = InfoPid,
                    options = #config_service_options{
                        hibernate = Hibernate} = ConfigOptions} = State) ->
-    {Value, NewHibernate} = cloudi_rate_based_configuration:
+    {Value, NewHibernate} = cloudi_core_i_rate_based_configuration:
                             hibernate_reinit(Hibernate),
     if
         is_pid(RequestPid) ->
@@ -1397,7 +1399,7 @@ handle_info('cloudi_count_process_dynamic_rate',
                    options = #config_service_options{
                        count_process_dynamic =
                            CountProcessDynamic} = ConfigOptions} = State) ->
-    NewCountProcessDynamic = cloudi_rate_based_configuration:
+    NewCountProcessDynamic = cloudi_core_i_rate_based_configuration:
                              count_process_dynamic_reinit(Dispatcher,
                                                           CountProcessDynamic),
     hibernate_check({noreply,
@@ -1416,7 +1418,7 @@ handle_info('cloudi_count_process_dynamic_terminate',
                        scope = Scope} = ConfigOptions} = State) ->
     cloudi_x_cpg:leave(Scope, ReceiverPid, infinity),
     NewCountProcessDynamic =
-        cloudi_rate_based_configuration:
+        cloudi_core_i_rate_based_configuration:
         count_process_dynamic_terminate_set(ReceiverPid, CountProcessDynamic),
     hibernate_check({noreply,
                      State#state{
@@ -1481,7 +1483,7 @@ terminate(Reason,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}}) ->
-    cloudi_services_monitor:terminate_kill(Dispatcher),
+    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, NewServiceState} = aspects_terminate(Aspects,
                                               Reason, ServiceState),
     Module:cloudi_service_terminate(Reason, NewServiceState),
@@ -1545,7 +1547,7 @@ format_status(_Opt,
         true ->
             cloudi_x_trie:to_list(DestAllow)
     end,
-    NewConfigOptions = cloudi_configuration:
+    NewConfigOptions = cloudi_core_i_configuration:
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"State",
@@ -2546,7 +2548,8 @@ hibernate_check({reply, Reply,
                  #state{options = #config_service_options{
                             hibernate = Hibernate}} = State})
     when is_tuple(Hibernate) ->
-    case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+    case cloudi_core_i_rate_based_configuration:
+         hibernate_check(Hibernate) of
         false ->
             {reply, Reply, State};
         true ->
@@ -2557,7 +2560,8 @@ hibernate_check({noreply,
                  #state{options = #config_service_options{
                             hibernate = Hibernate}} = State})
     when is_tuple(Hibernate) ->
-    case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+    case cloudi_core_i_rate_based_configuration:
+         hibernate_check(Hibernate) of
         false ->
             {noreply, State};
         true ->
@@ -2574,7 +2578,8 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
                                        Hibernate}, ResultPid) ->
     if
         OldRequestPid =:= undefined ->
-            case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+            case cloudi_core_i_rate_based_configuration:
+                 hibernate_check(Hibernate) of
                 false ->
                     erlang:spawn_opt(fun() ->
                         handle_module_request_loop_normal(RequestPidUses,
@@ -2689,7 +2694,8 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
                                     Hibernate}, ResultPid) ->
     if
         OldInfoPid =:= undefined ->
-            case cloudi_rate_based_configuration:hibernate_check(Hibernate) of
+            case cloudi_core_i_rate_based_configuration:
+                 hibernate_check(Hibernate) of
                 false ->
                     erlang:spawn_opt(fun() ->
                         handle_module_info_loop_normal(InfoPidUses,
@@ -2784,8 +2790,10 @@ duo_mode_loop_init(#state_duo{module = Module,
         {'cloudi_service_init_execute', Args, Timeout,
          DispatcherProcessDictionary,
          #state{prefix = Prefix} = DispatcherState} ->
-            {ok, DispatcherProxy} = cloudi_services_internal_init:start_link(
-                Timeout, DispatcherProcessDictionary, DispatcherState),
+            {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
+                                    start_link(Timeout,
+                                               DispatcherProcessDictionary,
+                                               DispatcherState),
             Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
             {NewDispatcherProcessDictionary,
              #state{recv_timeouts = RecvTimeouts,
@@ -2793,7 +2801,8 @@ duo_mode_loop_init(#state_duo{module = Module,
                     queued = Queued,
                     queued_info = QueuedInfo,
                     options = ConfigOptions} = NextDispatcherState} =
-                cloudi_services_internal_init:stop_link(DispatcherProxy),
+                cloudi_core_i_services_internal_init:
+                stop_link(DispatcherProxy),
             case Result of
                 {ok, ServiceState} ->
                     NewConfigOptions = check_init_receive(ConfigOptions),
@@ -2822,7 +2831,7 @@ duo_mode_loop_init(#state_duo{module = Module,
                             Dispatcher ! {'cloudi_service_init_state',
                                           NewDispatcherProcessDictionary,
                                           NewDispatcherState},
-                            case cloudi_rate_based_configuration:
+                            case cloudi_core_i_rate_based_configuration:
                                  hibernate_check(Hibernate) of
                                 false ->
                                     duo_mode_loop(
@@ -2854,7 +2863,7 @@ duo_mode_loop(#state_duo{} = State) ->
                     duo_mode_loop_terminate(Reason, ServiceState, NewState);
                 {noreply, #state_duo{options = #config_service_options{
                                          hibernate = Hibernate}} = NewState} ->
-                    case cloudi_rate_based_configuration:
+                    case cloudi_core_i_rate_based_configuration:
                          hibernate_check(Hibernate) of
                         false ->
                             duo_mode_loop(NewState);
@@ -2870,7 +2879,7 @@ duo_mode_loop_terminate(Reason, ServiceState,
                                    module = Module,
                                    options = #config_service_options{
                                        aspects_terminate_before = Aspects}}) ->
-    cloudi_services_monitor:terminate_kill(DuoModePid),
+    cloudi_core_i_services_monitor:terminate_kill(DuoModePid),
     {ok, NewServiceState} = aspects_terminate(Aspects,
                                               Reason, ServiceState),
     Module:cloudi_service_terminate(Reason, NewServiceState),
@@ -3062,7 +3071,7 @@ duo_handle_info('cloudi_hibernate_rate',
                            options = #config_service_options{
                                hibernate = Hibernate} = ConfigOptions
                            } = State) ->
-    {Value, NewHibernate} = cloudi_rate_based_configuration:
+    {Value, NewHibernate} = cloudi_core_i_rate_based_configuration:
                             hibernate_reinit(Hibernate),
     Dispatcher ! {'cloudi_hibernate', Value},
     if
@@ -3081,7 +3090,7 @@ duo_handle_info('cloudi_count_process_dynamic_rate',
                                count_process_dynamic =
                                    CountProcessDynamic} = ConfigOptions
                            } = State) ->
-    NewCountProcessDynamic = cloudi_rate_based_configuration:
+    NewCountProcessDynamic = cloudi_core_i_rate_based_configuration:
                              count_process_dynamic_reinit(Dispatcher,
                                                           CountProcessDynamic),
     {noreply,

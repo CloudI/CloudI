@@ -69,7 +69,7 @@
     cloudi_x_trie:cloudi_x_trie().
 
 lookup() ->
-    cloudi_spawn:environment_lookup().
+    cloudi_core_i_spawn:environment_lookup().
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -84,7 +84,7 @@ lookup() ->
 
 transform(String) ->
     Lookup = lookup(),
-    cloudi_spawn:environment_transform(String, Lookup).
+    cloudi_core_i_spawn:environment_transform(String, Lookup).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -99,5 +99,5 @@ transform(String) ->
     string().
 
 transform(String, Lookup) ->
-    cloudi_spawn:environment_transform(String, Lookup).
+    cloudi_core_i_spawn:environment_transform(String, Lookup).
 

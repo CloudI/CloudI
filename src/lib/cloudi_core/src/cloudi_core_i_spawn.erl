@@ -47,7 +47,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_spawn).
+-module(cloudi_core_i_spawn).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -57,11 +57,11 @@
          start_internal/14,
          start_external/17]).
 
--include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
+-include("cloudi_core_i_configuration.hrl").
 
--define(CREATE_INTERNAL, cloudi_services_internal_sup:create_internal).
--define(CREATE_EXTERNAL, cloudi_services_external_sup:create_external).
+-define(CREATE_INTERNAL, cloudi_core_i_services_internal_sup:create_internal).
+-define(CREATE_EXTERNAL, cloudi_core_i_services_external_sup:create_external).
 
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
@@ -203,7 +203,8 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 DestDeny, DestAllow,
                                                 ConfigOptions) of
                         {ok, Pids, Ports} ->
-                            case cloudi_pool:get(cloudi_os_spawn) of
+                            case cloudi_core_i_pool:
+                                 get(cloudi_core_i_os_spawn) of
                                 SpawnProcess when is_pid(SpawnProcess) ->
                                     SpawnProtocol = if
                                         Protocol =:= tcp ->
@@ -294,16 +295,16 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath, Pids, Ports,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
-    SpawnEnvironment =  environment_parse(Environment, ThreadsPerProcess,
-                                          Protocol, BufferSize,
-                                          EnvironmentLookup),
-    case cloudi_os_spawn:spawn(SpawnProcess,
-                               SpawnProtocol,
-                               string_terminate(SocketPath),
-                               Ports,
-                               string_terminate(Filename),
-                               string_terminate(Arguments),
-                               SpawnEnvironment) of
+    SpawnEnvironment = environment_parse(Environment, ThreadsPerProcess,
+                                         Protocol, BufferSize,
+                                         EnvironmentLookup),
+    case cloudi_core_i_os_spawn:spawn(SpawnProcess,
+                                      SpawnProtocol,
+                                      string_terminate(SocketPath),
+                                      Ports,
+                                      string_terminate(Filename),
+                                      string_terminate(Arguments),
+                                      SpawnEnvironment) of
         {ok, OsPid} ->
             ?LOG_INFO("OS pid ~p spawned ~p~n  ~p",
                       [OsPid, Pids, CommandLine]),

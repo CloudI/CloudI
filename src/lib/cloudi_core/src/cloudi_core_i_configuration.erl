@@ -47,7 +47,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_configuration).
+-module(cloudi_core_i_configuration).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -66,10 +66,10 @@
          nodes_remove/2,
          nodes_set/2]).
 
--include("cloudi_configuration.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_service_api.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -type error_reason_acl_add_configuration() ::
     {acl_invalid |
@@ -178,13 +178,13 @@
     error_reason_acl_remove_configuration().
 -type error_reason_services_add() ::
     error_reason_services_add_configuration() |
-    cloudi_configurator:error_reason_service_start().
+    cloudi_core_i_configurator:error_reason_service_start().
 -type error_reason_services_remove() ::
     error_reason_services_remove_configuration() |
-    cloudi_configurator:error_reason_service_stop().
+    cloudi_core_i_configurator:error_reason_service_stop().
 -type error_reason_services_restart() ::
     error_reason_services_restart_configuration() |
-    cloudi_configurator:error_reason_service_restart().
+    cloudi_core_i_configurator:error_reason_service_restart().
 -type error_reason_nodes_add() ::
     error_reason_nodes_add_configuration().
 -type error_reason_nodes_remove() ::
@@ -793,7 +793,7 @@ services_add_service(NextServices, Timeout) ->
 services_add_service([], Added, _) ->
     {ok, lists:reverse(Added)};
 services_add_service([Service | Services], Added, Timeout) ->
-    case cloudi_configurator:service_start(Service, Timeout) of
+    case cloudi_core_i_configurator:service_start(Service, Timeout) of
         {ok, NewService} ->
             services_add_service(Services, [NewService | Added], Timeout);
         {error, _} = Error ->
@@ -956,7 +956,8 @@ services_format_options_internal(Options) ->
         Options#config_service_options.hibernate /=
         Defaults#config_service_options.hibernate ->
             [{hibernate,
-              cloudi_rate_based_configuration:hibernate_format(
+              cloudi_core_i_rate_based_configuration:
+              hibernate_format(
                   Options#config_service_options.hibernate)} |
              OptionsList8];
         true ->
@@ -1052,7 +1053,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.count_process_dynamic /=
         Defaults#config_service_options.count_process_dynamic ->
             [{count_process_dynamic,
-              cloudi_rate_based_configuration:count_process_dynamic_format(
+              cloudi_core_i_rate_based_configuration:
+              count_process_dynamic_format(
                   Options#config_service_options.count_process_dynamic)} |
              OptionsList8];
         true ->
@@ -1070,7 +1072,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.monkey_latency /=
         Defaults#config_service_options.monkey_latency ->
             [{monkey_latency,
-              cloudi_runtime_testing:monkey_latency_format(
+              cloudi_core_i_runtime_testing:
+              monkey_latency_format(
                   Options#config_service_options.monkey_latency)} |
              OptionsList10];
         true ->
@@ -1080,7 +1083,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.monkey_chaos /=
         Defaults#config_service_options.monkey_chaos ->
             [{monkey_chaos,
-              cloudi_runtime_testing:monkey_chaos_format(
+              cloudi_core_i_runtime_testing:
+              monkey_chaos_format(
                   Options#config_service_options.monkey_chaos)} |
              OptionsList11];
         true ->
@@ -1954,8 +1958,8 @@ services_validate_options_internal_checks(CountProcessDynamic,
                 {ok, NewRequestPidOptions} ->
                     case services_validate_option_pid_options(InfoPidOptions) of
                         {ok, NewInfoPidOptions} ->
-                            case cloudi_rate_based_configuration
-                                :hibernate_validate(Hibernate) of
+                            case cloudi_core_i_rate_based_configuration:
+                                 hibernate_validate(Hibernate) of
                                 {ok, NewHibernate} ->
                                     case services_validate_option_aspects_internal(
                                         AspectsInitAfter,
@@ -2211,13 +2215,13 @@ services_validate_options_external_checks(CountProcessDynamic,
                                           MonkeyLatency,
                                           MonkeyChaos,
                                           CountProcess) ->
-    case cloudi_rate_based_configuration:
+    case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_validate(CountProcessDynamic, CountProcess) of
         {ok, NewCountProcessDynamic} ->
-            case cloudi_runtime_testing:
+            case cloudi_core_i_runtime_testing:
                  monkey_latency_validate(MonkeyLatency) of
                 {ok, NewMonkeyLatency} ->
-                    case cloudi_runtime_testing:
+                    case cloudi_core_i_runtime_testing:
                          monkey_chaos_validate(MonkeyChaos) of
                         {ok, NewMonkeyChaos} ->
                             {ok,
@@ -2579,7 +2583,7 @@ services_remove_all([], Services, _) ->
     {ok, Services};
 services_remove_all([Service | RemoveServices], Services, Timeout) ->
     Remove = services_remove_all_internal(Services, Service),
-    case cloudi_configurator:service_stop(Service, Remove, Timeout) of
+    case cloudi_core_i_configurator:service_stop(Service, Remove, Timeout) of
         ok ->
             services_remove_all(RemoveServices, Services, Timeout);
         {error, _} = Error ->
@@ -2617,7 +2621,7 @@ services_restart_uuid([ID | _], _, _, _) ->
 services_restart_all([], _) ->
     ok;
 services_restart_all([Service | RestartServices], Timeout) ->
-    case cloudi_configurator:service_restart(Service, Timeout) of
+    case cloudi_core_i_configurator:service_restart(Service, Timeout) of
         ok ->
             services_restart_all(RestartServices, Timeout);
         {error, _} = Error ->

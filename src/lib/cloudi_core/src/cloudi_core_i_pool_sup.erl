@@ -47,7 +47,7 @@
 %%% @version 1.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_pool_sup).
+-module(cloudi_core_i_pool_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
@@ -121,7 +121,7 @@ start_children(Supervisor, ChildSpecs)
 which_children(Supervisor)
     when is_pid(Supervisor) ->
     lists:foldl(fun
-        ({cloudi_pool, _, _, _}, L) ->
+        ({cloudi_core_i_pool, _, _, _}, L) ->
             L;
         ({_, undefined, _, _}, L) ->
             L;
@@ -138,9 +138,10 @@ init([Name, ChildSpecs, Parent]) ->
     MaxTime = 60, % seconds (1 minute)
     Shutdown = 2000, % milliseconds (2 seconds)
     {ok, {{one_for_one, MaxRestarts, MaxTime}, 
-          [{cloudi_pool,
-            {cloudi_pool, start_link, [Name, ChildSpecs, self(), Parent]},
-            permanent, Shutdown, worker, [cloudi_pool]}]}}.
+          [{cloudi_core_i_pool,
+            {cloudi_core_i_pool, start_link,
+             [Name, ChildSpecs, self(), Parent]},
+            permanent, Shutdown, worker, [cloudi_core_i_pool]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

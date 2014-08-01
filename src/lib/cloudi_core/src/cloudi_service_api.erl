@@ -72,8 +72,8 @@
          code_path_remove/2,
          code_path/1]).
 
--include("cloudi_constants.hrl").
 -include("cloudi_service_api.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -type dest_refresh() ::
     lazy_closest | immediate_closest |
@@ -430,14 +430,14 @@
     ok |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_acl_add()}.
+     cloudi_core_i_configuration:error_reason_acl_add()}.
 
 acl_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:acl_add(L, Timeout).
+    cloudi_core_i_configurator:acl_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -453,14 +453,14 @@ acl_add([_ | _] = L, Timeout)
     ok |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_acl_remove()}.
+     cloudi_core_i_configuration:error_reason_acl_remove()}.
 
 acl_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:acl_remove(L, Timeout).
+    cloudi_core_i_configurator:acl_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -487,7 +487,8 @@ service_subscriptions(ServiceId, Timeout)
           (Timeout =:= infinity)) ->
     case service_id_convert(ServiceId) of
         {ok, ServiceIdValid} ->
-            cloudi_configurator:service_subscriptions(ServiceIdValid, Timeout);
+            cloudi_core_i_configurator:service_subscriptions(ServiceIdValid,
+                                                             Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -507,14 +508,14 @@ service_subscriptions(ServiceId, Timeout)
     {ok, nonempty_list(service_id())} |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_services_add()}.
+     cloudi_core_i_configuration:error_reason_services_add()}.
 
 services_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:services_add(L, Timeout).
+    cloudi_core_i_configurator:services_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -533,7 +534,7 @@ services_add([_ | _] = L, Timeout)
     {error,
      timeout | noproc |
      {service_id_invalid, any()} |
-     cloudi_configuration:error_reason_services_remove()}.
+     cloudi_core_i_configuration:error_reason_services_remove()}.
 
 services_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -542,7 +543,8 @@ services_remove([_ | _] = L, Timeout)
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
-            cloudi_configurator:services_remove(ServiceIdsValid, Timeout);
+            cloudi_core_i_configurator:services_remove(ServiceIdsValid,
+                                                       Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -566,7 +568,7 @@ services_remove([_ | _] = L, Timeout)
     {error,
      timeout | noproc |
      {service_id_invalid, any()} |
-     cloudi_configuration:error_reason_services_restart()}.
+     cloudi_core_i_configuration:error_reason_services_restart()}.
 
 services_restart([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
@@ -575,7 +577,8 @@ services_restart([_ | _] = L, Timeout)
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
-            cloudi_configurator:services_restart(ServiceIdsValid, Timeout);
+            cloudi_core_i_configurator:services_restart(ServiceIdsValid,
+                                                        Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -606,7 +609,7 @@ services_search([_ | _] = ServiceName, Timeout)
           (Timeout =:= infinity)) ->
     try cloudi_x_trie:is_pattern(ServiceName) of
         false ->
-            cloudi_configurator:services_search(ServiceName, Timeout);
+            cloudi_core_i_configurator:services_search(ServiceName, Timeout);
         true ->
             {error, service_name_invalid}
     catch
@@ -630,7 +633,7 @@ services(Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:services(Timeout).
+    cloudi_core_i_configurator:services(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -645,14 +648,14 @@ services(Timeout)
     ok |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_nodes_add()}.
+     cloudi_core_i_configuration:error_reason_nodes_add()}.
 
 nodes_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:nodes_add(L, Timeout).
+    cloudi_core_i_configurator:nodes_add(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -666,14 +669,14 @@ nodes_add([_ | _] = L, Timeout)
     ok |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_nodes_remove()}.
+     cloudi_core_i_configuration:error_reason_nodes_remove()}.
 
 nodes_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:nodes_remove(L, Timeout).
+    cloudi_core_i_configurator:nodes_remove(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -686,14 +689,14 @@ nodes_remove([_ | _] = L, Timeout)
     ok |
     {error,
      timeout | noproc |
-     cloudi_configuration:error_reason_nodes_set()}.
+     cloudi_core_i_configuration:error_reason_nodes_set()}.
 
 nodes_set([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_configurator:nodes_set(L, Timeout).
+    cloudi_core_i_configurator:nodes_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -710,7 +713,7 @@ nodes_alive(Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_nodes:alive(Timeout).
+    cloudi_core_i_nodes:alive(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -727,7 +730,7 @@ nodes_dead(Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_nodes:dead(Timeout).
+    cloudi_core_i_nodes:dead(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -744,7 +747,7 @@ nodes(Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_nodes:nodes(Timeout).
+    cloudi_core_i_nodes:nodes(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -764,7 +767,7 @@ loglevel_set(Level, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_logger:change_loglevel(Level).
+    cloudi_core_i_logger:change_loglevel(Level).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -784,7 +787,7 @@ log_redirect(Node, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_nodes:logger_redirect(Node).
+    cloudi_core_i_nodes:logger_redirect(Node).
 
 %%-------------------------------------------------------------------------
 %% @doc

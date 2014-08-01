@@ -48,7 +48,7 @@
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_os_spawn).
+-module(cloudi_core_i_os_spawn).
 -author('mjtruog [at] gmail (dot) com').
 
 -behavior(gen_server).
@@ -62,7 +62,7 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
 -export([spawn/7]).
 -define(ERL_PORT_NAME, "/dev/null").
@@ -71,7 +71,7 @@ spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
     erlang:exit(badarg).
 -else.
--include("cloudi_os_spawn.hrl").
+-include("cloudi_core_i_os_spawn.hrl").
 -endif.
 
 -record(state, {last_port_name,
@@ -375,7 +375,7 @@ call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
     end.
 
 load_path(File) when is_list(File) ->
-    case cloudi_core_app:test() of
+    case cloudi_core_i_app:test() of
         true ->
             Path = [_ | _] = code:lib_dir(cloudi_core),
             {ok, filename:join(Path, "cxx_src")};

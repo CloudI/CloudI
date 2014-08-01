@@ -4,8 +4,9 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Services==
-%%% Manage all cloudi_spawn processes with monitors and their configuration.
-%%% Perform process restarts but do not escalate failures (only log failures).
+%%% Manage all cloudi_core_i_spawn processes with monitors and their
+%%% configuration.  Perform process restarts but do not escalate failures
+%%% (only log failures).
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -49,7 +50,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_monitor).
+-module(cloudi_core_i_services_monitor).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -71,7 +72,7 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
@@ -405,7 +406,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
                 {true, NewState} ->
                     {noreply, NewState};
                 {false, NewState} ->
-                    cloudi_configurator:service_dead(ServiceId),
+                    cloudi_core_i_configurator:service_dead(ServiceId),
                     {noreply, NewState}
             end;
         error ->
@@ -421,7 +422,7 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
         {true, NewState} ->
             {noreply, NewState};
         {false, NewState} ->
-            cloudi_configurator:service_dead(ServiceId),
+            cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, NewState}
     end;
 
@@ -687,7 +688,7 @@ pids_update([#service{pids = Pids} = Service | ServiceL], Output,
             CountProcess, ServiceId, Services) ->
     NewService = Service#service{count_process = CountProcess},
     NewServices = lists:foldl(fun(P, D) ->
-        cloudi_rate_based_configuration:
+        cloudi_core_i_rate_based_configuration:
         count_process_dynamic_update(P, CountProcess),
         cloudi_x_key2value:store(ServiceId, P, NewService, D)
     end, Services, Pids),
@@ -762,7 +763,8 @@ pids_decrease_loop(0, ServiceL) ->
     ServiceL;
 pids_decrease_loop(Count, [#service{pids = Pids} | ServiceL]) ->
     lists:foreach(fun(P) ->
-        cloudi_rate_based_configuration:count_process_dynamic_terminate(P)
+        cloudi_core_i_rate_based_configuration:
+        count_process_dynamic_terminate(P)
     end, Pids),
     pids_decrease_loop(Count + 1, ServiceL).
 

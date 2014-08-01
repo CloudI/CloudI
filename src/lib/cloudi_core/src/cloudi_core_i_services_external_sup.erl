@@ -47,7 +47,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_external_sup).
+-module(cloudi_core_i_services_external_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
@@ -110,10 +110,10 @@ create_external(Protocol, SocketPath,
                                  CommandLine, BufferSize, Timeout, Prefix,
                                  TimeoutSync, TimeoutAsync, DestRefresh,
                                  DestDeny, DestAllow, ConfigOptions]) of
-        {ok, Pid} ->
-            {ok, Pid, cloudi_services_external:port(Pid)};
-        {ok, Pid, _} ->
-            {ok, Pid, cloudi_services_external:port(Pid)};
+        {ok, Dispatcher} ->
+            result(Dispatcher);
+        {ok, Dispatcher, _} ->
+            result(Dispatcher);
         {error, _} = Error ->
             Error
     end.
@@ -125,13 +125,21 @@ create_external(Protocol, SocketPath,
 init([]) ->
     MaxRestarts = 0,
     MaxTime = 1,
-    Shutdown = infinity, % cloudi_services_monitor handles shutdown
+    Shutdown = infinity, % cloudi_core_i_services_monitor handles shutdown
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
-            {cloudi_services_external, start_link, []},
-            temporary, Shutdown, worker, [cloudi_services_external]}]}}.
+            {cloudi_core_i_services_external, start_link, []},
+            temporary, Shutdown, worker, [cloudi_core_i_services_external]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+result(Service) ->
+    try cloudi_core_i_services_external:port(Service) of
+        Port ->
+            {ok, Service, Port}
+    catch
+        _:Reason ->
+            {error, Reason}
+    end.

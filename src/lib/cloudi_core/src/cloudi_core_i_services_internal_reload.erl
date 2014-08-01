@@ -49,7 +49,7 @@
 %%% @version 1.2.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_internal_reload).
+-module(cloudi_core_i_services_internal_reload).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -70,9 +70,9 @@
         reload_start
     }).
 
--include_lib("kernel/include/file.hrl").
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
+-include_lib("kernel/include/file.hrl").
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(GREGORIAN_SECONDS_OFFSET, 62167219200).

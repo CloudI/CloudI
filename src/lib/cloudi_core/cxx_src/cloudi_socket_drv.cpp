@@ -445,5 +445,5 @@ static void * local_thread(void * /*data*/)
 }
 #endif
 
-ERL_NIF_INIT(cloudi_socket, nif_funcs, &on_load, 0, 0, &on_unload);
+ERL_NIF_INIT(cloudi_core_i_socket, nif_funcs, &on_load, 0, 0, &on_unload);
 

@@ -94,8 +94,8 @@
          trans_id_age/1]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
--include("cloudi_configuration_defaults.hrl").
+-include("cloudi_core_i_constants.hrl").
+-include("cloudi_core_i_configuration_defaults.hrl").
 
 -type service_name() :: string().
 -type service_name_pattern() :: string().

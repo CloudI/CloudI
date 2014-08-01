@@ -2,8 +2,8 @@ defmodule HelloWorld1 do
 
     defmacro log_warn(format, args) do
         quote do
-            :cloudi_logger_interface.warn(__MODULE__, __ENV__.line,
-                                          unquote(format), unquote(args))
+            :cloudi_core_i_logger_interface.warn(__MODULE__, __ENV__.line,
+                                                 unquote(format), unquote(args))
         end
     end
 

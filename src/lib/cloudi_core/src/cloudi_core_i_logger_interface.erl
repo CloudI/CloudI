@@ -49,7 +49,7 @@
 %%% @version 1.3.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_logger_interface).
+-module(cloudi_core_i_logger_interface).
 -author('mjtruog [at] gmail (dot) com').
 -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
          fatal_apply/2, error_apply/2, warn_apply/2,
@@ -57,17 +57,23 @@
          fatal_apply/3, error_apply/3, warn_apply/3,
          info_apply/3, debug_apply/3, trace_apply/3]).
 fatal(Module, Line, Format, Arguments) ->
-    cloudi_logger:fatal(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:fatal(async, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
 error(Module, Line, Format, Arguments) ->
-    cloudi_logger:error(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:error(async, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
 warn(Module, Line, Format, Arguments) ->
-    cloudi_logger:warn(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:warn(async, cloudi_core_i_logger,
+                              Module, Line, Format, Arguments).
 info(Module, Line, Format, Arguments) ->
-    cloudi_logger:info(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:info(async, cloudi_core_i_logger,
+                              Module, Line, Format, Arguments).
 debug(Module, Line, Format, Arguments) ->
-    cloudi_logger:debug(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:debug(async, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
 trace(Module, Line, Format, Arguments) ->
-    cloudi_logger:trace(async, cloudi_logger, Module, Line, Format, Arguments).
+    cloudi_core_i_logger:trace(async, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
 fatal_apply(F, A) ->
     erlang:apply(F, A).
 error_apply(F, A) ->

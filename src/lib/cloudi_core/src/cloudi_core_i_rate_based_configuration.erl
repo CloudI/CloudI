@@ -48,7 +48,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_rate_based_configuration).
+-module(cloudi_core_i_rate_based_configuration).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -69,7 +69,7 @@
          count_process_dynamic_terminated/1]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -define(HIBERNATE_PERIOD_DEFAULT, 5). % seconds
 -define(HIBERNATE_RATE_REQUEST_MIN_DEFAULT, 1). % req/sec
@@ -228,7 +228,7 @@ count_process_dynamic_format(#count_process_dynamic{
 count_process_dynamic_validate(false, _) ->
     {ok, false};
 count_process_dynamic_validate(Options, CountProcess) ->
-    CountProcessInteger = cloudi_configurator:concurrency(CountProcess),
+    CountProcessInteger = cloudi_core_i_configurator:concurrency(CountProcess),
     count_process_dynamic_validate(Options,
                                    #count_process_dynamic{},
                                    CountProcessInteger).
@@ -267,11 +267,13 @@ count_process_dynamic_reinit(Dispatcher,
     RateCurrent = Count / Period,
     if
         RateCurrent > RateMax ->
-            cloudi_services_monitor:increase(Dispatcher, Period, RateCurrent,
-                                             RateMax, CountProcessMax);
+            cloudi_core_i_services_monitor:
+            increase(Dispatcher, Period, RateCurrent,
+                     RateMax, CountProcessMax);
         RateCurrent < RateMin ->
-            cloudi_services_monitor:decrease(Dispatcher, Period, RateCurrent,
-                                             RateMin, CountProcessMin);
+            cloudi_core_i_services_monitor:
+            decrease(Dispatcher, Period, RateCurrent,
+                     RateMin, CountProcessMin);
         true ->
             ok
     end,

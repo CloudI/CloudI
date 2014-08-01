@@ -41,7 +41,7 @@
 %%%
 %%%------------------------------------------------------------------------
 
--include("cloudi_configuration_defaults.hrl").
+-include("cloudi_core_i_configuration_defaults.hrl").
 
 -record(config_logging_syslog,
     {

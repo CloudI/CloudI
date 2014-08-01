@@ -59,13 +59,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%% Attempt to handle request conversions automatically,
-%% when dealing between internal CloudI services that want Erlang terms
-%% while external CloudI services need binary data.
-%% Normally this is avoided and the output is set by service configuration,
-%% but some older services do attempt to do conversions.
-%% Need to remove, refactor, or improve.
-
+% TODO: remove old code path?
 new(Input, OutputType)
     when is_binary(Input) ->
     if

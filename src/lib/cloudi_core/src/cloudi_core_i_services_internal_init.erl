@@ -51,7 +51,7 @@
 %%% @version 1.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_internal_init).
+-module(cloudi_core_i_services_internal_init).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -74,7 +74,7 @@
     }).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -138,7 +138,8 @@ handle_call(Request, _, State)
     {reply, {error, invalid_state}, State};
 
 handle_call(Request, From, #state{service_state = InternalState} = State) ->
-    case cloudi_services_internal:handle_call(Request, From, InternalState) of
+    case cloudi_core_i_services_internal:
+         handle_call(Request, From, InternalState) of
         {reply, Reply, NewInternalState} ->
             {reply, Reply,
              State#state{service_state = NewInternalState}};
@@ -160,7 +161,8 @@ handle_call(Request, From, #state{service_state = InternalState} = State) ->
     end.
 
 handle_cast(Request, #state{service_state = InternalState} = State) ->
-    case cloudi_services_internal:handle_cast(Request, InternalState) of
+    case cloudi_core_i_services_internal:
+         handle_cast(Request, InternalState) of
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};
@@ -176,7 +178,8 @@ handle_info('cloudi_service_init_timeout', State) ->
     {stop, timeout, State#state{init_timeout = undefined}};
 
 handle_info(Request, #state{service_state = InternalState} = State) ->
-    case cloudi_services_internal:handle_info(Request, InternalState) of
+    case cloudi_core_i_services_internal:
+         handle_info(Request, InternalState) of
         {noreply, NewInternalState} ->
             {noreply,
              State#state{service_state = NewInternalState}};

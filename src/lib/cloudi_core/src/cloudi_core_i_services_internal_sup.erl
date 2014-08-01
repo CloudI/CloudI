@@ -47,7 +47,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_services_internal_sup).
+-module(cloudi_core_i_services_internal_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
@@ -119,11 +119,11 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
 init([]) ->
     MaxRestarts = 0,
     MaxTime = 1,
-    Shutdown = infinity, % cloudi_services_monitor handles shutdown
+    Shutdown = infinity, % cloudi_core_i_services_monitor handles shutdown
     {ok, {{simple_one_for_one, MaxRestarts, MaxTime}, 
           [{undefined,
-            {cloudi_services_internal, start_link, []},
-            temporary, Shutdown, worker, [cloudi_services_internal]}]}}.
+            {cloudi_core_i_services_internal, start_link, []},
+            temporary, Shutdown, worker, [cloudi_core_i_services_internal]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

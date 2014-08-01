@@ -48,7 +48,7 @@
 %%% @version 1.2.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_pool).
+-module(cloudi_core_i_pool).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -94,7 +94,7 @@ get(Name)
 %%%------------------------------------------------------------------------
 
 init([ChildSpecs, Supervisor, Parent]) ->
-    cloudi_pool_sup:start_link_done(Parent),
+    cloudi_core_i_pool_sup:start_link_done(Parent),
     self() ! {start, ChildSpecs},
     {ok, #state{supervisor = Supervisor}}.
 
@@ -127,7 +127,7 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
-    case cloudi_pool_sup:start_children(Supervisor, ChildSpecs) of
+    case cloudi_core_i_pool_sup:start_children(Supervisor, ChildSpecs) of
         [] ->
             {stop, {error, noproc}, State};
         Pids when is_list(Pids) ->
@@ -153,7 +153,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 update(I, #state{supervisor = Supervisor} = State) ->
-    Pids = cloudi_pool_sup:which_children(Supervisor),
+    Pids = cloudi_core_i_pool_sup:which_children(Supervisor),
     Count = erlang:length(Pids),
     NewState = State#state{pool = erlang:list_to_tuple(Pids),
                            count = Count},

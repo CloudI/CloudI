@@ -48,7 +48,7 @@
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_nodes).
+-module(cloudi_core_i_nodes).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
@@ -67,8 +67,8 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
--include("cloudi_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
+-include("cloudi_core_i_configuration.hrl").
 
 -record(state,
     {
@@ -243,11 +243,11 @@ handle_cast({logger_redirect, NodeLogger},
         NewNodeLogger /= OldNodeLogger ->
             if
                 NewNodeLogger =:= undefined ->
-                    cloudi_logger:redirect(undefined);
+                    cloudi_core_i_logger:redirect(undefined);
                 true ->
                     case lists:member(NewNodeLogger, NodesAlive) of
                         true ->
-                            cloudi_logger:redirect(NewNodeLogger);
+                            cloudi_core_i_logger:redirect(NewNodeLogger);
                         false ->
                             case lists:member(NewNodeLogger, NodesDead) of
                                 true ->
@@ -276,7 +276,7 @@ handle_info({nodeup, Node, InfoList},
                    logger_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_logger:redirect(NodeLogger);
+            cloudi_core_i_logger:redirect(NodeLogger);
         true ->
             ok
     end,
@@ -292,7 +292,7 @@ handle_info({nodedown, Node, InfoList},
                    logger_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_logger:redirect(undefined);
+            cloudi_core_i_logger:redirect(undefined);
         true ->
             ok
     end,
@@ -396,7 +396,7 @@ discovery_update(#config_nodes_discovery{} = OldDiscovery,
     discovery_start(NewDiscovery).
 
 cpg_scopes() ->
-    % due to settings in cloudi_constants.hrl of
+    % due to settings in cloudi_core_i_constants.hrl of
     % SCOPE_CUSTOM_PREFIX and SCOPE_DEFAULT
     CustomScopes = lists:filter(fun(RegisteredName) ->
         lists:prefix(?SCOPE_CUSTOM_PREFIX,

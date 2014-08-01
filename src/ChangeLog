@@ -10,6 +10,9 @@
        have been moved to the following modules:
        cloudi_environment, cloudi_service_name, cloudi_request,
        cloudi_request_info, cloudi_key_value)
+    * Move internal cloudi_core source code filenames to have the prefix
+      "cloudi_core_i_" to make it clearer what modules are meant for
+      usage in non-cloudi_core source code
 
 2014-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 

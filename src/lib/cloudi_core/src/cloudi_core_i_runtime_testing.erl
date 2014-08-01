@@ -48,7 +48,7 @@
 %%% @version 1.3.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_runtime_testing).
+-module(cloudi_core_i_runtime_testing).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
@@ -62,7 +62,7 @@
          monkey_chaos_check/1]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -define(MONKEY_LATENCY_DEFAULT, 5000). % milliseconds
 -define(MONKEY_LATENCY_LOG, 5000). % milliseconds

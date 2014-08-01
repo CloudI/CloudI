@@ -43,8 +43,8 @@
 %%%------------------------------------------------------------------------
 
 % When using the state record within this file, only the state elements
-% that are common among cloudi_services_internal.erl and
-% cloudi_services_external.erl may be used (to avoid GC delays)
+% that are common among cloudi_core_i_services_internal.erl and
+% cloudi_core_i_services_external.erl may be used (to avoid GC delays)
 
 -compile({nowarn_unused_function,
           [{recv_async_select_random, 1},
@@ -445,13 +445,15 @@ check_init_send(#config_service_options{
                     monkey_chaos = MonkeyChaos} = ConfigOptions) ->
     NewMonkeyLatency = if
         MonkeyLatency =/= false ->
-            cloudi_runtime_testing:monkey_latency_init(MonkeyLatency);
+            cloudi_core_i_runtime_testing:
+            monkey_latency_init(MonkeyLatency);
         true ->
             MonkeyLatency
     end,
     NewMonkeyChaos = if
         MonkeyChaos =/= false ->
-            cloudi_runtime_testing:monkey_chaos_init(MonkeyChaos);
+            cloudi_core_i_runtime_testing:
+            monkey_chaos_init(MonkeyChaos);
         true ->
             MonkeyChaos
     end,
@@ -469,14 +471,15 @@ check_init_receive(#config_service_options{
                        hibernate = Hibernate} = ConfigOptions) ->
     NewCountProcessDynamic = if
         CountProcessDynamic =/= false ->
-            cloudi_rate_based_configuration:
+            cloudi_core_i_rate_based_configuration:
             count_process_dynamic_init(CountProcessDynamic);
         true ->
             CountProcessDynamic
     end,
     NewHibernate = if
         not is_boolean(Hibernate) ->
-            cloudi_rate_based_configuration:hibernate_init(Hibernate);
+            cloudi_core_i_rate_based_configuration:
+            hibernate_init(Hibernate);
         true ->
             Hibernate
     end,
@@ -500,26 +503,29 @@ check_incoming(ServiceRequest,
                    hibernate = Hibernate} = ConfigOptions) ->
     NewCountProcessDynamic = if
         (CountProcessDynamic =/= false), ServiceRequest ->
-            cloudi_rate_based_configuration:
+            cloudi_core_i_rate_based_configuration:
             count_process_dynamic_request(CountProcessDynamic);
         true ->
             CountProcessDynamic
     end,
     NewMonkeyLatency = if
         MonkeyLatency =/= false ->
-            cloudi_runtime_testing:monkey_latency_check(MonkeyLatency);
+            cloudi_core_i_runtime_testing:
+            monkey_latency_check(MonkeyLatency);
         true ->
             MonkeyLatency
     end,
     NewMonkeyChaos = if
         MonkeyChaos =/= false ->
-            cloudi_runtime_testing:monkey_chaos_check(MonkeyChaos);
+            cloudi_core_i_runtime_testing:
+            monkey_chaos_check(MonkeyChaos);
         true ->
             MonkeyChaos
     end,
     NewHibernate = if
         (not is_boolean(Hibernate)), ServiceRequest ->
-            cloudi_rate_based_configuration:hibernate_request(Hibernate);
+            cloudi_core_i_rate_based_configuration:
+            hibernate_request(Hibernate);
         true ->
             Hibernate
     end,

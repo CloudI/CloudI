@@ -177,17 +177,20 @@
          destination_refresh_lazy/1,
          source_subscriptions/2,
          context_options/1,
-         % service request parameter helpers
+         trans_id/1,
+         trans_id_age/1,
+         % deprecated, moved to the cloudi_service_name module
          service_name_parse/2,
          service_name_parse_with_suffix/2,
+         % deprecated, moved to the cloudi_request module
          request_http_qs_parse/1,
+         % deprecated, moved to the cloudi_request_info module
          request_info_key_value_new/1,
          request_info_key_value_parse/1,
+         % deprecated, moved to the cloudi_key_value module
          key_value_erase/2,
          key_value_find/2,
          key_value_store/3,
-         trans_id/1,
-         trans_id_age/1,
          % functions to trigger edoc, until -callback works with edoc
          'Module:service_init'/3,
          'Module:service_request'/3,
@@ -1865,7 +1868,35 @@ context_options(Dispatcher) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse a service name pattern.===
+%% ===Return a new transaction id.===
+%% The same data as used when sending service requests is used.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id(Dispatcher :: cloudi_service:dispatcher() |
+                             cloudi:context()) ->
+    trans_id().
+
+trans_id(Dispatcher) ->
+    cloudi:trans_id(Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the age of the transaction id.===
+%% The result is microseconds since the Unix epoch 1970-01-01 00:00:00.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trans_id_age(TransId :: trans_id()) ->
+    non_neg_integer().
+
+trans_id_age(TransId)
+    when is_binary(TransId) ->
+    cloudi:trans_id_age(TransId).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @deprecated Use {@link cloudi_service_name:parse/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1878,7 +1909,7 @@ service_name_parse(Name, Pattern) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse a service name pattern and return the common suffix.===
+%% @deprecated Use {@link cloudi_service_name:parse_with_suffix/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1891,7 +1922,7 @@ service_name_parse_with_suffix(Name, Pattern) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse HTTP Request query string data.===
+%% @deprecated Use {@link cloudi_request:http_qs_parse/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1908,10 +1939,7 @@ request_http_qs_parse(Request) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===New RequestInfo key/value data.===
-%% RequestInfo is meant to contain key/value pairs that is request
-%% meta-data.  Create the binary RequestInfo data with a list of pairs or
-%% a dict data structure.
+%% @deprecated Use {@link cloudi_request_info:key_value_new/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1923,9 +1951,7 @@ request_info_key_value_new(RequestInfo) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse RequestInfo key/value data.===
-%% RequestInfo is meant to contain key/value pairs that is request
-%% meta-data.
+%% @deprecated Use {@link cloudi_request_info:key_value_parse/1} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1944,10 +1970,7 @@ request_info_key_value_parse(RequestInfo) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value erase.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to erase request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:erase/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1960,10 +1983,7 @@ key_value_erase(Key, KeyValues) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value find.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to access the request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:find/2} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1977,10 +1997,7 @@ key_value_find(Key, KeyValues) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Generic key/value store.===
-%% RequestInfo's key/value result from request_info_key_value_parse/1
-%% can be used here to store request meta-data while encapsulating
-%% the data structure used for the lookup.
+%% @deprecated Use {@link cloudi_key_value:store/3} instead
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1991,34 +2008,6 @@ key_value_find(Key, KeyValues) ->
 
 key_value_store(Key, Value, KeyValues) ->
     cloudi_service:key_value_store(Key, Value, KeyValues).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Return a new transaction id.===
-%% The same data as used when sending service requests is used.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec trans_id(Dispatcher :: cloudi_service:dispatcher() |
-                             cloudi:context()) ->
-    <<_:128>>.
-
-trans_id(Dispatcher) ->
-    cloudi:trans_id(Dispatcher).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Return the age of the transaction id.===
-%% The result is microseconds since the Unix epoch 1970-01-01 00:00:00.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec trans_id_age(TransId :: <<_:128>>) ->
-    non_neg_integer().
-
-trans_id_age(TransId)
-    when is_binary(TransId) ->
-    cloudi:trans_id_age(TransId).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

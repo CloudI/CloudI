@@ -194,7 +194,7 @@
          'Module:cloudi_service_handle_info'/3,
          'Module:cloudi_service_terminate'/2]).
 
--include("cloudi_constants.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -type request_type() :: 'send_async' | 'send_sync'.
 -type service_name() :: cloudi:service_name().
