@@ -13,6 +13,10 @@
     * Move internal cloudi_core source code filenames to have the prefix
       "cloudi_core_i_" to make it clearer what modules are meant for
       usage in non-cloudi_core source code
+    * Add the elixir CloudILogger.ex module so elixir source code can
+      utilize the same cloudi_logger.hrl logging macros that are used in
+      erlang source code
+    * Updated the Elixir.HelloWorld1 example to use the CloudILogger.ex module
 
 2014-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
