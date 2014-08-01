@@ -6,6 +6,7 @@
    {vsn, "@VERSION@"},
    {modules, [
         cloudi,
+        cloudi_concurrency,
         cloudi_core_i_app,
         cloudi_core_i_configuration,
         cloudi_core_i_configurator,

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move the cloudi_core_i_configurator:concurrency/1 function
+      to cloudi_concurrency:count/1 so that it can be used easily by
+      internal services
+
 2014-07-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Split functionality not related to usage of the Dispatcher in

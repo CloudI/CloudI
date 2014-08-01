@@ -70,8 +70,7 @@
          service_start/2,
          service_stop/3,
          service_restart/2,
-         service_dead/1,
-         concurrency/1]).
+         service_dead/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -208,7 +207,7 @@ service_start(#config_service_internal{
                 Reload =:= false ->
                     ok
             end,
-            NewCountProcess = concurrency(CountProcess),
+            NewCountProcess = cloudi_concurrency:count(CountProcess),
             service_start_internal(0, FoundService, GroupLeader,
                                    NewCountProcess, timeout_decr(Timeout));
         {error, _} = Error ->
@@ -218,8 +217,8 @@ service_start(#config_service_internal{
 service_start(#config_service_external{count_process = CountProcess,
                                        count_thread = CountThread} = Service,
               Timeout) ->
-    NewCountProcess = concurrency(CountProcess),
-    NewCountThread = concurrency(CountThread),
+    NewCountProcess = cloudi_concurrency:count(CountProcess),
+    NewCountThread = cloudi_concurrency:count(CountThread),
     service_start_external(0, Service, NewCountThread,
                            NewCountProcess, timeout_decr(Timeout)).
 
@@ -252,20 +251,6 @@ service_restart(#config_service_external{} = Service, Timeout) ->
 service_dead(ID)
     when is_binary(ID) ->
     gen_server:cast(?MODULE, {service_dead, ID}).
-
-concurrency(I)
-    when is_integer(I) ->
-    I;
-concurrency(I)
-    when is_float(I) ->
-    if
-        I > 1.0 ->
-            cloudi_math:floor(I * erlang:system_info(schedulers));
-        I > 0.0, I < 1.0 ->
-            erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
-        I == 1.0 ->
-            erlang:system_info(schedulers)
-    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

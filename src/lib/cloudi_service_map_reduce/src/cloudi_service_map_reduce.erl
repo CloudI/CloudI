@@ -159,8 +159,7 @@ cloudi_service_handle_info({init, Prefix,
                                                        Prefix,
                                                        Dispatcher) of
         {ok, MapReduceState} ->
-            % TODO: move cloudi_core_i_configurator:concurrency/1
-            MapCount = cloudi_core_i_configurator:concurrency(Concurrency),
+            MapCount = cloudi_concurrency:count(Concurrency),
             case map_send(MapCount, dict:new(), Dispatcher,
                           MapReduceModule, MapReduceState) of
                 {ok, MapRequests, NewMapReduceState} ->

@@ -228,7 +228,7 @@ count_process_dynamic_format(#count_process_dynamic{
 count_process_dynamic_validate(false, _) ->
     {ok, false};
 count_process_dynamic_validate(Options, CountProcess) ->
-    CountProcessInteger = cloudi_core_i_configurator:concurrency(CountProcess),
+    CountProcessInteger = cloudi_concurrency:count(CountProcess),
     count_process_dynamic_validate(Options,
                                    #count_process_dynamic{},
                                    CountProcessInteger).
