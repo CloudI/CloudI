@@ -16,12 +16,14 @@
 #     ERLANG_OTP_VER (e.g., "17.1-rc0")
 #     ERLANG_OTP_VER_MAJOR (e.g., "17")
 #     ERLANG_OTP_VER_MINOR (e.g., "1")
+#     ERLANG_OTP_VER_PATCH (e.g., "")
 #     ERLANG_OTP_VER_RELEASE_CANDIDATE (e.g., "0")
 #
 #   For backwards compatability the script also handles pre 17.0 versions:
 #     ERLANG_OTP_VER (e.g., "R14B01")
 #     ERLANG_OTP_VER_MAJOR (e.g., "14")
 #     ERLANG_OTP_VER_MINOR (e.g., "01")
+#     ERLANG_OTP_VER_PATCH (e.g., "")
 #     ERLANG_OTP_VER_RELEASE_CANDIDATE (e.g., "")
 #
 #   WARNING: After the 17.0 Erlang/OTP release, both
@@ -30,8 +32,9 @@
 #            provide detailed version information.  For autoconf, you should
 #            instead prefer AC_ERLANG_CHECK_LIB and AC_ERLANG_SUBST_ERTS_VER
 #            to check the version of individual OTP applications.
+#            An OTP_VERSION file may be present in the installation.
+#            If it is, it is checked.
 #   (http://erlang.org/pipermail/erlang-questions/2014-April/078590.html)
-#
 
 AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
 [
@@ -59,10 +62,24 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
             [AC_LANG_PUSH([Erlang])
              AC_RUN_IFELSE(
                 [AC_LANG_PROGRAM([], [
+                    Major = erlang:system_info(otp_release),
                     Version = try erlang:system_info(otp_correction_package)
                     catch
                         error:badarg ->
-                            erlang:system_info(otp_release) ++ ".0"
+                            VersionPath = filename:join([[code:root_dir(),
+                                                          "releases", Major,
+                                                          "OTP_VERSION"]]),
+                            case file:read_file(VersionPath) of
+                                {ok, FileVersion} ->
+                                    %% 17.1.x and after
+                                    [[DetailedVersion |
+                                      _]] = binary:split(FileVersion,
+                                                         [[<<"\r">>, <<"\n">>,
+                                                           <<" ">>]]),
+                                    binary_to_list(DetailedVersion);
+                                {error, _} ->
+                                    Major ++ ".0.0"
+                            end
                     end,
                     file:write_file("conftest.out", Version),
                     ReturnValue = 0,
@@ -74,11 +91,13 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
              AC_LANG_POP([Erlang])
         ])
         ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]*\.\([[0-9]]*\)'`
+        ax_erlang_otp_ver_patch=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]*\.[[0-9]]*.\([[0-9]]*\)'`
         ax_erlang_otp_ver_release_candidate=`expr $ax_cv_erlang_otp_package_ver : '.*-rc\([[0-8]]\)'`
         AC_SUBST([ERLANG_OTP_VER],
                  ["${ax_erlang_otp_ver_major}_${ax_erlang_otp_ver_minor}"])
     else
         ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
+        ax_erlang_otp_ver_patch=""
         ax_erlang_otp_ver_type=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*\([[AB]]\)'`
         if test "$ax_erlang_otp_ver_type" = "A"; then
             ax_erlang_otp_ver_release_candidate="0"
@@ -92,6 +111,7 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
     fi
     AC_SUBST([ERLANG_OTP_VER_MAJOR], [$ax_erlang_otp_ver_major])
     AC_SUBST([ERLANG_OTP_VER_MINOR], [$ax_erlang_otp_ver_minor])
+    AC_SUBST([ERLANG_OTP_VER_PATCH], [$ax_erlang_otp_ver_patch])
     AC_SUBST([ERLANG_OTP_VER_RELEASE_CANDIDATE],
              [$ax_erlang_otp_ver_release_candidate])
 ])
@@ -101,28 +121,31 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
     erlang_otp_version_req=ifelse([$1], ,R10B01,$1)
     erlang_otp_version_req_major=`expr $erlang_otp_version_req : 'R*\([[0-9]]*\)'`
     if test "$erlang_otp_version_req_major" -ge 17; then
-       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : '[[0-9]]*\.\([[0-9]]*\)'`
-       erlang_otp_version_req_release_candidate=`expr $erlang_otp_version_req : '.*-rc\([[0-8]]\)'`
-       if test "x$erlang_otp_version_req_minor" = "x"; then
-         erlang_otp_version_req_minor="0"
-       fi
-       if test "x$erlang_otp_version_req_release_candidate" = "x"; then
-          erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10 \+ 9`
-       else
-          erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10 \+ $erlang_otp_version_req_release_candidate`
-       fi
+        erlang_otp_version_req_minor=`expr $erlang_otp_version_req : '[[0-9]]*\.\([[0-9]]*\)'`
+        erlang_otp_version_req_patch=`expr $erlang_otp_version_req : '[[0-9]]*\.[[0-9]]*.\([[0-9]]*\)'`
+        erlang_otp_version_req_release_candidate=`expr $erlang_otp_version_req : '.*-rc\([[0-9]]\)'`
+        if test "x$erlang_otp_version_req_minor" = "x"; then
+            erlang_otp_version_req_minor="0"
+        fi
+        if test "x$erlang_otp_version_req_patch" = "x"; then
+            erlang_otp_version_req_patch="0"
+        fi
+        if test "x$erlang_otp_version_req_release_candidate" = "x"; then
+            erlang_otp_version_req_release_candidate="0"
+        fi
+        erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000000 \+ $erlang_otp_version_req_minor \* 1000 \+ $erlang_otp_version_req_patch \* 10 \+ $erlang_otp_version_req_release_candidate`
     else
-       erlang_otp_version_req_minor=`expr $erlang_otp_version_req : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
-       erlang_otp_version_req_type=`expr $erlang_otp_version_req : 'R[[0-9]]*\([[AB]]*\)'`
-       if test "$erlang_otp_version_req_type" = "B"; then
-           erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10 \+ 9`
-       elif test "$erlang_otp_version_req_type" = "A"; then
-           erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000 \+ $erlang_otp_version_req_minor \* 10`
-       elif test "x$erlang_otp_version_req_type" = "x"; then
-           erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000`
-       else
+        erlang_otp_version_req_minor=`expr $erlang_otp_version_req : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
+        erlang_otp_version_req_type=`expr $erlang_otp_version_req : 'R[[0-9]]*\([[AB]]*\)'`
+        if test "$erlang_otp_version_req_type" = "B"; then
+            erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000000 \+ $erlang_otp_version_req_minor \* 1000 \+ 999`
+        elif test "$erlang_otp_version_req_type" = "A"; then
+            erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000000 \+ $erlang_otp_version_req_minor \* 1000`
+        elif test "x$erlang_otp_version_req_type" = "x"; then
+            erlang_otp_version_req_int=`expr $erlang_otp_version_req_major \* 1000000`
+        else
             AC_MSG_FAILURE([invalid version])
-       fi
+        fi
     fi
 
     AC_MSG_CHECKING(for Erlang >= $erlang_otp_version_req)
@@ -145,28 +168,47 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                     end,
                     if
                         T1 == \$B ->
-                            list_to_integer([[Major1, Major2]]) * 1000 +
-                            Minor * 10 + 9;
+                            list_to_integer([[Major1, Major2]]) * 1000000 +
+                            Minor * 1000 + 999;
                         T1 == \$A ->
-                            list_to_integer([[Major1, Major2]]) * 1000 +
-                            Minor * 10
+                            list_to_integer([[Major1, Major2]]) * 1000000 +
+                            Minor * 1000
                     end;
                 Major ->
                     %% 17.0 and after
                     Package = try erlang:system_info(otp_correction_package)
                     catch
                         error:badarg ->
-                            Major ++ ".0"
+                            VersionPath = filename:join([[code:root_dir(),
+                                                          "releases", Major,
+                                                          "OTP_VERSION"]]),
+                            case file:read_file(VersionPath) of
+                                {ok, FileVersion} ->
+                                    %% 17.1.x and after
+                                    [[DetailedVersion |
+                                      _]] = binary:split(FileVersion,
+                                                         [[<<"\r">>, <<"\n">>,
+                                                           <<" ">>]]),
+                                    binary_to_list(DetailedVersion);
+                                {error, _} ->
+                                    Major ++ ".0.0"
+                            end
                     end,
                     [[_, Minor | RCString]] = string:tokens(Package, ".-"),
-                    case RCString of
+                    {Patch, RC} = case RCString of
+                        [["rc" ++ RCStr]] ->
+                            {"0", RCStr};
+                        [[PatchStr, "rc" ++ RCStr]] ->
+                            {PatchStr, RCStr};
+                        [[PatchStr]] ->
+                            {PatchStr, "0"};
                         [[]] ->
-                            list_to_integer(Major) * 1000 +
-                            list_to_integer(Minor) * 10 + 9;
-                        [["rc" ++ RC]] ->
-                            list_to_integer(Major) * 1000 +
-                            list_to_integer(Minor) * 10 + list_to_integer(RC)
-                    end
+                            {"0", "0"}
+                    end,
+                    list_to_integer(Major) * 1000000 +
+                    list_to_integer(Minor) * 1000 +
+                    list_to_integer(Patch) * 10 +
+                    list_to_integer(RC)
             end,
             file:write_file("conftest.out", integer_to_list(Version)),
             ReturnValue = 0,

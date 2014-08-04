@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Tweak ERLANG_OTP_VER* autoconf discovery to utilize the 17.1.*
+      OTP_VERSION file which might be installed
+
 2014-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Move the cloudi_core_i_configurator:concurrency/1 function
