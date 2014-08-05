@@ -7,6 +7,10 @@ python:
   - "2.7"
 rvm:
   - 1.9.3
+services:
+  - riak
+  - cassandra
+  - elasticsearch
 before_install:
   - sudo apt-get update
 # travis takes care of: make autoconf automake libtool g++ git
