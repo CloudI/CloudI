@@ -93,6 +93,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
     tests-service_api-install \
     tests-messaging-install \
     tests-msg_size-install \
+    tests-request_rate-install \
     tests-websockets-install \
     tests-zeromq-install \
     api-install \
@@ -831,6 +832,7 @@ install-exec-hook: cloudi-prefix-install \
                    tests-service_api-install \
                    tests-messaging-install \
                    tests-msg_size-install \
+                   tests-request_rate-install \
                    tests-websockets-install \
                    tests-zeromq-install \
                    api-install \
@@ -1082,6 +1084,17 @@ tests-msg_size-install: \
 	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
              "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
              "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
+
+tests-request_rate-install: \
+        $(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.app \
+        $(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.beam
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.app" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin/"
+	$(INSTALL_DATA) \
+        "$(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.beam" \
+        "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin/"
 
 tests-websockets-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/websockets"

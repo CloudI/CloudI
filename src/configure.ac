@@ -293,6 +293,8 @@ AC_CONFIG_FILES([
     tests/msg_size/org/cloudi/tests/msg_size/Makefile
     tests/msg_size/src/Makefile
     tests/msg_size/cxx_src/Makefile
+    tests/request_rate/Makefile
+    tests/request_rate/src/Makefile
     ])
 AC_OUTPUT
 

@@ -729,7 +729,13 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                    duo_mode_pid = undefined} = State) ->
     {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
                             start_link(Timeout, ProcessDictionary, State),
-    Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
+    Result = try Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
+    catch
+        ErrorType:Error ->
+            ?LOG_ERROR("init ~p ~p~n~p",
+                       [ErrorType, Error, erlang:get_stacktrace()]),
+            erlang:ErrorType(Error)
+    end,
     {NewProcessDictionary,
      #state{options = ConfigOptions} = NextState} =
         cloudi_core_i_services_internal_init:
@@ -2794,7 +2800,14 @@ duo_mode_loop_init(#state_duo{module = Module,
                                     start_link(Timeout,
                                                DispatcherProcessDictionary,
                                                DispatcherState),
-            Result = Module:cloudi_service_init(Args, Prefix, DispatcherProxy),
+            Result = try Module:cloudi_service_init(Args, Prefix,
+                                                    DispatcherProxy)
+            catch
+                ErrorType:Error ->
+                    ?LOG_ERROR("init ~p ~p~n~p",
+                               [ErrorType, Error, erlang:get_stacktrace()]),
+                    erlang:ErrorType(Error)
+            end,
             {NewDispatcherProcessDictionary,
              #state{recv_timeouts = RecvTimeouts,
                     queue_requests = QueueRequests,

@@ -413,7 +413,11 @@ configure_service([Service | Services], Configured, Timeout) ->
     case service_start(Service, Timeout) of
         {ok, NewService} ->
             configure_service(Services, [NewService | Configured], Timeout);
-        {error, _} = Error ->
+        {error, Reason} = Error ->
+            ServiceDescription = cloudi_core_i_configuration:
+                                 service_format(Service),
+            ?LOG_ERROR("configure failed: ~p~n~p",
+                       [Reason, ServiceDescription]),
             Error
     end.
 

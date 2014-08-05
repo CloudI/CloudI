@@ -5,6 +5,8 @@
 
     * Tweak ERLANG_OTP_VER* autoconf discovery to utilize the 17.1.*
       OTP_VERSION file which might be installed
+    * Add more error logging for debugging services (startup timeouts)
+    * Add the request_rate integration test
 
 2014-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 

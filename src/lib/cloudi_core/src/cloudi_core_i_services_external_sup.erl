@@ -140,6 +140,8 @@ result(Service) ->
         Port ->
             {ok, Service, Port}
     catch
+        exit:{timeout, _} ->
+            {error, external_spawn_timeout};
         _:Reason ->
-            {error, Reason}
+            {error, {Reason, erlang:get_stacktrace()}}
     end.

@@ -134,7 +134,9 @@ result(Dispatcher) ->
         Service ->
             {ok, Service}
     catch
+        exit:{timeout, _} ->
+            {error, internal_init_timeout};
         _:Reason ->
-            {error, Reason}
+            {error, {Reason, erlang:get_stacktrace()}}
     end.
 

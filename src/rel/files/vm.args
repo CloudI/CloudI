@@ -20,20 +20,13 @@
 
 ## Increase number of concurrent ports/sockets
 -env ERL_MAX_PORTS 32768
-#+Q 32768 # change for R17
+#+Q 32768 # change for 17.0
 
-# hexpi tests service module not included in an application
+# Integration Tests code paths for the default configuration
 -pz tests/hexpi/ebin/
-
-# flood tests service module not included in an application
 -pz tests/flood/ebin/
-
-# http_req tests service module not included in an application
 -pz tests/http_req/ebin/
-
-# msg_size tests service module not included in an application
 -pz tests/msg_size/ebin/
-
-# messaging tests service module not included in an application
 -pz tests/messaging/ebin/
+-pz tests/request_rate/ebin/
 
