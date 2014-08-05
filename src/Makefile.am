@@ -813,8 +813,7 @@ xref: all
 test: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit \
-        || exit 0)
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
 
 tests: test
 
