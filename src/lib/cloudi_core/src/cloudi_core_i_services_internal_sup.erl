@@ -137,6 +137,6 @@ result(Dispatcher) ->
         exit:{timeout, _} ->
             {error, internal_init_timeout};
         _:Reason ->
-            {error, {Reason, erlang:get_stacktrace()}}
+            {error, Reason}
     end.
 

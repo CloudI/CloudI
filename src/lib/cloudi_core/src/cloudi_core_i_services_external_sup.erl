@@ -143,5 +143,5 @@ result(Service) ->
         exit:{timeout, _} ->
             {error, external_spawn_timeout};
         _:Reason ->
-            {error, {Reason, erlang:get_stacktrace()}}
+            {error, Reason}
     end.
