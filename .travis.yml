@@ -17,7 +17,7 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
-script: ../src/make_dev test install
+script: ../src/make_dev test install || find ../src/ -name 'raw.log' | xargs cat
 after_script:
   - make distclean
 branches:
