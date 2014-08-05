@@ -17,6 +17,7 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
+  - psql -U postgres -c "CREATE USER cloudi_tests WITH PASSWORD 'cloudi_tests'; CREATE DATABASE cloudi_tests; GRANT ALL PRIVILEGES ON DATABASE cloudi_tests to cloudi_tests;"
 script: ../src/make_dev test install || ( find ../src/ -name 'raw.log' | xargs cat && exit 1 )
 after_script:
   - make distclean
