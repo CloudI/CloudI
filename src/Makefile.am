@@ -185,6 +185,8 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1)
 	(cd $(top_srcdir)/lib/cloudi_service_api_requests/src && \
         test ! -e cloudi_service_api_requests.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src || exit 0)
