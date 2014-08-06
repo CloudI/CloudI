@@ -11,6 +11,8 @@
       OTP_VERSION file which might be installed
     * Add more error logging for debugging services (startup timeouts)
     * Add the request_rate integration test
+    * Make Travis do all the regression/unit tests with the
+      available databases enabled after a successful build (before an install)
 
 2014-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 

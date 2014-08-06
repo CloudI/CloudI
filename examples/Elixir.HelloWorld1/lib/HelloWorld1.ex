@@ -15,7 +15,7 @@ defmodule HelloWorld1 do
     end
 
     def cloudi_service_handle_info(request, state, _dispatcher) do
-        log_warn('Unknown info \"~p\"', [request])
+        log_warn('Unknown info "~p"', [request])
         {:noreply, state}
     end
 
