@@ -19,6 +19,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_db_riak/src \
      -d $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_client/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
@@ -133,6 +134,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_db_riak/ebin
 	$(MKDIR_P) lib/cloudi_service_db_tokyotyrant/ebin
 	$(MKDIR_P) lib/cloudi_service_filesystem/ebin
+	$(MKDIR_P) lib/cloudi_service_http_client/ebin
 	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
 	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
 	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
@@ -185,9 +187,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
-        test ! -e cloudi_os_spawn_vsn_1 && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_api_requests/src && \
         test ! -e cloudi_service_api_requests.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src || exit 0)
@@ -224,6 +223,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_filesystem/src && \
         test ! -e cloudi_service_filesystem.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_client/src && \
+        test ! -e cloudi_service_http_client.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_http_cowboy/src && \
         test ! -e cloudi_service_http_cowboy.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src || exit 0)
@@ -323,6 +325,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_filesystem && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_client && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_client/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_http_cowboy && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_cowboy/ebin || exit 0)
@@ -509,6 +514,9 @@ rebar-directories-compile:
 	(cd $(top_builddir)/lib/cloudi_core && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/lib/cloudi_core/include || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
+        test ! -e cloudi_os_spawn_vsn_1 && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || exit 0)
 
 erlang-applications-scope-add: scoped
 
@@ -558,6 +566,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_filesystem/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_http_client/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_http_client/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_http_cowboy/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_http_cowboy/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_http_elli/ebin || exit 0
@@ -688,6 +698,9 @@ rebar-directories-clean: rebar-clean
 	(test -L $(top_builddir)/lib/cloudi_core/include && \
 	 rm $(top_builddir)/lib/cloudi_core/include || \
 	 exit 0)
+	(test -L $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 && \
+	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || \
+	 exit 0)
 
 clean-configure: distclean
 
@@ -756,6 +769,7 @@ dialyze: all \
               lib/cloudi_service_db_riak/ebin/ \
               lib/cloudi_service_db_tokyotyrant/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
+              lib/cloudi_service_http_client/ebin/ \
               lib/cloudi_service_http_cowboy/ebin/ \
               lib/cloudi_service_http_elli/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \

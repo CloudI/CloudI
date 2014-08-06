@@ -223,6 +223,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
     lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
+    lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
     lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src
     lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
     lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
