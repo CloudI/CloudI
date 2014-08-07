@@ -301,8 +301,8 @@ callbacks_test() ->
     ok = cpg:remove_leave_callback("GroupC", Callback6),
     ok.
 
-cpg_stop_test() ->
-    ok = reltool_util:application_stop(cpg).
+cpg_stop_test_() ->
+    {timeout, 10, ?_assertEqual(ok, reltool_util:application_stop(cpg))}.
 
 busy_pid() ->
     timer:sleep(1000),
