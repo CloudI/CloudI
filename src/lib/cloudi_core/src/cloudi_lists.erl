@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.3 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
@@ -52,7 +52,9 @@
 
 %% external interface
 -export([itera/3, itera2/4,
-         delete_checked/2, delete_all/2]).
+         delete_checked/2, delete_all/2,
+         take_values/2,
+         compare_constant/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -131,6 +133,58 @@ delete_all(Elem, L, [H | T]) ->
     delete_all(Elem, [H | L], T);
 delete_all(_, L, []) ->
     lists:reverse(L).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===cloudi_proplists:take_values/2 functionality, but with any tuple list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec take_values(DefaultList :: list({any(), any()}),
+                  List :: list({any(), any()})) ->
+    list({any(), any()}).
+
+take_values(DefaultList, List)
+    when is_list(DefaultList), is_list(List) ->
+    take_values([], DefaultList, List).
+
+take_values(Result, [], List) ->
+    lists:reverse(Result) ++ List;
+
+take_values(Result, [{Key, Default} | DefaultList], List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            take_values([Default | Result], DefaultList, List);
+        {value, {Key, Value}, RemainingList} ->
+            take_values([Value | Result], DefaultList, RemainingList)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Time insensitive compare to avoid a timing leak.===
+%% Use for password or other authentication comparisons.  Instead of the
+%% typical "R | (T ^ C)" bitwise operations Erlang pattern matching is used
+%% to make it a little bit simpler and more efficient.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec compare_constant(Test :: string(),
+                       Correct :: nonempty_string()) ->
+    boolean().
+
+compare_constant(Test, [_ | _] = Correct) when is_list(Test) ->
+    compare_constant(Test, Correct, 0) =:= 0.
+
+compare_constant([], [], Difference) ->
+    Difference;
+compare_constant([], [_ | _], _) ->
+    1;
+compare_constant([C | Test], [] = Correct, Difference) ->
+    compare_constant(Test, Correct, Difference bor C);
+compare_constant([C | Test], [C | Correct], Difference) ->
+    compare_constant(Test, Correct, Difference);
+compare_constant([C | Test], [_ | Correct], Difference) ->
+    compare_constant(Test, Correct, Difference bor C).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

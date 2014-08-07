@@ -37,6 +37,7 @@
         cloudi_request,
         cloudi_request_info,
         cloudi_response,
+        cloudi_response_info,
         cloudi_service,
         cloudi_service_api,
         cloudi_service_name,

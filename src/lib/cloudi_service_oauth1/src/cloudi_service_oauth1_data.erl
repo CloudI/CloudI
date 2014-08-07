@@ -83,7 +83,8 @@ plaintext_signature({_, ConsumerSecret, _}, TokenSecret) ->
     uri_join([ConsumerSecret, TokenSecret]).
 
 plaintext_verify(Signature, Consumer, TokenSecret) ->
-    compare(plaintext_signature(Consumer, TokenSecret), Signature).
+    cloudi_lists:compare_constant(plaintext_signature(Consumer,
+                                                      TokenSecret), Signature).
 
 hmac_sha1_signature(BaseString, {_, ConsumerSecret, _}, TokenSecret) ->
     Key = uri_join([ConsumerSecret, TokenSecret]),
@@ -91,7 +92,9 @@ hmac_sha1_signature(BaseString, {_, ConsumerSecret, _}, TokenSecret) ->
 
 hmac_sha1_verify(Signature, HttpMethod, URL, Params, Consumer, TokenSecret) ->
     BaseString = signature_base_string(HttpMethod, URL, Params),
-    compare(hmac_sha1_signature(BaseString, Consumer, TokenSecret), Signature).
+    cloudi_lists:compare_constant(hmac_sha1_signature(BaseString,
+                                                      Consumer,
+                                                      TokenSecret), Signature).
 
 hmac_sha(Key, Data) ->
     crypto:hmac(sha, Key, Data).
@@ -177,21 +180,6 @@ dec2hex(N) when N >= 0 andalso N =< 9 ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-% time insensitive compare to avoid a timing leak
-compare([], [], Difference) ->
-    Difference;
-compare([], [_ | _], _) ->
-    1;
-compare([C | Test], [] = Correct, Difference) ->
-    compare(Test, Correct, Difference bor C);
-compare([C | Test], [C | Correct], Difference) ->
-    compare(Test, Correct, Difference);
-compare([C | Test], [_ | Correct], Difference) ->
-    compare(Test, Correct, Difference bor C).
-
-compare(Test, [_ | _] = Correct) when is_list(Test) ->
-    compare(Test, Correct, 0) =:= 0.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
