@@ -51,7 +51,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 5100}].
+     {timetrap, 10100}].
 
 init_per_suite(Config) ->
     Path = [_ | _] = os:getenv("TEST_DIR"),
@@ -60,7 +60,7 @@ init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core,
                                                  [{configuration,
                                                    CloudIConfigPath}],
-                                                 1000),
+                                                 infinity),
     Config.
 
 end_per_suite(_Config) ->
