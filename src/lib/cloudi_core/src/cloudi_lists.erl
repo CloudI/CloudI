@@ -162,9 +162,8 @@ take_values(Result, [{Key, Default} | DefaultList], List) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Time insensitive compare to avoid a timing leak.===
-%% Use for password or other authentication comparisons.  Instead of the
-%% typical "R | (T ^ C)" bitwise operations Erlang pattern matching is used
-%% to make it a little bit simpler and more efficient.
+%% Use for password or other authentication comparisons.
+%% Execution time is based on the length of Test.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -175,16 +174,14 @@ take_values(Result, [{Key, Default} | DefaultList], List) ->
 compare_constant(Test, [_ | _] = Correct) when is_list(Test) ->
     compare_constant(Test, Correct, 0) =:= 0.
 
-compare_constant([], [], Difference) ->
-    Difference;
+compare_constant([], [], Bits) ->
+    Bits;
 compare_constant([], [_ | _], _) ->
     1;
-compare_constant([C | Test], [] = Correct, Difference) ->
-    compare_constant(Test, Correct, Difference bor C);
-compare_constant([C | Test], [C | Correct], Difference) ->
-    compare_constant(Test, Correct, Difference);
-compare_constant([C | Test], [_ | Correct], Difference) ->
-    compare_constant(Test, Correct, Difference bor C).
+compare_constant([C | Test], [] = Correct, Bits) ->
+    compare_constant(Test, Correct, Bits bor (C bxor -1));
+compare_constant([C1 | Test], [C2 | Correct], Bits) ->
+    compare_constant(Test, Correct, Bits bor (C1 bxor C2)).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
