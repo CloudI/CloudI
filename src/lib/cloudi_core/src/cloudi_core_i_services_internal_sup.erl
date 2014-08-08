@@ -136,6 +136,8 @@ result(Dispatcher) ->
     catch
         exit:{timeout, _} ->
             {error, internal_init_timeout};
+        exit:{noproc, _} ->
+            {error, internal_init_timeout};
         _:Reason ->
             {error, Reason}
     end.

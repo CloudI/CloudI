@@ -142,6 +142,8 @@ result(Service) ->
     catch
         exit:{timeout, _} ->
             {error, external_spawn_timeout};
+        exit:{noproc, _} ->
+            {error, external_spawn_timeout};
         _:Reason ->
             {error, Reason}
     end.
