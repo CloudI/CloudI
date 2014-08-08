@@ -83,8 +83,8 @@ plaintext_signature({_, ConsumerSecret, _}, TokenSecret) ->
     uri_join([ConsumerSecret, TokenSecret]).
 
 plaintext_verify(Signature, Consumer, TokenSecret) ->
-    cloudi_lists:compare_constant(plaintext_signature(Consumer,
-                                                      TokenSecret), Signature).
+    cloudi_string:compare_constant(plaintext_signature(Consumer,
+                                                       TokenSecret), Signature).
 
 hmac_sha1_signature(BaseString, {_, ConsumerSecret, _}, TokenSecret) ->
     Key = uri_join([ConsumerSecret, TokenSecret]),
@@ -92,9 +92,9 @@ hmac_sha1_signature(BaseString, {_, ConsumerSecret, _}, TokenSecret) ->
 
 hmac_sha1_verify(Signature, HttpMethod, URL, Params, Consumer, TokenSecret) ->
     BaseString = signature_base_string(HttpMethod, URL, Params),
-    cloudi_lists:compare_constant(hmac_sha1_signature(BaseString,
-                                                      Consumer,
-                                                      TokenSecret), Signature).
+    cloudi_string:compare_constant(hmac_sha1_signature(BaseString,
+                                                       Consumer,
+                                                       TokenSecret), Signature).
 
 hmac_sha(Key, Data) ->
     crypto:hmac(sha, Key, Data).

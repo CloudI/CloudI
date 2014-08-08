@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==String extensions==
+%%% ==String manipulation functions==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -69,7 +69,10 @@
          term_to_list/1,
          format/2,
          format_to_list/2,
-         format_to_binary/2]).
+         format_to_binary/2,
+         compare_constant/2,
+         compare_constant_list/2,
+         compare_constant_binary/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -387,4 +390,61 @@ format_to_list(L, A) when is_list(L), is_list(A) ->
 
 format_to_binary(L, A) when is_list(L), is_list(A) ->
     erlang:iolist_to_binary(io_lib:format(L, A)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Time insensitive compare to avoid a timing leak.===
+%% Use for password or other authentication comparisons.
+%% Execution time is based on the length of Test.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec compare_constant(Test :: string(),
+                       Correct :: nonempty_string()) ->
+    boolean().
+
+compare_constant(Test, [_ | _] = Correct) when is_list(Test) ->
+    compare_constant(Test, Correct, 0) =:= 0.
+
+compare_constant([], [], Bits) ->
+    Bits;
+compare_constant([], [_ | _], _) ->
+    1;
+compare_constant([C | Test], [] = Correct, Bits) ->
+    compare_constant(Test, Correct, Bits bor (C bxor -1));
+compare_constant([C1 | Test], [C2 | Correct], Bits) ->
+    compare_constant(Test, Correct, Bits bor (C1 bxor C2)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Time insensitive compare to avoid a timing leak with strings as lists.===
+%% Use for password or other authentication comparisons.
+%% Execution time is based on the length of Test.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec compare_constant_list(Test :: string(),
+                            Correct :: nonempty_string()) ->
+    boolean().
+
+compare_constant_list(Test, Correct) ->
+    compare_constant(Test, Correct).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Time insensitive compare to avoid a timing leak with strings as binaries.===
+%% Use for password or other authentication comparisons.
+%% Execution time is based on the length of Test.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec compare_constant_binary(Test :: binary(),
+                              Correct :: binary()) ->
+    boolean().
+
+compare_constant_binary(Test, Correct)
+    when is_binary(Test), is_binary(Correct) ->
+    compare_constant(erlang:binary_to_list(Test),
+                     erlang:binary_to_list(Correct)).
+
 

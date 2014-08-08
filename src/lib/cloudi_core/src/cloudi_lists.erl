@@ -53,8 +53,7 @@
 %% external interface
 -export([itera/3, itera2/4,
          delete_checked/2, delete_all/2,
-         take_values/2,
-         compare_constant/2]).
+         take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -158,30 +157,6 @@ take_values(Result, [{Key, Default} | DefaultList], List) ->
         {value, {Key, Value}, RemainingList} ->
             take_values([Value | Result], DefaultList, RemainingList)
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Time insensitive compare to avoid a timing leak.===
-%% Use for password or other authentication comparisons.
-%% Execution time is based on the length of Test.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec compare_constant(Test :: string(),
-                       Correct :: nonempty_string()) ->
-    boolean().
-
-compare_constant(Test, [_ | _] = Correct) when is_list(Test) ->
-    compare_constant(Test, Correct, 0) =:= 0.
-
-compare_constant([], [], Bits) ->
-    Bits;
-compare_constant([], [_ | _], _) ->
-    1;
-compare_constant([C | Test], [] = Correct, Bits) ->
-    compare_constant(Test, Correct, Bits bor (C bxor -1));
-compare_constant([C1 | Test], [C2 | Correct], Bits) ->
-    compare_constant(Test, Correct, Bits bor (C1 bxor C2)).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
