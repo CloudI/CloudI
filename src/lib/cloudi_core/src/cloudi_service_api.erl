@@ -501,8 +501,11 @@ service_subscriptions(ServiceId, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_add(L :: nonempty_list(#internal{} |
-                                      #external{} |
+-spec services_add(L :: nonempty_list({internal,
+                                       _, _, _, _, _, _, _, _, _, _, _, _, _} |
+                                      {external,
+                                       _, _, _, _, _, _, _, _, _, _, _, _, _,
+                                       _, _, _, _} |
                                       service_proplist()),
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, nonempty_list(service_id())} |
@@ -596,8 +599,8 @@ services_restart([_ | _] = L, Timeout)
 
 -spec services_search(ServiceName :: cloudi:service_name(),
                       Timeout :: api_timeout_milliseconds()) ->
-    {ok, list({service_id(), #internal{}} |
-              {service_id(), #external{}})} |
+    {ok, list({service_id(), service_internal()} |
+              {service_id(), service_external()})} |
     {error,
      timeout | noproc |
      service_name_invalid}.
@@ -624,8 +627,8 @@ services_search([_ | _] = ServiceName, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec services(Timeout :: api_timeout_milliseconds()) ->
-    {ok, list({service_id(), #internal{}} |
-              {service_id(), #external{}})} |
+    {ok, list({service_id(), service_internal()} |
+              {service_id(), service_external()})} |
     {error, timeout | noproc}.
 
 services(Timeout)

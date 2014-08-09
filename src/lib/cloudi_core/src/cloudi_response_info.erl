@@ -96,6 +96,7 @@ lookup_content_type_data() ->
      {".csv",    {request, <<"text/csv">>}},
      {".htm",    {request, <<"text/html">>}},
      {".html",   {request, <<"text/html">>}},
+     {".erl",    {request, <<"application/x-erlang">>}},
      {".exe",    {attachment, <<"application/octet-stream">>}},
      {".pdf",    {attachment, <<"application/pdf">>}},
      {".rtf",    {attachment, <<"application/rtf">>}},

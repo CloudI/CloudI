@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -41,43 +41,78 @@
 %%%
 %%%------------------------------------------------------------------------
 
+% defaults from cloudi_core_i_configuration_defaults.hrl are set below
+% (so the same defaults used in the proplist format are provided).
+% records are provided without defaults in cloudi_core_i_configuration.erl
+% to satisfy dialyzer.
+
 % internal service parameters
 -record(internal,
     {
-        prefix             :: cloudi:service_name_pattern(),
-        module             :: atom() | file:filename(),
-        args               :: list(),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_internal()
+        prefix = "/"
+            :: cloudi:service_name_pattern(),
+        module
+            :: atom() | file:filename(),
+        args = []
+            :: list(),
+        dest_refresh = immediate_closest
+            :: cloudi_service_api:dest_refresh(),
+        timeout_init = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny = undefined
+            :: cloudi_service_api:dest_list(),
+        dest_list_allow = undefined
+            :: cloudi_service_api:dest_list(),
+        count_process = 1
+            :: pos_integer() | float(),
+        max_r = 5
+            :: non_neg_integer(),
+        max_t = 300
+            :: cloudi_service_api:seconds(),
+        options = []
+            :: cloudi_service_api:service_options_internal()
     }).
     
 % external service parameters
 -record(external,
     {
-        prefix             :: cloudi:service_name_pattern(),
-        file_path          :: file:filename(),
-        args               :: string(),
-        env                :: list({string(), string()}),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        protocol           :: 'default' | 'local' | 'tcp' | 'udp',
-        buffer_size        :: 'default' | pos_integer(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        count_thread       :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_external()
+        prefix = "/"
+            :: cloudi:service_name_pattern(),
+        file_path
+            :: file:filename(),
+        args = ""
+            :: string(),
+        env = []
+            :: list({string(), string()}),
+        dest_refresh = immediate_closest
+            :: cloudi_service_api:dest_refresh(),
+        protocol = default
+            :: 'default' | 'local' | 'tcp' | 'udp',
+        buffer_size = default
+            :: 'default' | pos_integer(),
+        timeout_init = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync = 5000
+            :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny = undefined
+            :: cloudi_service_api:dest_list(),
+        dest_list_allow = undefined
+            :: cloudi_service_api:dest_list(),
+        count_process = 1
+            :: pos_integer() | float(),
+        count_thread = 1
+            :: pos_integer() | float(),
+        max_r = 5
+            :: non_neg_integer(),
+        max_t = 300
+            :: cloudi_service_api:seconds(),
+        options = []
+            :: cloudi_service_api:service_options_external()
     }).
 

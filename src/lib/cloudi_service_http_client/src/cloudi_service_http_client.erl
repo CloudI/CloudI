@@ -76,18 +76,18 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(DEFAULT_CLIENT,                     httpc).
+-define(DEFAULT_CLIENT,                     inets).
 -define(DEFAULT_PROFILE,                undefined). % settings/cookies
 -define(DEFAULT_INPUT,                   external).
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
 % supported clients
--define(MODULE_HTTPC, httpc). % Erlang/OTP inets HTTP client
+-define(MODULE_INETS, httpc). % Erlang/OTP inets HTTP client
 
 -record(state,
     {
-        module :: ?MODULE_HTTPC,
+        module :: ?MODULE_INETS,
         profile,
         input_type :: external | internal,
         debug_level :: off | trace | debug | info | warn | error | fatal,
@@ -350,22 +350,23 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = ((Profile0 =:= undefined) orelse
             (is_list(Profile0) andalso is_integer(hd(Profile0)))),
     true = (InputType =:= external) orelse (InputType =:= internal),
-    {Methods, ProfileN} = if
-        Client =:= httpc ->
+    {Module, Methods, ProfileN} = if
+        Client =:= inets ->
             Profile1 = if
                 Profile0 =:= undefined ->
                     default;
                 true ->
                     erlang:list_to_atom(Profile0)
             end,
-            case inets:start(?MODULE_HTTPC, [{profile, Profile1}], inets) of
+            case inets:start(?MODULE_INETS, [{profile, Profile1}], inets) of
                 {ok, _} ->
                     ok;
                 {error, {already_started, _}} ->
                     ok
             end,
-            {["head", "get", "put", "post", "trace",
-              "options", "delete"], Profile1}
+            {?MODULE_INETS,
+             ["head", "get", "put", "post", "trace", "options", "delete"],
+             Profile1}
     end,
     false = lists:member($*, Prefix),
     [cloudi_service:subscribe(Dispatcher, [$/ | Method]) || Method <- Methods],
@@ -382,7 +383,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             DebugLevel
     end,
     ContentTypeLookup = cloudi_response_info:lookup_content_type(list),
-    {ok, #state{module = Client,
+    {ok, #state{module = Module,
                 profile = ProfileN,
                 input_type = InputType,
                 debug_level = DebugLogLevel,
@@ -474,152 +475,148 @@ headers_request_filter(Headers0) ->
         {<<"peer-port">>,                undefined},
         {<<"source-address">>,           undefined},
         {<<"source-port">>,              undefined}],
-        case cloudi_lists:take_values(Defaults, Headers0) of
-            [undefined, _,
-             _, _, _, _ | _] ->
-                {error, {request_info_missing, <<"host">>}};
-            [Host, _,
-             _, _, _, _ | _]
-                when not is_binary(Host) ->
-                {error, {request_info_invalid, <<"host">>}};
-            [_, undefined,
-             _, _, _, _ | _] ->
-                {error, {request_info_missing, <<"url-path">>}};
-            [_, URLPath,
-             _, _, _, _ | _]
-                when not is_binary(URLPath) ->
-                {error, {request_info_invalid, <<"url-path">>}};
-            [Host, URLPath,
-             _, _, _, _ | Headers1] ->
-                {ok, Host, URLPath, Headers1}
-        end.
+    case cloudi_lists:take_values(Defaults, Headers0) of
+        [undefined, _,
+         _, _, _, _ | _] ->
+            {error, {request_info_missing, <<"host">>}};
+        [Host, _,
+         _, _, _, _ | _]
+            when not is_binary(Host) ->
+            {error, {request_info_invalid, <<"host">>}};
+        [_, undefined,
+         _, _, _, _ | _] ->
+            {error, {request_info_missing, <<"url-path">>}};
+        [_, URLPath,
+         _, _, _, _ | _]
+            when not is_binary(URLPath) ->
+            {error, {request_info_invalid, <<"url-path">>}};
+        [Host, URLPath,
+         _, _, _, _ | Headers1] ->
+            {ok, Host, URLPath, Headers1}
+    end.
 
-    header_content_type(Headers) ->
-        case lists:keyfind("content-type", 1, Headers) of
-            false ->
-                undefined;
-            {"content-type", Value} ->
-                cloudi_string:beforel($;, Value, input)
-        end.
+header_content_type(Headers) ->
+    case lists:keyfind("content-type", 1, Headers) of
+        false ->
+            undefined;
+        {"content-type", Value} ->
+            cloudi_string:beforel($;, Value, input)
+    end.
 
-    url_string({HostName, <<"80">>}, URL) ->
-        "http://" ++ erlang:binary_to_list(HostName) ++
-        erlang:binary_to_list(URL);
-    url_string({HostName, <<"443">>}, URL) ->
-        "https://" ++ erlang:binary_to_list(HostName) ++
-        erlang:binary_to_list(URL);
-    url_string({HostName, Port}, URL) ->
-        "http://" ++ erlang:binary_to_list(HostName) ++
-        ":" ++ erlang:binary_to_list(Port) ++
-        erlang:binary_to_list(URL).
+url_string({HostName, <<"80">>}, URL) ->
+    "http://" ++ erlang:binary_to_list(HostName) ++
+    erlang:binary_to_list(URL);
+url_string({HostName, <<"443">>}, URL) ->
+    "https://" ++ erlang:binary_to_list(HostName) ++
+    erlang:binary_to_list(URL);
+url_string({HostName, Port}, URL) ->
+    "http://" ++ erlang:binary_to_list(HostName) ++
+    ":" ++ erlang:binary_to_list(Port) ++
+    erlang:binary_to_list(URL).
 
-    client_request(?MODULE_HTTPC, Profile, Method0,
-                   HeadersIncoming0, Request, Timeout,
-                   ContentTypeLookup) ->
-        Method1 = if
-            Method0 == "head" ->
-                head;
-            Method0 == "get" ->
-                get;
-            Method0 == "put" ->
-                put;
-            Method0 == "post" ->
-                post;
-            Method0 == "trace" ->
-                trace;
-            Method0 == "options" ->
-                options;
-            Method0 == "delete" ->
-                delete
-        end,
-        case headers_request_filter(HeadersIncoming0) of
-            {ok, Host, URLPath, HeadersIncoming1} ->
-                URL = url_string(headers_request_filter_host(Host), URLPath),
-                RequestHeaders = [{erlang:binary_to_list(Kin),
-                                   erlang:binary_to_list(Vin)} ||
-                                  {Kin, Vin} <- HeadersIncoming1],
-                ClientRequest = if
-                    Method1 =:= get ->
-                        {URL, RequestHeaders};
-                    true ->
-                        ContentTypeN = case header_content_type(RequestHeaders) of
-                            undefined ->
-                                case cloudi_x_trie:find(filename:extension(URL),
-                                                        ContentTypeLookup) of
-                                    {ok, {_, ContentType1}} ->
-                                        ContentType1;
-                                    error ->
-                                        "text/html"
-                                end;
-                            ContentType0 ->
-                                ContentType0
-                        end,
-                        {URL, RequestHeaders, ContentTypeN, Request}
-                end,
-                case ?MODULE_HTTPC:request(Method1, ClientRequest,
-                                           [{autoredirect, false},
-                                            {timeout, Timeout}],
-                                           [{body_format, binary}], Profile) of
-                    {ok, {{_HttpVersion, StatusCode, _Reason},
-                          ResponseHeaders, Response}} ->
-                        HeadersOutgoing0 = [{erlang:list_to_binary(Kout),
-                                             erlang:list_to_binary(Vout)} ||
-                                            {Kout, Vout} <- ResponseHeaders],
-                        HeadersOutgoing1 = [{<<"status">>,
-                                             erlang:integer_to_binary(StatusCode)} |
-                                            HeadersOutgoing0],
-                        {StatusCode, HeadersOutgoing1, Response};
-                    {error, _} = Error ->
-                        %XXX fix
-                        {undefined, [], Error}
-                end;
-            {error, _} = Error ->
-                %XXX fix
-                {undefined, [], Error}
-        end.
+client_request(?MODULE_INETS, Profile, Method0,
+               HeadersIncoming0, Request, Timeout,
+               ContentTypeLookup) ->
+    Method1 = if
+        Method0 == "HEAD" ->
+            head;
+        Method0 == "GET" ->
+            get;
+        Method0 == "PUT" ->
+            put;
+        Method0 == "POST" ->
+            post;
+        Method0 == "TRACE" ->
+            trace;
+        Method0 == "OPTIONS" ->
+            options;
+        Method0 == "DELETE" ->
+            delete
+    end,
+    case headers_request_filter(HeadersIncoming0) of
+        {ok, Host, URLPath, HeadersIncoming1} ->
+            URL = url_string(headers_request_filter_host(Host), URLPath),
+            RequestHeaders = [{erlang:binary_to_list(Kin),
+                               erlang:binary_to_list(Vin)} ||
+                              {Kin, Vin} <- HeadersIncoming1],
+            ClientRequest = if
+                Method1 =:= get ->
+                    {URL, RequestHeaders};
+                true ->
+                    ContentTypeN = case header_content_type(RequestHeaders) of
+                        undefined ->
+                            case cloudi_x_trie:find(filename:extension(URL),
+                                                    ContentTypeLookup) of
+                                {ok, {_, ContentType1}} ->
+                                    ContentType1;
+                                error ->
+                                    "text/html"
+                            end;
+                        ContentType0 ->
+                            ContentType0
+                    end,
+                    {URL, RequestHeaders, ContentTypeN, Request}
+            end,
+            case ?MODULE_INETS:request(Method1, ClientRequest,
+                                       [{autoredirect, false},
+                                        {timeout, Timeout}],
+                                       [{body_format, binary}], Profile) of
+                {ok, {{_HttpVersion, StatusCode, _Reason},
+                      ResponseHeaders, Response}} ->
+                    HeadersOutgoing0 = [{erlang:list_to_binary(Kout),
+                                         erlang:list_to_binary(Vout)} ||
+                                        {Kout, Vout} <- ResponseHeaders],
+                    HeadersOutgoing1 = [{<<"status">>,
+                                         erlang:integer_to_binary(StatusCode)} |
+                                        HeadersOutgoing0],
+                    {StatusCode, HeadersOutgoing1, Response};
+                {error, _} = Error ->
+                    {undefined, <<>>, Error}
+            end;
+        {error, _} = Error ->
+            {undefined, <<>>, Error}
+    end.
 
-    client_debug_log(trace, Message, Args) ->
-        ?LOG_TRACE(Message, Args);
-    client_debug_log(debug, Message, Args) ->
-        ?LOG_DEBUG(Message, Args);
-    client_debug_log(info, Message, Args) ->
-        ?LOG_INFO(Message, Args);
-    client_debug_log(warn, Message, Args) ->
-        ?LOG_WARN(Message, Args);
-    client_debug_log(error, Message, Args) ->
-        ?LOG_ERROR(Message, Args);
-    client_debug_log(fatal, Message, Args) ->
-        ?LOG_FATAL(Message, Args).
+client_debug_log(trace, Message, Args) ->
+    ?LOG_TRACE(Message, Args);
+client_debug_log(debug, Message, Args) ->
+    ?LOG_DEBUG(Message, Args);
+client_debug_log(info, Message, Args) ->
+    ?LOG_INFO(Message, Args);
+client_debug_log(warn, Message, Args) ->
+    ?LOG_WARN(Message, Args);
+client_debug_log(error, Message, Args) ->
+    ?LOG_ERROR(Message, Args);
+client_debug_log(fatal, Message, Args) ->
+    ?LOG_FATAL(Message, Args).
 
-    client_debug_start(off) ->
-        undefined;
-    client_debug_start(_) ->
-        cloudi_x_uuid:get_v1_time(os).
+client_debug_start(off) ->
+    undefined;
+client_debug_start(_) ->
+    cloudi_x_uuid:get_v1_time(os).
 
-    client_debug_end(off, _, _, _, _, _, _, _) ->
-        undefined;
-    client_debug_end(Level, HttpCode, Method,
-                     HeadersIncoming, Request,
-                     HeadersOutgoing, Response, RequestStartMicroSec) ->
-        client_debug_log(Level,
-                         "~p ~s (~p, ~p) -> (~p, ~p) ~p ms",
-                         [HttpCode, Method,
-                          HeadersIncoming, Request,
-                          HeadersOutgoing, Response,
-                          (cloudi_x_uuid:get_v1_time(os) -
-                           RequestStartMicroSec) / 1000.0]).
+client_debug_end(off, _, _, _, _, _, _, _) ->
+    undefined;
+client_debug_end(Level, HttpCode, Method,
+                 HeadersIncoming, Request,
+                 HeadersOutgoing, Response, RequestStartMicroSec) ->
+    client_debug_log(Level,
+                     "~p ~s (~p, ~p) -> (~p, ~p) ~p ms",
+                     [HttpCode, Method,
+                      HeadersIncoming, Request,
+                      HeadersOutgoing, Response,
+                      (cloudi_x_uuid:get_v1_time(os) -
+                       RequestStartMicroSec) / 1000.0]).
 
-    result({ok, {error, _} = Error}) ->
-        Error;
-    result({error, _} = Error) ->
-        Error;
-    result({ok, Response}) ->
-        {ok, [], Response};
-    result({ok, _, _} = Success) ->
-        Success.
+result({ok, {error, _} = Error}) ->
+    Error;
+result({error, _} = Error) ->
+    Error;
+result({ok, Response}) ->
+    {ok, [], Response};
+result({ok, _, _} = Success) ->
+    Success.
 
-    strip_whitespace(<<32:8, Rest/binary>>) ->
-        strip_whitespace(Rest);
-    strip_whitespace(Result) ->
-        Result.
+strip_whitespace(String) when is_binary(String) ->
+    erlang:list_to_binary(string:strip(erlang:binary_to_list(String))).
 

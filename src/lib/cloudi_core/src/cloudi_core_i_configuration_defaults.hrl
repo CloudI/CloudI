@@ -42,6 +42,7 @@
 %%%------------------------------------------------------------------------
 
 % defaults common to cloudi module usage and cloudi_service module usage
+% (set manually in the cloudi_service_api.hrl records)
 -define(DEFAULT_SERVICE_PREFIX,                   "/").
 -define(DEFAULT_DEST_REFRESH,       immediate_closest).
 -define(DEFAULT_TIMEOUT_INIT,                    5000). % milliseconds

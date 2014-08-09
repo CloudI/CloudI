@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -67,12 +67,18 @@
     {
         functions, % method -> function lookup
         formats = cloudi_x_trie:new([
+            % new format code paths
+            {"rpc",
+             fun format_rpc/5},
+            {"rpc.json",
+             fun format_json_rpc/5},
+            % old format code paths
             {"erlang",
-             fun format_erlang/4},
+             fun format_erlang/5},
             {"json_rpc",
-             fun format_json_rpc/4}
+             fun format_json_rpc/5}
         ]),
-        suffix_index = undefined
+        prefix_length = undefined
     }).
  
 %%%------------------------------------------------------------------------
@@ -84,42 +90,62 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, Dispatcher) ->
+    % newer service names should be preferred to provide a
+    % content-type hint as a file extension
     CloudIServiceAPI = lists:foldl(fun({Method, Arity}, Functions) ->
         F = fun cloudi_service_api:Method/Arity,
-        MethodString = erlang:atom_to_list(Method),
-        FormatMethod = "erlang/" ++ MethodString,
-        % service names are [prefix]format/[method] (i.e., request format)
-        cloudi_service:subscribe(Dispatcher, FormatMethod),
+        MethodName = erlang:atom_to_list(Method),
+        % new service names are (prefix)rpc/(method)(format-extension)
+        FormatMethodNew = "rpc/" ++ MethodName ++ ".erl",
+        cloudi_service:subscribe(Dispatcher, FormatMethodNew),
         if
             Arity == 1 ->
-                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/get");
+                cloudi_service:subscribe(Dispatcher,
+                                         FormatMethodNew ++ "/get");
             Arity == 2 ->
-                cloudi_service:subscribe(Dispatcher, FormatMethod ++ "/post")
+                cloudi_service:subscribe(Dispatcher,
+                                         FormatMethodNew ++ "/post")
         end,
-        cloudi_x_trie:store(MethodString, F, Functions)
+        % old service names are (prefix)(format)/(method)
+        FormatMethodOld = "erlang/" ++ MethodName,
+        cloudi_service:subscribe(Dispatcher, FormatMethodOld),
+        if
+            Arity == 1 ->
+                cloudi_service:subscribe(Dispatcher,
+                                         FormatMethodOld ++ "/get");
+            Arity == 2 ->
+                cloudi_service:subscribe(Dispatcher,
+                                         FormatMethodOld ++ "/post")
+        end,
+        cloudi_x_trie:store(MethodName ++ ".erl", F,
+            cloudi_x_trie:store(MethodName, F, Functions))
     end, cloudi_x_trie:new(),
     cloudi_x_reltool_util:module_exports(cloudi_service_api)),
+    % new service names for JSON-RPC are:
+    cloudi_service:subscribe(Dispatcher, "rpc.json/"),
+    cloudi_service:subscribe(Dispatcher, "rpc.json//post"),
+    % old service names for JSON-RPC are:
     cloudi_service:subscribe(Dispatcher, "json_rpc/"),
     cloudi_service:subscribe(Dispatcher, "json_rpc//post"),
     {ok, #state{functions = CloudIServiceAPI,
-                suffix_index = erlang:length(Prefix) + 1}}.
+                prefix_length = erlang:length(Prefix)}}.
 
-cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
+cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
-                              #state{suffix_index = SuffixIndex,
+                              #state{prefix_length = PrefixLength,
                                      functions = Functions,
                                      formats = Formats} = State, _Dispatcher) ->
-    {Format, Suffix} = cloudi_string:splitl(
-        $/, string:sub_string(Pattern, SuffixIndex)
-    ),
-    FunctionArity = case cloudi_string:beforel($/, Suffix, input) of
-        [] ->
-            undefined;
-        Method ->
-            cloudi_x_trie:fetch(Method, Functions)
-    end,
+    {Format,
+     Suffix} = cloudi_string:splitl($/, lists:nthtail(PrefixLength, Name)),
     FormatF = cloudi_x_trie:fetch(Format, Formats),
-    Response = FormatF(FunctionArity, Request, Timeout, Functions),
+    MethodName = cloudi_string:beforel($/, Suffix, input),
+    F = if
+        MethodName == [] ->
+            undefined;
+        true ->
+            cloudi_x_trie:fetch(MethodName, Functions)
+    end,
+    Response = FormatF(MethodName, F, Request, Timeout, Functions),
     {reply, cloudi_response:new(Request, Response), State}.
 
 cloudi_service_handle_info(Request, State, _) ->
@@ -133,32 +159,20 @@ cloudi_service_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-format_erlang(F, Input, Timeout, _)
+format_rpc(MethodName, F, Input, Timeout, _)
+    when is_function(F) ->
+    {arity, Arity} = erlang:fun_info(F, arity),
+    case filename:extension(MethodName) of
+        ".erl" ->
+            format_erlang_f(F, Arity, Input, Timeout);
+        _ ->
+            <<>>
+    end.
+
+format_erlang(_, F, Input, Timeout, _)
     when is_function(F) ->
     {arity, Arity} = erlang:fun_info(F, arity),
     format_erlang_f(F, Arity, Input, Timeout).
-
-format_erlang_f(F, 2, Input, Timeout) ->
-    if
-        is_binary(Input) ->
-            case F(cloudi_string:binary_to_term(Input), Timeout) of
-                {ok, Result} when is_binary(Result) ->
-                    Result;
-                {ok, Result} ->
-                    cloudi_string:term_to_binary(Result);
-                Result ->
-                    cloudi_string:term_to_binary(Result)
-            end;
-        is_list(Input) ->
-            case F(cloudi_string:list_to_term(Input), Timeout) of
-                {ok, Result} when is_binary(Result) ->
-                    erlang:binary_to_list(Result);
-                {ok, Result} ->
-                    cloudi_string:term_to_list(Result);
-                Result ->
-                    cloudi_string:term_to_list(Result)
-            end
-    end;
 
 format_erlang_f(F, 1, Input, Timeout) ->
     if
@@ -180,14 +194,36 @@ format_erlang_f(F, 1, Input, Timeout) ->
                 Result ->
                     cloudi_string:term_to_list(Result)
             end
+    end;
+format_erlang_f(F, 2, Input, Timeout) ->
+    if
+        is_binary(Input) ->
+            case F(cloudi_string:binary_to_term(Input), Timeout) of
+                {ok, Result} when is_binary(Result) ->
+                    Result;
+                {ok, Result} ->
+                    cloudi_string:term_to_binary(Result);
+                Result ->
+                    cloudi_string:term_to_binary(Result)
+            end;
+        is_list(Input) ->
+            case F(cloudi_string:list_to_term(Input), Timeout) of
+                {ok, Result} when is_binary(Result) ->
+                    erlang:binary_to_list(Result);
+                {ok, Result} ->
+                    cloudi_string:term_to_list(Result);
+                Result ->
+                    cloudi_string:term_to_list(Result)
+            end
     end.
 
--spec format_json_rpc('undefined',
+-spec format_json_rpc(string(),
+                      'undefined',
                       Input :: binary() | string(),
                       Timeout :: integer(),
                       Functions :: any()) -> binary().
 
-format_json_rpc(undefined, Input, Timeout, Functions) ->
+format_json_rpc(_, undefined, Input, Timeout, Functions) ->
     {Method, Params, Id} = cloudi_json_rpc:request_to_term(Input),
     try (case cloudi_x_trie:fetch(erlang:binary_to_list(Method), Functions) of
         F when Params == [], is_function(F, 1) ->

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add separate endpoints for cloudi_service_api_requests that provide
+      content-type hints as file extensions with a better hierarchy
+    * Add defaults for the tuple configuration format in cloudi_service_api.hrl
+    * Add a basic test for cloudi_service_http_client and fixed various bugs
+
 2014-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Move some common functions into cloudi_core,

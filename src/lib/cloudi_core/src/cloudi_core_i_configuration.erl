@@ -67,7 +67,6 @@
          nodes_set/2]).
 
 -include("cloudi_logger.hrl").
--include("cloudi_service_api.hrl").
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 
@@ -214,6 +213,45 @@
      logging_syslog_facility_invalid |
      logging_syslog_level_invalid |
      logging_syslog_facility_invalid, any()}.
+
+% cloudi_service_api.hrl records without defaults set so
+% dialyzer doesn't get confused
+-record(internal,
+    {
+        prefix             :: cloudi:service_name_pattern(),
+        module             :: atom() | file:filename(),
+        args               :: list(),
+        dest_refresh       :: cloudi_service_api:dest_refresh(),
+        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny     :: cloudi_service_api:dest_list(),
+        dest_list_allow    :: cloudi_service_api:dest_list(),
+        count_process      :: pos_integer() | float(),
+        max_r              :: non_neg_integer(),
+        max_t              :: cloudi_service_api:seconds(),
+        options            :: cloudi_service_api:service_options_internal()
+    }).
+-record(external,
+    {
+        prefix             :: cloudi:service_name_pattern(),
+        file_path          :: file:filename(),
+        args               :: string(),
+        env                :: list({string(), string()}),
+        dest_refresh       :: cloudi_service_api:dest_refresh(),
+        protocol           :: 'default' | 'local' | 'tcp' | 'udp',
+        buffer_size        :: 'default' | pos_integer(),
+        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
+        dest_list_deny     :: cloudi_service_api:dest_list(),
+        dest_list_allow    :: cloudi_service_api:dest_list(),
+        count_process      :: pos_integer() | float(),
+        count_thread       :: pos_integer() | float(),
+        max_r              :: non_neg_integer(),
+        max_t              :: cloudi_service_api:seconds(),
+        options            :: cloudi_service_api:service_options_external()
+    }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

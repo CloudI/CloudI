@@ -141,7 +141,7 @@ delete_all(_, L, []) ->
 
 -spec take_values(DefaultList :: list({any(), any()}),
                   List :: list({any(), any()})) ->
-    list({any(), any()}).
+    list().
 
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
