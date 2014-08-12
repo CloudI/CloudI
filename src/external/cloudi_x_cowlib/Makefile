@@ -1,7 +1,7 @@
 # See LICENSE for licensing information.
 
 PROJECT = cowlib
-CT_SUITES = eunit
+PLT_APPS = crypto
 
 include erlang.mk
 
@@ -37,7 +37,7 @@ deps/horse:
 	cd $(DEPS_DIR)/horse ; git checkout -q master
 	$(MAKE) -C $(DEPS_DIR)/horse
 
-perfs: ERLC_OPTS += -DPERF=1 +'{parse_transform, horse_autoexport}'
+perfs: ERLC_OPTS += -DPERF=1 +'{parse_transform, horse_autoexport}' -DEXTRA=1
 perfs: clean deps deps/horse app
 	$(gen_verbose) erl -noshell -pa ebin deps/horse/ebin \
 		-eval 'horse:app_perf($(PROJECT)), init:stop().'

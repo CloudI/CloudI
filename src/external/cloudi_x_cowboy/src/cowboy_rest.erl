@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -12,8 +12,6 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-%% @doc REST protocol implementation.
-%%
 %% Originally based on the Webmachine Diagram from Alan Dean and
 %% Justin Sheehy.
 -module(cowboy_rest).
@@ -54,17 +52,11 @@
 	%% Cached resource calls.
 	etag :: undefined | no_call | {strong | weak, binary()},
 	last_modified :: undefined | no_call | calendar:datetime(),
-	expires :: undefined | no_call | calendar:datetime()
+	expires :: undefined | no_call | calendar:datetime() | binary()
 }).
 
-%% @doc Upgrade a HTTP request to the REST protocol.
-%%
-%% You do not need to call this function manually. To upgrade to the REST
-%% protocol, you simply need to return <em>{upgrade, protocol, {@module}}</em>
-%% in your <em>cowboy_http_handler:init/3</em> handler function.
 -spec upgrade(Req, Env, module(), any())
-	-> {ok, Req, Env} | {error, 500, Req}
-	when Req::cowboy_req:req(), Env::cowboy_middleware:env().
+	-> {ok, Req, Env} when Req::cowboy_req:req(), Env::cowboy_middleware:env().
 upgrade(Req, Env, Handler, HandlerOpts) ->
 	Method = cowboy_req:get(method, Req),
 	case erlang:function_exported(Handler, rest_init, 2) of
@@ -74,11 +66,12 @@ upgrade(Req, Env, Handler, HandlerOpts) ->
 					service_available(Req2, #state{env=Env, method=Method,
 						handler=Handler, handler_state=HandlerState})
 			catch Class:Reason ->
-				cowboy_req:maybe_reply(500, Req),
+				Stacktrace = erlang:get_stacktrace(),
+				cowboy_req:maybe_reply(Stacktrace, Req),
 				erlang:Class([
 					{reason, Reason},
 					{mfa, {Handler, rest_init, 2}},
-					{stacktrace, erlang:get_stacktrace()},
+					{stacktrace, Stacktrace},
 					{req, cowboy_req:to_list(Req)},
 					{opts, HandlerOpts}
 				])
@@ -788,7 +781,7 @@ process_content_type(Req, State=#state{method=Method, exists=Exists}, Fun) ->
 			next(Req2, State2, fun maybe_created/2);
 		{false, Req2, HandlerState2} ->
 			State2 = State#state{handler_state=HandlerState2},
-			respond(Req2, State2, 422);
+			respond(Req2, State2, 400);
 		{{true, ResURL}, Req2, HandlerState2} when Method =:= <<"POST">> ->
 			State2 = State#state{handler_state=HandlerState2},
 			Req3 = cowboy_req:set_resp_header(
@@ -903,6 +896,10 @@ set_resp_expires(Req, State) ->
 	case Expires of
 		Expires when is_atom(Expires) ->
 			{Req2, State2};
+		Expires when is_binary(Expires) ->
+			Req3 = cowboy_req:set_resp_header(
+				<<"expires">>, Expires, Req2),
+			{Req3, State2};
 		Expires ->
 			ExpiresBin = cowboy_clock:rfc1123(Expires),
 			Req3 = cowboy_req:set_resp_header(
@@ -1003,11 +1000,12 @@ terminate(Req, State=#state{env=Env}) ->
 error_terminate(Req, State=#state{handler=Handler, handler_state=HandlerState},
 		Class, Reason, Callback) ->
 	rest_terminate(Req, State),
-	cowboy_req:maybe_reply(500, Req),
+	Stacktrace = erlang:get_stacktrace(),
+	cowboy_req:maybe_reply(Stacktrace, Req),
 	erlang:Class([
 		{reason, Reason},
 		{mfa, {Handler, Callback, 2}},
-		{stacktrace, erlang:get_stacktrace()},
+		{stacktrace, Stacktrace},
 		{req, cowboy_req:to_list(Req)},
 		{state, HandlerState}
 	]).

@@ -16,10 +16,22 @@ Prerequisites
 It is assumed the developer already knows Erlang and has some experience
 with socket programming and TCP protocols.
 
-In order to run the examples available in this user guide, you will need
-Erlang and rebar installed and in your $PATH.
+Supported platforms
+-------------------
 
-Please see the [rebar repository](https://github.com/basho/rebar) for
-downloading and building instructions. Please look up the environment
-variables documentation of your system for details on how to update the
-$PATH information.
+Ranch is tested and supported on Linux.
+
+Ranch has been reported to work on other platforms, but we make no
+guarantee that the experience will be safe and smooth. You are advised
+to perform the necessary testing and security audits prior to deploying
+on other platforms.
+
+Ranch is developed for Erlang R15B01 and later versions.
+
+Ranch may be compiled on earlier Erlang versions with small source code
+modifications but there is no guarantee that it will work as expected.
+
+Versioning
+----------
+
+Ranch uses [Semantic Versioning 2.0.0](http://semver.org/).

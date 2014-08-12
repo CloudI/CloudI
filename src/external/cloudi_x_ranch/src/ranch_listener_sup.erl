@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2012, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -12,17 +12,11 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-%% @private
 -module(ranch_listener_sup).
 -behaviour(supervisor).
 
-%% API.
 -export([start_link/6]).
-
-%% supervisor.
 -export([init/1]).
-
-%% API.
 
 -spec start_link(ranch:ref(), non_neg_integer(), module(), any(), module(), any())
 	-> {ok, pid()}.
@@ -33,18 +27,16 @@ start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts) ->
 		Ref, NbAcceptors, Transport, TransOpts, Protocol
 	}).
 
-%% supervisor.
-
 init({Ref, NbAcceptors, Transport, TransOpts, Protocol}) ->
+	AckTimeout = proplists:get_value(ack_timeout, TransOpts, 5000),
 	ConnType = proplists:get_value(connection_type, TransOpts, worker),
+	Shutdown = proplists:get_value(shutdown, TransOpts, 5000),
 	ChildSpecs = [
-		%% conns_sup
 		{ranch_conns_sup, {ranch_conns_sup, start_link,
-				[Ref, ConnType, Transport, Protocol]},
+				[Ref, ConnType, Shutdown, Transport, AckTimeout, Protocol]},
 			permanent, infinity, supervisor, [ranch_conns_sup]},
-		%% acceptors_sup
 		{ranch_acceptors_sup, {ranch_acceptors_sup, start_link,
-				[Ref, NbAcceptors, Transport, TransOpts]
-			}, permanent, infinity, supervisor, [ranch_acceptors_sup]}
+				[Ref, NbAcceptors, Transport, TransOpts]},
+			permanent, infinity, supervisor, [ranch_acceptors_sup]}
 	],
 	{ok, {{rest_for_one, 10, 10}, ChildSpecs}}.

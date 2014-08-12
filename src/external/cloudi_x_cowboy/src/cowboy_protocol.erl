@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
 %% Copyright (c) 2011, Anthony Ramine <nox@dev-extend.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
@@ -13,39 +13,6 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-%% @doc HTTP protocol handler.
-%%
-%% The available options are:
-%% <dl>
-%%  <dt>compress</dt><dd>Whether to automatically compress the response
-%%   body when the conditions are met. Disabled by default.</dd>
-%%  <dt>env</dt><dd>The environment passed and optionally modified
-%%   by middlewares.</dd>
-%%  <dt>max_empty_lines</dt><dd>Max number of empty lines before a request.
-%%   Defaults to 5.</dd>
-%%  <dt>max_header_name_length</dt><dd>Max length allowed for header names.
-%%   Defaults to 64.</dd>
-%%  <dt>max_header_value_length</dt><dd>Max length allowed for header values.
-%%   Defaults to 4096.</dd>
-%%  <dt>max_headers</dt><dd>Max number of headers allowed.
-%%   Defaults to 100.</dd>
-%%  <dt>max_keepalive</dt><dd>Max number of requests allowed in a single
-%%   keep-alive session. Defaults to 100.</dd>
-%%  <dt>max_request_line_length</dt><dd>Max length allowed for the request
-%%   line. Defaults to 4096.</dd>
-%%  <dt>middlewares</dt><dd>The list of middlewares to execute when a
-%%   request is received.</dd>
-%%  <dt>onrequest</dt><dd>Optional fun that allows Req interaction before
-%%   any dispatching is done. Host info, path info and bindings are thus
-%%   not available at this point.</dd>
-%%  <dt>onresponse</dt><dd>Optional fun that allows replacing a response
-%%   sent by the application.</dd>
-%%  <dt>timeout</dt><dd>Time in milliseconds a client has to send the
-%%   full request line and headers. Defaults to 5000 milliseconds.</dd>
-%% </dl>
-%%
-%% Note that there is no need to monitor these processes when using Cowboy as
-%% an application as it already supervises them under the listener supervisor.
 -module(cowboy_protocol).
 
 %% API.
@@ -89,9 +56,10 @@
 	until :: non_neg_integer() | infinity
 }).
 
+-include_lib("cowlib/include/cow_inline.hrl").
+
 %% API.
 
-%% @doc Start an HTTP protocol process.
 -spec start_link(ranch:ref(), inet:socket(), module(), opts()) -> {ok, pid()}.
 start_link(Ref, Socket, Transport, Opts) ->
 	Pid = spawn_link(?MODULE, init, [Ref, Socket, Transport, Opts]),
@@ -99,15 +67,13 @@ start_link(Ref, Socket, Transport, Opts) ->
 
 %% Internal.
 
-%% @doc Faster alternative to proplists:get_value/3.
-%% @private
+%% Faster alternative to proplists:get_value/3.
 get_value(Key, Opts, Default) ->
 	case lists:keyfind(Key, 1, Opts) of
 		{_, Value} -> Value;
 		_ -> Default
 	end.
 
-%% @private
 -spec init(ranch:ref(), inet:socket(), module(), opts()) -> ok.
 init(Ref, Socket, Transport, Opts) ->
 	Compress = get_value(compress, Opts, false),
@@ -170,7 +136,6 @@ wait_request(Buffer, State=#state{socket=Socket, transport=Transport,
 			terminate(State)
 	end.
 
-%% @private
 -spec parse_request(binary(), #state{}, non_neg_integer()) -> ok.
 %% Empty lines must be using \r\n.
 parse_request(<< $\n, _/binary >>, State, _) ->
@@ -292,44 +257,12 @@ match_colon(<< _, Rest/bits >>, N) ->
 match_colon(_, _) ->
 	nomatch.
 
-%% I know, this isn't exactly pretty. But this is the most critical
-%% code path and as such needs to be optimized to death.
-%%
-%% ... Sorry for your eyes.
-%%
-%% But let's be honest, that's still pretty readable.
 parse_hd_name(<< C, Rest/bits >>, S, M, P, Q, V, H, SoFar) ->
 	case C of
 		$: -> parse_hd_before_value(Rest, S, M, P, Q, V, H, SoFar);
 		$\s -> parse_hd_name_ws(Rest, S, M, P, Q, V, H, SoFar);
 		$\t -> parse_hd_name_ws(Rest, S, M, P, Q, V, H, SoFar);
-		$A -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $a >>);
-		$B -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $b >>);
-		$C -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $c >>);
-		$D -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $d >>);
-		$E -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $e >>);
-		$F -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $f >>);
-		$G -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $g >>);
-		$H -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $h >>);
-		$I -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $i >>);
-		$J -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $j >>);
-		$K -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $k >>);
-		$L -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $l >>);
-		$M -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $m >>);
-		$N -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $n >>);
-		$O -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $o >>);
-		$P -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $p >>);
-		$Q -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $q >>);
-		$R -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $r >>);
-		$S -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $s >>);
-		$T -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $t >>);
-		$U -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $u >>);
-		$V -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $v >>);
-		$W -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $w >>);
-		$X -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $x >>);
-		$Y -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $y >>);
-		$Z -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, $z >>);
-		C -> parse_hd_name(Rest, S, M, P, Q, V, H, << SoFar/binary, C >>)
+		?INLINE_LOWERCASE(parse_hd_name, Rest, S, M, P, Q, V, H, SoFar)
 	end.
 
 parse_hd_name_ws(<< C, Rest/bits >>, S, M, P, Q, V, H, Name) ->
@@ -405,7 +338,8 @@ parse_hd_value(<< $\r, Rest/bits >>, S, M, P, Q, V, Headers, Name, SoFar) ->
 		<< $\n >> ->
 			wait_hd_value_nl(<<>>, S, M, P, Q, V, Headers, Name, SoFar);
 		<< $\n, C, Rest2/bits >> when C =:= $\s; C =:= $\t ->
-			parse_hd_value(Rest2, S, M, P, Q, V, Headers, Name, SoFar);
+			parse_hd_value(Rest2, S, M, P, Q, V, Headers, Name,
+				<< SoFar/binary, C >>);
 		<< $\n, Rest2/bits >> ->
 			parse_header(Rest2, S, M, P, Q, V, [{Name, SoFar}|Headers])
 	end;
@@ -441,8 +375,6 @@ request(B, State=#state{transport=Transport}, M, P, Q, Version, Headers) ->
 default_port(ssl) -> 443;
 default_port(_) -> 80.
 
-%% Another hurtful block of code. :)
-%%
 %% Same code as cow_http:parse_fullhost/1, but inline because we
 %% really want this to go fast.
 parse_host(<< $[, Rest/bits >>, false, <<>>) ->
@@ -455,33 +387,7 @@ parse_host(<< $], Rest/bits >>, true, Acc) ->
 	parse_host(Rest, false, << Acc/binary, $] >>);
 parse_host(<< C, Rest/bits >>, E, Acc) ->
 	case C of
-		$A -> parse_host(Rest, E, << Acc/binary, $a >>);
-		$B -> parse_host(Rest, E, << Acc/binary, $b >>);
-		$C -> parse_host(Rest, E, << Acc/binary, $c >>);
-		$D -> parse_host(Rest, E, << Acc/binary, $d >>);
-		$E -> parse_host(Rest, E, << Acc/binary, $e >>);
-		$F -> parse_host(Rest, E, << Acc/binary, $f >>);
-		$G -> parse_host(Rest, E, << Acc/binary, $g >>);
-		$H -> parse_host(Rest, E, << Acc/binary, $h >>);
-		$I -> parse_host(Rest, E, << Acc/binary, $i >>);
-		$J -> parse_host(Rest, E, << Acc/binary, $j >>);
-		$K -> parse_host(Rest, E, << Acc/binary, $k >>);
-		$L -> parse_host(Rest, E, << Acc/binary, $l >>);
-		$M -> parse_host(Rest, E, << Acc/binary, $m >>);
-		$N -> parse_host(Rest, E, << Acc/binary, $n >>);
-		$O -> parse_host(Rest, E, << Acc/binary, $o >>);
-		$P -> parse_host(Rest, E, << Acc/binary, $p >>);
-		$Q -> parse_host(Rest, E, << Acc/binary, $q >>);
-		$R -> parse_host(Rest, E, << Acc/binary, $r >>);
-		$S -> parse_host(Rest, E, << Acc/binary, $s >>);
-		$T -> parse_host(Rest, E, << Acc/binary, $t >>);
-		$U -> parse_host(Rest, E, << Acc/binary, $u >>);
-		$V -> parse_host(Rest, E, << Acc/binary, $v >>);
-		$W -> parse_host(Rest, E, << Acc/binary, $w >>);
-		$X -> parse_host(Rest, E, << Acc/binary, $x >>);
-		$Y -> parse_host(Rest, E, << Acc/binary, $y >>);
-		$Z -> parse_host(Rest, E, << Acc/binary, $z >>);
-		_ -> parse_host(Rest, E, << Acc/binary, C >>)
+		?INLINE_LOWERCASE(parse_host, Rest, E, Acc)
 	end.
 
 %% End of request parsing.
@@ -538,7 +444,6 @@ execute(Req, State, Env, [Middleware|Tail]) ->
 			error_terminate(Code, Req2, State)
 	end.
 
-%% @private
 -spec resume(#state{}, cowboy_middleware:env(), [module()],
 	module(), module(), [any()]) -> ok.
 resume(State, Env, Tail, Module, Function, Args) ->
@@ -564,13 +469,14 @@ next_request(Req, State=#state{req_keepalive=Keepalive, timeout=Timeout},
 		close ->
 			terminate(State);
 		_ ->
-			Buffer = case cowboy_req:skip_body(Req) of
-				{ok, Req2} -> cowboy_req:get(buffer, Req2);
+			%% Skip the body if it is reasonably sized. Close otherwise.
+			Buffer = case cowboy_req:body(Req) of
+				{ok, _, Req2} -> cowboy_req:get(buffer, Req2);
 				_ -> close
 			end,
 			%% Flush the resp_sent message before moving on.
-			receive {cowboy_req, resp_sent} -> ok after 0 -> ok end,
 			if HandlerRes =:= ok, Buffer =/= close ->
+					receive {cowboy_req, resp_sent} -> ok after 0 -> ok end,
 					?MODULE:parse_request(Buffer,
 						State#state{req_keepalive=Keepalive + 1,
 						until=until(Timeout)}, 0);
@@ -588,7 +494,7 @@ error_terminate(Status, State=#state{socket=Socket, transport=Transport,
 
 -spec error_terminate(cowboy:http_status(), cowboy_req:req(), #state{}) -> ok.
 error_terminate(Status, Req, State) ->
-	cowboy_req:maybe_reply(Status, Req),
+	_ = cowboy_req:reply(Status, Req),
 	terminate(State).
 
 -spec terminate(#state{}) -> ok.

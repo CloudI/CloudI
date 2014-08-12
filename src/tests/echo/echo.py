@@ -72,7 +72,10 @@ class Task(threading.Thread):
             return 'echo'
         else:
             print 'echo: %s' % request
-            return request
+            if request_info == '':
+                return request
+            else:
+                return (request_info, request)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

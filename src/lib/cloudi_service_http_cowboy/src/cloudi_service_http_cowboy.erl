@@ -70,7 +70,17 @@
 -define(DEFAULT_PORT,                              8080).
 -define(DEFAULT_BACKLOG,                            128).
 -define(DEFAULT_NODELAY,                           true).
--define(DEFAULT_RECV_TIMEOUT,                 30 * 1000). % milliseconds
+-define(DEFAULT_RECV_TIMEOUT,                      5000). % milliseconds
+-define(DEFAULT_BODY_TIMEOUT,                     15000). % milliseconds
+-define(DEFAULT_BODY_LENGTH_READ,               1000000).
+-define(DEFAULT_BODY_LENGTH_CHUNK,              8000000).
+-define(DEFAULT_MULTIPART_HEADER_TIMEOUT,          5000). % milliseconds
+-define(DEFAULT_MULTIPART_HEADER_LENGTH_READ,     64000).
+-define(DEFAULT_MULTIPART_HEADER_LENGTH_CHUNK,    64000).
+-define(DEFAULT_MULTIPART_BODY_TIMEOUT,           15000). % milliseconds
+-define(DEFAULT_MULTIPART_BODY_LENGTH_READ,     1000000).
+-define(DEFAULT_MULTIPART_BODY_LENGTH_CHUNK,    8000000).
+-define(DEFAULT_MULTIPART_DESTINATION_LOCK,        true).
 -define(DEFAULT_WEBSOCKET_TIMEOUT,             infinity). % milliseconds
 -define(DEFAULT_WEBSOCKET_OUTPUT,             undefined).
 -define(DEFAULT_WEBSOCKET_CONNECT_ASYNC,      undefined).
@@ -152,7 +162,6 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Close a cowboy handler socket pid which represents a live connection.===
@@ -180,43 +189,56 @@ close({Pattern, Pid})
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {ip,                             ?DEFAULT_INTERFACE},
-        {port,                           ?DEFAULT_PORT},
-        {backlog,                        ?DEFAULT_BACKLOG},
-        {nodelay,                        ?DEFAULT_NODELAY},
-        {recv_timeout,                   ?DEFAULT_RECV_TIMEOUT},
-        {websocket_timeout,              ?DEFAULT_WEBSOCKET_TIMEOUT},
-        {websocket_output,               ?DEFAULT_WEBSOCKET_OUTPUT},
-        {websocket_connect,              ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
-        {websocket_disconnect,           ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
-        {websocket_connect_async,        ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
-        {websocket_connect_sync,         ?DEFAULT_WEBSOCKET_CONNECT_SYNC},
-        {websocket_disconnect_async,     ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
-        {websocket_disconnect_sync,      ?DEFAULT_WEBSOCKET_DISCONNECT_SYNC},
-        {websocket_ping,                 ?DEFAULT_WEBSOCKET_PING},
-        {websocket_protocol,             ?DEFAULT_WEBSOCKET_PROTOCOL},
-        {websocket_subscriptions,        ?DEFAULT_WEBSOCKET_SUBSCRIPTIONS},
-        {ssl,                            ?DEFAULT_SSL},
-        {compress,                       ?DEFAULT_COMPRESS},
-        {max_connections,                ?DEFAULT_MAX_CONNECTIONS},
-        {max_empty_lines,                ?DEFAULT_MAX_EMPTY_LINES},
-        {max_header_name_length,         ?DEFAULT_MAX_HEADER_NAME_LENGTH},
-        {max_header_value_length,        ?DEFAULT_MAX_HEADER_VALUE_LENGTH},
-        {max_headers,                    ?DEFAULT_MAX_HEADERS},
-        {max_keepalive,                  ?DEFAULT_MAX_KEEPALIVE},
-        {max_request_line_length,        ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
-        {output,                         ?DEFAULT_OUTPUT},
-        {content_type,                   ?DEFAULT_CONTENT_TYPE},
-        {content_types_accepted,         ?DEFAULT_CONTENT_TYPES_ACCEPTED},
-        {set_x_forwarded_for,            ?DEFAULT_SET_X_FORWARDED_FOR},
-        {status_code_timeout,            ?DEFAULT_STATUS_CODE_TIMEOUT},
-        {use_websockets,                 ?DEFAULT_USE_WEBSOCKETS},
-        {use_spdy,                       ?DEFAULT_USE_SPDY},
-        {use_host_prefix,                ?DEFAULT_USE_HOST_PREFIX},
-        {use_client_ip_prefix,           ?DEFAULT_USE_CLIENT_IP_PREFIX},
-        {use_method_suffix,              ?DEFAULT_USE_METHOD_SUFFIX}],
+        {ip,                            ?DEFAULT_INTERFACE},
+        {port,                          ?DEFAULT_PORT},
+        {backlog,                       ?DEFAULT_BACKLOG},
+        {nodelay,                       ?DEFAULT_NODELAY},
+        {recv_timeout,                  ?DEFAULT_RECV_TIMEOUT},
+        {body_timeout,                  ?DEFAULT_BODY_TIMEOUT},
+        {body_length_read,              ?DEFAULT_BODY_LENGTH_READ},
+        {body_length_chunk,             ?DEFAULT_BODY_LENGTH_CHUNK},
+        {multipart_header_timeout,      ?DEFAULT_MULTIPART_HEADER_TIMEOUT},
+        {multipart_header_length_read,  ?DEFAULT_MULTIPART_HEADER_LENGTH_READ},
+        {multipart_header_length_chunk, ?DEFAULT_MULTIPART_HEADER_LENGTH_CHUNK},
+        {multipart_body_timeout,        ?DEFAULT_MULTIPART_BODY_TIMEOUT},
+        {multipart_body_length_read,    ?DEFAULT_MULTIPART_BODY_LENGTH_READ},
+        {multipart_body_length_chunk,   ?DEFAULT_MULTIPART_BODY_LENGTH_CHUNK},
+        {multipart_destination_lock,    ?DEFAULT_MULTIPART_DESTINATION_LOCK},
+        {websocket_timeout,             ?DEFAULT_WEBSOCKET_TIMEOUT},
+        {websocket_output,              ?DEFAULT_WEBSOCKET_OUTPUT},
+        {websocket_connect,             ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
+        {websocket_disconnect,          ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
+        {websocket_connect_async,       ?DEFAULT_WEBSOCKET_CONNECT_ASYNC},
+        {websocket_connect_sync,        ?DEFAULT_WEBSOCKET_CONNECT_SYNC},
+        {websocket_disconnect_async,    ?DEFAULT_WEBSOCKET_DISCONNECT_ASYNC},
+        {websocket_disconnect_sync,     ?DEFAULT_WEBSOCKET_DISCONNECT_SYNC},
+        {websocket_ping,                ?DEFAULT_WEBSOCKET_PING},
+        {websocket_protocol,            ?DEFAULT_WEBSOCKET_PROTOCOL},
+        {websocket_subscriptions,       ?DEFAULT_WEBSOCKET_SUBSCRIPTIONS},
+        {ssl,                           ?DEFAULT_SSL},
+        {compress,                      ?DEFAULT_COMPRESS},
+        {max_connections,               ?DEFAULT_MAX_CONNECTIONS},
+        {max_empty_lines,               ?DEFAULT_MAX_EMPTY_LINES},
+        {max_header_name_length,        ?DEFAULT_MAX_HEADER_NAME_LENGTH},
+        {max_header_value_length,       ?DEFAULT_MAX_HEADER_VALUE_LENGTH},
+        {max_headers,                   ?DEFAULT_MAX_HEADERS},
+        {max_keepalive,                 ?DEFAULT_MAX_KEEPALIVE},
+        {max_request_line_length,       ?DEFAULT_MAX_REQUEST_LINE_LENGTH},
+        {output,                        ?DEFAULT_OUTPUT},
+        {content_type,                  ?DEFAULT_CONTENT_TYPE},
+        {content_types_accepted,        ?DEFAULT_CONTENT_TYPES_ACCEPTED},
+        {set_x_forwarded_for,           ?DEFAULT_SET_X_FORWARDED_FOR},
+        {status_code_timeout,           ?DEFAULT_STATUS_CODE_TIMEOUT},
+        {use_websockets,                ?DEFAULT_USE_WEBSOCKETS},
+        {use_spdy,                      ?DEFAULT_USE_SPDY},
+        {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
+        {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
+        {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, NoDelay, RecvTimeout,
-     WebSocketTimeout, WebSocketOutputType0,
+     BodyTimeout, BodyLengthRead, BodyLengthChunk, MultipartHeaderTimeout,
+     MultipartHeaderLengthRead, MultipartHeaderLengthChunk,
+     MultipartBodyTimeout, MultipartBodyLengthRead, MultipartBodyLengthChunk,
+     MultipartDestinationLock, WebSocketTimeout, WebSocketOutputType0,
      WebSocketConnect0, WebSocketDisconnect0,
      WebSocketConnectAsync0, WebSocketConnectSync,
      WebSocketDisconnectAsync0, WebSocketDisconnectSync,
@@ -231,6 +253,22 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
     true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
+    true = is_integer(BodyTimeout) andalso (BodyTimeout > 0),
+    true = is_integer(BodyLengthRead) andalso (BodyLengthRead > 0),
+    true = is_integer(BodyLengthChunk) andalso (BodyLengthChunk > 0),
+    true = is_integer(MultipartHeaderTimeout) andalso
+           (MultipartHeaderTimeout > 0),
+    true = is_integer(MultipartHeaderLengthRead) andalso
+           (MultipartHeaderLengthRead > 0),
+    true = is_integer(MultipartHeaderLengthChunk) andalso
+           (MultipartHeaderLengthChunk > 0),
+    true = is_integer(MultipartBodyTimeout) andalso
+           (MultipartBodyTimeout > 0),
+    true = is_integer(MultipartBodyLengthRead) andalso
+           (MultipartBodyLengthRead > 0),
+    true = is_integer(MultipartBodyLengthChunk) andalso
+           (MultipartBodyLengthChunk > 0),
+    true = is_boolean(MultipartDestinationLock),
     true = (WebSocketTimeout =:= infinity) orelse
            (is_integer(WebSocketTimeout) andalso (WebSocketTimeout > 0)),
     WebSocketOutputType1 = if
@@ -358,27 +396,37 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     Dispatch = cloudi_x_cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
-                #cowboy_state{dispatcher =
-                                  cloudi_service:dispatcher(Dispatcher),
-                              context = create_context(Dispatcher),
-                              prefix = Prefix,
-                              timeout_websocket = WebSocketTimeout,
-                              output_type = OutputType,
-                              content_type_forced = ContentTypeForced1,
-                              content_types_accepted = ContentTypesAccepted1,
-                              set_x_forwarded_for = SetXForwardedFor,
-                              status_code_timeout = StatusCodeTimeout,
-                              websocket_output_type = WebSocketOutputType1,
-                              websocket_connect = WebSocketConnect1,
-                              websocket_disconnect = WebSocketDisconnect1,
-                              websocket_ping = WebSocketPing,
-                              websocket_protocol = WebSocketProtocol1,
-                              websocket_subscriptions = WebSocketSubscriptions1,
-                              use_websockets = UseWebSockets,
-                              use_host_prefix = UseHostPrefix,
-                              use_client_ip_prefix = UseClientIpPrefix,
-                              use_method_suffix = UseMethodSuffix,
-                              content_type_lookup = ContentTypeLookup}}]}
+                #cowboy_state{
+                    dispatcher = cloudi_service:dispatcher(Dispatcher),
+                    context = create_context(Dispatcher),
+                    prefix = Prefix,
+                    timeout_body = BodyTimeout,
+                    timeout_part_header = MultipartHeaderTimeout,
+                    timeout_part_body = MultipartBodyTimeout,
+                    timeout_websocket = WebSocketTimeout,
+                    length_body_read = BodyLengthRead,
+                    length_body_chunk = BodyLengthChunk,
+                    length_part_header_read = MultipartHeaderLengthRead,
+                    length_part_header_chunk = MultipartHeaderLengthChunk,
+                    length_part_body_read = MultipartBodyLengthRead,
+                    length_part_body_chunk = MultipartBodyLengthChunk,
+                    parts_destination_lock = MultipartDestinationLock,
+                    output_type = OutputType,
+                    content_type_forced = ContentTypeForced1,
+                    content_types_accepted = ContentTypesAccepted1,
+                    set_x_forwarded_for = SetXForwardedFor,
+                    status_code_timeout = StatusCodeTimeout,
+                    websocket_output_type = WebSocketOutputType1,
+                    websocket_connect = WebSocketConnect1,
+                    websocket_disconnect = WebSocketDisconnect1,
+                    websocket_ping = WebSocketPing,
+                    websocket_protocol = WebSocketProtocol1,
+                    websocket_subscriptions = WebSocketSubscriptions1,
+                    use_websockets = UseWebSockets,
+                    use_host_prefix = UseHostPrefix,
+                    use_client_ip_prefix = UseClientIpPrefix,
+                    use_method_suffix = UseMethodSuffix,
+                    content_type_lookup = ContentTypeLookup}}]}
     ]),
     Service = cloudi_service:self(Dispatcher),
     StartFunction = if

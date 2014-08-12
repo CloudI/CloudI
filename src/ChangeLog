@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update cowboy, cowlib, and ranch so it is at 1.0
+    * cloudi_service_http_cowboy changes:
+        * Add timeout and length limits due to cowboy configuration additions
+        * Change multipart support to utilize the new
+          multipart_destination_lock service argument (defaults to true)
+          to force all multipart parts to go to a single
+          service instance process
+
 2014-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add separate endpoints for cloudi_service_api_requests that provide

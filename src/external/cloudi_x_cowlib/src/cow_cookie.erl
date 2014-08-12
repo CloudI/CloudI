@@ -1,4 +1,4 @@
-%% Copyright (c) 2013, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2013-2014, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -80,8 +80,6 @@ parse_cookie_name(<< C, Rest/binary >>, Acc, Name) ->
 
 parse_cookie_value(<<>>, Acc, Name, Value) ->
 	lists:reverse([{Name, parse_cookie_trim(Value)}|Acc]);
-parse_cookie_value(<< $,, Rest/binary >>, Acc, Name, Value) ->
-	parse_cookie(Rest, [{Name, parse_cookie_trim(Value)}|Acc]);
 parse_cookie_value(<< $;, Rest/binary >>, Acc, Name, Value) ->
 	parse_cookie(Rest, [{Name, parse_cookie_trim(Value)}|Acc]);
 parse_cookie_value(<< $\t, _/binary >>, _, _, _) ->
@@ -130,6 +128,24 @@ parse_cookie_test_() ->
 		%% Space in value.
 		{<<"foo=Thu Jul 11 2013 15:38:43 GMT+0400 (MSK)">>,
 			[{<<"foo">>, <<"Thu Jul 11 2013 15:38:43 GMT+0400 (MSK)">>}]},
+		%% Comma in value. Google Analytics sets that kind of cookies.
+		{<<"refk=sOUZDzq2w2; sk=B602064E0139D842D620C7569640DBB4C81C45080651"
+			"9CC124EF794863E10E80; __utma=64249653.825741573.1380181332.1400"
+			"015657.1400019557.703; __utmb=64249653.1.10.1400019557; __utmc="
+			"64249653; __utmz=64249653.1400019557.703.13.utmcsr=bluesky.chic"
+			"agotribune.com|utmccn=(referral)|utmcmd=referral|utmcct=/origin"
+			"als/chi-12-indispensable-digital-tools-bsi,0,0.storygallery">>, [
+				{<<"refk">>, <<"sOUZDzq2w2">>},
+				{<<"sk">>, <<"B602064E0139D842D620C7569640DBB4C81C45080651"
+					"9CC124EF794863E10E80">>},
+				{<<"__utma">>, <<"64249653.825741573.1380181332.1400"
+					"015657.1400019557.703">>},
+				{<<"__utmb">>, <<"64249653.1.10.1400019557">>},
+				{<<"__utmc">>, <<"64249653">>},
+				{<<"__utmz">>, <<"64249653.1400019557.703.13.utmcsr=bluesky.chic"
+					"agotribune.com|utmccn=(referral)|utmcmd=referral|utmcct=/origin"
+					"als/chi-12-indispensable-digital-tools-bsi,0,0.storygallery">>}
+		]},
 		%% Potential edge cases (initially from Mochiweb).
 		{<<"foo=\\x">>, [{<<"foo">>, <<"\\x">>}]},
 		{<<"=">>, {error, badarg}},
@@ -140,8 +156,7 @@ parse_cookie_test_() ->
 			[{<<"foo">>, <<"\\\"">>}, {<<"bar">>, <<"good">>}]},
 		{<<"foo=\"\\\";bar">>, {error, badarg}},
 		{<<>>, []},
-		{<<"foo=bar , baz=wibble ">>,
-			[{<<"foo">>, <<"bar">>}, {<<"baz">>, <<"wibble">>}]}
+		{<<"foo=bar , baz=wibble ">>, [{<<"foo">>, <<"bar , baz=wibble">>}]}
 	],
 	[{V, fun() -> R = parse_cookie(V) end} || {V, R} <- Tests].
 -endif.

@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -12,7 +12,7 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-%% @doc Routing middleware.
+%% Routing middleware.
 %%
 %% Resolve the handler to be used for the request based on the
 %% routing information found in the <em>dispatch</em> environment value.
@@ -51,8 +51,6 @@
 -opaque dispatch_rules() :: [dispatch_rule()].
 -export_type([dispatch_rules/0]).
 
-%% @doc Compile a list of routes into the dispatch format used
-%% by Cowboy's routing.
 -spec compile(routes()) -> dispatch_rules().
 compile(Routes) ->
 	compile(Routes, []).
@@ -162,7 +160,6 @@ compile_brackets_split(<< $], Rest/binary >>, Acc, 0) ->
 compile_brackets_split(<< C, Rest/binary >>, Acc, N) ->
 	compile_brackets_split(Rest, << Acc/binary, C >>, N).
 
-%% @private
 -spec execute(Req, Env)
 	-> {ok, Req, Env} | {error, 400 | 404, Req}
 	when Req::cowboy_req:req(), Env::cowboy_middleware:env().
@@ -183,7 +180,7 @@ execute(Req, Env) ->
 
 %% Internal.
 
-%% @doc Match hostname tokens and path tokens against dispatch rules.
+%% Match hostname tokens and path tokens against dispatch rules.
 %%
 %% It is typically used for matching tokens for the hostname and path of
 %% the request against a global dispatch rule for your listener.
@@ -300,7 +297,6 @@ check_constraint({_, int}, Value) ->
 check_constraint({_, function, Fun}, Value) ->
 	Fun(Value).
 
-%% @doc Split a hostname into a list of tokens.
 -spec split_host(binary()) -> tokens().
 split_host(Host) ->
 	split_host(Host, []).
@@ -317,8 +313,6 @@ split_host(Host, Acc) ->
 			split_host(Rest, [Segment|Acc])
 	end.
 
-%% @doc Split a path into a list of path segments.
-%%
 %% Following RFC2396, this function may return path segments containing any
 %% character, including <em>/</em> if, and only if, a <em>/</em> was escaped
 %% and part of a path segment.
@@ -332,9 +326,9 @@ split_path(Path, Acc) ->
 	try
 		case binary:match(Path, <<"/">>) of
 			nomatch when Path =:= <<>> ->
-				lists:reverse([cowboy_http:urldecode(S) || S <- Acc]);
+				lists:reverse([cow_qs:urldecode(S) || S <- Acc]);
 			nomatch ->
-				lists:reverse([cowboy_http:urldecode(S) || S <- [Path|Acc]]);
+				lists:reverse([cow_qs:urldecode(S) || S <- [Path|Acc]]);
 			{Pos, _} ->
 				<< Segment:Pos/binary, _:8, Rest/bits >> = Path,
 				split_path(Rest, [Segment|Acc])
@@ -376,9 +370,7 @@ list_match(_List, _Match, _Binds) ->
 %% Tests.
 
 -ifdef(TEST).
-
 compile_test_() ->
-	%% {Routes, Result}
 	Tests = [
 		%% Match any host and path.
 		{[{'_', [{'_', h, o}]}],
@@ -390,14 +382,22 @@ compile_test_() ->
 				{[<<"path">>, <<"to">>, <<"resource">>], [], hb, ob}]}]},
 		{[{'_', [{"/path/to/resource/", h, o}]}],
 			[{'_', [], [{[<<"path">>, <<"to">>, <<"resource">>], [], h, o}]}]},
-		{[{'_', [{"/путь/к/ресурсу/", h, o}]}],
-			[{'_', [], [{[<<"путь">>, <<"к">>, <<"ресурсу">>], [], h, o}]}]},
+		% Cyrillic from a latin1 encoded file.
+		{[{'_', [{[47,208,191,209,131,209,130,209,140,47,208,186,47,209,128,
+				208,181,209,129,209,131,209,128,209,129,209,131,47], h, o}]}],
+			[{'_', [], [{[<<208,191,209,131,209,130,209,140>>, <<208,186>>,
+				<<209,128,208,181,209,129,209,131,209,128,209,129,209,131>>],
+				[], h, o}]}]},
 		{[{"cowboy.example.org.", [{'_', h, o}]}],
 			[{[<<"org">>, <<"example">>, <<"cowboy">>], [], [{'_', [], h, o}]}]},
 		{[{".cowboy.example.org", [{'_', h, o}]}],
 			[{[<<"org">>, <<"example">>, <<"cowboy">>], [], [{'_', [], h, o}]}]},
-		{[{"некий.сайт.рф.", [{'_', h, o}]}],
-			[{[<<"рф">>, <<"сайт">>, <<"некий">>], [], [{'_', [], h, o}]}]},
+		% Cyrillic from a latin1 encoded file.
+		{[{[208,189,208,181,208,186,208,184,208,185,46,209,129,208,176,
+				208,185,209,130,46,209,128,209,132,46], [{'_', h, o}]}],
+			[{[<<209,128,209,132>>, <<209,129,208,176,208,185,209,130>>,
+				<<208,189,208,181,208,186,208,184,208,185>>],
+				[], [{'_', [], h, o}]}]},
 		{[{":subdomain.example.org", [{"/hats/:name/prices", h, o}]}],
 			[{[<<"org">>, <<"example">>, subdomain], [], [
 				{[<<"hats">>, name, <<"prices">>], [], h, o}]}]},
@@ -425,7 +425,6 @@ compile_test_() ->
 		fun() -> Rs = compile(Rt) end} || {Rt, Rs} <- Tests].
 
 split_host_test_() ->
-	%% {Host, Result}
 	Tests = [
 		{<<"">>, []},
 		{<<"*">>, [<<"*">>]},
@@ -442,7 +441,6 @@ split_host_test_() ->
 	[{H, fun() -> R = split_host(H) end} || {H, R} <- Tests].
 
 split_path_test_() ->
-	%% {Path, Result, QueryString}
 	Tests = [
 		{<<"/">>, []},
 		{<<"/extend//cowboy">>, [<<"extend">>, <<>>, <<"cowboy">>]},
@@ -473,7 +471,6 @@ match_test_() ->
 			{'_', [], match_any, []}
 		]}
 	],
-	%% {Host, Path, Result}
 	Tests = [
 		{<<"any">>, <<"/">>, {ok, match_any, [], []}},
 		{<<"www.any.ninenines.eu">>, <<"/users/42/mails">>,
@@ -506,8 +503,9 @@ match_info_test_() ->
 		{[<<"eu">>, <<"ninenines">>, '...'], [], [
 			{'_', [], match_any, []}
 		]},
-		{[<<"рф">>, <<"сайт">>], [], [
-			{[<<"путь">>, '...'], [], match_path, []}
+		% Cyrillic from a latin1 encoded file.
+		{[<<209,128,209,132>>, <<209,129,208,176,208,185,209,130>>], [], [
+			{[<<208,191,209,131,209,130,209,140>>, '...'], [], match_path, []}
 		]}
 	],
 	Tests = [
@@ -523,8 +521,10 @@ match_info_test_() ->
 			{ok, match_path, [], [], undefined, [<<"path_info">>]}},
 		{<<"www.ninenines.eu">>, <<"/pathinfo/is/next/foo/bar">>,
 			{ok, match_path, [], [], undefined, [<<"foo">>, <<"bar">>]}},
-		{<<"сайт.рф">>, <<"/путь/домой">>,
-			{ok, match_path, [], [], undefined, [<<"домой">>]}}
+		% Cyrillic from a latin1 encoded file.
+		{<<209,129,208,176,208,185,209,130,46,209,128,209,132>>,
+			<<47,208,191,209,131,209,130,209,140,47,208,180,208,190,208,188,208,190,208,185>>,
+			{ok, match_path, [], [], undefined, [<<208,180,208,190,208,188,208,190,208,185>>]}}
 	],
 	[{lists:flatten(io_lib:format("~p, ~p", [H, P])), fun() ->
 		R = match(Dispatch, H, P)
@@ -569,5 +569,4 @@ match_same_bindings_test() ->
 	{error, notfound, path} = match(Dispatch3,
 		<<"ninenines.eu">>, <<"/path/to">>),
 	ok.
-
 -endif.

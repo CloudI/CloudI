@@ -7,7 +7,7 @@ Goals
 -----
 
 Cowboy aims to provide a **complete** HTTP stack in a **small** code base.
-It is optimized for **low latency** and **low memory usage**, in parts
+It is optimized for **low latency** and **low memory usage**, in part
 because it uses **binary strings**.
 
 Cowboy provides **routing** capabilities, selectively dispatching requests
@@ -21,18 +21,29 @@ No parameterized module. No process dictionary. **Clean** Erlang code.
 Sponsors
 --------
 
-The SPDY protocol development is sponsored
-by [LeoFS Cloud Storage](http://www.leofs.org).
+The SPDY implementation was sponsored by
+[LeoFS Cloud Storage](http://www.leofs.org).
 
-Getting Started
----------------
+The project is currently sponsored by
+[Kato.im](https://kato.im).
 
- *  [Read the guide](http://ninenines.eu/docs/en/cowboy/HEAD/guide)
- *  [Check the manual](http://ninenines.eu/docs/en/cowboy/HEAD/manual)
- *  Look at the examples in the `examples/` directory
+Online documentation
+--------------------
 
-Support
--------
+ *  [User guide](http://ninenines.eu/docs/en/cowboy/HEAD/guide)
+ *  [Function reference](http://ninenines.eu/docs/en/cowboy/HEAD/manual)
+
+Offline documentation
+---------------------
+
+ *  While still online, run `make docs`
+ *  Function reference man pages available in `doc/man3/` and `doc/man7/`
+ *  Run `make install-docs` to install man pages on your system
+ *  Full documentation in Markdown available in `doc/markdown/`
+ *  Examples available in `examples/`
+
+Getting help
+------------
 
  *  Official IRC Channel: #ninenines on irc.freenode.net
  *  [Mailing Lists](http://lists.ninenines.eu)

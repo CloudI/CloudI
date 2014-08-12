@@ -26,17 +26,17 @@ exceptions due to their C integration).
 `cowboy`
 --------
 `Erlang HTTP Server`
-- `https://github.com/extend/cowboy`
-- `commit df818625545d565b8b76fbc445063a4822114b93 (0.9.0)`
-- `Fri Nov 15 13:24:03 PST 2013`
+- `https://github.com/ninenines/cowboy`
+- `commit 021f4f6069e5fae326bdfb0acb12c6500082fa44 (1.0.0)`
+- `Mon Aug 11 10:57:20 PDT 2014`
 - `MIT`
 
 `cowlib`
 --------
 `cowboy Protocols`
-- `https://github.com/extend/cowlib`
-- `commit 63298e8e160031a70efff86a1acde7e7db1fcda6 (0.4.0)`
-- `Fri Nov 15 13:24:03 PST 2013`
+- `https://github.com/ninenines/cowlib`
+- `commit d544a494af4dbc810fc9c15eaf5cc050cced1501 (1.0.0)`
+- `Mon Aug 11 10:57:20 PDT 2014`
 - `MIT`
 
 `dynamic_compile`
@@ -290,9 +290,9 @@ exceptions due to their C integration).
 -------
 `Erlang Socket acceptor pool for TCP protocols`
 
-- `https://github.com/extend/ranch`
-- `commit 33e1b4fcb0954f61588cb1baff905d107f74b467 (0.9.0)`
-- `Fri Nov 15 13:24:03 PST 2013`
+- `https://github.com/ninenines/ranch`
+- `commit adf1822defc2b7cfdc7aca112adabfa1d614043c (1.0.0)`
+- `Mon Aug 11 10:57:20 PDT 2014`
 - `MIT`
 
 `rebar`
