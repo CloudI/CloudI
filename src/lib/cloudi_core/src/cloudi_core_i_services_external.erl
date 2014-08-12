@@ -399,6 +399,7 @@ init([Protocol, SocketPath,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
                 options = #config_service_options{
+                    request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
@@ -409,6 +410,9 @@ init([Protocol, SocketPath,
                     case destination_get(DestRefresh, Scope, Name, Source,
                                          Groups, NewTimeout) of
                         {error, timeout} ->
+                            ok;
+                        {error, _}
+                            when RequestNameLookup =:= async ->
                             ok;
                         {error, _}
                             when NewTimeout >= ?FORWARD_ASYNC_INTERVAL ->
@@ -459,6 +463,7 @@ init([Protocol, SocketPath,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
                 options = #config_service_options{
+                    request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
@@ -469,6 +474,9 @@ init([Protocol, SocketPath,
                     case destination_get(DestRefresh, Scope, Name, Source,
                                          Groups, NewTimeout) of
                         {error, timeout} ->
+                            ok;
+                        {error, _}
+                            when RequestNameLookup =:= async ->
                             ok;
                         {error, _}
                             when NewTimeout >= ?FORWARD_SYNC_INTERVAL ->
@@ -756,9 +764,12 @@ handle_info({'cloudi_service_forward_async_retry', Name, RequestInfo, Request,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups,
                    options = #config_service_options{
+                       request_name_lookup = RequestNameLookup,
                        scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
         {error, timeout} ->
+            ok;
+        {error, _} when RequestNameLookup =:= async ->
             ok;
         {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
             erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
@@ -785,9 +796,12 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups,
                    options = #config_service_options{
+                       request_name_lookup = RequestNameLookup,
                        scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
         {error, timeout} ->
+            ok;
+        {error, _} when RequestNameLookup =:= async ->
             ok;
         {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
             erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
@@ -1135,7 +1149,7 @@ code_change(_, StateName, State, _) ->
 
 -ifdef(VERBOSE_STATE).
 format_status(_Opt, [PDict, State]) ->
-    [{data, [{"State", [PDict, State]}]}].
+    [{data, [{"StateData", [PDict, State]}]}].
 -else.
 format_status(_Opt,
               [PDict,
@@ -1181,7 +1195,7 @@ format_status(_Opt,
     NewConfigOptions = cloudi_core_i_configuration:
                        services_format_options_internal(ConfigOptions),
     [{data,
-      [{"State",
+      [{"StateData",
         [PDict,
          State#state{send_timeouts = dict:to_list(SendTimeouts),
                      send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
@@ -1213,10 +1227,14 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups,
                          options = #config_service_options{
+                             request_name_lookup = RequestNameLookup,
                              scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
+            send('return_async_out'(), State),
+            {next_state, StateName, State};
+        {error, _} when RequestNameLookup =:= async ->
             send('return_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
@@ -1244,10 +1262,14 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
                         dest_refresh = DestRefresh,
                         cpg_data = Groups,
                         options = #config_service_options{
+                            request_name_lookup = RequestNameLookup,
                             scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
+            send('return_sync_out'(), State),
+            {next_state, StateName, State};
+        {error, _} when RequestNameLookup =:= async ->
             send('return_sync_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -1296,10 +1318,14 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups,
                           options = #config_service_options{
+                              request_name_lookup = RequestNameLookup,
                               scope = Scope}} = State) ->
     case destination_all(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
+            send('returns_async_out'(), State),
+            {next_state, StateName, State};
+        {error, _} when RequestNameLookup =:= async ->
             send('returns_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->

@@ -98,6 +98,15 @@
         %  a service is mainly communicating with short-lived services).
         dest_refresh_delay = ?DEFAULT_DEST_REFRESH_DELAY
             :: cloudi_service_api:dest_refresh_delay_milliseconds(),
+        % should the service request name lookup be a synchronous or
+        % an asynchronous operation (the default is to be synchronous and
+        % keep the service name lookup result decoupled from the
+        % destination service's lifetime during the service request
+        % timeout period, to anticipate any number of delays a service 
+        % request may encounter, including node-splits and forwards,
+        % to provide service failure isolation)
+        request_name_lookup = ?DEFAULT_REQUEST_NAME_LOOKUP
+            :: sync | async,
         % should the service request handler execution time decrement the
         % request timeout to reduce the timeout of a forwarded request or
         % the timeout of a returned response

@@ -136,6 +136,7 @@
             dest_refresh :: cloudi_service_api:dest_refresh(),
             dest_refresh_delay
                 :: cloudi_service_api:dest_refresh_delay_milliseconds(),
+            request_name_lookup :: sync | async,
             timeout_async :: cloudi_service_api:timeout_milliseconds(),
             timeout_sync :: cloudi_service_api:timeout_milliseconds(),
             priority_default :: cloudi_service_api:priority(),
@@ -151,6 +152,7 @@
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay,
           cloudi_service_api:dest_refresh_delay_milliseconds()} |
+         {request_name_lookup, sync | async} |
          {timeout_async, cloudi_service_api:timeout_milliseconds()} |
          {timeout_sync, cloudi_service_api:timeout_milliseconds()} |
          {priority_default, priority()} |
@@ -203,6 +205,7 @@ new(Options)
         {dest_refresh,                     ?DEFAULT_DEST_REFRESH},
         {dest_refresh_start,         ?DEFAULT_DEST_REFRESH_START},
         {dest_refresh_delay,         ?DEFAULT_DEST_REFRESH_DELAY},
+        {request_name_lookup,       ?DEFAULT_REQUEST_NAME_LOOKUP},
         {timeout_async,                   ?DEFAULT_TIMEOUT_ASYNC},
         {timeout_sync,                     ?DEFAULT_TIMEOUT_SYNC},
         {priority_default,                     ?DEFAULT_PRIORITY},
@@ -212,7 +215,7 @@ new(Options)
         {groups_scope,                                 undefined},
         {groups_static,                                    false}
         ],
-    [DestRefresh, DestRefreshStart, DestRefreshDelay,
+    [DestRefresh, DestRefreshStart, DestRefreshDelay, RequestNameLookup,
      DefaultTimeoutAsync, DefaultTimeoutSync, PriorityDefault, Scope,
      OldUUID, OldGroups, GroupsScope, GroupsStatic] =
         cloudi_proplists:take_values(Defaults, Options),
@@ -236,6 +239,8 @@ new(Options)
     true = is_integer(DestRefreshDelay) andalso
            (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
            (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG),
+    true = (RequestNameLookup =:= sync) orelse
+           (RequestNameLookup =:= async),
     true = is_integer(DefaultTimeoutAsync) andalso
            (DefaultTimeoutAsync > ?TIMEOUT_DELTA) andalso
            (DefaultTimeoutAsync =< ?TIMEOUT_MAX),
@@ -301,6 +306,7 @@ new(Options)
     #cloudi_context{
         dest_refresh = DestRefresh,
         dest_refresh_delay = DestRefreshDelay,
+        request_name_lookup = RequestNameLookup,
         timeout_async = DefaultTimeoutAsync,
         timeout_sync = DefaultTimeoutSync,
         priority_default = PriorityDefault,
@@ -380,6 +386,7 @@ get_pid(#cloudi_context{} = Context, Name, Timeout)
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
@@ -387,8 +394,13 @@ get_pid(#cloudi_context{} = Context, Name, Timeout)
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
-            get_pid(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
-                    Timeout - ?SEND_SYNC_INTERVAL);
+            if
+                RequestNameLookup =:= sync ->
+                    get_pid(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
+                            Timeout - ?SEND_SYNC_INTERVAL);
+                RequestNameLookup =:= async ->
+                    result(NewContext, {error, timeout})
+            end;
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
@@ -442,14 +454,20 @@ get_pids(#cloudi_context{} = Context, Name, Timeout)
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
     case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?SEND_SYNC_INTERVAL ->
-            get_pids(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
-                     Timeout - ?SEND_SYNC_INTERVAL);
+            if
+                RequestNameLookup =:= sync ->
+                    get_pids(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
+                             Timeout - ?SEND_SYNC_INTERVAL);
+                RequestNameLookup =:= async ->
+                    result(NewContext, {error, timeout})
+            end;
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, Pids} ->
@@ -593,6 +611,7 @@ send_async(#cloudi_context{} = Context,
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
@@ -600,10 +619,15 @@ send_async(#cloudi_context{} = Context,
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_ASYNC_INTERVAL ->
-            send_async(sleep(NewContext, ?SEND_ASYNC_INTERVAL), Name,
-                       RequestInfo, Request,
-                       Timeout - ?SEND_ASYNC_INTERVAL,
-                       Priority, undefined);
+            if
+                RequestNameLookup =:= sync ->
+                    send_async(sleep(NewContext, ?SEND_ASYNC_INTERVAL), Name,
+                               RequestInfo, Request,
+                               Timeout - ?SEND_ASYNC_INTERVAL,
+                               Priority, undefined);
+                RequestNameLookup =:= async ->
+                    result(NewContext, {error, timeout})
+            end;
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
@@ -865,6 +889,7 @@ send_sync(#cloudi_context{} = Context,
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
     case destination_get(DestRefresh, Scope, Name, Groups,
@@ -872,10 +897,15 @@ send_sync(#cloudi_context{} = Context,
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
-            send_sync(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
-                      RequestInfo, Request,
-                      Timeout - ?SEND_SYNC_INTERVAL,
-                      Priority, undefined);
+            if
+                RequestNameLookup =:= sync ->
+                    send_sync(sleep(NewContext, ?SEND_SYNC_INTERVAL), Name,
+                              RequestInfo, Request,
+                              Timeout - ?SEND_SYNC_INTERVAL,
+                              Priority, undefined);
+                RequestNameLookup =:= async ->
+                    result(NewContext, {error, timeout})
+            end;
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, Pid} ->
@@ -987,6 +1017,7 @@ mcast_async(#cloudi_context{} = Context,
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
+        request_name_lookup = RequestNameLookup,
         scope = Scope,
         receiver = Receiver,
         uuid_generator = UUID,
@@ -995,9 +1026,14 @@ mcast_async(#cloudi_context{} = Context,
                          Timeout + ?TIMEOUT_DELTA) of
         {error, {no_such_group, Name}}
         when Timeout >= ?MCAST_ASYNC_INTERVAL ->
-            mcast_async(sleep(NewContext, ?MCAST_ASYNC_INTERVAL), Name,
-                        RequestInfo, Request,
-                        Timeout - ?MCAST_ASYNC_INTERVAL, Priority);
+            if
+                RequestNameLookup =:= sync ->
+                    mcast_async(sleep(NewContext, ?MCAST_ASYNC_INTERVAL), Name,
+                                RequestInfo, Request,
+                                Timeout - ?MCAST_ASYNC_INTERVAL, Priority);
+                RequestNameLookup =:= async ->
+                    result(NewContext, {error, timeout})
+            end;
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, PidList} ->

@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@
 -define(DEFAULT_MAX_T,                            300). % max time in seconds
 -define(DEFAULT_DEST_REFRESH_START,               500). % milliseconds
 -define(DEFAULT_DEST_REFRESH_DELAY,            300000). % milliseconds
+-define(DEFAULT_REQUEST_NAME_LOOKUP,             sync).
 -define(DEFAULT_PRIORITY,                           0).
 -define(DEFAULT_SCOPE,                        default).
 

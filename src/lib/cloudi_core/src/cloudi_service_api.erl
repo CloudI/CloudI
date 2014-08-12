@@ -270,6 +270,7 @@
          {queue_limit, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
           request_timeout_immediate_max_milliseconds()} |
@@ -318,6 +319,7 @@
          {queue_limit, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
           request_timeout_immediate_max_milliseconds()} |

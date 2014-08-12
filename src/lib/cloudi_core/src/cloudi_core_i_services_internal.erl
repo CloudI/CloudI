@@ -695,10 +695,12 @@ handle_call(context_options, _,
                        priority_default = PriorityDefault,
                        dest_refresh_start = DestRefreshStart,
                        dest_refresh_delay = DestRefreshDelay,
+                       request_name_lookup = RequestNameLookup,
                        scope = Scope}} = State) ->
     Options = [{dest_refresh, DestRefresh},
                {dest_refresh_start, DestRefreshStart},
                {dest_refresh_delay, DestRefreshDelay},
+               {request_name_lookup, RequestNameLookup},
                {timeout_async, TimeoutAsync},
                {timeout_sync, TimeoutSync},
                {priority_default, PriorityDefault},
@@ -967,12 +969,15 @@ handle_info({'cloudi_service_forward_async_retry',
                    dest_deny = DestDeny,
                    dest_allow = DestAllow,
                    options = #config_service_options{
+                       request_name_lookup = RequestNameLookup,
                        scope = Scope}} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Scope, Name, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
+                    ok;
+                {error, _} when RequestNameLookup =:= async ->
                     ok;
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
@@ -1003,12 +1008,15 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow,
                    options = #config_service_options{
+                       request_name_lookup = RequestNameLookup,
                        scope = Scope}} = State) ->
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Scope, Name, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
+                    ok;
+                {error, _} when RequestNameLookup =:= async ->
                     ok;
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
@@ -1579,10 +1587,14 @@ handle_get_pid(Name, Timeout, Client,
                       dest_refresh = DestRefresh,
                       cpg_data = Groups,
                       options = #config_service_options{
+                          request_name_lookup = RequestNameLookup,
                           scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -1603,10 +1615,14 @@ handle_get_pids(Name, Timeout, Client,
                        dest_refresh = DestRefresh,
                        cpg_data = Groups,
                        options = #config_service_options{
+                           request_name_lookup = RequestNameLookup,
                            scope = Scope}} = State) ->
     case destination_all(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -1630,10 +1646,14 @@ handle_send_async(Name, RequestInfo, Request,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups,
                          options = #config_service_options{
+                             request_name_lookup = RequestNameLookup,
                              scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
@@ -1674,10 +1694,14 @@ handle_send_async_active(Name, RequestInfo, Request,
                                 dest_refresh = DestRefresh,
                                 cpg_data = Groups,
                                 options = #config_service_options{
+                                    request_name_lookup = RequestNameLookup,
                                     scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
@@ -1723,10 +1747,14 @@ handle_send_sync(Name, RequestInfo, Request,
                         dest_refresh = DestRefresh,
                         cpg_data = Groups,
                         options = #config_service_options{
+                            request_name_lookup = RequestNameLookup,
                             scope = Scope}} = State) ->
     case destination_get(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -1789,10 +1817,14 @@ handle_mcast_async(Name, RequestInfo, Request,
                           dest_refresh = DestRefresh,
                           cpg_data = Groups,
                           options = #config_service_options{
+                              request_name_lookup = RequestNameLookup,
                               scope = Scope}} = State) ->
     case destination_all(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
@@ -1842,10 +1874,14 @@ handle_mcast_async_active(Name, RequestInfo, Request,
                                  dest_refresh = DestRefresh,
                                  cpg_data = Groups,
                                  options = #config_service_options{
+                                     request_name_lookup = RequestNameLookup,
                                      scope = Scope}} = State) ->
     case destination_all(DestRefresh, Scope, Name, ReceiverPid,
                          Groups, Timeout) of
         {error, timeout} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {error, _} when RequestNameLookup =:= async ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
