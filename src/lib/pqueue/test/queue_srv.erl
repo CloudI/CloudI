@@ -38,7 +38,10 @@ start_link(Mod) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Mod], []).
 
 stop() ->
-    call(stop).
+    try call(stop)
+    catch
+        exit:{noproc, _} -> ok
+    end.
 
 call(M) ->
     gen_server:call(?SERVER, M, infinity).
