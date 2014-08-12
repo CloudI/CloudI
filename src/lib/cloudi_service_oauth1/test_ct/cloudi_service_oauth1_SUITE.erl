@@ -491,7 +491,7 @@ t_example_with_db_1(_Config) ->
                                                       RequestInfo4, Request4,
                                                       undefined, undefined),
 
-    timer:sleep(2000), % wait for the access token to expire
+    timer:sleep(3000), % wait for the access token to expire
     ResponseInfo5 = [{<<"status">>,<<"401">>},
                      {<<"www-authenticate">>,<<"OAuth">>}],
     Response5 = <<>>,
