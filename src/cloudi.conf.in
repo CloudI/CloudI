@@ -399,7 +399,8 @@
                "python_c.xml/get",
                "ruby.xml/get"]}]}]}],
         immediate_closest,
-        5000, 5000, 5000, [api], undefined, 1, 5, 300, []},
+        5000, 5000, 5000, [api], undefined, 1, 5, 300,
+        [{request_name_lookup, async}]},
     % normal echo in python
     {external,
         "/tests/",

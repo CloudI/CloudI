@@ -1762,8 +1762,8 @@ services_validate_options_internal(OptionsList, CountProcess) ->
         [_, _, _, _, RequestNameLookup, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _]
-        when not (RequestNameLookup =:= sync andalso
-                  RequestNameLookup =:= async) ->
+        when not ((RequestNameLookup =:= sync) orelse
+                  (RequestNameLookup =:= async)) ->
             {error, {service_options_request_name_lookup_invalid,
                      RequestNameLookup}};
         [_, _, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _,
@@ -2156,8 +2156,8 @@ services_validate_options_external(OptionsList, CountProcess) ->
                      DestRefreshDelay}};
         [_, _, _, _, RequestNameLookup, _, _, _, _, _, _,
          _, _, _, _, _, _, _]
-        when not (RequestNameLookup =:= sync andalso
-                  RequestNameLookup =:= async) ->
+        when not ((RequestNameLookup =:= sync) orelse
+                  (RequestNameLookup =:= async)) ->
             {error, {service_options_request_name_lookup_invalid,
                      RequestNameLookup}};
         [_, _, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _,
