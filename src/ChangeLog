@@ -10,6 +10,8 @@
           multipart_destination_lock service argument (defaults to true)
           to force all multipart parts to go to a single
           service instance process
+        * Changed recv_timeout to default to 5000 ms instead of 30000 ms,
+          to match the cowboy default
 
 2014-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
