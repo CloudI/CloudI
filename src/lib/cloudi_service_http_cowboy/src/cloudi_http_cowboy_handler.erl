@@ -380,17 +380,6 @@ websocket_init(_Transport, Req0,
         true ->
             undefined
     end,
-    NewState = websocket_connect_check(WebSocketConnect,
-        State#cowboy_state{websocket_ping = WebSocketPingStatus,
-                           websocket_subscriptions = undefined,
-                           content_type_lookup = undefined,
-                           websocket_state = #websocket_state{
-                               name_incoming = NameIncoming,
-                               name_outgoing = NameOutgoing,
-                               request_info = RequestInfo,
-                               response_lookup = ResponseLookup,
-                               recv_timeouts = RecvTimeouts,
-                               queued = Queued}}),
     if
         SubscribeWebSocket =:= true ->
             % service requests are only received if they relate to
@@ -418,7 +407,19 @@ websocket_init(_Transport, Req0,
         SubscribeWebSocket =:= false ->
             ok
     end,
-    {ok, ReqN, NewState, TimeoutWebSocket}.
+    {ok, ReqN,
+     websocket_connect_check(WebSocketConnect,
+                             State#cowboy_state{
+                                 websocket_ping = WebSocketPingStatus,
+                                 websocket_subscriptions = undefined,
+                                 content_type_lookup = undefined,
+                                 websocket_state = #websocket_state{
+                                     name_incoming = NameIncoming,
+                                     name_outgoing = NameOutgoing,
+                                     request_info = RequestInfo,
+                                     response_lookup = ResponseLookup,
+                                     recv_timeouts = RecvTimeouts,
+                                     queued = Queued}}), TimeoutWebSocket}.
 
 websocket_handle({ping, _Payload}, Req, State) ->
     % cowboy automatically responds with pong
