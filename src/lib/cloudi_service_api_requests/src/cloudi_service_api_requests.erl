@@ -122,8 +122,8 @@ cloudi_service_init(_Args, Prefix, Dispatcher) ->
     end, cloudi_x_trie:new(),
     cloudi_x_reltool_util:module_exports(cloudi_service_api)),
     % new service names for JSON-RPC are:
-    cloudi_service:subscribe(Dispatcher, "rpc.json/"),
-    cloudi_service:subscribe(Dispatcher, "rpc.json//post"),
+    cloudi_service:subscribe(Dispatcher, "rpc.json"),
+    cloudi_service:subscribe(Dispatcher, "rpc.json/post"),
     % old service names for JSON-RPC are:
     cloudi_service:subscribe(Dispatcher, "json_rpc/"),
     cloudi_service:subscribe(Dispatcher, "json_rpc//post"),
@@ -136,11 +136,17 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
                                      functions = Functions,
                                      formats = Formats} = State, _Dispatcher) ->
     {Format,
-     Suffix} = cloudi_string:splitl($/, lists:nthtail(PrefixLength, Name)),
+     Suffix} = cloudi_string:splitl($/,
+                                    lists:nthtail(PrefixLength, Name), input),
     FormatF = cloudi_x_trie:fetch(Format, Formats),
-    MethodName = cloudi_string:beforel($/, Suffix, input),
+    MethodName = if
+        (Format == "rpc") ->
+            cloudi_string:beforel($/, Suffix, input);
+        true ->
+            ""
+    end,
     F = if
-        MethodName == [] ->
+        MethodName == "" ->
             undefined;
         true ->
             cloudi_x_trie:fetch(MethodName, Functions)

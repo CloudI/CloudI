@@ -35,7 +35,7 @@ class _ServiceDescription(object):
 class CloudI(object):
     # initialize with configuration file defaults
     def __init__(self, host = 'localhost', port = 6464):
-        address = 'http://%s:%d/cloudi/api/json_rpc/' % (host, port)
+        address = 'http://%s:%d/cloudi/api/rpc.json' % (host, port)
         self.__server = jsonrpclib.Server(address)
 
     def __getattr__(self, name):

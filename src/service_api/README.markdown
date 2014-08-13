@@ -19,27 +19,27 @@ process (assuming it is not blocked by an ACL).  The [default configuration](htt
 initializes the [CloudI service responsible for dynamic configuration](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl)
 which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
-* `"/cloudi/api/json_rpc/"`
-* `"/cloudi/api/erlang/*"` (see below)
-  * `"/cloudi/api/erlang/acl_add"`
-  * `"/cloudi/api/erlang/acl_remove"`
-  * `"/cloudi/api/erlang/service_subscriptions"`
-  * `"/cloudi/api/erlang/services_add"`
-  * `"/cloudi/api/erlang/services_remove"`
-  * `"/cloudi/api/erlang/services_restart"`
-  * `"/cloudi/api/erlang/services_search"`
-  * `"/cloudi/api/erlang/services"`
-  * `"/cloudi/api/erlang/nodes_add"`
-  * `"/cloudi/api/erlang/nodes_remove"`
-  * `"/cloudi/api/erlang/nodes_set"`
-  * `"/cloudi/api/erlang/nodes_alive"`
-  * `"/cloudi/api/erlang/nodes_dead"`
-  * `"/cloudi/api/erlang/nodes"`
-  * `"/cloudi/api/erlang/loglevel_set"`
-  * `"/cloudi/api/erlang/log_redirect"`
-  * `"/cloudi/api/erlang/code_path_add"`
-  * `"/cloudi/api/erlang/code_path_remove"`
-  * `"/cloudi/api/erlang/code_path"`
+* `"/cloudi/api/rpc.json"`
+* `"/cloudi/api/rpc/*.erl"` (see below)
+  * `"/cloudi/api/rpc/acl_add.erl"`
+  * `"/cloudi/api/rpc/acl_remove.erl"`
+  * `"/cloudi/api/rpc/service_subscriptions.erl"`
+  * `"/cloudi/api/rpc/services_add.erl"`
+  * `"/cloudi/api/rpc/services_remove.erl"`
+  * `"/cloudi/api/rpc/services_restart.erl"`
+  * `"/cloudi/api/rpc/services_search.erl"`
+  * `"/cloudi/api/rpc/services.erl"`
+  * `"/cloudi/api/rpc/nodes_add.erl"`
+  * `"/cloudi/api/rpc/nodes_remove.erl"`
+  * `"/cloudi/api/rpc/nodes_set.erl"`
+  * `"/cloudi/api/rpc/nodes_alive.erl"`
+  * `"/cloudi/api/rpc/nodes_dead.erl"`
+  * `"/cloudi/api/rpc/nodes.erl"`
+  * `"/cloudi/api/rpc/loglevel_set.erl"`
+  * `"/cloudi/api/rpc/log_redirect.erl"`
+  * `"/cloudi/api/rpc/code_path_add.erl"`
+  * `"/cloudi/api/rpc/code_path_remove.erl"`
+  * `"/cloudi/api/rpc/code_path.erl"`
 
 The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
 expects HTTP requests to port 6464 with the proper service path and format
@@ -59,5 +59,4 @@ CloudI Service API usage examples:
 * [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/run.py) (Add/Remove nodes, Add/Remove ACL entries, Start/Stop services)
 
 Please see the [CloudI Service API documentation](http://cloudi.org/api.html#CloudI)
-for more details (a graphical interface will be added soon,
-which will provide more explicit examples for utilizing the CloudI Service API).
+for more details.

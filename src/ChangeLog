@@ -6,6 +6,7 @@
     * Add the service configuration option request_name_lookup to provide a way
       to change service name lookup failure behavior
       (usable as cloudi module context configuration too)
+    * Switch to using the new endpoints in cloudi_service_api_requests
 
 2014-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
