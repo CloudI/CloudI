@@ -63,6 +63,7 @@
   "external/syslog",
   "lib/cpg",
   "lib/key2value",
+  "lib/keys1value",
   "lib/pqueue",
   "lib/quickrand",
   "lib/reltool_util",

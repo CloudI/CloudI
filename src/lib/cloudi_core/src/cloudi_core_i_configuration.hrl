@@ -60,16 +60,61 @@
             :: cloudi_service_api:loglevel()
     }).
 
+-record(config_logging_formatter,
+    {
+        file = undefined
+            :: undefined | string(),
+        % The mapping for lager levels to CloudI levels is:
+        % (use normal CloudI levels to avoid the mapping)
+        % emergency                     -> fatal
+        % alert     (becomes emergency) -> fatal
+        % critical  (becomes emergency) -> fatal
+        % error                         -> error
+        % warning                       -> warn
+        % notice    (becomes warning)   -> warn
+        % info                          -> info
+        % debug                         -> debug
+        %           (becomes debug)     -> trace
+        % none                          -> off
+        level = trace
+            :: cloudi_service_api:loglevel(),
+        output = undefined
+            :: undefined | module(),
+        output_max_r = ?DEFAULT_MAX_R
+            :: non_neg_integer(),
+        output_max_t = ?DEFAULT_MAX_T
+            :: cloudi_service_api:seconds(),
+        formatter = undefined
+            :: undefined | module(),
+        formatter_config = []
+            :: list()
+    }).
+
+-record(config_logging_formatters,
+    {
+        % 'any' formatter entry
+        default = undefined
+            :: undefined | #config_logging_formatter{},
+        % nonempty_list(module()) -> #config_logging_formatter{} lookup
+        lookup = cloudi_x_keys1value:new()
+            :: cloudi_x_keys1value:
+               cloudi_x_keys1value(module(), #config_logging_formatter{}),
+        level = undefined
+            :: undefined | cloudi_service_api:loglevel()
+    }).
+
 -record(config_logging,
     {
         file = "logs/cloudi.log"
-            :: undefined | file:filename(),
+            :: undefined | string(),
         level = trace
             :: cloudi_service_api:loglevel(),
         redirect = undefined
             :: undefined | node(),
         syslog = undefined
-            :: undefined | #config_logging_syslog{}
+            :: undefined | #config_logging_syslog{},
+        formatters = undefined
+            :: undefined | #config_logging_formatters{}
     }).
 
 -record(config_service_options,
@@ -316,19 +361,20 @@
 -record(config_nodes_discovery,
     {
         % nodefinder interface
-        mode :: multicast | ec2,
-        module :: module(),
-        start_f :: atom(),
-        start_a :: list(),
-        discover_f :: atom(),
-        discover_a :: list(),
-        stop_f :: atom(),
-        stop_a :: list()
+        mode         :: multicast | ec2,
+        module       :: module(),
+        start_f      :: atom(),
+        start_a      :: list(),
+        discover_f   :: atom(),
+        discover_a   :: list(),
+        stop_f       :: atom(),
+        stop_a       :: list()
     }).
 
 -record(config_nodes,
     {
-        nodes = [] :: list(node()),
+        nodes = []
+            :: list(node()),
         % time to wait before the first reconnect is attempted with a node
         reconnect_start = ?DEFAULT_NODE_RECONNECT_START
             :: cloudi_service_api:node_reconnect_delay_seconds(),
@@ -366,11 +412,15 @@
 
 -record(config,
     {
-        uuid_generator :: cloudi_x_uuid:state(),
-        logging = #config_logging{} :: #config_logging{},
+        uuid_generator
+            :: cloudi_x_uuid:state(),
+        logging = #config_logging{}
+            :: #config_logging{},
         acl = dict:new(),
-        services = [] :: list(#config_service_internal{} |
-                              #config_service_external{}),
-        nodes = #config_nodes{} :: #config_nodes{}
+        services = []
+            :: list(#config_service_internal{} |
+                    #config_service_external{}),
+        nodes = #config_nodes{}
+            :: #config_nodes{}
     }).
 

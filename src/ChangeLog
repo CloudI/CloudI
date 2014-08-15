@@ -1,9 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add lager formatter integration
+
 2014-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_http_cowboy websocket_connect_sync race condition
+    * Update key2value
+    * Add keys1value dependency
 
 2014-08-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 

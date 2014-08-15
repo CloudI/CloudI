@@ -1,0 +1,7 @@
+{application, keys1value,
+  [{description, "Set Associative Map Data Structure For Key Lists"},
+   {vsn, "1.3.3"},
+   {modules, [keys1value]},
+   {registered, []},
+   {applications, [kernel, stdlib]}]}.
+

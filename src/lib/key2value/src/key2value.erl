@@ -68,18 +68,25 @@
          new/1,
          store/4]).
 
+-record(key2value,
+    {
+        module :: module(),
+        lookup1 :: any(),
+        lookup2 :: any()
+    }).
 -ifdef(ERLANG_OTP_VER_16).
 -type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -endif.
 -type key2value_dict(Key1, Key2, Value) ::
-    {dict,
+    {key2value,
+     dict,
      dict_proxy(Key1, {list(Key2), Value}),
      dict_proxy(Key2, {list(Key1), Value})}.
 -type key2value(Key1, Key2, Value) ::
     key2value_dict(Key1, Key2, Value) |
-    {atom(), any(), any()}.
+    #key2value{}.
 -export_type([key2value/3]).
 -type key1() :: any().
 -type key2() :: any().
@@ -94,31 +101,38 @@
             State :: key2value(key1(), key2(), value())) ->
     key2value(key1(), key2(), value()).
 
-erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
+erase(K1, K2,
+      #key2value{module = Module,
+                 lookup1 = Lookup1,
+                 lookup2 = Lookup2} = State) ->
     case Module:find(K1, Lookup1) of
         {ok, {[K2], _}} ->
             case Module:find(K2, Lookup2) of
                 {ok, {[K1], _}} ->
-                    {Module,
-                     Module:erase(K1, Lookup1),
-                     Module:erase(K2, Lookup2)};
+                    State#key2value{
+                        lookup1 = Module:erase(K1, Lookup1),
+                        lookup2 = Module:erase(K2, Lookup2)};
                 {ok, {L1, V1}} ->
-                    {Module,
-                     Module:erase(K1, Lookup1),
-                     Module:store(K2, {lists:delete(K1, L1), V1}, Lookup2)};
+                    State#key2value{
+                        lookup1 = Module:erase(K1, Lookup1),
+                        lookup2 = Module:store(K2, {lists:delete(K1, L1), V1},
+                                               Lookup2)};
                 error ->
                     State
             end;
         {ok, {L2, V2}} ->
             case Module:find(K2, Lookup2) of
                 {ok, {[K1], _}} ->
-                    {Module,
-                     Module:store(K1, {lists:delete(K2, L2), V2}, Lookup1),
-                     Module:erase(K2, Lookup2)};
+                    State#key2value{
+                        lookup1 = Module:store(K1, {lists:delete(K2, L2), V2},
+                                               Lookup1),
+                        lookup2 = Module:erase(K2, Lookup2)};
                 {ok, {L1, V1}} ->
-                    {Module,
-                     Module:store(K1, {lists:delete(K2, L2), V2}, Lookup1),
-                     Module:store(K2, {lists:delete(K1, L1), V1}, Lookup2)};
+                    State#key2value{
+                        lookup1 = Module:store(K1, {lists:delete(K2, L2), V2},
+                                               Lookup1),
+                        lookup2 = Module:store(K2, {lists:delete(K1, L1), V1},
+                                               Lookup2)};
                 error ->
                     State
             end;
@@ -130,7 +144,9 @@ erase(K1, K2, {Module, Lookup1, Lookup2} = State) ->
              State :: key2value(key1(), key2(), value())) ->
     key2value(key1(), key2(), value()).
 
-erase1(K, {Module, Lookup1, _} = State) ->
+erase1(K,
+       #key2value{module = Module,
+                  lookup1 = Lookup1} = State) ->
     case Module:find(K, Lookup1) of
         {ok, {L, _}} ->
             lists:foldl(fun(K2, D) ->
@@ -144,7 +160,9 @@ erase1(K, {Module, Lookup1, _} = State) ->
              State :: key2value(key1(), key2(), value())) ->
     key2value(key1(), key2(), value()).
 
-erase2(K, {Module, _, Lookup2} = State) ->
+erase2(K,
+       #key2value{module = Module,
+                  lookup2 = Lookup2} = State) ->
     case Module:find(K, Lookup2) of
         {ok, {L, _}} ->
             lists:foldl(fun(K1, D) ->
@@ -158,14 +176,18 @@ erase2(K, {Module, _, Lookup2} = State) ->
              key2value(key1(), key2(), value())) ->
     {list(), any()}.
 
-fetch1(K, {Module, Lookup1, _}) ->
+fetch1(K,
+       #key2value{module = Module,
+                  lookup1 = Lookup1}) ->
     Module:fetch(K, Lookup1).
 
 -spec fetch2(K :: key2(),
              key2value(key1(), key2(), value())) ->
     {list(), any()}.
 
-fetch2(K, {Module, _, Lookup2}) ->
+fetch2(K,
+       #key2value{module = Module,
+                  lookup2 = Lookup2}) ->
     Module:fetch(K, Lookup2).
 
 -spec find1(K :: key1(),
@@ -173,7 +195,9 @@ fetch2(K, {Module, _, Lookup2}) ->
     {ok, {list(), any()}} |
     error.
 
-find1(K, {Module, Lookup1, _}) ->
+find1(K,
+      #key2value{module = Module,
+                 lookup1 = Lookup1}) ->
     Module:find(K, Lookup1).
 
 -spec find2(K :: key2(),
@@ -181,35 +205,45 @@ find1(K, {Module, Lookup1, _}) ->
     {ok, {list(), any()}} |
     error.
 
-find2(K, {Module, _, Lookup2}) ->
+find2(K,
+      #key2value{module = Module,
+                 lookup2 = Lookup2}) ->
     Module:find(K, Lookup2).
 
 -spec is_key1(K :: key1(),
               key2value(key1(), key2(), value())) ->
     boolean().
 
-is_key1(K, {Module, Lookup1, _}) ->
+is_key1(K,
+        #key2value{module = Module,
+                   lookup1 = Lookup1}) ->
     Module:is_key(K, Lookup1).
 
 -spec is_key2(K :: key2(),
               key2value(key1(), key2(), value())) ->
     boolean().
 
-is_key2(K, {Module, _, Lookup2}) ->
+is_key2(K,
+        #key2value{module = Module,
+                   lookup2 = Lookup2}) ->
     Module:is_key(K, Lookup2).
 
 -spec new() ->
     key2value_dict(key1(), key2(), value()).
 
 new() ->
-    {dict, dict:new(), dict:new()}.
+    #key2value{module = dict,
+               lookup1 = dict:new(),
+               lookup2 = dict:new()}.
 
 -spec new(Module :: atom()) ->
     key2value(key1(), key2(), value()).
 
 new(Module)
     when is_atom(Module) ->
-    {Module, Module:new(), Module:new()}.
+    #key2value{module = Module,
+               lookup1 = Module:new(),
+               lookup2 = Module:new()}.
 
 -spec store(K1 :: key1(),
             K2 :: key2(),
@@ -217,7 +251,10 @@ new(Module)
             key2value(key1(), key2(), value())) ->
     key2value(key1(), key2(), value()).
 
-store(K1, K2, V, {Module, Lookup1, Lookup2}) ->
+store(K1, K2, V,
+      #key2value{module = Module,
+                 lookup1 = Lookup1,
+                 lookup2 = Lookup2} = State) ->
     K1L = [K1],
     K2L = [K2],
     F1 = fun({L, _}) ->
@@ -226,9 +263,9 @@ store(K1, K2, V, {Module, Lookup1, Lookup2}) ->
     F2 = fun({L, _}) ->
         {lists:umerge(L, K1L), V}
     end,
-    {Module,
-     Module:update(K1, F1, {K2L, V}, Lookup1),
-     Module:update(K2, F2, {K1L, V}, Lookup2)}.
+    State#key2value{module = Module,
+                    lookup1 = Module:update(K1, F1, {K2L, V}, Lookup1),
+                    lookup2 = Module:update(K2, F2, {K1L, V}, Lookup2)}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

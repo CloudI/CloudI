@@ -35,6 +35,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
      -d $(top_srcdir)/lib/key2value/src \
+     -d $(top_srcdir)/lib/keys1value/src \
      -d $(top_srcdir)/lib/pqueue/src \
      -d $(top_srcdir)/lib/pqueue/test \
      -d $(top_srcdir)/lib/quickrand/src \
@@ -154,6 +155,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) lib/reltool_util/ebin
 	$(MKDIR_P) lib/key2value/ebin
+	$(MKDIR_P) lib/keys1value/ebin
 	$(MKDIR_P) lib/service/ebin
 	$(MKDIR_P) external/rebar_modules/ebin
 	$(MKDIR_P) external/cloudi_x_nodefinder/ebin
@@ -283,6 +285,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/key2value/src && \
         test ! -e $(SCOPE_EXTERNAL)key2value.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/key2value/src/$(SCOPE_EXTERNAL)key2value.app.src || exit 0)
+	(cd $(top_srcdir)/lib/keys1value/src && \
+        test ! -e $(SCOPE_EXTERNAL)keys1value.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/keys1value/src/$(SCOPE_EXTERNAL)keys1value.app.src || exit 0)
 	(cd $(top_srcdir)/lib/service/src && \
         test ! -e service.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/service/src/service.app.src || exit 0)
@@ -385,6 +390,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/key2value && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/key2value/ebin || exit 0)
+	(cd $(top_srcdir)/lib/keys1value && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/keys1value/ebin || exit 0)
 	(cd $(top_srcdir)/lib/service && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/service/ebin || exit 0)
@@ -606,6 +614,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/reltool_util/ebin
 	rmdir $(top_builddir)/lib/key2value/ebin || exit 0
 	rm -f $(top_srcdir)/lib/key2value/ebin
+	rmdir $(top_builddir)/lib/keys1value/ebin || exit 0
+	rm -f $(top_srcdir)/lib/keys1value/ebin
 	rmdir $(top_builddir)/lib/service/ebin || exit 0
 	rm -f $(top_srcdir)/lib/service/ebin
 	rmdir $(top_builddir)/external/rebar_modules/ebin || exit 0
@@ -790,6 +800,7 @@ dialyze: all \
               lib/trie/ebin/ \
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
+              lib/keys1value/ebin/ \
               external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_dynamic_compile/ebin \

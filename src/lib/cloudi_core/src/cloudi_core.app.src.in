@@ -64,6 +64,7 @@
         cloudi_x_trie,
         cloudi_x_reltool_util,
         cloudi_x_key2value,
+        cloudi_x_keys1value,
         cloudi_x_uuid,
         cloudi_x_cpg,
         sasl,

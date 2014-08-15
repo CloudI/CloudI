@@ -115,7 +115,7 @@
 -export_type([dest_list/0]).
 
 -type seconds() ::
-    pos_integer().
+    non_neg_integer().
 -export_type([seconds/0]).
 
 -type period_seconds() ::

@@ -64,7 +64,8 @@
          services_format_options_external/1,
          nodes_add/2,
          nodes_remove/2,
-         nodes_set/2]).
+         nodes_set/2,
+         log_level_highest/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -213,7 +214,16 @@
      logging_syslog_identity_invalid |
      logging_syslog_facility_invalid |
      logging_syslog_level_invalid |
-     logging_syslog_facility_invalid, any()}.
+     logging_syslog_facility_invalid |
+     logging_formatters_invalid |
+     logging_formatter_modules_invalid |
+     logging_formatter_file_invalid |
+     logging_formatter_level_invalid |
+     logging_formatter_output_invalid |
+     logging_formatter_output_max_r_invalid |
+     logging_formatter_output_max_t_invalid |
+     logging_formatter_formatter_invalid |
+     logging_formatter_formatter_config_invalid, any()}.
 
 % cloudi_service_api.hrl records without defaults set so
 % dialyzer doesn't get confused
@@ -637,286 +647,12 @@ service_format(#config_service_external{prefix = Prefix,
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Add CloudI nodes.===
+%% ===Provide the internal service configuration options in the configuration format with defaults ignored.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_add(Value :: list(node()),
-                Config :: #config{}) ->
-    {ok, #config{}} |
-    {error, error_reason_nodes_add()}.
-
-nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
-    when is_atom(A) ->
-    case nodes_elements_add(lists:delete(node(), Value), NodesConfig) of
-        {ok, NewNodesConfig} ->
-            {ok, Config#config{nodes = NewNodesConfig}};
-        {error, _} = Error ->
-            Error
-    end;
-nodes_add(Value, _) ->
-    {error, {node_invalid, Value}}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Remove CloudI nodes.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec nodes_remove(Value :: list(node()),
-                   Config :: #config{}) ->
-    {ok, #config{}} |
-    {error, error_reason_nodes_remove()}.
-
-nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
-    when is_atom(A) ->
-    case nodes_elements_remove(Value, NodesConfig) of
-        {ok, NewNodesConfig} ->
-            {ok, Config#config{nodes = NewNodesConfig}};
-        {error, _} = Error ->
-            Error
-    end;
-nodes_remove(Value, _) ->
-    {error, {node_invalid, Value}}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Set CloudI nodes configuration.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
-                Config :: #config{}) ->
-    {ok, #config{}} |
-    {error, error_reason_nodes_set()}.
-
-nodes_set([_ | _] = Value, #config{} = Config) ->
-    case nodes_proplist(Value) of
-        {ok, NodesConfig} ->
-            {ok, Config#config{nodes = NodesConfig}};
-        {error, _} = Error ->
-            Error
-    end.
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
-
--spec new(Terms :: list({atom(), any()}),
-          Config :: #config{}) ->
-    {ok, #config{}} |
-    {error, error_reason_new()}.
-
-new([], #config{services = Services, acl = ACL} = Config) ->
-    case services_acl_update(Services, ACL) of
-        {ok, NewServices} ->
-            {ok, Config#config{services = NewServices}};
-        {error, _} = Error ->
-            Error
-    end;
-new([{'services', []} | Terms], Config) ->
-    new(Terms, Config);
-new([{'services', [T | _] = Value} | Terms],
-    #config{uuid_generator = UUID} = Config)
-    when is_record(T, internal); is_record(T, external); is_list(T) ->
-    case services_validate(Value, UUID) of
-        {ok, NewServices, _IDs} ->
-            new(Terms, Config#config{services = NewServices});
-        {error, _} = Error ->
-            Error
-    end;
-new([{'acl', []} | Terms], Config) ->
-    new(Terms, Config);
-new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
-    when is_atom(A) ->
-    case acl_lookup_new(Value) of
-        {ok, NewACL} ->
-            new(Terms, Config#config{acl = NewACL});
-        {error, _} = Error ->
-            Error
-    end;
-new([{'nodes', automatic} | Terms], Config) ->
-    {ok, NodesConfig} = nodes_options([], [{discovery, [{multicast, []}]}]),
-    new(Terms, Config#config{nodes = NodesConfig});
-new([{'nodes', []} | Terms], Config) ->
-    new(Terms, Config);
-new([{'nodes', [_ | _] = Value} | Terms], Config) ->
-    case nodes_proplist(Value) of
-        {ok, NodesConfig} ->
-            new(Terms, Config#config{nodes = NodesConfig});
-        {error, _} = Error ->
-            Error
-    end;
-new([{'logging', []} | Terms], Config) ->
-    new(Terms, Config);
-new([{'logging', [T | _] = Value} | Terms], Config)
-    when is_atom(element(1, T)) ->
-    Defaults = [
-        {level, (Config#config.logging)#config_logging.level},
-        {file, (Config#config.logging)#config_logging.file},
-        {redirect, (Config#config.logging)#config_logging.redirect},
-        {syslog, (Config#config.logging)#config_logging.syslog}],
-    case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _ | _]
-            when not ((Level =:= fatal) orelse (Level =:= error) orelse
-                      (Level =:= warn) orelse (Level =:= info) orelse
-                      (Level =:= debug) orelse (Level =:= trace) orelse
-                      (Level =:= off) orelse (Level =:= undefined)) ->
-            {error, {logging_level_invalid, Level}};
-        [_, File, _, _ | _]
-            when not ((is_list(File) andalso
-                       (length(File) > 0) andalso
-                       is_integer(hd(File))) orelse
-                      (File =:= undefined))->
-            {error, {logging_file_invalid, File}};
-        [_, _, Redirect, _ | _]
-            when not is_atom(Redirect) ->
-            {error, {logging_redirect_invalid, Redirect}};
-        [_, _, _, Syslog | _]
-            when not ((Syslog =:= undefined) orelse
-                      is_list(Syslog)) ->
-            {error, {logging_syslog_invalid, Syslog}};
-        [Level, File, Redirect, Syslog] ->
-            NewFile = if
-                Level =:= undefined ->
-                    undefined;
-                true ->
-                    File
-            end,
-            NewLevel = if
-                File =:= undefined ->
-                    undefined;
-                true ->
-                    Level
-            end,
-            case logging_syslog_validate(Syslog) of
-                {ok, SyslogConfig}
-                when Redirect =:= undefined ->
-                    new(Terms,
-                        Config#config{
-                            logging = #config_logging{
-                                level = NewLevel,
-                                file = NewFile,
-                                redirect = Redirect,
-                                syslog = SyslogConfig}});
-                {ok, SyslogConfig} ->
-                    case node_validate(Redirect) of
-                        ok ->
-                            new(Terms,
-                                Config#config{
-                                    logging = #config_logging{
-                                        level = NewLevel,
-                                        file = NewFile,
-                                        redirect = Redirect,
-                                        syslog = SyslogConfig}});
-                        {error, _} = Error ->
-                            Error
-                    end;
-                {error, _} = Error ->
-                    Error
-            end;
-        [_, _, _, _ | Extra] ->
-            {error, {logging_invalid, Extra}}
-    end;
-new([Term | _], _) ->
-    {error, {invalid, Term}}.
-
-uuid_generator() ->
-    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
-    cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
-                               {mac_address, MacAddress}]).
-
-services_add_service(NextServices, Timeout) ->
-    services_add_service(NextServices, [], Timeout).
-
-services_add_service([], Added, _) ->
-    {ok, lists:reverse(Added)};
-services_add_service([Service | Services], Added, Timeout) ->
-    case cloudi_core_i_configurator:service_start(Service, Timeout) of
-        {ok, NewService} ->
-            services_add_service(Services, [NewService | Added], Timeout);
-        {error, _} = Error ->
-            Error
-    end.
-
-services_acl_update([], _) ->
-    {ok, []};
-services_acl_update([_ | _] = Services, Lookup) ->
-    services_acl_update(Services, [], Lookup).
-
--define(CLOUDI_CORE_SUPPORT_INTERNAL_ACL,
-services_acl_update([#config_service_internal{
-                        dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L],
-                    Output, Lookup) ->
-    case services_acl_update_list(Deny, [], Lookup) of
-        {ok, NewDeny} ->
-            case services_acl_update_list(Allow, [], Lookup) of
-                {ok, NewAllow} ->
-                    services_acl_update(L,
-                        [Service#config_service_internal{
-                            dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], Lookup);
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    ).
--ifdef(CLOUDI_CORE_STANDALONE).
--define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
-    end).
--else.
--define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
-    end;
-services_acl_update([#config_service_external{
-                        dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L],
-                    Output, Lookup) ->
-    case services_acl_update_list(Deny, [], Lookup) of
-        {ok, NewDeny} ->
-            case services_acl_update_list(Allow, [], Lookup) of
-                {ok, NewAllow} ->
-                    services_acl_update(L,
-                        [Service#config_service_external{
-                            dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], Lookup);
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    end).
--endif.
-services_acl_update([], Output, _) ->
-    {ok, lists:reverse(Output)};
-?CLOUDI_CORE_SUPPORT_INTERNAL_ACL
-?CLOUDI_CORE_SUPPORT_EXTERNAL_ACL
-    .
-
-services_acl_update_list(undefined, _, _) ->
-    {ok, undefined};
-services_acl_update_list([], Output, _) ->
-    {ok, lists:reverse(Output)};
-services_acl_update_list([E | L], Output, Lookup)
-    when is_atom(E) ->
-    case dict:find(E, Lookup) of
-        {ok, Value} ->
-            services_acl_update_list(L, Value ++ Output, Lookup);
-        error ->
-            {error, {acl_not_found, E}}
-    end;
-services_acl_update_list([E | L], Output, Lookup)
-    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern(E) of
-        true ->
-            services_acl_update_list(L, [E | Output], Lookup);
-        false ->
-            services_acl_update_list(L, [E ++ "*" | Output], Lookup)
-    catch
-        exit:badarg ->
-            {error, {acl_invalid, E}}
-    end.
+-spec services_format_options_internal(Options :: #config_service_options{}) ->
+    cloudi_service_api:service_options_internal().
 
 services_format_options_internal(Options) ->
     Defaults = #config_service_options{},
@@ -1012,6 +748,15 @@ services_format_options_internal(Options) ->
             OptionsList9
     end,
     lists:reverse(OptionsList10).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the external service configuration options in the configuration format with defaults ignored.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_format_options_external(Options :: #config_service_options{}) ->
+    cloudi_service_api:service_options_external().
 
 services_format_options_external(Options) ->
     Defaults = #config_service_options{},
@@ -1184,6 +929,307 @@ services_format_options_external(Options) ->
             OptionsList17
     end,
     lists:reverse(OptionsList18).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add CloudI nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_add(Value :: list(node()),
+                Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_nodes_add()}.
+
+nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
+    when is_atom(A) ->
+    case nodes_elements_add(lists:delete(node(), Value), NodesConfig) of
+        {ok, NewNodesConfig} ->
+            {ok, Config#config{nodes = NewNodesConfig}};
+        {error, _} = Error ->
+            Error
+    end;
+nodes_add(Value, _) ->
+    {error, {node_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Remove CloudI nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_remove(Value :: list(node()),
+                   Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_nodes_remove()}.
+
+nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
+    when is_atom(A) ->
+    case nodes_elements_remove(Value, NodesConfig) of
+        {ok, NewNodesConfig} ->
+            {ok, Config#config{nodes = NewNodesConfig}};
+        {error, _} = Error ->
+            Error
+    end;
+nodes_remove(Value, _) ->
+    {error, {node_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
+                Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_nodes_set()}.
+
+nodes_set([_ | _] = Value, #config{} = Config) ->
+    case nodes_proplist(Value) of
+        {ok, NodesConfig} ->
+            {ok, Config#config{nodes = NodesConfig}};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine the highest logging level in the list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec log_level_highest(list(cloudi_service_api:loglevel() | undefined)) ->
+    cloudi_service_api:loglevel() | undefined.
+
+log_level_highest([_ | _] = Levels) ->
+    [Level | _] = lists:dropwhile(fun(Highest) ->
+        not lists:member(Highest, Levels)
+    end, [trace, debug, info, warn, error, fatal, off, undefined]),
+    Level.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+-spec new(Terms :: list({atom(), any()}),
+          Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_new()}.
+
+new([], #config{services = Services, acl = ACL} = Config) ->
+    case services_acl_update(Services, ACL) of
+        {ok, NewServices} ->
+            {ok, Config#config{services = NewServices}};
+        {error, _} = Error ->
+            Error
+    end;
+new([{'services', []} | Terms], Config) ->
+    new(Terms, Config);
+new([{'services', [T | _] = Value} | Terms],
+    #config{uuid_generator = UUID} = Config)
+    when is_record(T, internal); is_record(T, external); is_list(T) ->
+    case services_validate(Value, UUID) of
+        {ok, NewServices, _IDs} ->
+            new(Terms, Config#config{services = NewServices});
+        {error, _} = Error ->
+            Error
+    end;
+new([{'acl', []} | Terms], Config) ->
+    new(Terms, Config);
+new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
+    when is_atom(A) ->
+    case acl_lookup_new(Value) of
+        {ok, NewACL} ->
+            new(Terms, Config#config{acl = NewACL});
+        {error, _} = Error ->
+            Error
+    end;
+new([{'nodes', automatic} | Terms], Config) ->
+    {ok, NodesConfig} = nodes_options([], [{discovery, [{multicast, []}]}]),
+    new(Terms, Config#config{nodes = NodesConfig});
+new([{'nodes', []} | Terms], Config) ->
+    new(Terms, Config);
+new([{'nodes', [_ | _] = Value} | Terms], Config) ->
+    case nodes_proplist(Value) of
+        {ok, NodesConfig} ->
+            new(Terms, Config#config{nodes = NodesConfig});
+        {error, _} = Error ->
+            Error
+    end;
+new([{'logging', []} | Terms], Config) ->
+    new(Terms, Config);
+new([{'logging', [T | _] = Value} | Terms], Config)
+    when is_atom(element(1, T)) ->
+    Defaults = [
+        {level, (Config#config.logging)#config_logging.level},
+        {file, (Config#config.logging)#config_logging.file},
+        {redirect, (Config#config.logging)#config_logging.redirect},
+        {syslog, (Config#config.logging)#config_logging.syslog},
+        {formatters, (Config#config.logging)#config_logging.formatters}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Level, _, _, _, _ | _]
+            when not ((Level =:= fatal) orelse (Level =:= error) orelse
+                      (Level =:= warn) orelse (Level =:= info) orelse
+                      (Level =:= debug) orelse (Level =:= trace) orelse
+                      (Level =:= off) orelse (Level =:= undefined)) ->
+            {error, {logging_level_invalid, Level}};
+        [_, File, _, _, _ | _]
+            when not ((is_list(File) andalso
+                       (length(File) > 0) andalso
+                       is_integer(hd(File))) orelse
+                      (File =:= undefined))->
+            {error, {logging_file_invalid, File}};
+        [_, _, Redirect, _, _ | _]
+            when not is_atom(Redirect) ->
+            {error, {logging_redirect_invalid, Redirect}};
+        [_, _, _, Syslog, _ | _]
+            when not ((Syslog =:= undefined) orelse
+                      is_list(Syslog)) ->
+            {error, {logging_syslog_invalid, Syslog}};
+        [Level, File, Redirect, Syslog, Formatters] ->
+            NewFile = if
+                Level =:= undefined ->
+                    undefined;
+                true ->
+                    File
+            end,
+            NewLevel = if
+                File =:= undefined ->
+                    undefined;
+                true ->
+                    Level
+            end,
+            case logging_syslog_validate(Syslog) of
+                {ok, SyslogConfig} ->
+                    case logging_formatters_validate(Formatters) of
+                        {ok, FormattersConfig} ->
+                            NewConfig = Config#config{
+                                            logging = #config_logging{
+                                                level = NewLevel,
+                                                file = NewFile,
+                                                redirect = Redirect,
+                                                syslog = SyslogConfig,
+                                                formatters = FormattersConfig}},
+                            if
+                                Redirect =:= undefined ->
+                                    new(Terms, NewConfig);
+                                true ->
+                                    case node_validate(Redirect) of
+                                        ok ->
+                                            new(Terms, NewConfig);
+                                        {error, _} = Error ->
+                                            Error
+                                    end
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _ | Extra] ->
+            {error, {logging_invalid, Extra}}
+    end;
+new([Term | _], _) ->
+    {error, {invalid, Term}}.
+
+uuid_generator() ->
+    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
+    cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
+                               {mac_address, MacAddress}]).
+
+services_add_service(NextServices, Timeout) ->
+    services_add_service(NextServices, [], Timeout).
+
+services_add_service([], Added, _) ->
+    {ok, lists:reverse(Added)};
+services_add_service([Service | Services], Added, Timeout) ->
+    case cloudi_core_i_configurator:service_start(Service, Timeout) of
+        {ok, NewService} ->
+            services_add_service(Services, [NewService | Added], Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+services_acl_update([], _) ->
+    {ok, []};
+services_acl_update([_ | _] = Services, Lookup) ->
+    services_acl_update(Services, [], Lookup).
+
+-define(CLOUDI_CORE_SUPPORT_INTERNAL_ACL,
+services_acl_update([#config_service_internal{
+                        dest_list_deny = Deny,
+                        dest_list_allow = Allow} = Service | L],
+                    Output, Lookup) ->
+    case services_acl_update_list(Deny, [], Lookup) of
+        {ok, NewDeny} ->
+            case services_acl_update_list(Allow, [], Lookup) of
+                {ok, NewAllow} ->
+                    services_acl_update(L,
+                        [Service#config_service_internal{
+                            dest_list_deny = NewDeny,
+                            dest_list_allow = NewAllow} | Output], Lookup);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    ).
+-ifdef(CLOUDI_CORE_STANDALONE).
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
+    end).
+-else.
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
+    end;
+services_acl_update([#config_service_external{
+                        dest_list_deny = Deny,
+                        dest_list_allow = Allow} = Service | L],
+                    Output, Lookup) ->
+    case services_acl_update_list(Deny, [], Lookup) of
+        {ok, NewDeny} ->
+            case services_acl_update_list(Allow, [], Lookup) of
+                {ok, NewAllow} ->
+                    services_acl_update(L,
+                        [Service#config_service_external{
+                            dest_list_deny = NewDeny,
+                            dest_list_allow = NewAllow} | Output], Lookup);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end).
+-endif.
+services_acl_update([], Output, _) ->
+    {ok, lists:reverse(Output)};
+?CLOUDI_CORE_SUPPORT_INTERNAL_ACL
+?CLOUDI_CORE_SUPPORT_EXTERNAL_ACL
+    .
+
+services_acl_update_list(undefined, _, _) ->
+    {ok, undefined};
+services_acl_update_list([], Output, _) ->
+    {ok, lists:reverse(Output)};
+services_acl_update_list([E | L], Output, Lookup)
+    when is_atom(E) ->
+    case dict:find(E, Lookup) of
+        {ok, Value} ->
+            services_acl_update_list(L, Value ++ Output, Lookup);
+        error ->
+            {error, {acl_not_found, E}}
+    end;
+services_acl_update_list([E | L], Output, Lookup)
+    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
+    try cloudi_x_trie:is_pattern(E) of
+        true ->
+            services_acl_update_list(L, [E | Output], Lookup);
+        false ->
+            services_acl_update_list(L, [E ++ "*" | Output], Lookup)
+    catch
+        exit:badarg ->
+            {error, {acl_invalid, E}}
+    end.
 
 -spec services_validate(Services :: list(#internal{} | #external{} |
                                          cloudi_service_api:service_proplist()),
@@ -2889,13 +2935,20 @@ nodes_discovery_options(Value, NodesConfig) ->
 nodes_options(Nodes0, Value) ->
     NodesConfig = #config_nodes{},
     Defaults = [
-        {nodes, NodesConfig#config_nodes.nodes},
-        {reconnect_start, NodesConfig#config_nodes.reconnect_start},
-        {reconnect_delay, NodesConfig#config_nodes.reconnect_delay},
-        {listen, NodesConfig#config_nodes.listen},
-        {connect, NodesConfig#config_nodes.connect},
-        {timestamp_type, NodesConfig#config_nodes.timestamp_type},
-        {discovery, NodesConfig#config_nodes.discovery}],
+        {nodes,
+         NodesConfig#config_nodes.nodes},
+        {reconnect_start,
+         NodesConfig#config_nodes.reconnect_start},
+        {reconnect_delay,
+         NodesConfig#config_nodes.reconnect_delay},
+        {listen,
+         NodesConfig#config_nodes.listen},
+        {connect,
+         NodesConfig#config_nodes.connect},
+        {timestamp_type,
+         NodesConfig#config_nodes.timestamp_type},
+        {discovery,
+         NodesConfig#config_nodes.discovery}],
     ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
         [Nodes1, _, _, _, _, _, _ | _]
@@ -2972,9 +3025,12 @@ logging_syslog_validate([]) ->
 logging_syslog_validate([_ | _] = Value) ->
     SyslogConfig = #config_logging_syslog{},
     Defaults = [
-        {identity, SyslogConfig#config_logging_syslog.identity},
-        {facility, SyslogConfig#config_logging_syslog.facility},
-        {level, SyslogConfig#config_logging_syslog.level}],
+        {identity,
+         SyslogConfig#config_logging_syslog.identity},
+        {facility,
+         SyslogConfig#config_logging_syslog.facility},
+        {level,
+         SyslogConfig#config_logging_syslog.level}],
     case cloudi_proplists:take_values(Defaults, Value) of
         [Identity, _, _ | _]
             when not (is_list(Identity) andalso
@@ -3008,5 +3064,163 @@ logging_syslog_validate([_ | _] = Value) ->
             end;
         [_, _, _ | Extra] ->
             {error, {logging_syslog_invalid, Extra}}
+    end.
+
+logging_formatters_validate(undefined) ->
+    {ok, undefined};
+logging_formatters_validate([]) ->
+    {ok, undefined};
+logging_formatters_validate([_ | _] = Value) ->
+    logging_formatters_validate(Value, [], #config_logging_formatters{}).
+
+logging_formatters_validate([], [], FormattersConfig) ->
+    {ok, FormattersConfig};
+logging_formatters_validate([], Levels, FormattersConfig) ->
+    {ok,
+     FormattersConfig#config_logging_formatters{
+         level = log_level_highest(Levels)}};
+logging_formatters_validate([{any, Options} | L], Levels,
+                            #config_logging_formatters{
+                                default = undefined} = FormattersConfig)
+    when is_list(Options) ->
+    case logging_formatter_validate(Options) of
+        {ok, #config_logging_formatter{level = off}} ->
+            logging_formatters_validate(L, Levels, FormattersConfig);
+        {ok, #config_logging_formatter{level = Level} = Formatter} ->
+            logging_formatters_validate(L, [Level | Levels],
+                FormattersConfig#config_logging_formatters{
+                    default = Formatter});
+        {error, _} = Error ->
+            Error
+    end;
+logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
+                            #config_logging_formatters{
+                                lookup = Lookup} = FormattersConfig)
+    when is_list(Options) ->
+    case (lists:all(fun is_atom/1, Modules) andalso
+          (not cloudi_x_keys1value:is_key(Modules, Lookup))) of
+        true ->
+            case logging_formatter_validate(Options) of
+                {ok, #config_logging_formatter{level = off}} ->
+                    logging_formatters_validate(L, Levels, FormattersConfig);
+                {ok, #config_logging_formatter{level = Level} = Formatter} ->
+                    NewLookup = cloudi_x_keys1value:store(Modules, Formatter,
+                                                          Lookup),
+                    logging_formatters_validate(L, [Level | Levels],
+                        FormattersConfig#config_logging_formatters{
+                            lookup = NewLookup});
+                {error, _} = Error ->
+                    Error
+            end;
+        false ->
+            {error, {logging_formatter_modules_invalid, Modules}}
+    end;
+logging_formatters_validate([Entry | _], _, _) ->
+    {error, {logging_formatters_invalid, Entry}}.
+
+% handle a conversion from lager log levels to CloudI log levels, if necessary
+logging_formatter_level(fatal) ->
+    {ok, fatal};
+logging_formatter_level(emergency) ->
+    {ok, fatal};
+logging_formatter_level(alert) ->
+    {ok, fatal};
+logging_formatter_level(critical) ->
+    {ok, fatal};
+logging_formatter_level(error) ->
+    {ok, error};
+logging_formatter_level(warn) ->
+    {ok, warn};
+logging_formatter_level(warning) ->
+    {ok, warn};
+logging_formatter_level(notice) ->
+    {ok, warn};
+logging_formatter_level(info) ->
+    {ok, info};
+logging_formatter_level(debug) ->
+    {ok, debug};
+logging_formatter_level(trace) ->
+    {ok, trace};
+logging_formatter_level(off) ->
+    {ok, off};
+logging_formatter_level(none) ->
+    {ok, off};
+logging_formatter_level(Invalid) ->
+    {error, {logging_formatter_level_invalid, Invalid}}.
+
+logging_formatter_validate(Value) ->
+    NewValue = lists:map(fun(A) ->
+        % handle lager logging level atoms in the proplist
+        if
+            is_atom(A) ->
+                {level, A};
+            true ->
+                A
+        end
+    end, Value),
+    FormatterConfig = #config_logging_formatter{},
+    Defaults = [
+        {file,
+         FormatterConfig#config_logging_formatter.file},
+        {level,
+         FormatterConfig#config_logging_formatter.level},
+        {output,
+         FormatterConfig#config_logging_formatter.output},
+        {output_max_r,
+         FormatterConfig#config_logging_formatter.output_max_r},
+        {output_max_t,
+         FormatterConfig#config_logging_formatter.output_max_t},
+        {formatter,
+         FormatterConfig#config_logging_formatter.formatter},
+        {formatter_config,
+         FormatterConfig#config_logging_formatter.formatter_config}],
+    case cloudi_proplists:take_values(Defaults, NewValue) of
+        [File, _, Output, _, _, _, _ | _]
+            when not (((File =:= undefined) andalso
+                       (Output =:= undefined)) orelse
+                      (is_list(File) andalso is_integer(hd(File)))) ->
+            {error, {logging_formatter_file_invalid, File}};
+        [_, Level, _, _, _, _, _ | _]
+            when not is_atom(Level) ->
+            {error, {logging_formatter_level_invalid, Level}};
+        [File, _, Output, _, _, _, _ | _]
+            when not (is_atom(Output) andalso
+                      (((File /= undefined) andalso
+                        (Output /= undefined)) orelse
+                       ((File =:= undefined) andalso
+                        (Output =:= undefined)))) ->
+            {error, {logging_formatter_output_invalid, Output}};
+        [_, _, _, OutputMaxR, _, _, _ | _]
+            when not (is_integer(OutputMaxR) andalso (OutputMaxR >= 0)) ->
+            {error, {logging_formatter_output_max_r_invalid, OutputMaxR}};
+        [_, _, _, _, OutputMaxT, _, _ | _]
+            when not (is_integer(OutputMaxT) andalso (OutputMaxT >= 0)) ->
+            {error, {logging_formatter_output_max_t_invalid, OutputMaxT}};
+        [File, _, Output, _, _, Formatter, _ | _]
+            when not (is_atom(Formatter) andalso
+                      (not ((File =:= undefined) andalso
+                            (Output =:= undefined) andalso
+                            (Formatter =:= undefined)))) ->
+            {error, {logging_formatter_formatter_invalid, Formatter}};
+        [_, _, _, _, _, _, Config | _]
+            when not is_list(Config) ->
+            {error, {logging_formatter_formatter_config_invalid, Config}};
+        [File, Level, Output, OutputMaxR, OutputMaxT, Formatter, Config] ->
+            case logging_formatter_level(Level) of
+                {ok, NewLevel} ->
+                    {ok,
+                     FormatterConfig#config_logging_formatter{
+                         file = File,
+                         level = NewLevel,
+                         output = Output,
+                         output_max_r = OutputMaxR,
+                         output_max_t = OutputMaxT,
+                         formatter = Formatter,
+                         formatter_config = Config}};
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _, _, _ | Extra] ->
+            {error, {logging_formatter_invalid, Extra}}
     end.
 

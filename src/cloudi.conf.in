@@ -1070,11 +1070,12 @@
 % (see http://cloudi.org/api.html#2_nodes_set for all the options)
 {logging, [
     %{file, "path/to/logfile"},
+    {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     %{syslog,
     % [{identity, "CloudI"},
     %  {facility, local0},
     %  {level, trace}]}, % CloudI log levels are mapped to syslog levels
-    {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
+    {formatters, [{any, [{formatter, cloudi_core_i_logger}]}]},
     {redirect, undefined}
 ]}.
 
