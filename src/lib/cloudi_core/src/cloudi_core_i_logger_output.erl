@@ -3,13 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Pool==
-%%% Simple process pool with round-robin.
+%%% ==CloudI Logger Formatter Output Initialization==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,18 +43,17 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
+%%% @copyright 2014 Michael Truog
 %%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_pool).
+-module(cloudi_core_i_logger_output).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/4,
-         get/1]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -63,59 +61,63 @@
          terminate/2, code_change/3]).
 
 -include("cloudi_logger.hrl").
+-include("cloudi_core_i_configuration.hrl").
 
 -record(state,
     {
-        pool,
-        count,
-        supervisor
+        config :: #config_logging_formatter{}
     }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Name, [_ | _] = ChildSpecs, Supervisor, Parent)
-    when is_atom(Name), is_list(ChildSpecs), is_pid(Supervisor),
-         is_pid(Parent) ->
-    gen_server:start_link({local, Name}, ?MODULE,
-                          [ChildSpecs, Supervisor, Parent], []).
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
 
-get(Name)
-    when is_atom(Name) ->
-    try gen_server:call(Name, get)
-    catch
-        exit:{Reason, _} ->
-            {error, Reason}
-    end.
+-spec start_link(FormatterConfig :: #config_logging_formatter{}) ->
+    {'ok', pid()} |
+    {'error', any()}.
+
+start_link(FormatterConfig)
+    when is_record(FormatterConfig, config_logging_formatter) ->
+    gen_server:start_link(?MODULE, [FormatterConfig], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ChildSpecs, Supervisor, Parent]) ->
-    self() ! {start, ChildSpecs},
-    cloudi_core_i_pool_sup:start_link_done(Parent),
-    {ok, #state{supervisor = Supervisor}}.
-
-
-handle_call(get, _, #state{pool = Pool,
-                           count = Count} = State) ->
-    I = erlang:get(current),
-    erlang:put(current, if I == Count -> 1; true -> I + 1 end),
-    Pid = erlang:element(I, Pool),
-    case erlang:is_process_alive(Pid) of
+init([#config_logging_formatter{
+          output = Output,
+          output_name = OutputName,
+          output_args = OutputArgs,
+          formatter = Formatter,
+          formatter_config = Config} = FormatterConfig]) ->
+    case gen_event:start_link({local, OutputName}) of
+        {ok, _} ->
+            ok;
+        {error, {already_started, _}} ->
+            ok
+    end,
+    Args = if
+        Formatter =:= undefined ->
+            OutputArgs;
         true ->
-            {reply, Pid, State};
-        false ->
-            {NewI, NewState} = update(I, State),
-            if
-                NewState#state.count == 0 ->
-                    {stop, {error, noproc}, {error, noproc}, NewState};
-                true ->
-                    {reply, erlang:element(NewI, NewState#state.pool), NewState}
-            end
-    end;
+            [{formatter, Formatter},
+             {formatter_config, Config} | OutputArgs]
+    end,
+    case gen_event:add_sup_handler(OutputName, Output, Args) of
+        ok ->
+            {ok, #state{config = FormatterConfig}};
+        {'EXIT', Reason} ->
+            {stop, {error, Reason}};
+        {error, _} = Error ->
+            {stop, Error};
+        Reason ->
+            {stop, {error, Reason}}
+    end.
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
@@ -126,17 +128,8 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
-handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
-    case cloudi_core_i_pool_sup:start_children(Supervisor, ChildSpecs) of
-        [] ->
-            {stop, {error, noproc}, State};
-        Pids when is_list(Pids) ->
-            erlang:put(current, 1),
-            {noreply, State#state{pool = erlang:list_to_tuple(Pids),
-                                  count = erlang:length(Pids)}};
-        {error, _} = Error ->
-            {stop, Error, State}
-    end;
+handle_info({gen_event_EXIT, _, Reason}, State) ->
+    {stop, Reason, State};
 
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -151,17 +144,4 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-update(I, #state{supervisor = Supervisor} = State) ->
-    Pids = cloudi_core_i_pool_sup:which_children(Supervisor),
-    Count = erlang:length(Pids),
-    NewState = State#state{pool = erlang:list_to_tuple(Pids),
-                           count = Count},
-    if
-        I > Count ->
-            erlang:put(current, if 1 == Count -> 1; true -> 2 end),
-            {1, NewState};
-        true ->
-            {I, NewState}
-    end.
 

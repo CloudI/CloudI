@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_sup).
@@ -95,7 +95,8 @@ start_link(Config) when is_record(Config, config) ->
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 -define(CHILDSPECS,
-        [child_specification(cloudi_core_i_logger, Config),
+        [child_specification(cloudi_core_i_logger_sup, Config),
+         child_specification(cloudi_core_i_logger, Config),
          child_specification(cloudi_core_i_nodes, Config),
          child_specification(cloudi_core_i_services_monitor),
          child_specification(cloudi_core_i_services_internal_sup),
@@ -107,7 +108,8 @@ start_link(Config) when is_record(Config, config) ->
          is_tuple(child_specification(cloudi_core_i_os_spawn_pool)))).
 -else.
 -define(CHILDSPECS,
-        [child_specification(cloudi_core_i_logger, Config),
+        [child_specification(cloudi_core_i_logger_sup, Config),
+         child_specification(cloudi_core_i_logger, Config),
          child_specification(cloudi_core_i_nodes, Config),
          child_specification(cloudi_core_i_services_monitor),
          child_specification(cloudi_core_i_services_external_sup),
@@ -129,22 +131,24 @@ init([Config]) when is_record(Config, config) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-child_specification(cloudi_core_i_logger, Config)
-    when is_record(Config, config) ->
+child_specification(cloudi_core_i_logger_sup, Config) ->
+    {cloudi_core_i_logger_sup,
+     {cloudi_core_i_logger_sup, start_link, [Config]},
+     permanent, infinity, supervisor, [cloudi_core_i_logger_sup]};
+
+child_specification(cloudi_core_i_logger, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_logger,
      {cloudi_core_i_logger, start_link, [Config]},
      permanent, Shutdown, worker, [cloud_core_i_logger]};
 
-child_specification(cloudi_core_i_nodes, Config)
-    when is_record(Config, config) ->
+child_specification(cloudi_core_i_nodes, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_nodes,
      {cloudi_core_i_nodes, start_link, [Config]},
      permanent, Shutdown, worker, [cloudi_core_i_nodes]};
 
-child_specification(cloudi_core_i_configurator, Config)
-    when is_record(Config, config) ->
+child_specification(cloudi_core_i_configurator, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_configurator,
      {cloudi_core_i_configurator, start_link, [Config]},

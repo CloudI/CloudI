@@ -308,7 +308,6 @@ format(Msg, Config, _) ->
      Timestamp,
      Message} = Msg,
     Level = lager_severity_input(Severity),
-    Now = Timestamp,
     Defaults = [
         {node, undefined},
         {pid, undefined},
@@ -321,7 +320,7 @@ format(Msg, Config, _) ->
         Mode =:= legacy ->
             NewLogMessage = [io_lib:format(" ~s~n", [S]) ||
                              S <- string:tokens(LogMessage, "\n")],
-            format_line(Level, Now, Node, Pid,
+            format_line(Level, Timestamp, Node, Pid,
                         Module, Line, NewLogMessage)
     end.
 
@@ -391,9 +390,9 @@ init([#config_logging{file = FilePath,
             {stop, Reason}
     end.
 
-handle_call({Level, Now, Node, Pid,
+handle_call({Level, Timestamp, Node, Pid,
              Module, Line, LogMessage}, _, State) ->
-    case log_message_internal(Level, Now, Node, Pid,
+    case log_message_internal(Level, Timestamp, Node, Pid,
                               Module, Line, LogMessage, State) of
         {ok, NextState} ->
             case log_mode_check(NextState) of
@@ -460,9 +459,9 @@ handle_cast({redirect, Node}, State) ->
         {error, Reason, NewState} ->
             {stop, Reason, NewState}
     end;
-handle_cast({Level, Now, Node, Pid,
+handle_cast({Level, Timestamp, Node, Pid,
              Module, Line, LogMessage}, State) ->
-    case log_message_internal(Level, Now, Node, Pid,
+    case log_message_internal(Level, Timestamp, Node, Pid,
                               Module, Line, LogMessage, State) of
         {ok, NextState} ->
             case log_mode_check(NextState) of
@@ -499,10 +498,10 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-format_line(Level, {_, _, MicroSeconds} = Now, Node, Pid,
+format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
             Module, Line, LogMessage) ->
     {{DateYYYY, DateMM, DateDD},
-     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
+     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Timestamp),
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     cloudi_string:format("~4..0w-~2..0w-~2..0wT"
                          "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
@@ -512,17 +511,16 @@ format_line(Level, {_, _, MicroSeconds} = Now, Node, Pid,
                           log_level_to_string(Level),
                           Module, Line, Pid, Node, LogMessage]).
 
-log_message_formatter_call(Level, Now, Node, Pid,
+log_message_formatter_call(Level, Timestamp, Node, Pid,
                            Module, Line, LogMessage,
                            #config_logging_formatter{
-                               file = undefined,
                                output = undefined,
                                formatter = Formatter,
                                formatter_config = FormatterConfig}) ->
     % A formatter module has:
     % required: format(Msg, Config)
     % optional: format(Msg, Config, Colors)
-    Msg = lager_msg(Level, Now, Node, Pid,
+    Msg = lager_msg(Level, Timestamp, Node, Pid,
                     Module, Line, LogMessage),
     try Formatter:format(Msg, FormatterConfig)
     catch
@@ -530,57 +528,69 @@ log_message_formatter_call(Level, Now, Node, Pid,
             ErrorMessage = cloudi_string:format("formatter(~p) ~p ~p~n~p",
                                                 [Formatter, ErrorType, Error,
                                                  erlang:get_stacktrace()]),
-            format_line(Level, erlang:now(), node(), self(),
-                        ?MODULE, ?LINE, ErrorMessage) ++
-            format_line(Level, Now, Node, Pid,
-                        Module, Line, LogMessage)
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line, LogMessage) ++
+            format_line(error, timestamp_increment(Timestamp), node(), self(),
+                        ?MODULE, ?LINE, ErrorMessage)
     end;
-log_message_formatter_call(Level, Now, Node, Pid,
+log_message_formatter_call(Level, Timestamp, Node, Pid,
                            Module, Line, LogMessage,
                            #config_logging_formatter{
-                               output = _Output}) ->
-    %Msg = lager_msg(Level, Now, Node, Pid,
-    %                Module, Line, LogMessage),
-    %XXX add formatter output support here
-    format_line(Level, Now, Node, Pid,
-                Module, Line, LogMessage).
+                               output = Output,
+                               output_name = OutputName}) ->
+    Msg = lager_msg(Level, Timestamp, Node, Pid,
+                    Module, Line, LogMessage),
+    try gen_event:notify(OutputName, {log, Msg}) of
+        ok ->
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line, LogMessage)
+    catch
+        ErrorType:Error ->
+            ErrorMessage = cloudi_string:format("output(~p) ~p ~p~n~p",
+                                                [Output, ErrorType, Error,
+                                                 erlang:get_stacktrace()]),
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line, LogMessage) ++
+            format_line(error, timestamp_increment(Timestamp), node(), self(),
+                        ?MODULE, ?LINE, ErrorMessage)
+    end.
 
-log_message_formatter(Level, Now, Node, Pid,
+log_message_formatter(Level, Timestamp, Node, Pid,
                       Module, Line, LogMessage,
                       #config_logging_formatter{
                           level = FormatterLevel} = FormatterConfig) ->
     case log_level_allowed(FormatterLevel, Level) of
         true ->
-            log_message_formatter_call(Level, Now, Node, Pid,
+            log_message_formatter_call(Level, Timestamp, Node, Pid,
                                        Module, Line, LogMessage,
                                        FormatterConfig);
         false ->
-            format_line(Level, Now, Node, Pid,
+            format_line(Level, Timestamp, Node, Pid,
                         Module, Line, LogMessage)
     end.
 
-log_message_formatters(Level, Now, Node, Pid,
+log_message_formatters(Level, Timestamp, Node, Pid,
                        Module, Line, LogMessage,
                        undefined) ->
-    format_line(Level, Now, Node, Pid,
+    format_line(Level, Timestamp, Node, Pid,
                 Module, Line, LogMessage);
-log_message_formatters(Level, Now, Node, Pid,
+log_message_formatters(Level, Timestamp, Node, Pid,
                        Module, Line, LogMessage,
                        #config_logging_formatters{
                            default = Default,
                            lookup = Lookup}) ->
     case cloudi_x_keys1value:find(Module, Lookup) of
         {ok, FormatterConfig} ->
-            log_message_formatter(Level, Now, Node, Pid,
+            log_message_formatter(Level, Timestamp, Node, Pid,
                                   Module, Line, LogMessage,
                                   FormatterConfig);
         error ->
             if
                 Default =:= undefined ->
-                    format_line(Level, Now, Node, Pid,
+                    format_line(Level, Timestamp, Node, Pid,
                                 Module, Line, LogMessage);
                 true ->
-                    log_message_formatter(Level, Now, Node, Pid,
+                    log_message_formatter(Level, Timestamp, Node, Pid,
                                           Module, Line, LogMessage,
                                           Default)
             end
@@ -588,8 +598,8 @@ log_message_formatters(Level, Now, Node, Pid,
 
 log_message_external(Mode, Process, Level, Module, Line, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line) ->
-    Now = erlang:now(),
-    case flooding_logger(Now) of
+    Timestamp = erlang:now(),
+    case flooding_logger(Timestamp) of
         true ->
             ok;
         false ->
@@ -602,33 +612,33 @@ log_message_external(Mode, Process, Level, Module, Line, Format, Args)
             if
                 Mode =:= async ->
                     gen_server:cast(Process,
-                                    {Level, Now, node(), self(),
+                                    {Level, Timestamp, node(), self(),
                                      Module, Line, LogMessage});
                 Mode =:= sync ->
                     gen_server:call(Process,
-                                    {Level, Now, node(), self(),
+                                    {Level, Timestamp, node(), self(),
                                      Module, Line, LogMessage}, infinity)
             end
     end.
 
 %% every 10 seconds, determine if the process has sent too many logging messages
-flooding_logger(Now2) ->
+flooding_logger(Timestamp2) ->
     case erlang:get(cloudi_logger) of
         undefined ->
-            erlang:put(cloudi_logger, {Now2, 1}),
+            erlang:put(cloudi_logger, {Timestamp2, 1}),
             false;
-        {Now1, Count1} ->
+        {Timestamp1, Count1} ->
             Count2 = Count1 + 1,
-            MicroSecondsElapsed = timer:now_diff(Now2, Now1),
+            MicroSecondsElapsed = timer:now_diff(Timestamp2, Timestamp1),
             if
                 MicroSecondsElapsed > 10000000 ->
-                    erlang:put(cloudi_logger, {Now2, 1}),
+                    erlang:put(cloudi_logger, {Timestamp2, 1}),
                     false;
                 (MicroSecondsElapsed / Count2) < ?LOGGER_FLOODING_DELTA ->
-                    erlang:put(cloudi_logger, {Now1, Count2}),
+                    erlang:put(cloudi_logger, {Timestamp1, Count2}),
                     true;
                 true ->
-                    erlang:put(cloudi_logger, {Now1, Count2}),
+                    erlang:put(cloudi_logger, {Timestamp1, Count2}),
                     false
             end
     end.
@@ -661,14 +671,14 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
             ok
     end.
 
-log_message_internal(Level, Now, Node, Pid,
+log_message_internal(Level, Timestamp, Node, Pid,
                      Module, Line, LogMessage,
                      #state{file_level = FileLevel,
                             syslog_level = SyslogLevel,
                             formatters = FormattersConfig} = State0)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
-    Message = log_message_formatters(Level, Now, Node, Pid,
+    Message = log_message_formatters(Level, Timestamp, Node, Pid,
                                      Module, Line, LogMessage,
                                      FormattersConfig),
     {FileResult, State1} = case log_level_allowed(FileLevel, Level) of
@@ -886,6 +896,13 @@ log_level_allowed(fatal, fatal) ->
     true;
 log_level_allowed(_, _) ->
     false.
+
+timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
+    NewMicroSecs = MicroSecs + 1,
+    NewSecs = Secs + (NewMicroSecs div 1000000),
+    {MegaSecs + (NewSecs div 1000000),
+     NewSecs rem 1000000,
+     NewMicroSecs rem 1000000}.
 
 -define(INTERFACE_MODULE_HEADER,
     "
@@ -1150,7 +1167,7 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
 %%%------------------------------------------------------------------------
 
 % based on lager_util:maybe_utc/1
-lager_datetime({_, _, MicroSeconds} = Now) ->
+lager_datetime({_, _, MicroSeconds} = Timestamp) ->
     UTC = case application:get_env(sasl, utc_log) of
         {ok, Val} ->
             Val;
@@ -1166,11 +1183,15 @@ lager_datetime({_, _, MicroSeconds} = Now) ->
     if
         UTC =:= true ->
             {Date,
-             {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Now),
+             {TimeHH,
+              TimeMM,
+              TimeSS}} = calendar:now_to_universal_time(Timestamp),
             {utc, {Date, {TimeHH, TimeMM, TimeSS, TimeMS}}};
         true ->
             {Date,
-             {TimeHH, TimeMM, TimeSS}} = calendar:now_to_local_time(Now),
+             {TimeHH,
+              TimeMM,
+              TimeSS}} = calendar:now_to_local_time(Timestamp),
             {Date, {TimeHH, TimeMM, TimeSS, TimeMS}}
     end.
 
@@ -1204,7 +1225,7 @@ lager_severity_input(info) -> info;
 lager_severity_input(debug) -> debug.
 
 -spec lager_msg(Level :: cloudi_service_api:loglevel(),
-                Now :: erlang:timestamp(),
+                Timestamp :: erlang:timestamp(),
                 Node :: node(),
                 Pid :: atom(),
                 Module :: module(),
@@ -1213,7 +1234,7 @@ lager_severity_input(debug) -> debug.
     cloudi_x_lager_msg:cloudi_x_lager_msg().
 
 % based on lager_msg:new/5
-lager_msg(Level, Now, Node, Pid,
+lager_msg(Level, Timestamp, Node, Pid,
           Module, Line, LogMessage) ->
     Destinations = [], % not using TraceFilters
     MetaData = [{node, Node},
@@ -1229,8 +1250,8 @@ lager_msg(Level, Now, Node, Pid,
                 %    (similar to stack trace overhead)
                 {line, Line}],
     Severity = lager_severity_output(Level),
-    DateTime = lager_datetime_format(lager_datetime(Now)),
-    Timestamp = Now,
+    DateTime = lager_datetime_format(lager_datetime(Timestamp)),
+    Timestamp = Timestamp,
     Message = LogMessage,
     % create lager_msg record manually
     {lager_msg,

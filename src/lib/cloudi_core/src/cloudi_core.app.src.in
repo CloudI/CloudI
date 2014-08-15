@@ -13,6 +13,9 @@
         cloudi_core_i_environment,
         cloudi_core_i_logger,
         cloudi_core_i_logger_interface,
+        cloudi_core_i_logger_output,
+        cloudi_core_i_logger_output_sup,
+        cloudi_core_i_logger_sup,
         cloudi_core_i_nodes,
         cloudi_core_i_os_spawn,
         cloudi_core_i_pool,
@@ -46,6 +49,7 @@
    {registered,[
         cloudi_core_i_configurator,
         cloudi_core_i_logger,
+        cloudi_core_i_logger_sup,
         cloudi_core_i_nodes,
         cloudi_core_i_os_spawn,
         cloudi_core_i_services_external_sup,

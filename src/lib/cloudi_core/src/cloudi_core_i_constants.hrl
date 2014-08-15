@@ -97,6 +97,7 @@
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
 
+% create the locally registered name for a cpg scope
 -define(SCOPE_DEFAULT, cpg_default_scope).
 -define(SCOPE_CUSTOM_PREFIX, "cloudi_x_cpg_x_").
 -define(SCOPE_ASSIGN(Scope),
@@ -107,6 +108,19 @@
             true ->
                 erlang:list_to_atom(?SCOPE_CUSTOM_PREFIX ++
                                     erlang:atom_to_list(Scope))
+        end).
+
+% create the locally registered name for a cloudi_core_i_logger
+% formatter output gen_event module
+-define(LOGGING_FORMATTER_OUTPUT_CUSTOM_PREFIX,
+        "cloudi_core_i_logger_output_sup_").
+-define(LOGGING_FORMATTER_OUTPUT_ASSIGN(Output),
+        if
+            Output =:= undefined ->
+                undefined;
+            true ->
+                erlang:list_to_atom(?LOGGING_FORMATTER_OUTPUT_CUSTOM_PREFIX ++
+                                    erlang:atom_to_list(Output))
         end).
 
 % maximum timeout value for erlang:send_after/3 and gen_server:call

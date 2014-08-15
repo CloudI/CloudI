@@ -62,8 +62,6 @@
 
 -record(config_logging_formatter,
     {
-        file = undefined
-            :: undefined | string(),
         % The mapping for lager levels to CloudI levels is:
         % (use normal CloudI levels to avoid the mapping)
         % emergency                     -> fatal
@@ -80,6 +78,10 @@
             :: cloudi_service_api:loglevel(),
         output = undefined
             :: undefined | module(),
+        output_name
+            :: atom(),
+        output_args = [] % provided to output module with formatter args
+            :: list(),
         output_max_r = ?DEFAULT_MAX_R
             :: non_neg_integer(),
         output_max_t = ?DEFAULT_MAX_T

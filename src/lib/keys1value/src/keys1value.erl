@@ -59,7 +59,8 @@
          is_key/2,
          new/0,
          new/1,
-         store/3]).
+         store/3,
+         to_list/1]).
 
 -record(keys1value,
     {
@@ -167,4 +168,19 @@ store([_ | _] = Keys, Value,
         Module:store(K, {Keys, Value}, D)
     end, Lookup, Keys),
     State#keys1value{lookup = NewLookup}.
+
+-spec to_list(keys1value(key(), value())) ->
+    list({keys(), value()}).
+
+to_list(#keys1value{module = Module,
+                    lookup = Lookup}) ->
+    to_list(Module:to_list(Lookup), []).
+
+to_list([], Output) ->
+    Output;
+to_list([{_, {Keys, _} = Entry} | L0], Output) ->
+    LN = lists:foldl(fun(K, L1) ->
+        lists:keydelete(K, 1, L1)
+    end, L0, Keys),
+    to_list(LN, [Entry | Output]).
 

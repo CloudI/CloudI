@@ -217,9 +217,9 @@
      logging_syslog_facility_invalid |
      logging_formatters_invalid |
      logging_formatter_modules_invalid |
-     logging_formatter_file_invalid |
      logging_formatter_level_invalid |
      logging_formatter_output_invalid |
+     logging_formatter_output_args_invalid |
      logging_formatter_output_max_r_invalid |
      logging_formatter_output_max_t_invalid |
      logging_formatter_formatter_invalid |
@@ -3071,29 +3071,39 @@ logging_formatters_validate(undefined) ->
 logging_formatters_validate([]) ->
     {ok, undefined};
 logging_formatters_validate([_ | _] = Value) ->
-    logging_formatters_validate(Value, [], #config_logging_formatters{}).
+    logging_formatters_validate(Value, [], [], #config_logging_formatters{}).
 
-logging_formatters_validate([], [], FormattersConfig) ->
+logging_formatters_validate([], [], _, FormattersConfig) ->
     {ok, FormattersConfig};
-logging_formatters_validate([], Levels, FormattersConfig) ->
+logging_formatters_validate([], Levels, _, FormattersConfig) ->
     {ok,
      FormattersConfig#config_logging_formatters{
          level = log_level_highest(Levels)}};
-logging_formatters_validate([{any, Options} | L], Levels,
+logging_formatters_validate([{any, Options} | L],
+                            Levels, Outputs,
                             #config_logging_formatters{
                                 default = undefined} = FormattersConfig)
     when is_list(Options) ->
     case logging_formatter_validate(Options) of
         {ok, #config_logging_formatter{level = off}} ->
-            logging_formatters_validate(L, Levels, FormattersConfig);
-        {ok, #config_logging_formatter{level = Level} = Formatter} ->
-            logging_formatters_validate(L, [Level | Levels],
-                FormattersConfig#config_logging_formatters{
-                    default = Formatter});
+            logging_formatters_validate(L, Levels, Outputs,
+                                        FormattersConfig);
+        {ok, #config_logging_formatter{level = Level,
+                                       output = Output} = Formatter} ->
+            case lists:member(Output, Outputs) of
+                true ->
+                    {error, {logging_formatter_output_invalid, Output}};
+                false ->
+                    logging_formatters_validate(L,
+                        [Level | Levels], [Output | Outputs],
+                        FormattersConfig#config_logging_formatters{
+                            default = Formatter})
+            end;
         {error, _} = Error ->
             Error
     end;
-logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
+logging_formatters_validate([{[_ | _] = Modules, Options} | L],
+                            Levels, Outputs,
                             #config_logging_formatters{
                                 lookup = Lookup} = FormattersConfig)
     when is_list(Options) ->
@@ -3102,20 +3112,28 @@ logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
         true ->
             case logging_formatter_validate(Options) of
                 {ok, #config_logging_formatter{level = off}} ->
-                    logging_formatters_validate(L, Levels, FormattersConfig);
-                {ok, #config_logging_formatter{level = Level} = Formatter} ->
-                    NewLookup = cloudi_x_keys1value:store(Modules, Formatter,
-                                                          Lookup),
-                    logging_formatters_validate(L, [Level | Levels],
-                        FormattersConfig#config_logging_formatters{
-                            lookup = NewLookup});
+                    logging_formatters_validate(L, Levels, Outputs,
+                                                FormattersConfig);
+                {ok, #config_logging_formatter{level = Level,
+                                               output = Output} = Formatter} ->
+                    case lists:member(Output, Outputs) of
+                        true ->
+                            {error, {logging_formatter_output_invalid, Output}};
+                        false ->
+                            NewLookup = cloudi_x_keys1value:
+                                        store(Modules, Formatter, Lookup),
+                            logging_formatters_validate(L,
+                                [Level | Levels], [Output | Outputs],
+                                FormattersConfig#config_logging_formatters{
+                                    lookup = NewLookup})
+                    end;
                 {error, _} = Error ->
                     Error
             end;
         false ->
             {error, {logging_formatter_modules_invalid, Modules}}
     end;
-logging_formatters_validate([Entry | _], _, _) ->
+logging_formatters_validate([Entry | _], _, _, _) ->
     {error, {logging_formatters_invalid, Entry}}.
 
 % handle a conversion from lager log levels to CloudI log levels, if necessary
@@ -3160,12 +3178,12 @@ logging_formatter_validate(Value) ->
     end, Value),
     FormatterConfig = #config_logging_formatter{},
     Defaults = [
-        {file,
-         FormatterConfig#config_logging_formatter.file},
         {level,
          FormatterConfig#config_logging_formatter.level},
         {output,
          FormatterConfig#config_logging_formatter.output},
+        {output_args,
+         FormatterConfig#config_logging_formatter.output_args},
         {output_max_r,
          FormatterConfig#config_logging_formatter.output_max_r},
         {output_max_t,
@@ -3175,44 +3193,39 @@ logging_formatter_validate(Value) ->
         {formatter_config,
          FormatterConfig#config_logging_formatter.formatter_config}],
     case cloudi_proplists:take_values(Defaults, NewValue) of
-        [File, _, Output, _, _, _, _ | _]
-            when not (((File =:= undefined) andalso
-                       (Output =:= undefined)) orelse
-                      (is_list(File) andalso is_integer(hd(File)))) ->
-            {error, {logging_formatter_file_invalid, File}};
-        [_, Level, _, _, _, _, _ | _]
+        [Level, _, _, _, _, _, _ | _]
             when not is_atom(Level) ->
             {error, {logging_formatter_level_invalid, Level}};
-        [File, _, Output, _, _, _, _ | _]
-            when not (is_atom(Output) andalso
-                      (((File /= undefined) andalso
-                        (Output /= undefined)) orelse
-                       ((File =:= undefined) andalso
-                        (Output =:= undefined)))) ->
+        [_, Output, _, _, _, _, _ | _]
+            when not is_atom(Output) ->
             {error, {logging_formatter_output_invalid, Output}};
+        [_, _, OutputArgs, _, _, _, _ | _]
+            when not is_list(OutputArgs) ->
+            {error, {logging_formatter_output_args_invalid, OutputArgs}};
         [_, _, _, OutputMaxR, _, _, _ | _]
             when not (is_integer(OutputMaxR) andalso (OutputMaxR >= 0)) ->
             {error, {logging_formatter_output_max_r_invalid, OutputMaxR}};
         [_, _, _, _, OutputMaxT, _, _ | _]
             when not (is_integer(OutputMaxT) andalso (OutputMaxT >= 0)) ->
             {error, {logging_formatter_output_max_t_invalid, OutputMaxT}};
-        [File, _, Output, _, _, Formatter, _ | _]
+        [_, Output, _, _, _, Formatter, _ | _]
             when not (is_atom(Formatter) andalso
-                      (not ((File =:= undefined) andalso
-                            (Output =:= undefined) andalso
+                      (not ((Output =:= undefined) andalso
                             (Formatter =:= undefined)))) ->
             {error, {logging_formatter_formatter_invalid, Formatter}};
         [_, _, _, _, _, _, Config | _]
             when not is_list(Config) ->
             {error, {logging_formatter_formatter_config_invalid, Config}};
-        [File, Level, Output, OutputMaxR, OutputMaxT, Formatter, Config] ->
+        [Level, Output, OutputArgs, OutputMaxR, OutputMaxT,
+         Formatter, Config] ->
             case logging_formatter_level(Level) of
                 {ok, NewLevel} ->
                     {ok,
                      FormatterConfig#config_logging_formatter{
-                         file = File,
                          level = NewLevel,
                          output = Output,
+                         output_name = ?LOGGING_FORMATTER_OUTPUT_ASSIGN(Output),
+                         output_args = OutputArgs,
                          output_max_r = OutputMaxR,
                          output_max_t = OutputMaxT,
                          formatter = Formatter,
