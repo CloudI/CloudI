@@ -135,7 +135,11 @@ handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-terminate(_, _) ->
+terminate(Reason,
+          #state{config = #config_logging_formatter{
+                              output = Output,
+                              output_name = OutputName}}) ->
+    _ = gen_event:delete_handler(OutputName, Output, Reason),
     ok.
 
 code_change(_, State, _) ->

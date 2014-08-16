@@ -1251,7 +1251,6 @@ lager_msg(Level, Timestamp, Node, Pid,
                 {line, Line}],
     Severity = lager_severity_output(Level),
     DateTime = lager_datetime_format(lager_datetime(Timestamp)),
-    Timestamp = Timestamp,
     Message = LogMessage,
     % create lager_msg record manually
     {lager_msg,
