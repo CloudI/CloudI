@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes to log formatters to allow multiple instances of the same
+      output module
+    * Add the cloudi_service_api:log_formatters/2 function to the
+      CloudI Service API
+
 2014-08-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add lager backend integration

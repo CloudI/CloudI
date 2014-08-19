@@ -67,6 +67,7 @@
          nodes_add/2,
          nodes_remove/2,
          nodes_set/2,
+         log_formatters/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -177,6 +178,11 @@ nodes_remove(L, Timeout) ->
 nodes_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {nodes_set, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+log_formatters(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {log_formatters, L,
                                  timeout_decr(Timeout)}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
@@ -351,6 +357,18 @@ handle_call({nodes_remove, _, _, _} = Request, _, State) ->
 
 handle_call({nodes_set, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
+
+handle_call({log_formatters, L, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:log_formatters(L, Config) of
+        {ok, #config{logging = #config_logging{
+                         formatters = FormattersConfig}} = NewConfig} ->
+            ok = cloudi_core_i_logger:change_formatters(FormattersConfig,
+                                                        Timeout),
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

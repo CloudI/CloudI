@@ -67,6 +67,7 @@
          nodes_dead/1,
          nodes/1,
          loglevel_set/2,
+         log_formatters/2,
          log_redirect/2,
          code_path_add/2,
          code_path_remove/2,
@@ -350,9 +351,6 @@
 -export_type([service_options_internal/0,
               service_options_external/0]).
 
--type loglevel() :: fatal | error | warn | info | debug | trace | off.
--export_type([loglevel/0]).
-
 -type service_id() :: <<_:128>>. % version 1 UUID (service instance id)
 -type service_internal() :: #internal{}.
 -type service_external() :: #external{}.
@@ -405,6 +403,21 @@
                                          {tags, list({string(), string()} |
                                                      string())})})}).
 -export_type([nodes_proplist/0]).
+
+-type loglevel() :: fatal | error | warn | info | debug | trace | off.
+-type log_formatters_proplist() ::
+    list(fatal | error | warn | info | debug | trace |
+         emergency | alert | critical | warning | notice |
+         {level, fatal | error | warn | info | debug | trace |
+                 emergency | alert | critical | warning | notice} |
+         {output, module() | undefined} |
+         {output_args, list()} |
+         {output_max_r, non_neg_integer()} |
+         {output_max_t, cloudi_service_api:seconds()} |
+         {formatter, module() | undefined} |
+         {formatter_config, list()}).
+-export_type([log_formatters_proplist/0,
+              loglevel/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -772,7 +785,31 @@ loglevel_set(Level, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_logger:change_loglevel(Level).
+    cloudi_core_i_logger:change_level(Level).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set the CloudI log formatters.===
+%% lager backend (gen_event) modules are supported as 'output' modules and
+%% lager formatter modules are supported with or without an 'output'
+%% module specified.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec log_formatters(L :: log_formatters_proplist(),
+                     Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_log_formatters()}.
+
+log_formatters(L, Timeout)
+    when is_list(L),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:log_formatters(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

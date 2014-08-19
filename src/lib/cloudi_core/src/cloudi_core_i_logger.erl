@@ -55,7 +55,8 @@
 %% external interface
 -export([start_link/1,
          current_function/0,
-         change_loglevel/1,
+         change_level/1,
+         change_formatters/2,
          redirect/1,
          fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
          format/2, format/3]).
@@ -137,14 +138,33 @@ current_function() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec change_loglevel(Level :: atom()) ->
+-spec change_level(Level :: atom()) ->
     'ok'.
 
-change_loglevel(Level)
+change_level(Level)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace;
          Level =:= off ->
-    gen_server:cast(?MODULE, {change_loglevel, Level}).
+    gen_server:cast(?MODULE, {change_level, Level}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Change the logging formatters.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec change_formatters(FormattersConfig ::
+                            #config_logging_formatters{} | undefined,
+                        Timeout ::
+                            cloudi_service_api:api_timeout_milliseconds()) ->
+    'ok'.
+
+change_formatters(FormattersConfig, Timeout)
+    when FormattersConfig =:= undefined;
+         is_record(FormattersConfig, config_logging_formatters) ->
+    gen_server:call(?MODULE,
+                    {change_formatters,
+                     FormattersConfig, Timeout}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -404,17 +424,35 @@ handle_call({Level, Timestamp, Node, Pid,
         {{error, Reason}, NextState} ->
             {stop, Reason, NextState}
     end;
+handle_call({change_formatters, NewFormattersConfig, Timeout}, _,
+            #state{file_level = FileLevel,
+                   syslog_level = SyslogLevel,
+                   formatters = OldFormattersConfig} = State) ->
+    FormattersLevel = case NewFormattersConfig of
+        undefined ->
+            undefined;
+        #config_logging_formatters{level = FormattersLevel0} ->
+            FormattersLevel0
+    end,
+    Level = cloudi_core_i_configuration:
+            log_level_highest([FileLevel, SyslogLevel, FormattersLevel]),
+    ok = formatters_update(OldFormattersConfig, NewFormattersConfig, Timeout),
+    ok = cloudi_core_i_logger_sup:reconfigure(NewFormattersConfig),
+    {reply, ok,
+     State#state{level = Level,
+                 formatters = NewFormattersConfig,
+                 formatters_level = FormattersLevel}};
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]),
      error, State}.
 
-handle_cast({change_loglevel, _},
+handle_cast({change_level, _},
             #state{file_path = undefined} = State) ->
     {noreply, State};
-handle_cast({change_loglevel, FileLevel},
+handle_cast({change_level, FileLevel},
             #state{file_level = FileLevel} = State) ->
     {noreply, State};
-handle_cast({change_loglevel, FileLevelNew},
+handle_cast({change_level, FileLevelNew},
             #state{file_level = FileLevelOld,
                    level = LevelOld,
                    mode = Mode,
@@ -1159,6 +1197,64 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
         {error, _} = Error ->
             Error
     end.
+
+formatters_config_list(undefined) ->
+    [];
+formatters_config_list(#config_logging_formatters{default = Default,
+                                                  lookup = Lookup}) ->
+    L = [Value || {_, Value} <- cloudi_x_keys1value:to_list(Lookup)],
+    if
+        Default =:= undefined ->
+            L;
+        true ->
+            [Default | L]
+    end.
+
+formatters_config_output_names(L) ->
+    formatters_config_output_names(L, []).
+
+formatters_config_output_names([], Result) ->
+    Result;
+formatters_config_output_names([#config_logging_formatter{
+                                    output_name = undefined} | L], Result) ->
+    formatters_config_output_names(L, Result);
+formatters_config_output_names([#config_logging_formatter{
+                                    output_name = OutputName} | L], Result) ->
+    formatters_config_output_names(L, [OutputName | Result]).
+
+formatters_update_list([], _, _, _) ->
+    ok;
+formatters_update_list([OutputName | L], OldConfigL, NewConfigL, Timeout) ->
+    Index = #config_logging_formatter.output_name,
+    {value, #config_logging_formatter{level = OldLevel},
+     NextOldConfigL} = lists:keytake(OutputName, Index, OldConfigL),
+    {value, #config_logging_formatter{level = NewLevel,
+                                      output = Output},
+     NextNewConfigL} = lists:keytake(OutputName, Index, NewConfigL),
+    NewLagerLevel = lager_severity_output(NewLevel),
+    case lager_severity_output(OldLevel) of
+        NewLagerLevel ->
+            ok;
+        _ ->
+            try gen_event:call(OutputName, Output,
+                               {set_loglevel, NewLagerLevel}, Timeout)
+            catch
+                % ignore gen_event processes that don't care or fail
+                _:_ ->
+                    ok
+            end
+    end,
+    formatters_update_list(L, NextOldConfigL, NextNewConfigL, Timeout).
+
+formatters_update(OldFormattersConfig, NewFormattersConfig, Timeout) ->
+    NewConfigL = formatters_config_list(NewFormattersConfig),
+    OldConfigL = formatters_config_list(OldFormattersConfig),
+    NewOutputNames = formatters_config_output_names(NewConfigL),   
+    OldOutputNames = formatters_config_output_names(OldConfigL),   
+    ToUpdate = sets:intersection(sets:from_list(OldOutputNames),
+                                 sets:from_list(NewOutputNames)),
+    formatters_update_list(sets:to_list(ToUpdate),
+                           OldConfigL, NewConfigL, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% lager integration based on lager source code

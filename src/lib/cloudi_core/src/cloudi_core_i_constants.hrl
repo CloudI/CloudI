@@ -114,13 +114,14 @@
 % formatter output gen_event module
 -define(LOGGING_FORMATTER_OUTPUT_CUSTOM_PREFIX,
         "cloudi_core_i_logger_output_sup_").
--define(LOGGING_FORMATTER_OUTPUT_ASSIGN(Output),
+-define(LOGGING_FORMATTER_OUTPUT_ASSIGN(Output, Instance),
         if
             Output =:= undefined ->
                 undefined;
             true ->
                 erlang:list_to_atom(?LOGGING_FORMATTER_OUTPUT_CUSTOM_PREFIX ++
-                                    erlang:atom_to_list(Output))
+                                    erlang:atom_to_list(Output) ++ "_" ++
+                                    erlang:integer_to_list(Instance))
         end).
 
 % maximum timeout value for erlang:send_after/3 and gen_server:call

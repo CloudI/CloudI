@@ -65,7 +65,8 @@
          nodes_add/2,
          nodes_remove/2,
          nodes_set/2,
-         log_level_highest/1]).
+         log_level_highest/1,
+         log_formatters/2]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -173,6 +174,16 @@
      node_discovery_ec2_tags_selection_null |
      node_discovery_ec2_groups_invalid |
      node_discovery_ec2_tags_invalid, any()}.
+-type error_reason_log_formatters_configuration() ::
+    {logging_formatters_invalid |
+     logging_formatter_modules_invalid |
+     logging_formatter_level_invalid |
+     logging_formatter_output_invalid |
+     logging_formatter_output_args_invalid |
+     logging_formatter_output_max_r_invalid |
+     logging_formatter_output_max_t_invalid |
+     logging_formatter_formatter_invalid |
+     logging_formatter_formatter_config_invalid, any()}.
 -type error_reason_acl_add() ::
     error_reason_acl_add_configuration().
 -type error_reason_acl_remove() ::
@@ -192,6 +203,8 @@
     error_reason_nodes_remove_configuration().
 -type error_reason_nodes_set() ::
     error_reason_nodes_set_configuration().
+-type error_reason_log_formatters() ::
+    error_reason_log_formatters_configuration().
 -export_type([error_reason_acl_add/0,
               error_reason_acl_remove/0,
               error_reason_services_add/0,
@@ -199,11 +212,13 @@
               error_reason_services_restart/0,
               error_reason_nodes_add/0,
               error_reason_nodes_remove/0,
-              error_reason_nodes_set/0]).
+              error_reason_nodes_set/0,
+              error_reason_log_formatters/0]).
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |
     error_reason_nodes_set_configuration() |
+    error_reason_log_formatters_configuration() |
     {invalid |
      node_invalid |
      logging_invalid |
@@ -214,16 +229,7 @@
      logging_syslog_identity_invalid |
      logging_syslog_facility_invalid |
      logging_syslog_level_invalid |
-     logging_syslog_facility_invalid |
-     logging_formatters_invalid |
-     logging_formatter_modules_invalid |
-     logging_formatter_level_invalid |
-     logging_formatter_output_invalid |
-     logging_formatter_output_args_invalid |
-     logging_formatter_output_max_r_invalid |
-     logging_formatter_output_max_t_invalid |
-     logging_formatter_formatter_invalid |
-     logging_formatter_formatter_config_invalid, any()}.
+     logging_syslog_facility_invalid, any()}.
 
 % cloudi_service_api.hrl records without defaults set so
 % dialyzer doesn't get confused
@@ -1007,6 +1013,29 @@ log_level_highest([_ | _] = Levels) ->
         not lists:member(Highest, Levels)
     end, [trace, debug, info, warn, error, fatal, off, undefined]),
     Level.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set the CloudI log formatters.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec log_formatters(Value :: cloudi_service_api:log_formatters_proplist(),
+                     Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_log_formatters()}.
+
+log_formatters(Value, #config{logging = OldLogging} = Config)
+    when is_list(Value) ->
+    case logging_formatters_validate(Value) of
+        {ok, #config_logging_formatters{} = FormattersConfig} ->
+            {ok,
+             Config#config{
+                 logging = OldLogging#config_logging{
+                     formatters = FormattersConfig}}};
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -3071,69 +3100,47 @@ logging_formatters_validate(undefined) ->
 logging_formatters_validate([]) ->
     {ok, undefined};
 logging_formatters_validate([_ | _] = Value) ->
-    logging_formatters_validate(Value, [], [], #config_logging_formatters{}).
+    logging_formatters_validate(Value, [], #config_logging_formatters{}).
 
-logging_formatters_validate([], [], _, FormattersConfig) ->
+logging_formatters_validate([], [], FormattersConfig) ->
     {ok, FormattersConfig};
-logging_formatters_validate([], Levels, _, FormattersConfig) ->
+logging_formatters_validate([], Levels, FormattersConfig) ->
     {ok,
      FormattersConfig#config_logging_formatters{
          level = log_level_highest(Levels)}};
-logging_formatters_validate([{any, Options} | L],
-                            Levels, Outputs,
+logging_formatters_validate([{any, Options} | L], Levels,
                             #config_logging_formatters{
                                 default = undefined} = FormattersConfig)
     when is_list(Options) ->
-    case logging_formatter_validate(Options) of
-        {ok, #config_logging_formatter{level = off}} ->
-            logging_formatters_validate(L, Levels, Outputs,
-                                        FormattersConfig);
-        {ok, #config_logging_formatter{level = Level,
-                                       output = Output} = Formatter} ->
-            case lists:member(Output, Outputs) of
-                true ->
-                    {error, {logging_formatter_output_invalid, Output}};
-                false ->
-                    logging_formatters_validate(L,
-                        [Level | Levels], [Output | Outputs],
-                        FormattersConfig#config_logging_formatters{
-                            default = Formatter})
-            end;
+    case logging_formatter_validate(any, Options) of
+        {ok, #config_logging_formatter{level = Level} = Formatter} ->
+            logging_formatters_validate(L, [Level | Levels],
+                FormattersConfig#config_logging_formatters{
+                    default = Formatter});
         {error, _} = Error ->
             Error
     end;
-logging_formatters_validate([{[_ | _] = Modules, Options} | L],
-                            Levels, Outputs,
+logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
                             #config_logging_formatters{
                                 lookup = Lookup} = FormattersConfig)
     when is_list(Options) ->
     case (lists:all(fun is_atom/1, Modules) andalso
           (not cloudi_x_keys1value:is_key(Modules, Lookup))) of
         true ->
-            case logging_formatter_validate(Options) of
-                {ok, #config_logging_formatter{level = off}} ->
-                    logging_formatters_validate(L, Levels, Outputs,
-                                                FormattersConfig);
-                {ok, #config_logging_formatter{level = Level,
-                                               output = Output} = Formatter} ->
-                    case lists:member(Output, Outputs) of
-                        true ->
-                            {error, {logging_formatter_output_invalid, Output}};
-                        false ->
-                            NewLookup = cloudi_x_keys1value:
-                                        store(Modules, Formatter, Lookup),
-                            logging_formatters_validate(L,
-                                [Level | Levels], [Output | Outputs],
-                                FormattersConfig#config_logging_formatters{
-                                    lookup = NewLookup})
-                    end;
+            case logging_formatter_validate(Modules, Options) of
+                {ok, #config_logging_formatter{level = Level} = Formatter} ->
+                    NewLookup = cloudi_x_keys1value:
+                                store(Modules, Formatter, Lookup),
+                    logging_formatters_validate(L, [Level | Levels],
+                        FormattersConfig#config_logging_formatters{
+                            lookup = NewLookup});
                 {error, _} = Error ->
                     Error
             end;
         false ->
             {error, {logging_formatter_modules_invalid, Modules}}
     end;
-logging_formatters_validate([Entry | _], _, _, _) ->
+logging_formatters_validate([Entry | _], _, _) ->
     {error, {logging_formatters_invalid, Entry}}.
 
 % handle a conversion from lager log levels to CloudI log levels, if necessary
@@ -3166,7 +3173,7 @@ logging_formatter_level(none) ->
 logging_formatter_level(Invalid) ->
     {error, {logging_formatter_level_invalid, Invalid}}.
 
-logging_formatter_validate(Value) ->
+logging_formatter_validate(Key, Value) ->
     NewValue = lists:map(fun(A) ->
         % handle lager logging level atoms in the proplist
         if
@@ -3220,12 +3227,42 @@ logging_formatter_validate(Value) ->
          Formatter, Config] ->
             case logging_formatter_level(Level) of
                 {ok, NewLevel} ->
+                    OutputName = if
+                        Output =:= undefined ->
+                            undefined;
+                        true ->
+                            Instance = erlang:phash2({Key,
+                                                      OutputArgs,
+                                                      OutputMaxR, OutputMaxT,
+                                                      Formatter, Config}),
+                            ?LOGGING_FORMATTER_OUTPUT_ASSIGN(Output, Instance)
+                    end,
+                    NewOutputArgs = if
+                        Output =:= undefined ->
+                            OutputArgs;
+                        true ->
+                            LagerLevel = if
+                                NewLevel =:= fatal ->
+                                    emergency;
+                                NewLevel =:= error ->
+                                    error;
+                                NewLevel =:= warn ->
+                                    warning;
+                                NewLevel =:= info ->
+                                    info;
+                                NewLevel =:= debug ->
+                                    debug;
+                                NewLevel =:= trace ->
+                                    debug
+                            end,
+                            [{level, LagerLevel} | OutputArgs]
+                    end,
                     {ok,
                      FormatterConfig#config_logging_formatter{
                          level = NewLevel,
                          output = Output,
-                         output_name = ?LOGGING_FORMATTER_OUTPUT_ASSIGN(Output),
-                         output_args = OutputArgs,
+                         output_name = OutputName,
+                         output_args = NewOutputArgs,
                          output_max_r = OutputMaxR,
                          output_max_t = OutputMaxT,
                          formatter = Formatter,

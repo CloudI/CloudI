@@ -63,7 +63,7 @@
 -record(config_logging_formatter,
     {
         % The mapping for lager levels to CloudI levels is:
-        % (use normal CloudI levels to avoid the mapping)
+        % (use CloudI levels to avoid the mapping)
         % emergency                     -> fatal
         % alert     (becomes emergency) -> fatal
         % critical  (becomes emergency) -> fatal
