@@ -65,8 +65,9 @@
          nodes_add/2,
          nodes_remove/2,
          nodes_set/2,
-         log_level_highest/1,
-         log_formatters/2]).
+         logging_level_highest/1,
+         logging_syslog_set/2,
+         logging_formatters_set/2]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -174,7 +175,13 @@
      node_discovery_ec2_tags_selection_null |
      node_discovery_ec2_groups_invalid |
      node_discovery_ec2_tags_invalid, any()}.
--type error_reason_log_formatters_configuration() ::
+-type error_reason_logging_syslog_set_configuration() ::
+    {logging_syslog_invalid |
+     logging_syslog_identity_invalid |
+     logging_syslog_facility_invalid |
+     logging_syslog_level_invalid |
+     logging_syslog_facility_invalid, any()}.
+-type error_reason_logging_formatters_set_configuration() ::
     {logging_formatters_invalid |
      logging_formatter_modules_invalid |
      logging_formatter_level_invalid |
@@ -203,8 +210,10 @@
     error_reason_nodes_remove_configuration().
 -type error_reason_nodes_set() ::
     error_reason_nodes_set_configuration().
--type error_reason_log_formatters() ::
-    error_reason_log_formatters_configuration().
+-type error_reason_logging_syslog_set() ::
+    error_reason_logging_syslog_set_configuration().
+-type error_reason_logging_formatters_set() ::
+    error_reason_logging_formatters_set_configuration().
 -export_type([error_reason_acl_add/0,
               error_reason_acl_remove/0,
               error_reason_services_add/0,
@@ -213,23 +222,20 @@
               error_reason_nodes_add/0,
               error_reason_nodes_remove/0,
               error_reason_nodes_set/0,
-              error_reason_log_formatters/0]).
+              error_reason_logging_syslog_set/0,
+              error_reason_logging_formatters_set/0]).
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |
     error_reason_nodes_set_configuration() |
-    error_reason_log_formatters_configuration() |
+    error_reason_logging_syslog_set_configuration() |
+    error_reason_logging_formatters_set_configuration() |
     {invalid |
      node_invalid |
      logging_invalid |
      logging_redirect_invalid |
      logging_file_invalid |
-     logging_level_invalid |
-     logging_syslog_invalid |
-     logging_syslog_identity_invalid |
-     logging_syslog_facility_invalid |
-     logging_syslog_level_invalid |
-     logging_syslog_facility_invalid, any()}.
+     logging_level_invalid, any()}.
 
 % cloudi_service_api.hrl records without defaults set so
 % dialyzer doesn't get confused
@@ -379,8 +385,8 @@
     {error,
      file:posix() |
      badarg |
-     terminated |
      system_limit |
+     terminated |
      {configuration_invalid |
       parse_error, any()} |
      error_reason_new()}.
@@ -1005,10 +1011,10 @@ nodes_set([_ | _] = Value, #config{} = Config) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec log_level_highest(list(cloudi_service_api:loglevel() | undefined)) ->
+-spec logging_level_highest(list(cloudi_service_api:loglevel() | undefined)) ->
     cloudi_service_api:loglevel() | undefined.
 
-log_level_highest([_ | _] = Levels) ->
+logging_level_highest([_ | _] = Levels) ->
     [Level | _] = lists:dropwhile(fun(Highest) ->
         not lists:member(Highest, Levels)
     end, [trace, debug, info, warn, error, fatal, off, undefined]),
@@ -1016,19 +1022,44 @@ log_level_highest([_ | _] = Levels) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Set CloudI syslog configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_syslog_set(Value :: cloudi_service_api:
+                                  logging_syslog_set_proplist(),
+                         Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_logging_syslog_set()}.
+
+logging_syslog_set(Value, #config{logging = OldLogging} = Config)
+    when is_list(Value) ->
+    case logging_syslog_validate(Value) of
+        {ok, SyslogConfig} ->
+            {ok,
+             Config#config{
+                 logging = OldLogging#config_logging{
+                     syslog = SyslogConfig}}};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Set the CloudI log formatters.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec log_formatters(Value :: cloudi_service_api:log_formatters_proplist(),
-                     Config :: #config{}) ->
+-spec logging_formatters_set(Value :: cloudi_service_api:
+                                      logging_formatters_set_proplist(),
+                             Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_log_formatters()}.
+    {error, error_reason_logging_formatters_set()}.
 
-log_formatters(Value, #config{logging = OldLogging} = Config)
+logging_formatters_set(Value, #config{logging = OldLogging} = Config)
     when is_list(Value) ->
     case logging_formatters_validate(Value) of
-        {ok, #config_logging_formatters{} = FormattersConfig} ->
+        {ok, FormattersConfig} ->
             {ok,
              Config#config{
                  logging = OldLogging#config_logging{
@@ -3107,7 +3138,7 @@ logging_formatters_validate([], [], FormattersConfig) ->
 logging_formatters_validate([], Levels, FormattersConfig) ->
     {ok,
      FormattersConfig#config_logging_formatters{
-         level = log_level_highest(Levels)}};
+         level = logging_level_highest(Levels)}};
 logging_formatters_validate([{any, Options} | L], Levels,
                             #config_logging_formatters{
                                 default = undefined} = FormattersConfig)

@@ -66,12 +66,18 @@
          nodes_alive/1,
          nodes_dead/1,
          nodes/1,
-         loglevel_set/2,
-         log_formatters/2,
-         log_redirect/2,
+         logging_file_set/2,
+         logging_level_set/2,
+         logging_syslog_set/2,
+         logging_formatters_set/2,
+         logging_redirect_set/2,
          code_path_add/2,
          code_path_remove/2,
-         code_path/1]).
+         code_path/1,
+         % deprecated, renamed to logging_level_set/2
+         loglevel_set/2,
+         % deprecated, renamed to logging_redirect_set/2
+         log_redirect/2]).
 
 -include("cloudi_service_api.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -405,19 +411,29 @@
 -export_type([nodes_proplist/0]).
 
 -type loglevel() :: fatal | error | warn | info | debug | trace | off.
--type log_formatters_proplist() ::
-    list(fatal | error | warn | info | debug | trace |
-         emergency | alert | critical | warning | notice |
-         {level, fatal | error | warn | info | debug | trace |
-                 emergency | alert | critical | warning | notice} |
-         {output, module() | undefined} |
-         {output_args, list()} |
-         {output_max_r, non_neg_integer()} |
-         {output_max_t, cloudi_service_api:seconds()} |
-         {formatter, module() | undefined} |
-         {formatter_config, list()}).
--export_type([log_formatters_proplist/0,
-              loglevel/0]).
+-type logging_syslog_set_proplist() ::
+    list({identity, string()} |
+         {facility, kern | user | mail | daemon | auth | syslog | lpr |
+                    news | uucp | cron | authpriv | ftp | netinfo |
+                    remoteauth | install | ras |
+                    local0 | local1 | local2 | local3 | local4 |
+                    local5 | local6 | local7 | non_neg_integer()} |
+         {level, loglevel() | undefined}).
+-type logging_formatters_set_proplist() ::
+    list({any | nonempty_list(module()),
+          list(fatal | error | warn | info | debug | trace |
+               emergency | alert | critical | warning | notice |
+               {level, fatal | error | warn | info | debug | trace |
+                       emergency | alert | critical | warning | notice} |
+               {output, module() | undefined} |
+               {output_args, list()} |
+               {output_max_r, non_neg_integer()} |
+               {output_max_t, cloudi_service_api:seconds()} |
+               {formatter, module() | undefined} |
+               {formatter_config, list()})}).
+-export_type([loglevel/0,
+              logging_syslog_set_proplist/0,
+              logging_formatters_set_proplist/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -769,23 +785,63 @@ nodes(Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Modify the current log file path.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_file_set(FilePath :: string() | undefined,
+                       Timeout :: api_timeout_milliseconds()) ->
+    ok | {error, file:posix() | badarg | system_limit}.
+
+logging_file_set(FilePath, Timeout)
+    when ((FilePath =:= undefined) orelse
+          (is_list(FilePath) andalso is_integer(hd(FilePath)))),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_logger:file_set(FilePath).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Modify the current loglevel.===
 %% CloudI uses asynchronous logging with flow control (backpressure
 %% handling) to prevent misbehaving services from causing instability.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec loglevel_set(Level :: loglevel(),
-                   Timeout :: api_timeout_milliseconds()) ->
+-spec logging_level_set(Level :: loglevel(),
+                        Timeout :: api_timeout_milliseconds()) ->
     ok.
 
-loglevel_set(Level, Timeout)
+logging_level_set(Level, Timeout)
     when is_atom(Level),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_logger:change_level(Level).
+    cloudi_core_i_logger:level_set(Level).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set the CloudI syslog configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_syslog_set(L :: logging_syslog_set_proplist(),
+                         Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_logging_syslog_set()}.
+
+logging_syslog_set(L, Timeout)
+    when is_list(L),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:logging_syslog_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -796,20 +852,20 @@ loglevel_set(Level, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec log_formatters(L :: log_formatters_proplist(),
-                     Timeout :: api_timeout_milliseconds()) ->
+-spec logging_formatters_set(L :: logging_formatters_set_proplist(),
+                             Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
      timeout | noproc |
-     cloudi_core_i_configuration:error_reason_log_formatters()}.
+     cloudi_core_i_configuration:error_reason_logging_formatters_set()}.
 
-log_formatters(L, Timeout)
+logging_formatters_set(L, Timeout)
     when is_list(L),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_configurator:log_formatters(L, Timeout).
+    cloudi_core_i_configurator:logging_formatters_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -819,17 +875,17 @@ log_formatters(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec log_redirect(Node :: undefined | node(),
-                   Timeout :: api_timeout_milliseconds()) ->
+-spec logging_redirect_set(Node :: undefined | node(),
+                           Timeout :: api_timeout_milliseconds()) ->
     ok.
 
-log_redirect(Node, Timeout)
+logging_redirect_set(Node, Timeout)
     when is_atom(Node),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_nodes:logger_redirect(Node).
+    cloudi_core_i_nodes:logging_redirect_set(Node).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -899,6 +955,32 @@ code_path(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     {ok, code:get_path()}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @deprecated Use {@link logging_level_set/2} instead
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec loglevel_set(Level :: loglevel(),
+                   Timeout :: api_timeout_milliseconds()) ->
+    ok.
+
+loglevel_set(Level, Timeout) ->
+    logging_level_set(Level, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% @deprecated Use {@link logging_redirect_set/2} instead
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec log_redirect(Node :: undefined | node(),
+                   Timeout :: api_timeout_milliseconds()) ->
+    ok.
+
+log_redirect(Node, Timeout) ->
+    logging_redirect_set(Node, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

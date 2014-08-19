@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update the CloudI Service API to provide the following logging functions:
+        * cloudi_service_api:logging_file_set/2
+        * cloudi_service_api:logging_level_set/2
+        * cloudi_service_api:logging_syslog_set/2
+        * cloudi_service_api:logging_formatters_set/2
+        * cloudi_service_api:logging_redirect_set/2
+    * Deprecated the CloudI Service API functions:
+        * cloudi_service_api:loglevel_set/2
+        * cloudi_service_api:log_redirect/2
+
 2014-08-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes to log formatters to allow multiple instances of the same

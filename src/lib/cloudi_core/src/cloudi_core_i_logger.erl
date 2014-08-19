@@ -55,9 +55,11 @@
 %% external interface
 -export([start_link/1,
          current_function/0,
-         change_level/1,
-         change_formatters/2,
-         redirect/1,
+         file_set/1,
+         level_set/1,
+         syslog_set/1,
+         formatters_set/2,
+         redirect_set/1,
          fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
          format/2, format/3]).
 
@@ -134,18 +136,53 @@ current_function() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Change the file output path.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec file_set(FilePath :: string() | undefined) ->
+    'ok' | {'error', file:posix() | badarg | system_limit}.
+
+file_set(undefined) ->
+    gen_server:cast(?MODULE, {file_set, undefined});
+file_set(FilePath)
+    when is_list(FilePath) andalso is_integer(hd(FilePath)) ->
+    case file:open(FilePath, [append, raw]) of
+        {ok, Fd} ->
+            file:close(Fd),
+            gen_server:cast(?MODULE, {file_set, FilePath});
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Change the file output log level.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec change_level(Level :: atom()) ->
+-spec level_set(Level :: atom()) ->
     'ok'.
 
-change_level(Level)
+level_set(Level)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace;
-         Level =:= off ->
-    gen_server:cast(?MODULE, {change_level, Level}).
+         Level =:= off; Level =:= undefined ->
+    gen_server:cast(?MODULE, {level_set, Level}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Change the syslog configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec syslog_set(SyslogConfig :: #config_logging_syslog{} | undefined) ->
+    'ok'.
+                 
+syslog_set(SyslogConfig)
+    when SyslogConfig =:= undefined;
+         is_record(SyslogConfig, config_logging_syslog) ->
+    gen_server:cast(?MODULE, {syslog_set, SyslogConfig}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -153,18 +190,17 @@ change_level(Level)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec change_formatters(FormattersConfig ::
-                            #config_logging_formatters{} | undefined,
-                        Timeout ::
-                            cloudi_service_api:api_timeout_milliseconds()) ->
+-spec formatters_set(FormattersConfig :: #config_logging_formatters{} |
+                                         undefined,
+                     Timeout :: cloudi_service_api:
+                                api_timeout_milliseconds()) ->
     'ok'.
 
-change_formatters(FormattersConfig, Timeout)
+formatters_set(FormattersConfig, Timeout)
     when FormattersConfig =:= undefined;
          is_record(FormattersConfig, config_logging_formatters) ->
     gen_server:call(?MODULE,
-                    {change_formatters,
-                     FormattersConfig, Timeout}, Timeout).
+                    {formatters_set, FormattersConfig, Timeout}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -172,11 +208,11 @@ change_formatters(FormattersConfig, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec redirect(Node :: atom()) ->
+-spec redirect_set(Node :: atom()) ->
     'ok'.
 
-redirect(Node) ->
-    gen_server:cast(?MODULE, {redirect, Node}).
+redirect_set(Node) ->
+    gen_server:cast(?MODULE, {redirect_set, Node}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -338,10 +374,10 @@ format(Msg, Config, _) ->
     LogMessage = Message,
     if
         Mode =:= legacy ->
-            NewLogMessage = [io_lib:format(" ~s~n", [S]) ||
+            LogMessageNew = [io_lib:format(" ~s~n", [S]) ||
                              S <- string:tokens(LogMessage, "\n")],
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, NewLogMessage)
+                        Module, Line, LogMessageNew)
     end.
 
 %%%------------------------------------------------------------------------
@@ -362,21 +398,17 @@ init([#config_logging{file = FilePath,
     #state{mode = Mode} = State = #state{file_level = FileLevel,
                                          formatters = FormattersConfig,
                                          formatters_level = FormattersLevel},
-    #state{syslog_level = SyslogLevel} = NextState = case SyslogConfig of
+    #state{syslog_level = SyslogLevel} = StateNext = case SyslogConfig of
         undefined ->
             State;
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel0} ->
             ok = syslog:load(),
-            {ok, Syslog} = syslog:open(SyslogIdentity,
-                                       [ndelay, pid],
-                                       SyslogFacility),
-            State#state{syslog = Syslog,
+            State#state{syslog = syslog_open(SyslogIdentity, SyslogFacility),
                         syslog_level = SyslogLevel0}
     end,
-    Level = cloudi_core_i_configuration:
-            log_level_highest([FileLevel, SyslogLevel, FormattersLevel]),
+    Level = log_level([FileLevel, SyslogLevel, FormattersLevel]),
     Destination = if
         NodeLogger == node(); NodeLogger =:= undefined ->
             ?MODULE;
@@ -386,7 +418,7 @@ init([#config_logging{file = FilePath,
     case load_interface_module(Level, Mode, Destination) of
         {ok, Binary} when Destination == ?MODULE ->
             case log_file_open(FilePath,
-                               NextState#state{interface_module = Binary,
+                               StateNext#state{interface_module = Binary,
                                                level = Level,
                                                destination = Destination}) of
                 {ok, _} = Success ->
@@ -397,12 +429,12 @@ init([#config_logging{file = FilePath,
         {ok, Binary} ->
             case ?LOG_INFO_T0("redirecting log output to ~p",
                               [NodeLogger],
-                              NextState#state{file_path = FilePath,
+                              StateNext#state{file_path = FilePath,
                                               interface_module = Binary,
                                               level = Level,
                                               destination = ?MODULE}) of
-                {ok, NewState} ->
-                    {ok, NewState#state{destination = Destination}};
+                {ok, StateNew} ->
+                    {ok, StateNew#state{destination = Destination}};
                 {{error, Reason}, _} ->
                     {stop, Reason}
             end;
@@ -414,45 +446,134 @@ handle_call({Level, Timestamp, Node, Pid,
              Module, Line, LogMessage}, _, State) ->
     case log_message_internal(Level, Timestamp, Node, Pid,
                               Module, Line, LogMessage, State) of
-        {ok, NextState} ->
-            case log_mode_check(NextState) of
-                {ok, NewState} ->
-                    {reply, ok, NewState};
+        {ok, StateNext} ->
+            case log_mode_check(StateNext) of
+                {ok, StateNew} ->
+                    {reply, ok, StateNew};
                 {error, Reason} ->
-                    {stop, Reason, NextState}
+                    {stop, Reason, StateNext}
             end;
-        {{error, Reason}, NextState} ->
-            {stop, Reason, NextState}
+        {{error, Reason}, StateNext} ->
+            {stop, Reason, StateNext}
     end;
-handle_call({change_formatters, NewFormattersConfig, Timeout}, _,
+handle_call({formatters_set, FormattersConfigNew, Timeout}, _,
             #state{file_level = FileLevel,
+                   level = LevelOld,
+                   mode = Mode,
+                   destination = Destination,
                    syslog_level = SyslogLevel,
-                   formatters = OldFormattersConfig} = State) ->
-    FormattersLevel = case NewFormattersConfig of
+                   formatters = FormattersConfigOld,
+                   formatters_level = FormattersLevelOld} = State) ->
+    FormattersLevelNew = case FormattersConfigNew of
         undefined ->
             undefined;
-        #config_logging_formatters{level = FormattersLevel0} ->
-            FormattersLevel0
+        #config_logging_formatters{level = FormattersLevelNew0} ->
+            FormattersLevelNew0
     end,
-    Level = cloudi_core_i_configuration:
-            log_level_highest([FileLevel, SyslogLevel, FormattersLevel]),
-    ok = formatters_update(OldFormattersConfig, NewFormattersConfig, Timeout),
-    ok = cloudi_core_i_logger_sup:reconfigure(NewFormattersConfig),
-    {reply, ok,
-     State#state{level = Level,
-                 formatters = NewFormattersConfig,
-                 formatters_level = FormattersLevel}};
+    ok = formatters_update(FormattersConfigOld, FormattersConfigNew, Timeout),
+    ok = cloudi_core_i_logger_sup:reconfigure(FormattersConfigNew),
+    StateUpdated = State#state{formatters = FormattersConfigNew,
+                               formatters_level = FormattersLevelNew},
+    if
+        FormattersLevelNew /= FormattersLevelOld ->
+            case ?LOG_INFO_T0("changing formatters loglevel from ~p to ~p",
+                              [FormattersLevelOld, FormattersLevelNew],
+                              StateUpdated) of
+                {ok, StateNext} ->
+                     case log_level([FileLevel, SyslogLevel,
+                                     FormattersLevelNew]) of
+                        LevelOld ->
+                            {reply, ok, StateNext};
+                        LevelNew ->
+                            case load_interface_module(LevelNew, Mode,
+                                                       Destination) of
+                                {ok, Binary} ->
+                                    StateNew = StateNext#state{
+                                        interface_module = Binary,
+                                        level = LevelNew},
+                                    ?LOG_INFO_T1("changed loglevel "
+                                                 "from ~p to ~p",
+                                                 [LevelOld, LevelNew],
+                                                 StateNew),
+                                    {reply, ok, StateNew};
+                                {error, Reason} ->
+                                    {stop, Reason, StateNext}
+                            end
+                    end;
+                {{error, Reason}, StateNext} ->
+                    {stop, Reason,
+                     {error, {logging_formatters_invalid, Reason}}, StateNext}
+            end;
+        true ->
+            {reply, ok, StateUpdated}
+    end;
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]),
      error, State}.
 
-handle_cast({change_level, _},
+handle_cast({file_set, FilePath},
+            #state{file_path = FilePath} = State) ->
+    {noreply, State};
+handle_cast({file_set, FilePathNew},
+            #state{file_path = FilePathOld,
+                   file_level = FileLevelOld,
+                   level = LevelOld,
+                   mode = Mode,
+                   destination = Destination,
+                   syslog_level = SyslogLevel,
+                   formatters_level = FormattersLevel} = State)
+    when FilePathNew =:= undefined; FilePathOld =:= undefined ->
+    FileLevelNew = if
+        FilePathNew =:= undefined ->
+            undefined;
+        FilePathOld =:= undefined ->
+            (#config_logging{})#config_logging.level
+    end,
+    case ?LOG_INFO_T0("changing file loglevel from ~p to ~p",
+                      [FileLevelOld, FileLevelNew], State) of
+        {ok, #state{fd = FdOld} = StateNext} ->
+            file:close(FdOld),
+            case log_level([FileLevelNew, SyslogLevel, FormattersLevel]) of
+                LevelOld ->
+                    {noreply, StateNext#state{file_path = FilePathNew,
+                                              file_level = FileLevelNew,
+                                              fd = undefined,
+                                              inode = undefined}};
+                LevelNew ->
+                    case load_interface_module(LevelNew, Mode, Destination) of
+                        {ok, Binary} ->
+                            StateNew = StateNext#state{
+                                file_path = FilePathNew,
+                                file_level = FileLevelNew,
+                                interface_module = Binary,
+                                fd = undefined,
+                                inode = undefined,
+                                level = LevelNew},
+                            ?LOG_INFO_T1("changed loglevel from ~p to ~p",
+                                         [LevelOld, LevelNew], StateNew),
+                            {noreply, StateNew};
+                        {error, Reason} ->
+                            {stop, Reason,
+                             StateNext#state{fd = undefined,
+                                             inode = undefined}}
+                    end
+            end;
+        {{error, Reason}, StateNext} ->
+            {stop, Reason, StateNext}
+    end;
+handle_cast({file_set, FilePath},
+            #state{fd = FdOld} = State) ->
+    file:close(FdOld),
+    {noreply, State#state{file_path = FilePath,
+                          fd = undefined,
+                          inode = undefined}};
+handle_cast({level_set, _},
             #state{file_path = undefined} = State) ->
     {noreply, State};
-handle_cast({change_level, FileLevel},
+handle_cast({level_set, FileLevel},
             #state{file_level = FileLevel} = State) ->
     {noreply, State};
-handle_cast({change_level, FileLevelNew},
+handle_cast({level_set, FileLevelNew},
             #state{file_level = FileLevelOld,
                    level = LevelOld,
                    mode = Mode,
@@ -461,30 +582,95 @@ handle_cast({change_level, FileLevelNew},
                    formatters_level = FormattersLevel} = State) ->
     case ?LOG_INFO_T0("changing file loglevel from ~p to ~p",
                       [FileLevelOld, FileLevelNew], State) of
-        {ok, NextState} ->
-            case cloudi_core_i_configuration:
-                 log_level_highest([FileLevelNew, SyslogLevel,
-                                    FormattersLevel]) of
+        {ok, StateNext} ->
+            case log_level([FileLevelNew, SyslogLevel, FormattersLevel]) of
                 LevelOld ->
-                    {noreply, NextState#state{file_level = FileLevelNew}};
+                    {noreply, StateNext#state{file_level = FileLevelNew}};
                 LevelNew ->
                     case load_interface_module(LevelNew, Mode, Destination) of
                         {ok, Binary} ->
-                            NewState = NextState#state{
+                            StateNew = StateNext#state{
                                 file_level = FileLevelNew,
                                 interface_module = Binary,
                                 level = LevelNew},
                             ?LOG_INFO_T1("changed loglevel from ~p to ~p",
-                                         [LevelOld, LevelNew], NewState),
-                            {noreply, NewState};
+                                         [LevelOld, LevelNew], StateNew),
+                            {noreply, StateNew};
                         {error, Reason} ->
-                            {stop, Reason, NextState}
+                            {stop, Reason, StateNext}
                     end
             end;
-        {{error, Reason}, NextState} ->
-            {stop, Reason, NextState}
+        {{error, Reason}, StateNext} ->
+            {stop, Reason, StateNext}
     end;
-handle_cast({redirect, Node}, State) ->
+handle_cast({syslog_set, SyslogConfig},
+            #state{file_level = FileLevel,
+                   level = LevelOld,
+                   mode = Mode,
+                   destination = Destination,
+                   syslog = SyslogOld,
+                   syslog_level = SyslogLevelOld,
+                   formatters_level = FormattersLevel} = State) ->
+    if
+        SyslogOld =:= undefined ->
+            if
+                SyslogConfig =:= undefined ->
+                    ok;
+                true ->
+                    ok = syslog:load()
+            end;
+        is_port(SyslogOld) ->
+            ok = syslog:close(SyslogOld),
+            if
+                SyslogConfig =:= undefined ->
+                    ok = syslog:unload();
+                true ->
+                    ok
+            end
+    end,
+    #state{syslog_level = SyslogLevelNew} = StateUpdated = case SyslogConfig of
+        undefined ->
+            State#state{syslog = undefined,
+                        syslog_level = undefined};
+        #config_logging_syslog{identity = SyslogIdentity,
+                               facility = SyslogFacility,
+                               level = SyslogLevelNew0} ->
+            State#state{syslog = syslog_open(SyslogIdentity, SyslogFacility),
+                        syslog_level = SyslogLevelNew0}
+    end,
+    if
+        SyslogLevelNew /= SyslogLevelOld ->
+            case ?LOG_INFO_T0("changing syslog loglevel from ~p to ~p",
+                              [SyslogLevelOld, SyslogLevelNew],
+                              StateUpdated) of
+                {ok, StateNext} ->
+                     case log_level([FileLevel, SyslogLevelNew,
+                                     FormattersLevel]) of
+                        LevelOld ->
+                            {noreply, StateNext};
+                        LevelNew ->
+                            case load_interface_module(LevelNew, Mode,
+                                                       Destination) of
+                                {ok, Binary} ->
+                                    StateNew = StateNext#state{
+                                        interface_module = Binary,
+                                        level = LevelNew},
+                                    ?LOG_INFO_T1("changed loglevel "
+                                                 "from ~p to ~p",
+                                                 [LevelOld, LevelNew],
+                                                 StateNew),
+                                    {noreply, StateNew};
+                                {error, Reason} ->
+                                    {stop, Reason, StateNext}
+                            end
+                    end;
+                {{error, Reason}, StateNext} ->
+                    {stop, Reason, StateNext}
+            end;
+        true ->
+            {noreply, StateUpdated}
+    end;
+handle_cast({redirect_set, Node}, State) ->
     Destination = if
         Node == node(); Node =:= undefined ->
             ?MODULE;
@@ -492,24 +678,24 @@ handle_cast({redirect, Node}, State) ->
             {?MODULE, Node}
     end,
     case log_redirect(Node, Destination, State) of
-        {ok, NewState} ->
-            {noreply, NewState};
-        {error, Reason, NewState} ->
-            {stop, Reason, NewState}
+        {ok, StateNew} ->
+            {noreply, StateNew};
+        {error, Reason, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({Level, Timestamp, Node, Pid,
              Module, Line, LogMessage}, State) ->
     case log_message_internal(Level, Timestamp, Node, Pid,
                               Module, Line, LogMessage, State) of
-        {ok, NextState} ->
-            case log_mode_check(NextState) of
-                {ok, NewState} ->
-                    {noreply, NewState};
+        {ok, StateNext} ->
+            case log_mode_check(StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
                 {error, Reason} ->
-                    {stop, Reason, NextState}
+                    {stop, Reason, StateNext}
             end;
-        {{error, Reason}, NextState} ->
-            {stop, Reason, NextState}
+        {{error, Reason}, StateNext} ->
+            {stop, Reason, StateNext}
     end;
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
@@ -738,38 +924,43 @@ log_message_internal_result(ok, ok, State) ->
 log_message_internal_result({error, _} = Error, _, State) ->
     {Error, State}.
 
+log_level([_ | _] = L) ->
+    cloudi_core_i_configuration:logging_level_highest([off | L]).
+
 log_file(Message,
          #state{file_path = FilePath,
-                fd = OldFd,
-                inode = OldInode} = State) ->
+                fd = FdOld,
+                inode = InodeOld} = State) ->
     case file:read_file_info(FilePath) of
         {ok, #file_info{inode = CurrentInode}} ->
             if
-                CurrentInode == OldInode ->
-                    file:write(OldFd, Message),
-                    file:datasync(OldFd),
+                CurrentInode == InodeOld ->
+                    file:write(FdOld, Message),
+                    file:datasync(FdOld),
                     {ok, State};
                 true ->
-                    file:close(OldFd),
+                    file:close(FdOld),
                     case log_file_reopen(FilePath,
                                          CurrentInode, State) of
-                        {ok, #state{fd = NewFd} = NewState} ->
-                            file:write(NewFd, Message),
-                            file:datasync(NewFd),
-                            {ok, NewState};
+                        {ok, #state{fd = FdNew} = StateNew} ->
+                            file:write(FdNew, Message),
+                            file:datasync(FdNew),
+                            {ok, StateNew};
                         {error, _} = Error ->
-                            {Error, State#state{fd = undefined}}
+                            {Error, State#state{fd = undefined,
+                                                inode = undefined}}
                     end
             end;
         {error, enoent} ->
-            file:close(OldFd),
+            file:close(FdOld),
             case log_file_open(FilePath, State) of
-                {ok, #state{fd = NewFd} = NewState} ->
-                    file:write(NewFd, Message),
-                    file:datasync(NewFd),
-                    {ok, NewState};
+                {ok, #state{fd = FdNew} = StateNew} ->
+                    file:write(FdNew, Message),
+                    file:datasync(FdNew),
+                    {ok, StateNew};
                 {error, _} = Error ->
-                    {Error, State#state{fd = undefined}}
+                    {Error, State#state{fd = undefined,
+                                        inode = undefined}}
             end;
         {error, _} = Error ->
             {Error, State}
@@ -811,52 +1002,52 @@ log_syslog(Level, Message,
 log_redirect(_, Destination,
              #state{destination = Destination} = State) ->
     {ok, State};
-log_redirect(Node, NewDestination,
+log_redirect(Node, DestinationNew,
              #state{level = Level,
                     mode = Mode} = State) ->
     NodeLogger = if
-        NewDestination =:= ?MODULE ->
+        DestinationNew =:= ?MODULE ->
             node();
         true ->
             Node
     end,
     case ?LOG_INFO_T0("redirecting log output to ~p",
                       [NodeLogger], State) of
-        {ok, NextState} ->
-            case load_interface_module(Level, Mode, NewDestination) of
+        {ok, StateNext} ->
+            case load_interface_module(Level, Mode, DestinationNew) of
                 {ok, Binary} ->
                     ?LOG_INFO_T1("redirected log output from ~p to ~p",
-                                 [node(), NodeLogger], NextState),
-                    {ok, NextState#state{interface_module = Binary,
-                                         destination = NewDestination}};
+                                 [node(), NodeLogger], StateNext),
+                    {ok, StateNext#state{interface_module = Binary,
+                                         destination = DestinationNew}};
                 {error, Reason} ->
-                    {error, Reason, NextState}
+                    {error, Reason, StateNext}
             end;
         {{error, _}, _} = Error ->
             Error
     end.
 
 log_mode_check(#state{level = Level,
-                      mode = Mode,
+                      mode = ModeOld,
                       destination = Destination} = State) ->
     {message_queue_len,
      MessageQueueLength} = erlang:process_info(self(), message_queue_len),
-    NewMode = if
-        Mode =:= async,
+    ModeNew = if
+        ModeOld =:= async,
         MessageQueueLength >= ?LOGGER_MSG_QUEUE_SYNC ->
             sync;
-        Mode =:= sync,
+        ModeOld =:= sync,
         MessageQueueLength =< ?LOGGER_MSG_QUEUE_ASYNC ->
             async;
         true ->
-            Mode
+            ModeOld
     end,
     if
-        NewMode /= Mode ->
-            case load_interface_module(Level, NewMode, Destination) of
+        ModeNew /= ModeOld ->
+            case load_interface_module(Level, ModeNew, Destination) of
                 {ok, Binary} ->
                     {ok, State#state{interface_module = Binary,
-                                     mode = NewMode}};
+                                     mode = ModeNew}};
                 {error, _} = Error ->
                     Error
             end;
@@ -936,11 +1127,11 @@ log_level_allowed(_, _) ->
     false.
 
 timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
-    NewMicroSecs = MicroSecs + 1,
-    NewSecs = Secs + (NewMicroSecs div 1000000),
-    {MegaSecs + (NewSecs div 1000000),
-     NewSecs rem 1000000,
-     NewMicroSecs rem 1000000}.
+    MicroSecsNew = MicroSecs + 1,
+    SecsNew = Secs + (MicroSecsNew div 1000000),
+    {MegaSecs + (SecsNew div 1000000),
+     SecsNew rem 1000000,
+     MicroSecsNew rem 1000000}.
 
 -define(INTERFACE_MODULE_HEADER,
     "
@@ -1198,6 +1389,10 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
             Error
     end.
 
+syslog_open(SyslogIdentity, SyslogFacility) ->
+    {ok, Syslog} = syslog:open(SyslogIdentity, [ndelay, pid], SyslogFacility),
+    Syslog.
+
 formatters_config_list(undefined) ->
     [];
 formatters_config_list(#config_logging_formatters{default = Default,
@@ -1224,37 +1419,37 @@ formatters_config_output_names([#config_logging_formatter{
 
 formatters_update_list([], _, _, _) ->
     ok;
-formatters_update_list([OutputName | L], OldConfigL, NewConfigL, Timeout) ->
+formatters_update_list([OutputName | L], ConfigLOld, ConfigLNew, Timeout) ->
     Index = #config_logging_formatter.output_name,
-    {value, #config_logging_formatter{level = OldLevel},
-     NextOldConfigL} = lists:keytake(OutputName, Index, OldConfigL),
-    {value, #config_logging_formatter{level = NewLevel,
+    {value, #config_logging_formatter{level = LevelOld},
+     NextConfigLOld} = lists:keytake(OutputName, Index, ConfigLOld),
+    {value, #config_logging_formatter{level = LevelNew,
                                       output = Output},
-     NextNewConfigL} = lists:keytake(OutputName, Index, NewConfigL),
-    NewLagerLevel = lager_severity_output(NewLevel),
-    case lager_severity_output(OldLevel) of
-        NewLagerLevel ->
+     NextConfigLNew} = lists:keytake(OutputName, Index, ConfigLNew),
+    LagerLevelNew = lager_severity_output(LevelNew),
+    case lager_severity_output(LevelOld) of
+        LagerLevelNew ->
             ok;
         _ ->
             try gen_event:call(OutputName, Output,
-                               {set_loglevel, NewLagerLevel}, Timeout)
+                               {set_loglevel, LagerLevelNew}, Timeout)
             catch
                 % ignore gen_event processes that don't care or fail
                 _:_ ->
                     ok
             end
     end,
-    formatters_update_list(L, NextOldConfigL, NextNewConfigL, Timeout).
+    formatters_update_list(L, NextConfigLOld, NextConfigLNew, Timeout).
 
-formatters_update(OldFormattersConfig, NewFormattersConfig, Timeout) ->
-    NewConfigL = formatters_config_list(NewFormattersConfig),
-    OldConfigL = formatters_config_list(OldFormattersConfig),
-    NewOutputNames = formatters_config_output_names(NewConfigL),   
-    OldOutputNames = formatters_config_output_names(OldConfigL),   
-    ToUpdate = sets:intersection(sets:from_list(OldOutputNames),
-                                 sets:from_list(NewOutputNames)),
+formatters_update(FormattersConfigOld, FormattersConfigNew, Timeout) ->
+    ConfigLNew = formatters_config_list(FormattersConfigNew),
+    ConfigLOld = formatters_config_list(FormattersConfigOld),
+    OutputNamesNew = formatters_config_output_names(ConfigLNew),   
+    OutputNamesOld = formatters_config_output_names(ConfigLOld),   
+    ToUpdate = sets:intersection(sets:from_list(OutputNamesOld),
+                                 sets:from_list(OutputNamesNew)),
     formatters_update_list(sets:to_list(ToUpdate),
-                           OldConfigL, NewConfigL, Timeout).
+                           ConfigLOld, ConfigLNew, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% lager integration based on lager source code
@@ -1320,14 +1515,24 @@ lager_severity_input(warning) -> warn;
 lager_severity_input(info) -> info;
 lager_severity_input(debug) -> debug.
 
--spec lager_msg(Level :: cloudi_service_api:loglevel(),
+-record(lager_msg,
+    {
+        destinations :: list(),
+        metadata :: [tuple()],
+        severity :: debug | emergency | error | info | warning,
+        datetime :: {string(), string()},
+        timestamp :: erlang:timestamp(),
+        message :: list()
+    }).
+
+-spec lager_msg(Level :: debug | error | fatal | info | trace | warn,
                 Timestamp :: erlang:timestamp(),
                 Node :: node(),
                 Pid :: atom(),
                 Module :: module(),
                 Line :: pos_integer(),
                 LogMessage :: string()) ->
-    cloudi_x_lager_msg:cloudi_x_lager_msg().
+    #lager_msg{}.
 
 % based on lager_msg:new/5
 lager_msg(Level, Timestamp, Node, Pid,

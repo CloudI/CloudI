@@ -59,7 +59,7 @@
          alive/1,
          dead/1,
          nodes/1,
-         logger_redirect/1]).
+         logging_redirect_set/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -75,7 +75,7 @@
         nodes_alive = [] :: list(node()),
         nodes_dead :: list(node()),
         nodes :: list(node()),
-        logger_redirect :: node() | undefined,
+        logging_redirect :: node() | undefined,
         reconnect_interval :: pos_integer(),
         reconnect_timer,
         listen :: visible | all,
@@ -109,8 +109,8 @@ dead(Timeout) ->
 nodes(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, nodes, Timeout)).
 
-logger_redirect(Node) when is_atom(Node) ->
-    gen_server:cast(?MODULE, {logger_redirect, Node}).
+logging_redirect_set(Node) when is_atom(Node) ->
+    gen_server:cast(?MODULE, {logging_redirect_set, Node}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -149,7 +149,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                        self(), reconnect),
     {ok, #state{nodes_dead = Nodes,
                 nodes = Nodes,
-                logger_redirect = NewNodeLogger,
+                logging_redirect = NewNodeLogger,
                 reconnect_interval = ReconnectInterval,
                 reconnect_timer = ReconnectTimer,
                 listen = Listen,
@@ -189,7 +189,7 @@ handle_call({reconfigure,
         not lists:member(N, NewNodesDead)
     end, NewNodes),
     ReconnectInterval = ReconnectDelay * 1000,
-    logger_redirect(NodeLogger),
+    logging_redirect_set(NodeLogger),
     applications_set(Listen, Connect, TimestampType),
     if
         OldListen /= Listen ->
@@ -229,10 +229,10 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
      error, State}.
 
-handle_cast({logger_redirect, NodeLogger},
+handle_cast({logging_redirect_set, NodeLogger},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
-                   logger_redirect = OldNodeLogger} = State) ->
+                   logging_redirect = OldNodeLogger} = State) ->
     NewNodeLogger = if
         NodeLogger == node(); NodeLogger =:= undefined ->
             undefined;
@@ -243,11 +243,11 @@ handle_cast({logger_redirect, NodeLogger},
         NewNodeLogger /= OldNodeLogger ->
             if
                 NewNodeLogger =:= undefined ->
-                    cloudi_core_i_logger:redirect(undefined);
+                    cloudi_core_i_logger:redirect_set(undefined);
                 true ->
                     case lists:member(NewNodeLogger, NodesAlive) of
                         true ->
-                            cloudi_core_i_logger:redirect(NewNodeLogger);
+                            cloudi_core_i_logger:redirect_set(NewNodeLogger);
                         false ->
                             case lists:member(NewNodeLogger, NodesDead) of
                                 true ->
@@ -261,7 +261,7 @@ handle_cast({logger_redirect, NodeLogger},
                             end
                     end
             end,
-            {noreply, State#state{logger_redirect = NewNodeLogger}};
+            {noreply, State#state{logging_redirect = NewNodeLogger}};
         true ->
             {noreply, State}
     end;
@@ -273,10 +273,10 @@ handle_info({nodeup, Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
                    nodes = Nodes,
-                   logger_redirect = NodeLogger} = State) ->
+                   logging_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_core_i_logger:redirect(NodeLogger);
+            cloudi_core_i_logger:redirect_set(NodeLogger);
         true ->
             ok
     end,
@@ -289,10 +289,10 @@ handle_info({nodeup, Node, InfoList},
 handle_info({nodedown, Node, InfoList},
             #state{nodes_alive = NodesAlive,
                    nodes_dead = NodesDead,
-                   logger_redirect = NodeLogger} = State) ->
+                   logging_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_core_i_logger:redirect(undefined);
+            cloudi_core_i_logger:redirect_set(undefined);
         true ->
             ok
     end,

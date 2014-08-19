@@ -84,25 +84,13 @@ start_link(FormatterConfig)
 init([#config_logging_formatter{output_name = OutputName,
                                 output_max_r = MaxRestarts,
                                 output_max_t = MaxTime} = FormatterConfig]) ->
-    case application:load(OutputName) of
-        ok ->
-            output_application(OutputName);
-        {error, {already_loaded, OutputName}} ->
-            output_application(OutputName);
-        {error, _} ->
-            ok
-    end,
     Shutdown = 5000, % based on lager_sup Shutdown
     {ok, {{one_for_one, MaxRestarts, MaxTime}, 
           [{OutputName,
-            {cloudi_core_i_logger_output, start_link,
-             [FormatterConfig]},
+            {cloudi_core_i_logger_output, start_link, [FormatterConfig]},
             permanent, Shutdown, worker, [cloudi_core_i_logger_output]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-output_application(Application) ->
-    Timeout = 5000,
-    ok = cloudi_x_reltool_util:application_start(Application, [], Timeout).
