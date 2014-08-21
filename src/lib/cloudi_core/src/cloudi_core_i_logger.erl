@@ -201,8 +201,7 @@ syslog_set(SyslogConfig)
 formatters_set(FormattersConfig, Timeout)
     when FormattersConfig =:= undefined;
          is_record(FormattersConfig, config_logging_formatters) ->
-    gen_server:call(?MODULE,
-                    {formatters_set, FormattersConfig, Timeout}, Timeout).
+    gen_server:call(?MODULE, {formatters_set, FormattersConfig}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -456,13 +455,12 @@ handle_call({Level, Timestamp, Node, Pid,
         {{error, Reason}, StateNext} ->
             {stop, Reason, StateNext}
     end;
-handle_call({formatters_set, FormattersConfigNew, Timeout}, _,
+handle_call({formatters_set, FormattersConfigNew}, _,
             #state{file_level = FileLevel,
                    level = LevelOld,
                    mode = Mode,
                    destination = Destination,
                    syslog_level = SyslogLevel,
-                   formatters = FormattersConfigOld,
                    formatters_level = FormattersLevelOld} = State) ->
     FormattersLevelNew = case FormattersConfigNew of
         undefined ->
@@ -471,8 +469,6 @@ handle_call({formatters_set, FormattersConfigNew, Timeout}, _,
             FormattersLevelNew0
     end,
     SwitchF = fun(StateSwitch) ->
-        ok = formatters_update(FormattersConfigOld,
-                               FormattersConfigNew, Timeout),
         ok = cloudi_core_i_logger_sup:reconfigure(FormattersConfigNew),
         StateSwitch#state{formatters = FormattersConfigNew,
                           formatters_level = FormattersLevelNew}
@@ -1421,64 +1417,6 @@ syslog_open(SyslogIdentity, SyslogFacility) ->
     {ok, Syslog} = syslog:open(SyslogIdentity, [ndelay, pid], SyslogFacility),
     Syslog.
 
-formatters_config_list(undefined) ->
-    [];
-formatters_config_list(#config_logging_formatters{default = Default,
-                                                  lookup = Lookup}) ->
-    L = [Value || {_, Value} <- cloudi_x_keys1value:to_list(Lookup)],
-    if
-        Default =:= undefined ->
-            L;
-        true ->
-            [Default | L]
-    end.
-
-formatters_config_output_names(L) ->
-    formatters_config_output_names(L, []).
-
-formatters_config_output_names([], Result) ->
-    Result;
-formatters_config_output_names([#config_logging_formatter{
-                                    output_name = undefined} | L], Result) ->
-    formatters_config_output_names(L, Result);
-formatters_config_output_names([#config_logging_formatter{
-                                    output_name = OutputName} | L], Result) ->
-    formatters_config_output_names(L, [OutputName | Result]).
-
-formatters_update_list([], _, _, _) ->
-    ok;
-formatters_update_list([OutputName | L], ConfigLOld, ConfigLNew, Timeout) ->
-    Index = #config_logging_formatter.output_name,
-    {value, #config_logging_formatter{level = LevelOld},
-     NextConfigLOld} = lists:keytake(OutputName, Index, ConfigLOld),
-    {value, #config_logging_formatter{level = LevelNew,
-                                      output = Output},
-     NextConfigLNew} = lists:keytake(OutputName, Index, ConfigLNew),
-    LagerLevelNew = lager_severity_output(LevelNew),
-    case lager_severity_output(LevelOld) of
-        LagerLevelNew ->
-            ok;
-        _ ->
-            try gen_event:call(OutputName, Output,
-                               {set_loglevel, LagerLevelNew}, Timeout)
-            catch
-                % ignore gen_event processes that don't care or fail
-                _:_ ->
-                    ok
-            end
-    end,
-    formatters_update_list(L, NextConfigLOld, NextConfigLNew, Timeout).
-
-formatters_update(FormattersConfigOld, FormattersConfigNew, Timeout) ->
-    ConfigLNew = formatters_config_list(FormattersConfigNew),
-    ConfigLOld = formatters_config_list(FormattersConfigOld),
-    OutputNamesNew = formatters_config_output_names(ConfigLNew),   
-    OutputNamesOld = formatters_config_output_names(ConfigLOld),   
-    ToUpdate = sets:intersection(sets:from_list(OutputNamesOld),
-                                 sets:from_list(OutputNamesNew)),
-    formatters_update_list(sets:to_list(ToUpdate),
-                           ConfigLOld, ConfigLNew, Timeout).
-
 %%%------------------------------------------------------------------------
 %%% lager integration based on lager source code
 %%% (lager in under the Apache version 2.0 license and
@@ -1536,8 +1474,7 @@ lager_severity_output(error) -> error;
 lager_severity_output(warn) -> warning;
 lager_severity_output(info) -> info;
 lager_severity_output(debug) -> debug;
-lager_severity_output(trace) -> debug;
-lager_severity_output(off) -> none.
+lager_severity_output(trace) -> debug.
 lager_severity_input(emergency) -> fatal;
 lager_severity_input(error) -> error;
 lager_severity_input(warning) -> warn;
