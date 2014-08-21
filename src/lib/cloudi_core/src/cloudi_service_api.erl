@@ -888,7 +888,7 @@ logging_redirect_set(Node, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_nodes:logging_redirect_set(Node).
+    cloudi_core_i_configurator:logging_redirect_set(Node, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

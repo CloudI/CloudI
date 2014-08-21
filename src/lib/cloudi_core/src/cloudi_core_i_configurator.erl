@@ -71,6 +71,7 @@
          logging_level_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
+         logging_redirect_set/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -201,6 +202,11 @@ logging_syslog_set(L, Timeout) ->
 logging_formatters_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {logging_formatters_set, L,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging_redirect_set(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging_redirect_set, L,
                                  timeout_decr(Timeout)}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
@@ -420,6 +426,15 @@ handle_call({logging_formatters_set, L, Timeout}, _,
         {error, _} = Error ->
             {reply, Error, State}
     end;
+
+handle_call({logging_redirect_set, Node, _}, _,
+            #state{configuration = Config} = State) ->
+    #config{logging = LoggingConfig} = Config,
+    ok = cloudi_core_i_nodes:logging_redirect_set(Node),
+    NewConfig = Config#config{
+                    logging = LoggingConfig#config_logging{
+                        redirect = Node}},
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
