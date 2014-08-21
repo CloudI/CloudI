@@ -793,6 +793,12 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
             format_line(Level, Timestamp, Node, Pid,
                         Module, Line, LogMessage)
     catch
+        error:badarg ->
+            % output module is not currently running,
+            % it likely exceeded the maximum restart intensity
+            % (which is logged elsewhere via sasl)
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line, LogMessage);
         ErrorType:Error ->
             ErrorMessage = cloudi_string:format("output(~p) ~p ~p~n~p",
                                                 [Output, ErrorType, Error,

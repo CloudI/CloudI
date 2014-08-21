@@ -157,16 +157,11 @@ handle_info({Port, {data, Data}},
                     gen_server:reply(Client, {error, Reason}),
                     {noreply, State#state{replies = NewReplies}}
             end;
-        {Stream, OsPid, Output} when Stream == stdout; Stream == stderr ->
-            FormattedOutput = indent_space_1(Output),
-            if
-                Stream == stderr ->
-                    ?LOG_ERROR("stderr (pid ~w):~n~s",
-                               [OsPid, FormattedOutput]);
-                Stream == stdout ->
-                    ?LOG_INFO("stdout (pid ~w):~n~s",
-                              [OsPid, FormattedOutput])
-            end,
+        {stdout, OsPid, Output} ->
+            cloudi_core_i_services_external:stdout(OsPid, Output),
+            {noreply, State};
+        {stderr, OsPid, Output} ->
+            cloudi_core_i_services_external:stderr(OsPid, Output),
             {noreply, State};
         {Command, Success} ->
             case lists:keytake(Command, 1, Replies) of
@@ -390,18 +385,6 @@ load_path(File) when is_list(File) ->
                     end
             end
     end.
-
-% indent std streams by 1 space without last newline
-indent_space_1(Output) ->
-    indent_space_1_lines([32 | Output], []).
-indent_space_1_lines([], Output) ->
-    lists:reverse(Output);
-indent_space_1_lines([10], Output) ->
-    lists:reverse(Output);
-indent_space_1_lines([10 | L], Output) ->
-    indent_space_1_lines(L, [32, 10 | Output]);
-indent_space_1_lines([C | L], Output) ->
-    indent_space_1_lines(L, [C | Output]).
 
 %% exit status messages
 

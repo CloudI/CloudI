@@ -55,7 +55,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/15, port/1]).
+-export([start_link/15, port/1, stdout/2, stderr/2]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -176,6 +176,14 @@ start_link(Protocol, SocketPath,
 
 port(Process) when is_pid(Process) ->
     gen_fsm:sync_send_all_state_event(Process, port).
+
+stdout(OsPid, Output) ->
+    ?LOG_INFO("stdout (pid ~w):~n~s",
+              [OsPid, indent_space_1(Output)]).
+
+stderr(OsPid, Output) ->
+    ?LOG_ERROR("stderr (pid ~w):~n~s",
+               [OsPid, indent_space_1(Output)]).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_fsm
@@ -1211,6 +1219,18 @@ format_status(_Opt,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+% indent std streams by 1 space without last newline
+indent_space_1(Output) ->
+    indent_space_1_lines([32 | Output], []).
+indent_space_1_lines([], Output) ->
+    lists:reverse(Output);
+indent_space_1_lines([10], Output) ->
+    lists:reverse(Output);
+indent_space_1_lines([10 | L], Output) ->
+    indent_space_1_lines(L, [32, 10 | Output]);
+indent_space_1_lines([C | L], Output) ->
+    indent_space_1_lines(L, [C | Output]).
 
 os_pid_kill(undefined) ->
     ok;

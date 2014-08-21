@@ -110,6 +110,7 @@ init([#config_logging_formatter{
     end,
     case gen_event:add_sup_handler(OutputName, Output, Args) of
         ok ->
+            erlang:process_flag(trap_exit, true),
             {ok, #state{config = FormatterConfig}};
         {'EXIT', Reason} ->
             {stop, {error, Reason}};
@@ -128,7 +129,10 @@ handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     {noreply, State}.
 
-handle_info({gen_event_EXIT, _, Reason}, State) ->
+handle_info({'gen_event_EXIT', _, Reason}, State) ->
+    {stop, Reason, State};
+
+handle_info({'EXIT', _, Reason}, State) ->
     {stop, Reason, State};
 
 handle_info(Request, State) ->

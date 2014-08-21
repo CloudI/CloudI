@@ -4,6 +4,8 @@
 2014-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Small fixes for logging formatters usage
+    * Move stdout/stderr external service logging output to the
+      cloudi_core_i_services_external module
 
 2014-08-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
