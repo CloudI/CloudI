@@ -284,13 +284,15 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 websocket_init(_Transport, Req0,
-               #cowboy_state{prefix = Prefix,
+               #cowboy_state{scope = Scope,
+                             prefix = Prefix,
                              timeout_websocket = TimeoutWebSocket,
                              output_type = OutputType,
                              set_x_forwarded_for = SetXForwardedFor,
                              websocket_connect = WebSocketConnect,
                              websocket_ping = WebSocketPing,
                              websocket_protocol = WebSocketProtocol,
+                             websocket_name_unique = WebSocketNameUnique,
                              websocket_subscriptions = WebSocketSubscriptions,
                              use_websockets = true,
                              use_host_prefix = UseHostPrefix,
@@ -323,6 +325,20 @@ websocket_init(_Transport, Req0,
     SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
     HeadersIncoming1 = if
         SubscribeWebSocket =:= true ->
+            if
+                WebSocketNameUnique =:= true ->
+                    case cloudi_x_cpg:get_members(Scope, NameWebSocket,
+                                                  infinity) of
+                        {ok, _, OldConnections} ->
+                            [cloudi_service_http_cowboy:close(OldConnection)
+                             || OldConnection <- OldConnections],
+                            ok;
+                        {error, _} ->
+                            ok
+                    end;
+                WebSocketNameUnique =:= false ->
+                    ok
+            end,
             [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
              HeadersIncoming0];
         SubscribeWebSocket =:= false ->
@@ -384,7 +400,7 @@ websocket_init(_Transport, Req0,
         SubscribeWebSocket =:= true ->
             % service requests are only received if they relate to
             % the service's prefix
-            ok = cloudi_x_cpg:join(NameWebSocket),
+            ok = cloudi_x_cpg:join(Scope, NameWebSocket, self(), infinity),
             if
                 WebSocketSubscriptions =:= undefined ->
                     ok;
@@ -401,7 +417,8 @@ websocket_init(_Transport, Req0,
                             Parameters = cloudi_service:
                                          service_name_parse(PathRawStr,
                                                             Pattern),
-                            websocket_subscriptions(Functions, Parameters)
+                            websocket_subscriptions(Functions, Parameters,
+                                                    Scope)
                     end
             end;
         SubscribeWebSocket =:= false ->
@@ -775,6 +792,10 @@ websocket_info({websocket_ping, WebSocketPing}, Req,
             {reply, {ping, <<>>}, Req,
              State#cowboy_state{websocket_ping = undefined}}
     end;
+
+websocket_info({cowboy_error, shutdown}, Req, State) ->
+    % from cloudi_service_http_cowboy:close/1
+    {shutdown, Req, State};
 
 websocket_info(Info, Req,
                #cowboy_state{use_websockets = true} = State) ->
@@ -1351,16 +1372,16 @@ websocket_disconnect_check({sync, WebSocketDisconnectName},
                       websocket_disconnect_request(OutputType), self()),
     ok.
 
-websocket_subscriptions([], _) ->
+websocket_subscriptions([], _, _) ->
     ok;
-websocket_subscriptions([F | Functions], Parameters) ->
+websocket_subscriptions([F | Functions], Parameters, Scope) ->
     case F(Parameters) of
         {ok, NameWebSocket} ->
-            ok = cloudi_x_cpg:join(NameWebSocket);
+            ok = cloudi_x_cpg:join(Scope, NameWebSocket, self(), infinity);
         {error, _} ->
             ok
     end,
-    websocket_subscriptions(Functions, Parameters).
+    websocket_subscriptions(Functions, Parameters, Scope).
 
 websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
                                   RequestInfo, Request, ResponseF,

@@ -119,6 +119,11 @@
         % (outgoing, #protocol_error{id = ID} = OutgoingResponse) ->
         %     {ID, protocol_rpc:encode(OutgoingResponse)}
         % end.
+-define(DEFAULT_WEBSOCKET_NAME_UNIQUE,            false). % see below:
+        % set to true if the websocket name (for outgoing service requests)
+        % should only ever be used by a single websocket connection.
+        % When set to true, the newest connection will kill any older
+        % connection(s) that share the same service name.
 -define(DEFAULT_WEBSOCKET_SUBSCRIPTIONS,             []). % see below:
         % Provide configuration similar to cloudi_service_router:
         % list({PatternSuffix :: string(),
@@ -214,6 +219,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {websocket_disconnect_sync,     ?DEFAULT_WEBSOCKET_DISCONNECT_SYNC},
         {websocket_ping,                ?DEFAULT_WEBSOCKET_PING},
         {websocket_protocol,            ?DEFAULT_WEBSOCKET_PROTOCOL},
+        {websocket_name_unique,         ?DEFAULT_WEBSOCKET_NAME_UNIQUE},
         {websocket_subscriptions,       ?DEFAULT_WEBSOCKET_SUBSCRIPTIONS},
         {ssl,                           ?DEFAULT_SSL},
         {compress,                      ?DEFAULT_COMPRESS},
@@ -242,7 +248,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
      WebSocketConnect0, WebSocketDisconnect0,
      WebSocketConnectAsync0, WebSocketConnectSync,
      WebSocketDisconnectAsync0, WebSocketDisconnectSync,
-     WebSocketPing, WebSocketProtocol0, WebSocketSubscriptions0, SSL, Compress,
+     WebSocketPing, WebSocketProtocol0, WebSocketNameUnique,
+     WebSocketSubscriptions0, SSL, Compress,
      MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
@@ -351,6 +358,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         _ when is_function(WebSocketProtocol0, 2) ->
             WebSocketProtocol0
     end,
+    true = is_boolean(WebSocketNameUnique),
     WebSocketSubscriptions1 = if
         WebSocketSubscriptions0 == [] ->
             undefined;
@@ -393,12 +401,15 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_boolean(UseMethodSuffix),
     false = lists:member($*, Prefix),
     ContentTypeLookup = cloudi_response_info:lookup_content_type(),
+    {_, Scope} = lists:keyfind(groups_scope, 1,
+                               cloudi_service:context_options(Dispatcher)),
     Dispatch = cloudi_x_cowboy_router:compile([
         %% {Host, list({Path, Handler, Opts})}
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{
                     dispatcher = cloudi_service:dispatcher(Dispatcher),
                     context = create_context(Dispatcher),
+                    scope = Scope,
                     prefix = Prefix,
                     timeout_body = BodyTimeout,
                     timeout_part_header = MultipartHeaderTimeout,
@@ -421,6 +432,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                     websocket_disconnect = WebSocketDisconnect1,
                     websocket_ping = WebSocketPing,
                     websocket_protocol = WebSocketProtocol1,
+                    websocket_name_unique = WebSocketNameUnique,
                     websocket_subscriptions = WebSocketSubscriptions1,
                     use_websockets = UseWebSockets,
                     use_host_prefix = UseHostPrefix,

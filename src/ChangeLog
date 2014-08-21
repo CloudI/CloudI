@@ -5,6 +5,10 @@
 
     * Small fixes for various logging test-cases
       (testing the logging formatters still remains)
+    * Add cloudi_service_http_cowboy configuration argument
+      websocket_name_unique to make sure only one connection Erlang pid
+      represents a websocket service name
+    * Fix cloudi_service_http_cowboy usage of non-default scope
 
 2014-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 

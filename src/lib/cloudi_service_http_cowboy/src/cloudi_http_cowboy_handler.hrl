@@ -46,6 +46,7 @@
     {
         dispatcher                :: cloudi_service:dispatcher(),
         context                   :: cloudi:context(),
+        scope                     :: atom(),
         prefix                    :: string(),
         timeout_body              :: pos_integer(),
         timeout_part_header       :: pos_integer(),
@@ -74,6 +75,7 @@
         websocket_protocol        :: undefined |
                                      fun((incoming | outgoing, any()) ->
                                          {incoming | any(), any()}),
+        websocket_name_unique     :: boolean(),
         websocket_subscriptions   :: undefined | cloudi_x_trie:cloudi_x_trie(),
         use_websockets            :: boolean() | exclusively,
         use_host_prefix           :: boolean(),
