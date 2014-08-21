@@ -67,6 +67,8 @@
          nodes_add/2,
          nodes_remove/2,
          nodes_set/2,
+         logging_file_set/2,
+         logging_level_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
          service_start/2,
@@ -179,6 +181,16 @@ nodes_remove(L, Timeout) ->
 nodes_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {nodes_set, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging_file_set(FilePath, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging_file_set, FilePath,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging_level_set(Level, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging_level_set, Level,
                                  timeout_decr(Timeout)}, Timeout)).
 
 logging_syslog_set(L, Timeout) ->
@@ -363,6 +375,28 @@ handle_call({nodes_remove, _, _, _} = Request, _, State) ->
 
 handle_call({nodes_set, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
+
+handle_call({logging_file_set, FilePath, _}, _,
+            #state{configuration = Config} = State) ->
+    #config{logging = LoggingConfig} = Config,
+    case cloudi_core_i_logger:file_set(FilePath) of
+        ok ->
+            NewConfig = Config#config{
+                            logging = LoggingConfig#config_logging{
+                                file = FilePath}},
+            {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({logging_level_set, Level, _}, _,
+            #state{configuration = Config} = State) ->
+    #config{logging = LoggingConfig} = Config,
+    ok = cloudi_core_i_logger:level_set(Level),
+    NewConfig = Config#config{
+                    logging = LoggingConfig#config_logging{
+                        level = Level}},
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({logging_syslog_set, L, _}, _,
             #state{configuration = Config} = State) ->

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2012-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_hexpi).
@@ -143,7 +143,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
             % (elapsed time is returned this way from the hexpi C++ code)
             Timeout = erlang:round(0.5 + TargetTime * 3600000.0) + 5000,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
-            ?LOG_INFO("~p iterations starting at digit ~p~n",
+            ?LOG_INFO("~p iterations starting at digit ~p",
                       [Iterations, Index]),
             NewIndex = Index + Step * Iterations,
             {ok, SendArgs,
@@ -167,7 +167,7 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
               IndexBin/binary>> = Request,
             IndexStr = erlang:binary_to_list(IndexBin),
             TaskSize = Iterations / ?MAX_ITERATIONS,
-            ?LOG_INFO("index ~s result timeout (after ~p ms)~n",
+            ?LOG_INFO("index ~s result timeout (after ~p ms)",
                       [IndexStr, Timeout]),
             % a timeout generates a guess at what the
             % elapsed time could have been to reduce the task size
@@ -196,7 +196,7 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
       _Step:32/unsigned-integer-native,
       IndexBin/binary>> = Request,
     IndexStr = erlang:binary_to_list(IndexBin),
-    ?LOG_INFO("index ~s result received~n", [IndexStr]),
+    ?LOG_INFO("index ~s result received", [IndexStr]),
     TaskSize = Iterations / ?MAX_ITERATIONS,
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
     send_results(IndexStr, PiResult, Pid, State, Dispatcher),

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -158,9 +158,7 @@ handle_info({Port, {data, Data}},
                     {noreply, State#state{replies = NewReplies}}
             end;
         {Stream, OsPid, Output} when Stream == stdout; Stream == stderr ->
-            FormattedOutput = lists:flatmap(fun(Line) ->
-                io_lib:format(" ~s~n", [Line])
-            end, string:tokens(Output, "\n")),
+            FormattedOutput = indent_space_1(Output),
             if
                 Stream == stderr ->
                     ?LOG_ERROR("stderr (pid ~w):~n~s",
@@ -392,6 +390,18 @@ load_path(File) when is_list(File) ->
                     end
             end
     end.
+
+% indent std streams by 1 space without last newline
+indent_space_1(Output) ->
+    indent_space_1_lines([32 | Output], []).
+indent_space_1_lines([], Output) ->
+    lists:reverse(Output);
+indent_space_1_lines([10], Output) ->
+    lists:reverse(Output);
+indent_space_1_lines([10 | L], Output) ->
+    indent_space_1_lines(L, [32, 10 | Output]);
+indent_space_1_lines([C | L], Output) ->
+    indent_space_1_lines(L, [C | Output]).
 
 %% exit status messages
 

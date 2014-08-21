@@ -800,7 +800,7 @@ logging_file_set(FilePath, Timeout)
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_logger:file_set(FilePath).
+    cloudi_core_i_configurator:logging_file_set(FilePath, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -810,17 +810,20 @@ logging_file_set(FilePath, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec logging_level_set(Level :: loglevel(),
+-spec logging_level_set(Level :: loglevel() | undefined,
                         Timeout :: api_timeout_milliseconds()) ->
     ok.
 
 logging_level_set(Level, Timeout)
-    when is_atom(Level),
+    when ((Level =:= fatal) orelse (Level =:= error) orelse
+          (Level =:= warn) orelse (Level =:= info) orelse
+          (Level =:= debug) orelse (Level =:= trace) orelse
+          (Level =:= off) orelse (Level =:= undefined)),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_logger:level_set(Level).
+    cloudi_core_i_configurator:logging_level_set(Level, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Small fixes for various logging test-cases
+      (testing the logging formatters still remains)
+
 2014-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update the CloudI Service API to provide the following logging functions:

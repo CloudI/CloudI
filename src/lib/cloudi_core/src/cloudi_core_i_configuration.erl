@@ -3131,10 +3131,9 @@ logging_formatters_validate(undefined) ->
 logging_formatters_validate([]) ->
     {ok, undefined};
 logging_formatters_validate([_ | _] = Value) ->
-    logging_formatters_validate(Value, [], #config_logging_formatters{}).
+    logging_formatters_validate(Value, [undefined],
+                                #config_logging_formatters{}).
 
-logging_formatters_validate([], [], FormattersConfig) ->
-    {ok, FormattersConfig};
 logging_formatters_validate([], Levels, FormattersConfig) ->
     {ok,
      FormattersConfig#config_logging_formatters{
@@ -3144,8 +3143,15 @@ logging_formatters_validate([{any, Options} | L], Levels,
                                 default = undefined} = FormattersConfig)
     when is_list(Options) ->
     case logging_formatter_validate(any, Options) of
-        {ok, #config_logging_formatter{level = Level} = Formatter} ->
-            logging_formatters_validate(L, [Level | Levels],
+        {ok, #config_logging_formatter{level = Level,
+                                       output = Output} = Formatter} ->
+            NewLevels = if
+                Output =:= undefined ->
+                    Levels;
+                true ->
+                    [Level | Levels]
+            end,
+            logging_formatters_validate(L, NewLevels,
                 FormattersConfig#config_logging_formatters{
                     default = Formatter});
         {error, _} = Error ->
@@ -3159,10 +3165,17 @@ logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
           (not cloudi_x_keys1value:is_key(Modules, Lookup))) of
         true ->
             case logging_formatter_validate(Modules, Options) of
-                {ok, #config_logging_formatter{level = Level} = Formatter} ->
+                {ok, #config_logging_formatter{level = Level,
+                                               output = Output} = Formatter} ->
                     NewLookup = cloudi_x_keys1value:
                                 store(Modules, Formatter, Lookup),
-                    logging_formatters_validate(L, [Level | Levels],
+                    NewLevels = if
+                        Output =:= undefined ->
+                            Levels;
+                        true ->
+                            [Level | Levels]
+                    end,
+                    logging_formatters_validate(L, NewLevels,
                         FormattersConfig#config_logging_formatters{
                             lookup = NewLookup});
                 {error, _} = Error ->
@@ -3200,6 +3213,8 @@ logging_formatter_level(trace) ->
 logging_formatter_level(off) ->
     {ok, off};
 logging_formatter_level(none) ->
+    {ok, off};
+logging_formatter_level(undefined) ->
     {ok, off};
 logging_formatter_level(Invalid) ->
     {error, {logging_formatter_level_invalid, Invalid}}.
@@ -3284,7 +3299,9 @@ logging_formatter_validate(Key, Value) ->
                                 NewLevel =:= debug ->
                                     debug;
                                 NewLevel =:= trace ->
-                                    debug
+                                    debug;
+                                NewLevel =:= off ->
+                                    none
                             end,
                             [{level, LagerLevel} | OutputArgs]
                     end,
