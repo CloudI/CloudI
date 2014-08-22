@@ -69,8 +69,13 @@ via1_test() ->
 
 via2_test() ->
     {ok, Pid} = cpg_test_server:start_link("error"),
+    MonitorRef = erlang:monitor(process, Pid),
     erlang:unlink(Pid),
     error = gen_server:call({via, cpg, "error"}, undefined_call),
+    receive
+        {'DOWN', MonitorRef, process, Pid, _} ->
+            ok
+    end,
     false = is_process_alive(Pid),
     ok.
 
