@@ -1111,7 +1111,8 @@ handle_info(Request, StateName, State) ->
     {next_state, StateName, State}.
 
 terminate(Reason, _,
-          #state{protocol = tcp,
+          #state{dispatcher = Dispatcher,
+                 protocol = tcp,
                  listener = Listener,
                  socket = Socket,
                  os_pid = OsPid,
@@ -1121,11 +1122,13 @@ terminate(Reason, _,
     catch gen_tcp:close(Listener),
     catch gen_tcp:close(Socket),
     os_pid_kill(OsPid),
+    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
     ok;
 
 terminate(Reason, _,
-          #state{protocol = udp,
+          #state{dispatcher = Dispatcher,
+                 protocol = udp,
                  socket = Socket,
                  os_pid = OsPid,
                  service_state = ServiceState,
@@ -1133,11 +1136,13 @@ terminate(Reason, _,
                      aspects_terminate_before = Aspects}}) ->
     catch gen_udp:close(Socket),
     os_pid_kill(OsPid),
+    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
     ok;
 
 terminate(Reason, _,
-          #state{protocol = local,
+          #state{dispatcher = Dispatcher,
+                 protocol = local,
                  listener = Listener,
                  socket_path = SocketPath,
                  socket = Socket,
@@ -1149,6 +1154,7 @@ terminate(Reason, _,
     catch gen_udp:close(Socket),
     os_pid_kill(OsPid),
     catch file:delete(SocketPath),
+    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
     ok.
 
