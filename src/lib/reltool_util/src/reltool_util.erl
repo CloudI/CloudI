@@ -82,7 +82,11 @@
          script_start/1,
          script_remove/1,
          script_remove/2,
-         script_remove/3]).
+         script_remove/3,
+         boot_start/1,
+         boot_remove/1,
+         boot_remove/2,
+         boot_remove/3]).
 
 -define(IS_MODULE_LOADED_DELTA, 100).
 -define(MODULES_PURGED_DELTA, 100).
@@ -699,26 +703,12 @@ module_exports(Module)
 script_start(FilePath)
     when is_list(FilePath) ->
     true = lists:suffix(".script", FilePath),
-    % system name and version are ignored
-    {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
+    {ok,
+     [{script,
+       {_Name, _Vsn},
+       _Instructions} = Script]} = file:consult(FilePath),
     Dir = filename:dirname(FilePath),
-    % expects the typical directory structure produced by reltool
-    DirNames = filename:split(Dir),
-    case erlang:length(DirNames) of
-        DirNamesLength when DirNamesLength > 2 ->
-            Root = lists:sublist(DirNames, DirNamesLength - 2),
-            case filelib:is_dir(filename:join(Root ++ ["lib"])) of
-                true ->
-                    % on success, return the last application to be started
-                    % (should be the main application since all the application
-                    %  dependencies are started first)
-                    script_start_instructions(Instructions, Root);
-                false ->
-                    {error, invalid_release_structure}
-            end;
-        _ ->
-            {error, invalid_release_directory}
-    end.
+    script_start_data(Script, Dir).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -794,37 +784,110 @@ script_remove(FilePath, Timeout, Ignore)
          ((is_integer(Timeout) andalso (Timeout > 0)) orelse
           (Timeout =:= infinity)), is_list(Ignore) ->
     true = lists:suffix(".script", FilePath),
-    % system name and version are ignored
-    {ok, [{script, {_Name, _Vsn}, Instructions}]} = file:consult(FilePath),
+    {ok,
+     [{script,
+       {_Name, _Vsn},
+       _Instructions} = Script]} = file:consult(FilePath),
     Dir = filename:dirname(FilePath),
-    % expects the typical directory structure produced by reltool
-    DirNames = filename:split(Dir),
-    case erlang:length(DirNames) of
-        DirNamesLength when DirNamesLength > 2 ->
-            Root = lists:sublist(DirNames, DirNamesLength - 2),
-            case filelib:is_dir(filename:join(Root ++ ["lib"])) of
-                true ->
-                    case script_remove_instructions(Instructions) of
-                        {ok, Applications} ->
-                            NewTimeout = if
-                                Timeout =:= infinity ->
-                                    Timeout;
-                                is_integer(Timeout) ->
-                                    erlang:round(0.5 + Timeout /
-                                        erlang:length(Applications))
-                            end,
-                            applications_remove(Applications,
-                                                NewTimeout,
-                                                Ignore);
-                        {error, _} = Error ->
-                            Error
-                    end;
-                false ->
-                    {error, invalid_release_structure}
-            end;
-        _ ->
-            {error, invalid_release_directory}
-    end.
+    script_remove_data(Script, Dir, Timeout, Ignore).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start everything specified within a boot file.===
+%% A boot file is used when first starting the Erlang VM.  This function checks
+%% all applications to determine if they are already running with the
+%% expected versions.  All modules are checked to make sure they have
+%% been loaded, if they are expected to have been loaded. Normally,
+%% only a single boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The boot file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec boot_start(FilePath :: string()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+boot_start(FilePath)
+    when is_list(FilePath) ->
+    true = lists:suffix(".boot", FilePath),
+    {ok, ScriptData} = file:read_file(FilePath),
+    Dir = filename:dirname(FilePath),
+    script_start_data(erlang:binary_to_term(ScriptData), Dir).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a boot file.===
+%% A boot file is used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% only a single boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The boot file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec boot_remove(FilePath :: string()) ->
+    ok |
+    {error, any()}.
+
+boot_remove(FilePath) ->
+    boot_remove(FilePath, 5000, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a boot file with a timeout.===
+%% A boot file is used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% only a single boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The boot file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec boot_remove(FilePath :: string(),
+                  Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+boot_remove(FilePath, Timeout) ->
+    boot_remove(FilePath, Timeout, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop everything specified within a boot file with a timeout and a list of applications to ignore.===
+%% A boot file is used when first starting the Erlang VM.  This function checks
+%% all applications to determine applications which can be safely removed
+%% (assuming the application dependencies are correct).  The applications
+%% will then be stopped and their modules will be purged.  Normally,
+%% only a single boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The boot file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec boot_remove(FilePath :: string(),
+                  Timeout :: pos_integer() | infinity,
+                  Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+boot_remove(FilePath, Timeout, Ignore)
+    when is_list(FilePath),
+         ((is_integer(Timeout) andalso (Timeout > 0)) orelse
+          (Timeout =:= infinity)), is_list(Ignore) ->
+    true = lists:suffix(".boot", FilePath),
+    {ok, ScriptData} = file:read_file(FilePath),
+    Dir = filename:dirname(FilePath),
+    script_remove_data(erlang:binary_to_term(ScriptData),
+                       Dir, Timeout, Ignore).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -1109,6 +1172,26 @@ applications_top_level([Application | Applications], Dependencies) ->
             Error
     end.
 
+script_start_data({script, {_Name, _Vsn}, Instructions}, Dir) ->
+    % system name and version are ignored
+    % expects the typical directory structure produced by reltool
+    DirNames = filename:split(Dir),
+    case erlang:length(DirNames) of
+        DirNamesLength when DirNamesLength > 2 ->
+            Root = lists:sublist(DirNames, DirNamesLength - 2),
+            case filelib:is_dir(filename:join(Root ++ ["lib"])) of
+                true ->
+                    % on success, return the last application to be started
+                    % (should be the main application since all the application
+                    %  dependencies are started first)
+                    script_start_instructions(Instructions, Root);
+                false ->
+                    {error, invalid_release_structure}
+            end;
+        _ ->
+            {error, invalid_release_directory}
+    end.
+
 script_start_instructions(L, Root) ->
     Apps = application:loaded_applications(),
     script_start_instructions(L, preload, [], Root, Apps).
@@ -1215,6 +1298,38 @@ script_start_instructions([{apply, {c, erlangrc, _}} | L],
                           applications_loaded, Applications, Root, Apps) ->
     script_start_instructions(L, applications_loaded,
                               Applications, Root, Apps).
+
+script_remove_data({script, {_Name, _Vsn}, Instructions},
+                   Dir, Timeout, Ignore) ->
+    % system name and version are ignored
+    % expects the typical directory structure produced by reltool
+    DirNames = filename:split(Dir),
+    case erlang:length(DirNames) of
+        DirNamesLength when DirNamesLength > 2 ->
+            Root = lists:sublist(DirNames, DirNamesLength - 2),
+            case filelib:is_dir(filename:join(Root ++ ["lib"])) of
+                true ->
+                    case script_remove_instructions(Instructions) of
+                        {ok, Applications} ->
+                            NewTimeout = if
+                                Timeout =:= infinity ->
+                                    Timeout;
+                                is_integer(Timeout) ->
+                                    erlang:round(0.5 + Timeout /
+                                        erlang:length(Applications))
+                            end,
+                            applications_remove(Applications,
+                                                NewTimeout,
+                                                Ignore);
+                        {error, _} = Error ->
+                            Error
+                    end;
+                false ->
+                    {error, invalid_release_structure}
+            end;
+        _ ->
+            {error, invalid_release_directory}
+    end.
 
 script_remove_instructions(L) ->
     script_remove_instructions(L, preload, []).

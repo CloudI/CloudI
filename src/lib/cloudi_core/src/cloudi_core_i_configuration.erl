@@ -594,6 +594,7 @@ services(#config{services = Services}) ->
 
 service_format(#config_service_internal{prefix = Prefix,
                                         module = Module,
+                                        file_path = FilePath,
                                         args = Args,
                                         dest_refresh = DestRefresh,
                                         timeout_init = TimeoutInit,
@@ -606,9 +607,15 @@ service_format(#config_service_internal{prefix = Prefix,
                                         max_t = MaxT,
                                         options = Options,
                                         uuid = ID}) ->
+    ModuleEntry = if
+        FilePath =:= undefined ->
+            Module;
+        is_list(FilePath) ->
+            FilePath
+    end,
     {ID,
      #internal{prefix = Prefix,
-               module = Module,
+               module = ModuleEntry,
                args = Args,
                dest_refresh = DestRefresh,
                timeout_init = TimeoutInit,

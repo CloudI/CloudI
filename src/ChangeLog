@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix old format for erlang terms in
+      cloudi_service_api_requests (the new format changes broke it)
+    * Update reltool_util
+    * Add the option of starting a service with a release boot file
+    * Add the boot file startup to the hello_world1 example
+
 2014-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Small fixes for logging formatters usage

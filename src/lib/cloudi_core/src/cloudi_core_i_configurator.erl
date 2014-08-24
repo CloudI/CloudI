@@ -583,6 +583,20 @@ service_start_find_internal(#config_service_internal{
                 _ ->
                     service_start_find_internal_script(FilePath, Service)
             end;
+        ".boot" ->
+            case filename:dirname(FilePath) of
+                "." ->
+                    case code:where_is_file(FilePath) of
+                        non_existing ->
+                            {error,
+                             {service_internal_release_not_found, FilePath}};
+                        FullFilePath ->
+                            service_start_find_internal_boot(FullFilePath,
+                                                             Service)
+                    end;
+                _ ->
+                    service_start_find_internal_boot(FilePath, Service)
+            end;
         Extension ->
             {error, {service_internal_file_extension_invalid, Extension}}
     end;
@@ -678,6 +692,16 @@ service_start_find_internal_script(ScriptPath, Service)
             {error, {service_internal_release_invalid, Reason}}
     end.
 
+service_start_find_internal_boot(BootPath, Service)
+    when is_list(BootPath) ->
+    case cloudi_x_reltool_util:boot_start(BootPath) of
+        {ok, [Application | _]} ->
+            {ok, Application,
+             Service#config_service_internal{module = Application}};
+        {error, Reason} ->
+            {error, {service_internal_release_invalid, Reason}}
+    end.
+
 service_stop_remove_internal(#config_service_internal{
                                 options = #config_service_options{
                                     automatic_loading = false}},
@@ -714,6 +738,14 @@ service_stop_remove_internal(#config_service_internal{
         ".script" ->
             case cloudi_x_reltool_util:script_remove(FilePath, Timeout,
                                                      [cloudi_core]) of
+                ok ->
+                    {ok, release};
+                {error, Reason} ->
+                    {error, {service_internal_release_not_found, Reason}}
+            end;
+        ".boot" ->
+            case cloudi_x_reltool_util:boot_remove(FilePath, Timeout,
+                                                   [cloudi_core]) of
                 ok ->
                     {ok, release};
                 {error, Reason} ->

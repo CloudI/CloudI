@@ -140,7 +140,10 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
                                     lists:nthtail(PrefixLength, Name), input),
     FormatF = cloudi_x_trie:fetch(Format, Formats),
     MethodName = if
-        (Format == "rpc") ->
+        % new format
+        Format == "rpc";
+        % old format
+        Format == "erlang" ->
             cloudi_string:beforel($/, Suffix, input);
         true ->
             ""

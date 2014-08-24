@@ -98,3 +98,19 @@ same module name as the top-level application:
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
+To use an Erlang/OTP boot release file for an internal service with the
+same module name as the top-level application:
+
+    $ make release
+    $ cat << EOF > hello_world1_boot.conf
+    [{internal,
+      "/examples/",
+      "$PWD/release/releases/1/hello_world1.boot",
+      [],
+      lazy_closest,
+      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    EOF
+    $ curl -X POST -d @hello_world1_boot.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl http://localhost:6467/examples/hello_world1
+    Hello World!
+
