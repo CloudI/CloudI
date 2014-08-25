@@ -58,6 +58,7 @@
          configure/0,
          acl_add/2,
          acl_remove/2,
+         acl/1,
          service_subscriptions/2,
          services_add/2,
          services_remove/2,
@@ -72,6 +73,7 @@
          logging_syslog_set/2,
          logging_formatters_set/2,
          logging_redirect_set/2,
+         logging/1,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -138,6 +140,11 @@ acl_add(L, Timeout) ->
 acl_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {acl_remove, L,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+acl(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {acl,
                                  timeout_decr(Timeout)}, Timeout)).
 
 service_subscriptions(ServiceId, Timeout) ->
@@ -207,6 +214,11 @@ logging_formatters_set(L, Timeout) ->
 logging_redirect_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {logging_redirect_set, L,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging,
                                  timeout_decr(Timeout)}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
@@ -312,6 +324,10 @@ handle_call({acl_remove, L, _}, _,
         {error, _} = Error ->
             {reply, Error, State}
     end;
+
+handle_call({acl, _}, _,
+            #state{configuration = Config} = State) ->
+    {reply, {ok, cloudi_core_i_configuration:acl(Config)}, State};
 
 handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
     case cloudi_core_i_services_monitor:pids(ServiceId, Timeout) of
@@ -435,6 +451,10 @@ handle_call({logging_redirect_set, Node, _}, _,
                     logging = LoggingConfig#config_logging{
                         redirect = Node}},
     {reply, ok, State#state{configuration = NewConfig}};
+
+handle_call({logging, _}, _,
+            #state{configuration = Config} = State) ->
+    {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

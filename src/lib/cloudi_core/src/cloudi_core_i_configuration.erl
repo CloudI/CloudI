@@ -54,6 +54,7 @@
 -export([load/1,
          acl_add/2,
          acl_remove/2,
+         acl/1,
          services_add/3,
          services_remove/3,
          services_restart/3,
@@ -67,7 +68,8 @@
          nodes_set/2,
          logging_level_highest/1,
          logging_syslog_set/2,
-         logging_formatters_set/2]).
+         logging_formatters_set/2,
+         logging/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -458,6 +460,18 @@ acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     {ok, Config#config{acl = NewACL}};
 acl_remove(Value, _) ->
     {error, {acl_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List all ACL entries.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec acl(#config{}) ->
+    list({atom(), list(cloudi_service:service_name_pattern())}).
+
+acl(#config{acl = ACL}) ->
+    dict:to_list(ACL).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1074,6 +1088,155 @@ logging_formatters_set(Value, #config{logging = OldLogging} = Config)
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the current logging configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging(#config{}) ->
+    cloudi_service_api:logging_proplist().
+
+logging(#config{logging = #config_logging{file = File,
+                                          level = Level,
+                                          redirect = Redirect,
+                                          syslog = Syslog,
+                                          formatters = Formatters}}) ->
+    Defaults = #config_logging{},
+    LoggingList0 = [],
+    LoggingList1 = if
+        File == Defaults#config_logging.file ->
+            LoggingList0;
+        true ->
+            [{file, File} | LoggingList0]
+    end,
+    LoggingList2 = if
+        Level =:= Defaults#config_logging.level ->
+            LoggingList1;
+        true ->
+            [{level, Level} | LoggingList1]
+    end,
+    LoggingList3 = if
+        Redirect =:= Defaults#config_logging.redirect ->
+            LoggingList2;
+        true ->
+            [{redirect, Redirect} | LoggingList2]
+    end,
+    LoggingList4 = case Syslog of
+        undefined ->
+            LoggingList3;
+        #config_logging_syslog{identity = SyslogIdentity,
+                               facility = SyslogFacility,
+                               level = SyslogLevel} ->
+            SyslogDefaults = #config_logging_syslog{},
+            SyslogList0 = [],
+            SyslogList1 = if
+                SyslogIdentity ==
+                SyslogDefaults#config_logging_syslog.identity ->
+                    SyslogList0;
+                true ->
+                    [{identity, SyslogIdentity} | SyslogList0]
+            end,
+            SyslogList2 = if
+                SyslogFacility =:=
+                SyslogDefaults#config_logging_syslog.facility ->
+                    SyslogList1;
+                true ->
+                    [{facility, SyslogFacility} | SyslogList1]
+            end,
+            SyslogList3 = if
+                SyslogLevel =:=
+                SyslogDefaults#config_logging_syslog.level ->
+                    SyslogList2;
+                true ->
+                    [{level, SyslogLevel} | SyslogList2]
+            end,
+            [{syslog, lists:reverse(SyslogList3)} | LoggingList3]
+    end,
+    LoggingList5 = case Formatters of
+        undefined ->
+            LoggingList4;
+        #config_logging_formatters{default = FormattersDefault,
+                                   lookup = FormattersLookup} ->
+            FormattersList0 = if
+                FormattersDefault =:= undefined ->
+                    cloudi_x_keys1value:to_list(FormattersLookup);
+                true ->
+                    [{any, FormattersDefault} |
+                     cloudi_x_keys1value:to_list(FormattersLookup)]
+            end,
+            FormatterDefaults = #config_logging_formatter{},
+            FormattersList1 = lists:map(fun
+                ({FormatterKeys,
+                  #config_logging_formatter{
+                      level = FormatterLevel,
+                      output = FormatterOutput,
+                      output_args = FormatterOutputArgs,
+                      output_max_r = FormatterOutputMaxR,
+                      output_max_t = FormatterOutputMaxT,
+                      formatter = Formatter,
+                      formatter_config = FormatterConfig}}) ->
+                FormatterValue0 = [],
+                FormatterValue1 = if
+                    FormatterLevel =:=
+                    FormatterDefaults#config_logging_formatter.level ->
+                        FormatterValue0;
+                    true ->
+                        [{level, FormatterLevel} | FormatterValue0]
+                end,
+                FormatterValue5 = if
+                    FormatterOutput =:= undefined ->
+                        FormatterValue1;
+                    true ->
+                        FormatterValue2 = [{output, FormatterOutput} |
+                                           FormatterValue1],
+                        FormatterValue3 = if
+                            FormatterOutputArgs ==
+                            FormatterDefaults#config_logging_formatter.output_args ->
+                                FormatterValue2;
+                            true ->
+                                [{output_args, FormatterOutputArgs} |
+                                 FormatterValue2]
+                        end,
+                        FormatterValue4 = if
+                            FormatterOutputMaxR ==
+                            FormatterDefaults#config_logging_formatter.output_max_r ->
+                                FormatterValue3;
+                            true ->
+                                [{output_max_r, FormatterOutputMaxR} |
+                                 FormatterValue3]
+                        end,
+                        if
+                            FormatterOutputMaxT ==
+                            FormatterDefaults#config_logging_formatter.output_max_t ->
+                                FormatterValue4;
+                            true ->
+                                [{output_max_t, FormatterOutputMaxT} |
+                                 FormatterValue4]
+                        end
+                end,
+                FormatterValue7 = if
+                    Formatter =:= undefined ->
+                        FormatterValue5;
+                    true ->
+                        FormatterValue6 = [{formatter, Formatter} |
+                                           FormatterValue5],
+                        if
+                            FormatterConfig ==
+                            FormatterDefaults#config_logging_formatter.formatter_config ->
+                                FormatterValue6;
+                            true ->
+                                [{formatter_config, FormatterConfig} |
+                                 FormatterValue6]
+                        end
+                end,
+                {FormatterKeys, lists:reverse(FormatterValue7)}
+            end, FormattersList0),
+            [{formatters, FormattersList1} | LoggingList4]
+           
+    end,
+    lists:reverse(LoggingList5).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

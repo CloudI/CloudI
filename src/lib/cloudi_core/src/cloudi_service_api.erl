@@ -54,6 +54,7 @@
 %% external interface
 -export([acl_add/2,
          acl_remove/2,
+         acl/1,
          service_subscriptions/2,
          services_add/2,
          services_remove/2,
@@ -71,6 +72,7 @@
          logging_syslog_set/2,
          logging_formatters_set/2,
          logging_redirect_set/2,
+         logging/1,
          code_path_add/2,
          code_path_remove/2,
          code_path/1,
@@ -431,9 +433,16 @@
                {output_max_t, cloudi_service_api:seconds()} |
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
+-type logging_proplist() ::
+    nonempty_list({file, string() | undefined} |
+                  {level, loglevel()} |
+                  {syslog, logging_syslog_set_proplist() | undefined} |
+                  {formatters, logging_formatters_set_proplist() | undefined} |
+                  {redirect, node() | undefined}).
 -export_type([loglevel/0,
               logging_syslog_set_proplist/0,
-              logging_formatters_set_proplist/0]).
+              logging_formatters_set_proplist/0,
+              logging_proplist/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -492,6 +501,23 @@ acl_remove([_ | _] = L, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:acl_remove(L, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List all ACL entries.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec acl(Timeout :: api_timeout_milliseconds()) ->
+    {ok, list({atom(), list(cloudi_service:service_name_pattern())})} |
+    {error, timeout | noproc}.
+
+acl(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:acl(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -889,6 +915,23 @@ logging_redirect_set(Node, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_redirect_set(Node, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the current logging configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging(Timeout :: api_timeout_milliseconds()) ->
+    {ok, logging_proplist()} |
+    {error, timeout | noproc}.
+
+logging(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:logging(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

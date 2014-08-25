@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CloudI Service API functions to get the current configuration:
+        * cloudi_service_api:acl/1
+        * cloudi_service_api:logging/1
+
 2014-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix old format for erlang terms in
