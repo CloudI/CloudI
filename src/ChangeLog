@@ -5,6 +5,7 @@
 
     * Add CloudI Service API functions to get the current configuration:
         * cloudi_service_api:acl/1
+        * cloudi_service_api:nodes_get/1
         * cloudi_service_api:logging/1
 
 2014-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>

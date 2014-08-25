@@ -61,9 +61,10 @@
          services_restart/2,
          services_search/2,
          services/1,
+         nodes_set/2,
+         nodes_get/1,
          nodes_add/2,
          nodes_remove/2,
-         nodes_set/2,
          nodes_alive/1,
          nodes_dead/1,
          nodes/1,
@@ -697,6 +698,43 @@ services(Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Set CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_set(L :: nodes_proplist(),
+                Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_nodes_set()}.
+
+nodes_set([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:nodes_set(L, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_get(Timeout :: api_timeout_milliseconds()) ->
+    {ok, nodes_proplist()} |
+    {error, timeout | noproc}.
+
+nodes_get(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:nodes_get(Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Add CloudI nodes.===
 %% Explicitly add a CloudI node name, so that services between all other
 %% CloudI nodes and the added nodes can send each other service requests.
@@ -737,26 +775,6 @@ nodes_remove([_ | _] = L, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:nodes_remove(L, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Set CloudI nodes configuration.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec nodes_set(L :: nodes_proplist(),
-                Timeout :: api_timeout_milliseconds()) ->
-    ok |
-    {error,
-     timeout | noproc |
-     cloudi_core_i_configuration:error_reason_nodes_set()}.
-
-nodes_set([_ | _] = L, Timeout)
-    when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
-          (Timeout =:= infinity)) ->
-    cloudi_core_i_configurator:nodes_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

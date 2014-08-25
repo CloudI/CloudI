@@ -65,9 +65,10 @@
          services_restart/2,
          services_search/2,
          services/1,
+         nodes_set/2,
+         nodes_get/1,
          nodes_add/2,
          nodes_remove/2,
-         nodes_set/2,
          logging_file_set/2,
          logging_level_set/2,
          logging_syslog_set/2,
@@ -177,6 +178,16 @@ services(Timeout) ->
                                 {services,
                                  timeout_decr(Timeout)}, Timeout)).
 
+nodes_set(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {nodes_set, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+nodes_get(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {nodes_get,
+                                 timeout_decr(Timeout)}, Timeout)).
+
 nodes_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {nodes_add, L, local,
@@ -184,11 +195,6 @@ nodes_add(L, Timeout) ->
 nodes_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {nodes_remove, L, local,
-                                 timeout_decr(Timeout)}, Timeout)).
-
-nodes_set(L, Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {nodes_set, L, local,
                                  timeout_decr(Timeout)}, Timeout)).
 
 logging_file_set(FilePath, Timeout) ->
@@ -389,13 +395,17 @@ handle_call({services, _}, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:services(Config)}, State};
 
+handle_call({nodes_set, _, _, _} = Request, _, State) ->
+    nodes_call(Request, State);
+
+handle_call({nodes_get, _}, _,
+            #state{configuration = Config} = State) ->
+    {reply, {ok, cloudi_core_i_configuration:nodes_get(Config)}, State};
+
 handle_call({nodes_add, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
 handle_call({nodes_remove, _, _, _} = Request, _, State) ->
-    nodes_call(Request, State);
-
-handle_call({nodes_set, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
 handle_call({logging_file_set, FilePath, _}, _,

@@ -63,9 +63,10 @@
          service_format/1,
          services_format_options_internal/1,
          services_format_options_external/1,
+         nodes_set/2,
+         nodes_get/1,
          nodes_add/2,
          nodes_remove/2,
-         nodes_set/2,
          logging_level_highest/1,
          logging_syslog_set/2,
          logging_formatters_set/2,
@@ -965,6 +966,107 @@ services_format_options_external(Options) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Set CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
+                Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_nodes_set()}.
+
+nodes_set([_ | _] = Value, #config{} = Config) ->
+    case nodes_proplist(Value) of
+        {ok, NodesConfig} ->
+            {ok, Config#config{nodes = NodesConfig}};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get CloudI nodes configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_get(#config{}) ->
+    cloudi_service_api:nodes_proplist().
+
+nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
+                                        reconnect_start = ReconnectStart,
+                                        reconnect_delay = ReconnectDelay,
+                                        listen = Listen,
+                                        connect = Connect,
+                                        timestamp_type = TimestampType,
+                                        discovery = Discovery}}) ->
+    Defaults = #config_nodes{},
+    NodesList0 = [],
+    NodesList1 = if
+        Nodes == Defaults#config_nodes.nodes ->
+            NodesList0;
+        true ->
+            [{nodes, Nodes} | NodesList0]
+    end,
+    NodesList2 = if
+        ReconnectStart == Defaults#config_nodes.reconnect_start ->
+            NodesList1;
+        true ->
+            [{reconnect_start, ReconnectStart} | NodesList1]
+    end,
+    NodesList3 = if
+        ReconnectDelay == Defaults#config_nodes.reconnect_delay ->
+            NodesList2;
+        true ->
+            [{reconnect_delay, ReconnectDelay} | NodesList2]
+    end,
+    NodesList4 = if
+        Listen == Defaults#config_nodes.listen ->
+            NodesList3;
+        true ->
+            [{listen, Listen} | NodesList3]
+    end,
+    NodesList5 = if
+        Connect == Defaults#config_nodes.connect ->
+            NodesList4;
+        true ->
+            [{connect, Connect} | NodesList4]
+    end,
+    NodesList6 = if
+        TimestampType == Defaults#config_nodes.timestamp_type ->
+            NodesList5;
+        true ->
+            [{timestamp_type, TimestampType} | NodesList5]
+    end,
+    undefined = Defaults#config_nodes.discovery,
+    NodesList7 = case Discovery of
+        undefined ->
+            NodesList6;
+        #config_nodes_discovery{start_a = [MulticastAddress,
+                                           MulticastPort,
+                                           MulticastTTL, _],
+                                discover_f = multicast_discover} ->
+            [{discovery,
+              [{multicast,
+                [{address, MulticastAddress},
+                 {port, MulticastPort},
+                 {ttl, MulticastTTL}]}]} | NodesList6];
+        #config_nodes_discovery{start_a = [EC2AccessKeyId,
+                                           EC2SecretAccessKey,
+                                           EC2Host, EC2Groups, EC2Tags],
+                                discover_f = ec2_discover} ->
+                                
+            [{discovery,
+              [{ec2,
+                [{access_key_id, EC2AccessKeyId},
+                 {secret_access_key, EC2SecretAccessKey},
+                 {ec2_host, EC2Host},
+                 {groups, EC2Groups},
+                 {tags, EC2Tags}]}]} | NodesList6]
+    end,
+    lists:reverse(NodesList7).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Add CloudI nodes.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1006,25 +1108,6 @@ nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
     end;
 nodes_remove(Value, _) ->
     {error, {node_invalid, Value}}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Set CloudI nodes configuration.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
-                Config :: #config{}) ->
-    {ok, #config{}} |
-    {error, error_reason_nodes_set()}.
-
-nodes_set([_ | _] = Value, #config{} = Config) ->
-    case nodes_proplist(Value) of
-        {ok, NodesConfig} ->
-            {ok, Config#config{nodes = NodesConfig}};
-        {error, _} = Error ->
-            Error
-    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1123,6 +1206,7 @@ logging(#config{logging = #config_logging{file = File,
         true ->
             [{redirect, Redirect} | LoggingList2]
     end,
+    undefined = Defaults#config_logging.syslog,
     LoggingList4 = case Syslog of
         undefined ->
             LoggingList3;
@@ -1154,6 +1238,7 @@ logging(#config{logging = #config_logging{file = File,
             end,
             [{syslog, lists:reverse(SyslogList3)} | LoggingList3]
     end,
+    undefined = Defaults#config_logging.formatters,
     LoggingList5 = case Formatters of
         undefined ->
             LoggingList4;
