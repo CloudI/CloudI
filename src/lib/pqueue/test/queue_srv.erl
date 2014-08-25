@@ -40,7 +40,8 @@ start_link(Mod) ->
 stop() ->
     try call(stop)
     catch
-        exit:{noproc, _} -> ok
+        exit:{noproc, _} -> ok;
+        exit:{normal, _} -> ok
     end.
 
 call(M) ->
