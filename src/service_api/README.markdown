@@ -23,20 +23,26 @@ which subscribes to service names based on the functions defined in the [`cloudi
 * `"/cloudi/api/rpc/*.erl"` (see below)
   * `"/cloudi/api/rpc/acl_add.erl"`
   * `"/cloudi/api/rpc/acl_remove.erl"`
+  * `"/cloudi/api/rpc/acl.erl"`
   * `"/cloudi/api/rpc/service_subscriptions.erl"`
   * `"/cloudi/api/rpc/services_add.erl"`
   * `"/cloudi/api/rpc/services_remove.erl"`
   * `"/cloudi/api/rpc/services_restart.erl"`
   * `"/cloudi/api/rpc/services_search.erl"`
   * `"/cloudi/api/rpc/services.erl"`
+  * `"/cloudi/api/rpc/nodes_set.erl"`
+  * `"/cloudi/api/rpc/nodes_get.erl"`
   * `"/cloudi/api/rpc/nodes_add.erl"`
   * `"/cloudi/api/rpc/nodes_remove.erl"`
-  * `"/cloudi/api/rpc/nodes_set.erl"`
   * `"/cloudi/api/rpc/nodes_alive.erl"`
   * `"/cloudi/api/rpc/nodes_dead.erl"`
   * `"/cloudi/api/rpc/nodes.erl"`
-  * `"/cloudi/api/rpc/loglevel_set.erl"`
-  * `"/cloudi/api/rpc/log_redirect.erl"`
+  * `"/cloudi/api/rpc/logging_file_set.erl"`
+  * `"/cloudi/api/rpc/logging_level_set.erl"`
+  * `"/cloudi/api/rpc/logging_syslog_set.erl"`
+  * `"/cloudi/api/rpc/logging_formatters_set"`
+  * `"/cloudi/api/rpc/logging_redirect_set.erl"`
+  * `"/cloudi/api/rpc/logging.erl"`
   * `"/cloudi/api/rpc/code_path_add.erl"`
   * `"/cloudi/api/rpc/code_path_remove.erl"`
   * `"/cloudi/api/rpc/code_path.erl"`
